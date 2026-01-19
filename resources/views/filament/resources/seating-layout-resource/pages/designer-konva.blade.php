@@ -2,6 +2,7 @@
     <div class="space-y-6"
          x-data="konvaDesigner()"
          x-init="init()"
+         @@keydown.window="handleKeyDown($event)"
          @@section-deleted.window="handleSectionDeleted($event.detail)"
          @@section-added.window="handleSectionAdded($event.detail)"
          @@seat-added.window="handleSeatAdded($event.detail)"
@@ -27,9 +28,16 @@
                         </svg>
                     </button>
                     <button @click="resetView" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200">Reset</button>
+                    <button @click="zoomToFit" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Fit all content in view">Fit</button>
                     <button @click="toggleGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm" :class="showGrid ? 'bg-blue-500 text-white' : 'bg-gray-100'">
                         <x-svg-icon name="konvagrid" class="w-5 h-5 text-purple-600" />
                         Grid
+                    </button>
+                    <button @click="toggleSnapToGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm" :class="snapToGrid ? 'bg-indigo-500 text-white' : 'bg-gray-100'" title="Snap sections to grid when moving">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"></path>
+                        </svg>
+                        Snap
                     </button>
 
                     <div class="h-6 mx-1 border-l border-gray-300"></div>
@@ -72,11 +80,17 @@
                         Delete
                     </button>
 
-                    <button @click="exportSVG" type="button" class="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200">
+                    <button @click="exportSVG" type="button" class="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Export as SVG image">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                         </svg>
-                        Export SVG
+                        SVG
+                    </button>
+                    <button @click="exportJSON" type="button" class="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Export as JSON backup">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        JSON
                     </button>
                 </div>
             </div>
@@ -112,26 +126,34 @@
                 <div id="konva-container" wire:ignore></div>
             </div>
 
-            <div class="grid grid-cols-5 gap-4 mt-4 text-sm">
+            {{-- Statistics --}}
+            <div class="grid grid-cols-4 gap-4 mt-4 text-sm">
                 <div class="p-3 text-center rounded-lg bg-gray-50">
                     <div class="text-gray-600">Sections</div>
                     <div class="text-2xl font-bold" x-text="sections.length"></div>
                 </div>
                 <div class="p-3 text-center rounded-lg bg-blue-50">
-                    <div class="text-blue-600">Pan</div>
-                    <div class="text-sm font-medium">Click + Drag Background</div>
+                    <div class="text-blue-600">Rows</div>
+                    <div class="text-2xl font-bold" x-text="getTotalRows()"></div>
                 </div>
                 <div class="p-3 text-center rounded-lg bg-green-50">
-                    <div class="text-green-600">Zoom</div>
-                    <div class="text-sm font-medium">Mouse Wheel</div>
+                    <div class="text-green-600">Seats</div>
+                    <div class="text-2xl font-bold" x-text="getTotalSeats()"></div>
                 </div>
                 <div class="p-3 text-center rounded-lg bg-purple-50">
-                    <div class="text-purple-600">Move/Resize</div>
-                    <div class="text-sm font-medium">Drag Sections</div>
+                    <div class="text-purple-600">Canvas</div>
+                    <div class="text-sm font-bold" x-text="`${canvasWidth}x${canvasHeight}`"></div>
                 </div>
-                <div class="p-3 text-center rounded-lg bg-orange-50">
-                    <div class="text-orange-600">Multi-Select</div>
-                    <div class="text-sm font-medium">Shift+Click or Box Select</div>
+            </div>
+
+            {{-- Keyboard Shortcuts --}}
+            <div class="p-3 mt-2 border rounded-lg bg-slate-50 border-slate-200">
+                <div class="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-600">
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Del</kbd> Delete selected</span>
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Esc</kbd> Cancel / Deselect</span>
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Shift</kbd>+Click Multi-select</span>
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Scroll</kbd> Zoom</span>
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Drag</kbd> Pan canvas</span>
                 </div>
             </div>
         </div>
@@ -232,9 +254,261 @@
                 editColorHex: '#3B82F6',
                 editSeatColor: '#22C55E',
 
+                // Snap to grid
+                snapToGrid: false,
+                gridSize: 50,
+
+                // Tooltip
+                tooltip: null,
+
                 init() {
                     this.createStage();
                     this.loadSections();
+                    this.createTooltip();
+                },
+
+                // Keyboard shortcuts handler
+                handleKeyDown(e) {
+                    // Don't handle if typing in an input
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                        return;
+                    }
+
+                    switch (e.key) {
+                        case 'Delete':
+                        case 'Backspace':
+                            if (this.selectedSeats.length > 0) {
+                                this.deleteSelectedSeats();
+                            } else if (this.selectedSection) {
+                                this.deleteSelected();
+                            }
+                            e.preventDefault();
+                            break;
+
+                        case 'Escape':
+                            this.cancelDrawing();
+                            this.clearSelection();
+                            this.transformer.nodes([]);
+                            this.selectedSection = null;
+                            this.layer.batchDraw();
+                            break;
+
+                        case 'a':
+                            if (e.ctrlKey || e.metaKey) {
+                                // Ctrl+A - select all seats in multi-select mode
+                                if (this.drawMode === 'multiselect') {
+                                    this.selectAllSeats();
+                                    e.preventDefault();
+                                }
+                            }
+                            break;
+                    }
+                },
+
+                // Select all seats
+                selectAllSeats() {
+                    this.clearSelection();
+                    this.layer.find('.seat').forEach(seat => {
+                        const seatId = seat.getAttr('seatId');
+                        if (seatId) {
+                            this.selectedSeats.push({ id: seatId, node: seat });
+                            seat.stroke('#F97316');
+                            seat.strokeWidth(3);
+                        }
+                    });
+                    this.layer.batchDraw();
+                },
+
+                // Statistics functions
+                getTotalRows() {
+                    return this.sections.reduce((sum, section) => sum + (section.rows?.length || 0), 0);
+                },
+
+                getTotalSeats() {
+                    return this.sections.reduce((sum, section) => {
+                        return sum + (section.rows || []).reduce((rowSum, row) => {
+                            return rowSum + (row.seats?.length || 0);
+                        }, 0);
+                    }, 0);
+                },
+
+                // Zoom to fit all content
+                zoomToFit() {
+                    if (this.sections.length === 0) {
+                        this.resetView();
+                        return;
+                    }
+
+                    // Calculate bounding box of all sections
+                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+                    this.sections.forEach(section => {
+                        const x = section.x_position || 0;
+                        const y = section.y_position || 0;
+                        const w = section.width || 200;
+                        const h = section.height || 150;
+
+                        minX = Math.min(minX, x);
+                        minY = Math.min(minY, y);
+                        maxX = Math.max(maxX, x + w);
+                        maxY = Math.max(maxY, y + h);
+                    });
+
+                    const contentWidth = maxX - minX;
+                    const contentHeight = maxY - minY;
+
+                    const container = document.getElementById('konva-container');
+                    const containerWidth = container.offsetWidth || 1200;
+                    const containerHeight = 700;
+
+                    // Calculate scale to fit with padding
+                    const padding = 50;
+                    const scaleX = (containerWidth - padding * 2) / contentWidth;
+                    const scaleY = (containerHeight - padding * 2) / contentHeight;
+                    const scale = Math.min(scaleX, scaleY, 2); // Cap at 2x zoom
+
+                    this.zoom = Math.max(0.1, scale);
+                    this.stage.scale({ x: this.zoom, y: this.zoom });
+
+                    // Center the content
+                    const newX = (containerWidth / 2) - ((minX + contentWidth / 2) * this.zoom);
+                    const newY = (containerHeight / 2) - ((minY + contentHeight / 2) * this.zoom);
+                    this.stage.position({ x: newX, y: newY });
+                },
+
+                // Toggle snap to grid
+                toggleSnapToGrid() {
+                    this.snapToGrid = !this.snapToGrid;
+                },
+
+                // Snap position to grid
+                snapPosition(pos) {
+                    if (!this.snapToGrid) return pos;
+                    return {
+                        x: Math.round(pos.x / this.gridSize) * this.gridSize,
+                        y: Math.round(pos.y / this.gridSize) * this.gridSize
+                    };
+                },
+
+                // Create tooltip element
+                createTooltip() {
+                    this.tooltip = document.createElement('div');
+                    this.tooltip.style.cssText = `
+                        position: absolute;
+                        padding: 6px 10px;
+                        background: rgba(0,0,0,0.85);
+                        color: white;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        pointer-events: none;
+                        z-index: 1000;
+                        display: none;
+                        white-space: nowrap;
+                    `;
+                    document.getElementById('konva-container').appendChild(this.tooltip);
+                },
+
+                // Show tooltip for seat
+                showSeatTooltip(seat, pos) {
+                    const seatId = seat.getAttr('seatId');
+                    const sectionId = seat.getAttr('sectionId');
+
+                    // Find seat data
+                    let seatData = null;
+                    let sectionData = null;
+                    let rowData = null;
+
+                    for (const section of this.sections) {
+                        if (section.id === sectionId) {
+                            sectionData = section;
+                            for (const row of section.rows || []) {
+                                for (const s of row.seats || []) {
+                                    if (s.id === seatId) {
+                                        seatData = s;
+                                        rowData = row;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (seatData && sectionData) {
+                        const displayName = seatData.display_name || `${sectionData.name}, Row ${rowData?.label || '?'}, Seat ${seatData.label}`;
+                        this.tooltip.innerHTML = `
+                            <div><strong>${displayName}</strong></div>
+                            <div style="font-size: 10px; color: #aaa;">UID: ${seatData.seat_uid || 'N/A'}</div>
+                        `;
+                        this.tooltip.style.left = (pos.x + 15) + 'px';
+                        this.tooltip.style.top = (pos.y + 15) + 'px';
+                        this.tooltip.style.display = 'block';
+                    }
+                },
+
+                hideTooltip() {
+                    if (this.tooltip) {
+                        this.tooltip.style.display = 'none';
+                    }
+                },
+
+                // JSON Export
+                exportJSON() {
+                    const exportData = {
+                        layout: {
+                            id: {{ $layout->id }},
+                            name: '{{ $layout->name }}',
+                            canvasWidth: this.canvasWidth,
+                            canvasHeight: this.canvasHeight,
+                            exportedAt: new Date().toISOString(),
+                        },
+                        sections: this.sections.map(section => ({
+                            id: section.id,
+                            name: section.name,
+                            section_code: section.section_code,
+                            section_type: section.section_type,
+                            x_position: section.x_position,
+                            y_position: section.y_position,
+                            width: section.width,
+                            height: section.height,
+                            rotation: section.rotation,
+                            color_hex: section.color_hex,
+                            seat_color: section.seat_color,
+                            background_color: section.background_color,
+                            corner_radius: section.corner_radius,
+                            metadata: section.metadata,
+                            rows: (section.rows || []).map(row => ({
+                                id: row.id,
+                                label: row.label,
+                                y: row.y,
+                                rotation: row.rotation,
+                                seats: (row.seats || []).map(seat => ({
+                                    id: seat.id,
+                                    label: seat.label,
+                                    display_name: seat.display_name,
+                                    x: seat.x,
+                                    y: seat.y,
+                                    angle: seat.angle,
+                                    shape: seat.shape,
+                                    seat_uid: seat.seat_uid,
+                                }))
+                            }))
+                        })),
+                        statistics: {
+                            totalSections: this.sections.length,
+                            totalRows: this.getTotalRows(),
+                            totalSeats: this.getTotalSeats(),
+                        }
+                    };
+
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `seating-layout-{{ $layout->id }}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
                 },
 
                 createStage() {
@@ -811,10 +1085,18 @@
 
                     // Save on drag end
                     group.on('dragend', () => {
-                        this.saveSection(section.id, {
-                            x_position: Math.round(group.x()),
-                            y_position: Math.round(group.y()),
+                        // Apply snap to grid if enabled
+                        const snappedPos = this.snapPosition({
+                            x: group.x(),
+                            y: group.y()
                         });
+                        group.position(snappedPos);
+
+                        this.saveSection(section.id, {
+                            x_position: Math.round(snappedPos.x),
+                            y_position: Math.round(snappedPos.y),
+                        });
+                        this.layer.batchDraw();
                     });
 
                     // Save on transform end
@@ -892,6 +1174,28 @@
                             sectionId: sectionId,
                         });
                     }
+
+                    // Add tooltip events
+                    seatShape.on('mouseover', (e) => {
+                        const container = document.getElementById('konva-container');
+                        const containerRect = container.getBoundingClientRect();
+                        const pos = this.stage.getPointerPosition();
+                        this.showSeatTooltip(seatShape, {
+                            x: pos.x,
+                            y: pos.y
+                        });
+                        // Highlight on hover
+                        seatShape.strokeWidth(2);
+                        this.layer.batchDraw();
+                    });
+
+                    seatShape.on('mouseout', () => {
+                        this.hideTooltip();
+                        // Reset stroke unless selected
+                        const isSelected = this.selectedSeats.find(s => s.id === seat.id);
+                        seatShape.strokeWidth(isSelected ? 3 : 1);
+                        this.layer.batchDraw();
+                    });
 
                     return seatShape;
                 },
