@@ -14,14 +14,20 @@ class MilestoneAttributionService
 {
     /**
      * Attribute a purchase event to a milestone using time-windowed last-click attribution
+     * Accepts either a CoreCustomerEvent or an Order object
      */
-    public function attributePurchase(CoreCustomerEvent $purchaseEvent): ?EventMilestone
+    public function attributePurchase(CoreCustomerEvent|Order $purchaseEvent): ?EventMilestone
     {
+        // Handle Order objects - convert to attribution data
+        if ($purchaseEvent instanceof Order) {
+            return $this->attributeOrder($purchaseEvent);
+        }
+
         if ($purchaseEvent->event_type !== CoreCustomerEvent::TYPE_PURCHASE) {
             return null;
         }
 
-        $eventId = $purchaseEvent->event_id;
+        $eventId = $purchaseEvent->event_id ?? $purchaseEvent->marketplace_event_id;
         if (!$eventId) {
             return null;
         }
@@ -82,6 +88,135 @@ class MilestoneAttributionService
     }
 
     /**
+     * Attribute an Order to a milestone
+     * Finds the visitor's first touch (page view with UTM/click ID) and uses that for attribution
+     */
+    protected function attributeOrder(Order $order): ?EventMilestone
+    {
+        $eventId = $order->marketplace_event_id ?? $order->event_id;
+        if (!$eventId) {
+            return null;
+        }
+
+        // Get active milestones for this event
+        $milestones = EventMilestone::forEvent($eventId)
+            ->where('is_active', true)
+            ->get();
+
+        if ($milestones->isEmpty()) {
+            return null;
+        }
+
+        $purchaseDate = $order->paid_at ?? $order->created_at;
+
+        // Try to find visitor's tracking data from their session
+        // First check order meta for stored UTM/click IDs
+        $meta = $order->meta ?? [];
+        $utmCampaign = $meta['utm_campaign'] ?? null;
+        $utmSource = $meta['utm_source'] ?? null;
+        $utmMedium = $meta['utm_medium'] ?? null;
+        $gclid = $meta['gclid'] ?? null;
+        $fbclid = $meta['fbclid'] ?? null;
+        $ttclid = $meta['ttclid'] ?? null;
+        $li_fat_id = $meta['li_fat_id'] ?? null;
+
+        // If no UTM in order meta, try to find from visitor's tracking events
+        if (!$utmCampaign && !$utmSource && !$gclid && !$fbclid && !$ttclid) {
+            // Find the visitor's page view with tracking data for this event
+            $visitorTracking = CoreCustomerEvent::where(function ($q) use ($eventId) {
+                    $q->where('event_id', $eventId)
+                      ->orWhere('marketplace_event_id', $eventId);
+                })
+                ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                ->where(function ($q) {
+                    $q->whereNotNull('utm_campaign')
+                      ->orWhereNotNull('utm_source')
+                      ->orWhereNotNull('gclid')
+                      ->orWhereNotNull('fbclid')
+                      ->orWhereNotNull('ttclid')
+                      ->orWhereNotNull('li_fat_id');
+                })
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if ($visitorTracking) {
+                $utmCampaign = $utmCampaign ?: $visitorTracking->utm_campaign;
+                $utmSource = $utmSource ?: $visitorTracking->utm_source;
+                $utmMedium = $utmMedium ?: $visitorTracking->utm_medium;
+                $gclid = $gclid ?: $visitorTracking->gclid;
+                $fbclid = $fbclid ?: $visitorTracking->fbclid;
+                $ttclid = $ttclid ?: $visitorTracking->ttclid;
+                $li_fat_id = $li_fat_id ?: $visitorTracking->li_fat_id;
+            }
+        }
+
+        // Priority 1: Match by UTM campaign (most specific)
+        if ($utmCampaign) {
+            foreach ($milestones as $milestone) {
+                if ($milestone->matchesUtmParameters(['utm_campaign' => $utmCampaign])
+                    && $milestone->isWithinAttributionWindow($purchaseDate)) {
+                    return $this->assignOrderAttribution($order, $milestone);
+                }
+            }
+        }
+
+        // Priority 2: Match by click ID platform (for paid ads)
+        $clickIdPlatform = null;
+        if ($gclid) $clickIdPlatform = 'google';
+        elseif ($fbclid) $clickIdPlatform = 'facebook';
+        elseif ($ttclid) $clickIdPlatform = 'tiktok';
+        elseif ($li_fat_id) $clickIdPlatform = 'linkedin';
+
+        if ($clickIdPlatform) {
+            foreach ($milestones as $milestone) {
+                if ($milestone->matchesClickIdPlatform($clickIdPlatform)
+                    && $milestone->isWithinAttributionWindow($purchaseDate)) {
+                    return $this->assignOrderAttribution($order, $milestone);
+                }
+            }
+        }
+
+        // Priority 3: Match by UTM source
+        if ($utmSource) {
+            foreach ($milestones as $milestone) {
+                if ($milestone->matchesUtmParameters(['utm_source' => $utmSource])
+                    && $milestone->isWithinAttributionWindow($purchaseDate)) {
+                    return $this->assignOrderAttribution($order, $milestone);
+                }
+            }
+        }
+
+        // Priority 4: Match by source type for email milestones
+        if ($utmMedium === 'email') {
+            foreach ($milestones as $milestone) {
+                if ($milestone->type === EventMilestone::TYPE_EMAIL
+                    && $milestone->isWithinAttributionWindow($purchaseDate)) {
+                    return $this->assignOrderAttribution($order, $milestone);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Assign attribution from Order and update milestone metrics
+     */
+    protected function assignOrderAttribution(Order $order, EventMilestone $milestone): EventMilestone
+    {
+        // Store attribution in order meta
+        $meta = $order->meta ?? [];
+        $meta['attributed_milestone_id'] = $milestone->id;
+        $order->meta = $meta;
+        $order->save();
+
+        // Update milestone metrics
+        $this->updateMilestoneMetricsFromOrders($milestone);
+
+        return $milestone;
+    }
+
+    /**
      * Assign attribution and update milestone metrics
      */
     protected function assignAttribution(CoreCustomerEvent $event, EventMilestone $milestone): EventMilestone
@@ -118,6 +253,52 @@ class MilestoneAttributionService
             $milestone->cac = $conversions > 0 ? round($milestone->budget / $conversions, 2) : null;
             $milestone->roi = $milestone->calculateROI();
             $milestone->roas = $milestone->calculateROAS();
+        }
+
+        $milestone->metrics_updated_at = now();
+        $milestone->save();
+    }
+
+    /**
+     * Update milestone metrics from Orders (used when attributing directly from Order)
+     */
+    public function updateMilestoneMetricsFromOrders(EventMilestone $milestone): void
+    {
+        $eventId = $milestone->event_id;
+
+        // Get orders attributed to this milestone via meta JSON
+        $attributedOrders = Order::where(function ($q) use ($eventId) {
+                $q->where('event_id', $eventId)
+                  ->orWhere('marketplace_event_id', $eventId);
+            })
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->whereJsonContains('meta->attributed_milestone_id', $milestone->id)
+            ->get();
+
+        // Also count CoreCustomerEvents for backwards compatibility
+        $attributedEvents = CoreCustomerEvent::where('attributed_milestone_id', $milestone->id)
+            ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
+            ->get();
+
+        $conversionsFromOrders = $attributedOrders->count();
+        $revenueFromOrders = $attributedOrders->sum('total');
+
+        $conversionsFromEvents = $attributedEvents->count();
+        $revenueFromEvents = $attributedEvents->sum('event_value');
+
+        // Combine both sources (avoid double counting if both exist)
+        $milestone->conversions = max($conversionsFromOrders, $conversionsFromEvents);
+        $milestone->attributed_revenue = max($revenueFromOrders, $revenueFromEvents);
+
+        // Calculate CAC if budget is set
+        if ($milestone->hasBudget() && $milestone->conversions > 0) {
+            $milestone->cac = round($milestone->budget / $milestone->conversions, 2);
+            $milestone->roi = $milestone->calculateROI();
+            $milestone->roas = $milestone->calculateROAS();
+        } else {
+            $milestone->cac = null;
+            $milestone->roi = null;
+            $milestone->roas = null;
         }
 
         $milestone->metrics_updated_at = now();
