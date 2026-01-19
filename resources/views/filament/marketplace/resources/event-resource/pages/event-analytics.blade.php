@@ -10,9 +10,14 @@
         @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
         .milestone-card { transition: all 0.2s ease; }
         .milestone-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-        #globeMap { background: #f8fafc !important; z-index: 1; }
-        .leaflet-container { background: #f8fafc !important; }
-        .globe-modal-overlay { z-index: 9999 !important; }
+        #globeMap { background: #f8fafc !important; }
+        .leaflet-container { background: #f8fafc !important; font-size: 14px; }
+        .globe-modal-overlay { z-index: 99999 !important; position: fixed !important; }
+        .leaflet-pane { z-index: 1 !important; }
+        .leaflet-tile-pane { z-index: 1 !important; }
+        .leaflet-overlay-pane { z-index: 2 !important; }
+        .leaflet-marker-pane { z-index: 3 !important; }
+        .leaflet-popup-pane { z-index: 4 !important; }
     </style>
     @endpush
 
@@ -1198,10 +1203,18 @@
         </div>
 
         {{-- Globe Modal --}}
-        <div x-show="showGlobeModal" x-transition class="fixed inset-0 globe-modal-overlay" x-cloak>
+        <div x-show="showGlobeModal"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 globe-modal-overlay"
+             style="display: none;">
             <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" @click="showGlobeModal = false"></div>
-            <div class="fixed inset-4 bg-slate-50 rounded-3xl overflow-hidden shadow-2xl" style="z-index: 10000;">
-                <div id="globeMap" class="w-full h-full"></div>
+            <div class="fixed top-4 left-4 right-4 bottom-4 bg-slate-50 rounded-3xl overflow-hidden shadow-2xl" style="z-index: 100000; position: relative;">
+                <div id="globeMap" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; min-height: 400px;"></div>
 
                 {{-- Header Overlay --}}
                 <div class="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-slate-50 via-slate-50/80 to-transparent pointer-events-none">
