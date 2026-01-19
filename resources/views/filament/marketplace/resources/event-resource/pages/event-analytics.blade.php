@@ -26,6 +26,10 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     @endpush
 
+    @php
+        $liveData = $this->eventMode === 'live' ? $this->analyticsService->getLiveVisitors($this->event) : ['count' => 0, 'activity' => [], 'locations' => []];
+        $globeData = $this->eventMode === 'live' ? $this->getGlobeData() : [];
+    @endphp
     <div x-data="eventAnalyticsDashboard(@js([
         'eventId' => $this->eventId,
         'eventMode' => $this->eventMode,
@@ -39,7 +43,9 @@
         'recentSales' => $this->recentSales,
         'adCampaigns' => $this->getAdCampaigns(),
         'funnel' => $this->getFunnelMetrics(),
-        'liveVisitors' => $this->eventMode === 'live' ? $this->getLiveVisitorCount() : 0,
+        'liveVisitors' => $liveData['count'] ?? 0,
+        'liveActivity' => $liveData['activity'] ?? [],
+        'globeData' => $globeData,
     ]))" x-init="init()" @milestones-updated.window="milestones = $event.detail.milestones; $nextTick(() => initCharts())">
 
         {{-- Top Navigation Bar --}}
@@ -1210,7 +1216,7 @@
                     <div id="globeMapContainer" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; min-height: 400px; background: #f8fafc;"></div>
 
                 {{-- Header Overlay --}}
-                <div class="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-slate-50 via-slate-50/80 to-transparent pointer-events-none">
+                <div class="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-slate-50 via-slate-50/80 to-transparent pointer-events-none" style="z-index: 1000;">
                     <div class="flex items-center justify-between pointer-events-auto">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center">
@@ -1238,7 +1244,7 @@
                 </div>
 
                 {{-- Live Activity Panel (Bottom Left) --}}
-                <div class="absolute bottom-6 left-6 w-80 bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200 overflow-hidden pointer-events-auto">
+                <div class="absolute bottom-6 left-6 w-80 bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200 overflow-hidden" style="z-index: 1000;">
                     <div class="p-4 border-b border-slate-200">
                         <div class="flex items-center justify-between">
                             <span class="text-sm font-semibold text-slate-800">Live Activity</span>
@@ -1260,7 +1266,7 @@
                 </div>
 
                 {{-- Top Locations Panel (Bottom Right) --}}
-                <div class="absolute bottom-6 right-6 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200 p-4 pointer-events-auto">
+                <div class="absolute bottom-6 right-6 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200 p-4" style="z-index: 1000;">
                     <div class="text-sm font-semibold text-slate-800 mb-3">Top Locations</div>
                     <div class="space-y-2">
                         <template x-for="l in topLocations.slice(0, 5)" :key="l.city">
@@ -1303,14 +1309,15 @@
                 liveVisitors: initialData.liveVisitors,
                 showGlobeModal: false,
 
-                // Live activity feed for globe modal
-                liveActivities: [
-                    {flag: '🇷🇴', action: 'Viewing checkout page', city: 'București', country: 'Romania', time: 'now'},
-                    {flag: '🇷🇴', action: 'Added 2x VIP to cart', city: 'Cluj-Napoca', country: 'Romania', time: '12s'},
-                    {flag: '🇭🇺', action: 'Viewing event page', city: 'Budapest', country: 'Hungary', time: '28s'},
-                    {flag: '🇷🇴', action: 'Completed purchase', city: 'Timișoara', country: 'Romania', time: '45s'},
-                    {flag: '🇦🇹', action: 'Viewing pricing', city: 'Vienna', country: 'Austria', time: '1m'},
-                ],
+                // Live activity feed for globe modal - use real data or fallback to demo
+                liveActivities: initialData.liveActivity && initialData.liveActivity.length > 0
+                    ? initialData.liveActivity
+                    : [
+                        {flag: '🇷🇴', action: 'No live visitors', city: '-', country: '-', time: '-'},
+                    ],
+
+                // Globe marker data for the map
+                globeData: initialData.globeData || [],
 
                 chartMetrics: [
                     {key: 'revenue', label: 'Revenue', color: '#8b5cf6', active: true},
@@ -1700,31 +1707,48 @@
 
                         window.globeMap = map;
 
-                        // Add markers from topLocations data or fallback to sample
-                        const locations = this.topLocations.length > 0
-                            ? this.topLocations.slice(0, 10).map(l => ({
-                                lat: l.lat || 44.4268,
-                                lng: l.lng || 26.1025,
+                        // Add markers from live globe data (real visitors) or topLocations as fallback
+                        let locations = [];
+
+                        if (this.globeData && this.globeData.length > 0) {
+                            // Use real live visitor data
+                            locations = this.globeData.map(v => ({
+                                lat: v.lat,
+                                lng: v.lng,
+                                city: v.city || 'Unknown',
+                                country: v.country || '',
+                                time: v.time || '',
+                                isLive: true
+                            }));
+                        } else if (this.topLocations && this.topLocations.length > 0) {
+                            // Fallback to topLocations
+                            locations = this.topLocations.slice(0, 10).map(l => ({
+                                lat: l.lat || null,
+                                lng: l.lng || null,
                                 city: l.city,
-                                visitors: l.tickets
-                            }))
-                            : [
-                                {lat: 44.4268, lng: 26.1025, city: 'București', visitors: 18},
-                                {lat: 46.7712, lng: 23.6236, city: 'Cluj-Napoca', visitors: 9},
-                                {lat: 45.7489, lng: 21.2087, city: 'Timișoara', visitors: 6},
-                                {lat: 47.4979, lng: 19.0402, city: 'Budapest', visitors: 5},
-                            ];
+                                visitors: l.tickets,
+                                isLive: false
+                            })).filter(l => l.lat && l.lng);
+                        }
+
+                        // No demo data fallback - show empty map if no real data
 
                         locations.forEach(loc => {
                             if (loc.lat && loc.lng) {
-                                L.circleMarker([loc.lat, loc.lng], {
-                                    radius: Math.max(8, Math.min(25, loc.visitors / 2)),
-                                    fillColor: '#10b981',
+                                const marker = L.circleMarker([loc.lat, loc.lng], {
+                                    radius: loc.isLive ? 12 : Math.max(8, Math.min(25, (loc.visitors || 1) / 2)),
+                                    fillColor: loc.isLive ? '#10b981' : '#6366f1',
                                     color: '#fff',
                                     weight: 2,
                                     opacity: 1,
-                                    fillOpacity: 0.7
-                                }).addTo(map).bindPopup(`<b>${loc.city}</b><br>${loc.visitors} visitors`);
+                                    fillOpacity: loc.isLive ? 0.8 : 0.6,
+                                    className: loc.isLive ? 'live-marker-pulse' : ''
+                                }).addTo(map);
+
+                                const popupContent = loc.isLive
+                                    ? `<b>${loc.city}</b>${loc.country ? ', ' + loc.country : ''}<br><span class="text-emerald-600">Online ${loc.time}</span>`
+                                    : `<b>${loc.city}</b><br>${loc.visitors || 0} tickets sold`;
+                                marker.bindPopup(popupContent);
                             }
                         });
 
