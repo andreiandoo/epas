@@ -1337,7 +1337,7 @@ class DesignerSeatingLayout extends Page
                     'label' => (string) $seatIndex,
                     'display_name' => $section->generateSeatDisplayName((string) $rowIndex, (string) $seatIndex),
                     'x' => $seatData['x'],
-                    'y' => 0, // Seats are positioned at row Y, individual seat Y offset is 0
+                    'y' => $seatData['y'], // Keep original Y coordinate for future recalculations
                     'angle' => 0,
                     'shape' => 'circle',
                     'seat_uid' => $section->generateSeatUid((string) $rowIndex, (string) $seatIndex),
