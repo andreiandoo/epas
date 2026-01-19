@@ -487,6 +487,22 @@ class EventAnalytics extends Page implements HasForms
         return $data['count'] ?? 0;
     }
 
+    /**
+     * Fetch live visitor data for polling (called via Alpine.js)
+     */
+    #[Renderless]
+    public function fetchLiveVisitorData(): array
+    {
+        $liveData = $this->analyticsService->getLiveVisitors($this->event);
+        $globeData = $this->analyticsService->getLiveVisitorsForGlobe($this->event);
+
+        return [
+            'count' => $liveData['count'] ?? 0,
+            'activity' => $liveData['activity'] ?? [],
+            'globeData' => $globeData,
+        ];
+    }
+
     /* Goals methods */
 
     public function openGoalModal(?int $goalId = null): void

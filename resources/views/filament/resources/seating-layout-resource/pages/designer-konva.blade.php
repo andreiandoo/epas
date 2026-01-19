@@ -1,5 +1,4 @@
 <x-filament-panels::page>
-    <div>
     <div class="space-y-6"
          x-data="konvaDesigner()"
          x-init="init()"
@@ -218,6 +217,7 @@
         </div>
     </div>
 
+    @push('scripts')
     {{-- Konva.js CDN --}}
     <script src="https://unpkg.com/konva@9/konva.min.js"></script>
 
@@ -1537,5 +1537,5 @@
             }
         }
     </script>
-    </div>
+    @endpush
 </x-filament-panels::page>

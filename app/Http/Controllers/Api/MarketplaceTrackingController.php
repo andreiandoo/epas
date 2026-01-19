@@ -230,24 +230,61 @@ class MarketplaceTrackingController extends Controller
     }
 
     /**
-     * Get location data from IP address
-     * Note: This is a basic implementation. For production, use MaxMind GeoIP2 or similar.
+     * Get location data from IP address using ip-api.com (free tier: 45 req/min)
+     * For production with high traffic, use MaxMind GeoIP2 or similar paid service.
      */
     protected function getLocationFromIp(string $ip): array
     {
-        // Skip for localhost/private IPs
+        // Skip for localhost/private IPs - use Bucharest as default for local dev
         if (in_array($ip, ['127.0.0.1', '::1']) || str_starts_with($ip, '192.168.') || str_starts_with($ip, '10.')) {
             return [
                 'country_code' => 'RO',
-                'region' => null,
-                'city' => 'Local',
-                'latitude' => null,
-                'longitude' => null,
+                'region' => 'București',
+                'city' => 'București',
+                'latitude' => 44.4268,
+                'longitude' => 26.1025,
             ];
         }
 
-        // Try to get location from cache or external service
-        // For now, return null values - can be enhanced with GeoIP service
+        // Try to get from cache first (cache for 24 hours per IP)
+        $cacheKey = "geoip_{$ip}";
+        $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+        if ($cached) {
+            return $cached;
+        }
+
+        // Query ip-api.com (free tier, 45 requests per minute)
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(2)
+                ->get("http://ip-api.com/json/{$ip}?fields=status,countryCode,regionName,city,lat,lon");
+
+            if ($response->successful()) {
+                $data = $response->json();
+
+                if ($data['status'] === 'success') {
+                    $location = [
+                        'country_code' => $data['countryCode'] ?? null,
+                        'region' => $data['regionName'] ?? null,
+                        'city' => $data['city'] ?? null,
+                        'latitude' => $data['lat'] ?? null,
+                        'longitude' => $data['lon'] ?? null,
+                    ];
+
+                    // Cache for 24 hours
+                    \Illuminate\Support\Facades\Cache::put($cacheKey, $location, now()->addHours(24));
+
+                    return $location;
+                }
+            }
+        } catch (\Exception $e) {
+            // Log but don't fail - geolocation is nice-to-have
+            \Illuminate\Support\Facades\Log::debug('GeoIP lookup failed', [
+                'ip' => $ip,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Fallback - return nulls
         return [
             'country_code' => null,
             'region' => null,
