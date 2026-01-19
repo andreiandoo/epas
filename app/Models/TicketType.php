@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Models\Seating\SeatingSection;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -72,6 +74,37 @@ class TicketType extends Model
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);
+    }
+
+    /**
+     * Seating sections assigned to this ticket type
+     */
+    public function seatingSections(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            SeatingSection::class,
+            'ticket_type_seating_sections',
+            'ticket_type_id',
+            'seating_section_id'
+        )->withTimestamps();
+    }
+
+    /**
+     * Get total capacity from assigned seating sections
+     */
+    public function getSeatingCapacityAttribute(): int
+    {
+        return $this->seatingSections->sum(function ($section) {
+            return $section->total_seats;
+        });
+    }
+
+    /**
+     * Check if this ticket type has seating sections assigned
+     */
+    public function hasSeatingAssigned(): bool
+    {
+        return $this->seatingSections()->exists();
     }
 
     /**

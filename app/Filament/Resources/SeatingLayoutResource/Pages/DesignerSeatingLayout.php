@@ -7,7 +7,7 @@ use App\Models\Seating\SeatingLayout;
 use App\Models\Seating\SeatingSection;
 use App\Models\Seating\SeatingRow;
 use App\Models\Seating\SeatingSeat;
-use App\Models\Seating\PriceTier;
+use App\Services\Seating\SVGImportService;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Pages\Page;
@@ -21,32 +21,148 @@ class DesignerSeatingLayout extends Page
 
     protected static ?string $title = 'Seating Designer';
 
-    // ATENȚIE: redenumit ca să nu intre în conflict cu Filament\Pages\Page::$layout (static).
     public SeatingLayout $seatingLayout;
 
     public array $sections = [];
 
     public ?int $selectedSection = null;
 
-    public array $priceTiers = [];
-
     public function mount(SeatingLayout $record): void
     {
         $this->seatingLayout = $record;
-
         $this->reloadSections();
-
-        // Load price tiers pentru tenant
-        $this->priceTiers = PriceTier::query()
-            ->orderBy('name')
-            ->get()
-            ->pluck('name', 'id')
-            ->toArray();
     }
 
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('importMap')
+                ->label('Import Map')
+                ->icon('heroicon-o-arrow-up-tray')
+                ->color('info')
+                ->modalWidth('5xl')
+                ->modalHeading('Import Seating Map')
+                ->steps([
+                    Forms\Components\Wizard\Step::make('Upload')
+                        ->description('Paste HTML/SVG content')
+                        ->icon('heroicon-o-document-text')
+                        ->schema([
+                            Forms\Components\Textarea::make('html_content')
+                                ->label('HTML/SVG Content')
+                                ->helperText('Paste the HTML content containing SVG areas and seats layers (e.g., from iabilet.ro)')
+                                ->rows(12)
+                                ->required()
+                                ->columnSpanFull(),
+                        ]),
+                    Forms\Components\Wizard\Step::make('Preview')
+                        ->description('Review detected elements')
+                        ->icon('heroicon-o-eye')
+                        ->schema([
+                            Forms\Components\Placeholder::make('preview_info')
+                                ->label('Detected Elements')
+                                ->content(function (Forms\Get $get) {
+                                    $htmlContent = $get('html_content');
+                                    if (empty($htmlContent)) {
+                                        return 'No content to preview. Please go back and paste HTML/SVG content.';
+                                    }
+
+                                    try {
+                                        $service = app(SVGImportService::class);
+                                        $imported = $service->parseIabiletHtml($htmlContent);
+
+                                        $sectionCount = $imported->sectionCount();
+                                        $seatCount = $imported->seatCount();
+                                        $categoryIds = $imported->getUniqueCategoryIds();
+
+                                        $preview = "**Sections detected:** {$sectionCount}\n\n";
+                                        $preview .= "**Seats detected:** {$seatCount}\n\n";
+
+                                        if (!empty($categoryIds)) {
+                                            $preview .= "**Category IDs:** " . implode(', ', $categoryIds) . "\n\n";
+                                        }
+
+                                        if ($imported->backgroundUrl) {
+                                            $preview .= "**Background image:** Found\n\n";
+                                        }
+
+                                        $preview .= "---\n\n**Section Details:**\n\n";
+
+                                        foreach ($imported->sections as $index => $section) {
+                                            $sectionNum = $index + 1;
+                                            $sectionSeats = count($section->seats);
+                                            $preview .= "- Section {$sectionNum}: {$sectionSeats} seats";
+                                            if ($section->categoryId) {
+                                                $preview .= " (Category: {$section->categoryId})";
+                                            }
+                                            $preview .= "\n";
+                                        }
+
+                                        return new \Illuminate\Support\HtmlString(
+                                            \Illuminate\Support\Str::markdown($preview)
+                                        );
+                                    } catch (\Exception $e) {
+                                        return "Error parsing content: " . $e->getMessage();
+                                    }
+                                })
+                                ->columnSpanFull(),
+                        ]),
+                    Forms\Components\Wizard\Step::make('Options')
+                        ->description('Configure import settings')
+                        ->icon('heroicon-o-cog-6-tooth')
+                        ->schema([
+                            Forms\Components\Toggle::make('import_seats')
+                                ->label('Import seats')
+                                ->default(true)
+                                ->helperText('Uncheck to import only sections/areas'),
+
+                            Forms\Components\Toggle::make('clear_existing')
+                                ->label('Clear existing sections')
+                                ->default(false)
+                                ->helperText('Warning: This will delete all existing sections and their seats'),
+
+                            Forms\Components\Placeholder::make('current_layout_info')
+                                ->label('Current Layout')
+                                ->content(fn () => "This layout currently has **{$this->seatingLayout->sections()->count()}** sections.")
+                                ->columnSpanFull(),
+                        ]),
+                ])
+                ->action(function (array $data): void {
+                    $service = app(SVGImportService::class);
+
+                    try {
+                        $imported = $service->parseIabiletHtml($data['html_content']);
+                        $imported->normalizeToCanvas(
+                            $this->seatingLayout->canvas_w,
+                            $this->seatingLayout->canvas_h
+                        );
+
+                        $stats = $service->createLayoutFromImport(
+                            $imported,
+                            $this->seatingLayout,
+                            importSeats: $data['import_seats'] ?? true,
+                            clearExisting: $data['clear_existing'] ?? false
+                        );
+
+                        $this->reloadSections();
+
+                        // Dispatch event to reload canvas
+                        $this->dispatch('layout-imported', sections: $this->sections);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Import successful')
+                            ->body("Imported {$stats['sections_created']} sections, {$stats['rows_created']} rows, and {$stats['seats_created']} seats")
+                            ->send();
+
+                    } catch (\Exception $e) {
+                        Notification::make()
+                            ->danger()
+                            ->title('Import failed')
+                            ->body($e->getMessage())
+                            ->send();
+                    }
+                }),
+
             Actions\Action::make('addSection')
                 ->label('Add Section')
                 ->icon('heroicon-o-plus-circle')
@@ -64,13 +180,6 @@ class DesignerSeatingLayout extends Page
                         ->helperText('Unique identifier (e.g., A, B, VIP)')
                         ->columnSpanFull(),
 
-                    Forms\Components\Select::make('price_tier_id')
-                        ->label('Default Price Tier')
-                        ->options(fn () => $this->priceTiers)
-                        ->searchable()
-                        ->nullable()
-                        ->columnSpanFull(),
-
                     Forms\Components\Select::make('section_type')
                         ->options([
                             'standard' => 'Standard (rows & seats)',
@@ -79,6 +188,18 @@ class DesignerSeatingLayout extends Page
                         ->default('standard')
                         ->required()
                         ->columnSpanFull(),
+
+                    Forms\Components\ColorPicker::make('color_hex')
+                        ->label('Section Background Color')
+                        ->default('#3B82F6')
+                        ->helperText('Background color for the section area')
+                        ->columnSpan(1),
+
+                    Forms\Components\ColorPicker::make('seat_color')
+                        ->label('Seat Color (Available)')
+                        ->default('#22C55E')
+                        ->helperText('Color for available seats in this section')
+                        ->columnSpan(1),
 
                     Forms\Components\Hidden::make('x_position')
                         ->default(100),
@@ -104,20 +225,14 @@ class DesignerSeatingLayout extends Page
                         ->helperText('Order in which sections are displayed')
                         ->columnSpanFull(),
                 ])
-                ->fillForm(function (): array {
-                    // Check if there's geometry data from drawing tools
-                    return [];
-                })
                 ->action(function (array $data): void {
                     $data['layout_id'] = $this->seatingLayout->id;
                     $data['tenant_id'] = $this->seatingLayout->tenant_id;
 
-                    // Ensure display_order has a default value
                     if (!isset($data['display_order']) || $data['display_order'] === null || $data['display_order'] === '') {
                         $data['display_order'] = 0;
                     }
 
-                    // Parse metadata if it's a JSON string
                     if (isset($data['metadata']) && is_string($data['metadata'])) {
                         $data['metadata'] = json_decode($data['metadata'], true);
                     }
@@ -126,7 +241,6 @@ class DesignerSeatingLayout extends Page
 
                     $this->reloadSections();
 
-                    // Dispatch event to add to canvas
                     $this->dispatch('section-added', section: $section->load('rows.seats')->toArray());
 
                     Notification::make()
@@ -218,12 +332,10 @@ class DesignerSeatingLayout extends Page
                     $data['layout_id'] = $this->seatingLayout->id;
                     $data['tenant_id'] = $this->seatingLayout->tenant_id;
 
-                    // Ensure display_order has a default value
                     if (!isset($data['display_order']) || $data['display_order'] === null || $data['display_order'] === '') {
                         $data['display_order'] = 0;
                     }
 
-                    // Parse metadata if it's a JSON string
                     if (isset($data['metadata']) && is_string($data['metadata'])) {
                         $data['metadata'] = json_decode($data['metadata'], true);
                     }
@@ -232,7 +344,6 @@ class DesignerSeatingLayout extends Page
 
                     $this->reloadSections();
 
-                    // Dispatch event to add to canvas
                     $this->dispatch('section-added', section: $zone->toArray());
 
                     Notification::make()
@@ -250,7 +361,10 @@ class DesignerSeatingLayout extends Page
                 ->form([
                     Forms\Components\Select::make('section_id')
                         ->label('Section')
-                        ->options(fn () => $this->seatingLayout->sections()->orderBy('display_order')->pluck('name', 'id'))
+                        ->options(fn () => $this->seatingLayout->sections()
+                            ->where('section_type', 'standard')
+                            ->orderBy('display_order')
+                            ->pluck('name', 'id'))
                         ->required()
                         ->searchable()
                         ->columnSpanFull(),
@@ -289,8 +403,8 @@ class DesignerSeatingLayout extends Page
 
                     Forms\Components\TextInput::make('row_prefix')
                         ->label('Row Prefix')
-                        ->default('Row ')
-                        ->helperText('e.g., "Row " or "R"')
+                        ->default('')
+                        ->helperText('e.g., "Row " or leave empty for numbers only')
                         ->columnSpan(1),
 
                     Forms\Components\TextInput::make('seat_prefix')
@@ -357,7 +471,7 @@ class DesignerSeatingLayout extends Page
 
                     Forms\Components\Textarea::make('alignment_config')
                         ->label('Alignment per Row Configuration')
-                        ->helperText('Enter alignment for each row, separated by commas (e.g., "left,center,center,right"). Options: left, center, right. Must match number of rows.')
+                        ->helperText('Enter alignment for each row, separated by commas (e.g., "left,center,center,right"). Options: left, center, right.')
                         ->visible(fn ($get) => $get('use_variable_seats'))
                         ->columnSpanFull()
                         ->rows(2),
@@ -367,10 +481,117 @@ class DesignerSeatingLayout extends Page
 
                     $this->reloadSections();
 
+                    $seatsPerRow = $data['seats_per_row'] ?? 'variable';
                     Notification::make()
                         ->success()
                         ->title('Seats generated successfully')
-                        ->body("Created {$data['num_rows']} rows with {$data['seats_per_row']} seats each.")
+                        ->body("Created {$data['num_rows']} rows with {$seatsPerRow} seats each.")
+                        ->send();
+                }),
+
+            Actions\Action::make('manageRows')
+                ->label('Manage Rows')
+                ->icon('heroicon-o-queue-list')
+                ->color('gray')
+                ->modalWidth('3xl')
+                ->modalHeading('Manage Section Rows')
+                ->form([
+                    Forms\Components\Select::make('section_id')
+                        ->label('Section')
+                        ->options(fn () => $this->seatingLayout->sections()
+                            ->where('section_type', 'standard')
+                            ->orderBy('display_order')
+                            ->pluck('name', 'id'))
+                        ->required()
+                        ->searchable()
+                        ->reactive()
+                        ->columnSpanFull(),
+
+                    Forms\Components\Placeholder::make('rows_info')
+                        ->label('Existing Rows')
+                        ->content(function ($get) {
+                            $sectionId = $get('section_id');
+                            if (!$sectionId) return 'Select a section to see its rows';
+
+                            $section = SeatingSection::with('rows.seats')->find($sectionId);
+                            if (!$section) return 'Section not found';
+
+                            if ($section->rows->isEmpty()) {
+                                return 'No rows in this section yet';
+                            }
+
+                            $rows = $section->rows->map(function ($row) {
+                                return "Row {$row->label}: {$row->seats->count()} seats";
+                            })->join(', ');
+
+                            return $rows;
+                        })
+                        ->columnSpanFull(),
+
+                    Forms\Components\TextInput::make('new_row_label')
+                        ->label('New Row Label')
+                        ->helperText('Add a new row to this section')
+                        ->columnSpan(1),
+
+                    Forms\Components\TextInput::make('new_row_seats')
+                        ->label('Number of Seats')
+                        ->numeric()
+                        ->minValue(1)
+                        ->maxValue(100)
+                        ->default(10)
+                        ->columnSpan(1),
+                ])
+                ->action(function (array $data): void {
+                    if (empty($data['section_id']) || empty($data['new_row_label'])) {
+                        Notification::make()
+                            ->warning()
+                            ->title('Missing information')
+                            ->body('Please select a section and enter a row label')
+                            ->send();
+                        return;
+                    }
+
+                    $section = SeatingSection::find($data['section_id']);
+                    if (!$section) return;
+
+                    // Calculate Y position based on existing rows
+                    $lastRow = $section->rows()->orderByDesc('y')->first();
+                    $newY = $lastRow ? $lastRow->y + 40 : 0;
+
+                    $row = SeatingRow::create([
+                        'section_id' => $section->id,
+                        'label' => $data['new_row_label'],
+                        'y' => $newY,
+                        'rotation' => 0,
+                        'seat_count' => 0,
+                    ]);
+
+                    // Create seats for the new row
+                    $numSeats = (int) ($data['new_row_seats'] ?? 10);
+                    $seatSpacing = 30;
+
+                    for ($s = 1; $s <= $numSeats; $s++) {
+                        SeatingSeat::create([
+                            'row_id' => $row->id,
+                            'label' => (string) $s,
+                            'display_name' => $section->generateSeatDisplayName($data['new_row_label'], (string) $s),
+                            'x' => ($s - 1) * $seatSpacing,
+                            'y' => 0,
+                            'angle' => 0,
+                            'shape' => 'circle',
+                            'seat_uid' => $section->generateSeatUid($data['new_row_label'], (string) $s),
+                        ]);
+                    }
+
+                    $row->update(['seat_count' => $numSeats]);
+
+                    $this->reloadSections();
+                    $this->dispatch('layout-updated', sections: $this->sections);
+
+                    Notification::make()
+                        ->success()
+                        ->title('Row added')
+                        ->body("Added row '{$data['new_row_label']}' with {$numSeats} seats")
                         ->send();
                 }),
 
@@ -393,7 +614,7 @@ class DesignerSeatingLayout extends Page
             return;
         }
 
-        $rowPrefix  = $data['row_prefix']  ?? 'Row ';
+        $rowPrefix  = $data['row_prefix']  ?? '';
         $seatPrefix = $data['seat_prefix'] ?? '';
         $rowSpacing = $data['row_spacing'] ?? 40;
         $seatSpacing = $data['seat_spacing'] ?? 30;
@@ -405,7 +626,6 @@ class DesignerSeatingLayout extends Page
             $seatsPerRowArray = array_map('trim', explode(',', $data['seats_config']));
             $seatsPerRowArray = array_map('intval', $seatsPerRowArray);
 
-            // Validate count matches
             if (count($seatsPerRowArray) !== $numRows) {
                 Notification::make()
                     ->danger()
@@ -415,7 +635,6 @@ class DesignerSeatingLayout extends Page
                 return;
             }
         } else {
-            // Use same seats per row for all
             $defaultSeats = (int) ($data['seats_per_row'] ?? 10);
             $seatsPerRowArray = array_fill(0, $numRows, $defaultSeats);
         }
@@ -425,7 +644,6 @@ class DesignerSeatingLayout extends Page
         if (!empty($data['use_variable_seats']) && !empty($data['alignment_config'])) {
             $alignmentArray = array_map('trim', explode(',', $data['alignment_config']));
 
-            // Validate count matches
             if (count($alignmentArray) !== $numRows) {
                 Notification::make()
                     ->danger()
@@ -435,7 +653,6 @@ class DesignerSeatingLayout extends Page
                 return;
             }
 
-            // Validate alignment values
             $validAlignments = ['left', 'center', 'right'];
             foreach ($alignmentArray as $alignment) {
                 if (!in_array($alignment, $validAlignments)) {
@@ -448,7 +665,6 @@ class DesignerSeatingLayout extends Page
                 }
             }
         } else {
-            // Use same alignment for all rows
             $defaultAlignment = $data['seat_alignment'] ?? 'center';
             $alignmentArray = array_fill(0, $numRows, $defaultAlignment);
         }
@@ -499,29 +715,30 @@ class DesignerSeatingLayout extends Page
                 SeatingSeat::create([
                     'row_id'   => $row->id,
                     'label'    => $seatLabel,
+                    'display_name' => $section->generateSeatDisplayName($rowLabel, $seatLabel),
                     'x'        => $startX + (($s - 1) * $seatSpacing),
                     'y'        => 0,
                     'angle'    => 0,
                     'shape'    => 'circle',
-                    'seat_uid' => SeatingSeat::generateSeatUid($section->section_code ?? $section->name, $rowLabel, $seatLabel),
+                    'seat_uid' => $section->generateSeatUid($rowLabel, $seatLabel),
                 ]);
             }
 
-            // Update row seat count
             $row->update(['seat_count' => $seatsInThisRow]);
 
-            // Calculate next row Y position with grouping
             $currentY += $rowSpacing;
 
-            // Add aisle spacing after each group
             if ($useGrouping && $r < $numRows && $r % $groupSize === 0) {
                 $currentY += $aisleSpacing;
             }
         }
+
+        // Dispatch update to canvas
+        $this->dispatch('layout-updated', sections: $this->sections);
     }
 
     /**
-     * Reîncarcă secțiunile pentru layout-ul curent.
+     * Reload sections for the current layout
      */
     protected function reloadSections(): void
     {
@@ -566,6 +783,34 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Update section colors (called from frontend)
+     */
+    public function updateSectionColors($sectionId, $colorHex, $seatColor): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Section not found')
+                ->send();
+            return;
+        }
+
+        $section->update([
+            'color_hex' => $colorHex,
+            'seat_color' => $seatColor,
+        ]);
+
+        $this->reloadSections();
+
+        Notification::make()
+            ->success()
+            ->title('Section colors updated')
+            ->send();
+    }
+
+    /**
      * Delete section (called from Konva.js)
      */
     public function deleteSection($sectionId): void
@@ -592,13 +837,92 @@ class DesignerSeatingLayout extends Page
         $section->delete();
         $this->reloadSections();
 
-        // Dispatch event to remove from canvas
         $this->dispatch('section-deleted', sectionId: $sectionId);
 
         Notification::make()
             ->success()
             ->title('Section deleted')
             ->body("Section '{$sectionName}' has been deleted")
+            ->send();
+    }
+
+    /**
+     * Delete a row from a section
+     */
+    public function deleteRow($rowId): void
+    {
+        $row = SeatingRow::find($rowId);
+
+        if (!$row) {
+            Notification::make()
+                ->danger()
+                ->title('Row not found')
+                ->send();
+            return;
+        }
+
+        $section = $row->section;
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Row does not belong to this layout')
+                ->send();
+            return;
+        }
+
+        $rowLabel = $row->label;
+        $row->delete();
+        $this->reloadSections();
+
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Row deleted')
+            ->body("Row '{$rowLabel}' has been deleted")
+            ->send();
+    }
+
+    /**
+     * Delete a seat
+     */
+    public function deleteSeat($seatId): void
+    {
+        $seat = SeatingSeat::find($seatId);
+
+        if (!$seat) {
+            Notification::make()
+                ->danger()
+                ->title('Seat not found')
+                ->send();
+            return;
+        }
+
+        $row = $seat->row;
+        $section = $row?->section;
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Seat does not belong to this layout')
+                ->send();
+            return;
+        }
+
+        $seatLabel = $seat->label;
+        $seat->delete();
+
+        // Update row seat count
+        $row->decrement('seat_count');
+
+        $this->reloadSections();
+
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Seat deleted')
+            ->body("Seat '{$seatLabel}' has been deleted")
             ->send();
     }
 
@@ -617,11 +941,12 @@ class DesignerSeatingLayout extends Page
             return;
         }
 
-        // Find or create a "Manual" row for manually placed seats
+        // Find or create a row for the seat
+        $rowLabel = $data['row_label'] ?? 'Manual';
         $row = SeatingRow::firstOrCreate(
             [
                 'section_id' => $section->id,
-                'label' => 'Manual',
+                'label' => $rowLabel,
             ],
             [
                 'y' => 0,
@@ -630,43 +955,96 @@ class DesignerSeatingLayout extends Page
             ]
         );
 
-        // Create the seat
+        $seatLabel = $data['label'];
+
         $seat = SeatingSeat::create([
             'row_id' => $row->id,
-            'label' => $data['label'],
+            'label' => $seatLabel,
+            'display_name' => $section->generateSeatDisplayName($rowLabel, $seatLabel),
             'x' => $data['x'],
             'y' => $data['y'],
             'angle' => $data['angle'] ?? 0,
             'shape' => $data['shape'] ?? 'circle',
-            'seat_uid' => SeatingSeat::generateSeatUid(
-                $section->section_code ?? $section->name,
-                'Manual',
-                $data['label']
-            ),
+            'seat_uid' => $section->generateSeatUid($rowLabel, $seatLabel),
         ]);
 
-        // Update row seat count
         $row->increment('seat_count');
 
         $this->reloadSections();
 
-        // Dispatch event to add to canvas
         $this->dispatch('seat-added', seat: $seat->toArray(), sectionId: $section->id);
 
         Notification::make()
             ->success()
             ->title('Seat added')
-            ->body("Seat '{$data['label']}' added to section")
+            ->body("Seat '{$seatLabel}' added to section")
             ->send();
     }
 
     /**
-     * Date trimise către view.
+     * Assign selected seats to a section (bulk operation)
+     */
+    public function assignSeatsToSection(array $seatIds, int $sectionId, string $rowLabel): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Section not found')
+                ->send();
+            return;
+        }
+
+        // Find or create the row
+        $row = SeatingRow::firstOrCreate(
+            [
+                'section_id' => $section->id,
+                'label' => $rowLabel,
+            ],
+            [
+                'y' => 0,
+                'rotation' => 0,
+                'seat_count' => 0,
+            ]
+        );
+
+        $assignedCount = 0;
+
+        foreach ($seatIds as $index => $seatId) {
+            $seat = SeatingSeat::find($seatId);
+            if (!$seat) continue;
+
+            // Update seat's row and regenerate UID
+            $seatLabel = (string) ($index + 1);
+            $seat->update([
+                'row_id' => $row->id,
+                'label' => $seatLabel,
+                'display_name' => $section->generateSeatDisplayName($rowLabel, $seatLabel),
+                'seat_uid' => $section->generateSeatUid($rowLabel, $seatLabel),
+            ]);
+
+            $assignedCount++;
+        }
+
+        $row->update(['seat_count' => $row->seats()->count()]);
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Seats assigned')
+            ->body("Assigned {$assignedCount} seats to row '{$rowLabel}' in section '{$section->name}'")
+            ->send();
+    }
+
+    /**
+     * Data sent to view
      */
     protected function getViewData(): array
     {
         return [
-            // Păstrăm cheia 'layout' dacă Blade-ul tău se bazează pe ea.
             'layout'       => $this->seatingLayout,
             'sections'     => $this->sections,
             'canvasWidth'  => $this->seatingLayout->canvas_width,

@@ -25,6 +25,7 @@ class Event extends Model
         'marketplace_client_id',
         'marketplace_organizer_id',
         'venue_id',
+        'seating_layout_id',
         'ticket_template_id',
         'commission_mode',
         'commission_rate',
@@ -292,9 +293,30 @@ class Event extends Model
         return $this->belongsTo(\App\Models\Venue::class);
     }
 
+    public function seatingLayout(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Seating\SeatingLayout::class);
+    }
+
     public function ticketTemplate(): BelongsTo
     {
         return $this->belongsTo(\App\Models\TicketTemplate::class);
+    }
+
+    /**
+     * Get available seating sections for this event
+     * Based on the selected seating layout
+     */
+    public function getAvailableSeatingSections()
+    {
+        if (!$this->seating_layout_id) {
+            return collect();
+        }
+
+        return $this->seatingLayout?->sections()
+            ->where('section_type', 'standard')
+            ->orderBy('display_order')
+            ->get() ?? collect();
     }
 
     /**

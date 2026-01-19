@@ -2,9 +2,12 @@
 
 namespace App\Models\Seating;
 
+use App\Models\TicketType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class SeatingSection extends Model
 {
@@ -12,8 +15,8 @@ class SeatingSection extends Model
         'layout_id',
         'tenant_id',
         'name',
+        'display_name_template',
         'section_code',
-        'price_tier_id',
         'section_type',
         'x_position',
         'y_position',
@@ -22,6 +25,7 @@ class SeatingSection extends Model
         'rotation',
         'display_order',
         'color_hex',
+        'seat_color',
         'background_color',
         'corner_radius',
         'background_image',
@@ -43,6 +47,7 @@ class SeatingSection extends Model
 
     protected $attributes = [
         'color_hex' => '#3B82F6',
+        'seat_color' => '#22C55E',
         'section_type' => 'standard',
         'x_position' => 100,
         'y_position' => 100,
@@ -64,5 +69,61 @@ class SeatingSection extends Model
     public function rows(): HasMany
     {
         return $this->hasMany(SeatingRow::class, 'section_id');
+    }
+
+    public function seats(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            SeatingSeat::class,
+            SeatingRow::class,
+            'section_id',
+            'row_id',
+            'id',
+            'id'
+        );
+    }
+
+    public function ticketTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            TicketType::class,
+            'ticket_type_seating_sections',
+            'seating_section_id',
+            'ticket_type_id'
+        )->withTimestamps();
+    }
+
+    /**
+     * Get total seat count for this section
+     */
+    public function getTotalSeatsAttribute(): int
+    {
+        return $this->seats()->count();
+    }
+
+    /**
+     * Generate display name for a seat in this section
+     * Format: "Sector A, rând 2, loc 10"
+     */
+    public function generateSeatDisplayName(string $rowLabel, string $seatLabel): string
+    {
+        if ($this->display_name_template) {
+            return str_replace(
+                ['{section}', '{row}', '{seat}'],
+                [$this->name, $rowLabel, $seatLabel],
+                $this->display_name_template
+            );
+        }
+
+        return "{$this->name}, rând {$rowLabel}, loc {$seatLabel}";
+    }
+
+    /**
+     * Generate seat UID in format: SECTION_CODE-ROW-SEAT
+     */
+    public function generateSeatUid(string $rowLabel, string $seatLabel): string
+    {
+        $sectionCode = $this->section_code ?: strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $this->name));
+        return "{$sectionCode}-{$rowLabel}-{$seatLabel}";
     }
 }

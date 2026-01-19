@@ -2,9 +2,12 @@
     <div class="space-y-6"
          x-data="konvaDesigner()"
          x-init="init()"
+         @@keydown.window="handleKeyDown($event)"
          @@section-deleted.window="handleSectionDeleted($event.detail)"
          @@section-added.window="handleSectionAdded($event.detail)"
-         @@seat-added.window="handleSeatAdded($event.detail)">
+         @@seat-added.window="handleSeatAdded($event.detail)"
+         @@layout-imported.window="handleLayoutImported($event.detail)"
+         @@layout-updated.window="handleLayoutUpdated($event.detail)">
         {{-- Canvas Container --}}
         <div class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
             <div class="flex items-center justify-between mb-4">
@@ -12,7 +15,7 @@
                     <h3 class="text-lg font-semibold text-gray-900">Canvas Designer </h3>
                     <p class="text-sm text-gray-500">Layout: {{ $canvasWidth }}x{{ $canvasHeight }}px</p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     <button @click="zoomOut" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
@@ -25,9 +28,16 @@
                         </svg>
                     </button>
                     <button @click="resetView" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200">Reset</button>
+                    <button @click="zoomToFit" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Fit all content in view">Fit</button>
                     <button @click="toggleGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm" :class="showGrid ? 'bg-blue-500 text-white' : 'bg-gray-100'">
                         <x-svg-icon name="konvagrid" class="w-5 h-5 text-purple-600" />
                         Grid
+                    </button>
+                    <button @click="toggleSnapToGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm" :class="snapToGrid ? 'bg-indigo-500 text-white' : 'bg-gray-100'" title="Snap sections to grid when moving">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"></path>
+                        </svg>
+                        Snap
                     </button>
 
                     <div class="h-6 mx-1 border-l border-gray-300"></div>
@@ -35,6 +45,12 @@
                     <button @click="setDrawMode('select')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'select' ? 'bg-blue-500 text-white' : 'bg-gray-100'">
                         <x-svg-icon name="konvaselect" class="w-5 h-5 text-purple-600" />
                         Select
+                    </button>
+                    <button @click="setDrawMode('multiselect')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'multiselect' ? 'bg-orange-500 text-white' : 'bg-gray-100'">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
+                        </svg>
+                        Multi-Select
                     </button>
                     <button @click="setDrawMode('polygon')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'polygon' ? 'bg-green-500 text-white' : 'bg-gray-100'">
                         <x-svg-icon name="konvapolygon" class="w-5 h-5 text-purple-600" />
@@ -52,7 +68,7 @@
                         <x-svg-icon name="konvafinish" class="w-5 h-5 text-purple-600" />
                         Finish
                     </button>
-                    <button @click="cancelDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-gray-600 border rounded-md border-slate-200" x-show="drawMode !== 'select'">
+                    <button @click="cancelDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-gray-600 border rounded-md border-slate-200" x-show="drawMode !== 'select' && drawMode !== 'multiselect'">
                         <x-svg-icon name="konvacancel" class="w-5 h-5 text-purple-600" />
                         Cancel
                     </button>
@@ -63,6 +79,46 @@
                         <x-svg-icon name="konvadelete" class="w-5 h-5 text-purple-600" />
                         Delete
                     </button>
+
+                    <button @click="exportSVG" type="button" class="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Export as SVG image">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        SVG
+                    </button>
+                    <button @click="exportJSON" type="button" class="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Export as JSON backup">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        JSON
+                    </button>
+                </div>
+            </div>
+
+            {{-- Multi-select toolbar --}}
+            <div x-show="selectedSeats.length > 0" x-transition class="flex items-center gap-4 p-3 mb-4 border rounded-lg bg-orange-50 border-orange-200">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-orange-800" x-text="`${selectedSeats.length} seats selected`"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select x-model="assignToSectionId" class="text-sm border-gray-300 rounded-md">
+                        <option value="">Select Section...</option>
+                        @foreach($sections as $section)
+                            @if($section['section_type'] === 'standard')
+                                <option value="{{ $section['id'] }}">{{ $section['name'] }}</option>
+                            @endif
+                        @endforeach
+                    </select>
+                    <input type="text" x-model="assignToRowLabel" placeholder="Row label (e.g., A, 1)" class="w-32 text-sm border-gray-300 rounded-md">
+                    <button @click="assignSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-orange-600 rounded-md hover:bg-orange-700" :disabled="!assignToSectionId || !assignToRowLabel">
+                        Assign to Row
+                    </button>
+                    <button @click="deleteSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-red-600 rounded-md hover:bg-red-700">
+                        Delete Selected
+                    </button>
+                    <button @click="clearSelection" type="button" class="px-3 py-1 text-sm bg-gray-200 rounded-md hover:bg-gray-300">
+                        Clear Selection
+                    </button>
                 </div>
             </div>
 
@@ -70,22 +126,34 @@
                 <div id="konva-container" wire:ignore></div>
             </div>
 
+            {{-- Statistics --}}
             <div class="grid grid-cols-4 gap-4 mt-4 text-sm">
                 <div class="p-3 text-center rounded-lg bg-gray-50">
                     <div class="text-gray-600">Sections</div>
                     <div class="text-2xl font-bold" x-text="sections.length"></div>
                 </div>
                 <div class="p-3 text-center rounded-lg bg-blue-50">
-                    <div class="text-blue-600">Pan</div>
-                    <div class="text-sm font-medium">Click + Drag Background</div>
+                    <div class="text-blue-600">Rows</div>
+                    <div class="text-2xl font-bold" x-text="getTotalRows()"></div>
                 </div>
                 <div class="p-3 text-center rounded-lg bg-green-50">
-                    <div class="text-green-600">Zoom</div>
-                    <div class="text-sm font-medium">Mouse Wheel</div>
+                    <div class="text-green-600">Seats</div>
+                    <div class="text-2xl font-bold" x-text="getTotalSeats()"></div>
                 </div>
                 <div class="p-3 text-center rounded-lg bg-purple-50">
-                    <div class="text-purple-600">Move/Resize</div>
-                    <div class="text-sm font-medium">Drag Sections</div>
+                    <div class="text-purple-600">Canvas</div>
+                    <div class="text-sm font-bold" x-text="`${canvasWidth}x${canvasHeight}`"></div>
+                </div>
+            </div>
+
+            {{-- Keyboard Shortcuts --}}
+            <div class="p-3 mt-2 border rounded-lg bg-slate-50 border-slate-200">
+                <div class="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-600">
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Del</kbd> Delete selected</span>
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Esc</kbd> Cancel / Deselect</span>
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Shift</kbd>+Click Multi-select</span>
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Scroll</kbd> Zoom</span>
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Drag</kbd> Pan canvas</span>
                 </div>
             </div>
         </div>
@@ -99,7 +167,10 @@
                         <div class="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
                              @click="selectSection({{ $section['id'] }})">
                             <div class="flex items-center gap-3">
-                                <div class="w-4 h-4 rounded" style="background-color: {{ $section['color_hex'] ?? '#3B82F6' }}"></div>
+                                <div class="flex gap-1">
+                                    <div class="w-4 h-4 border rounded" style="background-color: {{ $section['color_hex'] ?? '#3B82F6' }}" title="Section color"></div>
+                                    <div class="w-4 h-4 border rounded" style="background-color: {{ $section['seat_color'] ?? '#22C55E' }}" title="Seat color"></div>
+                                </div>
                                 <div>
                                     <div class="font-medium">{{ $section['section_code'] }} - {{ $section['name'] }}</div>
                                     <div class="text-xs text-gray-500">
@@ -108,15 +179,42 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="text-xs text-gray-400">
-                                ({{ $section['x_position'] }}, {{ $section['y_position'] }}) •
-                                {{ $section['width'] }}x{{ $section['height'] }}
+                            <div class="flex items-center gap-4">
+                                <div class="text-xs text-gray-400">
+                                    ({{ $section['x_position'] }}, {{ $section['y_position'] }}) •
+                                    {{ $section['width'] }}x{{ $section['height'] }}
+                                </div>
+                                <button @click.stop="editSectionColors({{ $section['id'] }}, '{{ $section['color_hex'] ?? '#3B82F6' }}', '{{ $section['seat_color'] ?? '#22C55E' }}')"
+                                        class="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200">
+                                    Edit Colors
+                                </button>
                             </div>
                         </div>
                     @endforeach
                 </div>
             </div>
         @endif
+
+        {{-- Color Edit Modal --}}
+        <div x-show="showColorModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div class="p-6 bg-white rounded-lg shadow-xl w-96" @click.away="showColorModal = false">
+                <h3 class="mb-4 text-lg font-semibold">Edit Section Colors</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-1 text-sm font-medium">Section Background Color</label>
+                        <input type="color" x-model="editColorHex" class="w-full h-10 rounded cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-medium">Seat Color (Available)</label>
+                        <input type="color" x-model="editSeatColor" class="w-full h-10 rounded cursor-pointer">
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button @click="showColorModal = false" type="button" class="px-4 py-2 text-sm bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+                        <button @click="saveSectionColors" type="button" class="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     {{-- Konva.js CDN --}}
@@ -143,9 +241,274 @@
                 tempCircle: null,
                 circleStart: null,
 
+                // Multi-select state
+                selectedSeats: [],
+                selectionRect: null,
+                selectionStartPos: null,
+                assignToSectionId: '',
+                assignToRowLabel: '',
+
+                // Color edit modal
+                showColorModal: false,
+                editSectionId: null,
+                editColorHex: '#3B82F6',
+                editSeatColor: '#22C55E',
+
+                // Snap to grid
+                snapToGrid: false,
+                gridSize: 50,
+
+                // Tooltip
+                tooltip: null,
+
                 init() {
                     this.createStage();
                     this.loadSections();
+                    this.createTooltip();
+                },
+
+                // Keyboard shortcuts handler
+                handleKeyDown(e) {
+                    // Don't handle if typing in an input
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                        return;
+                    }
+
+                    switch (e.key) {
+                        case 'Delete':
+                        case 'Backspace':
+                            if (this.selectedSeats.length > 0) {
+                                this.deleteSelectedSeats();
+                            } else if (this.selectedSection) {
+                                this.deleteSelected();
+                            }
+                            e.preventDefault();
+                            break;
+
+                        case 'Escape':
+                            this.cancelDrawing();
+                            this.clearSelection();
+                            this.transformer.nodes([]);
+                            this.selectedSection = null;
+                            this.layer.batchDraw();
+                            break;
+
+                        case 'a':
+                            if (e.ctrlKey || e.metaKey) {
+                                // Ctrl+A - select all seats in multi-select mode
+                                if (this.drawMode === 'multiselect') {
+                                    this.selectAllSeats();
+                                    e.preventDefault();
+                                }
+                            }
+                            break;
+                    }
+                },
+
+                // Select all seats
+                selectAllSeats() {
+                    this.clearSelection();
+                    this.layer.find('.seat').forEach(seat => {
+                        const seatId = seat.getAttr('seatId');
+                        if (seatId) {
+                            this.selectedSeats.push({ id: seatId, node: seat });
+                            seat.stroke('#F97316');
+                            seat.strokeWidth(3);
+                        }
+                    });
+                    this.layer.batchDraw();
+                },
+
+                // Statistics functions
+                getTotalRows() {
+                    return this.sections.reduce((sum, section) => sum + (section.rows?.length || 0), 0);
+                },
+
+                getTotalSeats() {
+                    return this.sections.reduce((sum, section) => {
+                        return sum + (section.rows || []).reduce((rowSum, row) => {
+                            return rowSum + (row.seats?.length || 0);
+                        }, 0);
+                    }, 0);
+                },
+
+                // Zoom to fit all content
+                zoomToFit() {
+                    if (this.sections.length === 0) {
+                        this.resetView();
+                        return;
+                    }
+
+                    // Calculate bounding box of all sections
+                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+                    this.sections.forEach(section => {
+                        const x = section.x_position || 0;
+                        const y = section.y_position || 0;
+                        const w = section.width || 200;
+                        const h = section.height || 150;
+
+                        minX = Math.min(minX, x);
+                        minY = Math.min(minY, y);
+                        maxX = Math.max(maxX, x + w);
+                        maxY = Math.max(maxY, y + h);
+                    });
+
+                    const contentWidth = maxX - minX;
+                    const contentHeight = maxY - minY;
+
+                    const container = document.getElementById('konva-container');
+                    const containerWidth = container.offsetWidth || 1200;
+                    const containerHeight = 700;
+
+                    // Calculate scale to fit with padding
+                    const padding = 50;
+                    const scaleX = (containerWidth - padding * 2) / contentWidth;
+                    const scaleY = (containerHeight - padding * 2) / contentHeight;
+                    const scale = Math.min(scaleX, scaleY, 2); // Cap at 2x zoom
+
+                    this.zoom = Math.max(0.1, scale);
+                    this.stage.scale({ x: this.zoom, y: this.zoom });
+
+                    // Center the content
+                    const newX = (containerWidth / 2) - ((minX + contentWidth / 2) * this.zoom);
+                    const newY = (containerHeight / 2) - ((minY + contentHeight / 2) * this.zoom);
+                    this.stage.position({ x: newX, y: newY });
+                },
+
+                // Toggle snap to grid
+                toggleSnapToGrid() {
+                    this.snapToGrid = !this.snapToGrid;
+                },
+
+                // Snap position to grid
+                snapPosition(pos) {
+                    if (!this.snapToGrid) return pos;
+                    return {
+                        x: Math.round(pos.x / this.gridSize) * this.gridSize,
+                        y: Math.round(pos.y / this.gridSize) * this.gridSize
+                    };
+                },
+
+                // Create tooltip element
+                createTooltip() {
+                    this.tooltip = document.createElement('div');
+                    this.tooltip.style.cssText = `
+                        position: absolute;
+                        padding: 6px 10px;
+                        background: rgba(0,0,0,0.85);
+                        color: white;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        pointer-events: none;
+                        z-index: 1000;
+                        display: none;
+                        white-space: nowrap;
+                    `;
+                    document.getElementById('konva-container').appendChild(this.tooltip);
+                },
+
+                // Show tooltip for seat
+                showSeatTooltip(seat, pos) {
+                    const seatId = seat.getAttr('seatId');
+                    const sectionId = seat.getAttr('sectionId');
+
+                    // Find seat data
+                    let seatData = null;
+                    let sectionData = null;
+                    let rowData = null;
+
+                    for (const section of this.sections) {
+                        if (section.id === sectionId) {
+                            sectionData = section;
+                            for (const row of section.rows || []) {
+                                for (const s of row.seats || []) {
+                                    if (s.id === seatId) {
+                                        seatData = s;
+                                        rowData = row;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (seatData && sectionData) {
+                        const displayName = seatData.display_name || `${sectionData.name}, Row ${rowData?.label || '?'}, Seat ${seatData.label}`;
+                        this.tooltip.innerHTML = `
+                            <div><strong>${displayName}</strong></div>
+                            <div style="font-size: 10px; color: #aaa;">UID: ${seatData.seat_uid || 'N/A'}</div>
+                        `;
+                        this.tooltip.style.left = (pos.x + 15) + 'px';
+                        this.tooltip.style.top = (pos.y + 15) + 'px';
+                        this.tooltip.style.display = 'block';
+                    }
+                },
+
+                hideTooltip() {
+                    if (this.tooltip) {
+                        this.tooltip.style.display = 'none';
+                    }
+                },
+
+                // JSON Export
+                exportJSON() {
+                    const exportData = {
+                        layout: {
+                            id: {{ $layout->id }},
+                            name: '{{ $layout->name }}',
+                            canvasWidth: this.canvasWidth,
+                            canvasHeight: this.canvasHeight,
+                            exportedAt: new Date().toISOString(),
+                        },
+                        sections: this.sections.map(section => ({
+                            id: section.id,
+                            name: section.name,
+                            section_code: section.section_code,
+                            section_type: section.section_type,
+                            x_position: section.x_position,
+                            y_position: section.y_position,
+                            width: section.width,
+                            height: section.height,
+                            rotation: section.rotation,
+                            color_hex: section.color_hex,
+                            seat_color: section.seat_color,
+                            background_color: section.background_color,
+                            corner_radius: section.corner_radius,
+                            metadata: section.metadata,
+                            rows: (section.rows || []).map(row => ({
+                                id: row.id,
+                                label: row.label,
+                                y: row.y,
+                                rotation: row.rotation,
+                                seats: (row.seats || []).map(seat => ({
+                                    id: seat.id,
+                                    label: seat.label,
+                                    display_name: seat.display_name,
+                                    x: seat.x,
+                                    y: seat.y,
+                                    angle: seat.angle,
+                                    shape: seat.shape,
+                                    seat_uid: seat.seat_uid,
+                                }))
+                            }))
+                        })),
+                        statistics: {
+                            totalSections: this.sections.length,
+                            totalRows: this.getTotalRows(),
+                            totalSeats: this.getTotalSeats(),
+                        }
+                    };
+
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `seating-layout-{{ $layout->id }}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
                 },
 
                 createStage() {
@@ -208,15 +571,26 @@
                                 return;
                             }
                             this.addSeatAtPosition(stagePos);
+                        } else if (this.drawMode === 'multiselect') {
+                            // Handle multi-select click on seats
+                            this.handleMultiSelectClick(e);
                         } else if (this.drawMode === 'select') {
                             if (e.target === this.stage || e.target.getLayer() === this.backgroundLayer) {
                                 this.transformer.nodes([]);
                                 this.selectedSection = null;
+                                this.clearSelection();
                             }
                         }
                     });
 
-                    // Mouse move handler for circle drawing
+                    // Mouse down for box selection
+                    this.stage.on('mousedown', (e) => {
+                        if (this.drawMode === 'multiselect' && (e.target === this.stage || e.target.getLayer() === this.backgroundLayer)) {
+                            this.startBoxSelection(e);
+                        }
+                    });
+
+                    // Mouse move handler for circle drawing and box selection
                     this.stage.on('mousemove', (e) => {
                         if (this.drawMode === 'circle' && this.circleStart) {
                             const pos = this.stage.getPointerPosition();
@@ -243,9 +617,14 @@
                             this.drawLayer.add(this.tempCircle);
                             this.drawLayer.batchDraw();
                         }
+
+                        // Box selection
+                        if (this.drawMode === 'multiselect' && this.selectionStartPos) {
+                            this.updateBoxSelection(e);
+                        }
                     });
 
-                    // Mouse up handler for circle drawing
+                    // Mouse up handler for circle drawing and box selection
                     this.stage.on('mouseup', (e) => {
                         if (this.drawMode === 'circle' && this.circleStart && this.tempCircle) {
                             const radius = this.tempCircle.radius();
@@ -262,6 +641,11 @@
                                 this.openSectionForm(sectionData);
                             }
                             this.cancelDrawing();
+                        }
+
+                        // End box selection
+                        if (this.drawMode === 'multiselect' && this.selectionStartPos) {
+                            this.endBoxSelection(e);
                         }
                     });
 
@@ -287,6 +671,233 @@
                         };
                         this.stage.position(newPos);
                     });
+                },
+
+                // Multi-select methods
+                handleMultiSelectClick(e) {
+                    const target = e.target;
+
+                    // Check if clicked on a seat
+                    if (target.hasName && target.hasName('seat')) {
+                        const seatId = target.getAttr('seatId');
+                        if (seatId) {
+                            const isShift = e.evt.shiftKey;
+
+                            if (isShift) {
+                                // Toggle selection
+                                const index = this.selectedSeats.findIndex(s => s.id === seatId);
+                                if (index > -1) {
+                                    this.selectedSeats.splice(index, 1);
+                                    target.stroke('#1F2937');
+                                    target.strokeWidth(1);
+                                } else {
+                                    this.selectedSeats.push({ id: seatId, node: target });
+                                    target.stroke('#F97316');
+                                    target.strokeWidth(3);
+                                }
+                            } else {
+                                // Single select
+                                this.clearSelection();
+                                this.selectedSeats.push({ id: seatId, node: target });
+                                target.stroke('#F97316');
+                                target.strokeWidth(3);
+                            }
+
+                            this.layer.batchDraw();
+                        }
+                    }
+                },
+
+                startBoxSelection(e) {
+                    const pos = this.stage.getPointerPosition();
+                    this.selectionStartPos = {
+                        x: (pos.x - this.stage.x()) / this.zoom,
+                        y: (pos.y - this.stage.y()) / this.zoom
+                    };
+
+                    // Create selection rectangle
+                    this.selectionRect = new Konva.Rect({
+                        x: this.selectionStartPos.x,
+                        y: this.selectionStartPos.y,
+                        width: 0,
+                        height: 0,
+                        fill: 'rgba(249, 115, 22, 0.2)',
+                        stroke: '#F97316',
+                        strokeWidth: 1,
+                        dash: [5, 5],
+                    });
+                    this.drawLayer.add(this.selectionRect);
+                },
+
+                updateBoxSelection(e) {
+                    if (!this.selectionRect || !this.selectionStartPos) return;
+
+                    const pos = this.stage.getPointerPosition();
+                    const currentPos = {
+                        x: (pos.x - this.stage.x()) / this.zoom,
+                        y: (pos.y - this.stage.y()) / this.zoom
+                    };
+
+                    const x = Math.min(this.selectionStartPos.x, currentPos.x);
+                    const y = Math.min(this.selectionStartPos.y, currentPos.y);
+                    const width = Math.abs(currentPos.x - this.selectionStartPos.x);
+                    const height = Math.abs(currentPos.y - this.selectionStartPos.y);
+
+                    this.selectionRect.x(x);
+                    this.selectionRect.y(y);
+                    this.selectionRect.width(width);
+                    this.selectionRect.height(height);
+                    this.drawLayer.batchDraw();
+                },
+
+                endBoxSelection(e) {
+                    if (!this.selectionRect) {
+                        this.selectionStartPos = null;
+                        return;
+                    }
+
+                    const box = this.selectionRect.getClientRect();
+
+                    // Find all seats within selection
+                    this.layer.find('.seat').forEach(seat => {
+                        const seatBox = seat.getClientRect();
+
+                        // Check if seat is within selection box
+                        if (this.intersects(box, seatBox)) {
+                            const seatId = seat.getAttr('seatId');
+                            if (seatId && !this.selectedSeats.find(s => s.id === seatId)) {
+                                this.selectedSeats.push({ id: seatId, node: seat });
+                                seat.stroke('#F97316');
+                                seat.strokeWidth(3);
+                            }
+                        }
+                    });
+
+                    // Clean up
+                    this.selectionRect.destroy();
+                    this.selectionRect = null;
+                    this.selectionStartPos = null;
+                    this.drawLayer.batchDraw();
+                    this.layer.batchDraw();
+                },
+
+                intersects(r1, r2) {
+                    return !(r2.x > r1.x + r1.width ||
+                             r2.x + r2.width < r1.x ||
+                             r2.y > r1.y + r1.height ||
+                             r2.y + r2.height < r1.y);
+                },
+
+                clearSelection() {
+                    this.selectedSeats.forEach(seat => {
+                        if (seat.node) {
+                            seat.node.stroke('#1F2937');
+                            seat.node.strokeWidth(1);
+                        }
+                    });
+                    this.selectedSeats = [];
+                    this.layer.batchDraw();
+                },
+
+                assignSelectedSeats() {
+                    if (!this.assignToSectionId || !this.assignToRowLabel || this.selectedSeats.length === 0) {
+                        alert('Please select seats, a section, and enter a row label.');
+                        return;
+                    }
+
+                    const seatIds = this.selectedSeats.map(s => s.id);
+                    @this.call('assignSeatsToSection', seatIds, parseInt(this.assignToSectionId), this.assignToRowLabel);
+
+                    this.clearSelection();
+                    this.assignToSectionId = '';
+                    this.assignToRowLabel = '';
+                },
+
+                deleteSelectedSeats() {
+                    if (this.selectedSeats.length === 0) return;
+
+                    if (!confirm(`Delete ${this.selectedSeats.length} selected seats?`)) return;
+
+                    this.selectedSeats.forEach(seat => {
+                        @this.call('deleteSeat', seat.id);
+                    });
+
+                    this.clearSelection();
+                },
+
+                // Color edit methods
+                editSectionColors(sectionId, colorHex, seatColor) {
+                    this.editSectionId = sectionId;
+                    this.editColorHex = colorHex;
+                    this.editSeatColor = seatColor;
+                    this.showColorModal = true;
+                },
+
+                saveSectionColors() {
+                    if (this.editSectionId) {
+                        @this.call('updateSectionColors', this.editSectionId, this.editColorHex, this.editSeatColor);
+                        this.showColorModal = false;
+                    }
+                },
+
+                // Export SVG
+                exportSVG() {
+                    // Create SVG content
+                    let svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${this.canvasWidth} ${this.canvasHeight}" width="${this.canvasWidth}" height="${this.canvasHeight}">
+  <style>
+    .section { opacity: 0.6; }
+    .section-label { font-family: Arial, sans-serif; font-size: 14px; fill: #1F2937; }
+    .seat { opacity: 0.8; stroke: #1F2937; stroke-width: 1; }
+  </style>
+  <rect width="100%" height="100%" fill="#f3f4f6"/>
+`;
+
+                    // Add sections
+                    this.sections.forEach(section => {
+                        const x = section.x_position || 0;
+                        const y = section.y_position || 0;
+                        const w = section.width || 200;
+                        const h = section.height || 150;
+                        const color = section.color_hex || '#3B82F6';
+                        const seatColor = section.seat_color || '#22C55E';
+
+                        // Section rectangle
+                        svgContent += `  <g transform="translate(${x}, ${y})">
+    <rect class="section" width="${w}" height="${h}" fill="${color}" stroke="${color}" stroke-width="2" rx="4"/>
+    <text class="section-label" x="8" y="20">${section.section_code || ''} - ${section.name}</text>
+`;
+
+                        // Seats
+                        if (section.rows) {
+                            section.rows.forEach(row => {
+                                if (row.seats) {
+                                    row.seats.forEach(seat => {
+                                        const sx = parseFloat(seat.x || 0);
+                                        const sy = parseFloat(seat.y || 0) + 20;
+                                        svgContent += `    <circle class="seat" cx="${sx}" cy="${sy}" r="4" fill="${seatColor}" data-seat-id="${seat.id}" data-seat-uid="${seat.seat_uid || ''}"/>
+`;
+                                    });
+                                }
+                            });
+                        }
+
+                        svgContent += `  </g>
+`;
+                    });
+
+                    svgContent += `</svg>`;
+
+                    // Download
+                    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `seating-layout-{{ $layout->id }}.svg`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
                 },
 
                 drawBackground() {
@@ -376,6 +987,9 @@
                     const strokeWidth = isDecorativeZone ? 3 : 2;
                     const cornerRadius = section.corner_radius || 4;
 
+                    // Seat color for this section
+                    const seatColor = section.seat_color || '#22C55E';
+
                     let backgroundShape;
 
                     if (shape === 'polygon' && metadata.points) {
@@ -454,7 +1068,7 @@
                         section.rows.forEach(row => {
                             if (row.seats && row.seats.length > 0) {
                                 row.seats.forEach(seat => {
-                                    const seatShape = this.createSeat(seat, section.color_hex);
+                                    const seatShape = this.createSeat(seat, seatColor, section.id);
                                     group.add(seatShape);
                                 });
                             }
@@ -462,17 +1076,27 @@
                     }
 
                     // Click to select
-                    group.on('click', () => {
-                        this.transformer.nodes([group]);
-                        this.selectedSection = section.id;
+                    group.on('click', (e) => {
+                        if (this.drawMode !== 'multiselect') {
+                            this.transformer.nodes([group]);
+                            this.selectedSection = section.id;
+                        }
                     });
 
                     // Save on drag end
                     group.on('dragend', () => {
-                        this.saveSection(section.id, {
-                            x_position: Math.round(group.x()),
-                            y_position: Math.round(group.y()),
+                        // Apply snap to grid if enabled
+                        const snappedPos = this.snapPosition({
+                            x: group.x(),
+                            y: group.y()
                         });
+                        group.position(snappedPos);
+
+                        this.saveSection(section.id, {
+                            x_position: Math.round(snappedPos.x),
+                            y_position: Math.round(snappedPos.y),
+                        });
+                        this.layer.batchDraw();
                     });
 
                     // Save on transform end
@@ -486,8 +1110,8 @@
                         });
 
                         // Reset scale
-                        rect.width(group.width() * group.scaleX());
-                        rect.height(group.height() * group.scaleY());
+                        backgroundShape.width(group.width() * group.scaleX());
+                        backgroundShape.height(group.height() * group.scaleY());
                         label.width(group.width() * group.scaleX());
                         group.scaleX(1);
                         group.scaleY(1);
@@ -497,7 +1121,7 @@
                     this.layer.batchDraw();
                 },
 
-                createSeat(seat, sectionColor) {
+                createSeat(seat, seatColor, sectionId) {
                     const x = parseFloat(seat.x || 0);
                     const y = parseFloat(seat.y || 0);
                     const angle = parseFloat(seat.angle || 0);
@@ -510,10 +1134,13 @@
                             x: x,
                             y: y + 20, // Offset to not overlap with label
                             radius: seatSize / 2,
-                            fill: sectionColor || '#3B82F6',
+                            fill: seatColor || '#22C55E',
                             stroke: '#1F2937',
                             strokeWidth: 1,
                             opacity: 0.8,
+                            name: 'seat',
+                            seatId: seat.id,
+                            sectionId: sectionId,
                         });
                     } else if (shape === 'rect') {
                         seatShape = new Konva.Rect({
@@ -521,11 +1148,14 @@
                             y: y + 20 - seatSize / 2,
                             width: seatSize,
                             height: seatSize,
-                            fill: sectionColor || '#3B82F6',
+                            fill: seatColor || '#22C55E',
                             stroke: '#1F2937',
                             strokeWidth: 1,
                             opacity: 0.8,
                             rotation: angle,
+                            name: 'seat',
+                            seatId: seat.id,
+                            sectionId: sectionId,
                         });
                     } else { // stadium
                         seatShape = new Konva.Rect({
@@ -533,21 +1163,45 @@
                             y: y + 20 - seatSize / 2,
                             width: seatSize,
                             height: seatSize,
-                            fill: sectionColor || '#3B82F6',
+                            fill: seatColor || '#22C55E',
                             stroke: '#1F2937',
                             strokeWidth: 1,
                             opacity: 0.8,
                             cornerRadius: seatSize / 2,
                             rotation: angle,
+                            name: 'seat',
+                            seatId: seat.id,
+                            sectionId: sectionId,
                         });
                     }
+
+                    // Add tooltip events
+                    seatShape.on('mouseover', (e) => {
+                        const container = document.getElementById('konva-container');
+                        const containerRect = container.getBoundingClientRect();
+                        const pos = this.stage.getPointerPosition();
+                        this.showSeatTooltip(seatShape, {
+                            x: pos.x,
+                            y: pos.y
+                        });
+                        // Highlight on hover
+                        seatShape.strokeWidth(2);
+                        this.layer.batchDraw();
+                    });
+
+                    seatShape.on('mouseout', () => {
+                        this.hideTooltip();
+                        // Reset stroke unless selected
+                        const isSelected = this.selectedSeats.find(s => s.id === seat.id);
+                        seatShape.strokeWidth(isSelected ? 3 : 1);
+                        this.layer.batchDraw();
+                    });
 
                     return seatShape;
                 },
 
                 saveSection(sectionId, updates) {
                     console.log('Saving section', sectionId, updates);
-                    // TODO: Implement Livewire save
                     @this.call('updateSection', sectionId, updates);
                 },
 
@@ -604,6 +1258,11 @@
                     if (mode !== 'select') {
                         this.transformer.nodes([]);
                         this.selectedSection = null;
+                    }
+
+                    // Clear selection when changing modes
+                    if (mode !== 'multiselect') {
+                        this.clearSelection();
                     }
                 },
 
@@ -744,6 +1403,52 @@
                     this.createSection(section);
                 },
 
+                handleLayoutImported(detail) {
+                    // Reload all sections after import
+                    this.sections = detail.sections;
+
+                    // Clear and rebuild canvas
+                    this.layer.destroyChildren();
+
+                    // Re-add transformer
+                    this.transformer = new Konva.Transformer({
+                        enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+                        rotateEnabled: true,
+                        borderStroke: '#4F46E5',
+                        borderStrokeWidth: 2,
+                        anchorStroke: '#4F46E5',
+                        anchorFill: '#fff',
+                        anchorSize: 10,
+                    });
+                    this.layer.add(this.transformer);
+
+                    // Reload sections
+                    this.loadSections();
+                },
+
+                handleLayoutUpdated(detail) {
+                    // Reload all sections after update
+                    this.sections = detail.sections;
+
+                    // Clear and rebuild canvas
+                    this.layer.destroyChildren();
+
+                    // Re-add transformer
+                    this.transformer = new Konva.Transformer({
+                        enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+                        rotateEnabled: true,
+                        borderStroke: '#4F46E5',
+                        borderStrokeWidth: 2,
+                        anchorStroke: '#4F46E5',
+                        anchorFill: '#fff',
+                        anchorSize: 10,
+                    });
+                    this.layer.add(this.transformer);
+
+                    // Reload sections
+                    this.loadSections();
+                },
+
                 addSeatAtPosition(stagePos) {
                     if (!this.selectedSection) return;
 
@@ -773,12 +1478,16 @@
                     const customLabel = prompt('Enter seat label:', seatLabel);
                     if (!customLabel) return;
 
+                    const rowLabel = prompt('Enter row label:', 'Manual');
+                    if (!rowLabel) return;
+
                     // Call Livewire to save seat
                     @this.call('addSeat', {
                         section_id: this.selectedSection,
                         x: Math.round(relativeX),
                         y: Math.round(relativeY),
                         label: customLabel,
+                        row_label: rowLabel,
                         shape: 'circle',
                         angle: 0
                     });
@@ -794,22 +1503,22 @@
                         // Add seat to section data
                         if (!section.rows) section.rows = [];
 
-                        // Find or create a "Manual" row for manually placed seats
-                        let manualRow = section.rows.find(r => r.label === 'Manual');
-                        if (!manualRow) {
-                            manualRow = {
-                                id: `manual-${sectionId}`,
-                                label: 'Manual',
+                        // Find or create a row for manually placed seats
+                        let row = section.rows.find(r => r.label === (seat.row_label || 'Manual'));
+                        if (!row) {
+                            row = {
+                                id: `row-${sectionId}-${seat.row_label || 'manual'}`,
+                                label: seat.row_label || 'Manual',
                                 seats: []
                             };
-                            section.rows.push(manualRow);
+                            section.rows.push(row);
                         }
-                        manualRow.seats.push(seat);
+                        row.seats.push(seat);
 
                         // Draw the seat on canvas
                         const sectionNode = this.stage.findOne(`#section-${sectionId}`);
                         if (sectionNode) {
-                            const seatShape = this.createSeat(seat, section.color_hex);
+                            const seatShape = this.createSeat(seat, section.seat_color || section.color_hex, sectionId);
                             sectionNode.add(seatShape);
                             this.layer.batchDraw();
                         }
