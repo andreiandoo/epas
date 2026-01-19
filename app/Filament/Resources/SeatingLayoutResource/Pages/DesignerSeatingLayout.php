@@ -888,7 +888,20 @@ class DesignerSeatingLayout extends Page
             return;
         }
 
-        $section->update($updates);
+        // Filter to only allowed fields
+        $allowedFields = ['x_position', 'y_position', 'width', 'height', 'rotation'];
+        $filteredUpdates = array_intersect_key($updates, array_flip($allowedFields));
+
+        if (empty($filteredUpdates)) {
+            return;
+        }
+
+        // Force save with explicit field assignment
+        foreach ($filteredUpdates as $field => $value) {
+            $section->{$field} = (int) $value;
+        }
+        $section->save();
+
         $this->reloadSections();
 
         Notification::make()
@@ -896,6 +909,25 @@ class DesignerSeatingLayout extends Page
             ->title('Section updated')
             ->body('Position and dimensions saved')
             ->send();
+    }
+
+    /**
+     * Move section by offset (for arrow key movement)
+     */
+    public function moveSection($sectionId, $deltaX, $deltaY): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            return;
+        }
+
+        $section->x_position = max(0, $section->x_position + (int) $deltaX);
+        $section->y_position = max(0, $section->y_position + (int) $deltaY);
+        $section->save();
+
+        $this->reloadSections();
+        $this->dispatch('section-moved', sectionId: $sectionId, x: $section->x_position, y: $section->y_position);
     }
 
     /**

@@ -125,29 +125,29 @@
             {{-- Background image controls --}}
             <div x-show="backgroundUrl" x-transition class="flex flex-wrap items-center gap-4 p-3 mb-4 border rounded-lg bg-indigo-50 border-indigo-200">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-indigo-800">Background Image:</span>
+                    <span class="text-sm font-medium text-indigo-800">Background:</span>
                 </div>
-                <div class="flex items-center gap-3">
-                    <label class="text-sm text-indigo-700">Scale:</label>
-                    <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.1" @input="updateBackgroundScale()" class="w-32">
-                    <span class="text-sm font-medium text-indigo-900" x-text="`${Math.round(backgroundScale * 100)}%`"></span>
+                <div class="flex items-center gap-1">
+                    <label class="text-xs text-indigo-700">Scale:</label>
+                    <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-20">
+                    <input type="number" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
                 </div>
-                <div class="flex items-center gap-3">
-                    <label class="text-sm text-indigo-700">X:</label>
-                    <input type="range" x-model="backgroundX" min="-500" max="500" step="10" @input="updateBackgroundPosition()" class="w-24">
-                    <span class="text-sm font-medium text-indigo-900 w-12" x-text="`${backgroundX}px`"></span>
+                <div class="flex items-center gap-1">
+                    <label class="text-xs text-indigo-700">X:</label>
+                    <input type="range" x-model="backgroundX" min="-1000" max="1000" step="1" @input="updateBackgroundPosition()" class="w-20">
+                    <input type="number" x-model="backgroundX" step="1" @input="updateBackgroundPosition()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
                 </div>
-                <div class="flex items-center gap-3">
-                    <label class="text-sm text-indigo-700">Y:</label>
-                    <input type="range" x-model="backgroundY" min="-500" max="500" step="10" @input="updateBackgroundPosition()" class="w-24">
-                    <span class="text-sm font-medium text-indigo-900 w-12" x-text="`${backgroundY}px`"></span>
+                <div class="flex items-center gap-1">
+                    <label class="text-xs text-indigo-700">Y:</label>
+                    <input type="range" x-model="backgroundY" min="-1000" max="1000" step="1" @input="updateBackgroundPosition()" class="w-20">
+                    <input type="number" x-model="backgroundY" step="1" @input="updateBackgroundPosition()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
                 </div>
-                <div class="flex items-center gap-3">
-                    <label class="text-sm text-indigo-700">Opacity:</label>
-                    <input type="range" x-model="backgroundOpacity" min="0.1" max="1" step="0.1" @input="updateBackgroundOpacity()" class="w-24">
-                    <span class="text-sm font-medium text-indigo-900" x-text="`${Math.round(backgroundOpacity * 100)}%`"></span>
+                <div class="flex items-center gap-1">
+                    <label class="text-xs text-indigo-700">Opacity:</label>
+                    <input type="range" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-16">
+                    <input type="number" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-14 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
                 </div>
-                <button @click="resetBackgroundPosition" type="button" class="px-2 py-1 text-xs text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200">Reset All</button>
+                <button @click="resetBackgroundPosition" type="button" class="px-2 py-1 text-xs text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200">Reset</button>
             </div>
 
             <div class="overflow-hidden bg-gray-100 border-2 border-gray-300 rounded-lg">
@@ -180,6 +180,8 @@
                     <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Del</kbd> Delete selected</span>
                     <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Esc</kbd> Cancel / Deselect</span>
                     <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Shift</kbd>+Click Multi-select</span>
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">←↑→↓</kbd> Move section (1px)</span>
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Shift</kbd>+Arrow Move section (10px)</span>
                     <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Scroll</kbd> Zoom</span>
                     <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Drag</kbd> Pan canvas</span>
                 </div>
@@ -340,6 +342,46 @@
                                 }
                             }
                             break;
+
+                        case 'ArrowLeft':
+                        case 'ArrowRight':
+                        case 'ArrowUp':
+                        case 'ArrowDown':
+                            if (this.selectedSection) {
+                                e.preventDefault();
+                                const step = e.shiftKey ? 10 : 1; // Shift for larger steps
+                                let deltaX = 0, deltaY = 0;
+
+                                switch (e.key) {
+                                    case 'ArrowLeft': deltaX = -step; break;
+                                    case 'ArrowRight': deltaX = step; break;
+                                    case 'ArrowUp': deltaY = -step; break;
+                                    case 'ArrowDown': deltaY = step; break;
+                                }
+
+                                // Update visual position
+                                const node = this.stage.findOne(`#section-${this.selectedSection}`);
+                                if (node) {
+                                    node.x(node.x() + deltaX);
+                                    node.y(node.y() + deltaY);
+                                    this.layer.batchDraw();
+
+                                    // Save to backend
+                                    @this.call('moveSection', this.selectedSection, deltaX, deltaY);
+                                }
+                            }
+                            break;
+                    }
+                },
+
+                // Handle section moved event from backend
+                handleSectionMoved(event) {
+                    const { sectionId, x, y } = event.detail;
+                    const node = this.stage.findOne(`#section-${sectionId}`);
+                    if (node) {
+                        node.x(x);
+                        node.y(y);
+                        this.layer.batchDraw();
                     }
                 },
 
@@ -880,9 +922,9 @@
 
                 // Export SVG
                 exportSVG() {
-                    // Create SVG content
-                    let svgContent = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${this.canvasWidth} ${this.canvasHeight}" width="${this.canvasWidth}" height="${this.canvasHeight}">
+                    // Create SVG content (avoid PHP parsing by splitting <?xml)
+                    let svgContent = '<' + '?xml version="1.0" encoding="UTF-8"?' + '>\n';
+                    svgContent += `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${this.canvasWidth} ${this.canvasHeight}" width="${this.canvasWidth}" height="${this.canvasHeight}">
   <style>
     .section { opacity: 0.6; }
     .section-label { font-family: Arial, sans-serif; font-size: 14px; fill: #1F2937; }
