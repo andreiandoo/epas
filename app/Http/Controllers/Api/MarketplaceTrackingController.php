@@ -7,6 +7,7 @@ use App\Models\Platform\CoreCustomerEvent;
 use App\Models\Platform\CoreSession;
 use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceClient;
+use App\Services\Analytics\RedisAnalyticsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -15,10 +16,12 @@ use Jenssegers\Agent\Agent;
 class MarketplaceTrackingController extends Controller
 {
     protected Agent $agent;
+    protected RedisAnalyticsService $redisAnalytics;
 
-    public function __construct()
+    public function __construct(RedisAnalyticsService $redisAnalytics)
     {
         $this->agent = new Agent();
+        $this->redisAnalytics = $redisAnalytics;
     }
 
     /**
@@ -112,6 +115,17 @@ class MarketplaceTrackingController extends Controller
 
         // Update or create session
         $this->updateSession($sessionId, $visitorId, $request, $event);
+
+        // INSTANT: Write to Redis for real-time analytics (globe, live visitors)
+        $eventId = $request->input('marketplace_event_id');
+        if ($eventId) {
+            $this->redisAnalytics->trackVisitor(
+                (int) $eventId,
+                $visitorId,
+                $location,
+                $request->input('event_type')
+            );
+        }
 
         return response()->json([
             'success' => true,

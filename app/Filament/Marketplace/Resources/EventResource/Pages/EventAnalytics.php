@@ -14,6 +14,7 @@ use App\Services\Analytics\EventExportService;
 use App\Services\Analytics\MilestoneAttributionService;
 use App\Services\Analytics\BuyerJourneyService;
 use App\Services\Analytics\ScheduledReportService;
+use App\Services\Analytics\RedisAnalyticsService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms;
@@ -98,19 +99,22 @@ class EventAnalytics extends Page implements HasForms
     protected MilestoneAttributionService $attributionService;
     protected BuyerJourneyService $journeyService;
     protected ScheduledReportService $scheduledReportService;
+    protected RedisAnalyticsService $redisAnalytics;
 
     public function boot(
         EventAnalyticsService $analyticsService,
         EventExportService $exportService,
         MilestoneAttributionService $attributionService,
         BuyerJourneyService $journeyService,
-        ScheduledReportService $scheduledReportService
+        ScheduledReportService $scheduledReportService,
+        RedisAnalyticsService $redisAnalytics
     ): void {
         $this->analyticsService = $analyticsService;
         $this->exportService = $exportService;
         $this->attributionService = $attributionService;
         $this->journeyService = $journeyService;
         $this->scheduledReportService = $scheduledReportService;
+        $this->redisAnalytics = $redisAnalytics;
     }
 
     public function mount(int|string $record): void
@@ -478,21 +482,40 @@ class EventAnalytics extends Page implements HasForms
 
     public function getGlobeData(): array
     {
+        // Use Redis for instant real-time data, fallback to DB
+        if ($this->redisAnalytics->isAvailable()) {
+            $data = $this->redisAnalytics->getLiveVisitors($this->event->id);
+            return $data['locations'] ?? [];
+        }
+
         return $this->analyticsService->getLiveVisitorsForGlobe($this->event);
     }
 
     public function getLiveVisitorCount(): int
     {
+        // Use Redis for instant real-time data, fallback to DB
+        if ($this->redisAnalytics->isAvailable()) {
+            $data = $this->redisAnalytics->getLiveVisitors($this->event->id);
+            return $data['count'] ?? 0;
+        }
+
         $data = $this->analyticsService->getLiveVisitors($this->event);
         return $data['count'] ?? 0;
     }
 
     /**
      * Fetch live visitor data for polling (called via Alpine.js)
+     * Uses Redis for instant updates (5 min TTL data)
      */
     #[Renderless]
     public function fetchLiveVisitorData(): array
     {
+        // Primary: Redis for real-time data (instant, <5ms)
+        if ($this->redisAnalytics->isAvailable()) {
+            return $this->redisAnalytics->getLiveDataForGlobe($this->event->id);
+        }
+
+        // Fallback: PostgreSQL (slower but reliable)
         $liveData = $this->analyticsService->getLiveVisitors($this->event);
         $globeData = $this->analyticsService->getLiveVisitorsForGlobe($this->event);
 

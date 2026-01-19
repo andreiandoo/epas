@@ -178,6 +178,23 @@ return [
             'backoff_cap' => env('REDIS_BACKOFF_CAP', 1000),
         ],
 
+        // Analytics Redis connection (Upstash or local)
+        'analytics' => [
+            'url' => env('REDIS_ANALYTICS_URL'),
+            'host' => env('REDIS_ANALYTICS_HOST', env('REDIS_HOST', '127.0.0.1')),
+            'username' => env('REDIS_ANALYTICS_USERNAME', 'default'),
+            'password' => env('REDIS_ANALYTICS_PASSWORD', env('REDIS_PASSWORD')),
+            'port' => env('REDIS_ANALYTICS_PORT', env('REDIS_PORT', '6379')),
+            'database' => env('REDIS_ANALYTICS_DB', '0'),
+            'scheme' => env('REDIS_ANALYTICS_SCHEME', 'tls'), // Upstash requires TLS
+            'context' => [
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                ],
+            ],
+        ],
+
     ],
 
 ];
