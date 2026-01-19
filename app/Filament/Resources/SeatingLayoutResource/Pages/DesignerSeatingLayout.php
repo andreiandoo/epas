@@ -40,26 +40,91 @@ class DesignerSeatingLayout extends Page
                 ->label('Import Map')
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('info')
-                ->modalWidth('4xl')
+                ->modalWidth('5xl')
                 ->modalHeading('Import Seating Map')
-                ->modalDescription('Paste HTML/SVG content from an existing seating map (e.g., from iabilet.ro)')
-                ->form([
-                    Forms\Components\Textarea::make('html_content')
-                        ->label('HTML/SVG Content')
-                        ->helperText('Paste the HTML content containing SVG areas and seats layers')
-                        ->rows(15)
-                        ->required()
-                        ->columnSpanFull(),
+                ->steps([
+                    Forms\Components\Wizard\Step::make('Upload')
+                        ->description('Paste HTML/SVG content')
+                        ->icon('heroicon-o-document-text')
+                        ->schema([
+                            Forms\Components\Textarea::make('html_content')
+                                ->label('HTML/SVG Content')
+                                ->helperText('Paste the HTML content containing SVG areas and seats layers (e.g., from iabilet.ro)')
+                                ->rows(12)
+                                ->required()
+                                ->columnSpanFull(),
+                        ]),
+                    Forms\Components\Wizard\Step::make('Preview')
+                        ->description('Review detected elements')
+                        ->icon('heroicon-o-eye')
+                        ->schema([
+                            Forms\Components\Placeholder::make('preview_info')
+                                ->label('Detected Elements')
+                                ->content(function (Forms\Get $get) {
+                                    $htmlContent = $get('html_content');
+                                    if (empty($htmlContent)) {
+                                        return 'No content to preview. Please go back and paste HTML/SVG content.';
+                                    }
 
-                    Forms\Components\Toggle::make('import_seats')
-                        ->label('Import seats')
-                        ->default(true)
-                        ->helperText('Uncheck to import only sections/areas'),
+                                    try {
+                                        $service = app(SVGImportService::class);
+                                        $imported = $service->parseIabiletHtml($htmlContent);
 
-                    Forms\Components\Toggle::make('clear_existing')
-                        ->label('Clear existing sections')
-                        ->default(false)
-                        ->helperText('Warning: This will delete all existing sections and their seats'),
+                                        $sectionCount = $imported->sectionCount();
+                                        $seatCount = $imported->seatCount();
+                                        $categoryIds = $imported->getUniqueCategoryIds();
+
+                                        $preview = "**Sections detected:** {$sectionCount}\n\n";
+                                        $preview .= "**Seats detected:** {$seatCount}\n\n";
+
+                                        if (!empty($categoryIds)) {
+                                            $preview .= "**Category IDs:** " . implode(', ', $categoryIds) . "\n\n";
+                                        }
+
+                                        if ($imported->backgroundUrl) {
+                                            $preview .= "**Background image:** Found\n\n";
+                                        }
+
+                                        $preview .= "---\n\n**Section Details:**\n\n";
+
+                                        foreach ($imported->sections as $index => $section) {
+                                            $sectionNum = $index + 1;
+                                            $sectionSeats = count($section->seats);
+                                            $preview .= "- Section {$sectionNum}: {$sectionSeats} seats";
+                                            if ($section->categoryId) {
+                                                $preview .= " (Category: {$section->categoryId})";
+                                            }
+                                            $preview .= "\n";
+                                        }
+
+                                        return new \Illuminate\Support\HtmlString(
+                                            \Illuminate\Support\Str::markdown($preview)
+                                        );
+                                    } catch (\Exception $e) {
+                                        return "Error parsing content: " . $e->getMessage();
+                                    }
+                                })
+                                ->columnSpanFull(),
+                        ]),
+                    Forms\Components\Wizard\Step::make('Options')
+                        ->description('Configure import settings')
+                        ->icon('heroicon-o-cog-6-tooth')
+                        ->schema([
+                            Forms\Components\Toggle::make('import_seats')
+                                ->label('Import seats')
+                                ->default(true)
+                                ->helperText('Uncheck to import only sections/areas'),
+
+                            Forms\Components\Toggle::make('clear_existing')
+                                ->label('Clear existing sections')
+                                ->default(false)
+                                ->helperText('Warning: This will delete all existing sections and their seats'),
+
+                            Forms\Components\Placeholder::make('current_layout_info')
+                                ->label('Current Layout')
+                                ->content(fn () => "This layout currently has **{$this->seatingLayout->sections()->count()}** sections.")
+                                ->columnSpanFull(),
+                        ]),
                 ])
                 ->action(function (array $data): void {
                     $service = app(SVGImportService::class);
@@ -74,8 +139,8 @@ class DesignerSeatingLayout extends Page
                         $stats = $service->createLayoutFromImport(
                             $imported,
                             $this->seatingLayout,
-                            importSeats: $data['import_seats'],
-                            clearExisting: $data['clear_existing']
+                            importSeats: $data['import_seats'] ?? true,
+                            clearExisting: $data['clear_existing'] ?? false
                         );
 
                         $this->reloadSections();
