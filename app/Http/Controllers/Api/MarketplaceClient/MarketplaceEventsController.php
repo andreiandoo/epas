@@ -6,8 +6,12 @@ use App\Models\Event;
 use App\Models\MarketplaceEventCategory;
 use App\Models\MarketplaceOrganizer;
 use App\Models\Platform\CoreCustomerEvent;
+use App\Services\Analytics\RedisAnalyticsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -629,6 +633,9 @@ class MarketplaceEventsController extends BaseController
         $visitorId = $request->cookie('visitor_id') ?? $request->header('X-Visitor-ID') ?? Str::uuid()->toString();
         $sessionId = $request->cookie('session_id') ?? $request->header('X-Session-ID') ?? Str::uuid()->toString();
 
+        // Get location data from IP
+        $location = $this->getLocationFromIp($request->ip());
+
         CoreCustomerEvent::create([
             'marketplace_client_id' => $client->id,
             'marketplace_event_id' => $event->id, // Use marketplace_event_id for analytics queries
@@ -659,15 +666,94 @@ class MarketplaceEventsController extends BaseController
             'fbp' => $request->input('fbp'),
             // Device and location info
             'ip_address' => $request->ip(),
+            'country_code' => $location['country_code'] ?? null,
+            'region' => $location['region'] ?? null,
+            'city' => $location['city'] ?? null,
+            'latitude' => $location['latitude'] ?? null,
+            'longitude' => $location['longitude'] ?? null,
             'device_type' => $this->detectDeviceType($request),
             'browser' => $this->detectBrowser($request),
             'os' => $this->detectOS($request),
             'occurred_at' => now(),
         ]);
 
+        // INSTANT: Write to Redis for real-time analytics (globe, live visitors)
+        try {
+            $redisAnalytics = app(RedisAnalyticsService::class);
+            $redisAnalytics->trackVisitor(
+                $event->id,
+                $visitorId,
+                $location,
+                CoreCustomerEvent::TYPE_PAGE_VIEW
+            );
+        } catch (\Exception $e) {
+            // Don't fail the request if Redis is unavailable
+            Log::debug('Redis analytics tracking failed', ['error' => $e->getMessage()]);
+        }
+
         return $this->success([
             'views_count' => $event->views_count,
         ]);
+    }
+
+    /**
+     * Get location data from IP address using ip-api.com
+     */
+    protected function getLocationFromIp(string $ip): array
+    {
+        // Skip for localhost/private IPs - use București as default for local dev
+        if (in_array($ip, ['127.0.0.1', '::1']) || str_starts_with($ip, '192.168.') || str_starts_with($ip, '10.')) {
+            return [
+                'country_code' => 'RO',
+                'region' => 'București',
+                'city' => 'București',
+                'latitude' => 44.4268,
+                'longitude' => 26.1025,
+            ];
+        }
+
+        // Try to get from cache first (cache for 24 hours per IP)
+        $cacheKey = "geoip_{$ip}";
+        $cached = Cache::get($cacheKey);
+        if ($cached) {
+            return $cached;
+        }
+
+        // Query ip-api.com (free tier, 45 requests per minute)
+        try {
+            $response = Http::timeout(2)
+                ->get("http://ip-api.com/json/{$ip}?fields=status,countryCode,regionName,city,lat,lon");
+
+            if ($response->successful()) {
+                $data = $response->json();
+
+                if ($data['status'] === 'success') {
+                    $location = [
+                        'country_code' => $data['countryCode'] ?? null,
+                        'region' => $data['regionName'] ?? null,
+                        'city' => $data['city'] ?? null,
+                        'latitude' => $data['lat'] ?? null,
+                        'longitude' => $data['lon'] ?? null,
+                    ];
+
+                    // Cache for 24 hours
+                    Cache::put($cacheKey, $location, now()->addHours(24));
+
+                    return $location;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::debug('GeoIP lookup failed', ['ip' => $ip, 'error' => $e->getMessage()]);
+        }
+
+        // Fallback - return nulls
+        return [
+            'country_code' => null,
+            'region' => null,
+            'city' => null,
+            'latitude' => null,
+            'longitude' => null,
+        ];
     }
 
     /**
