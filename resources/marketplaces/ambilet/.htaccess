@@ -1,0 +1,391 @@
+# Ambilet Marketplace - Apache Configuration
+# Enable URL rewriting
+RewriteEngine On
+
+# Set default index file
+DirectoryIndex index.php index.html
+
+# Force HTTPS (uncomment in production)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ============================================
+# ROMANIAN URL STRUCTURE
+# ============================================
+
+# Handle event detail pages - /bilete/event-slug
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^bilete/([a-z0-9-]+)/?$ event.php?slug=$1 [L,QSA]
+
+# Legacy: redirect /event/slug to /bilete/slug
+RewriteRule ^event/([a-z0-9-]+)/?$ /bilete/$1 [R=301,L]
+
+# Handle category pages - /concerte, /festivaluri, /teatru, etc.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(concerte|festivaluri|teatru|stand-up|evenimente-copii|festival-moto|sport|comedy|spectacole|alte-evenimente|muzica|dans|expozitii|conferinte|workshop)/?$ category.php?slug=$1 [L,QSA]
+
+# Legacy: redirect /category/slug to /slug
+RewriteRule ^category/([a-z0-9-]+)/?$ /$1 [R=301,L]
+
+# Handle genre pages - /gen/rock, /gen/pop etc.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^gen/([a-z0-9-]+)/?$ genre.php?slug=$1 [L,QSA]
+
+# Legacy: redirect /genre/slug to /gen/slug
+RewriteRule ^genre/([a-z0-9-]+)/?$ /gen/$1 [R=301,L]
+
+# Handle all events listing - /evenimente
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^evenimente/?$ events.php [L,QSA]
+
+# Handle venues - /locatii and /locatie/venue-slug
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^locatii/?$ venues.php [L]
+
+# Handle venue type pages - /locatii/arene, /locatii/teatre, etc.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^locatii/(arene-stadioane|teatre-sali|cluburi-baruri|open-air)/?$ venue-type.php?type=$1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^locatie/([a-z0-9-]+)/?$ venue-single.php?slug=$1 [L,QSA]
+
+# Legacy: redirect /venues to /locatii
+RewriteRule ^venues/?$ /locatii [R=301,L]
+
+# Handle cities - /orase
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^orase/?$ cities.php [L]
+
+# Handle regions - /regiune/slug
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^regiune/([a-z0-9-]+)/?$ region.php?slug=$1 [L,QSA]
+
+# Legacy: redirect /region/slug to /regiune/slug
+RewriteRule ^region/([a-z0-9-]+)/?$ /regiune/$1 [R=301,L]
+
+# Legacy: redirect /cities to /orase
+RewriteRule ^cities/?$ /orase [R=301,L]
+
+# Handle artists - /artisti and /artist/artist-slug
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artisti/?$ artists.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/([a-z0-9-]+)/?$ artist-single.php?slug=$1 [L,QSA]
+
+# Handle organizer auth pages - must come BEFORE the public profile rule
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/login/?$ organizer/login.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/inregistrare/?$ organizer/register.php [L]
+
+# Handle organizer public page - /organizator/slug (excludes login, register, dashboard routes)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/organizator/(login|register|dashboard|events|settings|analytics|tickets|orders|payouts|team|support|landing|finance|help|participants|promo|sales)/?$
+RewriteRule ^organizator/([a-z0-9-]+)/?$ organizer/public.php?slug=$1 [L,QSA]
+
+# Legacy: redirect /organizer/slug to /organizator/slug
+RewriteRule ^organizer/([a-z0-9-]+)/?$ /organizator/$1 [R=301,L]
+
+# ============================================
+# USER ACCOUNT ROUTES - /cont/*
+# ============================================
+
+# /cont/dashboard, /cont/bilete, /cont/comenzi, etc.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/?$ user/dashboard.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/dashboard/?$ user/dashboard.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/bilete/?$ user/tickets.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/comenzi/?$ user/orders.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/favorite/?$ user/watchlist.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/puncte/?$ user/rewards.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/profil/?$ user/profile.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/plati/?$ user/payments.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/notificari/?$ user/notifications.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/setari/?$ user/settings.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/ajutor/?$ user/help.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/carduri-cadou/?$ user/gift-cards.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/invitatii/?$ user/referrals.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/recenzii/?$ user/reviews.php [L]
+
+# Legacy: redirect /user/* to /cont/*
+RewriteRule ^user/?$ /cont [R=301,L]
+RewriteRule ^user/dashboard/?$ /cont/dashboard [R=301,L]
+RewriteRule ^user/tickets/?$ /cont/bilete [R=301,L]
+RewriteRule ^user/orders/?$ /cont/comenzi [R=301,L]
+RewriteRule ^user/watchlist/?$ /cont/favorite [R=301,L]
+RewriteRule ^user/rewards/?$ /cont/puncte [R=301,L]
+RewriteRule ^user/profile/?$ /cont/profil [R=301,L]
+RewriteRule ^user/payments/?$ /cont/plati [R=301,L]
+RewriteRule ^user/notifications/?$ /cont/notificari [R=301,L]
+RewriteRule ^user/settings/?$ /cont/setari [R=301,L]
+RewriteRule ^user/help/?$ /cont/ajutor [R=301,L]
+RewriteRule ^user/gift-cards/?$ /cont/carduri-cadou [R=301,L]
+RewriteRule ^user/referrals/?$ /cont/invitatii [R=301,L]
+RewriteRule ^user/reviews/?$ /cont/recenzii [R=301,L]
+
+# ============================================
+# ORGANIZER DASHBOARD ROUTES - /organizator/*
+# ============================================
+
+# Handle organizer dashboard routes - /organizator/dashboard, /organizator/events, etc.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support)/?$ organizer/$1.php [L]
+
+# Legacy: redirect /organizer/* dashboard routes to /organizator/*
+RewriteRule ^organizer/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support)/?$ /organizator/$1 [R=301,L]
+
+# ============================================
+# AUTH ROUTES
+# ============================================
+
+# /autentificare -> login.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^autentificare/?$ login.php [L]
+
+# /inregistrare -> register.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^inregistrare/?$ register.php [L]
+
+# /parola-uitata -> forgot-password.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^parola-uitata/?$ forgot-password.php [L]
+
+# /resetare-parola -> reset-password.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^resetare-parola/?$ reset-password.php [L]
+
+# /cos -> cart.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cos/?$ cart.php [L]
+
+# /finalizare -> checkout.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^finalizare/?$ checkout.php [L]
+
+# /multumim -> thank-you.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^multumim/?$ thank-you.php [L]
+
+# /email-confirmat -> email-confirmed.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^email-confirmat/?$ email-confirmed.php [L]
+
+# /termeni -> terms.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^termeni/?$ terms.php [L]
+
+# /confidentialitate -> privacy.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^confidentialitate/?$ privacy.php [L]
+
+# /cookies -> cookies.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cookies/?$ cookies.php [L]
+
+# /gdpr -> gdpr.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^gdpr/?$ gdpr.php [L]
+
+# /card-cadou -> gift-cards.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^card-cadou/?$ gift-cards.php [L]
+
+# /organizatori -> organizers.php (listing of organizers)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizatori/?$ organizers.php [L]
+
+# /pentru-organizatori -> organizer/landing.php (landing page for organizers)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^pentru-organizatori/?$ organizer/landing.php [L]
+
+# /ajutor -> help-center.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ajutor/?$ help-center.php [L]
+
+# /intrebari -> faq.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^intrebari/?$ faq.php [L]
+
+# /calendar -> events-calendar.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^calendar/?$ events-calendar.php [L]
+
+# /contact -> contact.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^contact/?$ contact.php [L]
+
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^despre-noi/?$ about.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^parteneri/?$ partners.php [L]
+
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^politica-retur/?$ refund-policy.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^accesabilitate/?$ accesibility.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^email-confirmat/?$ email-confirmed.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^dezabonare/?$ newsletter-unsubscribed.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^blog/?$ blog.php [L]
+
+# ============================================
+# DYNAMIC CITY PAGES - Catch-all for city slugs
+# Must come after all other explicit routes
+# ============================================
+
+# Handle single city pages - dynamic routing for any city slug
+# The city.php file validates the slug against the API and redirects if not found
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z][a-z0-9-]{1,50})/?$ city.php?slug=$1 [L,QSA]
+
+# ============================================
+# FALLBACK: Remove .php extension from URLs
+# ============================================
+
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.php -f
+RewriteRule ^([^/]+)/?$ $1.php [L]
+
+# ============================================
+# SECURITY & PERFORMANCE
+# ============================================
+
+# Prevent directory listing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "^(config\.php|\.env|\.git)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Protect includes folder
+<IfModule mod_rewrite.c>
+    RewriteRule ^includes/ - [F,L]
+</IfModule>
+
+# Cache static assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType application/x-font-woff "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+</IfModule>
+
+# Enable GZIP compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css application/json
+    AddOutputFilterByType DEFLATE application/javascript text/javascript
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Custom error pages (create these files if needed)
+ErrorDocument 404 /404.php
+ErrorDocument 500 /500.php

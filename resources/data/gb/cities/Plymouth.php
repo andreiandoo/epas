@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 48476,
+        'name'      => 'Bere Alston',
+        'latitude'  => '50.48233000',
+        'longitude' => '-4.19034000',
+    ],
+    [
+        'id'        => 48826,
+        'name'      => 'Callington',
+        'latitude'  => '50.50147000',
+        'longitude' => '-4.31314000',
+    ],
+    [
+        'id'        => 49768,
+        'name'      => 'Gunnislake',
+        'latitude'  => '50.52441000',
+        'longitude' => '-4.21333000',
+    ],
+    [
+        'id'        => 49995,
+        'name'      => 'Horrabridge',
+        'latitude'  => '50.50843000',
+        'longitude' => '-4.10042000',
+    ],
+    [
+        'id'        => 50090,
+        'name'      => 'Ivybridge',
+        'latitude'  => '50.39039000',
+        'longitude' => '-3.91914000',
+    ],
+    [
+        'id'        => 50239,
+        'name'      => 'Landrake',
+        'latitude'  => '50.42265000',
+        'longitude' => '-4.29023000',
+    ],
+    [
+        'id'        => 50301,
+        'name'      => 'Lifton',
+        'latitude'  => '50.64356000',
+        'longitude' => '-4.28216000',
+    ],
+    [
+        'id'        => 50609,
+        'name'      => 'Modbury',
+        'latitude'  => '50.34957000',
+        'longitude' => '-3.88684000',
+    ],
+    [
+        'id'        => 50729,
+        'name'      => 'Newton Ferrers',
+        'latitude'  => '50.31467000',
+        'longitude' => '-4.03920000',
+    ],
+    [
+        'id'        => 50925,
+        'name'      => 'Plymouth',
+        'latitude'  => '50.38333000',
+        'longitude' => '-4.13333000',
+    ],
+    [
+        'id'        => 50926,
+        'name'      => 'Plympton',
+        'latitude'  => '50.39074000',
+        'longitude' => '-4.06022000',
+    ],
+    [
+        'id'        => 50927,
+        'name'      => 'Plymstock',
+        'latitude'  => '50.35999000',
+        'longitude' => '-4.09049000',
+    ],
+    [
+        'id'        => 50993,
+        'name'      => 'Princetown',
+        'latitude'  => '50.54393000',
+        'longitude' => '-3.98855000',
+    ],
+    [
+        'id'        => 51186,
+        'name'      => 'Saltash',
+        'latitude'  => '50.40959000',
+        'longitude' => '-4.22514000',
+    ],
+    [
+        'id'        => 51565,
+        'name'      => 'Tavistock',
+        'latitude'  => '50.54944000',
+        'longitude' => '-4.14418000',
+    ],
+    [
+        'id'        => 51646,
+        'name'      => 'Torpoint',
+        'latitude'  => '50.37505000',
+        'longitude' => '-4.19566000',
+    ],
+    [
+        'id'        => 51799,
+        'name'      => 'Wembury',
+        'latitude'  => '50.32272000',
+        'longitude' => '-4.07529000',
+    ],
+    [
+        'id'        => 52019,
+        'name'      => 'Yealmpton',
+        'latitude'  => '50.34856000',
+        'longitude' => '-3.99877000',
+    ],
+    [
+        'id'        => 52020,
+        'name'      => 'Yelverton',
+        'latitude'  => '50.49290000',
+        'longitude' => '-4.08382000',
+    ],
+];

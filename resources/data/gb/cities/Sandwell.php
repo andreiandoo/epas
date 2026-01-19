@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48457,
+        'name'      => 'Belbroughton',
+        'latitude'  => '52.39177000',
+        'longitude' => '-2.11884000',
+    ],
+    [
+        'id'        => 48690,
+        'name'      => 'Brierley Hill',
+        'latitude'  => '52.48173000',
+        'longitude' => '-2.12139000',
+    ],
+    [
+        'id'        => 49138,
+        'name'      => 'Cradley Heath',
+        'latitude'  => '52.47214000',
+        'longitude' => '-2.08212000',
+    ],
+    [
+        'id'        => 49335,
+        'name'      => 'Dudley',
+        'latitude'  => '52.50000000',
+        'longitude' => '-2.11667000',
+    ],
+    [
+        'id'        => 49778,
+        'name'      => 'Hagley',
+        'latitude'  => '52.42620000',
+        'longitude' => '-2.12819000',
+    ],
+    [
+        'id'        => 49782,
+        'name'      => 'Halesowen',
+        'latitude'  => '52.44859000',
+        'longitude' => '-2.04938000',
+    ],
+    [
+        'id'        => 50190,
+        'name'      => 'Kinvere',
+        'latitude'  => '52.45000000',
+        'longitude' => '-2.23333000',
+    ],
+    [
+        'id'        => 50682,
+        'name'      => 'Netherton',
+        'latitude'  => '52.48333000',
+        'longitude' => '-2.08333000',
+    ],
+    [
+        'id'        => 50806,
+        'name'      => 'Oldbury',
+        'latitude'  => '52.50000000',
+        'longitude' => '-2.01667000',
+    ],
+    [
+        'id'        => 51104,
+        'name'      => 'Romsley',
+        'latitude'  => '52.41996000',
+        'longitude' => '-2.05695000',
+    ],
+    [
+        'id'        => 51127,
+        'name'      => 'Rowley Regis',
+        'latitude'  => '52.48292000',
+        'longitude' => '-2.04376000',
+    ],
+    [
+        'id'        => 51195,
+        'name'      => 'Sandwell',
+        'latitude'  => '52.50000000',
+        'longitude' => '-2.00000000',
+    ],
+    [
+        'id'        => 51333,
+        'name'      => 'Smethwick',
+        'latitude'  => '52.49268000',
+        'longitude' => '-1.96745000',
+    ],
+    [
+        'id'        => 51482,
+        'name'      => 'Stourbridge',
+        'latitude'  => '52.45608000',
+        'longitude' => '-2.14317000',
+    ],
+    [
+        'id'        => 51630,
+        'name'      => 'Tipton',
+        'latitude'  => '52.52956000',
+        'longitude' => '-2.06773000',
+    ],
+    [
+        'id'        => 51781,
+        'name'      => 'Wednesbury',
+        'latitude'  => '52.55140000',
+        'longitude' => '-2.02355000',
+    ],
+    [
+        'id'        => 51808,
+        'name'      => 'West Bromwich',
+        'latitude'  => '52.51868000',
+        'longitude' => '-1.99450000',
+    ],
+];

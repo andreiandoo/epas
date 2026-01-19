@@ -1,0 +1,87 @@
+<?php
+return [
+    [
+        'id'        => 76410,
+        'name'      => 'Alor Setar',
+        'latitude'  => '6.12104000',
+        'longitude' => '100.36014000',
+    ],
+    [
+        'id'        => 76412,
+        'name'      => 'Ayer Hangat',
+        'latitude'  => '6.42062000',
+        'longitude' => '99.82199000',
+    ],
+    [
+        'id'        => 76426,
+        'name'      => 'Bedong',
+        'latitude'  => '5.72743000',
+        'longitude' => '100.50876000',
+    ],
+    [
+        'id'        => 76449,
+        'name'      => 'Gurun',
+        'latitude'  => '5.81717000',
+        'longitude' => '100.47381000',
+    ],
+    [
+        'id'        => 76454,
+        'name'      => 'Jitra',
+        'latitude'  => '6.26812000',
+        'longitude' => '100.42167000',
+    ],
+    [
+        'id'        => 76470,
+        'name'      => 'Kampung Kilim',
+        'latitude'  => '6.40550000',
+        'longitude' => '99.85020000',
+    ],
+    [
+        'id'        => 76471,
+        'name'      => 'Kampung Kok',
+        'latitude'  => '6.36759000',
+        'longitude' => '99.68252000',
+    ],
+    [
+        'id'        => 76492,
+        'name'      => 'Kuah',
+        'latitude'  => '6.32649000',
+        'longitude' => '99.84320000',
+    ],
+    [
+        'id'        => 76495,
+        'name'      => 'Kuala Kedah',
+        'latitude'  => '6.10000000',
+        'longitude' => '100.30000000',
+    ],
+    [
+        'id'        => 76503,
+        'name'      => 'Kuala Teriang',
+        'latitude'  => '6.36377000',
+        'longitude' => '99.71532000',
+    ],
+    [
+        'id'        => 76509,
+        'name'      => 'Kulim',
+        'latitude'  => '5.36499000',
+        'longitude' => '100.56177000',
+    ],
+    [
+        'id'        => 76514,
+        'name'      => 'Langkawi',
+        'latitude'  => '6.35608000',
+        'longitude' => '99.78375000',
+    ],
+    [
+        'id'        => 76529,
+        'name'      => 'Padang Mat Sirat',
+        'latitude'  => '6.35423000',
+        'longitude' => '99.73404000',
+    ],
+    [
+        'id'        => 76569,
+        'name'      => 'Sungai Petani',
+        'latitude'  => '5.64700000',
+        'longitude' => '100.48772000',
+    ],
+];

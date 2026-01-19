@@ -1,0 +1,87 @@
+<?php
+return [
+    [
+        'id'        => 19281,
+        'name'      => 'Ankang',
+        'latitude'  => '32.68000000',
+        'longitude' => '109.01722000',
+    ],
+    [
+        'id'        => 19315,
+        'name'      => 'Baoji Shi',
+        'latitude'  => '34.36944000',
+        'longitude' => '107.13635000',
+    ],
+    [
+        'id'        => 19578,
+        'name'      => 'Guozhen',
+        'latitude'  => '34.36591000',
+        'longitude' => '107.35904000',
+    ],
+    [
+        'id'        => 19595,
+        'name'      => 'Hancheng',
+        'latitude'  => '35.46028000',
+        'longitude' => '110.42917000',
+    ],
+    [
+        'id'        => 19600,
+        'name'      => 'Hanzhong',
+        'latitude'  => '33.07507000',
+        'longitude' => '107.02214000',
+    ],
+    [
+        'id'        => 19667,
+        'name'      => 'Huayin',
+        'latitude'  => '34.56528000',
+        'longitude' => '110.06639000',
+    ],
+    [
+        'id'        => 19852,
+        'name'      => 'Lintong',
+        'latitude'  => '34.37803000',
+        'longitude' => '109.20892000',
+    ],
+    [
+        'id'        => 20188,
+        'name'      => 'Tongchuanshi',
+        'latitude'  => '35.07474000',
+        'longitude' => '109.08495000',
+    ],
+    [
+        'id'        => 20215,
+        'name'      => 'Weinan',
+        'latitude'  => '34.50355000',
+        'longitude' => '109.50891000',
+    ],
+    [
+        'id'        => 20329,
+        'name'      => 'Xi’an',
+        'latitude'  => '34.25833000',
+        'longitude' => '108.92861000',
+    ],
+    [
+        'id'        => 20268,
+        'name'      => 'Xianyang',
+        'latitude'  => '34.33778000',
+        'longitude' => '108.70261000',
+    ],
+    [
+        'id'        => 20352,
+        'name'      => 'Yanliang',
+        'latitude'  => '34.65918000',
+        'longitude' => '109.22921000',
+    ],
+    [
+        'id'        => 20399,
+        'name'      => 'Yulinshi',
+        'latitude'  => '38.29181000',
+        'longitude' => '109.73753000',
+    ],
+    [
+        'id'        => 20410,
+        'name'      => 'Yuxia',
+        'latitude'  => '34.06153000',
+        'longitude' => '108.62905000',
+    ],
+];

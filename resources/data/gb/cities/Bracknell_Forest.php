@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 48213,
+        'name'      => 'Aldershot',
+        'latitude'  => '51.24827000',
+        'longitude' => '-0.76389000',
+    ],
+    [
+        'id'        => 48284,
+        'name'      => 'Ascot',
+        'latitude'  => '51.41082000',
+        'longitude' => '-0.67480000',
+    ],
+    [
+        'id'        => 48336,
+        'name'      => 'Bagshot',
+        'latitude'  => '51.36069000',
+        'longitude' => '-0.68802000',
+    ],
+    [
+        'id'        => 48644,
+        'name'      => 'Bracknell',
+        'latitude'  => '51.41363000',
+        'longitude' => '-0.75054000',
+    ],
+    [
+        'id'        => 48645,
+        'name'      => 'Bracknell Forest',
+        'latitude'  => '51.41667000',
+        'longitude' => '-0.75000000',
+    ],
+    [
+        'id'        => 48830,
+        'name'      => 'Camberley',
+        'latitude'  => '51.33705000',
+        'longitude' => '-0.74261000',
+    ],
+    [
+        'id'        => 48980,
+        'name'      => 'Chobham',
+        'latitude'  => '51.34836000',
+        'longitude' => '-0.60639000',
+    ],
+    [
+        'id'        => 49184,
+        'name'      => 'Crowthorne',
+        'latitude'  => '51.37027000',
+        'longitude' => '-0.79219000',
+    ],
+    [
+        'id'        => 49462,
+        'name'      => 'Elstead',
+        'latitude'  => '51.18548000',
+        'longitude' => '-0.70536000',
+    ],
+    [
+        'id'        => 49517,
+        'name'      => 'Fairlands',
+        'latitude'  => '51.26178000',
+        'longitude' => '-0.62141000',
+    ],
+    [
+        'id'        => 49528,
+        'name'      => 'Farnborough',
+        'latitude'  => '51.29424000',
+        'longitude' => '-0.75565000',
+    ],
+    [
+        'id'        => 49530,
+        'name'      => 'Farnham',
+        'latitude'  => '51.21444000',
+        'longitude' => '-0.80054000',
+    ],
+    [
+        'id'        => 49608,
+        'name'      => 'Frimley',
+        'latitude'  => '51.31667000',
+        'longitude' => '-0.74544000',
+    ],
+    [
+        'id'        => 50216,
+        'name'      => 'Knaphill',
+        'latitude'  => '51.32010000',
+        'longitude' => '-0.61584000',
+    ],
+    [
+        'id'        => 50302,
+        'name'      => 'Lightwater',
+        'latitude'  => '51.34846000',
+        'longitude' => '-0.67147000',
+    ],
+    [
+        'id'        => 50746,
+        'name'      => 'Normandy',
+        'latitude'  => '51.25751000',
+        'longitude' => '-0.67472000',
+    ],
+    [
+        'id'        => 51924,
+        'name'      => 'Windlesham',
+        'latitude'  => '51.36509000',
+        'longitude' => '-0.65476000',
+    ],
+    [
+        'id'        => 51956,
+        'name'      => 'Woking',
+        'latitude'  => '51.31903000',
+        'longitude' => '-0.55893000',
+    ],
+    [
+        'id'        => 51967,
+        'name'      => 'Wood Street Village',
+        'latitude'  => '51.25098000',
+        'longitude' => '-0.63695000',
+    ],
+];

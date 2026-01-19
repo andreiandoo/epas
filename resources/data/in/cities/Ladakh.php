@@ -1,0 +1,15 @@
+<?php
+return [
+    [
+        'id'        => 132399,
+        'name'      => 'Kargil',
+        'latitude'  => '34.55765000',
+        'longitude' => '76.12622000',
+    ],
+    [
+        'id'        => 132762,
+        'name'      => 'Leh',
+        'latitude'  => '34.16504000',
+        'longitude' => '77.58402000',
+    ],
+];

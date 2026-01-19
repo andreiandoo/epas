@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48312,
+        'name'      => 'Auchinleck',
+        'latitude'  => '55.47157000',
+        'longitude' => '-4.29337000',
+    ],
+    [
+        'id'        => 48892,
+        'name'      => 'Catrine',
+        'latitude'  => '55.50422000',
+        'longitude' => '-4.33026000',
+    ],
+    [
+        'id'        => 49208,
+        'name'      => 'Cumnock',
+        'latitude'  => '55.45445000',
+        'longitude' => '-4.26644000',
+    ],
+    [
+        'id'        => 49242,
+        'name'      => 'Darvel',
+        'latitude'  => '55.60976000',
+        'longitude' => '-4.28142000',
+    ],
+    [
+        'id'        => 49330,
+        'name'      => 'Drongan',
+        'latitude'  => '55.43498000',
+        'longitude' => '-4.45551000',
+    ],
+    [
+        'id'        => 49384,
+        'name'      => 'East Ayrshire',
+        'latitude'  => '55.50000000',
+        'longitude' => '-4.25000000',
+    ],
+    [
+        'id'        => 49624,
+        'name'      => 'Galston',
+        'latitude'  => '55.60093000',
+        'longitude' => '-4.38172000',
+    ],
+    [
+        'id'        => 50203,
+        'name'      => 'Kirkconnel',
+        'latitude'  => '55.38561000',
+        'longitude' => '-3.99836000',
+    ],
+    [
+        'id'        => 50387,
+        'name'      => 'Logan',
+        'latitude'  => '55.45466000',
+        'longitude' => '-4.23514000',
+    ],
+    [
+        'id'        => 50528,
+        'name'      => 'Mauchline',
+        'latitude'  => '55.51604000',
+        'longitude' => '-4.37928000',
+    ],
+    [
+        'id'        => 50634,
+        'name'      => 'Mossblown',
+        'latitude'  => '55.48941000',
+        'longitude' => '-4.52787000',
+    ],
+    [
+        'id'        => 50649,
+        'name'      => 'Muirkirk',
+        'latitude'  => '55.52272000',
+        'longitude' => '-4.06551000',
+    ],
+    [
+        'id'        => 50687,
+        'name'      => 'New Cumnock',
+        'latitude'  => '55.39563000',
+        'longitude' => '-4.18458000',
+    ],
+    [
+        'id'        => 50719,
+        'name'      => 'Newmilns',
+        'latitude'  => '55.60751000',
+        'longitude' => '-4.32416000',
+    ],
+    [
+        'id'        => 50797,
+        'name'      => 'Ochiltree',
+        'latitude'  => '55.45981000',
+        'longitude' => '-4.36782000',
+    ],
+    [
+        'id'        => 51540,
+        'name'      => 'Symington',
+        'latitude'  => '55.55176000',
+        'longitude' => '-4.55835000',
+    ],
+    [
+        'id'        => 51559,
+        'name'      => 'Tarbolton',
+        'latitude'  => '55.51292000',
+        'longitude' => '-4.48648000',
+    ],
+];

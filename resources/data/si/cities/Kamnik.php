@@ -1,0 +1,21 @@
+<?php
+return [
+    [
+        'id'        => 104133,
+        'name'      => 'Kamnik',
+        'latitude'  => '46.22587000',
+        'longitude' => '14.61207000',
+    ],
+    [
+        'id'        => 104184,
+        'name'      => 'Mekinje',
+        'latitude'  => '46.23333000',
+        'longitude' => '14.61667000',
+    ],
+    [
+        'id'        => 104355,
+        'name'      => 'Šmarca',
+        'latitude'  => '46.19333000',
+        'longitude' => '14.59667000',
+    ],
+];

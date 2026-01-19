@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AmBilet.ro - Bilete la Spectacole si Evenimente</title>
+    <meta name="description" content="Cumpara bilete online la concerte, teatru, festival si alte evenimente culturale in Romania.">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="images/favicon.png">
+</head>
+<body>
+    <!-- Header -->
+    <header id="header">
+        <nav class="container">
+            <a href="/" class="logo">
+                <img src="images/logo.png" alt="AmBilet.ro">
+            </a>
+            <ul class="nav-links">
+                <li><a href="/events">Evenimente</a></li>
+                <li><a href="/categories">Categorii</a></li>
+                <li><a href="/about">Despre Noi</a></li>
+                <li><a href="/contact">Contact</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="/cart" class="cart-icon">
+                    <span class="cart-count">0</span>
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="hero">
+        <div class="container">
+            <h1>Descopera cele mai bune evenimente</h1>
+            <p>Concerte, teatru, festival si multe altele</p>
+
+            <!-- Search -->
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Cauta evenimente...">
+                <button type="button" id="search-btn">Cauta</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Events -->
+    <section id="featured-events">
+        <div class="container">
+            <h2>Evenimente in Evidenta</h2>
+            <div id="events-grid" class="events-grid">
+                <!-- Events will be loaded here via JavaScript -->
+                <div class="loading">Se incarca...</div>
+            </div>
+            <div class="text-center">
+                <a href="/events" class="btn btn-primary">Vezi Toate Evenimentele</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories -->
+    <section id="categories">
+        <div class="container">
+            <h2>Categorii</h2>
+            <div class="categories-grid">
+                <a href="/events?category=concert" class="category-card">
+                    <span class="icon">🎵</span>
+                    <span class="name">Concerte</span>
+                </a>
+                <a href="/events?category=theater" class="category-card">
+                    <span class="icon">🎭</span>
+                    <span class="name">Teatru</span>
+                </a>
+                <a href="/events?category=festival" class="category-card">
+                    <span class="icon">🎪</span>
+                    <span class="name">Festivaluri</span>
+                </a>
+                <a href="/events?category=sports" class="category-card">
+                    <span class="icon">⚽</span>
+                    <span class="name">Sport</span>
+                </a>
+                <a href="/events?category=comedy" class="category-card">
+                    <span class="icon">😄</span>
+                    <span class="name">Stand-up</span>
+                </a>
+                <a href="/events?category=kids" class="category-card">
+                    <span class="icon">👶</span>
+                    <span class="name">Copii</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4>AmBilet.ro</h4>
+                    <p>Platforma ta de bilete online pentru cele mai bune evenimente din Romania.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Link-uri Utile</h4>
+                    <ul>
+                        <li><a href="/about">Despre Noi</a></li>
+                        <li><a href="/contact">Contact</a></li>
+                        <li><a href="/faq">Intrebari Frecvente</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="/terms">Termeni si Conditii</a></li>
+                        <li><a href="/privacy">Politica de Confidentialitate</a></li>
+                        <li><a href="/cookies">Politica Cookies</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Contact</h4>
+                    <ul>
+                        <li>Email: contact@ambilet.ro</li>
+                        <li>Tel: 021 XXX XXXX</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 AmBilet.ro. Toate drepturile rezervate.</p>
+                <p>Powered by <a href="https://tixello.com" target="_blank">Tixello</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

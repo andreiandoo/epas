@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48264,
+        'name'      => 'Appleton Thorn',
+        'latitude'  => '53.35045000',
+        'longitude' => '-2.54488000',
+    ],
+    [
+        'id'        => 48601,
+        'name'      => 'Borough of Halton',
+        'latitude'  => '53.33333000',
+        'longitude' => '-2.75000000',
+    ],
+    [
+        'id'        => 49197,
+        'name'      => 'Culcheth',
+        'latitude'  => '53.45110000',
+        'longitude' => '-2.52104000',
+    ],
+    [
+        'id'        => 49233,
+        'name'      => 'Daresbury',
+        'latitude'  => '53.34184000',
+        'longitude' => '-2.63500000',
+    ],
+    [
+        'id'        => 49613,
+        'name'      => 'Frodsham',
+        'latitude'  => '53.29485000',
+        'longitude' => '-2.72745000',
+    ],
+    [
+        'id'        => 49701,
+        'name'      => 'Grappenhall',
+        'latitude'  => '53.37204000',
+        'longitude' => '-2.54675000',
+    ],
+    [
+        'id'        => 49731,
+        'name'      => 'Great Sankey',
+        'latitude'  => '53.39234000',
+        'longitude' => '-2.63994000',
+    ],
+    [
+        'id'        => 49790,
+        'name'      => 'Halton',
+        'latitude'  => '53.31667000',
+        'longitude' => '-2.70000000',
+    ],
+    [
+        'id'        => 50448,
+        'name'      => 'Lymm',
+        'latitude'  => '53.38105000',
+        'longitude' => '-2.47763000',
+    ],
+    [
+        'id'        => 50734,
+        'name'      => 'Newton-le-Willows',
+        'latitude'  => '53.45000000',
+        'longitude' => '-2.60000000',
+    ],
+    [
+        'id'        => 50782,
+        'name'      => 'Northwich',
+        'latitude'  => '53.25882000',
+        'longitude' => '-2.52025000',
+    ],
+    [
+        'id'        => 51144,
+        'name'      => 'Runcorn',
+        'latitude'  => '53.34174000',
+        'longitude' => '-2.73124000',
+    ],
+    [
+        'id'        => 51459,
+        'name'      => 'Stockton Heath',
+        'latitude'  => '53.37084000',
+        'longitude' => '-2.57406000',
+    ],
+    [
+        'id'        => 51757,
+        'name'      => 'Warrington',
+        'latitude'  => '53.41667000',
+        'longitude' => '-2.58333000',
+    ],
+    [
+        'id'        => 51779,
+        'name'      => 'Weaverham',
+        'latitude'  => '53.26018000',
+        'longitude' => '-2.57291000',
+    ],
+    [
+        'id'        => 51897,
+        'name'      => 'Widnes',
+        'latitude'  => '53.36180000',
+        'longitude' => '-2.73406000',
+    ],
+    [
+        'id'        => 51939,
+        'name'      => 'Winwick',
+        'latitude'  => '53.43333000',
+        'longitude' => '-2.60000000',
+    ],
+];

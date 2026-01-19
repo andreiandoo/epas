@@ -1,0 +1,20 @@
+<?php
+return [
+    'Bamingui-Bangoran',
+    'Bangui',
+    'Basse-Kotto',
+    'Haut-Mbomou',
+    'Haute-Kotto',
+    'Kémo',
+    'Lobaye',
+    'Mambéré-Kadéï',
+    'Mbomou',
+    'Nana-Grébizi',
+    'Nana-Mambéré',
+    'Ombella-M\'Poko',
+    'Ouaka',
+    'Ouham',
+    'Ouham-Pendé',
+    'Sangha-Mbaéré',
+    'Vakaga',
+];

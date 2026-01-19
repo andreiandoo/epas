@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 48208,
+        'name'      => 'Aldbrough',
+        'latitude'  => '53.82893000',
+        'longitude' => '-0.11467000',
+    ],
+    [
+        'id'        => 48409,
+        'name'      => 'Barrow upon Humber',
+        'latitude'  => '53.67550000',
+        'longitude' => '-0.38062000',
+    ],
+    [
+        'id'        => 48416,
+        'name'      => 'Barton upon Humber',
+        'latitude'  => '53.68915000',
+        'longitude' => '-0.44377000',
+    ],
+    [
+        'id'        => 48787,
+        'name'      => 'Burstwick',
+        'latitude'  => '53.73211000',
+        'longitude' => '-0.13956000',
+    ],
+    [
+        'id'        => 48791,
+        'name'      => 'Burton Pidsea',
+        'latitude'  => '53.76327000',
+        'longitude' => '-0.10703000',
+    ],
+    [
+        'id'        => 49009,
+        'name'      => 'City of Kingston upon Hull',
+        'latitude'  => '53.75000000',
+        'longitude' => '-0.33333000',
+    ],
+    [
+        'id'        => 49364,
+        'name'      => 'Dunswell',
+        'latitude'  => '53.80106000',
+        'longitude' => '-0.37139000',
+    ],
+    [
+        'id'        => 49694,
+        'name'      => 'Goxhill',
+        'latitude'  => '53.67635000',
+        'longitude' => '-0.33759000',
+    ],
+    [
+        'id'        => 49886,
+        'name'      => 'Hedon',
+        'latitude'  => '53.73962000',
+        'longitude' => '-0.19655000',
+    ],
+    [
+        'id'        => 49994,
+        'name'      => 'Hornsea',
+        'latitude'  => '53.91041000',
+        'longitude' => '-0.16806000',
+    ],
+    [
+        'id'        => 50131,
+        'name'      => 'Keyingham',
+        'latitude'  => '53.70961000',
+        'longitude' => '-0.11325000',
+    ],
+    [
+        'id'        => 50179,
+        'name'      => 'Kingston upon Hull',
+        'latitude'  => '53.74460000',
+        'longitude' => '-0.33525000',
+    ],
+    [
+        'id'        => 50293,
+        'name'      => 'Leven',
+        'latitude'  => '53.89028000',
+        'longitude' => '-0.31783000',
+    ],
+    [
+        'id'        => 50755,
+        'name'      => 'North Ferriby',
+        'latitude'  => '53.72124000',
+        'longitude' => '-0.50520000',
+    ],
+    [
+        'id'        => 50828,
+        'name'      => 'Ottringham',
+        'latitude'  => '53.70092000',
+        'longitude' => '-0.07909000',
+    ],
+    [
+        'id'        => 51105,
+        'name'      => 'Roos',
+        'latitude'  => '53.75292000',
+        'longitude' => '-0.04463000',
+    ],
+    [
+        'id'        => 51323,
+        'name'      => 'Skidby',
+        'latitude'  => '53.78921000',
+        'longitude' => '-0.46131000',
+    ],
+    [
+        'id'        => 51394,
+        'name'      => 'Sproatley',
+        'latitude'  => '53.79379000',
+        'longitude' => '-0.19130000',
+    ],
+    [
+        'id'        => 51599,
+        'name'      => 'Thorngumbald',
+        'latitude'  => '53.72100000',
+        'longitude' => '-0.17175000',
+    ],
+    [
+        'id'        => 51692,
+        'name'      => 'Ulceby',
+        'latitude'  => '53.61667000',
+        'longitude' => '-0.33333000',
+    ],
+];

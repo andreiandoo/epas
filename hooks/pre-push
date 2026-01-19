@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Pre-push hook for version validation
+# Ensures version.json is up to date before pushing
+
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+VERSION_FILE="$PROJECT_ROOT/version.json"
+
+# Skip if version.json doesn't exist
+if [ ! -f "$VERSION_FILE" ]; then
+    exit 0
+fi
+
+# Check for uncommitted changes to version.json
+if [ -n "$(git status --porcelain version.json)" ]; then
+    echo "Warning: version.json has uncommitted changes"
+    echo "Consider committing version changes before pushing"
+fi
+
+# Display current versions
+echo "Current versions:"
+if [ -f "$PROJECT_ROOT/artisan" ]; then
+    cd "$PROJECT_ROOT"
+    php artisan version:show 2>/dev/null || cat "$VERSION_FILE"
+else
+    cat "$VERSION_FILE"
+fi
+
+echo ""
+echo "Proceeding with push..."
+
+exit 0

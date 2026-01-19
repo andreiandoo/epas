@@ -1,0 +1,75 @@
+<?php
+return [
+    [
+        'id'        => 65604,
+        'name'      => 'Aktau',
+        'latitude'  => '43.65000000',
+        'longitude' => '51.16667000',
+    ],
+    [
+        'id'        => 65641,
+        'name'      => 'Baūtīno',
+        'latitude'  => '44.54479000',
+        'longitude' => '50.24629000',
+    ],
+    [
+        'id'        => 65648,
+        'name'      => 'Beyneu',
+        'latitude'  => '45.31667000',
+        'longitude' => '55.20000000',
+    ],
+    [
+        'id'        => 65678,
+        'name'      => 'Fort-Shevchenko',
+        'latitude'  => '44.50654000',
+        'longitude' => '50.26388000',
+    ],
+    [
+        'id'        => 65732,
+        'name'      => 'Munayshy',
+        'latitude'  => '43.49111000',
+        'longitude' => '52.10861000',
+    ],
+    [
+        'id'        => 65851,
+        'name'      => 'Ömirzaq',
+        'latitude'  => '43.59786000',
+        'longitude' => '51.24171000',
+    ],
+    [
+        'id'        => 65772,
+        'name'      => 'Sayötesh',
+        'latitude'  => '44.32781000',
+        'longitude' => '53.53246000',
+    ],
+    [
+        'id'        => 65786,
+        'name'      => 'Shetpe',
+        'latitude'  => '44.16667000',
+        'longitude' => '52.11667000',
+    ],
+    [
+        'id'        => 65806,
+        'name'      => 'Taūshyq',
+        'latitude'  => '44.34678000',
+        'longitude' => '51.34932000',
+    ],
+    [
+        'id'        => 65829,
+        'name'      => 'Yeraliyev',
+        'latitude'  => '43.18032000',
+        'longitude' => '51.68116000',
+    ],
+    [
+        'id'        => 65837,
+        'name'      => 'Zhanaozen',
+        'latitude'  => '43.34116000',
+        'longitude' => '52.86192000',
+    ],
+    [
+        'id'        => 65844,
+        'name'      => 'Zhetibay',
+        'latitude'  => '43.59417000',
+        'longitude' => '52.07889000',
+    ],
+];

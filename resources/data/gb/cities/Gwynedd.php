@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 48340,
+        'name'      => 'Bala',
+        'latitude'  => '52.91111000',
+        'longitude' => '-3.59722000',
+    ],
+    [
+        'id'        => 48393,
+        'name'      => 'Barmouth',
+        'latitude'  => '52.72377000',
+        'longitude' => '-4.05748000',
+    ],
+    [
+        'id'        => 48485,
+        'name'      => 'Betws-y-Coed',
+        'latitude'  => '53.09382000',
+        'longitude' => '-3.80668000',
+    ],
+    [
+        'id'        => 48556,
+        'name'      => 'Blaenau-Ffestiniog',
+        'latitude'  => '52.99464000',
+        'longitude' => '-3.93697000',
+    ],
+    [
+        'id'        => 49093,
+        'name'      => 'Conwy',
+        'latitude'  => '53.08333000',
+        'longitude' => '-3.75000000',
+    ],
+    [
+        'id'        => 49156,
+        'name'      => 'Criccieth',
+        'latitude'  => '52.92053000',
+        'longitude' => '-4.23460000',
+    ],
+    [
+        'id'        => 49300,
+        'name'      => 'Dolgellau',
+        'latitude'  => '52.74222000',
+        'longitude' => '-3.88611000',
+    ],
+    [
+        'id'        => 49370,
+        'name'      => 'Dyffryn Ardudwy',
+        'latitude'  => '52.77748000',
+        'longitude' => '-4.06468000',
+    ],
+    [
+        'id'        => 49769,
+        'name'      => 'Gwynedd',
+        'latitude'  => '52.83333000',
+        'longitude' => '-3.91667000',
+    ],
+    [
+        'id'        => 49807,
+        'name'      => 'Harlech',
+        'latitude'  => '52.85941000',
+        'longitude' => '-4.10831000',
+    ],
+    [
+        'id'        => 50341,
+        'name'      => 'Llanbedr',
+        'latitude'  => '52.81667000',
+        'longitude' => '-4.10000000',
+    ],
+    [
+        'id'        => 50886,
+        'name'      => 'Penrhyndeudraeth',
+        'latitude'  => '52.93333000',
+        'longitude' => '-4.06667000',
+    ],
+    [
+        'id'        => 50893,
+        'name'      => 'Penygroes',
+        'latitude'  => '53.05502000',
+        'longitude' => '-4.28535000',
+    ],
+    [
+        'id'        => 50962,
+        'name'      => 'Porthmadog',
+        'latitude'  => '52.92924000',
+        'longitude' => '-4.13137000',
+    ],
+    [
+        'id'        => 51008,
+        'name'      => 'Pwllheli',
+        'latitude'  => '52.88990000',
+        'longitude' => '-4.41451000',
+    ],
+    [
+        'id'        => 51549,
+        'name'      => 'Tal-y-bont',
+        'latitude'  => '52.77471000',
+        'longitude' => '-4.09224000',
+    ],
+    [
+        'id'        => 51551,
+        'name'      => 'Talysarn',
+        'latitude'  => '53.05365000',
+        'longitude' => '-4.25767000',
+    ],
+    [
+        'id'        => 51660,
+        'name'      => 'Trawsfynydd',
+        'latitude'  => '52.90212000',
+        'longitude' => '-3.92289000',
+    ],
+];

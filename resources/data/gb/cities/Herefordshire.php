@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 48464,
+        'name'      => 'Belmont',
+        'latitude'  => '52.04272000',
+        'longitude' => '-2.74169000',
+    ],
+    [
+        'id'        => 48722,
+        'name'      => 'Bromyard',
+        'latitude'  => '52.19019000',
+        'longitude' => '-2.50875000',
+    ],
+    [
+        'id'        => 48751,
+        'name'      => 'Bucknell',
+        'latitude'  => '52.35997000',
+        'longitude' => '-2.95066000',
+    ],
+    [
+        'id'        => 49150,
+        'name'      => 'Credenhill',
+        'latitude'  => '52.08351000',
+        'longitude' => '-2.80804000',
+    ],
+    [
+        'id'        => 49313,
+        'name'      => 'Dorstone',
+        'latitude'  => '52.06667000',
+        'longitude' => '-3.00000000',
+    ],
+    [
+        'id'        => 49502,
+        'name'      => 'Ewyas Harold',
+        'latitude'  => '51.95358000',
+        'longitude' => '-2.89325000',
+    ],
+    [
+        'id'        => 49908,
+        'name'      => 'Hereford',
+        'latitude'  => '52.05684000',
+        'longitude' => '-2.71482000',
+    ],
+    [
+        'id'        => 49909,
+        'name'      => 'Herefordshire',
+        'latitude'  => '52.08333000',
+        'longitude' => '-2.75000000',
+    ],
+    [
+        'id'        => 50174,
+        'name'      => 'Kingsland',
+        'latitude'  => '52.24911000',
+        'longitude' => '-2.81542000',
+    ],
+    [
+        'id'        => 50267,
+        'name'      => 'Ledbury',
+        'latitude'  => '52.03639000',
+        'longitude' => '-2.42635000',
+    ],
+    [
+        'id'        => 50282,
+        'name'      => 'Leominster',
+        'latitude'  => '52.22583000',
+        'longitude' => '-2.74491000',
+    ],
+    [
+        'id'        => 50413,
+        'name'      => 'Longtown',
+        'latitude'  => '51.95000000',
+        'longitude' => '-2.98333000',
+    ],
+    [
+        'id'        => 50435,
+        'name'      => 'Lugwardine',
+        'latitude'  => '52.06583000',
+        'longitude' => '-2.65780000',
+    ],
+    [
+        'id'        => 50814,
+        'name'      => 'Orleton',
+        'latitude'  => '52.30000000',
+        'longitude' => '-2.75000000',
+    ],
+    [
+        'id'        => 51110,
+        'name'      => 'Ross on Wye',
+        'latitude'  => '51.91667000',
+        'longitude' => '-2.56667000',
+    ],
+    [
+        'id'        => 51575,
+        'name'      => 'Tenbury Wells',
+        'latitude'  => '52.31077000',
+        'longitude' => '-2.59621000',
+    ],
+    [
+        'id'        => 51804,
+        'name'      => 'Weobley',
+        'latitude'  => '52.15960000',
+        'longitude' => '-2.87500000',
+    ],
+    [
+        'id'        => 51899,
+        'name'      => 'Wigmore',
+        'latitude'  => '52.31474000',
+        'longitude' => '-2.85802000',
+    ],
+];

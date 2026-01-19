@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 76497,
+        'name'      => 'Kuala Lumpur',
+        'latitude'  => '3.14120000',
+        'longitude' => '101.68653000',
+    ],
+];

@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 154885,
+        'name'      => 'Anaa',
+        'latitude'  => '-17.41194390',
+        'longitude' => '-145.66284990',
+    ],
+    [
+        'id'        => 154886,
+        'name'      => 'Arutua',
+        'latitude'  => '-15.31203340',
+        'longitude' => '-146.91262850',
+    ],
+    [
+        'id'        => 154887,
+        'name'      => 'Fakarava',
+        'latitude'  => '-16.29845160',
+        'longitude' => '-145.92218890',
+    ],
+    [
+        'id'        => 154888,
+        'name'      => 'Fangatau',
+        'latitude'  => '-15.82097880',
+        'longitude' => '-140.90810600',
+    ],
+    [
+        'id'        => 154889,
+        'name'      => 'Gambier',
+        'latitude'  => '-23.10088440',
+        'longitude' => '-135.07922550',
+    ],
+    [
+        'id'        => 154890,
+        'name'      => 'Hao',
+        'latitude'  => '-18.74532930',
+        'longitude' => '-145.33383850',
+    ],
+    [
+        'id'        => 154891,
+        'name'      => 'Hikueru',
+        'latitude'  => '-17.58767480',
+        'longitude' => '-142.69120590',
+    ],
+    [
+        'id'        => 154892,
+        'name'      => 'Makemo',
+        'latitude'  => '-16.59334420',
+        'longitude' => '-144.01756280',
+    ],
+    [
+        'id'        => 154893,
+        'name'      => 'Manihi',
+        'latitude'  => '-14.39757810',
+        'longitude' => '-146.12217070',
+    ],
+    [
+        'id'        => 154894,
+        'name'      => 'Napuka',
+        'latitude'  => '-14.17342310',
+        'longitude' => '-141.30676690',
+    ],
+    [
+        'id'        => 154895,
+        'name'      => 'Nukutavake',
+        'latitude'  => '-18.97808660',
+        'longitude' => '-139.29284520',
+    ],
+    [
+        'id'        => 154896,
+        'name'      => 'Puka-Puka',
+        'latitude'  => '-14.81902510',
+        'longitude' => '-138.86100870',
+    ],
+    [
+        'id'        => 154897,
+        'name'      => 'Rangiroa',
+        'latitude'  => '-15.12282920',
+        'longitude' => '-147.91140150',
+    ],
+    [
+        'id'        => 154898,
+        'name'      => 'Reao',
+        'latitude'  => '-18.51946500',
+        'longitude' => '-136.46088500',
+    ],
+    [
+        'id'        => 154899,
+        'name'      => 'Takaroa',
+        'latitude'  => '-14.67263940',
+        'longitude' => '-145.22680410',
+    ],
+    [
+        'id'        => 154900,
+        'name'      => 'Tatakoto',
+        'latitude'  => '-17.34173160',
+        'longitude' => '-138.47584630',
+    ],
+    [
+        'id'        => 154901,
+        'name'      => 'Tureia',
+        'latitude'  => '-20.82803180',
+        'longitude' => '-138.58163900',
+    ],
+];

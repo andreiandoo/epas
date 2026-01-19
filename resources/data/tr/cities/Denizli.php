@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 107057,
+        'name'      => 'Acıpayam',
+        'latitude'  => '37.42385000',
+        'longitude' => '29.34941000',
+    ],
+    [
+        'id'        => 107252,
+        'name'      => 'Babadağ',
+        'latitude'  => '37.80764000',
+        'longitude' => '28.85665000',
+    ],
+    [
+        'id'        => 107265,
+        'name'      => 'Baklan',
+        'latitude'  => '37.97694000',
+        'longitude' => '29.60861000',
+    ],
+    [
+        'id'        => 107326,
+        'name'      => 'Bekilli',
+        'latitude'  => '38.24027000',
+        'longitude' => '29.42559000',
+    ],
+    [
+        'id'        => 107334,
+        'name'      => 'Beyağaç',
+        'latitude'  => '37.24546000',
+        'longitude' => '28.90041000',
+    ],
+    [
+        'id'        => 107384,
+        'name'      => 'Bozkurt',
+        'latitude'  => '37.77583000',
+        'longitude' => '29.60811000',
+    ],
+    [
+        'id'        => 107408,
+        'name'      => 'Buldan',
+        'latitude'  => '38.04500000',
+        'longitude' => '28.83056000',
+    ],
+    [
+        'id'        => 108759,
+        'name'      => 'Çal',
+        'latitude'  => '38.09371000',
+        'longitude' => '29.40467000',
+    ],
+    [
+        'id'        => 108767,
+        'name'      => 'Çameli',
+        'latitude'  => '37.08660000',
+        'longitude' => '29.35225000',
+    ],
+    [
+        'id'        => 108781,
+        'name'      => 'Çardak',
+        'latitude'  => '37.77485000',
+        'longitude' => '29.70593000',
+    ],
+    [
+        'id'        => 108836,
+        'name'      => 'Çivril',
+        'latitude'  => '38.30139000',
+        'longitude' => '29.73861000',
+    ],
+    [
+        'id'        => 107742,
+        'name'      => 'Güney',
+        'latitude'  => '38.16454000',
+        'longitude' => '29.07324000',
+    ],
+    [
+        'id'        => 107833,
+        'name'      => 'Honaz',
+        'latitude'  => '37.77146000',
+        'longitude' => '29.34466000',
+    ],
+    [
+        'id'        => 107871,
+        'name'      => 'Kale',
+        'latitude'  => '37.43917000',
+        'longitude' => '28.84528000',
+    ],
+    [
+        'id'        => 108196,
+        'name'      => 'Merkezefendi',
+        'latitude'  => '37.80544000',
+        'longitude' => '29.04236000',
+    ],
+    [
+        'id'        => 108310,
+        'name'      => 'Pamukkale',
+        'latitude'  => '37.91644000',
+        'longitude' => '29.11729000',
+    ],
+    [
+        'id'        => 108393,
+        'name'      => 'Sarayköy',
+        'latitude'  => '37.91580000',
+        'longitude' => '28.87999000',
+    ],
+    [
+        'id'        => 108442,
+        'name'      => 'Serinhisar',
+        'latitude'  => '37.58105000',
+        'longitude' => '29.26639000',
+    ],
+    [
+        'id'        => 108540,
+        'name'      => 'Tavas',
+        'latitude'  => '37.57351000',
+        'longitude' => '29.07058000',
+    ],
+];

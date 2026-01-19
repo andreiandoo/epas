@@ -1,0 +1,75 @@
+<?php
+return [
+    [
+        'id'        => 66739,
+        'name'      => 'Bissen',
+        'latitude'  => '49.78733000',
+        'longitude' => '6.06540000',
+    ],
+    [
+        'id'        => 66741,
+        'name'      => 'Boevange-sur-Attert',
+        'latitude'  => '49.77256000',
+        'longitude' => '6.01532000',
+    ],
+    [
+        'id'        => 66750,
+        'name'      => 'Colmar',
+        'latitude'  => '49.81028000',
+        'longitude' => '6.09722000',
+    ],
+    [
+        'id'        => 66770,
+        'name'      => 'Fischbach',
+        'latitude'  => '49.74600000',
+        'longitude' => '6.18702000',
+    ],
+    [
+        'id'        => 66779,
+        'name'      => 'Heffingen',
+        'latitude'  => '49.76907000',
+        'longitude' => '6.24049000',
+    ],
+    [
+        'id'        => 66796,
+        'name'      => 'Larochette',
+        'latitude'  => '49.78362000',
+        'longitude' => '6.21891000',
+    ],
+    [
+        'id'        => 66799,
+        'name'      => 'Lintgen',
+        'latitude'  => '49.72243000',
+        'longitude' => '6.13016000',
+    ],
+    [
+        'id'        => 66800,
+        'name'      => 'Lorentzweiler',
+        'latitude'  => '49.70131000',
+        'longitude' => '6.14234000',
+    ],
+    [
+        'id'        => 66805,
+        'name'      => 'Mersch',
+        'latitude'  => '49.74889000',
+        'longitude' => '6.10611000',
+    ],
+    [
+        'id'        => 66816,
+        'name'      => 'Nommern',
+        'latitude'  => '49.78694000',
+        'longitude' => '6.17472000',
+    ],
+    [
+        'id'        => 66830,
+        'name'      => 'Rollingen',
+        'latitude'  => '49.74167000',
+        'longitude' => '6.11444000',
+    ],
+    [
+        'id'        => 66850,
+        'name'      => 'Tuntange',
+        'latitude'  => '49.71778000',
+        'longitude' => '6.01028000',
+    ],
+];
