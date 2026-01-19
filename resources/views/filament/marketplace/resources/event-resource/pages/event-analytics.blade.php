@@ -1142,6 +1142,40 @@
                     return classes[type] || 'bg-gray-100';
                 },
 
+                getMilestoneColor(type) {
+                    const colors = {
+                        'campaign_fb': '#1877f2',
+                        'campaign_google': '#ea4335',
+                        'campaign_tiktok': '#000000',
+                        'campaign_instagram': '#e4405f',
+                        'campaign_other': '#6b7280',
+                        'email': '#f59e0b',
+                        'price': '#10b981',
+                        'announcement': '#8b5cf6',
+                        'press': '#3b82f6',
+                        'lineup': '#ec4899',
+                        'custom': '#6b7280',
+                    };
+                    return colors[type] || '#6b7280';
+                },
+
+                getMilestoneIcon(type) {
+                    const icons = {
+                        'campaign_fb': '📘',
+                        'campaign_google': '🔍',
+                        'campaign_tiktok': '🎵',
+                        'campaign_instagram': '📸',
+                        'campaign_other': '📣',
+                        'email': '📧',
+                        'price': '💰',
+                        'announcement': '📢',
+                        'press': '📰',
+                        'lineup': '🎤',
+                        'custom': '📌',
+                    };
+                    return icons[type] || '📌';
+                },
+
                 getSourceClass(source) {
                     const classes = {
                         'Facebook': 'bg-blue-100 text-blue-700',
@@ -1186,29 +1220,48 @@
 
                     const self = this;
 
-                    // Build milestone annotations for the chart
+                    // Build milestone lookup by date for tooltips
+                    const milestonesOnDate = {};
+                    (this.milestones || []).forEach(m => {
+                        if (m.start_date) {
+                            const date = m.start_date.split('T')[0];
+                            const dateIndex = data.findIndex(d => d.date === date || d.full_date?.includes(date));
+                            if (dateIndex >= 0) {
+                                const dateKey = data[dateIndex]?.date;
+                                if (!milestonesOnDate[dateKey]) milestonesOnDate[dateKey] = [];
+                                milestonesOnDate[dateKey].push(m);
+                            }
+                        }
+                    });
+
+                    // Build milestone annotations for the chart with type-specific colors
                     const milestoneAnnotations = (this.milestones || [])
                         .filter(m => m.start_date)
                         .map(m => {
-                            const date = m.start_date.split('T')[0]; // Get just the date part
-                            // Find matching category index
+                            const date = m.start_date.split('T')[0];
                             const dateIndex = data.findIndex(d => d.date === date || d.full_date?.includes(date));
                             if (dateIndex === -1) return null;
 
+                            const color = self.getMilestoneColor(m.type);
+                            const icon = self.getMilestoneIcon(m.type);
+
                             return {
                                 x: data[dateIndex]?.date,
-                                borderColor: m.type?.includes('campaign') ? '#3b82f6' : '#8b5cf6',
-                                strokeDashArray: 4,
+                                borderColor: color,
+                                borderWidth: 2,
+                                strokeDashArray: 0,
                                 label: {
-                                    borderColor: m.type?.includes('campaign') ? '#3b82f6' : '#8b5cf6',
+                                    borderColor: color,
+                                    borderWidth: 0,
+                                    borderRadius: 6,
                                     style: {
                                         color: '#fff',
-                                        background: m.type?.includes('campaign') ? '#3b82f6' : '#8b5cf6',
+                                        background: color,
                                         fontSize: '10px',
-                                        fontWeight: 500,
+                                        fontWeight: 600,
                                         padding: { left: 8, right: 8, top: 4, bottom: 4 }
                                     },
-                                    text: m.title?.substring(0, 20) + (m.title?.length > 20 ? '...' : ''),
+                                    text: icon + ' ' + (m.title?.substring(0, 15) || '') + (m.title?.length > 15 ? '...' : ''),
                                     position: 'top',
                                     offsetY: -8
                                 }
@@ -1250,12 +1303,51 @@
                             intersect: false,
                             custom: function(opts) {
                                 const d = data[opts.dataPointIndex];
-                                let h = '<div style="background:#fff;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.15);padding:14px;font-size:12px;min-width:200px;"><div style="font-weight:600;color:#1f2937;margin-bottom:10px;">' + (d.full_date || d.date) + '</div>';
+                                let h = '<div style="background:#fff;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.15);padding:14px;font-size:12px;min-width:220px;"><div style="font-weight:600;color:#1f2937;margin-bottom:10px;">' + (d.full_date || d.date) + '</div>';
                                 self.chartMetrics.forEach(m => {
                                     if (m.active) {
                                         h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;"><div style="display:flex;align-items:center;gap:6px;"><div style="width:8px;height:8px;border-radius:50%;background:' + m.color + ';"></div><span style="color:#6b7280;">' + m.label + '</span></div><span style="font-weight:600;color:#1f2937;">' + (m.key === 'revenue' ? self.formatCurrency(d[m.key]) : (d[m.key] || 0).toLocaleString()) + '</span></div>';
                                     }
                                 });
+
+                                // Check for milestones on this date
+                                const dateMilestones = milestonesOnDate[d.date] || [];
+                                if (dateMilestones.length > 0) {
+                                    h += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb;">';
+                                    dateMilestones.forEach(m => {
+                                        const color = self.getMilestoneColor(m.type);
+                                        const icon = self.getMilestoneIcon(m.type);
+                                        h += '<div style="margin-bottom:10px;padding:10px;background:#f9fafb;border-radius:8px;border-left:3px solid ' + color + ';">';
+                                        h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span style="font-size:14px;">' + icon + '</span><span style="font-weight:600;color:#1f2937;">' + m.title + '</span></div>';
+
+                                        // Show metrics for ad campaigns
+                                        if (m.budget) {
+                                            h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">';
+                                            h += '<div><span style="color:#6b7280;">Budget:</span> <span style="font-weight:600;">' + self.formatCurrency(m.budget) + '</span></div>';
+                                            h += '<div><span style="color:#6b7280;">Revenue:</span> <span style="font-weight:600;color:#10b981;">' + self.formatCurrency(m.attributed_revenue || 0) + '</span></div>';
+                                            if (m.conversions) {
+                                                h += '<div><span style="color:#6b7280;">Conversions:</span> <span style="font-weight:600;">' + m.conversions + '</span></div>';
+                                            }
+                                            if (m.cac) {
+                                                h += '<div><span style="color:#6b7280;">CAC:</span> <span style="font-weight:600;">' + self.formatCurrency(m.cac) + '</span></div>';
+                                            }
+                                            if (m.roi !== null && m.roi !== undefined) {
+                                                const roiColor = m.roi >= 0 ? '#10b981' : '#ef4444';
+                                                h += '<div style="grid-column:span 2;"><span style="color:#6b7280;">ROI:</span> <span style="font-weight:700;color:' + roiColor + ';">' + (m.roi >= 0 ? '+' : '') + m.roi + '%</span></div>';
+                                            }
+                                            h += '</div>';
+                                        }
+
+                                        // Show impact for non-campaign milestones
+                                        if (m.impact && !m.budget) {
+                                            h += '<div style="font-size:11px;color:#10b981;font-weight:500;">' + m.impact + '</div>';
+                                        }
+
+                                        h += '</div>';
+                                    });
+                                    h += '</div>';
+                                }
+
                                 return h + '</div>';
                             }
                         }
