@@ -1642,48 +1642,94 @@
                     this.showGlobeModal = true;
                 },
 
-                initGlobe() {
+                initGlobe(retryCount = 0) {
                     const container = document.getElementById('globeMap');
-                    if (!container || typeof L === 'undefined') return;
 
-                    if (window.globeMap) {
-                        window.globeMap.remove();
+                    // Check if Leaflet is loaded
+                    if (typeof L === 'undefined') {
+                        console.warn('Leaflet not loaded yet, retrying...', retryCount);
+                        if (retryCount < 10) {
+                            setTimeout(() => this.initGlobe(retryCount + 1), 200);
+                        }
+                        return;
                     }
 
-                    const map = L.map(container, {
-                        center: [46, 20],
-                        zoom: 5,
-                        zoomControl: true,
-                        attributionControl: false
-                    });
+                    // Check if container exists
+                    if (!container) {
+                        console.warn('Globe container not found, retrying...', retryCount);
+                        if (retryCount < 10) {
+                            setTimeout(() => this.initGlobe(retryCount + 1), 200);
+                        }
+                        return;
+                    }
 
-                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                        subdomains: 'abcd',
-                        maxZoom: 19
-                    }).addTo(map);
+                    // Remove existing map if any
+                    if (window.globeMap) {
+                        try {
+                            window.globeMap.remove();
+                        } catch (e) {
+                            console.warn('Error removing old map:', e);
+                        }
+                        window.globeMap = null;
+                    }
 
-                    window.globeMap = map;
+                    try {
+                        const map = L.map(container, {
+                            center: [46, 20],
+                            zoom: 5,
+                            zoomControl: true,
+                            attributionControl: false
+                        });
 
-                    // Add sample markers
-                    const locations = [
-                        {lat: 44.4268, lng: 26.1025, city: 'Bucuresti', visitors: 18},
-                        {lat: 46.7712, lng: 23.6236, city: 'Cluj-Napoca', visitors: 9},
-                        {lat: 45.7489, lng: 21.2087, city: 'Timisoara', visitors: 6},
-                        {lat: 47.4979, lng: 19.0402, city: 'Budapest', visitors: 5},
-                    ];
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                            subdomains: 'abcd',
+                            maxZoom: 19
+                        }).addTo(map);
 
-                    locations.forEach(loc => {
-                        L.circleMarker([loc.lat, loc.lng], {
-                            radius: Math.max(8, loc.visitors),
-                            fillColor: '#10b981',
-                            color: '#fff',
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 0.7
-                        }).addTo(map).bindPopup(`<b>${loc.city}</b><br>${loc.visitors} visitors`);
-                    });
+                        window.globeMap = map;
 
-                    setTimeout(() => map.invalidateSize(), 100);
+                        // Add markers from topLocations data or fallback to sample
+                        const locations = this.topLocations.length > 0
+                            ? this.topLocations.slice(0, 10).map(l => ({
+                                lat: l.lat || 44.4268,
+                                lng: l.lng || 26.1025,
+                                city: l.city,
+                                visitors: l.tickets
+                            }))
+                            : [
+                                {lat: 44.4268, lng: 26.1025, city: 'București', visitors: 18},
+                                {lat: 46.7712, lng: 23.6236, city: 'Cluj-Napoca', visitors: 9},
+                                {lat: 45.7489, lng: 21.2087, city: 'Timișoara', visitors: 6},
+                                {lat: 47.4979, lng: 19.0402, city: 'Budapest', visitors: 5},
+                            ];
+
+                        locations.forEach(loc => {
+                            if (loc.lat && loc.lng) {
+                                L.circleMarker([loc.lat, loc.lng], {
+                                    radius: Math.max(8, Math.min(25, loc.visitors / 2)),
+                                    fillColor: '#10b981',
+                                    color: '#fff',
+                                    weight: 2,
+                                    opacity: 1,
+                                    fillOpacity: 0.7
+                                }).addTo(map).bindPopup(`<b>${loc.city}</b><br>${loc.visitors} visitors`);
+                            }
+                        });
+
+                        // Force map to recalculate size after container is visible
+                        setTimeout(() => {
+                            map.invalidateSize();
+                            // Fit bounds to markers if we have locations
+                            if (locations.length > 0 && locations[0].lat) {
+                                const bounds = L.latLngBounds(locations.map(l => [l.lat, l.lng]));
+                                map.fitBounds(bounds, { padding: [50, 50] });
+                            }
+                        }, 200);
+
+                        console.log('Globe map initialized successfully');
+                    } catch (e) {
+                        console.error('Error initializing globe map:', e);
+                    }
                 }
             };
         }
