@@ -1224,10 +1224,10 @@
                     const milestonesOnDate = {};
                     (this.milestones || []).forEach(m => {
                         if (m.start_date) {
-                            const date = m.start_date.split('T')[0];
-                            const dateIndex = data.findIndex(d => d.date === date || d.full_date?.includes(date));
+                            const milestoneDate = m.start_date.split('T')[0]; // "2026-01-14"
+                            const dateIndex = data.findIndex(d => d.raw_date === milestoneDate);
                             if (dateIndex >= 0) {
-                                const dateKey = data[dateIndex]?.date;
+                                const dateKey = data[dateIndex]?.date; // Use display format as key
                                 if (!milestonesOnDate[dateKey]) milestonesOnDate[dateKey] = [];
                                 milestonesOnDate[dateKey].push(m);
                             }
@@ -1238,8 +1238,8 @@
                     const milestoneAnnotations = (this.milestones || [])
                         .filter(m => m.start_date)
                         .map(m => {
-                            const date = m.start_date.split('T')[0];
-                            const dateIndex = data.findIndex(d => d.date === date || d.full_date?.includes(date));
+                            const milestoneDate = m.start_date.split('T')[0]; // "2026-01-14"
+                            const dateIndex = data.findIndex(d => d.raw_date === milestoneDate);
                             if (dateIndex === -1) return null;
 
                             const color = self.getMilestoneColor(m.type);
