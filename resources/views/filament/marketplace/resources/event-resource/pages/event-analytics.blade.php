@@ -336,8 +336,8 @@
                 <template x-for="m in milestones" :key="m.id">
                     <div @click="$wire.openMilestoneDetail(m.id)" class="milestone-card p-4 rounded-xl border border-gray-100 dark:border-gray-700 cursor-pointer hover:border-primary-200">
                         <div class="flex items-center gap-3 mb-3">
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl" :class="getMilestoneIconClass(m.type)">
-                                <span x-text="m.icon"></span>
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="getMilestoneIconClass(m.type)" :style="'color:' + getMilestoneColor(m.type)">
+                                <span x-html="getMilestoneIcon(m.type, 20)"></span>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="text-sm font-semibold text-gray-900 dark:text-white truncate" x-text="m.title"></div>
@@ -1109,9 +1109,10 @@
 
                 formatCurrency(v) {
                     if (!v) return '0 RON';
-                    if (v >= 1000000) return (v / 1000000).toFixed(2) + 'M RON';
-                    if (v >= 1000) return Math.round(v / 1000) + 'K RON';
-                    return v + ' RON';
+                    if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M RON';
+                    if (v >= 10000) return Math.round(v / 1000) + 'K RON';
+                    if (v >= 1000) return (v / 1000).toFixed(1) + 'K RON';
+                    return Math.round(v) + ' RON';
                 },
 
                 getTotalAdSpend() {
@@ -1159,21 +1160,23 @@
                     return colors[type] || '#6b7280';
                 },
 
-                getMilestoneIcon(type) {
-                    const icons = {
-                        'campaign_fb': '📘',
-                        'campaign_google': '🔍',
-                        'campaign_tiktok': '🎵',
-                        'campaign_instagram': '📸',
-                        'campaign_other': '📣',
-                        'email': '📧',
-                        'price': '💰',
-                        'announcement': '📢',
-                        'press': '📰',
-                        'lineup': '🎤',
-                        'custom': '📌',
+                getMilestoneIcon(type, size = 16) {
+                    // SVG heroicon paths for each milestone type
+                    const paths = {
+                        'campaign_fb': 'M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z', // Facebook
+                        'campaign_google': 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z', // Search
+                        'campaign_tiktok': 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3', // Music
+                        'campaign_instagram': 'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', // Camera
+                        'campaign_other': 'M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z', // Megaphone
+                        'email': 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', // Envelope
+                        'price': 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', // Currency
+                        'announcement': 'M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z', // Megaphone
+                        'press': 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z', // Newspaper
+                        'lineup': 'M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z', // Microphone
+                        'custom': 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z', // Location pin
                     };
-                    return icons[type] || '📌';
+                    const path = paths[type] || paths['custom'];
+                    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path.split(' M').map((p, i) => `<path d="${i > 0 ? 'M' : ''}${p}"/>`).join('')}</svg>`;
                 },
 
                 getSourceClass(source) {
@@ -1243,7 +1246,6 @@
                             if (dateIndex === -1) return null;
 
                             const color = self.getMilestoneColor(m.type);
-                            const icon = self.getMilestoneIcon(m.type);
 
                             return {
                                 x: data[dateIndex]?.date,
@@ -1261,7 +1263,7 @@
                                         fontWeight: 600,
                                         padding: { left: 8, right: 8, top: 4, bottom: 4 }
                                     },
-                                    text: icon + ' ' + (m.title?.substring(0, 15) || '') + (m.title?.length > 15 ? '...' : ''),
+                                    text: (m.title?.substring(0, 18) || '') + (m.title?.length > 18 ? '...' : ''),
                                     position: 'top',
                                     offsetY: -8
                                 }
