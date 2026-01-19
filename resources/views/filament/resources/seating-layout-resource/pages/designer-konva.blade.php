@@ -1,4 +1,5 @@
 <x-filament-panels::page>
+    <div>
     <div class="space-y-6"
          x-data="konvaDesigner()"
          x-init="init()"
@@ -1536,4 +1537,5 @@
             }
         }
     </script>
+    </div>
 </x-filament-panels::page>
