@@ -61,7 +61,7 @@ class DesignerSeatingLayout extends Page
                         ->schema([
                             Forms\Components\Placeholder::make('preview_info')
                                 ->label('Detected Elements')
-                                ->content(function (Forms\Get $get) {
+                                ->content(function (\Filament\Schemas\Components\Utilities\Get $get) {
                                     $htmlContent = $get('html_content');
                                     if (empty($htmlContent)) {
                                         return 'No content to preview. Please go back and paste HTML/SVG content.';
