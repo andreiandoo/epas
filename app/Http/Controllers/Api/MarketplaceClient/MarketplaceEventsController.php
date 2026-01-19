@@ -641,12 +641,23 @@ class MarketplaceEventsController extends BaseController
             'content_name' => $event->getTranslation('title', $client->language ?? 'ro'),
             'page_url' => $request->header('Referer'),
             'page_path' => '/bilete/' . $event->slug,
-            'referrer' => $request->header('Referer'),
+            // Referrer from frontend takes priority, fallback to HTTP header
+            'referrer' => $request->input('referrer') ?: $request->header('Referer'),
+            // UTM parameters
             'utm_source' => $request->input('utm_source'),
             'utm_medium' => $request->input('utm_medium'),
             'utm_campaign' => $request->input('utm_campaign'),
             'utm_term' => $request->input('utm_term'),
             'utm_content' => $request->input('utm_content'),
+            // Ad platform click IDs
+            'gclid' => $request->input('gclid'),         // Google Ads
+            'fbclid' => $request->input('fbclid'),       // Facebook/Meta Ads
+            'ttclid' => $request->input('ttclid'),       // TikTok Ads
+            'li_fat_id' => $request->input('li_fat_id'), // LinkedIn Ads
+            // Facebook browser cookies
+            'fbc' => $request->input('fbc'),
+            'fbp' => $request->input('fbp'),
+            // Device and location info
             'ip_address' => $request->ip(),
             'device_type' => $this->detectDeviceType($request),
             'browser' => $this->detectBrowser($request),

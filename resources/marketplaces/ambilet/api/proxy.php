@@ -129,6 +129,7 @@ switch ($action) {
             exit;
         }
         $method = 'POST';
+        $body = file_get_contents('php://input'); // Forward UTM parameters and tracking data
         $endpoint = '/events/' . urlencode($slug) . '/track-view';
         break;
 

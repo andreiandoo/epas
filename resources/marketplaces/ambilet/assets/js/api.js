@@ -685,10 +685,70 @@ const AmbiletAPI = {
     },
 
     /**
+     * Extract UTM and ad click parameters from current URL
+     */
+    getTrackingParams() {
+        const params = new URLSearchParams(window.location.search);
+        const trackingParams = {};
+
+        // UTM parameters
+        const utmFields = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+        utmFields.forEach(field => {
+            const value = params.get(field);
+            if (value) trackingParams[field] = value;
+        });
+
+        // Ad click IDs
+        const clickIds = ['gclid', 'fbclid', 'ttclid', 'li_fat_id'];
+        clickIds.forEach(field => {
+            const value = params.get(field);
+            if (value) trackingParams[field] = value;
+        });
+
+        // Facebook browser cookies (if available)
+        const fbFields = ['fbc', 'fbp'];
+        fbFields.forEach(field => {
+            const value = params.get(field);
+            if (value) trackingParams[field] = value;
+        });
+
+        // Also try to get fbc/fbp from cookies (Facebook Pixel convention)
+        try {
+            const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+                const [key, value] = cookie.trim().split('=');
+                acc[key] = value;
+                return acc;
+            }, {});
+            if (cookies['_fbc'] && !trackingParams.fbc) trackingParams.fbc = cookies['_fbc'];
+            if (cookies['_fbp'] && !trackingParams.fbp) trackingParams.fbp = cookies['_fbp'];
+        } catch (e) {
+            // Ignore cookie access errors
+        }
+
+        // Document referrer (if not same origin)
+        try {
+            const referrer = document.referrer;
+            if (referrer) {
+                const referrerUrl = new URL(referrer);
+                const currentUrl = new URL(window.location.href);
+                // Only include referrer if it's from a different domain
+                if (referrerUrl.hostname !== currentUrl.hostname) {
+                    trackingParams.referrer = referrer;
+                }
+            }
+        } catch (e) {
+            // Ignore URL parsing errors
+        }
+
+        return trackingParams;
+    },
+
+    /**
      * Track event page view
      */
     async trackEventView(slug) {
-        return this.post(`/events/${slug}/track-view`);
+        const trackingParams = this.getTrackingParams();
+        return this.post(`/events/${slug}/track-view`, trackingParams);
     },
 
     /**
