@@ -1279,42 +1279,36 @@ class DesignerSeatingLayout extends Page
             return;
         }
 
-        // Sort seats by Y coordinate first, then by X
-        usort($allSeats, fn($a, $b) => $a['y'] <=> $b['y']);
-
         // Debug: log Y values to understand distribution
         $yValues = array_column($allSeats, 'y');
-        $uniqueYs = array_unique($yValues);
-        \Log::info("RecalculateRows: Found " . count($allSeats) . " seats with " . count($uniqueYs) . " unique Y values");
+        \Log::info("RecalculateRows: Found " . count($allSeats) . " seats");
         \Log::info("Y range: " . min($yValues) . " to " . max($yValues));
 
-        // Group seats into rows using gap detection
-        // Find natural breaks in Y coordinates (gaps larger than tolerance)
-        $rowGroups = [];
-        $currentRow = [$allSeats[0]];
+        // Group seats into rows by rounding Y to buckets
+        // Seats with Y values within tolerance of each other go in the same row
+        $bucketSize = $tolerance;
+        $yBuckets = [];
 
-        for ($i = 1; $i < count($allSeats); $i++) {
-            $currentSeat = $allSeats[$i];
-            $prevSeat = $allSeats[$i - 1];
-
-            // If gap between consecutive seats (sorted by Y) is larger than tolerance, start new row
-            if (abs($currentSeat['y'] - $prevSeat['y']) > $tolerance) {
-                // Finish current row - sort by X
-                usort($currentRow, fn($a, $b) => $a['x'] <=> $b['x']);
-                $rowGroups[] = $currentRow;
-                $currentRow = [$currentSeat];
-            } else {
-                $currentRow[] = $currentSeat;
+        foreach ($allSeats as $seat) {
+            // Round Y to nearest bucket
+            $roundedY = round($seat['y'] / $bucketSize) * $bucketSize;
+            if (!isset($yBuckets[$roundedY])) {
+                $yBuckets[$roundedY] = [];
             }
+            $yBuckets[$roundedY][] = $seat;
         }
 
-        // Don't forget the last row
-        if (!empty($currentRow)) {
-            usort($currentRow, fn($a, $b) => $a['x'] <=> $b['x']);
-            $rowGroups[] = $currentRow;
+        // Sort buckets by Y value (top to bottom)
+        ksort($yBuckets);
+
+        // Create row groups, sorting each by X (left to right)
+        $rowGroups = [];
+        foreach ($yBuckets as $y => $seats) {
+            usort($seats, fn($a, $b) => $a['x'] <=> $b['x']);
+            $rowGroups[] = $seats;
         }
 
-        \Log::info("RecalculateRows: Created " . count($rowGroups) . " row groups");
+        \Log::info("RecalculateRows: Created " . count($rowGroups) . " rows from " . count($yBuckets) . " Y buckets");
 
         // Delete existing rows
         $section->rows()->delete();
