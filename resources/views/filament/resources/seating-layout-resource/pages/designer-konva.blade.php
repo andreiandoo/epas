@@ -64,6 +64,14 @@
                         <x-svg-icon name="konvaseats" class="w-5 h-5 text-purple-600" />
                         Add Seats
                     </button>
+                    <div x-show="drawMode === 'seat'" x-transition class="flex items-center gap-2 px-2 py-1 ml-1 border rounded-md bg-purple-50 border-purple-200">
+                        <label class="text-xs text-purple-700">Size:</label>
+                        <input type="number" x-model="seatSize" min="4" max="30" step="1" class="w-12 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                        <select x-model="seatShape" class="px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                            <option value="circle">Circle</option>
+                            <option value="rect">Square</option>
+                        </select>
+                    </div>
                     <button @click="finishDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-green-600 border rounded-md border-slate-200" x-show="['polygon', 'circle'].includes(drawMode) && polygonPoints.length > 0">
                         <x-svg-icon name="konvafinish" class="w-5 h-5 text-purple-600" />
                         Finish
@@ -148,6 +156,7 @@
                     <input type="number" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-14 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
                 </div>
                 <button @click="resetBackgroundPosition" type="button" class="px-2 py-1 text-xs text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200">Reset</button>
+                <button @click="saveBackgroundSettings" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Save Settings</button>
             </div>
 
             <div class="overflow-hidden bg-gray-100 border-2 border-gray-300 rounded-lg">
@@ -218,6 +227,13 @@
                                         class="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200">
                                     Edit Colors
                                 </button>
+                                @if($section['section_type'] === 'standard')
+                                <button @click.stop="recalculateRows({{ $section['id'] }})"
+                                        class="px-2 py-1 text-xs text-orange-700 bg-orange-100 rounded hover:bg-orange-200"
+                                        title="Re-group seats into rows based on Y position">
+                                    Recalc Rows
+                                </button>
+                                @endif
                             </div>
                         </div>
                     @endforeach
@@ -289,14 +305,18 @@
                 snapToGrid: false,
                 gridSize: 50,
 
+                // Seat settings
+                seatSize: 8,
+                seatShape: 'circle',
+
                 // Tooltip
                 tooltip: null,
 
-                // Background image controls
-                backgroundScale: 1,
-                backgroundOpacity: 0.3,
-                backgroundX: 0,
-                backgroundY: 0,
+                // Background image controls (loaded from database)
+                backgroundScale: {{ $backgroundScale ?? 1 }},
+                backgroundOpacity: {{ $backgroundOpacity ?? 0.3 }},
+                backgroundX: {{ $backgroundX ?? 0 }},
+                backgroundY: {{ $backgroundY ?? 0 }},
                 backgroundImage: null,
                 backgroundBaseX: 0,
                 backgroundBaseY: 0,
@@ -388,7 +408,7 @@
                 // Select all seats
                 selectAllSeats() {
                     this.clearSelection();
-                    this.layer.find('.seat').forEach(seat => {
+                    this.seatsLayer.find('.seat').forEach(seat => {
                         const seatId = seat.getAttr('seatId');
                         if (seatId) {
                             this.selectedSeats.push({ id: seatId, node: seat });
@@ -396,7 +416,7 @@
                             seat.strokeWidth(3);
                         }
                     });
-                    this.layer.batchDraw();
+                    this.seatsLayer.batchDraw();
                 },
 
                 // Statistics functions
@@ -611,9 +631,13 @@
                     // Draw background
                     this.drawBackground();
 
-                    // Main layer for sections
+                    // Main layer for sections (shapes only)
                     this.layer = new Konva.Layer();
                     this.stage.add(this.layer);
+
+                    // Seats layer (above sections, absolute positioning)
+                    this.seatsLayer = new Konva.Layer();
+                    this.stage.add(this.seatsLayer);
 
                     // Drawing layer (for temporary shapes while drawing)
                     this.drawLayer = new Konva.Layer();
@@ -876,6 +900,7 @@
                         }
                     });
                     this.selectedSeats = [];
+                    if (this.seatsLayer) this.seatsLayer.batchDraw();
                     this.layer.batchDraw();
                 },
 
@@ -1052,9 +1077,18 @@
                 },
 
                 loadSections() {
+                    // Clear seats layer before loading new sections
+                    if (this.seatsLayer) {
+                        this.seatsLayer.destroyChildren();
+                    }
+
                     this.sections.forEach(section => {
                         this.createSection(section);
                     });
+
+                    if (this.seatsLayer) {
+                        this.seatsLayer.batchDraw();
+                    }
                 },
 
                 createSection(section) {
@@ -1160,16 +1194,24 @@
                         imageObj.src = imagePath;
                     }
 
-                    // Draw seats if available (skip for decorative zones)
+                    // Draw seats on separate layer with absolute coordinates (skip for decorative zones)
                     if (!isDecorativeZone && section.rows && section.rows.length > 0) {
+                        const sectionX = section.x_position || 0;
+                        const sectionY = section.y_position || 0;
+
                         section.rows.forEach(row => {
                             if (row.seats && row.seats.length > 0) {
                                 row.seats.forEach(seat => {
-                                    const seatShape = this.createSeat(seat, seatColor, section.id);
-                                    group.add(seatShape);
+                                    // Calculate absolute position
+                                    const absoluteX = sectionX + parseFloat(seat.x || 0);
+                                    const absoluteY = sectionY + parseFloat(seat.y || 0);
+
+                                    const seatShape = this.createSeatAbsolute(seat, seatColor, section.id, absoluteX, absoluteY);
+                                    this.seatsLayer.add(seatShape);
                                 });
                             }
                         });
+                        this.seatsLayer.batchDraw();
                     }
 
                     // Add bounding box for selection highlight
@@ -1246,12 +1288,109 @@
                     this.layer.batchDraw();
                 },
 
+                // Create seat at absolute position (for seatsLayer)
+                createSeatAbsolute(seat, seatColor, sectionId, absoluteX, absoluteY) {
+                    const angle = parseFloat(seat.angle || 0);
+                    const shape = seat.shape || 'circle';
+                    const seatSize = this.seatSize || 8;
+
+                    let seatShape;
+                    if (shape === 'circle') {
+                        seatShape = new Konva.Circle({
+                            x: absoluteX,
+                            y: absoluteY,
+                            radius: seatSize / 2,
+                            fill: seatColor || '#22C55E',
+                            stroke: '#1F2937',
+                            strokeWidth: 1,
+                            opacity: 0.8,
+                            name: 'seat',
+                            seatId: seat.id,
+                            sectionId: sectionId,
+                        });
+                    } else if (shape === 'rect') {
+                        seatShape = new Konva.Rect({
+                            x: absoluteX - seatSize / 2,
+                            y: absoluteY - seatSize / 2,
+                            width: seatSize,
+                            height: seatSize,
+                            fill: seatColor || '#22C55E',
+                            stroke: '#1F2937',
+                            strokeWidth: 1,
+                            opacity: 0.8,
+                            rotation: angle,
+                            name: 'seat',
+                            seatId: seat.id,
+                            sectionId: sectionId,
+                        });
+                    } else { // stadium
+                        seatShape = new Konva.Rect({
+                            x: absoluteX - seatSize / 2,
+                            y: absoluteY - seatSize / 2,
+                            width: seatSize,
+                            height: seatSize,
+                            fill: seatColor || '#22C55E',
+                            stroke: '#1F2937',
+                            strokeWidth: 1,
+                            opacity: 0.8,
+                            cornerRadius: seatSize / 2,
+                            rotation: angle,
+                            name: 'seat',
+                            seatId: seat.id,
+                            sectionId: sectionId,
+                        });
+                    }
+
+                    // Add tooltip events
+                    seatShape.on('mouseover', (e) => {
+                        const mouseEvent = e.evt;
+                        this.showSeatTooltip(seatShape, {
+                            x: mouseEvent.clientX,
+                            y: mouseEvent.clientY
+                        });
+                        seatShape.strokeWidth(2);
+                        this.seatsLayer.batchDraw();
+                    });
+
+                    seatShape.on('mouseout', () => {
+                        this.hideTooltip();
+                        const isSelected = this.selectedSeats.find(s => s.id === seat.id);
+                        seatShape.strokeWidth(isSelected ? 3 : 1);
+                        this.seatsLayer.batchDraw();
+                    });
+
+                    // Click to select individual seat
+                    seatShape.on('click', (e) => {
+                        e.cancelBubble = true;
+
+                        if (this.drawMode === 'select' || this.drawMode === 'multiselect') {
+                            const existingIndex = this.selectedSeats.findIndex(s => s.id === seat.id);
+                            if (existingIndex >= 0) {
+                                this.selectedSeats.splice(existingIndex, 1);
+                                seatShape.stroke('#1F2937');
+                                seatShape.strokeWidth(1);
+                            } else {
+                                if (this.drawMode === 'select' && !e.evt.shiftKey) {
+                                    this.clearSelection();
+                                }
+                                this.selectedSeats.push({ id: seat.id, node: seatShape });
+                                seatShape.stroke('#F97316');
+                                seatShape.strokeWidth(3);
+                            }
+                            this.seatsLayer.batchDraw();
+                        }
+                    });
+
+                    return seatShape;
+                },
+
+                // Legacy createSeat for compatibility (relative coordinates within group)
                 createSeat(seat, seatColor, sectionId) {
                     const x = parseFloat(seat.x || 0);
                     const y = parseFloat(seat.y || 0);
                     const angle = parseFloat(seat.angle || 0);
                     const shape = seat.shape || 'circle';
-                    const seatSize = 8; // Seat size in pixels
+                    const seatSize = this.seatSize || 8;
 
                     let seatShape;
                     if (shape === 'circle') {
@@ -1364,7 +1503,9 @@
 
                 saveSection(sectionId, updates) {
                     console.log('Saving section', sectionId, updates);
-                    @this.call('updateSection', sectionId, updates);
+                    @this.call('updateSection', sectionId, updates)
+                        .then(() => console.log('Section saved successfully'))
+                        .catch(err => console.error('Failed to save section:', err));
                 },
 
                 selectSection(sectionId) {
@@ -1450,6 +1591,21 @@
                     this.updateBackgroundOpacity();
                 },
 
+                saveBackgroundSettings() {
+                    @this.call('saveBackgroundSettings',
+                        parseFloat(this.backgroundScale),
+                        parseInt(this.backgroundX),
+                        parseInt(this.backgroundY),
+                        parseFloat(this.backgroundOpacity)
+                    );
+                },
+
+                recalculateRows(sectionId) {
+                    if (confirm('This will re-group all seats in this section into rows based on their Y position. Continue?')) {
+                        @this.call('recalculateRows', sectionId);
+                    }
+                },
+
                 setDrawMode(mode) {
                     this.drawMode = mode;
                     this.polygonPoints = [];
@@ -1472,6 +1628,23 @@
                 },
 
                 addPolygonPoint(pos) {
+                    const snapDistance = 15; // pixels
+
+                    // Check if we should snap to close (click near first point)
+                    if (this.polygonPoints.length >= 6) {
+                        const firstX = this.polygonPoints[0];
+                        const firstY = this.polygonPoints[1];
+                        const distance = Math.sqrt(
+                            Math.pow(pos.x - firstX, 2) + Math.pow(pos.y - firstY, 2)
+                        );
+
+                        if (distance <= snapDistance) {
+                            // Snap to close - finish the polygon
+                            this.finishDrawing();
+                            return;
+                        }
+                    }
+
                     this.polygonPoints.push(pos.x, pos.y);
 
                     // Draw points
@@ -1490,15 +1663,29 @@
 
                     // Draw points as circles
                     for (let i = 0; i < this.polygonPoints.length; i += 2) {
+                        const isFirstPoint = (i === 0);
                         const circle = new Konva.Circle({
                             x: this.polygonPoints[i],
                             y: this.polygonPoints[i + 1],
-                            radius: 5,
-                            fill: '#10B981',
+                            radius: isFirstPoint && this.polygonPoints.length >= 6 ? 10 : 5,
+                            fill: isFirstPoint && this.polygonPoints.length >= 6 ? '#F59E0B' : '#10B981',
                             stroke: '#fff',
                             strokeWidth: 2,
                         });
                         this.drawLayer.add(circle);
+                    }
+
+                    // Add hint text near first point if we have enough points
+                    if (this.polygonPoints.length >= 6) {
+                        const hintText = new Konva.Text({
+                            x: this.polygonPoints[0] + 15,
+                            y: this.polygonPoints[1] - 10,
+                            text: 'Click to close',
+                            fontSize: 12,
+                            fill: '#F59E0B',
+                            fontStyle: 'bold',
+                        });
+                        this.drawLayer.add(hintText);
                     }
 
                     this.drawLayer.batchDraw();
@@ -1637,6 +1824,7 @@
 
                     // Clear and rebuild canvas
                     this.layer.destroyChildren();
+                    if (this.seatsLayer) this.seatsLayer.destroyChildren();
 
                     // Re-add transformer
                     this.transformer = new Konva.Transformer({

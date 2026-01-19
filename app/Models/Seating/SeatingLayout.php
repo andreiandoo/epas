@@ -20,6 +20,10 @@ class SeatingLayout extends Model
         'canvas_h',
         'background_image_path',
         'background_image_url',
+        'background_scale',
+        'background_x',
+        'background_y',
+        'background_opacity',
         'version',
         'notes',
     ];
@@ -27,6 +31,10 @@ class SeatingLayout extends Model
     protected $casts = [
         'canvas_w' => 'integer',
         'canvas_h' => 'integer',
+        'background_scale' => 'float',
+        'background_x' => 'integer',
+        'background_y' => 'integer',
+        'background_opacity' => 'float',
         'version' => 'integer',
     ];
 

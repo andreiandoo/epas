@@ -1224,6 +1224,145 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Save background image settings
+     */
+    public function saveBackgroundSettings(float $scale, int $x, int $y, float $opacity): void
+    {
+        $this->seatingLayout->update([
+            'background_scale' => $scale,
+            'background_x' => $x,
+            'background_y' => $y,
+            'background_opacity' => $opacity,
+        ]);
+
+        Notification::make()
+            ->success()
+            ->title('Background settings saved')
+            ->send();
+    }
+
+    /**
+     * Recalculate rows for a section based on seat Y-coordinate proximity
+     */
+    public function recalculateRows(int $sectionId, float $tolerance = 15.0): void
+    {
+        $section = SeatingSection::with('rows.seats')->find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Section not found')
+                ->send();
+            return;
+        }
+
+        // Get all seats from all rows with absolute Y coordinates
+        $allSeats = [];
+        foreach ($section->rows as $row) {
+            $rowY = $row->y ?? 0;
+            foreach ($row->seats as $seat) {
+                // Calculate absolute Y position (row Y + seat Y offset)
+                $absoluteY = $rowY + ($seat->y ?? 0);
+                $allSeats[] = [
+                    'id' => $seat->id,
+                    'x' => $seat->x,
+                    'y' => $absoluteY,  // Use absolute Y for grouping
+                    'original_y' => $seat->y,
+                    'row_y' => $rowY,
+                    'label' => $seat->label,
+                    'seat_uid' => $seat->seat_uid,
+                ];
+            }
+        }
+
+        if (empty($allSeats)) {
+            Notification::make()
+                ->warning()
+                ->title('No seats to recalculate')
+                ->send();
+            return;
+        }
+
+        // Sort seats by Y coordinate
+        usort($allSeats, fn($a, $b) => $a['y'] <=> $b['y']);
+
+        // Group seats into rows based on Y proximity
+        $rowGroups = [];
+        $currentRow = [];
+        $lastY = null;
+
+        foreach ($allSeats as $seat) {
+            if ($lastY === null || abs($seat['y'] - $lastY) <= $tolerance) {
+                $currentRow[] = $seat;
+                if ($lastY === null) {
+                    $lastY = $seat['y'];
+                } else {
+                    $lastY = ($lastY + $seat['y']) / 2; // Running average
+                }
+            } else {
+                if (!empty($currentRow)) {
+                    // Sort current row by X
+                    usort($currentRow, fn($a, $b) => $a['x'] <=> $b['x']);
+                    $rowGroups[] = $currentRow;
+                }
+                $currentRow = [$seat];
+                $lastY = $seat['y'];
+            }
+        }
+
+        // Don't forget the last row
+        if (!empty($currentRow)) {
+            usort($currentRow, fn($a, $b) => $a['x'] <=> $b['x']);
+            $rowGroups[] = $currentRow;
+        }
+
+        // Delete existing rows
+        $section->rows()->delete();
+
+        // Create new rows and reassign seats
+        $rowIndex = 1;
+        foreach ($rowGroups as $rowSeats) {
+            $avgY = count($rowSeats) > 0
+                ? array_sum(array_column($rowSeats, 'y')) / count($rowSeats)
+                : 0;
+
+            $row = SeatingRow::create([
+                'section_id' => $section->id,
+                'label' => (string) $rowIndex,
+                'y' => $avgY,
+                'rotation' => 0,
+                'seat_count' => count($rowSeats),
+            ]);
+
+            $seatIndex = 1;
+            foreach ($rowSeats as $seatData) {
+                SeatingSeat::create([
+                    'row_id' => $row->id,
+                    'label' => (string) $seatIndex,
+                    'display_name' => $section->generateSeatDisplayName((string) $rowIndex, (string) $seatIndex),
+                    'x' => $seatData['x'],
+                    'y' => 0, // Seats are positioned at row Y, individual seat Y offset is 0
+                    'angle' => 0,
+                    'shape' => 'circle',
+                    'seat_uid' => $section->generateSeatUid((string) $rowIndex, (string) $seatIndex),
+                ]);
+                $seatIndex++;
+            }
+
+            $rowIndex++;
+        }
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Rows recalculated')
+            ->body("Created " . count($rowGroups) . " rows from " . count($allSeats) . " seats")
+            ->send();
+    }
+
+    /**
      * Data sent to view
      */
     protected function getViewData(): array
@@ -1242,6 +1381,10 @@ class DesignerSeatingLayout extends Page
             'canvasWidth'  => $this->seatingLayout->canvas_width,
             'canvasHeight' => $this->seatingLayout->canvas_height,
             'backgroundUrl' => $backgroundUrl,
+            'backgroundScale' => $this->seatingLayout->background_scale ?? 1,
+            'backgroundX' => $this->seatingLayout->background_x ?? 0,
+            'backgroundY' => $this->seatingLayout->background_y ?? 0,
+            'backgroundOpacity' => $this->seatingLayout->background_opacity ?? 0.3,
         ];
     }
 }
