@@ -1256,19 +1256,15 @@ class DesignerSeatingLayout extends Page
             return;
         }
 
-        // Get all seats from all rows with absolute Y coordinates
+        // Get all seats from all rows
+        // Note: seat.y is already relative to section (not to row), so we use it directly
         $allSeats = [];
         foreach ($section->rows as $row) {
-            $rowY = $row->y ?? 0;
             foreach ($row->seats as $seat) {
-                // Calculate absolute Y position (row Y + seat Y offset)
-                $absoluteY = $rowY + ($seat->y ?? 0);
                 $allSeats[] = [
                     'id' => $seat->id,
                     'x' => $seat->x,
-                    'y' => $absoluteY,  // Use absolute Y for grouping
-                    'original_y' => $seat->y,
-                    'row_y' => $rowY,
+                    'y' => $seat->y,  // Y is relative to section, use directly for grouping
                     'label' => $seat->label,
                     'seat_uid' => $seat->seat_uid,
                 ];
