@@ -1126,15 +1126,42 @@ class DesignerSeatingLayout extends Page
         );
 
         $assignedCount = 0;
+        $oldRows = [];
 
         foreach ($seatIds as $index => $seatId) {
             $seat = SeatingSeat::find($seatId);
             if (!$seat) continue;
 
-            // Update seat's row and regenerate UID
-            $seatLabel = (string) ($index + 1);
+            // Track old row for seat count update
+            $oldRowId = $seat->row_id;
+            if ($oldRowId && $oldRowId !== $row->id) {
+                $oldRows[$oldRowId] = true;
+            }
+
+            // Get old section for coordinate conversion
+            $oldRow = $seat->row;
+            $oldSection = $oldRow?->section;
+
+            // Calculate absolute position then convert to relative to new section
+            $absoluteX = $seat->x;
+            $absoluteY = $seat->y;
+            if ($oldSection) {
+                $absoluteX += $oldSection->x_position;
+                $absoluteY += $oldSection->y_position;
+            }
+
+            // Convert to new section's relative coordinates
+            $newX = $absoluteX - $section->x_position;
+            $newY = $absoluteY - $section->y_position;
+
+            // Determine seat label - try to keep original or use index
+            $seatLabel = $seat->label ?: (string) ($index + 1);
+
+            // Update seat's row, coordinates, and regenerate UID
             $seat->update([
                 'row_id' => $row->id,
+                'x' => $newX,
+                'y' => $newY,
                 'label' => $seatLabel,
                 'display_name' => $section->generateSeatDisplayName($rowLabel, $seatLabel),
                 'seat_uid' => $section->generateSeatUid($rowLabel, $seatLabel),
@@ -1143,6 +1170,15 @@ class DesignerSeatingLayout extends Page
             $assignedCount++;
         }
 
+        // Update seat counts for old rows
+        foreach (array_keys($oldRows) as $oldRowId) {
+            $oldRow = SeatingRow::find($oldRowId);
+            if ($oldRow) {
+                $oldRow->update(['seat_count' => $oldRow->seats()->count()]);
+            }
+        }
+
+        // Update new row seat count
         $row->update(['seat_count' => $row->seats()->count()]);
 
         $this->reloadSections();

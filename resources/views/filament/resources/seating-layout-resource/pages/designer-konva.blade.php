@@ -123,7 +123,7 @@
             </div>
 
             {{-- Background image controls --}}
-            <div x-show="backgroundUrl" x-transition class="flex items-center gap-4 p-3 mb-4 border rounded-lg bg-indigo-50 border-indigo-200">
+            <div x-show="backgroundUrl" x-transition class="flex flex-wrap items-center gap-4 p-3 mb-4 border rounded-lg bg-indigo-50 border-indigo-200">
                 <div class="flex items-center gap-2">
                     <span class="text-sm font-medium text-indigo-800">Background Image:</span>
                 </div>
@@ -131,13 +131,23 @@
                     <label class="text-sm text-indigo-700">Scale:</label>
                     <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.1" @input="updateBackgroundScale()" class="w-32">
                     <span class="text-sm font-medium text-indigo-900" x-text="`${Math.round(backgroundScale * 100)}%`"></span>
-                    <button @click="resetBackgroundScale" type="button" class="px-2 py-1 text-xs text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200">Reset</button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="text-sm text-indigo-700">X:</label>
+                    <input type="range" x-model="backgroundX" min="-500" max="500" step="10" @input="updateBackgroundPosition()" class="w-24">
+                    <span class="text-sm font-medium text-indigo-900 w-12" x-text="`${backgroundX}px`"></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="text-sm text-indigo-700">Y:</label>
+                    <input type="range" x-model="backgroundY" min="-500" max="500" step="10" @input="updateBackgroundPosition()" class="w-24">
+                    <span class="text-sm font-medium text-indigo-900 w-12" x-text="`${backgroundY}px`"></span>
                 </div>
                 <div class="flex items-center gap-3">
                     <label class="text-sm text-indigo-700">Opacity:</label>
                     <input type="range" x-model="backgroundOpacity" min="0.1" max="1" step="0.1" @input="updateBackgroundOpacity()" class="w-24">
                     <span class="text-sm font-medium text-indigo-900" x-text="`${Math.round(backgroundOpacity * 100)}%`"></span>
                 </div>
+                <button @click="resetBackgroundPosition" type="button" class="px-2 py-1 text-xs text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200">Reset All</button>
             </div>
 
             <div class="overflow-hidden bg-gray-100 border-2 border-gray-300 rounded-lg">
@@ -283,7 +293,11 @@
                 // Background image controls
                 backgroundScale: 1,
                 backgroundOpacity: 0.3,
+                backgroundX: 0,
+                backgroundY: 0,
                 backgroundImage: null,
+                backgroundBaseX: 0,
+                backgroundBaseY: 0,
 
                 init() {
                     this.createStage();
@@ -972,9 +986,13 @@
                             const scaledWidth = width * scale;
                             const scaledHeight = height * scale;
 
+                            // Calculate base position (centered)
+                            this.backgroundBaseX = (this.canvasWidth - scaledWidth) / 2;
+                            this.backgroundBaseY = (this.canvasHeight - scaledHeight) / 2;
+
                             this.backgroundImage = new Konva.Image({
-                                x: (this.canvasWidth - scaledWidth) / 2,
-                                y: (this.canvasHeight - scaledHeight) / 2,
+                                x: this.backgroundBaseX + parseFloat(this.backgroundX),
+                                y: this.backgroundBaseY + parseFloat(this.backgroundY),
                                 image: imageObj,
                                 width: width,
                                 height: height,
@@ -1112,11 +1130,37 @@
                         });
                     }
 
+                    // Add bounding box for selection highlight
+                    const boundingBox = new Konva.Rect({
+                        x: -2,
+                        y: -2,
+                        width: (section.width || 200) + 4,
+                        height: (section.height || 150) + 4,
+                        stroke: '#F97316',
+                        strokeWidth: 3,
+                        dash: [8, 4],
+                        visible: false,
+                        name: 'boundingBox',
+                    });
+                    group.add(boundingBox);
+
                     // Click to select
                     group.on('click', (e) => {
-                        if (this.drawMode !== 'multiselect') {
+                        if (this.drawMode === 'multiselect') {
+                            // Toggle section highlight in multi-select mode
+                            const bb = group.findOne('.boundingBox');
+                            if (bb) {
+                                bb.visible(!bb.visible());
+                                this.layer.batchDraw();
+                            }
+                            // Also update Livewire selectedSection for Edit Section modal
+                            if (bb && bb.visible()) {
+                                @this.set('selectedSection', section.id);
+                            }
+                        } else {
                             this.transformer.nodes([group]);
                             this.selectedSection = section.id;
+                            @this.set('selectedSection', section.id);
                         }
                     });
 
@@ -1156,9 +1200,7 @@
 
                     this.layer.add(group);
 
-                    // Cache sections with many seats for performance
-                    const seatCount = (section.rows || []).reduce((sum, row) => sum + (row.seats?.length || 0), 0);
-                    if (seatCount > 100) { group.cache(); }
+                    // Note: Removed caching as it breaks click events on individual seats
                     this.layer.batchDraw();
                 },
 
@@ -1328,12 +1370,24 @@
                         const scale = parseFloat(this.backgroundScale);
                         this.backgroundImage.scale({ x: scale, y: scale });
 
-                        // Re-center the image
+                        // Calculate new base position (centered)
                         const width = this.backgroundImage.getAttr('originalWidth') * scale;
                         const height = this.backgroundImage.getAttr('originalHeight') * scale;
-                        this.backgroundImage.x((this.canvasWidth - width) / 2);
-                        this.backgroundImage.y((this.canvasHeight - height) / 2);
+                        this.backgroundBaseX = (this.canvasWidth - width) / 2;
+                        this.backgroundBaseY = (this.canvasHeight - height) / 2;
 
+                        // Apply position offset
+                        this.backgroundImage.x(this.backgroundBaseX + parseFloat(this.backgroundX));
+                        this.backgroundImage.y(this.backgroundBaseY + parseFloat(this.backgroundY));
+
+                        this.backgroundLayer.batchDraw();
+                    }
+                },
+
+                updateBackgroundPosition() {
+                    if (this.backgroundImage) {
+                        this.backgroundImage.x(this.backgroundBaseX + parseFloat(this.backgroundX));
+                        this.backgroundImage.y(this.backgroundBaseY + parseFloat(this.backgroundY));
                         this.backgroundLayer.batchDraw();
                     }
                 },
@@ -1345,9 +1399,13 @@
                     }
                 },
 
-                resetBackgroundScale() {
+                resetBackgroundPosition() {
                     this.backgroundScale = 1;
+                    this.backgroundX = 0;
+                    this.backgroundY = 0;
+                    this.backgroundOpacity = 0.3;
                     this.updateBackgroundScale();
+                    this.updateBackgroundOpacity();
                 },
 
                 setDrawMode(mode) {
@@ -1356,17 +1414,17 @@
                     this.drawLayer.destroyChildren();
                     this.drawLayer.batchDraw();
 
-                    // Disable stage dragging in draw mode
-                    this.stage.draggable(mode === 'select');
+                    // Enable stage dragging in select and multiselect modes
+                    this.stage.draggable(mode === 'select' || mode === 'multiselect');
 
-                    // Disable transformer in draw mode
+                    // Disable transformer in non-select modes
                     if (mode !== 'select') {
                         this.transformer.nodes([]);
                         this.selectedSection = null;
                     }
 
-                    // Clear selection when changing modes
-                    if (mode !== 'multiselect') {
+                    // Clear selection when changing modes (except multiselect)
+                    if (mode !== 'multiselect' && mode !== 'select') {
                         this.clearSelection();
                     }
                 },
