@@ -1279,30 +1279,32 @@ class DesignerSeatingLayout extends Page
             return;
         }
 
-        // Sort seats by Y coordinate
+        // Sort seats by Y coordinate first, then by X
         usort($allSeats, fn($a, $b) => $a['y'] <=> $b['y']);
 
-        // Group seats into rows based on Y proximity
-        $rowGroups = [];
-        $currentRow = [];
-        $lastY = null;
+        // Debug: log Y values to understand distribution
+        $yValues = array_column($allSeats, 'y');
+        $uniqueYs = array_unique($yValues);
+        \Log::info("RecalculateRows: Found " . count($allSeats) . " seats with " . count($uniqueYs) . " unique Y values");
+        \Log::info("Y range: " . min($yValues) . " to " . max($yValues));
 
-        foreach ($allSeats as $seat) {
-            if ($lastY === null || abs($seat['y'] - $lastY) <= $tolerance) {
-                $currentRow[] = $seat;
-                if ($lastY === null) {
-                    $lastY = $seat['y'];
-                } else {
-                    $lastY = ($lastY + $seat['y']) / 2; // Running average
-                }
+        // Group seats into rows using gap detection
+        // Find natural breaks in Y coordinates (gaps larger than tolerance)
+        $rowGroups = [];
+        $currentRow = [$allSeats[0]];
+
+        for ($i = 1; $i < count($allSeats); $i++) {
+            $currentSeat = $allSeats[$i];
+            $prevSeat = $allSeats[$i - 1];
+
+            // If gap between consecutive seats (sorted by Y) is larger than tolerance, start new row
+            if (abs($currentSeat['y'] - $prevSeat['y']) > $tolerance) {
+                // Finish current row - sort by X
+                usort($currentRow, fn($a, $b) => $a['x'] <=> $b['x']);
+                $rowGroups[] = $currentRow;
+                $currentRow = [$currentSeat];
             } else {
-                if (!empty($currentRow)) {
-                    // Sort current row by X
-                    usort($currentRow, fn($a, $b) => $a['x'] <=> $b['x']);
-                    $rowGroups[] = $currentRow;
-                }
-                $currentRow = [$seat];
-                $lastY = $seat['y'];
+                $currentRow[] = $currentSeat;
             }
         }
 
@@ -1311,6 +1313,8 @@ class DesignerSeatingLayout extends Page
             usort($currentRow, fn($a, $b) => $a['x'] <=> $b['x']);
             $rowGroups[] = $currentRow;
         }
+
+        \Log::info("RecalculateRows: Created " . count($rowGroups) . " row groups");
 
         // Delete existing rows
         $section->rows()->delete();
