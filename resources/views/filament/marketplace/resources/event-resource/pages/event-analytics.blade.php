@@ -27,8 +27,9 @@
     @endpush
 
     @php
-        $liveData = $this->eventMode === 'live' ? $this->analyticsService->getLiveVisitors($this->event) : ['count' => 0, 'activity' => [], 'locations' => []];
-        $globeData = $this->eventMode === 'live' ? $this->getGlobeData() : [];
+        // Use Redis for real-time data (instant), fallback to PostgreSQL
+        $liveData = $this->eventMode === 'live' ? $this->fetchLiveVisitorData() : ['count' => 0, 'activity' => [], 'globeData' => []];
+        $globeData = $liveData['globeData'] ?? [];
     @endphp
     <div x-data="eventAnalyticsDashboard(@js([
         'eventId' => $this->eventId,
@@ -1325,11 +1326,17 @@
                     {key: 'visits', label: 'Visits', color: '#f59e0b', active: false}
                 ],
 
-                // Polling interval for live visitor data
+                // Polling intervals for live visitor data
                 globePollingInterval: null,
+                liveCountPollingInterval: null,
 
                 init() {
                     this.$nextTick(() => this.initCharts());
+
+                    // Start permanent polling for live visitor count (every 15s)
+                    if (this.eventMode === 'live') {
+                        this.startLiveCountPolling();
+                    }
 
                     // Watch for globe modal - use $nextTick to ensure x-if template is rendered
                     this.$watch('showGlobeModal', (value) => {
@@ -1339,14 +1346,50 @@
                             this.$nextTick(() => {
                                 console.log('Calling initGlobe after $nextTick');
                                 this.initGlobe();
-                                // Start polling for live updates
+                                // Start fast polling for full updates when modal is open
                                 this.startGlobePolling();
                             });
                         } else {
-                            // Stop polling when modal closes
+                            // Stop fast polling when modal closes (count polling continues)
                             this.stopGlobePolling();
                         }
                     });
+                },
+
+                // Permanent polling for live count (runs always in live mode)
+                startLiveCountPolling() {
+                    this.stopLiveCountPolling();
+                    // Poll every 15 seconds for the count
+                    this.liveCountPollingInterval = setInterval(() => {
+                        this.refreshLiveCount();
+                    }, 15000);
+                    console.log('Live count polling started (every 15s)');
+                },
+
+                stopLiveCountPolling() {
+                    if (this.liveCountPollingInterval) {
+                        clearInterval(this.liveCountPollingInterval);
+                        this.liveCountPollingInterval = null;
+                    }
+                },
+
+                async refreshLiveCount() {
+                    try {
+                        const data = await this.$wire.fetchLiveVisitorData();
+                        if (data) {
+                            this.liveVisitors = data.count || 0;
+                            // Also update activity if not in modal (will be overwritten by fast polling if modal open)
+                            if (!this.showGlobeModal) {
+                                this.liveActivities = data.activity && data.activity.length > 0
+                                    ? data.activity
+                                    : [{flag: '🌍', action: 'No live visitors', city: '-', country: '-', time: '-'}];
+                                this.globeData = data.globeData || [];
+                            }
+                            console.log('Live count updated:', data.count);
+                        }
+                    } catch (e) {
+                        console.error('Failed to refresh live count:', e);
+                    }
                 },
 
                 startGlobePolling() {
