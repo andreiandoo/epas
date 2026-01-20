@@ -1811,27 +1811,27 @@ const EventPage = {
             // Create a group for the section with rotation
             svg += '<g' + transform + '>';
 
-            // Section name (positioned at top-center of section)
-            var textY = section.y + 18;
+            // Section name (positioned ABOVE the section, outside)
+            var textY = section.y - 5;
             var textX = section.x + (section.width / 2);
             var textColor = isAllowed ? '#1F2937' : '#9CA3AF';
-            svg += '<text x="' + textX + '" y="' + textY + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + textColor + '">' + section.name + '</text>';
+            svg += '<text x="' + textX + '" y="' + textY + '" text-anchor="middle" font-size="11" font-weight="600" fill="' + textColor + '" style="text-shadow: 0 0 3px white, 0 0 3px white;">' + section.name + '</text>';
 
             // Render seats for this section
             if (section.rows) {
                 var seatSize = 18;
                 var seatGap = 3;
                 var rowGap = 4;
-                var startY = section.y + 28; // Start after section name
+                var startY = section.y + 4; // Small padding from section top
 
                 section.rows.forEach(function(row, rowIndex) {
                     if (row.seats) {
-                        var startX = section.x + 8; // Padding from section edge
+                        var startX = section.x + 4; // Small padding from section edge
 
                         row.seats.forEach(function(seat, seatIndex) {
                             // Calculate position - use stored x/y if available, otherwise calculate from index
                             var seatX = seat.x !== null && seat.x !== undefined ? section.x + seat.x : startX + seatIndex * (seatSize + seatGap);
-                            var seatY = seat.y !== null && seat.y !== undefined ? section.y + 28 + seat.y : startY + rowIndex * (seatSize + rowGap);
+                            var seatY = seat.y !== null && seat.y !== undefined ? section.y + seat.y : startY + rowIndex * (seatSize + rowGap);
 
                             var isSelected = self.isSeatSelected(ticketTypeId, seat.id);
                             var status = seat.status || 'available';
