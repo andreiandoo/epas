@@ -1804,19 +1804,18 @@ const EventPage = {
         layout.sections.forEach(function(section) {
             var isAllowed = allowedSectionIds.includes(section.id);
 
-            // Calculate rotation transform
-            var centerX = section.x + (section.width / 2);
-            var centerY = section.y + (section.height / 2);
+            // Calculate rotation transform - Konva rotates around top-left corner (x, y)
             var rotation = section.rotation || 0;
-            var transform = rotation !== 0 ? ' transform="rotate(' + rotation + ' ' + centerX + ' ' + centerY + ')"' : '';
+            var transform = rotation !== 0 ? ' transform="rotate(' + rotation + ' ' + section.x + ' ' + section.y + ')"' : '';
 
             // Create a group for the section with rotation
             svg += '<g' + transform + '>';
 
-            // Section name (positioned at top of section)
+            // Section name (positioned at top-center of section)
             var textY = section.y + 18;
+            var textX = section.x + (section.width / 2);
             var textColor = isAllowed ? '#1F2937' : '#9CA3AF';
-            svg += '<text x="' + centerX + '" y="' + textY + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + textColor + '">' + section.name + '</text>';
+            svg += '<text x="' + textX + '" y="' + textY + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + textColor + '">' + section.name + '</text>';
 
             // Render seats for this section
             if (section.rows) {
@@ -1915,8 +1914,6 @@ const EventPage = {
         }
 
         var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketTypeId); });
-        // Max seats is the quantity user selected for this ticket type
-        var maxSeats = this.quantities[ticketTypeId] || tt?.max_per_order || 10;
 
         var existingIndex = this.selectedSeats[ticketTypeId].findIndex(function(s) { return s.id === seatId; });
 
@@ -1924,12 +1921,7 @@ const EventPage = {
             // Deselect
             this.selectedSeats[ticketTypeId].splice(existingIndex, 1);
         } else {
-            // Check max limit (based on quantity selected)
-            if (this.selectedSeats[ticketTypeId].length >= maxSeats) {
-                alert('Ai selectat deja ' + maxSeats + ' loc' + (maxSeats > 1 ? 'uri' : '') + '. Deselectează un loc pentru a alege altul.');
-                return;
-            }
-            // Select
+            // Select - no limit, user can select as many as they want
             this.selectedSeats[ticketTypeId].push({
                 id: seatId,
                 section: sectionName,
@@ -1937,6 +1929,9 @@ const EventPage = {
                 seat: seatLabel
             });
         }
+
+        // Update quantities to match selected seats count
+        this.quantities[ticketTypeId] = this.selectedSeats[ticketTypeId].length;
 
         console.log('[EventPage] Selected seats:', this.selectedSeats[ticketTypeId]);
 
