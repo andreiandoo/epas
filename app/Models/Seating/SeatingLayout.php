@@ -2,6 +2,7 @@
 
 namespace App\Models\Seating;
 
+use App\Models\MarketplaceClient;
 use App\Models\Scopes\TenantScope;
 use App\Models\Tenant;
 use App\Models\Venue;
@@ -13,6 +14,9 @@ class SeatingLayout extends Model
 {
     protected $fillable = [
         'tenant_id',
+        'marketplace_client_id',
+        'is_partner',
+        'partner_notes',
         'venue_id',
         'name',
         'status',
@@ -36,6 +40,7 @@ class SeatingLayout extends Model
         'background_y' => 'integer',
         'background_opacity' => 'float',
         'version' => 'integer',
+        'is_partner' => 'boolean',
     ];
 
     protected $attributes = [
@@ -68,6 +73,11 @@ class SeatingLayout extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function marketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class);
     }
 
     public function venue(): BelongsTo
