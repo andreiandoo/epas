@@ -255,8 +255,11 @@ class MarketplaceEventsController extends BaseController
         $event = $query->with([
             'marketplaceOrganizer',
             'venue',
+            'venue.seatingLayouts' => function ($q) {
+                $q->where('status', 'published')->with(['sections.rows.seats']);
+            },
             'marketplaceEventCategory',
-            'ticketTypes',
+            'ticketTypes.seatingSections',
             'artists',
         ])->first();
 
@@ -400,6 +403,16 @@ class MarketplaceEventsController extends BaseController
                     $originalPrice = $targetPrice;
                 }
 
+                // Get seating sections if assigned
+                $seatingSections = [];
+                if ($tt->relationLoaded('seatingSections') && $tt->seatingSections->isNotEmpty()) {
+                    $seatingSections = $tt->seatingSections->map(fn ($s) => [
+                        'id' => $s->id,
+                        'name' => $s->name,
+                        'color' => $s->color_hex,
+                    ])->values()->toArray();
+                }
+
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
@@ -412,6 +425,8 @@ class MarketplaceEventsController extends BaseController
                     'max_per_order' => $tt->max_per_order ?? 10,
                     'status' => $tt->status,
                     'is_sold_out' => $available <= 0,
+                    'has_seating' => !empty($seatingSections),
+                    'seating_sections' => $seatingSections,
                 ];
             })->values(),
             'artists' => $event->artists->map(function ($artist) use ($language) {
@@ -449,6 +464,8 @@ class MarketplaceEventsController extends BaseController
             'commission_mode' => $commissionMode,
             'commission_rate' => (float) $commissionRate,
             'taxes' => $taxes,
+            // Seating layout if venue has one
+            'seating_layout' => $this->getSeatingLayout($venue),
             // Custom related events (array at root level for frontend)
             'custom_related_events' => $this->getCustomRelatedEvents($event, $language, $client),
         ]);
@@ -950,5 +967,74 @@ class MarketplaceEventsController extends BaseController
         return $this->success([
             'genres' => $genres,
         ]);
+    }
+
+    /**
+     * Get seating layout data for a venue
+     */
+    protected function getSeatingLayout($venue): ?array
+    {
+        if (!$venue || !$venue->relationLoaded('seatingLayouts')) {
+            return null;
+        }
+
+        $layout = $venue->seatingLayouts->first();
+        if (!$layout) {
+            return null;
+        }
+
+        // Build geometry data
+        $sections = [];
+        foreach ($layout->sections as $section) {
+            $rows = [];
+            foreach ($section->rows as $row) {
+                $seats = [];
+                foreach ($row->seats as $seat) {
+                    $seats[] = [
+                        'id' => $seat->id,
+                        'label' => $seat->label,
+                        'x' => $seat->x_offset,
+                        'y' => $seat->y_offset,
+                        'status' => 'available', // Will be updated by availability check
+                    ];
+                }
+                $rows[] = [
+                    'id' => $row->id,
+                    'label' => $row->label,
+                    'seats' => $seats,
+                ];
+            }
+            $sections[] = [
+                'id' => $section->id,
+                'name' => $section->name,
+                'color' => $section->color_hex,
+                'x' => $section->x_position,
+                'y' => $section->y_position,
+                'width' => $section->width,
+                'height' => $section->height,
+                'rotation' => $section->rotation,
+                'rows' => $rows,
+            ];
+        }
+
+        // Generate seating map preview image URL
+        $bgPath = $layout->background_image_path ?? $layout->background_image_url;
+        $bgUrl = null;
+        if ($bgPath) {
+            $bgUrl = str_starts_with($bgPath, 'http') ? $bgPath : Storage::disk('public')->url($bgPath);
+        }
+
+        return [
+            'id' => $layout->id,
+            'name' => $layout->name,
+            'canvas_width' => $layout->canvas_w,
+            'canvas_height' => $layout->canvas_h,
+            'background_image' => $bgUrl,
+            'background_scale' => $layout->background_scale,
+            'background_x' => $layout->background_x,
+            'background_y' => $layout->background_y,
+            'background_opacity' => $layout->background_opacity,
+            'sections' => $sections,
+        ];
     }
 }
