@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Resources\SeatingLayoutResource\Pages;
 use App\Models\Seating\SeatingLayout;
 use App\Models\Venue;
 use Filament\Actions\Action;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -536,12 +537,12 @@ class SeatingLayoutResource extends Resource
                     ->preload(),
             ])
             ->actions([
-                Tables\Actions\Action::make('designer')
+                Action::make('designer')
                     ->label('Designer')
                     ->icon('heroicon-o-paint-brush')
                     ->color('primary')
                     ->url(fn (SeatingLayout $record) => static::getUrl('designer', ['record' => $record])),
-                Tables\Actions\EditAction::make(),
+                EditAction::make(),
             ])
             ->bulkActions([]);
     }
