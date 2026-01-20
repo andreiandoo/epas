@@ -5,6 +5,7 @@ namespace App\Models\Seating;
 use App\Models\MarketplaceClient;
 use App\Models\Scopes\TenantScope;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Models\Venue;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,6 +31,8 @@ class SeatingLayout extends Model
         'background_opacity',
         'version',
         'notes',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
@@ -59,10 +62,20 @@ class SeatingLayout extends Model
     {
         static::addGlobalScope(new TenantScope());
 
-        // Auto-set tenant_id on create
+        // Auto-set tenant_id and created_by on create
         static::creating(function ($layout) {
             if (!$layout->tenant_id && auth()->check() && isset(auth()->user()->tenant_id)) {
                 $layout->tenant_id = auth()->user()->tenant_id;
+            }
+            if (!$layout->created_by && auth()->check()) {
+                $layout->created_by = auth()->id();
+            }
+        });
+
+        // Auto-set updated_by on update
+        static::updating(function ($layout) {
+            if (auth()->check()) {
+                $layout->updated_by = auth()->id();
             }
         });
     }
@@ -93,6 +106,16 @@ class SeatingLayout extends Model
     public function eventSnapshots(): HasMany
     {
         return $this->hasMany(EventSeatingLayout::class, 'layout_id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     /**

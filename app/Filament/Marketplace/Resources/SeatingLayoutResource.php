@@ -90,6 +90,20 @@ class SeatingLayoutResource extends Resource
                                 ->placeholder('Scrie numele layout-ului sau al locației...')
                                 ->searchable()
                                 ->prefixIcon('heroicon-o-magnifying-glass')
+                                ->getOptionLabelUsing(function ($value) use ($marketplace): ?string {
+                                    if (!$value) return null;
+                                    $layout = SeatingLayout::withoutGlobalScopes()->with('venue')->find($value);
+                                    if (!$layout) return null;
+
+                                    $venueName = $layout->venue
+                                        ? ($layout->venue->getTranslation('name', 'ro') ?? $layout->venue->getTranslation('name', 'en') ?? '')
+                                        : '';
+                                    $venueInfo = $venueName ? " - {$venueName}" : '';
+                                    $sectionsCount = $layout->sections()->count();
+                                    $seatsInfo = " ({$sectionsCount} secțiuni)";
+
+                                    return $layout->name . $venueInfo . $seatsInfo;
+                                })
                                 ->getSearchResultsUsing(function (string $search) use ($marketplace): array {
                                     if (strlen($search) < 2) {
                                         return [];
@@ -198,8 +212,8 @@ class SeatingLayoutResource extends Resource
 
                             SC\Actions::make([
                                 Action::make('add_as_partner')
-                                    ->label('Adaugă ca partener')
-                                    ->icon('heroicon-o-plus-circle')
+                                    ->label('Importa model harta')
+                                    ->icon('heroicon-o-arrow-down-tray')
                                     ->color('success')
                                     ->size('lg')
                                     ->visible(function (SGet $get) use ($marketplace) {
@@ -209,8 +223,8 @@ class SeatingLayoutResource extends Resource
                                         return $layout && is_null($layout->marketplace_client_id);
                                     })
                                     ->requiresConfirmation()
-                                    ->modalHeading('Adaugă layout ca partener')
-                                    ->modalDescription('Acest layout va fi adăugat în lista ta de layout-uri partenere. Vei putea să îl folosești pentru evenimentele tale.')
+                                    ->modalHeading('Importa model harta')
+                                    ->modalDescription('Acest layout va fi importat în lista ta. Vei putea să îl folosești pentru evenimentele tale.')
                                     ->action(function (SGet $get) use ($marketplace) {
                                         $layoutId = $get('search_existing_layout');
                                         $layout = SeatingLayout::withoutGlobalScopes()->find($layoutId);
@@ -239,8 +253,8 @@ class SeatingLayoutResource extends Resource
                                         ]);
 
                                         Notification::make()
-                                            ->title('Layout adăugat')
-                                            ->body('"' . $layout->name . '" a fost adăugat ca partener. Vei fi redirecționat către lista de layout-uri.')
+                                            ->title('Layout importat')
+                                            ->body('"' . $layout->name . '" a fost importat cu succes.')
                                             ->success()
                                             ->send();
 
@@ -389,13 +403,21 @@ class SeatingLayoutResource extends Resource
                                 ->label('Versiune')
                                 ->content(fn ($record) => $record?->version ?? 1),
 
-                            Forms\Components\Placeholder::make('created_at')
-                                ->label('Creat la')
-                                ->content(fn ($record) => $record?->created_at?->format('d.m.Y H:i') ?? '-'),
+                            Forms\Components\Placeholder::make('created_info')
+                                ->label('Creat')
+                                ->content(function ($record) {
+                                    $date = $record?->created_at?->format('d.m.Y H:i') ?? '-';
+                                    $user = $record?->creator?->name ?? '-';
+                                    return "{$date} de {$user}";
+                                }),
 
-                            Forms\Components\Placeholder::make('updated_at')
-                                ->label('Actualizat la')
-                                ->content(fn ($record) => $record?->updated_at?->format('d.m.Y H:i') ?? '-'),
+                            Forms\Components\Placeholder::make('updated_info')
+                                ->label('Actualizat')
+                                ->content(function ($record) {
+                                    $date = $record?->updated_at?->format('d.m.Y H:i') ?? '-';
+                                    $user = $record?->updater?->name ?? ($record?->creator?->name ?? '-');
+                                    return "{$date} de {$user}";
+                                }),
                         ]),
 
                     // Statistici (doar pe Edit)
@@ -447,10 +469,11 @@ class SeatingLayoutResource extends Resource
                             ]),
                         ]),
 
-                    // Partner status
+                    // Partner status (only on edit)
                     SC\Section::make('Status partener')
                         ->icon('heroicon-o-user-group')
                         ->compact()
+                        ->visible(fn ($operation) => $operation === 'edit')
                         ->schema([
                             Forms\Components\Toggle::make('is_partner')
                                 ->label('Layout partener')
@@ -473,13 +496,18 @@ class SeatingLayoutResource extends Resource
                     ->weight(FontWeight::Bold)
                     ->url(fn (SeatingLayout $record) => static::getUrl('designer', ['record' => $record])),
 
-                Tables\Columns\TextColumn::make('venue.name')
+                Tables\Columns\TextColumn::make('venue_name')
                     ->label('Locație')
-                    ->formatStateUsing(fn ($record) => $record->venue
-                        ? ($record->venue->getTranslation('name', 'ro') ?? $record->venue->getTranslation('name', 'en'))
+                    ->state(fn (SeatingLayout $record) => $record->venue
+                        ? ($record->venue->getTranslation('name', 'ro') ?: $record->venue->getTranslation('name', 'en'))
                         : '-')
-                    ->searchable()
-                    ->sortable()
+                    ->searchable(query: fn ($query, $search) => $query->whereHas('venue', fn ($q) => $q->where('name', 'like', "%{$search}%")))
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('total_seats')
+                    ->label('Locuri')
+                    ->state(fn (SeatingLayout $record) => $record->sections->sum(fn ($s) => $s->seats()->count()))
+                    ->sortable(query: fn ($query, $direction) => $query)
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('status')
