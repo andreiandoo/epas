@@ -52,6 +52,18 @@
                         </svg>
                         Multi-Select
                     </button>
+                    <button @click="setDrawMode('selectseats')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'selectseats' ? 'bg-pink-500 text-white' : 'bg-gray-100'" title="Select individual seats - drag to select multiple">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="6" cy="6" r="2" stroke-width="2" fill="currentColor"/>
+                            <circle cx="12" cy="6" r="2" stroke-width="2"/>
+                            <circle cx="18" cy="6" r="2" stroke-width="2"/>
+                            <circle cx="6" cy="12" r="2" stroke-width="2"/>
+                            <circle cx="12" cy="12" r="2" stroke-width="2" fill="currentColor"/>
+                            <circle cx="18" cy="12" r="2" stroke-width="2"/>
+                            <rect x="3" y="3" width="8" height="12" stroke-width="1.5" stroke-dasharray="2,2" fill="none"/>
+                        </svg>
+                        Select Seats
+                    </button>
                     <button @click="setDrawMode('polygon')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'polygon' ? 'bg-green-500 text-white' : 'bg-gray-100'">
                         <x-svg-icon name="konvapolygon" class="w-5 h-5 text-purple-600" />
                         Polygon
@@ -76,7 +88,7 @@
                         <x-svg-icon name="konvafinish" class="w-5 h-5 text-purple-600" />
                         Finish
                     </button>
-                    <button @click="cancelDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-gray-600 border rounded-md border-slate-200" x-show="drawMode !== 'select' && drawMode !== 'multiselect'">
+                    <button @click="cancelDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-gray-600 border rounded-md border-slate-200" x-show="drawMode !== 'select' && drawMode !== 'multiselect' && drawMode !== 'selectseats'">
                         <x-svg-icon name="konvacancel" class="w-5 h-5 text-purple-600" />
                         Cancel
                     </button>
@@ -380,6 +392,15 @@
                 backgroundImage: null,
                 backgroundBaseX: 0,
                 backgroundBaseY: 0,
+
+                // Section drag tracking (for moving seats with section)
+                sectionDragStartPos: null,
+                draggingSectionId: null,
+
+                // Rectangle selection for seats
+                rectSelectionBox: null,
+                rectSelectionStart: null,
+                isRectSelecting: false,
 
                 init() {
                     this.createStage();
@@ -738,6 +759,9 @@
                         } else if (this.drawMode === 'multiselect') {
                             // Handle multi-select click on seats
                             this.handleMultiSelectClick(e);
+                        } else if (this.drawMode === 'selectseats') {
+                            // Handle seat selection click
+                            this.handleSeatSelectClick(e);
                         } else if (this.drawMode === 'select') {
                             if (e.target === this.stage || e.target.getLayer() === this.backgroundLayer) {
                                 this.transformer.nodes([]);
@@ -751,6 +775,10 @@
                     this.stage.on('mousedown', (e) => {
                         if (this.drawMode === 'multiselect' && (e.target === this.stage || e.target.getLayer() === this.backgroundLayer)) {
                             this.startBoxSelection(e);
+                        }
+                        // Rectangle selection for seats
+                        if (this.drawMode === 'selectseats' && (e.target === this.stage || e.target.getLayer() === this.backgroundLayer || e.target.getLayer() === this.seatsLayer)) {
+                            this.startRectSelection(e);
                         }
                     });
 
@@ -786,6 +814,11 @@
                         if (this.drawMode === 'multiselect' && this.selectionStartPos) {
                             this.updateBoxSelection(e);
                         }
+
+                        // Rectangle selection for seats
+                        if (this.drawMode === 'selectseats' && this.isRectSelecting) {
+                            this.updateRectSelection(e);
+                        }
                     });
 
                     // Mouse up handler for circle drawing and box selection
@@ -810,6 +843,11 @@
                         // End box selection
                         if (this.drawMode === 'multiselect' && this.selectionStartPos) {
                             this.endBoxSelection(e);
+                        }
+
+                        // End rectangle selection for seats
+                        if (this.drawMode === 'selectseats' && this.isRectSelecting) {
+                            this.endRectSelection(e);
                         }
                     });
 
@@ -950,6 +988,126 @@
                              r2.x + r2.width < r1.x ||
                              r2.y > r1.y + r1.height ||
                              r2.y + r2.height < r1.y);
+                },
+
+                // Seat selection mode - click handler
+                handleSeatSelectClick(e) {
+                    const target = e.target;
+
+                    // Check if clicked on a seat
+                    if (target.hasName && target.hasName('seat')) {
+                        const seatId = target.getAttr('seatId');
+                        if (seatId) {
+                            const isShift = e.evt.shiftKey;
+
+                            if (isShift) {
+                                // Toggle selection with shift
+                                const index = this.selectedSeats.findIndex(s => s.id === seatId);
+                                if (index > -1) {
+                                    this.selectedSeats.splice(index, 1);
+                                    target.stroke('#1F2937');
+                                    target.strokeWidth(1);
+                                } else {
+                                    this.selectedSeats.push({ id: seatId, node: target });
+                                    target.stroke('#EC4899');
+                                    target.strokeWidth(3);
+                                }
+                            } else {
+                                // Single select - clear previous and select this one
+                                this.clearSelection();
+                                this.selectedSeats.push({ id: seatId, node: target });
+                                target.stroke('#EC4899');
+                                target.strokeWidth(3);
+                            }
+                            this.seatsLayer.batchDraw();
+                        }
+                    } else if (e.target === this.stage || e.target.getLayer() === this.backgroundLayer) {
+                        // Clicked on empty space - clear selection
+                        this.clearSelection();
+                    }
+                },
+
+                // Rectangle selection for seats
+                startRectSelection(e) {
+                    const pos = this.stage.getPointerPosition();
+                    this.rectSelectionStart = {
+                        x: (pos.x - this.stage.x()) / this.zoom,
+                        y: (pos.y - this.stage.y()) / this.zoom
+                    };
+                    this.isRectSelecting = true;
+
+                    // Create selection rectangle with pink color for seat selection
+                    this.rectSelectionBox = new Konva.Rect({
+                        x: this.rectSelectionStart.x,
+                        y: this.rectSelectionStart.y,
+                        width: 0,
+                        height: 0,
+                        fill: 'rgba(236, 72, 153, 0.2)',
+                        stroke: '#EC4899',
+                        strokeWidth: 2,
+                        dash: [5, 5],
+                    });
+                    this.drawLayer.add(this.rectSelectionBox);
+                },
+
+                updateRectSelection(e) {
+                    if (!this.rectSelectionBox || !this.rectSelectionStart) return;
+
+                    const pos = this.stage.getPointerPosition();
+                    const currentPos = {
+                        x: (pos.x - this.stage.x()) / this.zoom,
+                        y: (pos.y - this.stage.y()) / this.zoom
+                    };
+
+                    const x = Math.min(this.rectSelectionStart.x, currentPos.x);
+                    const y = Math.min(this.rectSelectionStart.y, currentPos.y);
+                    const width = Math.abs(currentPos.x - this.rectSelectionStart.x);
+                    const height = Math.abs(currentPos.y - this.rectSelectionStart.y);
+
+                    this.rectSelectionBox.x(x);
+                    this.rectSelectionBox.y(y);
+                    this.rectSelectionBox.width(width);
+                    this.rectSelectionBox.height(height);
+                    this.drawLayer.batchDraw();
+                },
+
+                endRectSelection(e) {
+                    this.isRectSelecting = false;
+
+                    if (!this.rectSelectionBox) {
+                        this.rectSelectionStart = null;
+                        return;
+                    }
+
+                    const box = this.rectSelectionBox.getClientRect();
+
+                    // Don't clear existing selection if shift is held
+                    const isShift = e.evt.shiftKey;
+                    if (!isShift) {
+                        this.clearSelection();
+                    }
+
+                    // Find all seats within selection on seatsLayer
+                    this.seatsLayer.find('.seat').forEach(seat => {
+                        const seatBox = seat.getClientRect();
+
+                        // Check if seat is within selection box
+                        if (this.intersects(box, seatBox)) {
+                            const seatId = seat.getAttr('seatId');
+                            if (seatId && !this.selectedSeats.find(s => s.id === seatId)) {
+                                this.selectedSeats.push({ id: seatId, node: seat });
+                                seat.stroke('#EC4899');
+                                seat.strokeWidth(3);
+                            }
+                        }
+                    });
+
+                    // Clean up
+                    this.rectSelectionBox.destroy();
+                    this.rectSelectionBox = null;
+                    this.rectSelectionStart = null;
+                    this.drawLayer.batchDraw();
+                    this.seatsLayer.batchDraw();
                 },
 
                 clearSelection() {
@@ -1395,6 +1553,38 @@
                         }
                     });
 
+                    // Store initial position on drag start
+                    group.on('dragstart', () => {
+                        this.sectionDragStartPos = { x: group.x(), y: group.y() };
+                        this.draggingSectionId = section.id;
+                    });
+
+                    // Move seats with section during drag
+                    group.on('drag', () => {
+                        if (this.sectionDragStartPos && this.draggingSectionId === section.id) {
+                            const deltaX = group.x() - this.sectionDragStartPos.x;
+                            const deltaY = group.y() - this.sectionDragStartPos.y;
+
+                            // Move all seats belonging to this section
+                            this.seatsLayer.find('.seat').forEach(seat => {
+                                if (seat.getAttr('sectionId') === section.id) {
+                                    const originalX = seat.getAttr('originalX') ?? seat.x();
+                                    const originalY = seat.getAttr('originalY') ?? seat.y();
+
+                                    // Store original position on first drag
+                                    if (!seat.getAttr('originalX')) {
+                                        seat.setAttr('originalX', seat.x());
+                                        seat.setAttr('originalY', seat.y());
+                                    }
+
+                                    seat.x(originalX + deltaX);
+                                    seat.y(originalY + deltaY);
+                                }
+                            });
+                            this.seatsLayer.batchDraw();
+                        }
+                    });
+
                     // Save on drag end
                     group.on('dragend', () => {
                         // Apply snap to grid if enabled
@@ -1403,6 +1593,32 @@
                             y: group.y()
                         });
                         group.position(snappedPos);
+
+                        // Calculate final delta with snap
+                        if (this.sectionDragStartPos && this.draggingSectionId === section.id) {
+                            const finalDeltaX = snappedPos.x - this.sectionDragStartPos.x;
+                            const finalDeltaY = snappedPos.y - this.sectionDragStartPos.y;
+
+                            // Update final seat positions with snap applied
+                            this.seatsLayer.find('.seat').forEach(seat => {
+                                if (seat.getAttr('sectionId') === section.id) {
+                                    const originalX = seat.getAttr('originalX');
+                                    const originalY = seat.getAttr('originalY');
+                                    if (originalX !== undefined && originalY !== undefined) {
+                                        seat.x(originalX + finalDeltaX);
+                                        seat.y(originalY + finalDeltaY);
+                                        // Clear original position attrs
+                                        seat.setAttr('originalX', null);
+                                        seat.setAttr('originalY', null);
+                                    }
+                                }
+                            });
+                            this.seatsLayer.batchDraw();
+                        }
+
+                        // Clear drag tracking
+                        this.sectionDragStartPos = null;
+                        this.draggingSectionId = null;
 
                         this.saveSection(section.id, {
                             x_position: Math.round(snappedPos.x),

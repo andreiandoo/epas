@@ -43,7 +43,12 @@ class SeatingLayoutResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('venue_id')
                             ->relationship('venue', 'name')
-                            ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? $record->getTranslation('name', 'en') ?? 'Unnamed Venue')
+                            ->getOptionLabelFromRecordUsing(function ($record) {
+                                $locale = app()->getLocale();
+                                $name = $record->getTranslation('name', $locale) ?? $record->getTranslation('name', 'en') ?? 'Unnamed Venue';
+                                $city = $record->city ?? null;
+                                return $city ? "{$name} ({$city})" : $name;
+                            })
                             ->getSearchResultsUsing(function (string $search) {
                                 $locale = app()->getLocale();
                                 $searchLower = strtolower($search);
@@ -55,12 +60,19 @@ class SeatingLayoutResource extends Resource
                                         // Get name in current locale or fallback to English
                                         $name = $venue->getTranslation('name', $locale) ?? $venue->getTranslation('name', 'en') ?? '';
                                         $slug = $venue->slug ?? '';
+                                        $city = $venue->city ?? '';
 
                                         return str_contains(strtolower($name), $searchLower)
-                                            || str_contains(strtolower($slug), $searchLower);
+                                            || str_contains(strtolower($slug), $searchLower)
+                                            || str_contains(strtolower($city), $searchLower);
                                     })
                                     ->take(50)
-                                    ->mapWithKeys(fn ($venue) => [$venue->id => $venue->getTranslation('name', $locale) ?? $venue->getTranslation('name', 'en') ?? 'Unnamed Venue']);
+                                    ->mapWithKeys(function ($venue) use ($locale) {
+                                        $name = $venue->getTranslation('name', $locale) ?? $venue->getTranslation('name', 'en') ?? 'Unnamed Venue';
+                                        $city = $venue->city ?? null;
+                                        $label = $city ? "{$name} ({$city})" : $name;
+                                        return [$venue->id => $label];
+                                    });
                             })
                             ->required()
                             ->searchable()
