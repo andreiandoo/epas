@@ -40,9 +40,27 @@ class SeatingLayoutResource extends Resource
         $marketplace = static::getMarketplaceClient();
 
         // Return layouts belonging to this marketplace
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes() // Remove TenantScope for marketplace access
-            ->where('marketplace_client_id', $marketplace?->id);
+        // Use try-catch in case migration hasn't run yet
+        try {
+            return parent::getEloquentQuery()
+                ->withoutGlobalScopes() // Remove TenantScope for marketplace access
+                ->where('marketplace_client_id', $marketplace?->id);
+        } catch (\Exception $e) {
+            // If column doesn't exist yet, return empty query
+            return parent::getEloquentQuery()
+                ->withoutGlobalScopes()
+                ->whereRaw('1 = 0'); // Return empty result
+        }
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        // Check if migration has run by checking if column exists
+        try {
+            return \Illuminate\Support\Facades\Schema::hasColumn('seating_layouts', 'marketplace_client_id');
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     public static function form(Schema $schema): Schema
