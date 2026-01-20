@@ -10,8 +10,8 @@
          @@layout-updated.window="handleLayoutUpdated($event.detail)">
         {{-- Canvas Container --}}
         <div class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-                <div>
+            <div class="flex flex-col gap-y-4 items-center justify-between mb-4">
+                <div class="flex flex-row items-center gap-x-4">
                     <h3 class="text-lg font-semibold text-gray-900">Canvas Designer </h3>
                     <p class="text-sm text-gray-500">Layout: {{ $canvasWidth }}x{{ $canvasHeight }}px</p>
                 </div>
@@ -1330,7 +1330,7 @@
 
                 // Export SVG
                 exportSVG() {
-                    // Create SVG content (avoid PHP parsing by splitting <?xml)
+                    // Create SVG content (avoid PHP parsing by splitting xml)
                     let svgContent = '<' + '?xml version="1.0" encoding="UTF-8"?' + '>\n';
                     svgContent += `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${this.canvasWidth} ${this.canvasHeight}" width="${this.canvasWidth}" height="${this.canvasHeight}">
   <style>
