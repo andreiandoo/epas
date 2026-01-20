@@ -993,8 +993,8 @@ class MarketplaceEventsController extends BaseController
                     $seats[] = [
                         'id' => $seat->id,
                         'label' => $seat->label,
-                        'x' => $seat->x_offset,
-                        'y' => $seat->y_offset,
+                        'x' => $seat->x,
+                        'y' => $seat->y,
                         'status' => 'available', // Will be updated by availability check
                     ];
                 }
