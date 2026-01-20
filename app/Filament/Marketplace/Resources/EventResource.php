@@ -1027,7 +1027,7 @@ class EventResource extends Resource
                                             ->datalist(['Early Bird','Standard','VIP','Backstage','Student','Senior','Child'])
                                             ->required()
                                             ->columnSpan(6)
-                                            ->live(debounce: 400)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                 if ($get('sku')) return;
                                                 $set('sku', Str::upper(Str::slug($state, '-')));
@@ -1055,7 +1055,7 @@ class EventResource extends Resource
                                                 ->numeric()
                                                 ->minValue(0)
                                                 ->required()
-                                                ->live(debounce: 300)
+                                                ->live(onBlur: true)
                                                 ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                     $price = (float) $state;
                                                     $sale = $get('price');
@@ -1075,7 +1075,7 @@ class EventResource extends Resource
                                                 ->numeric()
                                                 ->minValue(0)
                                                 ->nullable()
-                                                ->live(debounce: 500)
+                                                ->live(onBlur: true)
                                                 ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                     // Auto-generate series_end based on capacity if not already set
                                                     $seriesEnd = $get('series_end');
@@ -1177,6 +1177,20 @@ class EventResource extends Resource
                                                 $canvasW = $layout->canvas_w ?? 1920;
                                                 $canvasH = $layout->canvas_h ?? 1080;
 
+                                                // Background image
+                                                $bgImage = '';
+                                                $bgPath = $layout->background_image_path ?? $layout->background_image_url;
+                                                if ($bgPath) {
+                                                    $bgUrl = str_starts_with($bgPath, 'http') ? $bgPath : asset('storage/' . $bgPath);
+                                                    $bgScale = $layout->background_scale ?? 1;
+                                                    $bgX = $layout->background_x ?? 0;
+                                                    $bgY = $layout->background_y ?? 0;
+                                                    $bgOpacity = $layout->background_opacity ?? 0.5;
+                                                    $bgW = $canvasW * $bgScale;
+                                                    $bgH = $canvasH * $bgScale;
+                                                    $bgImage = "<image href=\"{$bgUrl}\" x=\"{$bgX}\" y=\"{$bgY}\" width=\"{$bgW}\" height=\"{$bgH}\" opacity=\"{$bgOpacity}\" preserveAspectRatio=\"xMidYMid meet\"/>";
+                                                }
+
                                                 // Build SVG paths for sections
                                                 $svgSections = '';
                                                 foreach ($allSections as $section) {
@@ -1188,11 +1202,10 @@ class EventResource extends Resource
                                                     $rotation = $section->rotation ?? 0;
                                                     $name = e($section->name);
 
-                                                    // Colors based on selection
-                                                    $fill = $isSelected ? '#22c55e' : '#374151';
-                                                    $stroke = $isSelected ? '#16a34a' : '#6b7280';
-                                                    $textColor = $isSelected ? '#ffffff' : '#9ca3af';
-                                                    $opacity = $isSelected ? '1' : '0.5';
+                                                    // Colors based on selection - more visible
+                                                    $fill = $isSelected ? 'rgba(34, 197, 94, 0.7)' : 'rgba(55, 65, 81, 0.5)';
+                                                    $stroke = $isSelected ? '#22c55e' : '#6b7280';
+                                                    $textColor = $isSelected ? '#ffffff' : '#d1d5db';
                                                     $strokeWidth = $isSelected ? '4' : '2';
 
                                                     // Section rectangle with rotation
@@ -1200,11 +1213,11 @@ class EventResource extends Resource
                                                     $cy = $y + $h / 2;
                                                     $transform = $rotation != 0 ? " transform=\"rotate({$rotation} {$cx} {$cy})\"" : '';
 
-                                                    $svgSections .= "<g{$transform} opacity=\"{$opacity}\">";
+                                                    $svgSections .= "<g{$transform}>";
                                                     $svgSections .= "<rect x=\"{$x}\" y=\"{$y}\" width=\"{$w}\" height=\"{$h}\" fill=\"{$fill}\" stroke=\"{$stroke}\" stroke-width=\"{$strokeWidth}\" rx=\"6\"/>";
                                                     // Section name - scale font based on section size
-                                                    $fontSize = max(12, min(24, min($w, $h) / 5));
-                                                    $svgSections .= "<text x=\"{$cx}\" y=\"{$cy}\" text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"{$textColor}\" font-size=\"{$fontSize}\" font-weight=\"700\">{$name}</text>";
+                                                    $fontSize = max(14, min(28, min($w, $h) / 4));
+                                                    $svgSections .= "<text x=\"{$cx}\" y=\"{$cy}\" text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"{$textColor}\" font-size=\"{$fontSize}\" font-weight=\"700\" stroke=\"#000\" stroke-width=\"0.5\">{$name}</text>";
                                                     $svgSections .= "</g>";
                                                 }
 
@@ -1213,7 +1226,7 @@ class EventResource extends Resource
 
                                                 // Calculate aspect ratio for responsive height
                                                 $aspectRatio = $canvasH / $canvasW;
-                                                $heightClass = $aspectRatio > 0.7 ? 'h-64' : 'h-40';
+                                                $heightClass = $aspectRatio > 0.7 ? 'h-72' : 'h-48';
 
                                                 return new \Illuminate\Support\HtmlString("
                                                     <div class='p-3 bg-gray-900 rounded-lg border border-gray-700'>
@@ -1228,6 +1241,7 @@ class EventResource extends Resource
                                                             </div>
                                                         </div>
                                                         <svg viewBox=\"0 0 {$canvasW} {$canvasH}\" preserveAspectRatio=\"xMidYMid meet\" class='w-full {$heightClass} bg-gray-950 rounded border border-gray-800'>
+                                                            {$bgImage}
                                                             {$svgSections}
                                                         </svg>
                                                     </div>
