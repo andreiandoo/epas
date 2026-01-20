@@ -1014,7 +1014,7 @@ class EventResource extends Resource
                                 Forms\Components\Repeater::make('ticketTypes')
                                     ->relationship()
                                     ->label('Ticket types')
-                                    ->collapsed()
+                                    ->collapsible()
                                     ->addActionLabel('Add ticket type')
                                     ->itemLabel(fn (array $state) => ($state['is_active'] ?? true)
                                         ? '✓ ' . ($state['name'] ?? 'Ticket')
@@ -1170,29 +1170,12 @@ class EventResource extends Resource
 
                                                 // Get all sections for this layout
                                                 $allSections = $layout->sections;
+
+                                                if ($allSections->isEmpty()) return '';
+
+                                                // Use full canvas as viewBox for proper proportions
                                                 $canvasW = $layout->canvas_w ?? 1920;
                                                 $canvasH = $layout->canvas_h ?? 1080;
-
-                                                // Calculate viewBox to fit all sections with padding
-                                                $minX = $maxX = $minY = $maxY = null;
-                                                foreach ($allSections as $section) {
-                                                    $x = $section->origin_x ?? 0;
-                                                    $y = $section->origin_y ?? 0;
-                                                    $w = $section->width ?? 200;
-                                                    $h = $section->height ?? 100;
-
-                                                    if ($minX === null || $x < $minX) $minX = $x;
-                                                    if ($minY === null || $y < $minY) $minY = $y;
-                                                    if ($maxX === null || ($x + $w) > $maxX) $maxX = $x + $w;
-                                                    if ($maxY === null || ($y + $h) > $maxY) $maxY = $y + $h;
-                                                }
-
-                                                // Add padding
-                                                $padding = 50;
-                                                $minX = ($minX ?? 0) - $padding;
-                                                $minY = ($minY ?? 0) - $padding;
-                                                $viewW = (($maxX ?? $canvasW) - $minX) + $padding * 2;
-                                                $viewH = (($maxY ?? $canvasH) - $minY) + $padding * 2;
 
                                                 // Build SVG paths for sections
                                                 $svgSections = '';
@@ -1200,16 +1183,17 @@ class EventResource extends Resource
                                                     $isSelected = in_array($section->id, $selectedSections);
                                                     $x = $section->origin_x ?? 0;
                                                     $y = $section->origin_y ?? 0;
-                                                    $w = $section->width ?? 200;
-                                                    $h = $section->height ?? 100;
+                                                    $w = max(50, $section->width ?? 200);
+                                                    $h = max(30, $section->height ?? 100);
                                                     $rotation = $section->rotation ?? 0;
                                                     $name = e($section->name);
 
                                                     // Colors based on selection
-                                                    $fill = $isSelected ? '#22c55e' : '#e5e7eb';
-                                                    $stroke = $isSelected ? '#16a34a' : '#9ca3af';
-                                                    $textColor = $isSelected ? '#ffffff' : '#6b7280';
-                                                    $opacity = $isSelected ? '1' : '0.6';
+                                                    $fill = $isSelected ? '#22c55e' : '#374151';
+                                                    $stroke = $isSelected ? '#16a34a' : '#6b7280';
+                                                    $textColor = $isSelected ? '#ffffff' : '#9ca3af';
+                                                    $opacity = $isSelected ? '1' : '0.5';
+                                                    $strokeWidth = $isSelected ? '4' : '2';
 
                                                     // Section rectangle with rotation
                                                     $cx = $x + $w / 2;
@@ -1217,31 +1201,35 @@ class EventResource extends Resource
                                                     $transform = $rotation != 0 ? " transform=\"rotate({$rotation} {$cx} {$cy})\"" : '';
 
                                                     $svgSections .= "<g{$transform} opacity=\"{$opacity}\">";
-                                                    $svgSections .= "<rect x=\"{$x}\" y=\"{$y}\" width=\"{$w}\" height=\"{$h}\" fill=\"{$fill}\" stroke=\"{$stroke}\" stroke-width=\"2\" rx=\"4\"/>";
-                                                    // Section name
-                                                    $fontSize = min(14, max(8, min($w, $h) / 8));
-                                                    $svgSections .= "<text x=\"{$cx}\" y=\"{$cy}\" text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"{$textColor}\" font-size=\"{$fontSize}\" font-weight=\"600\">{$name}</text>";
+                                                    $svgSections .= "<rect x=\"{$x}\" y=\"{$y}\" width=\"{$w}\" height=\"{$h}\" fill=\"{$fill}\" stroke=\"{$stroke}\" stroke-width=\"{$strokeWidth}\" rx=\"6\"/>";
+                                                    // Section name - scale font based on section size
+                                                    $fontSize = max(12, min(24, min($w, $h) / 5));
+                                                    $svgSections .= "<text x=\"{$cx}\" y=\"{$cy}\" text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"{$textColor}\" font-size=\"{$fontSize}\" font-weight=\"700\">{$name}</text>";
                                                     $svgSections .= "</g>";
                                                 }
 
                                                 $selectedCount = count($selectedSections);
                                                 $totalSeats = SeatingSection::whereIn('id', $selectedSections)->get()->sum(fn ($s) => $s->total_seats);
 
+                                                // Calculate aspect ratio for responsive height
+                                                $aspectRatio = $canvasH / $canvasW;
+                                                $heightClass = $aspectRatio > 0.7 ? 'h-64' : 'h-40';
+
                                                 return new \Illuminate\Support\HtmlString("
-                                                    <div class='p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+                                                    <div class='p-3 bg-gray-900 rounded-lg border border-gray-700'>
                                                         <div class='flex items-center justify-between mb-2'>
-                                                            <span class='text-sm font-medium text-gray-700 dark:text-gray-300'>
-                                                                Secțiuni selectate: <span class='text-green-600 font-bold'>{$selectedCount}</span>
-                                                                ({$totalSeats} locuri)
+                                                            <span class='text-sm font-medium text-gray-300'>
+                                                                Secțiuni selectate: <span class='text-green-400 font-bold'>{$selectedCount}</span>
+                                                                <span class='text-gray-500'>({$totalSeats} locuri)</span>
                                                             </span>
+                                                            <div class='flex items-center gap-3 text-xs text-gray-500'>
+                                                                <span class='flex items-center gap-1'><span class='w-3 h-3 rounded bg-green-500'></span> Selectate</span>
+                                                                <span class='flex items-center gap-1'><span class='w-3 h-3 rounded bg-gray-600'></span> Disponibile</span>
+                                                            </div>
                                                         </div>
-                                                        <svg viewBox=\"{$minX} {$minY} {$viewW} {$viewH}\" class='w-full h-32 bg-white dark:bg-gray-900 rounded border'>
+                                                        <svg viewBox=\"0 0 {$canvasW} {$canvasH}\" preserveAspectRatio=\"xMidYMid meet\" class='w-full {$heightClass} bg-gray-950 rounded border border-gray-800'>
                                                             {$svgSections}
                                                         </svg>
-                                                        <div class='mt-1 flex items-center gap-3 text-xs text-gray-500'>
-                                                            <span class='flex items-center gap-1'><span class='w-3 h-3 rounded bg-green-500'></span> Selectate</span>
-                                                            <span class='flex items-center gap-1'><span class='w-3 h-3 rounded bg-gray-200 dark:bg-gray-600'></span> Disponibile</span>
-                                                        </div>
                                                     </div>
                                                 ");
                                             })
