@@ -1830,8 +1830,9 @@ const EventPage = {
 
                         row.seats.forEach(function(seat, seatIndex) {
                             // Calculate position - use stored x/y if available, otherwise calculate from index
-                            var seatX = seat.x !== null && seat.x !== undefined ? section.x + seat.x : startX + seatIndex * (seatSize + seatGap);
-                            var seatY = seat.y !== null && seat.y !== undefined ? section.y + seat.y : startY + rowIndex * (seatSize + rowGap);
+                            // Use parseFloat to ensure numeric addition (API may return strings)
+                            var seatX = seat.x !== null && seat.x !== undefined ? parseFloat(section.x) + parseFloat(seat.x) : startX + seatIndex * (seatSize + seatGap);
+                            var seatY = seat.y !== null && seat.y !== undefined ? parseFloat(section.y) + parseFloat(seat.y) : startY + rowIndex * (seatSize + rowGap);
 
                             var isSelected = self.isSeatSelected(ticketTypeId, seat.id);
                             var status = seat.status || 'available';
