@@ -3,6 +3,8 @@
 namespace App\Models\Seating;
 
 use App\Models\Event;
+use App\Models\MarketplaceClient;
+use App\Models\MarketplaceEvent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +14,10 @@ class EventSeatingLayout extends Model
     protected $fillable = [
         'event_id',
         'layout_id',
+        'marketplace_client_id',
+        'marketplace_event_id',
+        'is_partner',
+        'partner_notes',
         'json_geometry',
         'status',
         'published_at',
@@ -24,6 +30,7 @@ class EventSeatingLayout extends Model
         'notes' => 'array',
         'published_at' => 'datetime',
         'archived_at' => 'datetime',
+        'is_partner' => 'boolean',
     ];
 
     /**
@@ -32,6 +39,16 @@ class EventSeatingLayout extends Model
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
+    }
+
+    public function marketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    public function marketplaceEvent(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceEvent::class);
     }
 
     public function sourceLayout(): BelongsTo
