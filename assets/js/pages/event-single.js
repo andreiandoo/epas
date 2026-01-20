@@ -1024,6 +1024,9 @@ const EventPage = {
             // Controls HTML - different messages based on event status
             var controlsHtml = '';
             var hasSeating = tt.has_seating && self.seatingLayout;
+            var currentQty = self.quantities[tt.id] || 0;
+            var selectedCount = self.selectedSeats[tt.id]?.length || 0;
+
             if (eventIsCancelled) {
                 controlsHtml = '<span class="text-sm font-medium text-red-400">Indisponibil</span>';
             } else if (eventIsPostponed) {
@@ -1032,21 +1035,23 @@ const EventPage = {
                 controlsHtml = '<span class="text-sm font-medium text-gray-500">Sold Out</span>';
             } else if (isSoldOut) {
                 controlsHtml = '<span class="text-sm font-medium text-gray-400">Epuizat</span>';
-            } else if (hasSeating) {
-                // Ticket type with seating - show "Select seats" button
-                var selectedCount = self.selectedSeats[tt.id]?.length || 0;
-                controlsHtml = '<div class="flex items-center gap-2">' +
-                    '<button onclick="EventPage.openSeatSelection(\'' + tt.id + '\')" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-colors rounded-lg bg-primary hover:bg-primary-dark">' +
-                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>' +
-                        (selectedCount > 0 ? selectedCount + ' loc' + (selectedCount > 1 ? 'uri' : '') + ' selectat' + (selectedCount > 1 ? 'e' : '') : 'Alege locuri') +
-                    '</button>' +
-                '</div>';
             } else {
+                // Quantity controls (always show for available tickets)
                 controlsHtml = '<div class="flex items-center gap-2">' +
                     '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">-</button>' +
-                    '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center">0</span>' +
-                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">+</button>' +
-                '</div>';
+                    '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center">' + currentQty + '</span>' +
+                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">+</button>';
+
+                // Add "Alege locuri" button for seating tickets when quantity > 0
+                if (hasSeating && currentQty > 0) {
+                    controlsHtml += '<button onclick="EventPage.openSeatSelection(\'' + tt.id + '\')" class="flex items-center gap-2 px-3 py-2 ml-2 text-xs font-semibold transition-colors rounded-lg ' +
+                        (selectedCount > 0 ? 'bg-green-500 text-white' : 'bg-accent text-white hover:bg-accent/80') + '">' +
+                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>' +
+                        (selectedCount > 0 ? selectedCount + '/' + currentQty + ' selectate' : 'Alege locuri') +
+                    '</button>';
+                }
+
+                controlsHtml += '</div>';
             }
 
             return '<div class="' + cardClasses + '" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
@@ -1457,6 +1462,7 @@ const EventPage = {
         if (!tt || !this.seatingLayout) return;
 
         console.log('[EventPage] Opening seat selection for:', tt.name, 'sections:', tt.seating_sections);
+        console.log('[EventPage] Seating layout:', this.seatingLayout);
 
         // Get allowed section IDs for this ticket type
         var allowedSectionIds = tt.seating_sections.map(function(s) { return s.id; });
@@ -1469,6 +1475,12 @@ const EventPage = {
         // Store current ticket type for the modal
         this.currentTicketTypeId = ticketTypeId;
 
+        // Reset zoom
+        this.mapZoom = 1;
+
+        // Render ticket types sidebar
+        this.renderModalTicketTypes(ticketTypeId);
+
         // Render the seating map
         this.renderSeatingMap(allowedSectionIds, ticketTypeId);
 
@@ -1477,61 +1489,177 @@ const EventPage = {
         document.body.style.overflow = 'hidden';
     },
 
+    // Zoom level for seating map
+    mapZoom: 1,
+    mapPan: { x: 0, y: 0 },
+
     /**
      * Create the seat selection modal
      */
     createSeatSelectionModal() {
+        var self = this;
         var modal = document.createElement('div');
         modal.id = 'seat-selection-modal';
         modal.className = 'fixed inset-0 z-50 hidden';
         modal.innerHTML =
             '<div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="EventPage.closeSeatSelection()"></div>' +
-            '<div class="absolute inset-4 md:inset-8 lg:inset-12 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">' +
+            '<div class="absolute inset-2 md:inset-4 lg:inset-8 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">' +
                 // Header
-                '<div class="flex items-center justify-between px-6 py-4 border-b border-border">' +
+                '<div class="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border">' +
                     '<div>' +
-                        '<h2 class="text-xl font-bold text-secondary">Alege locurile</h2>' +
-                        '<p class="text-sm text-muted" id="seat-selection-subtitle">Selectează locurile dorite pe hartă</p>' +
+                        '<h2 class="text-lg md:text-xl font-bold text-secondary">Alege locurile</h2>' +
+                        '<p class="text-xs md:text-sm text-muted" id="seat-selection-subtitle">Selectează locurile dorite pe hartă</p>' +
                     '</div>' +
                     '<button onclick="EventPage.closeSeatSelection()" class="p-2 transition-colors rounded-lg hover:bg-surface">' +
                         '<svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
                     '</button>' +
                 '</div>' +
-                // Content - seating map
-                '<div class="flex-1 overflow-auto p-4 bg-surface/50" id="seat-map-container">' +
-                    '<div id="seat-map-svg" class="w-full h-full flex items-center justify-center">' +
-                        '<div class="text-center text-muted">' +
-                            '<svg class="w-12 h-12 mx-auto mb-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>' +
-                            'Se încarcă harta...' +
+                // Content area with sidebar and map
+                '<div class="flex-1 flex overflow-hidden">' +
+                    // Sidebar - ticket types
+                    '<div class="w-64 lg:w-80 border-r border-border bg-white overflow-y-auto hidden md:block" id="seat-modal-sidebar">' +
+                        '<div class="p-4">' +
+                            '<h3 class="font-bold text-secondary mb-3">Tipuri de bilete</h3>' +
+                            '<div id="seat-modal-ticket-types" class="space-y-2"></div>' +
+                        '</div>' +
+                    '</div>' +
+                    // Map container
+                    '<div class="flex-1 flex flex-col bg-surface/50 overflow-hidden">' +
+                        // Zoom controls
+                        '<div class="flex items-center justify-between px-4 py-2 bg-white border-b border-border">' +
+                            '<div class="flex items-center gap-2">' +
+                                '<button onclick="EventPage.zoomMap(-0.2)" class="p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom out">' +
+                                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>' +
+                                '</button>' +
+                                '<span id="zoom-level" class="text-sm font-medium text-muted w-12 text-center">100%</span>' +
+                                '<button onclick="EventPage.zoomMap(0.2)" class="p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom in">' +
+                                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+                                '</button>' +
+                                '<button onclick="EventPage.resetMapZoom()" class="ml-2 p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors text-xs" title="Reset zoom">' +
+                                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
+                                '</button>' +
+                            '</div>' +
+                            '<div class="text-xs text-muted">Scroll pentru zoom, drag pentru panoramare</div>' +
+                        '</div>' +
+                        // Map SVG container
+                        '<div class="flex-1 overflow-hidden p-2" id="seat-map-container">' +
+                            '<div id="seat-map-wrapper" class="w-full h-full overflow-auto" style="cursor: grab;">' +
+                                '<div id="seat-map-svg" class="inline-block min-w-full min-h-full flex items-center justify-center" style="transform-origin: center center;">' +
+                                    '<div class="text-center text-muted">' +
+                                        '<svg class="w-12 h-12 mx-auto mb-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>' +
+                                        'Se încarcă harta...' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
                 // Legend
-                '<div class="px-6 py-3 border-t border-border bg-white">' +
-                    '<div class="flex flex-wrap items-center justify-center gap-4 text-sm">' +
-                        '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-green-500"></span> Disponibil</div>' +
-                        '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-primary"></span> Selectat</div>' +
-                        '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-gray-300"></span> Ocupat</div>' +
-                        '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-gray-100 border border-gray-300"></span> Indisponibil</div>' +
+                '<div class="px-4 md:px-6 py-2 border-t border-border bg-white">' +
+                    '<div class="flex flex-wrap items-center justify-center gap-3 md:gap-4 text-xs md:text-sm">' +
+                        '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-green-500"></span> Disponibil</div>' +
+                        '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-primary"></span> Selectat</div>' +
+                        '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-300"></span> Ocupat</div>' +
+                        '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-100 border border-gray-300"></span> Indisponibil</div>' +
                     '</div>' +
                 '</div>' +
                 // Footer
-                '<div class="flex items-center justify-between px-6 py-4 border-t border-border bg-white">' +
-                    '<div>' +
+                '<div class="flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-3 border-t border-border bg-white gap-3">' +
+                    '<div class="text-center md:text-left">' +
                         '<span class="text-sm text-muted">Locuri selectate: </span>' +
                         '<span id="selected-seats-count" class="font-bold text-secondary">0</span>' +
-                        '<span class="ml-4 text-sm text-muted">Total: </span>' +
+                        '<span class="mx-2 text-muted">|</span>' +
+                        '<span class="text-sm text-muted">Total: </span>' +
                         '<span id="selected-seats-total" class="font-bold text-primary">0 lei</span>' +
                     '</div>' +
-                    '<div class="flex gap-3">' +
-                        '<button onclick="EventPage.closeSeatSelection()" class="px-6 py-2.5 text-sm font-semibold text-muted border border-border rounded-xl hover:bg-surface transition-colors">Anulează</button>' +
-                        '<button onclick="EventPage.confirmSeatSelection()" class="px-6 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Confirmă selecția</button>' +
+                    '<div class="flex gap-2 md:gap-3">' +
+                        '<button onclick="EventPage.closeSeatSelection()" class="px-4 md:px-6 py-2 text-sm font-semibold text-muted border border-border rounded-xl hover:bg-surface transition-colors">Anulează</button>' +
+                        '<button onclick="EventPage.confirmSeatSelection()" class="px-4 md:px-6 py-2 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Confirmă</button>' +
                     '</div>' +
                 '</div>' +
             '</div>';
 
         document.body.appendChild(modal);
         this.seatSelectionModal = modal;
+
+        // Setup zoom with mouse wheel
+        var mapWrapper = document.getElementById('seat-map-wrapper');
+        mapWrapper.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            var delta = e.deltaY > 0 ? -0.1 : 0.1;
+            self.zoomMap(delta);
+        }, { passive: false });
+    },
+
+    /**
+     * Zoom the map
+     */
+    zoomMap(delta) {
+        this.mapZoom = Math.max(0.5, Math.min(3, this.mapZoom + delta));
+        var svgContainer = document.getElementById('seat-map-svg');
+        if (svgContainer) {
+            svgContainer.style.transform = 'scale(' + this.mapZoom + ')';
+        }
+        document.getElementById('zoom-level').textContent = Math.round(this.mapZoom * 100) + '%';
+    },
+
+    /**
+     * Reset map zoom
+     */
+    resetMapZoom() {
+        this.mapZoom = 1;
+        var svgContainer = document.getElementById('seat-map-svg');
+        if (svgContainer) {
+            svgContainer.style.transform = 'scale(1)';
+        }
+        document.getElementById('zoom-level').textContent = '100%';
+    },
+
+    /**
+     * Render ticket types in modal sidebar
+     */
+    renderModalTicketTypes(currentTicketTypeId) {
+        var self = this;
+        var container = document.getElementById('seat-modal-ticket-types');
+        if (!container) return;
+
+        var html = this.ticketTypes.filter(function(tt) {
+            return tt.has_seating && !tt.is_sold_out;
+        }).map(function(tt) {
+            var isActive = String(tt.id) === String(currentTicketTypeId);
+            var selectedCount = self.selectedSeats[tt.id]?.length || 0;
+            var requiredCount = self.quantities[tt.id] || 0;
+
+            return '<div class="p-3 rounded-xl border-2 cursor-pointer transition-all ' +
+                (isActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50') + '" ' +
+                'onclick="EventPage.switchTicketType(\'' + tt.id + '\')">' +
+                '<div class="flex justify-between items-start mb-1">' +
+                    '<span class="font-semibold text-secondary text-sm">' + tt.name + '</span>' +
+                    '<span class="font-bold text-primary">' + tt.price.toFixed(0) + ' lei</span>' +
+                '</div>' +
+                '<div class="text-xs text-muted">' + (tt.description || 'Acces general') + '</div>' +
+                (requiredCount > 0 ?
+                    '<div class="mt-2 text-xs font-medium ' + (selectedCount >= requiredCount ? 'text-green-600' : 'text-accent') + '">' +
+                        selectedCount + '/' + requiredCount + ' locuri selectate' +
+                    '</div>' : ''
+                ) +
+            '</div>';
+        }).join('');
+
+        container.innerHTML = html || '<p class="text-sm text-muted">Nu există bilete cu locuri pentru acest eveniment.</p>';
+    },
+
+    /**
+     * Switch to different ticket type in modal
+     */
+    switchTicketType(ticketTypeId) {
+        var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketTypeId); });
+        if (!tt) return;
+
+        this.currentTicketTypeId = ticketTypeId;
+        var allowedSectionIds = tt.seating_sections.map(function(s) { return s.id; });
+        this.renderSeatingMap(allowedSectionIds, ticketTypeId);
+        this.renderModalTicketTypes(ticketTypeId);
     },
 
     /**
@@ -1580,11 +1708,25 @@ const EventPage = {
 
             // Render seats if allowed
             if (isAllowed && section.rows) {
-                section.rows.forEach(function(row) {
+                console.log('[EventPage] Rendering section:', section.name, 'rows:', section.rows.length);
+                var seatSize = 20;
+                var seatGap = 4;
+                var rowGap = 6;
+                var startY = section.y + 30; // Start after section name
+
+                section.rows.forEach(function(row, rowIndex) {
+                    console.log('[EventPage] Row:', row.label, 'seats:', row.seats?.length);
                     if (row.seats) {
-                        row.seats.forEach(function(seat) {
-                            var seatX = section.x + (seat.x || 0);
-                            var seatY = section.y + 30 + (seat.y || 0);
+                        var startX = section.x + 10; // Padding from section edge
+
+                        // Row label
+                        svg += '<text x="' + (startX - 5) + '" y="' + (startY + rowIndex * (seatSize + rowGap) + seatSize / 2 + 4) + '" text-anchor="end" font-size="10" fill="#6B7280">' + row.label + '</text>';
+
+                        row.seats.forEach(function(seat, seatIndex) {
+                            // Calculate position - use stored x/y if available, otherwise calculate from index
+                            var seatX = seat.x !== null && seat.x !== undefined ? section.x + seat.x : startX + seatIndex * (seatSize + seatGap);
+                            var seatY = seat.y !== null && seat.y !== undefined ? section.y + 30 + seat.y : startY + rowIndex * (seatSize + rowGap);
+
                             var isSelected = self.isSeatSelected(ticketTypeId, seat.id);
                             var status = seat.status || 'available';
 
@@ -1604,8 +1746,8 @@ const EventPage = {
                                 'onclick="EventPage.toggleSeat(\'' + ticketTypeId + '\', ' + seat.id + ', \'' + section.name + '\', \'' + row.label + '\', \'' + seat.label + '\')"' : '';
 
                             svg += '<g ' + clickHandler + ' style="cursor: ' + cursor + '">' +
-                                '<rect x="' + seatX + '" y="' + seatY + '" width="16" height="16" rx="3" fill="' + seatColor + '" stroke="' + (isSelected ? '#1D4ED8' : '#E5E7EB') + '" stroke-width="' + (isSelected ? '2' : '1') + '"/>' +
-                                '<text x="' + (seatX + 8) + '" y="' + (seatY + 12) + '" text-anchor="middle" font-size="8" fill="' + (isSelected || status === 'available' ? 'white' : '#9CA3AF') + '">' + seat.label + '</text>' +
+                                '<rect x="' + seatX + '" y="' + seatY + '" width="' + seatSize + '" height="' + seatSize + '" rx="4" fill="' + seatColor + '" stroke="' + (isSelected ? '#1D4ED8' : '#E5E7EB') + '" stroke-width="' + (isSelected ? '2' : '1') + '"/>' +
+                                '<text x="' + (seatX + seatSize/2) + '" y="' + (seatY + seatSize/2 + 4) + '" text-anchor="middle" font-size="10" fill="' + (isSelected || status === 'available' ? 'white' : '#9CA3AF') + '">' + seat.label + '</text>' +
                             '</g>';
                         });
                     }
