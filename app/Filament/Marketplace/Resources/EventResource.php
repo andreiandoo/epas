@@ -1137,7 +1137,7 @@ class EventResource extends Resource
 
                                                 return $assignedToOther;
                                             })
-                                            ->live()
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                 // Auto-update capacity based on total seats in selected sections
                                                 if (!empty($state)) {
@@ -1148,6 +1148,103 @@ class EventResource extends Resource
                                                 }
                                             })
                                             ->helperText('Assign seating sections to this ticket type. Sections already assigned to other ticket types are disabled.')
+                                            ->columnSpan(12),
+
+                                        // Visual preview of selected sections
+                                        Forms\Components\Placeholder::make('sections_preview')
+                                            ->label('')
+                                            ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id') && !empty($get('seatingSections')))
+                                            ->content(function (SGet $get) {
+                                                $layoutId = $get('../../seating_layout_id');
+                                                $selectedSections = $get('seatingSections') ?? [];
+
+                                                if (!$layoutId || empty($selectedSections)) {
+                                                    return '';
+                                                }
+
+                                                $layout = \App\Models\Seating\SeatingLayout::withoutGlobalScopes()
+                                                    ->with('sections')
+                                                    ->find($layoutId);
+
+                                                if (!$layout) return '';
+
+                                                // Get all sections for this layout
+                                                $allSections = $layout->sections;
+                                                $canvasW = $layout->canvas_w ?? 1920;
+                                                $canvasH = $layout->canvas_h ?? 1080;
+
+                                                // Calculate viewBox to fit all sections with padding
+                                                $minX = $maxX = $minY = $maxY = null;
+                                                foreach ($allSections as $section) {
+                                                    $x = $section->origin_x ?? 0;
+                                                    $y = $section->origin_y ?? 0;
+                                                    $w = $section->width ?? 200;
+                                                    $h = $section->height ?? 100;
+
+                                                    if ($minX === null || $x < $minX) $minX = $x;
+                                                    if ($minY === null || $y < $minY) $minY = $y;
+                                                    if ($maxX === null || ($x + $w) > $maxX) $maxX = $x + $w;
+                                                    if ($maxY === null || ($y + $h) > $maxY) $maxY = $y + $h;
+                                                }
+
+                                                // Add padding
+                                                $padding = 50;
+                                                $minX = ($minX ?? 0) - $padding;
+                                                $minY = ($minY ?? 0) - $padding;
+                                                $viewW = (($maxX ?? $canvasW) - $minX) + $padding * 2;
+                                                $viewH = (($maxY ?? $canvasH) - $minY) + $padding * 2;
+
+                                                // Build SVG paths for sections
+                                                $svgSections = '';
+                                                foreach ($allSections as $section) {
+                                                    $isSelected = in_array($section->id, $selectedSections);
+                                                    $x = $section->origin_x ?? 0;
+                                                    $y = $section->origin_y ?? 0;
+                                                    $w = $section->width ?? 200;
+                                                    $h = $section->height ?? 100;
+                                                    $rotation = $section->rotation ?? 0;
+                                                    $name = e($section->name);
+
+                                                    // Colors based on selection
+                                                    $fill = $isSelected ? '#22c55e' : '#e5e7eb';
+                                                    $stroke = $isSelected ? '#16a34a' : '#9ca3af';
+                                                    $textColor = $isSelected ? '#ffffff' : '#6b7280';
+                                                    $opacity = $isSelected ? '1' : '0.6';
+
+                                                    // Section rectangle with rotation
+                                                    $cx = $x + $w / 2;
+                                                    $cy = $y + $h / 2;
+                                                    $transform = $rotation != 0 ? " transform=\"rotate({$rotation} {$cx} {$cy})\"" : '';
+
+                                                    $svgSections .= "<g{$transform} opacity=\"{$opacity}\">";
+                                                    $svgSections .= "<rect x=\"{$x}\" y=\"{$y}\" width=\"{$w}\" height=\"{$h}\" fill=\"{$fill}\" stroke=\"{$stroke}\" stroke-width=\"2\" rx=\"4\"/>";
+                                                    // Section name
+                                                    $fontSize = min(14, max(8, min($w, $h) / 8));
+                                                    $svgSections .= "<text x=\"{$cx}\" y=\"{$cy}\" text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"{$textColor}\" font-size=\"{$fontSize}\" font-weight=\"600\">{$name}</text>";
+                                                    $svgSections .= "</g>";
+                                                }
+
+                                                $selectedCount = count($selectedSections);
+                                                $totalSeats = SeatingSection::whereIn('id', $selectedSections)->get()->sum(fn ($s) => $s->total_seats);
+
+                                                return new \Illuminate\Support\HtmlString("
+                                                    <div class='p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+                                                        <div class='flex items-center justify-between mb-2'>
+                                                            <span class='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                                                                Secțiuni selectate: <span class='text-green-600 font-bold'>{$selectedCount}</span>
+                                                                ({$totalSeats} locuri)
+                                                            </span>
+                                                        </div>
+                                                        <svg viewBox=\"{$minX} {$minY} {$viewW} {$viewH}\" class='w-full h-32 bg-white dark:bg-gray-900 rounded border'>
+                                                            {$svgSections}
+                                                        </svg>
+                                                        <div class='mt-1 flex items-center gap-3 text-xs text-gray-500'>
+                                                            <span class='flex items-center gap-1'><span class='w-3 h-3 rounded bg-green-500'></span> Selectate</span>
+                                                            <span class='flex items-center gap-1'><span class='w-3 h-3 rounded bg-gray-200 dark:bg-gray-600'></span> Disponibile</span>
+                                                        </div>
+                                                    </div>
+                                                ");
+                                            })
                                             ->columnSpan(12),
 
                                         // Commission calculation for this ticket
