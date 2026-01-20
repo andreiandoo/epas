@@ -103,7 +103,7 @@
                 </div>
             </div>
 
-            {{-- Multi-select toolbar --}}
+            {{-- Seats selection toolbar --}}
             <div x-show="selectedSeats.length > 0" x-transition class="flex items-center gap-4 p-3 mb-4 border rounded-lg bg-orange-50 border-orange-200">
                 <div class="flex items-center gap-2">
                     <span class="text-sm font-medium text-orange-800" x-text="`${selectedSeats.length} seats selected`"></span>
@@ -125,6 +125,34 @@
                         Delete Selected
                     </button>
                     <button @click="clearSelection" type="button" class="px-3 py-1 text-sm text-gray-800 bg-gray-200 rounded-md hover:bg-gray-300">
+                        Clear Selection
+                    </button>
+                </div>
+            </div>
+
+            {{-- Rows selection toolbar --}}
+            <div x-show="selectedRows.length > 0" x-transition class="flex items-center gap-4 p-3 mb-4 border rounded-lg bg-blue-50 border-blue-200">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-blue-800" x-text="`${selectedRows.length} rows selected`"></span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs text-blue-600">Align:</span>
+                    <button @click="alignSelectedRows('left')" type="button" class="px-3 py-1 text-sm text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200" title="Align left">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h14"></path>
+                        </svg>
+                    </button>
+                    <button @click="alignSelectedRows('center')" type="button" class="px-3 py-1 text-sm text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200" title="Align center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M5 18h14"></path>
+                        </svg>
+                    </button>
+                    <button @click="alignSelectedRows('right')" type="button" class="px-3 py-1 text-sm text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200" title="Align right">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M6 18h14"></path>
+                        </svg>
+                    </button>
+                    <button @click="clearRowSelection" type="button" class="px-3 py-1 text-sm text-gray-800 bg-gray-200 rounded-md hover:bg-gray-300">
                         Clear Selection
                     </button>
                 </div>
@@ -203,38 +231,69 @@
                 <h3 class="mb-4 text-lg font-semibold text-gray-900">Sections</h3>
                 <div class="space-y-2">
                     @foreach($sections as $section)
-                        <div class="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
-                             @click="selectSection({{ $section['id'] }})">
-                            <div class="flex items-center gap-3">
-                                <div class="flex gap-1">
-                                    <div class="w-4 h-4 border rounded" style="background-color: {{ $section['color_hex'] ?? '#3B82F6' }}" title="Section color"></div>
-                                    <div class="w-4 h-4 border rounded" style="background-color: {{ $section['seat_color'] ?? '#22C55E' }}" title="Seat color"></div>
-                                </div>
-                                <div>
-                                    <div class="font-medium">{{ $section['section_code'] }} - {{ $section['name'] }}</div>
-                                    <div class="text-xs text-gray-500">
-                                        {{ count($section['rows'] ?? []) }} rows •
-                                        {{ collect($section['rows'] ?? [])->sum(fn($row) => count($row['seats'] ?? [])) }} seats
+                        <div x-data="{ expanded: false }" class="border rounded-lg">
+                            <div class="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
+                                 @click="selectSection({{ $section['id'] }})">
+                                <div class="flex items-center gap-3">
+                                    @if($section['section_type'] === 'standard' && count($section['rows'] ?? []) > 0)
+                                    <button @click.stop="expanded = !expanded" class="p-1 text-gray-500 hover:text-gray-700">
+                                        <svg class="w-4 h-4 transition-transform" :class="expanded ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </button>
+                                    @endif
+                                    <div class="flex gap-1">
+                                        <div class="w-4 h-4 border rounded" style="background-color: {{ $section['color_hex'] ?? '#3B82F6' }}" title="Section color"></div>
+                                        <div class="w-4 h-4 border rounded" style="background-color: {{ $section['seat_color'] ?? '#22C55E' }}" title="Seat color"></div>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium">{{ $section['section_code'] }} - {{ $section['name'] }}</div>
+                                        <div class="text-xs text-gray-500">
+                                            {{ count($section['rows'] ?? []) }} rows •
+                                            {{ collect($section['rows'] ?? [])->sum(fn($row) => count($row['seats'] ?? [])) }} seats
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="flex items-center gap-4">
-                                <div class="text-xs text-gray-400">
-                                    ({{ $section['x_position'] }}, {{ $section['y_position'] }}) •
-                                    {{ $section['width'] }}x{{ $section['height'] }}
+                                <div class="flex items-center gap-2">
+                                    <div class="text-xs text-gray-400">
+                                        ({{ $section['x_position'] }}, {{ $section['y_position'] }}) •
+                                        {{ $section['width'] }}x{{ $section['height'] }}
+                                    </div>
+                                    <button @click.stop="editSectionColors({{ $section['id'] }}, '{{ $section['color_hex'] ?? '#3B82F6' }}', '{{ $section['seat_color'] ?? '#22C55E' }}')"
+                                            class="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200">
+                                        Edit Colors
+                                    </button>
+                                    @if($section['section_type'] === 'standard')
+                                    <button @click.stop="selectRowsBySection({{ $section['id'] }})"
+                                            class="px-2 py-1 text-xs text-blue-700 bg-blue-100 rounded hover:bg-blue-200"
+                                            title="Select all rows in this section">
+                                        Select Rows
+                                    </button>
+                                    <button @click.stop="recalculateRows({{ $section['id'] }})"
+                                            class="px-2 py-1 text-xs text-orange-700 bg-orange-100 rounded hover:bg-orange-200"
+                                            title="Re-group seats into rows based on Y position">
+                                        Recalc Rows
+                                    </button>
+                                    @endif
                                 </div>
-                                <button @click.stop="editSectionColors({{ $section['id'] }}, '{{ $section['color_hex'] ?? '#3B82F6' }}', '{{ $section['seat_color'] ?? '#22C55E' }}')"
-                                        class="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200">
-                                    Edit Colors
-                                </button>
-                                @if($section['section_type'] === 'standard')
-                                <button @click.stop="recalculateRows({{ $section['id'] }})"
-                                        class="px-2 py-1 text-xs text-orange-700 bg-orange-100 rounded hover:bg-orange-200"
-                                        title="Re-group seats into rows based on Y position">
-                                    Recalc Rows
-                                </button>
-                                @endif
                             </div>
+                            {{-- Expandable rows list --}}
+                            @if($section['section_type'] === 'standard' && count($section['rows'] ?? []) > 0)
+                            <div x-show="expanded" x-transition class="px-3 pb-3 ml-8 border-t">
+                                <div class="pt-2 space-y-1">
+                                    @foreach($section['rows'] ?? [] as $row)
+                                    <div class="flex items-center justify-between px-2 py-1 text-sm rounded hover:bg-gray-100"
+                                         :class="selectedRows.find(r => r.rowId === {{ $row['id'] }}) ? 'bg-blue-100' : ''">
+                                        <button @click.stop="selectRow({{ $section['id'] }}, {{ $row['id'] }})"
+                                                class="flex items-center gap-2 flex-1 text-left">
+                                            <span class="font-medium">Row {{ $row['label'] }}</span>
+                                            <span class="text-xs text-gray-500">{{ count($row['seats'] ?? []) }} seats</span>
+                                        </button>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -290,6 +349,7 @@
 
                 // Multi-select state
                 selectedSeats: [],
+                selectedRows: [],
                 selectionRect: null,
                 selectionStartPos: null,
                 assignToSectionId: '',
@@ -923,11 +983,97 @@
 
                     if (!confirm(`Delete ${this.selectedSeats.length} selected seats?`)) return;
 
-                    this.selectedSeats.forEach(seat => {
-                        @this.call('deleteSeat', seat.id);
-                    });
+                    // Use bulk delete for better performance
+                    const seatIds = this.selectedSeats.map(s => s.id);
+                    @this.call('deleteSeats', seatIds);
 
                     this.clearSelection();
+                },
+
+                // Row selection methods
+                selectRow(sectionId, rowId) {
+                    const existingIndex = this.selectedRows.findIndex(r => r.rowId === rowId);
+                    if (existingIndex >= 0) {
+                        // Deselect
+                        this.selectedRows.splice(existingIndex, 1);
+                    } else {
+                        // Select
+                        this.selectedRows.push({ sectionId, rowId });
+                    }
+                    this.highlightSelectedRows();
+                },
+
+                selectRowsBySection(sectionId) {
+                    const section = this.sections.find(s => s.id === sectionId);
+                    if (!section || !section.rows) return;
+
+                    // Select all rows in this section
+                    section.rows.forEach(row => {
+                        if (!this.selectedRows.find(r => r.rowId === row.id)) {
+                            this.selectedRows.push({ sectionId, rowId: row.id });
+                        }
+                    });
+                    this.highlightSelectedRows();
+                },
+
+                clearRowSelection() {
+                    this.selectedRows = [];
+                    this.highlightSelectedRows();
+                },
+
+                highlightSelectedRows() {
+                    // Highlight seats belonging to selected rows
+                    this.seatsLayer.find('.seat').forEach(seat => {
+                        const seatData = this.getSeatDataById(seat.getAttr('seatId'));
+                        if (seatData) {
+                            const isRowSelected = this.selectedRows.some(r => r.rowId === seatData.rowId);
+                            if (isRowSelected) {
+                                seat.stroke('#3B82F6');
+                                seat.strokeWidth(3);
+                            } else {
+                                seat.stroke('#1F2937');
+                                seat.strokeWidth(1);
+                            }
+                        }
+                    });
+                    this.seatsLayer.batchDraw();
+                },
+
+                getSeatDataById(seatId) {
+                    for (const section of this.sections) {
+                        if (section.rows) {
+                            for (const row of section.rows) {
+                                if (row.seats) {
+                                    const seat = row.seats.find(s => s.id === seatId);
+                                    if (seat) {
+                                        return { ...seat, rowId: row.id, sectionId: section.id };
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return null;
+                },
+
+                alignSelectedRows(alignment) {
+                    if (this.selectedRows.length === 0) {
+                        alert('Please select rows first');
+                        return;
+                    }
+
+                    // Group by section
+                    const bySection = {};
+                    this.selectedRows.forEach(r => {
+                        if (!bySection[r.sectionId]) bySection[r.sectionId] = [];
+                        bySection[r.sectionId].push(r.rowId);
+                    });
+
+                    // Call alignment for each section
+                    Object.keys(bySection).forEach(sectionId => {
+                        @this.call('alignRows', parseInt(sectionId), bySection[sectionId], alignment);
+                    });
+
+                    this.clearRowSelection();
                 },
 
                 // Color edit methods
@@ -1095,6 +1241,7 @@
                     const group = new Konva.Group({
                         x: section.x_position || 100,
                         y: section.y_position || 100,
+                        rotation: section.rotation || 0,
                         draggable: true,
                         id: `section-${section.id}`,
                         sectionData: section,
@@ -1266,20 +1413,51 @@
 
                     // Save on transform end
                     group.on('transformend', () => {
-                        this.saveSection(section.id, {
-                            x_position: Math.round(group.x()),
-                            y_position: Math.round(group.y()),
-                            width: Math.round(group.width() * group.scaleX()),
-                            height: Math.round(group.height() * group.scaleY()),
-                            rotation: Math.round(group.rotation()),
-                        });
+                        // Get current dimensions from the background shape
+                        const currentWidth = backgroundShape.width ? backgroundShape.width() : (section.width || 200);
+                        const currentHeight = backgroundShape.height ? backgroundShape.height() : (section.height || 150);
 
-                        // Reset scale
-                        backgroundShape.width(group.width() * group.scaleX());
-                        backgroundShape.height(group.height() * group.scaleY());
-                        label.width(group.width() * group.scaleX());
+                        // Calculate new dimensions with scale
+                        const scaleX = group.scaleX();
+                        const scaleY = group.scaleY();
+                        const newWidth = Math.round(currentWidth * Math.abs(scaleX));
+                        const newHeight = Math.round(currentHeight * Math.abs(scaleY));
+
+                        // Only update dimensions if they are valid (> 0)
+                        if (newWidth > 0 && newHeight > 0) {
+                            this.saveSection(section.id, {
+                                x_position: Math.round(group.x()),
+                                y_position: Math.round(group.y()),
+                                width: newWidth,
+                                height: newHeight,
+                                rotation: Math.round(group.rotation()),
+                            });
+
+                            // Update background shape dimensions
+                            if (backgroundShape.width) {
+                                backgroundShape.width(newWidth);
+                            }
+                            if (backgroundShape.height) {
+                                backgroundShape.height(newHeight);
+                            }
+                            label.width(newWidth);
+
+                            // Update bounding box
+                            boundingBox.width(newWidth + 4);
+                            boundingBox.height(newHeight + 4);
+                        } else {
+                            // Just save rotation if dimensions would be invalid
+                            this.saveSection(section.id, {
+                                x_position: Math.round(group.x()),
+                                y_position: Math.round(group.y()),
+                                rotation: Math.round(group.rotation()),
+                            });
+                        }
+
+                        // Reset scale to 1
                         group.scaleX(1);
                         group.scaleY(1);
+                        this.layer.batchDraw();
                     });
 
                     this.layer.add(group);
