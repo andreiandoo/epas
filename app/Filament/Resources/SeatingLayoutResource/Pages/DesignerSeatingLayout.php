@@ -500,6 +500,102 @@ class DesignerSeatingLayout extends Page
                         ->send();
                 }),
 
+            Actions\Action::make('addIcon')
+                ->label('Add Icon')
+                ->icon('heroicon-o-map-pin')
+                ->color('info')
+                ->modalHeading('Add Map Icon')
+                ->modalDescription('Add an icon marker to your seating map (exit, toilet, info point, etc.)')
+                ->form([
+                    Forms\Components\Select::make('icon_key')
+                        ->label('Icon Type')
+                        ->options(fn () => collect(config('seating-icons', []))->mapWithKeys(fn ($icon, $key) => [$key => $icon['label']]))
+                        ->required()
+                        ->searchable()
+                        ->columnSpanFull(),
+
+                    Forms\Components\TextInput::make('name')
+                        ->label('Title/Label')
+                        ->required()
+                        ->maxLength(50)
+                        ->helperText('Text that appears below the icon')
+                        ->columnSpanFull(),
+
+                    Forms\Components\ColorPicker::make('icon_color')
+                        ->label('Icon Color')
+                        ->default('#FFFFFF')
+                        ->columnSpan(1),
+
+                    Forms\Components\ColorPicker::make('background_color')
+                        ->label('Background Color')
+                        ->default('#3B82F6')
+                        ->columnSpan(1),
+
+                    Forms\Components\TextInput::make('icon_size')
+                        ->label('Icon Size (px)')
+                        ->numeric()
+                        ->default(48)
+                        ->minValue(24)
+                        ->maxValue(96)
+                        ->helperText('Size of the icon marker')
+                        ->columnSpan(1),
+
+                    Forms\Components\TextInput::make('corner_radius')
+                        ->label('Corner Radius')
+                        ->numeric()
+                        ->default(8)
+                        ->minValue(0)
+                        ->maxValue(48)
+                        ->helperText('Rounded corners (0 = square)')
+                        ->columnSpan(1),
+
+                    Forms\Components\Hidden::make('x_position')
+                        ->default(200),
+
+                    Forms\Components\Hidden::make('y_position')
+                        ->default(200),
+
+                    Forms\Components\TextInput::make('display_order')
+                        ->label('Display Order')
+                        ->numeric()
+                        ->default(100)
+                        ->helperText('Higher numbers appear on top')
+                        ->columnSpanFull(),
+                ])
+                ->action(function (array $data): void {
+                    $iconSize = (int) ($data['icon_size'] ?? 48);
+
+                    $section = SeatingSection::create([
+                        'layout_id' => $this->seatingLayout->id,
+                        'tenant_id' => $this->seatingLayout->tenant_id,
+                        'name' => $data['name'],
+                        'section_code' => 'ICON_' . strtoupper($data['icon_key']),
+                        'section_type' => 'icon',
+                        'x_position' => $data['x_position'] ?? 200,
+                        'y_position' => $data['y_position'] ?? 200,
+                        'width' => $iconSize,
+                        'height' => $iconSize + 20, // Extra space for label
+                        'rotation' => 0,
+                        'display_order' => $data['display_order'] ?? 100,
+                        'background_color' => $data['background_color'] ?? '#3B82F6',
+                        'corner_radius' => $data['corner_radius'] ?? 8,
+                        'metadata' => [
+                            'icon_key' => $data['icon_key'],
+                            'icon_color' => $data['icon_color'] ?? '#FFFFFF',
+                            'icon_size' => $iconSize,
+                        ],
+                    ]);
+
+                    $this->reloadSections();
+
+                    $this->dispatch('section-added', section: $section->toArray());
+
+                    Notification::make()
+                        ->success()
+                        ->title('Icon added successfully')
+                        ->send();
+                }),
+
             Actions\Action::make('generateSeats')
                 ->label('Bulk Generate Seats')
                 ->icon('heroicon-o-squares-plus')
@@ -1748,6 +1844,7 @@ class DesignerSeatingLayout extends Page
             'backgroundX' => $this->seatingLayout->background_x ?? 0,
             'backgroundY' => $this->seatingLayout->background_y ?? 0,
             'backgroundOpacity' => $this->seatingLayout->background_opacity ?? 0.3,
+            'iconDefinitions' => config('seating-icons', []),
         ];
     }
 }

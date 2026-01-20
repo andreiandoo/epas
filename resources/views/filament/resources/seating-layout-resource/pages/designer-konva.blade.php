@@ -254,27 +254,49 @@
                                         </svg>
                                     </button>
                                     @endif
-                                    <div class="flex gap-1">
-                                        <div class="w-4 h-4 border rounded" style="background-color: {{ $section['color_hex'] ?? '#3B82F6' }}" title="Section color"></div>
-                                        <div class="w-4 h-4 border rounded" style="background-color: {{ $section['seat_color'] ?? '#22C55E' }}" title="Seat color"></div>
-                                    </div>
+                                    @if($section['section_type'] === 'icon')
+                                        {{-- Icon display --}}
+                                        <div class="flex items-center justify-center w-6 h-6 rounded" style="background-color: {{ $section['background_color'] ?? '#3B82F6' }}">
+                                            <svg class="w-4 h-4" fill="{{ $section['metadata']['icon_color'] ?? '#FFFFFF' }}" viewBox="0 0 24 24">
+                                                <path d="{{ $iconDefinitions[$section['metadata']['icon_key'] ?? 'info_point']['svg'] ?? '' }}"/>
+                                            </svg>
+                                        </div>
+                                    @else
+                                        <div class="flex gap-1">
+                                            <div class="w-4 h-4 border rounded" style="background-color: {{ $section['color_hex'] ?? '#3B82F6' }}" title="Section color"></div>
+                                            <div class="w-4 h-4 border rounded" style="background-color: {{ $section['seat_color'] ?? '#22C55E' }}" title="Seat color"></div>
+                                        </div>
+                                    @endif
                                     <div>
-                                        <div class="font-medium">{{ $section['section_code'] }} - {{ $section['name'] }}</div>
+                                        <div class="font-medium">
+                                            @if($section['section_type'] === 'icon')
+                                                <span class="text-xs text-blue-600 uppercase">Icon:</span>
+                                            @endif
+                                            {{ $section['name'] }}
+                                        </div>
                                         <div class="text-xs text-gray-500">
-                                            {{ count($section['rows'] ?? []) }} rows •
-                                            {{ collect($section['rows'] ?? [])->sum(fn($row) => count($row['seats'] ?? [])) }} seats
+                                            @if($section['section_type'] === 'icon')
+                                                {{ $iconDefinitions[$section['metadata']['icon_key'] ?? 'info_point']['label'] ?? 'Icon' }}
+                                            @else
+                                                {{ count($section['rows'] ?? []) }} rows •
+                                                {{ collect($section['rows'] ?? [])->sum(fn($row) => count($row['seats'] ?? [])) }} seats
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <div class="text-xs text-gray-400">
-                                        ({{ $section['x_position'] }}, {{ $section['y_position'] }}) •
-                                        {{ $section['width'] }}x{{ $section['height'] }}
+                                        ({{ $section['x_position'] }}, {{ $section['y_position'] }})
+                                        @if($section['section_type'] !== 'icon')
+                                            • {{ $section['width'] }}x{{ $section['height'] }}
+                                        @endif
                                     </div>
-                                    <button @click.stop="editSectionColors({{ $section['id'] }}, '{{ $section['color_hex'] ?? '#3B82F6' }}', '{{ $section['seat_color'] ?? '#22C55E' }}')"
-                                            class="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200">
-                                        Edit Colors
-                                    </button>
+                                    @if($section['section_type'] !== 'icon')
+                                        <button @click.stop="editSectionColors({{ $section['id'] }}, '{{ $section['color_hex'] ?? '#3B82F6' }}', '{{ $section['seat_color'] ?? '#22C55E' }}')"
+                                                class="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200">
+                                            Edit Colors
+                                        </button>
+                                    @endif
                                     @if($section['section_type'] === 'standard')
                                     <button @click.stop="selectRowsBySection({{ $section['id'] }})"
                                             class="px-2 py-1 text-xs text-blue-700 bg-blue-100 rounded hover:bg-blue-200"
@@ -350,6 +372,7 @@
                 showGrid: true,
                 selectedSection: null,
                 sections: @json($sections),
+                iconDefinitions: @json($iconDefinitions ?? []),
                 canvasWidth: {{ $canvasWidth }},
                 canvasHeight: {{ $canvasHeight }},
                 backgroundUrl: '{{ $backgroundUrl }}',
@@ -1396,6 +1419,12 @@
                 },
 
                 createSection(section) {
+                    // Handle icon type sections specially
+                    if (section.section_type === 'icon') {
+                        this.createIconSection(section);
+                        return;
+                    }
+
                     const group = new Konva.Group({
                         x: section.x_position || 100,
                         y: section.y_position || 100,
@@ -1679,6 +1708,122 @@
                     this.layer.add(group);
 
                     // Note: Removed caching as it breaks click events on individual seats
+                    this.layer.batchDraw();
+                },
+
+                // Create icon section (map markers like exit, toilet, info point, etc.)
+                createIconSection(section) {
+                    const metadata = section.metadata || {};
+                    const iconKey = metadata.icon_key || 'info_point';
+                    const iconColor = metadata.icon_color || '#FFFFFF';
+                    const iconSize = metadata.icon_size || 48;
+                    const bgColor = section.background_color || '#3B82F6';
+                    const cornerRadius = section.corner_radius || 8;
+
+                    // Get icon SVG path from definitions
+                    const iconDef = this.iconDefinitions[iconKey];
+                    const svgPath = iconDef ? iconDef.svg : 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z';
+
+                    const group = new Konva.Group({
+                        x: section.x_position || 100,
+                        y: section.y_position || 100,
+                        rotation: section.rotation || 0,
+                        draggable: true,
+                        id: `section-${section.id}`,
+                        sectionData: section,
+                    });
+
+                    // Background rectangle with rounded corners
+                    const background = new Konva.Rect({
+                        x: 0,
+                        y: 0,
+                        width: iconSize,
+                        height: iconSize,
+                        fill: bgColor,
+                        cornerRadius: cornerRadius,
+                        shadowColor: 'black',
+                        shadowBlur: 4,
+                        shadowOffset: { x: 2, y: 2 },
+                        shadowOpacity: 0.3,
+                    });
+                    group.add(background);
+
+                    // Icon using Konva.Path
+                    const iconPadding = iconSize * 0.15;
+                    const iconInnerSize = iconSize - (iconPadding * 2);
+                    const iconPath = new Konva.Path({
+                        x: iconPadding,
+                        y: iconPadding,
+                        data: svgPath,
+                        fill: iconColor,
+                        scaleX: iconInnerSize / 24,
+                        scaleY: iconInnerSize / 24,
+                    });
+                    group.add(iconPath);
+
+                    // Label below the icon
+                    const label = new Konva.Text({
+                        x: 0,
+                        y: iconSize + 4,
+                        text: section.name || '',
+                        fontSize: 11,
+                        fontFamily: 'Arial',
+                        fontStyle: 'bold',
+                        fill: '#1F2937',
+                        width: iconSize + 40,
+                        align: 'center',
+                        offsetX: 20,
+                    });
+                    group.add(label);
+
+                    // Selection bounding box
+                    const boundingBox = new Konva.Rect({
+                        x: -4,
+                        y: -4,
+                        width: iconSize + 8,
+                        height: iconSize + 28,
+                        stroke: '#F97316',
+                        strokeWidth: 2,
+                        dash: [5, 3],
+                        visible: false,
+                        name: 'boundingBox',
+                    });
+                    group.add(boundingBox);
+
+                    // Click handler
+                    group.on('click', (e) => {
+                        if (this.drawMode === 'multiselect') {
+                            const bb = group.findOne('.boundingBox');
+                            if (bb) {
+                                bb.visible(!bb.visible());
+                                this.layer.batchDraw();
+                            }
+                            if (bb && bb.visible()) {
+                                @this.set('selectedSection', section.id);
+                            }
+                        } else {
+                            this.transformer.nodes([group]);
+                            this.selectedSection = section.id;
+                            @this.set('selectedSection', section.id);
+                        }
+                    });
+
+                    // Drag handlers
+                    group.on('dragend', () => {
+                        const snappedPos = this.snapPosition({
+                            x: group.x(),
+                            y: group.y()
+                        });
+                        group.position(snappedPos);
+
+                        this.saveSection(section.id, {
+                            x_position: Math.round(snappedPos.x),
+                            y_position: Math.round(snappedPos.y),
+                        });
+                        this.layer.batchDraw();
+                    });
+
+                    this.layer.add(group);
                     this.layer.batchDraw();
                 },
 
