@@ -67,14 +67,16 @@ class SeatingLayout extends Model
             if (!$layout->tenant_id && auth()->check() && isset(auth()->user()->tenant_id)) {
                 $layout->tenant_id = auth()->user()->tenant_id;
             }
-            if (!$layout->created_by && auth()->check()) {
+            // Only set created_by if the authenticated user is a User model (not MarketplaceAdmin)
+            if (!$layout->created_by && auth()->check() && auth()->user() instanceof User) {
                 $layout->created_by = auth()->id();
             }
         });
 
         // Auto-set updated_by on update
         static::updating(function ($layout) {
-            if (auth()->check()) {
+            // Only set updated_by if the authenticated user is a User model (not MarketplaceAdmin)
+            if (auth()->check() && auth()->user() instanceof User) {
                 $layout->updated_by = auth()->id();
             }
         });
