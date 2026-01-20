@@ -170,30 +170,49 @@
                 </div>
             </div>
 
-            {{-- Background image controls --}}
-            <div x-show="backgroundUrl" x-transition class="flex flex-wrap items-center gap-4 p-3 mb-4 border rounded-lg bg-indigo-50 border-indigo-200">
+            {{-- Background image controls toggle button --}}
+            <div x-show="backgroundUrl" class="mb-4">
+                <button @click="showBackgroundControls = !showBackgroundControls" type="button"
+                    class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg"
+                    :class="showBackgroundControls ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    Background Settings
+                    <svg class="w-4 h-4 transition-transform" :class="showBackgroundControls ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+            </div>
+
+            {{-- Background image controls (collapsible) --}}
+            <div x-show="backgroundUrl && showBackgroundControls" x-transition class="flex flex-wrap items-center gap-4 p-3 mb-4 border rounded-lg bg-indigo-50 border-indigo-200">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-indigo-800">Background:</span>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="backgroundVisible" @change="toggleBackgroundVisibility()" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                        <span class="text-sm font-medium text-indigo-800">Show Background</span>
+                    </label>
                 </div>
+                <div class="h-6 mx-1 border-l border-indigo-300"></div>
                 <div class="flex items-center gap-1">
                     <label class="text-xs text-indigo-700">Scale:</label>
-                    <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-20">
-                    <input type="number" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                    <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-20" :disabled="!backgroundVisible">
+                    <input type="number" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
                 </div>
                 <div class="flex items-center gap-1">
                     <label class="text-xs text-indigo-700">X:</label>
-                    <input type="range" x-model="backgroundX" min="-1000" max="1000" step="1" @input="updateBackgroundPosition()" class="w-20">
-                    <input type="number" x-model="backgroundX" step="1" @input="updateBackgroundPosition()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                    <input type="range" x-model="backgroundX" min="-1000" max="1000" step="1" @input="updateBackgroundPosition()" class="w-20" :disabled="!backgroundVisible">
+                    <input type="number" x-model="backgroundX" step="1" @input="updateBackgroundPosition()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
                 </div>
                 <div class="flex items-center gap-1">
                     <label class="text-xs text-indigo-700">Y:</label>
-                    <input type="range" x-model="backgroundY" min="-1000" max="1000" step="1" @input="updateBackgroundPosition()" class="w-20">
-                    <input type="number" x-model="backgroundY" step="1" @input="updateBackgroundPosition()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                    <input type="range" x-model="backgroundY" min="-1000" max="1000" step="1" @input="updateBackgroundPosition()" class="w-20" :disabled="!backgroundVisible">
+                    <input type="number" x-model="backgroundY" step="1" @input="updateBackgroundPosition()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
                 </div>
                 <div class="flex items-center gap-1">
                     <label class="text-xs text-indigo-700">Opacity:</label>
-                    <input type="range" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-16">
-                    <input type="number" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-14 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                    <input type="range" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-16" :disabled="!backgroundVisible">
+                    <input type="number" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-14 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
                 </div>
                 <button @click="resetBackgroundPosition" type="button" class="px-2 py-1 text-xs text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200">Reset</button>
                 <button @click="saveBackgroundSettings" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Save Settings</button>
@@ -424,6 +443,14 @@
                 rectSelectionBox: null,
                 rectSelectionStart: null,
                 isRectSelecting: false,
+
+                // Section transform tracking (for rotating seats with section)
+                sectionTransformStartRotation: null,
+                transformingSectionId: null,
+
+                // Background controls toggle
+                showBackgroundControls: false,
+                backgroundVisible: true,
 
                 init() {
                     this.createStage();
@@ -1667,6 +1694,52 @@
                         this.layer.batchDraw();
                     });
 
+                    // Store initial rotation on transform start
+                    group.on('transformstart', () => {
+                        this.sectionTransformStartRotation = group.rotation();
+                        this.transformingSectionId = section.id;
+
+                        // Store original seat positions relative to section center
+                        const sectionCenterX = group.x() + (backgroundShape.width ? backgroundShape.width() / 2 : 100);
+                        const sectionCenterY = group.y() + (backgroundShape.height ? backgroundShape.height() / 2 : 75);
+
+                        this.seatsLayer.find('.seat').forEach(seat => {
+                            if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
+                                // Store position relative to section center
+                                seat.setAttr('transformStartX', seat.x() - sectionCenterX);
+                                seat.setAttr('transformStartY', seat.y() - sectionCenterY);
+                            }
+                        });
+                    });
+
+                    // Rotate seats during transform
+                    group.on('transform', () => {
+                        if (this.transformingSectionId !== section.id) return;
+
+                        const currentRotation = group.rotation();
+                        const rotationDelta = (currentRotation - (this.sectionTransformStartRotation || 0)) * Math.PI / 180;
+
+                        const sectionCenterX = group.x() + (backgroundShape.width ? backgroundShape.width() / 2 : 100);
+                        const sectionCenterY = group.y() + (backgroundShape.height ? backgroundShape.height() / 2 : 75);
+
+                        this.seatsLayer.find('.seat').forEach(seat => {
+                            if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
+                                const startX = seat.getAttr('transformStartX');
+                                const startY = seat.getAttr('transformStartY');
+
+                                if (startX !== undefined && startY !== undefined) {
+                                    // Rotate point around origin (0,0) then translate to section center
+                                    const newX = startX * Math.cos(rotationDelta) - startY * Math.sin(rotationDelta);
+                                    const newY = startX * Math.sin(rotationDelta) + startY * Math.cos(rotationDelta);
+
+                                    seat.x(sectionCenterX + newX);
+                                    seat.y(sectionCenterY + newY);
+                                }
+                            }
+                        });
+                        this.seatsLayer.batchDraw();
+                    });
+
                     // Save on transform end
                     group.on('transformend', () => {
                         // Get current dimensions from the background shape
@@ -1678,6 +1751,18 @@
                         const scaleY = group.scaleY();
                         const newWidth = Math.round(currentWidth * Math.abs(scaleX));
                         const newHeight = Math.round(currentHeight * Math.abs(scaleY));
+
+                        // Clear transform tracking attributes from seats
+                        this.seatsLayer.find('.seat').forEach(seat => {
+                            if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
+                                seat.setAttr('transformStartX', undefined);
+                                seat.setAttr('transformStartY', undefined);
+                            }
+                        });
+
+                        // Clear transform tracking
+                        this.sectionTransformStartRotation = null;
+                        this.transformingSectionId = null;
 
                         // Only update dimensions if they are valid (> 0)
                         if (newWidth > 0 && newHeight > 0) {
@@ -2114,7 +2199,21 @@
 
                 deleteSelected() {
                     if (this.selectedSection) {
-                        if (confirm('Delete this section?')) {
+                        // Find the section to determine its type
+                        const section = this.sections.find(s => s.id === this.selectedSection);
+                        let confirmMessage = 'Delete this section?';
+
+                        if (section) {
+                            if (section.section_type === 'icon') {
+                                confirmMessage = `Delete icon "${section.name}"?`;
+                            } else if (section.section_type === 'decorative') {
+                                confirmMessage = `Delete decorative zone "${section.name}"?`;
+                            } else {
+                                confirmMessage = `Delete section "${section.name}"?`;
+                            }
+                        }
+
+                        if (confirm(confirmMessage)) {
                             @this.call('deleteSection', this.selectedSection);
                         }
                     }
@@ -2193,6 +2292,13 @@
                         parseInt(this.backgroundY),
                         parseFloat(this.backgroundOpacity)
                     );
+                },
+
+                toggleBackgroundVisibility() {
+                    if (this.backgroundImage) {
+                        this.backgroundImage.visible(this.backgroundVisible);
+                        this.backgroundLayer.batchDraw();
+                    }
                 },
 
                 recalculateRows(sectionId) {

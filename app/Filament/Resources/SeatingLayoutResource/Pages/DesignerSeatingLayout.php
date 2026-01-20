@@ -1284,6 +1284,9 @@ class DesignerSeatingLayout extends Page
         // Update row seat count
         $row->decrement('seat_count');
 
+        // Renumber remaining seats in the row
+        $this->renumberSeatsInRow($row);
+
         $this->reloadSections();
 
         $this->dispatch('layout-updated', sections: $this->sections);
@@ -1662,16 +1665,17 @@ class DesignerSeatingLayout extends Page
 
             if (!$section || $section->layout_id !== $this->seatingLayout->id) continue;
 
-            // Track affected rows for seat count update
+            // Track affected rows for seat count update and renumbering
             $affectedRows[$row->id] = $row;
 
             $seat->delete();
             $deletedCount++;
         }
 
-        // Update seat counts for affected rows
+        // Update seat counts and renumber remaining seats for affected rows
         foreach ($affectedRows as $row) {
             $row->update(['seat_count' => $row->seats()->count()]);
+            $this->renumberSeatsInRow($row);
         }
 
         $this->reloadSections();
@@ -1682,6 +1686,31 @@ class DesignerSeatingLayout extends Page
             ->title('Seats deleted')
             ->body("Deleted {$deletedCount} seats")
             ->send();
+    }
+
+    /**
+     * Renumber seats in a row after deletion (orders by X position left-to-right)
+     */
+    protected function renumberSeatsInRow(SeatingRow $row): void
+    {
+        // Get remaining seats ordered by X position (left to right)
+        $seats = $row->seats()->orderBy('x', 'asc')->get();
+
+        $number = 1;
+        foreach ($seats as $seat) {
+            $newLabel = (string) $number;
+
+            // Only update if label changed
+            if ($seat->label !== $newLabel) {
+                $section = $row->section;
+                $seat->update([
+                    'label' => $newLabel,
+                    'display_name' => $section ? $section->generateSeatDisplayName($row->label, $newLabel) : $newLabel,
+                    'seat_uid' => $section ? $section->generateSeatUid($row->label, $newLabel) : uniqid(),
+                ]);
+            }
+            $number++;
+        }
     }
 
     /**
