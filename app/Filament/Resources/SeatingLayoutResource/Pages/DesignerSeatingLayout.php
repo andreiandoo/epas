@@ -1581,7 +1581,7 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
-     * Align rows within a section
+     * Align rows within a section (respects section rotation)
      */
     public function alignRows(int $sectionId, array $rowIds, string $alignment): void
     {
@@ -1595,46 +1595,92 @@ class DesignerSeatingLayout extends Page
             return;
         }
 
-        // Get section width from metadata or calculate from seats
+        // Get section properties
         $sectionWidth = $section->width ?? 200;
-        $metadata = $section->metadata ?? [];
-        $seatSpacing = $metadata['seat_spacing'] ?? 18;
+        $sectionHeight = $section->height ?? 150;
+        $sectionX = $section->x ?? 0;
+        $sectionY = $section->y ?? 0;
+        $rotation = $section->rotation ?? 0;
+
+        // Calculate section center (pivot point for rotation)
+        $centerX = $sectionX + $sectionWidth / 2;
+        $centerY = $sectionY + $sectionHeight / 2;
+
+        // Convert rotation to radians (negative to reverse rotation for global->local transform)
+        $angleRad = -$rotation * M_PI / 180;
+        $cosA = cos($angleRad);
+        $sinA = sin($angleRad);
+
+        // Positive angle for local->global transform
+        $angleRadPos = $rotation * M_PI / 180;
+        $cosAPos = cos($angleRadPos);
+        $sinAPos = sin($angleRadPos);
 
         foreach ($rowIds as $rowId) {
             $row = SeatingRow::with('seats')->find($rowId);
             if (!$row || $row->section_id !== $section->id) continue;
 
-            // Get seats for this row, sorted by X
-            $seats = $row->seats->sortBy('x')->values();
+            $seats = $row->seats;
             if ($seats->isEmpty()) continue;
 
-            // Calculate row width
-            $minX = $seats->first()->x;
-            $maxX = $seats->last()->x;
-            $rowWidth = $maxX - $minX;
+            // Transform seat positions from global to section-local coordinates
+            $seatsWithLocal = $seats->map(function ($seat) use ($centerX, $centerY, $cosA, $sinA) {
+                // Translate to origin (section center)
+                $dx = $seat->x - $centerX;
+                $dy = $seat->y - $centerY;
 
-            // Calculate offset based on alignment
-            $offset = 0;
+                // Reverse rotation to get local coordinates
+                $localX = $dx * $cosA - $dy * $sinA;
+                $localY = $dx * $sinA + $dy * $cosA;
+
+                return [
+                    'seat' => $seat,
+                    'localX' => $localX,
+                    'localY' => $localY,
+                ];
+            })->sortBy('localX')->values();
+
+            // Calculate row width in local space
+            $minLocalX = $seatsWithLocal->first()['localX'];
+            $maxLocalX = $seatsWithLocal->last()['localX'];
+            $rowWidth = $maxLocalX - $minLocalX;
+
+            // Calculate offset in local space
             $padding = 10;
-            $availableWidth = $sectionWidth - (2 * $padding);
+            // Local coordinates are relative to center, so section spans from -width/2 to +width/2
+            $localLeft = -$sectionWidth / 2 + $padding;
+            $localRight = $sectionWidth / 2 - $padding;
+            $availableWidth = $localRight - $localLeft;
 
+            $offset = 0;
             switch ($alignment) {
                 case 'left':
-                    $offset = $padding - $minX;
+                    $offset = $localLeft - $minLocalX;
                     break;
                 case 'center':
-                    $targetStart = $padding + ($availableWidth - $rowWidth) / 2;
-                    $offset = $targetStart - $minX;
+                    $targetStart = $localLeft + ($availableWidth - $rowWidth) / 2;
+                    $offset = $targetStart - $minLocalX;
                     break;
                 case 'right':
-                    $targetStart = $sectionWidth - $padding - $rowWidth;
-                    $offset = $targetStart - $minX;
+                    $targetStart = $localRight - $rowWidth;
+                    $offset = $targetStart - $minLocalX;
                     break;
             }
 
-            // Update all seat X positions
-            foreach ($seats as $seat) {
-                $seat->update(['x' => $seat->x + $offset]);
+            // Apply offset in local space and transform back to global coordinates
+            foreach ($seatsWithLocal as $seatData) {
+                $seat = $seatData['seat'];
+                $newLocalX = $seatData['localX'] + $offset;
+                $localY = $seatData['localY'];
+
+                // Transform back to global coordinates (apply rotation)
+                $newGlobalX = $centerX + $newLocalX * $cosAPos - $localY * $sinAPos;
+                $newGlobalY = $centerY + $newLocalX * $sinAPos + $localY * $cosAPos;
+
+                $seat->update([
+                    'x' => round($newGlobalX, 2),
+                    'y' => round($newGlobalY, 2),
+                ]);
             }
         }
 

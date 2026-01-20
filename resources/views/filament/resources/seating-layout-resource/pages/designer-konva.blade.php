@@ -447,6 +447,8 @@
                 // Section transform tracking (for rotating seats with section)
                 sectionTransformStartRotation: null,
                 transformingSectionId: null,
+                transformSectionWidth: null,
+                transformSectionHeight: null,
 
                 // Background controls toggle
                 showBackgroundControls: false,
@@ -1566,13 +1568,33 @@
                     if (!isDecorativeZone && section.rows && section.rows.length > 0) {
                         const sectionX = section.x_position || 0;
                         const sectionY = section.y_position || 0;
+                        const sectionW = section.width || 200;
+                        const sectionH = section.height || 150;
+                        const rotation = (section.rotation || 0) * Math.PI / 180;
+                        const cosR = Math.cos(rotation);
+                        const sinR = Math.sin(rotation);
+
+                        // Section center in local coordinates (relative to section origin)
+                        const localCenterX = sectionW / 2;
+                        const localCenterY = sectionH / 2;
 
                         section.rows.forEach(row => {
                             if (row.seats && row.seats.length > 0) {
                                 row.seats.forEach(seat => {
-                                    // Calculate absolute position
-                                    const absoluteX = sectionX + parseFloat(seat.x || 0);
-                                    const absoluteY = sectionY + parseFloat(seat.y || 0);
+                                    const localX = parseFloat(seat.x || 0);
+                                    const localY = parseFloat(seat.y || 0);
+
+                                    // Calculate position relative to section center
+                                    const relX = localX - localCenterX;
+                                    const relY = localY - localCenterY;
+
+                                    // Apply rotation around section center
+                                    const rotatedX = relX * cosR - relY * sinR;
+                                    const rotatedY = relX * sinR + relY * cosR;
+
+                                    // Calculate absolute position (section position + rotated offset from center)
+                                    const absoluteX = sectionX + localCenterX + rotatedX;
+                                    const absoluteY = sectionY + localCenterY + rotatedY;
 
                                     const seatShape = this.createSeatAbsolute(seat, seatColor, section.id, absoluteX, absoluteY);
                                     this.seatsLayer.add(seatShape);
@@ -1694,46 +1716,88 @@
                         this.layer.batchDraw();
                     });
 
-                    // Store initial rotation on transform start
+                    // Store initial state on transform start
                     group.on('transformstart', () => {
                         this.sectionTransformStartRotation = group.rotation();
                         this.transformingSectionId = section.id;
 
-                        // Store original seat positions relative to section center
-                        const sectionCenterX = group.x() + (backgroundShape.width ? backgroundShape.width() / 2 : 100);
-                        const sectionCenterY = group.y() + (backgroundShape.height ? backgroundShape.height() / 2 : 75);
+                        // Store section dimensions at transform start
+                        const width = backgroundShape.width ? backgroundShape.width() : (section.width || 200);
+                        const height = backgroundShape.height ? backgroundShape.height() : (section.height || 150);
+                        this.transformSectionWidth = width;
+                        this.transformSectionHeight = height;
 
+                        // Calculate current rotation in radians (to reverse it)
+                        const currentRotationRad = (this.sectionTransformStartRotation || 0) * Math.PI / 180;
+                        const cosR = Math.cos(-currentRotationRad); // Negative to reverse
+                        const sinR = Math.sin(-currentRotationRad);
+
+                        // Local center in section coordinates
+                        const localCenterX = width / 2;
+                        const localCenterY = height / 2;
+
+                        // Section position (group position)
+                        const sectionX = group.x();
+                        const sectionY = group.y();
+
+                        // Absolute center position (accounts for rotation via Konva transform)
+                        const transform = group.getAbsoluteTransform();
+                        const centerPoint = transform.point({x: localCenterX, y: localCenterY});
+
+                        // For each seat, calculate and store its LOCAL position (in section coordinates, before rotation)
                         this.seatsLayer.find('.seat').forEach(seat => {
                             if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
-                                // Store position relative to section center
-                                seat.setAttr('transformStartX', seat.x() - sectionCenterX);
-                                seat.setAttr('transformStartY', seat.y() - sectionCenterY);
+                                // Current absolute position
+                                const absX = seat.x();
+                                const absY = seat.y();
+
+                                // Position relative to absolute center
+                                const relX = absX - centerPoint.x;
+                                const relY = absY - centerPoint.y;
+
+                                // Reverse the rotation to get back to local coordinates
+                                const localRelX = relX * cosR - relY * sinR;
+                                const localRelY = relX * sinR + relY * cosR;
+
+                                // Store LOCAL position relative to center (before rotation)
+                                seat.setAttr('transformLocalX', localRelX);
+                                seat.setAttr('transformLocalY', localRelY);
                             }
                         });
                     });
 
-                    // Rotate seats during transform
+                    // Update seats during transform
                     group.on('transform', () => {
                         if (this.transformingSectionId !== section.id) return;
 
+                        // Get CURRENT rotation and convert to radians
                         const currentRotation = group.rotation();
-                        const rotationDelta = (currentRotation - (this.sectionTransformStartRotation || 0)) * Math.PI / 180;
+                        const rotationRad = currentRotation * Math.PI / 180;
+                        const cosR = Math.cos(rotationRad);
+                        const sinR = Math.sin(rotationRad);
 
-                        const sectionCenterX = group.x() + (backgroundShape.width ? backgroundShape.width() / 2 : 100);
-                        const sectionCenterY = group.y() + (backgroundShape.height ? backgroundShape.height() / 2 : 75);
+                        // Get current absolute center position
+                        const width = this.transformSectionWidth;
+                        const height = this.transformSectionHeight;
+                        const localCenterX = width / 2;
+                        const localCenterY = height / 2;
+
+                        const transform = group.getAbsoluteTransform();
+                        const currentCenter = transform.point({x: localCenterX, y: localCenterY});
 
                         this.seatsLayer.find('.seat').forEach(seat => {
                             if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
-                                const startX = seat.getAttr('transformStartX');
-                                const startY = seat.getAttr('transformStartY');
+                                const localX = seat.getAttr('transformLocalX');
+                                const localY = seat.getAttr('transformLocalY');
 
-                                if (startX !== undefined && startY !== undefined) {
-                                    // Rotate point around origin (0,0) then translate to section center
-                                    const newX = startX * Math.cos(rotationDelta) - startY * Math.sin(rotationDelta);
-                                    const newY = startX * Math.sin(rotationDelta) + startY * Math.cos(rotationDelta);
+                                if (localX !== undefined && localY !== undefined) {
+                                    // Apply FULL current rotation to local position
+                                    const rotatedX = localX * cosR - localY * sinR;
+                                    const rotatedY = localX * sinR + localY * cosR;
 
-                                    seat.x(sectionCenterX + newX);
-                                    seat.y(sectionCenterY + newY);
+                                    // Position at current center + rotated offset
+                                    seat.x(currentCenter.x + rotatedX);
+                                    seat.y(currentCenter.y + rotatedY);
                                 }
                             }
                         });
@@ -1755,14 +1819,16 @@
                         // Clear transform tracking attributes from seats
                         this.seatsLayer.find('.seat').forEach(seat => {
                             if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
-                                seat.setAttr('transformStartX', undefined);
-                                seat.setAttr('transformStartY', undefined);
+                                seat.setAttr('transformLocalX', undefined);
+                                seat.setAttr('transformLocalY', undefined);
                             }
                         });
 
                         // Clear transform tracking
                         this.sectionTransformStartRotation = null;
                         this.transformingSectionId = null;
+                        this.transformSectionWidth = null;
+                        this.transformSectionHeight = null;
 
                         // Only update dimensions if they are valid (> 0)
                         if (newWidth > 0 && newHeight > 0) {
