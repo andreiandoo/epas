@@ -44,6 +44,24 @@ class SeatingLayoutResource extends Resource
                         Forms\Components\Select::make('venue_id')
                             ->relationship('venue', 'name')
                             ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? $record->getTranslation('name', 'en') ?? 'Unnamed Venue')
+                            ->getSearchResultsUsing(function (string $search) {
+                                $locale = app()->getLocale();
+                                $searchLower = strtolower($search);
+
+                                // Fetch venues and filter in PHP (works across all databases for JSON columns)
+                                return \App\Models\Venue::query()
+                                    ->get()
+                                    ->filter(function ($venue) use ($searchLower, $locale) {
+                                        // Get name in current locale or fallback to English
+                                        $name = $venue->getTranslation('name', $locale) ?? $venue->getTranslation('name', 'en') ?? '';
+                                        $slug = $venue->slug ?? '';
+
+                                        return str_contains(strtolower($name), $searchLower)
+                                            || str_contains(strtolower($slug), $searchLower);
+                                    })
+                                    ->take(50)
+                                    ->mapWithKeys(fn ($venue) => [$venue->id => $venue->getTranslation('name', $locale) ?? $venue->getTranslation('name', 'en') ?? 'Unnamed Venue']);
+                            })
                             ->required()
                             ->searchable()
                             ->preload()

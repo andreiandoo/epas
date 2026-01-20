@@ -13,6 +13,7 @@ use Filament\Forms;
 use Filament\Resources\Pages\Page;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Schemas\Components as SC;
 
 class DesignerSeatingLayout extends Page
 {
@@ -232,7 +233,7 @@ class DesignerSeatingLayout extends Page
                         ->columnSpan(1),
 
                     // Standard section: rows & seats configuration
-                    Forms\Components\Section::make('Rows & Seats Configuration')
+                    SC\Section::make('Rows & Seats Configuration')
                         ->description('Configure the initial layout of rows and seats')
                         ->visible(fn ($get) => $get('section_type') === 'standard')
                         ->schema([
@@ -820,7 +821,7 @@ class DesignerSeatingLayout extends Page
                         ->label('Seat Color')
                         ->columnSpan(1),
 
-                    Forms\Components\Section::make('Dimensions')
+                    SC\Section::make('Dimensions')
                         ->schema([
                             Forms\Components\TextInput::make('width')
                                 ->label('Width (px)')
@@ -838,7 +839,7 @@ class DesignerSeatingLayout extends Page
                         ])
                         ->columns(2),
 
-                    Forms\Components\Section::make('Seat Settings')
+                    SC\Section::make('Seat Settings')
                         ->description('Fine-tune the seat appearance and spacing')
                         ->schema([
                             Forms\Components\TextInput::make('seat_size')
