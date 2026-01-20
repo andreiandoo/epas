@@ -14,6 +14,9 @@ const EventPage = {
     galleryImages: [],
     isInterested: false,
     shareMenuOpen: false,
+    seatingLayout: null,
+    selectedSeats: {},  // ticketTypeId -> [seatId, ...]
+    seatSelectionModal: null,
 
     // DOM element IDs
     elements: {
@@ -433,7 +436,7 @@ const EventPage = {
             artists: artistsData,
             ticket_types: ticketTypesData.map(function(tt) {
                 var available = tt.available_quantity !== undefined ? tt.available_quantity : (tt.available !== undefined ? tt.available : 999);
-                console.log('[EventPage] Processing ticket type:', tt.name, 'price:', tt.price, 'original_price:', tt.original_price);
+                console.log('[EventPage] Processing ticket type:', tt.name, 'price:', tt.price, 'original_price:', tt.original_price, 'has_seating:', tt.has_seating);
                 return {
                     id: tt.id,
                     name: tt.name,
@@ -446,9 +449,12 @@ const EventPage = {
                     min_per_order: tt.min_per_order || 1,
                     max_per_order: tt.max_per_order || 10,
                     status: tt.status,
-                    is_sold_out: available <= 0
+                    is_sold_out: available <= 0,
+                    has_seating: tt.has_seating || false,
+                    seating_sections: tt.seating_sections || []
                 };
             }),
+            seating_layout: apiData.seating_layout || null,
             max_tickets_per_order: eventData.max_tickets_per_order || 10,
             target_price: eventData.target_price || null,
             commission_rate: apiData.commission_rate || 5,
@@ -497,8 +503,12 @@ const EventPage = {
         document.getElementById(this.elements.mainImage).src = mainImg;
         document.getElementById(this.elements.mainImage).alt = e.title;
 
-        // Gallery
+        // Gallery - include seating map background if available
         this.galleryImages = e.images?.length ? e.images : [mainImg];
+        if (e.seating_layout?.background_image) {
+            // Add seating map as last gallery image
+            this.galleryImages.push(e.seating_layout.background_image);
+        }
         this.renderGallery();
 
         // Badges
@@ -545,6 +555,12 @@ const EventPage = {
 
         // Venue section
         this.renderVenue(e.venue || { name: e.location || 'Locatie TBA' });
+
+        // Seating layout
+        this.seatingLayout = e.seating_layout || null;
+        if (this.seatingLayout) {
+            console.log('[EventPage] Event has seating layout:', this.seatingLayout.name);
+        }
 
         // Ticket types
         this.ticketTypes = e.ticket_types || this.getDefaultTicketTypes();
@@ -1007,6 +1023,7 @@ const EventPage = {
 
             // Controls HTML - different messages based on event status
             var controlsHtml = '';
+            var hasSeating = tt.has_seating && self.seatingLayout;
             if (eventIsCancelled) {
                 controlsHtml = '<span class="text-sm font-medium text-red-400">Indisponibil</span>';
             } else if (eventIsPostponed) {
@@ -1015,6 +1032,15 @@ const EventPage = {
                 controlsHtml = '<span class="text-sm font-medium text-gray-500">Sold Out</span>';
             } else if (isSoldOut) {
                 controlsHtml = '<span class="text-sm font-medium text-gray-400">Epuizat</span>';
+            } else if (hasSeating) {
+                // Ticket type with seating - show "Select seats" button
+                var selectedCount = self.selectedSeats[tt.id]?.length || 0;
+                controlsHtml = '<div class="flex items-center gap-2">' +
+                    '<button onclick="EventPage.openSeatSelection(\'' + tt.id + '\')" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-colors rounded-lg bg-primary hover:bg-primary-dark">' +
+                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>' +
+                        (selectedCount > 0 ? selectedCount + ' loc' + (selectedCount > 1 ? 'uri' : '') + ' selectat' + (selectedCount > 1 ? 'e' : '') : 'Alege locuri') +
+                    '</button>' +
+                '</div>';
             } else {
                 controlsHtml = '<div class="flex items-center gap-2">' +
                     '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">-</button>' +
@@ -1420,6 +1446,280 @@ const EventPage = {
                 cartDrawerCount.classList.add('hidden');
             }
         }
+    },
+
+    /**
+     * Open seat selection modal for a ticket type
+     */
+    openSeatSelection(ticketTypeId) {
+        var self = this;
+        var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketTypeId); });
+        if (!tt || !this.seatingLayout) return;
+
+        console.log('[EventPage] Opening seat selection for:', tt.name, 'sections:', tt.seating_sections);
+
+        // Get allowed section IDs for this ticket type
+        var allowedSectionIds = tt.seating_sections.map(function(s) { return s.id; });
+
+        // Create modal if not exists
+        if (!this.seatSelectionModal) {
+            this.createSeatSelectionModal();
+        }
+
+        // Store current ticket type for the modal
+        this.currentTicketTypeId = ticketTypeId;
+
+        // Render the seating map
+        this.renderSeatingMap(allowedSectionIds, ticketTypeId);
+
+        // Show modal
+        document.getElementById('seat-selection-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    },
+
+    /**
+     * Create the seat selection modal
+     */
+    createSeatSelectionModal() {
+        var modal = document.createElement('div');
+        modal.id = 'seat-selection-modal';
+        modal.className = 'fixed inset-0 z-50 hidden';
+        modal.innerHTML =
+            '<div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="EventPage.closeSeatSelection()"></div>' +
+            '<div class="absolute inset-4 md:inset-8 lg:inset-12 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">' +
+                // Header
+                '<div class="flex items-center justify-between px-6 py-4 border-b border-border">' +
+                    '<div>' +
+                        '<h2 class="text-xl font-bold text-secondary">Alege locurile</h2>' +
+                        '<p class="text-sm text-muted" id="seat-selection-subtitle">Selectează locurile dorite pe hartă</p>' +
+                    '</div>' +
+                    '<button onclick="EventPage.closeSeatSelection()" class="p-2 transition-colors rounded-lg hover:bg-surface">' +
+                        '<svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+                    '</button>' +
+                '</div>' +
+                // Content - seating map
+                '<div class="flex-1 overflow-auto p-4 bg-surface/50" id="seat-map-container">' +
+                    '<div id="seat-map-svg" class="w-full h-full flex items-center justify-center">' +
+                        '<div class="text-center text-muted">' +
+                            '<svg class="w-12 h-12 mx-auto mb-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>' +
+                            'Se încarcă harta...' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                // Legend
+                '<div class="px-6 py-3 border-t border-border bg-white">' +
+                    '<div class="flex flex-wrap items-center justify-center gap-4 text-sm">' +
+                        '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-green-500"></span> Disponibil</div>' +
+                        '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-primary"></span> Selectat</div>' +
+                        '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-gray-300"></span> Ocupat</div>' +
+                        '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded bg-gray-100 border border-gray-300"></span> Indisponibil</div>' +
+                    '</div>' +
+                '</div>' +
+                // Footer
+                '<div class="flex items-center justify-between px-6 py-4 border-t border-border bg-white">' +
+                    '<div>' +
+                        '<span class="text-sm text-muted">Locuri selectate: </span>' +
+                        '<span id="selected-seats-count" class="font-bold text-secondary">0</span>' +
+                        '<span class="ml-4 text-sm text-muted">Total: </span>' +
+                        '<span id="selected-seats-total" class="font-bold text-primary">0 lei</span>' +
+                    '</div>' +
+                    '<div class="flex gap-3">' +
+                        '<button onclick="EventPage.closeSeatSelection()" class="px-6 py-2.5 text-sm font-semibold text-muted border border-border rounded-xl hover:bg-surface transition-colors">Anulează</button>' +
+                        '<button onclick="EventPage.confirmSeatSelection()" class="px-6 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Confirmă selecția</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(modal);
+        this.seatSelectionModal = modal;
+    },
+
+    /**
+     * Render the seating map SVG
+     */
+    renderSeatingMap(allowedSectionIds, ticketTypeId) {
+        var self = this;
+        var layout = this.seatingLayout;
+        var container = document.getElementById('seat-map-svg');
+
+        if (!layout || !layout.sections) {
+            container.innerHTML = '<div class="text-center text-muted">Nu există hartă de locuri disponibilă.</div>';
+            return;
+        }
+
+        // Calculate viewBox
+        var canvasW = layout.canvas_width || 1920;
+        var canvasH = layout.canvas_height || 1080;
+
+        // Build SVG
+        var svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" class="w-full h-full max-h-[60vh]" preserveAspectRatio="xMidYMid meet">';
+
+        // Background image if exists
+        if (layout.background_image) {
+            var bgScale = layout.background_scale || 1;
+            var bgX = layout.background_x || 0;
+            var bgY = layout.background_y || 0;
+            var bgOpacity = layout.background_opacity || 0.5;
+            var bgW = canvasW * bgScale;
+            var bgH = canvasH * bgScale;
+            svg += '<image href="' + layout.background_image + '" x="' + bgX + '" y="' + bgY + '" width="' + bgW + '" height="' + bgH + '" opacity="' + bgOpacity + '" preserveAspectRatio="xMidYMid meet"/>';
+        }
+
+        // Render sections
+        layout.sections.forEach(function(section) {
+            var isAllowed = allowedSectionIds.includes(section.id);
+            var sectionColor = isAllowed ? (section.color || '#3B82F6') : '#E5E7EB';
+            var sectionOpacity = isAllowed ? 0.2 : 0.5;
+
+            // Section background
+            svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionColor + '" fill-opacity="' + sectionOpacity + '" stroke="' + sectionColor + '" stroke-width="2" rx="8"/>';
+
+            // Section name
+            var textY = section.y + 20;
+            svg += '<text x="' + (section.x + section.width / 2) + '" y="' + textY + '" text-anchor="middle" font-size="14" font-weight="bold" fill="' + (isAllowed ? '#1F2937' : '#9CA3AF') + '">' + section.name + '</text>';
+
+            // Render seats if allowed
+            if (isAllowed && section.rows) {
+                section.rows.forEach(function(row) {
+                    if (row.seats) {
+                        row.seats.forEach(function(seat) {
+                            var seatX = section.x + (seat.x || 0);
+                            var seatY = section.y + 30 + (seat.y || 0);
+                            var isSelected = self.isSeatSelected(ticketTypeId, seat.id);
+                            var status = seat.status || 'available';
+
+                            var seatColor = '#22C55E'; // Available - green
+                            var cursor = 'pointer';
+                            if (isSelected) {
+                                seatColor = '#3B82F6'; // Selected - primary
+                            } else if (status === 'sold' || status === 'held') {
+                                seatColor = '#D1D5DB'; // Occupied - gray
+                                cursor = 'not-allowed';
+                            } else if (status === 'blocked' || status === 'disabled') {
+                                seatColor = '#F3F4F6'; // Disabled - light gray
+                                cursor = 'not-allowed';
+                            }
+
+                            var clickHandler = (status === 'available' || isSelected) ?
+                                'onclick="EventPage.toggleSeat(\'' + ticketTypeId + '\', ' + seat.id + ', \'' + section.name + '\', \'' + row.label + '\', \'' + seat.label + '\')"' : '';
+
+                            svg += '<g ' + clickHandler + ' style="cursor: ' + cursor + '">' +
+                                '<rect x="' + seatX + '" y="' + seatY + '" width="16" height="16" rx="3" fill="' + seatColor + '" stroke="' + (isSelected ? '#1D4ED8' : '#E5E7EB') + '" stroke-width="' + (isSelected ? '2' : '1') + '"/>' +
+                                '<text x="' + (seatX + 8) + '" y="' + (seatY + 12) + '" text-anchor="middle" font-size="8" fill="' + (isSelected || status === 'available' ? 'white' : '#9CA3AF') + '">' + seat.label + '</text>' +
+                            '</g>';
+                        });
+                    }
+                });
+            }
+        });
+
+        svg += '</svg>';
+        container.innerHTML = svg;
+
+        this.updateSeatSelectionSummary(ticketTypeId);
+    },
+
+    /**
+     * Check if a seat is selected for a ticket type
+     */
+    isSeatSelected(ticketTypeId, seatId) {
+        var seats = this.selectedSeats[ticketTypeId] || [];
+        return seats.some(function(s) { return s.id === seatId; });
+    },
+
+    /**
+     * Toggle seat selection
+     */
+    toggleSeat(ticketTypeId, seatId, sectionName, rowLabel, seatLabel) {
+        var self = this;
+        if (!this.selectedSeats[ticketTypeId]) {
+            this.selectedSeats[ticketTypeId] = [];
+        }
+
+        var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketTypeId); });
+        var maxSeats = tt ? tt.max_per_order : 10;
+
+        var existingIndex = this.selectedSeats[ticketTypeId].findIndex(function(s) { return s.id === seatId; });
+
+        if (existingIndex >= 0) {
+            // Deselect
+            this.selectedSeats[ticketTypeId].splice(existingIndex, 1);
+        } else {
+            // Check max limit
+            if (this.selectedSeats[ticketTypeId].length >= maxSeats) {
+                alert('Poți selecta maxim ' + maxSeats + ' locuri pentru acest tip de bilet.');
+                return;
+            }
+            // Select
+            this.selectedSeats[ticketTypeId].push({
+                id: seatId,
+                section: sectionName,
+                row: rowLabel,
+                seat: seatLabel
+            });
+        }
+
+        console.log('[EventPage] Selected seats:', this.selectedSeats[ticketTypeId]);
+
+        // Re-render map to update selection visual
+        var allowedSectionIds = tt.seating_sections.map(function(s) { return s.id; });
+        this.renderSeatingMap(allowedSectionIds, ticketTypeId);
+    },
+
+    /**
+     * Update seat selection summary in modal footer
+     */
+    updateSeatSelectionSummary(ticketTypeId) {
+        var seats = this.selectedSeats[ticketTypeId] || [];
+        var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketTypeId); });
+        var price = tt ? tt.price : 0;
+
+        document.getElementById('selected-seats-count').textContent = seats.length;
+        document.getElementById('selected-seats-total').textContent = (seats.length * price).toFixed(2) + ' lei';
+
+        // Update subtitle with selected seats
+        var subtitle = document.getElementById('seat-selection-subtitle');
+        if (seats.length > 0) {
+            var seatNames = seats.map(function(s) { return s.section + ', rând ' + s.row + ', loc ' + s.seat; }).join('; ');
+            subtitle.textContent = 'Selectate: ' + seatNames;
+        } else {
+            subtitle.textContent = 'Selectează locurile dorite pe hartă';
+        }
+    },
+
+    /**
+     * Close seat selection modal
+     */
+    closeSeatSelection() {
+        document.getElementById('seat-selection-modal').classList.add('hidden');
+        document.body.style.overflow = '';
+    },
+
+    /**
+     * Confirm seat selection and update cart
+     */
+    confirmSeatSelection() {
+        var ticketTypeId = this.currentTicketTypeId;
+        var seats = this.selectedSeats[ticketTypeId] || [];
+
+        if (seats.length === 0) {
+            alert('Te rugăm să selectezi cel puțin un loc.');
+            return;
+        }
+
+        // Update quantities based on selected seats
+        this.quantities[ticketTypeId] = seats.length;
+
+        // Close modal
+        this.closeSeatSelection();
+
+        // Re-render ticket types to show updated count
+        this.renderTicketTypes();
+
+        // Update cart
+        this.updateCart();
+
+        console.log('[EventPage] Seats confirmed:', seats.length, 'for ticket type:', ticketTypeId);
     }
 };
 
