@@ -1571,7 +1571,8 @@ const EventPage = {
         var self = this;
         var modal = document.createElement('div');
         modal.id = 'seat-selection-modal';
-        modal.className = 'fixed inset-0 z-50 hidden';
+        modal.className = 'fixed inset-0 hidden';
+        modal.style.zIndex = '9999'; // Above navigation
         modal.innerHTML =
             '<div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="EventPage.closeSeatSelection()"></div>' +
             '<div class="absolute inset-2 md:inset-4 lg:inset-8 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">' +
@@ -1660,6 +1661,40 @@ const EventPage = {
             var delta = e.deltaY > 0 ? -0.1 : 0.1;
             self.zoomMap(delta);
         }, { passive: false });
+
+        // Setup pan with mouse drag
+        var isDragging = false;
+        var startX, startY, scrollLeft, scrollTop;
+
+        mapWrapper.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            mapWrapper.style.cursor = 'grabbing';
+            startX = e.pageX - mapWrapper.offsetLeft;
+            startY = e.pageY - mapWrapper.offsetTop;
+            scrollLeft = mapWrapper.scrollLeft;
+            scrollTop = mapWrapper.scrollTop;
+        });
+
+        mapWrapper.addEventListener('mouseleave', function() {
+            isDragging = false;
+            mapWrapper.style.cursor = 'grab';
+        });
+
+        mapWrapper.addEventListener('mouseup', function() {
+            isDragging = false;
+            mapWrapper.style.cursor = 'grab';
+        });
+
+        mapWrapper.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            var x = e.pageX - mapWrapper.offsetLeft;
+            var y = e.pageY - mapWrapper.offsetTop;
+            var walkX = (x - startX) * 1.5;
+            var walkY = (y - startY) * 1.5;
+            mapWrapper.scrollLeft = scrollLeft - walkX;
+            mapWrapper.scrollTop = scrollTop - walkY;
+        });
     },
 
     /**
@@ -1750,8 +1785,9 @@ const EventPage = {
         var canvasW = layout.canvas_width || 1920;
         var canvasH = layout.canvas_height || 1080;
 
-        // Build SVG
-        var svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" class="w-full h-full max-h-[60vh]" preserveAspectRatio="xMidYMid meet">';
+        // Build SVG with tooltip styles
+        var svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" class="w-full h-full" style="min-width: ' + canvasW + 'px; min-height: ' + canvasH + 'px;" preserveAspectRatio="xMidYMid meet">';
+        svg += '<style>.seat-hover:hover rect { stroke-width: 3; filter: brightness(1.1); } .seat-hover { transition: all 0.15s; }</style>';
 
         // Background image if exists
         if (layout.background_image) {
@@ -1764,66 +1800,95 @@ const EventPage = {
             svg += '<image href="' + layout.background_image + '" x="' + bgX + '" y="' + bgY + '" width="' + bgW + '" height="' + bgH + '" opacity="' + bgOpacity + '" preserveAspectRatio="xMidYMid meet"/>';
         }
 
-        // Render sections
+        // Render ALL sections (not just allowed ones)
         layout.sections.forEach(function(section) {
             var isAllowed = allowedSectionIds.includes(section.id);
-            var sectionColor = isAllowed ? (section.color || '#3B82F6') : '#E5E7EB';
-            var sectionOpacity = isAllowed ? 0.2 : 0.5;
 
-            // Section background
-            svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionColor + '" fill-opacity="' + sectionOpacity + '" stroke="' + sectionColor + '" stroke-width="2" rx="8"/>';
+            // Calculate rotation transform
+            var centerX = section.x + (section.width / 2);
+            var centerY = section.y + (section.height / 2);
+            var rotation = section.rotation || 0;
+            var transform = rotation !== 0 ? ' transform="rotate(' + rotation + ' ' + centerX + ' ' + centerY + ')"' : '';
 
-            // Section name
-            var textY = section.y + 20;
-            svg += '<text x="' + (section.x + section.width / 2) + '" y="' + textY + '" text-anchor="middle" font-size="14" font-weight="bold" fill="' + (isAllowed ? '#1F2937' : '#9CA3AF') + '">' + section.name + '</text>';
+            // Create a group for the section with rotation
+            svg += '<g' + transform + '>';
 
-            // Render seats if allowed
-            if (isAllowed && section.rows) {
-                console.log('[EventPage] Rendering section:', section.name, 'rows:', section.rows.length);
-                var seatSize = 20;
-                var seatGap = 4;
-                var rowGap = 6;
-                var startY = section.y + 30; // Start after section name
+            // Section name (positioned at top of section)
+            var textY = section.y + 18;
+            var textColor = isAllowed ? '#1F2937' : '#9CA3AF';
+            svg += '<text x="' + centerX + '" y="' + textY + '" text-anchor="middle" font-size="12" font-weight="600" fill="' + textColor + '">' + section.name + '</text>';
+
+            // Render seats for this section
+            if (section.rows) {
+                var seatSize = 18;
+                var seatGap = 3;
+                var rowGap = 4;
+                var startY = section.y + 28; // Start after section name
 
                 section.rows.forEach(function(row, rowIndex) {
-                    console.log('[EventPage] Row:', row.label, 'seats:', row.seats?.length);
                     if (row.seats) {
-                        var startX = section.x + 10; // Padding from section edge
-
-                        // Row label
-                        svg += '<text x="' + (startX - 5) + '" y="' + (startY + rowIndex * (seatSize + rowGap) + seatSize / 2 + 4) + '" text-anchor="end" font-size="10" fill="#6B7280">' + row.label + '</text>';
+                        var startX = section.x + 8; // Padding from section edge
 
                         row.seats.forEach(function(seat, seatIndex) {
                             // Calculate position - use stored x/y if available, otherwise calculate from index
                             var seatX = seat.x !== null && seat.x !== undefined ? section.x + seat.x : startX + seatIndex * (seatSize + seatGap);
-                            var seatY = seat.y !== null && seat.y !== undefined ? section.y + 30 + seat.y : startY + rowIndex * (seatSize + rowGap);
+                            var seatY = seat.y !== null && seat.y !== undefined ? section.y + 28 + seat.y : startY + rowIndex * (seatSize + rowGap);
 
                             var isSelected = self.isSeatSelected(ticketTypeId, seat.id);
                             var status = seat.status || 'available';
 
-                            var seatColor = '#22C55E'; // Available - green
-                            var cursor = 'pointer';
-                            if (isSelected) {
-                                seatColor = '#3B82F6'; // Selected - primary
+                            // Determine seat color and interactivity
+                            var seatColor, cursor, isClickable;
+
+                            if (!isAllowed) {
+                                // Section not available for this ticket type
+                                seatColor = '#E5E7EB'; // Light gray
+                                cursor = 'not-allowed';
+                                isClickable = false;
+                            } else if (isSelected) {
+                                seatColor = '#3B82F6'; // Selected - primary blue
+                                cursor = 'pointer';
+                                isClickable = true;
+                            } else if (status === 'available') {
+                                seatColor = '#22C55E'; // Available - green
+                                cursor = 'pointer';
+                                isClickable = true;
                             } else if (status === 'sold' || status === 'held') {
-                                seatColor = '#D1D5DB'; // Occupied - gray
+                                seatColor = '#9CA3AF'; // Occupied - darker gray
                                 cursor = 'not-allowed';
-                            } else if (status === 'blocked' || status === 'disabled') {
-                                seatColor = '#F3F4F6'; // Disabled - light gray
+                                isClickable = false;
+                            } else {
+                                seatColor = '#E5E7EB'; // Disabled/blocked - light gray
                                 cursor = 'not-allowed';
+                                isClickable = false;
                             }
 
-                            var clickHandler = (status === 'available' || isSelected) ?
-                                'onclick="EventPage.toggleSeat(\'' + ticketTypeId + '\', ' + seat.id + ', \'' + section.name + '\', \'' + row.label + '\', \'' + seat.label + '\')"' : '';
+                            var clickHandler = isClickable ?
+                                'onclick="EventPage.toggleSeat(\'' + ticketTypeId + '\', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\')"' : '';
 
-                            svg += '<g ' + clickHandler + ' style="cursor: ' + cursor + '">' +
-                                '<rect x="' + seatX + '" y="' + seatY + '" width="' + seatSize + '" height="' + seatSize + '" rx="4" fill="' + seatColor + '" stroke="' + (isSelected ? '#1D4ED8' : '#E5E7EB') + '" stroke-width="' + (isSelected ? '2' : '1') + '"/>' +
-                                '<text x="' + (seatX + seatSize/2) + '" y="' + (seatY + seatSize/2 + 4) + '" text-anchor="middle" font-size="10" fill="' + (isSelected || status === 'available' ? 'white' : '#9CA3AF') + '">' + seat.label + '</text>' +
+                            var strokeColor = isSelected ? '#1D4ED8' : (isAllowed && status === 'available' ? '#16A34A' : '#D1D5DB');
+                            var strokeWidth = isSelected ? '2' : '1';
+
+                            // Tooltip text
+                            var tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
+                            if (!isAllowed) {
+                                tooltipText += ' (indisponibil pentru acest bilet)';
+                            } else if (status === 'sold') {
+                                tooltipText += ' (vândut)';
+                            } else if (status === 'held') {
+                                tooltipText += ' (rezervat)';
+                            }
+
+                            svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + '">' +
+                                '<title>' + tooltipText + '</title>' +
+                                '<rect x="' + seatX + '" y="' + seatY + '" width="' + seatSize + '" height="' + seatSize + '" rx="3" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '"/>' +
                             '</g>';
                         });
                     }
                 });
             }
+
+            svg += '</g>'; // Close section group
         });
 
         svg += '</svg>';
@@ -1850,7 +1915,8 @@ const EventPage = {
         }
 
         var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketTypeId); });
-        var maxSeats = tt ? tt.max_per_order : 10;
+        // Max seats is the quantity user selected for this ticket type
+        var maxSeats = this.quantities[ticketTypeId] || tt?.max_per_order || 10;
 
         var existingIndex = this.selectedSeats[ticketTypeId].findIndex(function(s) { return s.id === seatId; });
 
@@ -1858,9 +1924,9 @@ const EventPage = {
             // Deselect
             this.selectedSeats[ticketTypeId].splice(existingIndex, 1);
         } else {
-            // Check max limit
+            // Check max limit (based on quantity selected)
             if (this.selectedSeats[ticketTypeId].length >= maxSeats) {
-                alert('Poți selecta maxim ' + maxSeats + ' locuri pentru acest tip de bilet.');
+                alert('Ai selectat deja ' + maxSeats + ' loc' + (maxSeats > 1 ? 'uri' : '') + '. Deselectează un loc pentru a alege altul.');
                 return;
             }
             // Select
@@ -1877,6 +1943,9 @@ const EventPage = {
         // Re-render map to update selection visual
         var allowedSectionIds = tt.seating_sections.map(function(s) { return s.id; });
         this.renderSeatingMap(allowedSectionIds, ticketTypeId);
+
+        // Update sidebar to show selection count
+        this.renderModalTicketTypes(ticketTypeId);
     },
 
     /**
