@@ -6,11 +6,13 @@
  * Each icon has:
  * - key: unique identifier (used in code)
  * - label: display name in dropdown
- * - svg: the SVG path data (viewBox is assumed 0 0 24 24)
+ * - svg: SVG data in one of two formats:
+ *   1. Path data only (viewBox assumed 0 0 24 24): 'M17 16l4-4m0...'
+ *   2. Full SVG string: '<svg xmlns="...">...</svg>'
  *
  * To add a new icon:
- * 1. Find or create an SVG icon (24x24 viewBox recommended)
- * 2. Extract the path data (the 'd' attribute from <path>)
+ * 1. Find or create an SVG icon
+ * 2. Either extract just the path 'd' attribute, OR paste the full SVG
  * 3. Add a new entry below with a unique key
  *
  * SVG sources: heroicons.com, lucide.dev, feathericons.com, flaticon.com
@@ -19,7 +21,7 @@
 return [
     'exit' => [
         'label' => 'Exit',
-        'svg' => 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1',
+        'svg' => '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512" x="0" y="0" viewBox="0 0 512.005 512" style="enable-background:new 0 0 512 512" xml:space="preserve" class=""><g><path d="M320 277.336c-11.797 0-21.332 9.559-21.332 21.332v85.336c0 11.754-9.559 21.332-21.336 21.332h-64v-320c0-18.219-11.605-34.496-29.055-40.555l-6.316-2.113h99.371c11.777 0 21.336 9.578 21.336 21.336v64c0 11.773 9.535 21.332 21.332 21.332s21.332-9.559 21.332-21.332v-64c0-35.285-28.715-64-64-64H48c-.812 0-1.492.363-2.281.469-1.028-.086-2.008-.47-3.051-.47C19.137.004 0 19.138 0 42.669v384c0 18.219 11.605 34.496 29.055 40.555L157.44 510.02c4.352 1.343 8.68 1.984 13.227 1.984 23.531 0 42.664-19.137 42.664-42.668v-21.332h64c35.285 0 64-28.715 64-64v-85.336c0-11.773-9.535-21.332-21.332-21.332zm0 0" fill="#000000" opacity="1" data-original="#000000" class=""></path><path d="m505.75 198.254-85.336-85.332a21.33 21.33 0 0 0-23.25-4.633C389.207 111.598 384 119.383 384 128.004v64h-85.332c-11.777 0-21.336 9.555-21.336 21.332 0 11.777 9.559 21.332 21.336 21.332H384v64c0 8.621 5.207 16.406 13.164 19.715a21.335 21.335 0 0 0 23.25-4.63l85.336-85.335c8.34-8.34 8.34-21.824 0-30.164zm0 0" fill="#000000" opacity="1" data-original="#000000" class=""></path></g></svg>',
     ],
 
     'toilet' => [

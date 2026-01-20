@@ -749,8 +749,9 @@
 
                     // Transformer for selection/resize
                     this.transformer = new Konva.Transformer({
-                        enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+                        enabledAnchors: ['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right'],
                         rotateEnabled: true,
+                        keepRatio: false,
                         borderStroke: '#4F46E5',
                         borderStrokeWidth: 2,
                         anchorStroke: '#4F46E5',
@@ -796,10 +797,16 @@
 
                     // Mouse down for box selection
                     this.stage.on('mousedown', (e) => {
+                        // Ctrl+drag for rectangle selection in any mode
+                        if (e.evt.ctrlKey && (e.target === this.stage || e.target.getLayer() === this.backgroundLayer || e.target.getLayer() === this.seatsLayer)) {
+                            this.startRectSelection(e);
+                            return;
+                        }
+
                         if (this.drawMode === 'multiselect' && (e.target === this.stage || e.target.getLayer() === this.backgroundLayer)) {
                             this.startBoxSelection(e);
                         }
-                        // Rectangle selection for seats
+                        // Rectangle selection for seats (without Ctrl, in selectseats mode)
                         if (this.drawMode === 'selectseats' && (e.target === this.stage || e.target.getLayer() === this.backgroundLayer || e.target.getLayer() === this.seatsLayer)) {
                             this.startRectSelection(e);
                         }
@@ -838,8 +845,8 @@
                             this.updateBoxSelection(e);
                         }
 
-                        // Rectangle selection for seats
-                        if (this.drawMode === 'selectseats' && this.isRectSelecting) {
+                        // Rectangle selection for seats (works with Ctrl+drag in any mode)
+                        if (this.isRectSelecting) {
                             this.updateRectSelection(e);
                         }
                     });
@@ -863,14 +870,14 @@
                             this.cancelDrawing();
                         }
 
+                        // End rectangle selection for seats (works with Ctrl+drag in any mode)
+                        if (this.isRectSelecting) {
+                            this.endRectSelection(e);
+                        }
+
                         // End box selection
                         if (this.drawMode === 'multiselect' && this.selectionStartPos) {
                             this.endBoxSelection(e);
-                        }
-
-                        // End rectangle selection for seats
-                        if (this.drawMode === 'selectseats' && this.isRectSelecting) {
-                            this.endRectSelection(e);
                         }
                     });
 
@@ -1586,6 +1593,15 @@
                     group.on('dragstart', () => {
                         this.sectionDragStartPos = { x: group.x(), y: group.y() };
                         this.draggingSectionId = section.id;
+
+                        // Store original positions for all seats in this section
+                        this.seatsLayer.find('.seat').forEach(seat => {
+                            // Compare as numbers to avoid type issues
+                            if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
+                                seat.setAttr('dragStartX', seat.x());
+                                seat.setAttr('dragStartY', seat.y());
+                            }
+                        });
                     });
 
                     // Move seats with section during drag
@@ -1596,18 +1612,13 @@
 
                             // Move all seats belonging to this section
                             this.seatsLayer.find('.seat').forEach(seat => {
-                                if (seat.getAttr('sectionId') === section.id) {
-                                    const originalX = seat.getAttr('originalX') ?? seat.x();
-                                    const originalY = seat.getAttr('originalY') ?? seat.y();
-
-                                    // Store original position on first drag
-                                    if (!seat.getAttr('originalX')) {
-                                        seat.setAttr('originalX', seat.x());
-                                        seat.setAttr('originalY', seat.y());
+                                if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
+                                    const startX = seat.getAttr('dragStartX');
+                                    const startY = seat.getAttr('dragStartY');
+                                    if (startX !== undefined && startY !== undefined) {
+                                        seat.x(startX + deltaX);
+                                        seat.y(startY + deltaY);
                                     }
-
-                                    seat.x(originalX + deltaX);
-                                    seat.y(originalY + deltaY);
                                 }
                             });
                             this.seatsLayer.batchDraw();
@@ -1630,16 +1641,16 @@
 
                             // Update final seat positions with snap applied
                             this.seatsLayer.find('.seat').forEach(seat => {
-                                if (seat.getAttr('sectionId') === section.id) {
-                                    const originalX = seat.getAttr('originalX');
-                                    const originalY = seat.getAttr('originalY');
-                                    if (originalX !== undefined && originalY !== undefined) {
-                                        seat.x(originalX + finalDeltaX);
-                                        seat.y(originalY + finalDeltaY);
-                                        // Clear original position attrs
-                                        seat.setAttr('originalX', null);
-                                        seat.setAttr('originalY', null);
+                                if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
+                                    const startX = seat.getAttr('dragStartX');
+                                    const startY = seat.getAttr('dragStartY');
+                                    if (startX !== undefined && startY !== undefined) {
+                                        seat.x(startX + finalDeltaX);
+                                        seat.y(startY + finalDeltaY);
                                     }
+                                    // Clear drag start attrs
+                                    seat.setAttr('dragStartX', undefined);
+                                    seat.setAttr('dragStartY', undefined);
                                 }
                             });
                             this.seatsLayer.batchDraw();
@@ -1720,9 +1731,9 @@
                     const bgColor = section.background_color || '#3B82F6';
                     const cornerRadius = section.corner_radius || 8;
 
-                    // Get icon SVG path from definitions
+                    // Get icon SVG from definitions
                     const iconDef = this.iconDefinitions[iconKey];
-                    const svgPath = iconDef ? iconDef.svg : 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z';
+                    const svgData = iconDef ? iconDef.svg : 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z';
 
                     const group = new Konva.Group({
                         x: section.x_position || 100,
@@ -1748,18 +1759,63 @@
                     });
                     group.add(background);
 
-                    // Icon using Konva.Path
+                    // Icon rendering - supports both path data and full SVG strings
                     const iconPadding = iconSize * 0.15;
                     const iconInnerSize = iconSize - (iconPadding * 2);
-                    const iconPath = new Konva.Path({
-                        x: iconPadding,
-                        y: iconPadding,
-                        data: svgPath,
-                        fill: iconColor,
-                        scaleX: iconInnerSize / 24,
-                        scaleY: iconInnerSize / 24,
-                    });
-                    group.add(iconPath);
+
+                    // Check if it's a full SVG string
+                    if (svgData.trim().startsWith('<svg')) {
+                        // Parse full SVG - extract viewBox and path data
+                        const parser = new DOMParser();
+                        const svgDoc = parser.parseFromString(svgData, 'image/svg+xml');
+                        const svgElement = svgDoc.querySelector('svg');
+
+                        // Get viewBox for scaling (default to 24x24 if not found)
+                        let viewBoxWidth = 24, viewBoxHeight = 24;
+                        const viewBox = svgElement?.getAttribute('viewBox');
+                        if (viewBox) {
+                            const parts = viewBox.split(/[\s,]+/).map(Number);
+                            if (parts.length >= 4) {
+                                viewBoxWidth = parts[2] || 24;
+                                viewBoxHeight = parts[3] || 24;
+                            }
+                        } else {
+                            // Try width/height attributes
+                            viewBoxWidth = parseFloat(svgElement?.getAttribute('width')) || 24;
+                            viewBoxHeight = parseFloat(svgElement?.getAttribute('height')) || 24;
+                        }
+
+                        // Extract all path elements
+                        const paths = svgDoc.querySelectorAll('path');
+                        const scaleX = iconInnerSize / viewBoxWidth;
+                        const scaleY = iconInnerSize / viewBoxHeight;
+
+                        paths.forEach(pathEl => {
+                            const d = pathEl.getAttribute('d');
+                            if (d) {
+                                const iconPath = new Konva.Path({
+                                    x: iconPadding,
+                                    y: iconPadding,
+                                    data: d,
+                                    fill: iconColor,
+                                    scaleX: scaleX,
+                                    scaleY: scaleY,
+                                });
+                                group.add(iconPath);
+                            }
+                        });
+                    } else {
+                        // Simple path data string (assumes 24x24 viewBox)
+                        const iconPath = new Konva.Path({
+                            x: iconPadding,
+                            y: iconPadding,
+                            data: svgData,
+                            fill: iconColor,
+                            scaleX: iconInnerSize / 24,
+                            scaleY: iconInnerSize / 24,
+                        });
+                        group.add(iconPath);
+                    }
 
                     // Label below the icon
                     const label = new Konva.Text({
@@ -2343,8 +2399,9 @@
 
                     // Re-add transformer
                     this.transformer = new Konva.Transformer({
-                        enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+                        enabledAnchors: ['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right'],
                         rotateEnabled: true,
+                        keepRatio: false,
                         borderStroke: '#4F46E5',
                         borderStrokeWidth: 2,
                         anchorStroke: '#4F46E5',
@@ -2367,8 +2424,9 @@
 
                     // Re-add transformer
                     this.transformer = new Konva.Transformer({
-                        enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+                        enabledAnchors: ['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right'],
                         rotateEnabled: true,
+                        keepRatio: false,
                         borderStroke: '#4F46E5',
                         borderStrokeWidth: 2,
                         anchorStroke: '#4F46E5',
