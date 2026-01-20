@@ -100,17 +100,10 @@
                         Delete
                     </button>
 
-                    <button @click="exportSVG" type="button" class="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Export as SVG image">
+                    <button @click="showExportModal = true" type="button" class="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Export layout">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                         </svg>
-                        SVG
-                    </button>
-                    <button @click="exportJSON" type="button" class="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Export as JSON backup">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                        </svg>
-                        JSON
                     </button>
                 </div>
             </div>
@@ -252,6 +245,36 @@
                     <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Shift</kbd>+Arrow Move section (10px)</span>
                     <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Scroll</kbd> Zoom</span>
                     <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-sm">Drag</kbd> Pan canvas</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- Export Modal --}}
+        <div x-show="showExportModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showExportModal = false" @keydown.escape.window="showExportModal = false">
+            <div x-show="showExportModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="w-full max-w-md p-6 bg-white rounded-lg shadow-xl">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Export Layout</h3>
+                    <button @click="showExportModal = false" type="button" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <button @click="exportSVG(); showExportModal = false" type="button" class="flex flex-col items-center gap-3 p-6 transition border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 group">
+                        <svg class="w-12 h-12 text-gray-400 transition group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="text-sm font-medium text-gray-700 group-hover:text-blue-700">Export SVG</span>
+                        <span class="text-xs text-gray-500">Vector image format</span>
+                    </button>
+                    <button @click="exportJSON(); showExportModal = false" type="button" class="flex flex-col items-center gap-3 p-6 transition border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 group">
+                        <svg class="w-12 h-12 text-gray-400 transition group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="text-sm font-medium text-gray-700 group-hover:text-green-700">Export JSON</span>
+                        <span class="text-xs text-gray-500">Backup data format</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -444,15 +467,12 @@
                 rectSelectionStart: null,
                 isRectSelecting: false,
 
-                // Section transform tracking (for rotating seats with section)
-                sectionTransformStartRotation: null,
-                transformingSectionId: null,
-                transformSectionWidth: null,
-                transformSectionHeight: null,
-
                 // Background controls toggle
                 showBackgroundControls: false,
                 backgroundVisible: true,
+
+                // Export modal
+                showExportModal: false,
 
                 init() {
                     this.createStage();
@@ -538,10 +558,10 @@
                     }
                 },
 
-                // Select all seats
+                // Select all seats (seats are now children of section groups in the main layer)
                 selectAllSeats() {
                     this.clearSelection();
-                    this.seatsLayer.find('.seat').forEach(seat => {
+                    this.layer.find('.seat').forEach(seat => {
                         const seatId = seat.getAttr('seatId');
                         if (seatId) {
                             this.selectedSeats.push({ id: seatId, node: seat });
@@ -549,7 +569,7 @@
                             seat.strokeWidth(3);
                         }
                     });
-                    this.seatsLayer.batchDraw();
+                    this.layer.batchDraw();
                 },
 
                 // Statistics functions
@@ -827,7 +847,7 @@
                     // Mouse down for box selection
                     this.stage.on('mousedown', (e) => {
                         // Ctrl+drag for rectangle selection in any mode
-                        if (e.evt.ctrlKey && (e.target === this.stage || e.target.getLayer() === this.backgroundLayer || e.target.getLayer() === this.seatsLayer)) {
+                        if (e.evt.ctrlKey && (e.target === this.stage || e.target.getLayer() === this.backgroundLayer || e.target.getLayer() === this.layer)) {
                             this.startRectSelection(e);
                             return;
                         }
@@ -836,7 +856,7 @@
                             this.startBoxSelection(e);
                         }
                         // Rectangle selection for seats (without Ctrl, in selectseats mode)
-                        if (this.drawMode === 'selectseats' && (e.target === this.stage || e.target.getLayer() === this.backgroundLayer || e.target.getLayer() === this.seatsLayer)) {
+                        if (this.drawMode === 'selectseats' && (e.target === this.stage || e.target.getLayer() === this.backgroundLayer || e.target.getLayer() === this.layer)) {
                             this.startRectSelection(e);
                         }
                     });
@@ -1146,8 +1166,8 @@
                         this.clearSelection();
                     }
 
-                    // Find all seats within selection on seatsLayer
-                    this.seatsLayer.find('.seat').forEach(seat => {
+                    // Find all seats within selection (seats are children of section groups)
+                    this.layer.find('.seat').forEach(seat => {
                         const seatBox = seat.getClientRect();
 
                         // Check if seat is within selection box
@@ -1166,7 +1186,7 @@
                     this.rectSelectionBox = null;
                     this.rectSelectionStart = null;
                     this.drawLayer.batchDraw();
-                    this.seatsLayer.batchDraw();
+                    this.layer.batchDraw();
                 },
 
                 clearSelection() {
@@ -1239,8 +1259,8 @@
                 },
 
                 highlightSelectedRows() {
-                    // Highlight seats belonging to selected rows
-                    this.seatsLayer.find('.seat').forEach(seat => {
+                    // Highlight seats belonging to selected rows (seats are children of section groups)
+                    this.layer.find('.seat').forEach(seat => {
                         const seatData = this.getSeatDataById(seat.getAttr('seatId'));
                         if (seatData) {
                             const isRowSelected = this.selectedRows.some(r => r.rowId === seatData.rowId);
@@ -1253,7 +1273,7 @@
                             }
                         }
                     });
-                    this.seatsLayer.batchDraw();
+                    this.layer.batchDraw();
                 },
 
                 getSeatDataById(seatId) {
@@ -1528,7 +1548,7 @@
                         });
                     }
 
-                    // Label
+                    // Label is hidden - only visible in tooltip
                     const label = new Konva.Text({
                         text: `${section.section_code || ''} - ${section.name}`,
                         fontSize: 14,
@@ -1537,6 +1557,7 @@
                         padding: 8,
                         align: 'center',
                         width: section.width || 200,
+                        visible: false, // Hidden - name shown in tooltip only
                     });
 
                     group.add(backgroundShape);
@@ -1564,44 +1585,18 @@
                         imageObj.src = imagePath;
                     }
 
-                    // Draw seats on separate layer with absolute coordinates (skip for decorative zones)
+                    // Draw seats INSIDE the section group with local coordinates (skip for decorative zones)
+                    // This way seats automatically rotate with the section
                     if (!isDecorativeZone && section.rows && section.rows.length > 0) {
-                        const sectionX = section.x_position || 0;
-                        const sectionY = section.y_position || 0;
-                        const sectionW = section.width || 200;
-                        const sectionH = section.height || 150;
-                        const rotation = (section.rotation || 0) * Math.PI / 180;
-                        const cosR = Math.cos(rotation);
-                        const sinR = Math.sin(rotation);
-
-                        // Section center in local coordinates (relative to section origin)
-                        const localCenterX = sectionW / 2;
-                        const localCenterY = sectionH / 2;
-
                         section.rows.forEach(row => {
                             if (row.seats && row.seats.length > 0) {
                                 row.seats.forEach(seat => {
-                                    const localX = parseFloat(seat.x || 0);
-                                    const localY = parseFloat(seat.y || 0);
-
-                                    // Calculate position relative to section center
-                                    const relX = localX - localCenterX;
-                                    const relY = localY - localCenterY;
-
-                                    // Apply rotation around section center
-                                    const rotatedX = relX * cosR - relY * sinR;
-                                    const rotatedY = relX * sinR + relY * cosR;
-
-                                    // Calculate absolute position (section position + rotated offset from center)
-                                    const absoluteX = sectionX + localCenterX + rotatedX;
-                                    const absoluteY = sectionY + localCenterY + rotatedY;
-
-                                    const seatShape = this.createSeatAbsolute(seat, seatColor, section.id, absoluteX, absoluteY);
-                                    this.seatsLayer.add(seatShape);
+                                    // Create seat with local coordinates (relative to section origin)
+                                    const seatShape = this.createSeat(seat, seatColor, section.id);
+                                    group.add(seatShape);
                                 });
                             }
                         });
-                        this.seatsLayer.batchDraw();
                     }
 
                     // Add bounding box for selection highlight
@@ -1638,43 +1633,7 @@
                         }
                     });
 
-                    // Store initial position on drag start
-                    group.on('dragstart', () => {
-                        this.sectionDragStartPos = { x: group.x(), y: group.y() };
-                        this.draggingSectionId = section.id;
-
-                        // Store original positions for all seats in this section
-                        this.seatsLayer.find('.seat').forEach(seat => {
-                            // Compare as numbers to avoid type issues
-                            if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
-                                seat.setAttr('dragStartX', seat.x());
-                                seat.setAttr('dragStartY', seat.y());
-                            }
-                        });
-                    });
-
-                    // Move seats with section during drag
-                    group.on('drag', () => {
-                        if (this.sectionDragStartPos && this.draggingSectionId === section.id) {
-                            const deltaX = group.x() - this.sectionDragStartPos.x;
-                            const deltaY = group.y() - this.sectionDragStartPos.y;
-
-                            // Move all seats belonging to this section
-                            this.seatsLayer.find('.seat').forEach(seat => {
-                                if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
-                                    const startX = seat.getAttr('dragStartX');
-                                    const startY = seat.getAttr('dragStartY');
-                                    if (startX !== undefined && startY !== undefined) {
-                                        seat.x(startX + deltaX);
-                                        seat.y(startY + deltaY);
-                                    }
-                                }
-                            });
-                            this.seatsLayer.batchDraw();
-                        }
-                    });
-
-                    // Save on drag end
+                    // Simple drag end handler - seats are children of group, move automatically
                     group.on('dragend', () => {
                         // Apply snap to grid if enabled
                         const snappedPos = this.snapPosition({
@@ -1683,32 +1642,6 @@
                         });
                         group.position(snappedPos);
 
-                        // Calculate final delta with snap
-                        if (this.sectionDragStartPos && this.draggingSectionId === section.id) {
-                            const finalDeltaX = snappedPos.x - this.sectionDragStartPos.x;
-                            const finalDeltaY = snappedPos.y - this.sectionDragStartPos.y;
-
-                            // Update final seat positions with snap applied
-                            this.seatsLayer.find('.seat').forEach(seat => {
-                                if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
-                                    const startX = seat.getAttr('dragStartX');
-                                    const startY = seat.getAttr('dragStartY');
-                                    if (startX !== undefined && startY !== undefined) {
-                                        seat.x(startX + finalDeltaX);
-                                        seat.y(startY + finalDeltaY);
-                                    }
-                                    // Clear drag start attrs
-                                    seat.setAttr('dragStartX', undefined);
-                                    seat.setAttr('dragStartY', undefined);
-                                }
-                            });
-                            this.seatsLayer.batchDraw();
-                        }
-
-                        // Clear drag tracking
-                        this.sectionDragStartPos = null;
-                        this.draggingSectionId = null;
-
                         this.saveSection(section.id, {
                             x_position: Math.round(snappedPos.x),
                             y_position: Math.round(snappedPos.y),
@@ -1716,95 +1649,7 @@
                         this.layer.batchDraw();
                     });
 
-                    // Store initial state on transform start
-                    group.on('transformstart', () => {
-                        this.sectionTransformStartRotation = group.rotation();
-                        this.transformingSectionId = section.id;
-
-                        // Store section dimensions at transform start
-                        const width = backgroundShape.width ? backgroundShape.width() : (section.width || 200);
-                        const height = backgroundShape.height ? backgroundShape.height() : (section.height || 150);
-                        this.transformSectionWidth = width;
-                        this.transformSectionHeight = height;
-
-                        // Calculate current rotation in radians (to reverse it)
-                        const currentRotationRad = (this.sectionTransformStartRotation || 0) * Math.PI / 180;
-                        const cosR = Math.cos(-currentRotationRad); // Negative to reverse
-                        const sinR = Math.sin(-currentRotationRad);
-
-                        // Local center in section coordinates
-                        const localCenterX = width / 2;
-                        const localCenterY = height / 2;
-
-                        // Section position (group position)
-                        const sectionX = group.x();
-                        const sectionY = group.y();
-
-                        // Absolute center position (accounts for rotation via Konva transform)
-                        const transform = group.getAbsoluteTransform();
-                        const centerPoint = transform.point({x: localCenterX, y: localCenterY});
-
-                        // For each seat, calculate and store its LOCAL position (in section coordinates, before rotation)
-                        this.seatsLayer.find('.seat').forEach(seat => {
-                            if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
-                                // Current absolute position
-                                const absX = seat.x();
-                                const absY = seat.y();
-
-                                // Position relative to absolute center
-                                const relX = absX - centerPoint.x;
-                                const relY = absY - centerPoint.y;
-
-                                // Reverse the rotation to get back to local coordinates
-                                const localRelX = relX * cosR - relY * sinR;
-                                const localRelY = relX * sinR + relY * cosR;
-
-                                // Store LOCAL position relative to center (before rotation)
-                                seat.setAttr('transformLocalX', localRelX);
-                                seat.setAttr('transformLocalY', localRelY);
-                            }
-                        });
-                    });
-
-                    // Update seats during transform
-                    group.on('transform', () => {
-                        if (this.transformingSectionId !== section.id) return;
-
-                        // Get CURRENT rotation and convert to radians
-                        const currentRotation = group.rotation();
-                        const rotationRad = currentRotation * Math.PI / 180;
-                        const cosR = Math.cos(rotationRad);
-                        const sinR = Math.sin(rotationRad);
-
-                        // Get current absolute center position
-                        const width = this.transformSectionWidth;
-                        const height = this.transformSectionHeight;
-                        const localCenterX = width / 2;
-                        const localCenterY = height / 2;
-
-                        const transform = group.getAbsoluteTransform();
-                        const currentCenter = transform.point({x: localCenterX, y: localCenterY});
-
-                        this.seatsLayer.find('.seat').forEach(seat => {
-                            if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
-                                const localX = seat.getAttr('transformLocalX');
-                                const localY = seat.getAttr('transformLocalY');
-
-                                if (localX !== undefined && localY !== undefined) {
-                                    // Apply FULL current rotation to local position
-                                    const rotatedX = localX * cosR - localY * sinR;
-                                    const rotatedY = localX * sinR + localY * cosR;
-
-                                    // Position at current center + rotated offset
-                                    seat.x(currentCenter.x + rotatedX);
-                                    seat.y(currentCenter.y + rotatedY);
-                                }
-                            }
-                        });
-                        this.seatsLayer.batchDraw();
-                    });
-
-                    // Save on transform end
+                    // Simplified transform end handler - seats are children and rotate automatically
                     group.on('transformend', () => {
                         // Get current dimensions from the background shape
                         const currentWidth = backgroundShape.width ? backgroundShape.width() : (section.width || 200);
@@ -1815,20 +1660,6 @@
                         const scaleY = group.scaleY();
                         const newWidth = Math.round(currentWidth * Math.abs(scaleX));
                         const newHeight = Math.round(currentHeight * Math.abs(scaleY));
-
-                        // Clear transform tracking attributes from seats
-                        this.seatsLayer.find('.seat').forEach(seat => {
-                            if (Number(seat.getAttr('sectionId')) === Number(section.id)) {
-                                seat.setAttr('transformLocalX', undefined);
-                                seat.setAttr('transformLocalY', undefined);
-                            }
-                        });
-
-                        // Clear transform tracking
-                        this.sectionTransformStartRotation = null;
-                        this.transformingSectionId = null;
-                        this.transformSectionWidth = null;
-                        this.transformSectionHeight = null;
 
                         // Only update dimensions if they are valid (> 0)
                         if (newWidth > 0 && newHeight > 0) {

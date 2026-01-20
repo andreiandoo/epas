@@ -1598,8 +1598,8 @@ class DesignerSeatingLayout extends Page
         // Get section properties
         $sectionWidth = $section->width ?? 200;
         $sectionHeight = $section->height ?? 150;
-        $sectionX = $section->x ?? 0;
-        $sectionY = $section->y ?? 0;
+        $sectionX = $section->x_position ?? 0;
+        $sectionY = $section->y_position ?? 0;
         $rotation = $section->rotation ?? 0;
 
         // Calculate section center (pivot point for rotation)
