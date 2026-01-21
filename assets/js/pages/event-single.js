@@ -1628,10 +1628,10 @@ const EventPage = {
                 '<div class="flex-1 flex overflow-hidden">' +
                     // Left sidebar - ticket types
                     '<div class="w-48 lg:w-64 border-r border-border bg-white overflow-y-auto hidden md:block" id="seat-modal-sidebar">' +
-                        '<div class="p-3">' +
-                            '<h3 class="font-bold text-secondary mb-3 text-sm">Tipuri de bilete</h3>' +
-                            '<div id="seat-modal-ticket-types" class="space-y-2"></div>' +
+                        '<div class="p-4 border-b border-border">' +
+                            '<h3 class="font-bold text-secondary text-sm">Tipuri de bilete</h3>' +
                         '</div>' +
+                        '<div id="seat-modal-ticket-types" class="space-y-2"></div>' +
                     '</div>' +
                     // Map container
                     '<div class="flex-1 flex flex-col bg-surface/50 overflow-hidden">' +
@@ -1665,7 +1665,7 @@ const EventPage = {
                     '</div>' +
                     // Right sidebar - selected tickets
                     '<div class="w-64 lg:w-80 border-l border-border bg-white overflow-y-auto hidden lg:flex flex-col" id="seat-selected-sidebar">' +
-                        '<div class="p-3 border-b border-border">' +
+                        '<div class="py-4 px-3 border-b border-border">' +
                             '<h3 class="font-bold text-secondary text-sm" id="selected-tickets-count-header">0 bilete</h3>' +
                         '</div>' +
                         '<div id="seat-selected-tickets" class="flex-1 overflow-y-auto p-3 space-y-2"></div>' +
@@ -1687,10 +1687,10 @@ const EventPage = {
                     '</div>' +
                 '</div>' +
                 // Legend - price tiers (only Selectat and Ocupat)
-                '<div class="px-4 md:px-6 py-2 border-t border-border bg-white">' +
+                '<div class="px-4 md:px-6 py-4 border-t border-border bg-white">' +
                     '<div class="flex flex-wrap items-center justify-between gap-3">' +
                         '<div class="flex flex-wrap items-center gap-3 md:gap-4 text-xs md:text-sm">' +
-                            '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-red-500"></span> Selectat</div>' +
+                            '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded" style="background-color: #a51c30;"></span> Selectat</div>' +
                             '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-300"></span> Ocupat</div>' +
                         '</div>' +
                         '<div id="price-legend" class="flex flex-wrap items-center gap-3 text-xs md:text-sm"></div>' +
@@ -1954,9 +1954,12 @@ const EventPage = {
         var canvasW = layout.canvas_width || 1920;
         var canvasH = layout.canvas_height || 1080;
 
-        // Build SVG with tooltip styles
+        // Build SVG with tooltip styles and seat shapes
         var svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" class="w-full h-full" style="min-width: ' + canvasW + 'px; min-height: ' + canvasH + 'px;" preserveAspectRatio="xMidYMid meet">';
-        svg += '<style>.seat-hover:hover rect { stroke-width: 3; filter: brightness(1.1); } .seat-hover { transition: all 0.15s; }</style>';
+        svg += '<style>' +
+            '.seat-hover { transition: all 0.2s ease; }' +
+            '.seat-hover:hover { transform: scale(1.15); filter: brightness(1.2); }' +
+        '</style>';
 
         // Background image if exists
         if (layout.background_image) {
@@ -1994,11 +1997,16 @@ const EventPage = {
             if (section.rows) {
                 // Use metadata values if available, with fallbacks
                 var metadata = section.metadata || {};
-                var seatSize = metadata.seat_size || 18;
-                var seatSpacing = metadata.seat_spacing || 20;
-                var rowSpacing = metadata.row_spacing || 25;
+                var seatSpacing = metadata.seat_spacing || 28;
+                var rowSpacing = metadata.row_spacing || 28;
                 var padding = 10;
                 var startY = section.y + padding;
+
+                // Seat dimensions: 24x20 with 4px rounded top corners
+                var seatW = 24;
+                var seatH = 20;
+                var cornerR = 4;
+                var bottomH = 4; // 3D bottom effect height
 
                 section.rows.forEach(function(row, rowIndex) {
                     if (row.seats) {
@@ -2006,7 +2014,6 @@ const EventPage = {
 
                         row.seats.forEach(function(seat, seatIndex) {
                             // Always calculate positions based on metadata spacing
-                            // This ensures proper spacing regardless of stored x/y values
                             var seatX = startX + seatIndex * seatSpacing;
                             var seatY = startY + rowIndex * rowSpacing;
 
@@ -2017,12 +2024,11 @@ const EventPage = {
                             var seatColor, cursor, isClickable;
 
                             if (!isAllowed) {
-                                // Section not available for this ticket type
                                 seatColor = '#E5E7EB'; // Light gray
                                 cursor = 'not-allowed';
                                 isClickable = false;
                             } else if (isSelected) {
-                                seatColor = '#EF4444'; // Selected - red
+                                seatColor = '#a51c30'; // Selected - red
                                 cursor = 'pointer';
                                 isClickable = true;
                             } else if (status === 'available') {
@@ -2042,8 +2048,7 @@ const EventPage = {
                             var clickHandler = isClickable ?
                                 'onclick="EventPage.toggleSeat(\'' + ticketTypeId + '\', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\')"' : '';
 
-                            var strokeColor = isSelected ? '#B91C1C' : (isAllowed && status === 'available' ? '#16A34A' : '#D1D5DB');
-                            var strokeWidth = isSelected ? '2' : '1';
+                            var strokeColor = isSelected ? '#7a141f' : (isAllowed && status === 'available' ? '#16A34A' : '#D1D5DB');
 
                             // Tooltip text
                             var tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
@@ -2055,9 +2060,24 @@ const EventPage = {
                                 tooltipText += ' (rezervat)';
                             }
 
-                            svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + '">' +
+                            // SVG path for seat with rounded top corners only
+                            var seatPath = 'M' + seatX + ',' + (seatY + seatH) +
+                                ' L' + seatX + ',' + (seatY + cornerR) +
+                                ' A' + cornerR + ',' + cornerR + ' 0 0 1 ' + (seatX + cornerR) + ',' + seatY +
+                                ' L' + (seatX + seatW - cornerR) + ',' + seatY +
+                                ' A' + cornerR + ',' + cornerR + ' 0 0 1 ' + (seatX + seatW) + ',' + (seatY + cornerR) +
+                                ' L' + (seatX + seatW) + ',' + (seatY + seatH) +
+                                ' Z';
+
+                            // 3D bottom effect - small rect below main seat
+                            var bottomX = seatX + 2;
+                            var bottomY = seatY + seatH;
+                            var bottomW = seatW - 4;
+
+                            svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + '; transform-origin: ' + (seatX + seatW/2) + 'px ' + (seatY + seatH/2) + 'px;">' +
                                 '<title>' + tooltipText + '</title>' +
-                                '<rect x="' + seatX + '" y="' + seatY + '" width="' + seatSize + '" height="' + seatSize + '" rx="3" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '"/>' +
+                                '<rect x="' + bottomX + '" y="' + bottomY + '" width="' + bottomW + '" height="' + bottomH + '" rx="2" fill="' + seatColor + '" style="filter: brightness(0.7);"/>' +
+                                '<path d="' + seatPath + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="1"/>' +
                             '</g>';
                         });
                     }
@@ -2090,7 +2110,10 @@ const EventPage = {
         var canvasH = layout.canvas_height || 1080;
 
         var svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" class="w-full h-full" style="min-width: ' + canvasW + 'px; min-height: ' + canvasH + 'px;" preserveAspectRatio="xMidYMid meet">';
-        svg += '<style>.seat-hover:hover rect { stroke-width: 3; filter: brightness(1.1); } .seat-hover { transition: all 0.15s; }</style>';
+        svg += '<style>' +
+            '.seat-hover { transition: all 0.2s ease; }' +
+            '.seat-hover:hover { transform: scale(1.15); filter: brightness(1.2); }' +
+        '</style>';
 
         // Background image if exists
         if (layout.background_image) {
@@ -2127,11 +2150,16 @@ const EventPage = {
             if (section.rows) {
                 // Use metadata values if available, with fallbacks
                 var metadata = section.metadata || {};
-                var seatSize = metadata.seat_size || 18;
-                var seatSpacing = metadata.seat_spacing || 20;
-                var rowSpacing = metadata.row_spacing || 25;
+                var seatSpacing = metadata.seat_spacing || 28;
+                var rowSpacing = metadata.row_spacing || 28;
                 var padding = 10;
                 var startY = section.y + padding;
+
+                // Seat dimensions: 24x20 with 4px rounded top corners
+                var seatW = 24;
+                var seatH = 20;
+                var cornerR = 4;
+                var bottomH = 4; // 3D bottom effect height
 
                 section.rows.forEach(function(row, rowIndex) {
                     if (row.seats) {
@@ -2139,7 +2167,6 @@ const EventPage = {
 
                         row.seats.forEach(function(seat, seatIndex) {
                             // Always calculate positions based on metadata spacing
-                            // This ensures proper spacing regardless of stored x/y values
                             var seatX = startX + seatIndex * seatSpacing;
                             var seatY = startY + rowIndex * rowSpacing;
 
@@ -2153,7 +2180,7 @@ const EventPage = {
                                 cursor = 'not-allowed';
                                 isClickable = false;
                             } else if (isSelected) {
-                                seatColor = '#3B82F6';
+                                seatColor = '#a51c30'; // Selected - red
                                 cursor = 'pointer';
                                 isClickable = true;
                             } else if (status === 'available') {
@@ -2174,8 +2201,7 @@ const EventPage = {
                             var clickHandler = isClickable ?
                                 'onclick="EventPage.toggleSeatAuto(' + section.id + ', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\')"' : '';
 
-                            var strokeColor = isSelected ? '#B91C1C' : (isAssigned && status === 'available' ? '#16A34A' : '#D1D5DB');
-                            var strokeWidth = isSelected ? '2' : '1';
+                            var strokeColor = isSelected ? '#7a141f' : (isAssigned && status === 'available' ? '#16A34A' : '#D1D5DB');
 
                             var tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
                             if (ticketTypesForSection.length > 0) {
@@ -2189,9 +2215,24 @@ const EventPage = {
                                 tooltipText += ' (rezervat)';
                             }
 
-                            svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + '">' +
+                            // SVG path for seat with rounded top corners only
+                            var seatPath = 'M' + seatX + ',' + (seatY + seatH) +
+                                ' L' + seatX + ',' + (seatY + cornerR) +
+                                ' A' + cornerR + ',' + cornerR + ' 0 0 1 ' + (seatX + cornerR) + ',' + seatY +
+                                ' L' + (seatX + seatW - cornerR) + ',' + seatY +
+                                ' A' + cornerR + ',' + cornerR + ' 0 0 1 ' + (seatX + seatW) + ',' + (seatY + cornerR) +
+                                ' L' + (seatX + seatW) + ',' + (seatY + seatH) +
+                                ' Z';
+
+                            // 3D bottom effect - small rect below main seat
+                            var bottomX = seatX + 2;
+                            var bottomY = seatY + seatH;
+                            var bottomW = seatW - 4;
+
+                            svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + '; transform-origin: ' + (seatX + seatW/2) + 'px ' + (seatY + seatH/2) + 'px;">' +
                                 '<title>' + tooltipText + '</title>' +
-                                '<rect x="' + seatX + '" y="' + seatY + '" width="' + seatSize + '" height="' + seatSize + '" rx="3" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '"/>' +
+                                '<rect x="' + bottomX + '" y="' + bottomY + '" width="' + bottomW + '" height="' + bottomH + '" rx="2" fill="' + seatColor + '" style="filter: brightness(0.7);"/>' +
+                                '<path d="' + seatPath + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="1"/>' +
                             '</g>';
                         });
                     }
