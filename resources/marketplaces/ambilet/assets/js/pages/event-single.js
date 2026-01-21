@@ -1578,6 +1578,15 @@ const EventPage = {
         // Reset zoom
         this.mapZoom = 1;
 
+        // Render ticket types in sidebar
+        this.renderModalTicketTypes(ticketTypeId);
+
+        // Render selected tickets panel
+        this.renderSelectedTicketsPanel();
+
+        // Render price legend
+        this.renderPriceLegend();
+
         // Render the seating map with ALL assigned sections
         this.renderSeatingMapAllSections(allAssignedSectionIds);
 
@@ -1617,10 +1626,10 @@ const EventPage = {
                 '</div>' +
                 // Content area with sidebar and map
                 '<div class="flex-1 flex overflow-hidden">' +
-                    // Sidebar - ticket types
-                    '<div class="w-64 lg:w-80 border-r border-border bg-white overflow-y-auto hidden md:block" id="seat-modal-sidebar">' +
-                        '<div class="p-4">' +
-                            '<h3 class="font-bold text-secondary mb-3">Tipuri de bilete</h3>' +
+                    // Left sidebar - ticket types
+                    '<div class="w-48 lg:w-64 border-r border-border bg-white overflow-y-auto hidden md:block" id="seat-modal-sidebar">' +
+                        '<div class="p-3">' +
+                            '<h3 class="font-bold text-secondary mb-3 text-sm">Tipuri de bilete</h3>' +
                             '<div id="seat-modal-ticket-types" class="space-y-2"></div>' +
                         '</div>' +
                     '</div>' +
@@ -1654,14 +1663,27 @@ const EventPage = {
                             '</div>' +
                         '</div>' +
                     '</div>' +
+                    // Right sidebar - selected tickets
+                    '<div class="w-64 lg:w-80 border-l border-border bg-white overflow-y-auto hidden lg:flex flex-col" id="seat-selected-sidebar">' +
+                        '<div class="p-3 border-b border-border">' +
+                            '<h3 class="font-bold text-secondary text-sm" id="selected-tickets-count-header">0 bilete</h3>' +
+                        '</div>' +
+                        '<div id="seat-selected-tickets" class="flex-1 overflow-y-auto p-3 space-y-2"></div>' +
+                        '<div class="p-3 border-t border-border bg-surface/30">' +
+                            '<button onclick="EventPage.confirmSeatSelection()" class="w-full px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Comandă</button>' +
+                        '</div>' +
+                    '</div>' +
                 '</div>' +
-                // Legend
+                // Legend - price tiers
                 '<div class="px-4 md:px-6 py-2 border-t border-border bg-white">' +
-                    '<div class="flex flex-wrap items-center justify-center gap-3 md:gap-4 text-xs md:text-sm">' +
-                        '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-green-500"></span> Disponibil</div>' +
-                        '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-primary"></span> Selectat</div>' +
-                        '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-300"></span> Ocupat</div>' +
-                        '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-100 border border-gray-300"></span> Indisponibil</div>' +
+                    '<div class="flex flex-wrap items-center justify-between gap-3">' +
+                        '<div class="flex flex-wrap items-center gap-3 md:gap-4 text-xs md:text-sm">' +
+                            '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-green-500"></span> Disponibil</div>' +
+                            '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-primary"></span> Selectat</div>' +
+                            '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-300"></span> Ocupat</div>' +
+                            '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-100 border border-gray-300"></span> Indisponibil</div>' +
+                        '</div>' +
+                        '<div id="price-legend" class="flex flex-wrap items-center gap-3 text-xs md:text-sm"></div>' +
                     '</div>' +
                 '</div>' +
                 // Footer
@@ -1785,6 +1807,106 @@ const EventPage = {
     },
 
     /**
+     * Render selected tickets panel in right sidebar
+     */
+    renderSelectedTicketsPanel() {
+        var self = this;
+        var container = document.getElementById('seat-selected-tickets');
+        var headerEl = document.getElementById('selected-tickets-count-header');
+        if (!container) return;
+
+        var totalCount = 0;
+        var html = '';
+
+        // Group by ticket type
+        this.ticketTypes.filter(function(tt) {
+            return tt.has_seating && !tt.is_sold_out;
+        }).forEach(function(tt) {
+            var seats = self.selectedSeats[tt.id] || [];
+            if (seats.length === 0) return;
+
+            totalCount += seats.length;
+
+            // Category header
+            html += '<div class="mb-2">' +
+                '<div class="flex items-center justify-between mb-1">' +
+                    '<span class="text-xs font-semibold text-secondary">' + tt.name + '</span>' +
+                    '<span class="text-xs font-bold text-primary">' + tt.price.toFixed(0) + ' lei</span>' +
+                '</div>';
+
+            // Individual seats
+            seats.forEach(function(seat, index) {
+                html += '<div class="flex items-center justify-between p-2 bg-surface rounded-lg mb-1">' +
+                    '<div class="text-xs">' +
+                        '<div class="font-medium text-secondary">' + seat.section + '</div>' +
+                        '<div class="text-muted">Rând ' + seat.row + ', Loc ' + seat.seat + '</div>' +
+                    '</div>' +
+                    '<button onclick="EventPage.removeSeat(\'' + tt.id + '\', ' + index + ')" class="p-1 text-red-500 hover:bg-red-50 rounded transition-colors" title="Șterge">' +
+                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+                    '</button>' +
+                '</div>';
+            });
+
+            html += '</div>';
+        });
+
+        container.innerHTML = html || '<p class="text-xs text-muted text-center py-4">Selectează locuri pe hartă</p>';
+
+        if (headerEl) {
+            headerEl.textContent = totalCount + ' bilet' + (totalCount !== 1 ? 'e' : '');
+        }
+    },
+
+    /**
+     * Remove a seat from selection
+     */
+    removeSeat(ticketTypeId, index) {
+        if (this.selectedSeats[ticketTypeId] && this.selectedSeats[ticketTypeId][index]) {
+            this.selectedSeats[ticketTypeId].splice(index, 1);
+            this.quantities[ticketTypeId] = this.selectedSeats[ticketTypeId].length;
+
+            // Re-render everything
+            var allAssignedSectionIds = Object.keys(this.sectionToTicketTypeMap).map(function(id) { return parseInt(id); });
+            this.renderSeatingMapAllSections(allAssignedSectionIds);
+            this.renderSelectedTicketsPanel();
+            this.renderModalTicketTypes(this.currentTicketTypeId);
+            this.updateSeatSelectionSummary();
+        }
+    },
+
+    /**
+     * Render price legend showing ticket type colors
+     */
+    renderPriceLegend() {
+        var container = document.getElementById('price-legend');
+        if (!container) return;
+
+        // Get unique ticket types with seating and their colors
+        var ticketTypesWithSeating = this.ticketTypes.filter(function(tt) {
+            return tt.has_seating && !tt.is_sold_out;
+        });
+
+        if (ticketTypesWithSeating.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        var html = '<span class="font-medium text-muted mr-2">Preț bilete:</span>';
+        html += ticketTypesWithSeating.map(function(tt) {
+            // Use section color if available, otherwise use a default color
+            var color = tt.seating_sections && tt.seating_sections[0] && tt.seating_sections[0].color_hex
+                ? tt.seating_sections[0].color_hex
+                : '#22C55E';
+            return '<div class="flex items-center gap-1">' +
+                '<span class="w-3 h-3 rounded" style="background-color: ' + color + '"></span>' +
+                '<span>' + tt.price.toFixed(0) + ' lei</span>' +
+            '</div>';
+        }).join('');
+
+        container.innerHTML = html;
+    },
+
+    /**
      * Switch to different ticket type in modal
      */
     switchTicketType(ticketTypeId) {
@@ -1848,20 +1970,26 @@ const EventPage = {
 
             // Render seats for this section
             if (section.rows) {
-                var seatSize = 18;
-                var seatGap = 3;
-                var rowGap = 4;
-                var startY = section.y + 4; // Small padding from section top
+                // Use metadata values if available, with fallbacks
+                var metadata = section.metadata || {};
+                var seatSize = metadata.seat_size || 18;
+                var seatSpacing = metadata.seat_spacing || 20;
+                var rowSpacing = metadata.row_spacing || 25;
+                var padding = 10;
+                var startY = section.y + padding;
 
                 section.rows.forEach(function(row, rowIndex) {
                     if (row.seats) {
-                        var startX = section.x + 4; // Small padding from section edge
+                        var startX = section.x + padding;
 
                         row.seats.forEach(function(seat, seatIndex) {
-                            // Calculate position - use stored x/y if available, otherwise calculate from index
-                            // Use parseFloat to ensure numeric addition (API may return strings)
-                            var seatX = seat.x !== null && seat.x !== undefined ? parseFloat(section.x) + parseFloat(seat.x) : startX + seatIndex * (seatSize + seatGap);
-                            var seatY = seat.y !== null && seat.y !== undefined ? parseFloat(section.y) + parseFloat(seat.y) : startY + rowIndex * (seatSize + rowGap);
+                            // Use stored x/y coordinates if available (these are relative to section)
+                            var seatX = seat.x !== null && seat.x !== undefined
+                                ? parseFloat(section.x) + parseFloat(seat.x)
+                                : startX + seatIndex * seatSpacing;
+                            var seatY = seat.y !== null && seat.y !== undefined
+                                ? parseFloat(section.y) + parseFloat(seat.y)
+                                : startY + rowIndex * rowSpacing;
 
                             var isSelected = self.isSeatSelected(ticketTypeId, seat.id);
                             var status = seat.status || 'available';
@@ -1974,18 +2102,26 @@ const EventPage = {
 
             // Render seats
             if (section.rows) {
-                var seatSize = 18;
-                var seatGap = 3;
-                var rowGap = 4;
-                var startY = section.y + 4;
+                // Use metadata values if available, with fallbacks
+                var metadata = section.metadata || {};
+                var seatSize = metadata.seat_size || 18;
+                var seatSpacing = metadata.seat_spacing || 20;
+                var rowSpacing = metadata.row_spacing || 25;
+                var padding = 10;
+                var startY = section.y + padding;
 
                 section.rows.forEach(function(row, rowIndex) {
                     if (row.seats) {
-                        var startX = section.x + 4;
+                        var startX = section.x + padding;
 
                         row.seats.forEach(function(seat, seatIndex) {
-                            var seatX = seat.x !== null && seat.x !== undefined ? parseFloat(section.x) + parseFloat(seat.x) : startX + seatIndex * (seatSize + seatGap);
-                            var seatY = seat.y !== null && seat.y !== undefined ? parseFloat(section.y) + parseFloat(seat.y) : startY + rowIndex * (seatSize + rowGap);
+                            // Use stored x/y coordinates if available (these are relative to section)
+                            var seatX = seat.x !== null && seat.x !== undefined
+                                ? parseFloat(section.x) + parseFloat(seat.x)
+                                : startX + seatIndex * seatSpacing;
+                            var seatY = seat.y !== null && seat.y !== undefined
+                                ? parseFloat(section.y) + parseFloat(seat.y)
+                                : startY + rowIndex * rowSpacing;
 
                             var isSelected = self.isSeatSelectedAny(seat.id);
                             var status = seat.status || 'available';
@@ -2115,9 +2251,11 @@ const EventPage = {
 
         console.log('[EventPage] Selected seats for', tt.name, ':', this.selectedSeats[ticketTypeId]);
 
-        // Re-render map
+        // Re-render map and panels
         var allAssignedSectionIds = Object.keys(this.sectionToTicketTypeMap).map(function(id) { return parseInt(id); });
         this.renderSeatingMapAllSections(allAssignedSectionIds);
+        this.renderSelectedTicketsPanel();
+        this.renderModalTicketTypes(this.currentTicketTypeId);
     },
 
     /**

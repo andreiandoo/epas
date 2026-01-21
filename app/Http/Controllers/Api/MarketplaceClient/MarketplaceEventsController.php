@@ -410,6 +410,8 @@ class MarketplaceEventsController extends BaseController
                         'id' => $s->id,
                         'name' => $s->name,
                         'color' => $s->color_hex,
+                        'color_hex' => $s->color_hex,
+                        'seat_color' => $s->seat_color,
                     ])->values()->toArray();
                 }
 
@@ -1008,11 +1010,19 @@ class MarketplaceEventsController extends BaseController
                 'id' => $section->id,
                 'name' => $section->name,
                 'color' => $section->color_hex,
+                'color_hex' => $section->color_hex,
+                'seat_color' => $section->seat_color,
                 'x' => $section->x_position,
                 'y' => $section->y_position,
                 'width' => $section->width,
                 'height' => $section->height,
                 'rotation' => $section->rotation,
+                'metadata' => $section->metadata ?? [
+                    'seat_size' => 18,
+                    'seat_spacing' => 20,
+                    'row_spacing' => 25,
+                    'seat_shape' => 'circle',
+                ],
                 'rows' => $rows,
             ];
         }
