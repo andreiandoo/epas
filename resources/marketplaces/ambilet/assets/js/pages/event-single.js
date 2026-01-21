@@ -1575,8 +1575,9 @@ const EventPage = {
         // Clear ALL previous seat selections
         this.selectedSeats = {};
 
-        // Reset zoom
+        // Reset zoom and pan
         this.mapZoom = 1;
+        this.mapPan = { x: 0, y: 0 };
 
         // Render ticket types in sidebar
         this.renderModalTicketTypes(ticketTypeId);
@@ -1628,10 +1629,10 @@ const EventPage = {
                 '<div class="flex-1 flex overflow-hidden">' +
                     // Left sidebar - ticket types
                     '<div class="w-48 lg:w-64 border-r border-border bg-white overflow-y-auto hidden md:block" id="seat-modal-sidebar">' +
-                        '<div class="p-3">' +
-                            '<h3 class="font-bold text-secondary mb-3 text-sm">Tipuri de bilete</h3>' +
-                            '<div id="seat-modal-ticket-types" class="space-y-2"></div>' +
+                        '<div class="p-4 border-b border-border">' +
+                            '<h3 class="font-bold text-secondary text-sm">Tipuri de bilete</h3>' +
                         '</div>' +
+                        '<div id="seat-modal-ticket-types" class="flex-1 overflow-y-auto p-3 space-y-2"></div>' +
                     '</div>' +
                     // Map container
                     '<div class="flex-1 flex flex-col bg-surface/50 overflow-hidden">' +
@@ -1653,7 +1654,7 @@ const EventPage = {
                         '</div>' +
                         // Map SVG container
                         '<div class="flex-1 overflow-hidden p-2" id="seat-map-container">' +
-                            '<div id="seat-map-wrapper" class="w-full h-full overflow-auto" style="cursor: grab;">' +
+                            '<div id="seat-map-wrapper" class="w-full h-full overflow-hidden" style="cursor: grab;">' +
                                 '<div id="seat-map-svg" class="inline-block min-w-full min-h-full flex items-center justify-center" style="transform-origin: center center;">' +
                                     '<div class="text-center text-muted">' +
                                         '<svg class="w-12 h-12 mx-auto mb-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>' +
@@ -1709,17 +1710,17 @@ const EventPage = {
             self.zoomMap(delta);
         }, { passive: false });
 
-        // Setup pan with mouse drag
+        // Setup pan with mouse drag (using transform instead of scroll for better zoom support)
         var isDragging = false;
-        var startX, startY, scrollLeft, scrollTop;
+        var startX, startY, startPanX, startPanY;
 
         mapWrapper.addEventListener('mousedown', function(e) {
             isDragging = true;
             mapWrapper.style.cursor = 'grabbing';
-            startX = e.pageX - mapWrapper.offsetLeft;
-            startY = e.pageY - mapWrapper.offsetTop;
-            scrollLeft = mapWrapper.scrollLeft;
-            scrollTop = mapWrapper.scrollTop;
+            startX = e.clientX;
+            startY = e.clientY;
+            startPanX = self.mapPan.x;
+            startPanY = self.mapPan.y;
         });
 
         mapWrapper.addEventListener('mouseleave', function() {
@@ -1735,13 +1736,22 @@ const EventPage = {
         mapWrapper.addEventListener('mousemove', function(e) {
             if (!isDragging) return;
             e.preventDefault();
-            var x = e.pageX - mapWrapper.offsetLeft;
-            var y = e.pageY - mapWrapper.offsetTop;
-            var walkX = (x - startX) * 1.5;
-            var walkY = (y - startY) * 1.5;
-            mapWrapper.scrollLeft = scrollLeft - walkX;
-            mapWrapper.scrollTop = scrollTop - walkY;
+            var dx = e.clientX - startX;
+            var dy = e.clientY - startY;
+            self.mapPan.x = startPanX + dx;
+            self.mapPan.y = startPanY + dy;
+            self.applyMapTransform();
         });
+    },
+
+    /**
+     * Apply map transform (zoom + pan)
+     */
+    applyMapTransform() {
+        var svgContainer = document.getElementById('seat-map-svg');
+        if (svgContainer) {
+            svgContainer.style.transform = 'translate(' + this.mapPan.x + 'px, ' + this.mapPan.y + 'px) scale(' + this.mapZoom + ')';
+        }
     },
 
     /**
@@ -1749,10 +1759,7 @@ const EventPage = {
      */
     zoomMap(delta) {
         this.mapZoom = Math.max(0.5, Math.min(3, this.mapZoom + delta));
-        var svgContainer = document.getElementById('seat-map-svg');
-        if (svgContainer) {
-            svgContainer.style.transform = 'scale(' + this.mapZoom + ')';
-        }
+        this.applyMapTransform();
         document.getElementById('zoom-level').textContent = Math.round(this.mapZoom * 100) + '%';
     },
 
@@ -1761,10 +1768,8 @@ const EventPage = {
      */
     resetMapZoom() {
         this.mapZoom = 1;
-        var svgContainer = document.getElementById('seat-map-svg');
-        if (svgContainer) {
-            svgContainer.style.transform = 'scale(1)';
-        }
+        this.mapPan = { x: 0, y: 0 };
+        this.applyMapTransform();
         document.getElementById('zoom-level').textContent = '100%';
     },
 
@@ -1995,27 +2000,29 @@ const EventPage = {
 
             // Render seats for this section
             if (section.rows) {
-                // Use metadata values if available, with fallbacks
-                var metadata = section.metadata || {};
-                var seatSpacing = metadata.seat_spacing || 28;
-                var rowSpacing = metadata.row_spacing || 28;
-                var padding = 10;
-                var startY = section.y + padding;
-
                 // Seat dimensions: 24x20 with 4px rounded top corners
                 var seatW = 24;
                 var seatH = 20;
                 var cornerR = 4;
                 var bottomH = 4; // 3D bottom effect height
 
+                // Use metadata values as GAP between seats/rows
+                var metadata = section.metadata || {};
+                var seatGap = metadata.seat_spacing || 4; // Gap between seats
+                var rowGap = metadata.row_spacing || 8; // Gap between rows
+                var stepX = seatW + seatGap; // Total horizontal step
+                var stepY = seatH + bottomH + rowGap; // Total vertical step
+                var padding = 10;
+                var startY = section.y + padding;
+
                 section.rows.forEach(function(row, rowIndex) {
                     if (row.seats) {
                         var startX = section.x + padding;
 
                         row.seats.forEach(function(seat, seatIndex) {
-                            // Always calculate positions based on metadata spacing
-                            var seatX = startX + seatIndex * seatSpacing;
-                            var seatY = startY + rowIndex * rowSpacing;
+                            // Calculate positions: seat width + gap
+                            var seatX = startX + seatIndex * stepX;
+                            var seatY = startY + rowIndex * stepY;
 
                             var isSelected = self.isSeatSelected(ticketTypeId, seat.id);
                             var status = seat.status || 'available';
@@ -2148,27 +2155,29 @@ const EventPage = {
 
             // Render seats
             if (section.rows) {
-                // Use metadata values if available, with fallbacks
-                var metadata = section.metadata || {};
-                var seatSpacing = metadata.seat_spacing || 28;
-                var rowSpacing = metadata.row_spacing || 28;
-                var padding = 10;
-                var startY = section.y + padding;
-
                 // Seat dimensions: 24x20 with 4px rounded top corners
                 var seatW = 24;
                 var seatH = 20;
                 var cornerR = 4;
                 var bottomH = 4; // 3D bottom effect height
 
+                // Use metadata values as GAP between seats/rows
+                var metadata = section.metadata || {};
+                var seatGap = metadata.seat_spacing || 4; // Gap between seats
+                var rowGap = metadata.row_spacing || 8; // Gap between rows
+                var stepX = seatW + seatGap; // Total horizontal step
+                var stepY = seatH + bottomH + rowGap; // Total vertical step
+                var padding = 10;
+                var startY = section.y + padding;
+
                 section.rows.forEach(function(row, rowIndex) {
                     if (row.seats) {
                         var startX = section.x + padding;
 
                         row.seats.forEach(function(seat, seatIndex) {
-                            // Always calculate positions based on metadata spacing
-                            var seatX = startX + seatIndex * seatSpacing;
-                            var seatY = startY + rowIndex * rowSpacing;
+                            // Calculate positions: seat width + gap
+                            var seatX = startX + seatIndex * stepX;
+                            var seatY = startY + rowIndex * stepY;
 
                             var isSelected = self.isSeatSelectedAny(seat.id);
                             var status = seat.status || 'available';
