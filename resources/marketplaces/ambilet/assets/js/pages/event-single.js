@@ -2000,14 +2000,15 @@ const EventPage = {
 
             // Render seats for this section
             if (section.rows) {
-                // Seat dimensions: 24x20 with 4px rounded top corners
-                var seatW = 24;
-                var seatH = 20;
-                var cornerR = 4;
-                var bottomH = 4; // 3D bottom effect height
+                // Get seat size from metadata, with aspect ratio 0.83 (width/height)
+                var metadata = section.metadata || {};
+                var seatSize = metadata.seat_size || 20; // Base size from admin
+                var seatH = seatSize;
+                var seatW = Math.round(seatH * 0.83); // Aspect ratio 0.83
+                var cornerR = Math.max(2, Math.round(seatW * 0.17)); // Proportional corner radius
+                var bottomH = Math.max(2, Math.round(seatH * 0.2)); // 3D bottom effect height proportional
 
                 // Use metadata values as GAP between seats/rows
-                var metadata = section.metadata || {};
                 var seatGap = metadata.seat_spacing || 4; // Gap between seats
                 var rowGap = metadata.row_spacing || 8; // Gap between rows
                 var stepX = seatW + seatGap; // Total horizontal step
@@ -2155,14 +2156,15 @@ const EventPage = {
 
             // Render seats
             if (section.rows) {
-                // Seat dimensions: 24x20 with 4px rounded top corners
-                var seatW = 24;
-                var seatH = 20;
-                var cornerR = 4;
-                var bottomH = 4; // 3D bottom effect height
+                // Get seat size from metadata, with aspect ratio 0.83 (width/height)
+                var metadata = section.metadata || {};
+                var seatSize = metadata.seat_size || 20; // Base size from admin
+                var seatH = seatSize;
+                var seatW = Math.round(seatH * 0.83); // Aspect ratio 0.83
+                var cornerR = Math.max(2, Math.round(seatW * 0.17)); // Proportional corner radius
+                var bottomH = Math.max(2, Math.round(seatH * 0.2)); // 3D bottom effect height proportional
 
                 // Use metadata values as GAP between seats/rows
-                var metadata = section.metadata || {};
                 var seatGap = metadata.seat_spacing || 4; // Gap between seats
                 var rowGap = metadata.row_spacing || 8; // Gap between rows
                 var stepX = seatW + seatGap; // Total horizontal step

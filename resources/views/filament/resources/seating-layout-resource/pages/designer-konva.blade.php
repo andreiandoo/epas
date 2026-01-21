@@ -1628,14 +1628,14 @@
                             }
                             // Also update Livewire selectedSection for Edit Section modal (deferred to avoid re-render)
                             if (bb && bb.visible()) {
-                                $wire.set('selectedSection', section.id, false);
+                                $wire.set('selectedSection', section.id);
                             }
                         } else {
                             this.transformer.nodes([group]);
                             this.selectedSection = section.id;
                             this.layer.batchDraw();
                             // Defer Livewire sync to avoid re-render issues - only needed for Edit Section modal
-                            $wire.set('selectedSection', section.id, false);
+                            $wire.set('selectedSection', section.id);
                         }
                     });
 
@@ -1843,7 +1843,7 @@
                                 this.layer.batchDraw();
                             }
                             if (bb && bb.visible()) {
-                                $wire.set('selectedSection', section.id, false);
+                                $wire.set('selectedSection', section.id);
                             }
                         } else {
                             this.transformer.nodes([group]);
