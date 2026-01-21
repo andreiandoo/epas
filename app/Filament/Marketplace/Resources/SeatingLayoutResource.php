@@ -79,14 +79,13 @@ class SeatingLayoutResource extends Resource
                     // SEARCH EXISTING LAYOUTS (only on create page)
                     // ============================================================
                     SC\Section::make('Caută layout-uri existente')
-                        ->description('Caută în toate layout-urile din sistem. Dacă găsești layout-ul dorit, îl poți adăuga ca partener în loc să creezi unul nou.')
                         ->icon('heroicon-o-magnifying-glass')
                         ->extraAttributes(['class' => 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30'])
                         ->visible(fn ($operation) => $operation === 'create')
                         ->columnSpanFull()
                         ->schema([
                             Forms\Components\Select::make('search_existing_layout')
-                                ->label('Caută un layout existent')
+                                ->label('Caută o hartă existentă în biblioteca Tixello')
                                 ->placeholder('Scrie numele layout-ului sau al locației...')
                                 ->searchable()
                                 ->prefixIcon('heroicon-o-magnifying-glass')
@@ -182,8 +181,8 @@ class SeatingLayoutResource extends Resource
                                     }
 
                                     return new HtmlString("
-                                        <div class='p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
-                                            <div class='flex justify-between items-start mb-3'>
+                                        <div class='p-4 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700'>
+                                            <div class='flex items-start justify-between mb-3'>
                                                 <h4 class='text-lg font-semibold text-gray-900 dark:text-white'>{$layout->name}</h4>
                                                 {$statusBadge}
                                             </div>
@@ -285,42 +284,20 @@ class SeatingLayoutResource extends Resource
                         ->schema([
                             Forms\Components\Select::make('venue_id')
                                 ->label('Locație')
-                                ->relationship('venue', 'name')
+                                ->relationship('venue', 'name', fn (Builder $query) => $query->where('marketplace_client_id', static::getMarketplaceClient()?->id))
                                 ->getOptionLabelFromRecordUsing(function ($record) {
                                     $locale = app()->getLocale();
                                     $name = $record->getTranslation('name', $locale) ?? $record->getTranslation('name', 'en') ?? 'Unnamed Venue';
                                     $city = $record->city ?? null;
                                     return $city ? "{$name} ({$city})" : $name;
                                 })
-                                ->getSearchResultsUsing(function (string $search) use ($marketplace) {
-                                    $locale = app()->getLocale();
-                                    $searchLower = strtolower($search);
-
-                                    // Filter venues - only this marketplace's venues
-                                    return Venue::query()
-                                        ->where('marketplace_client_id', $marketplace?->id)
-                                        ->get()
-                                        ->filter(function ($venue) use ($searchLower, $locale) {
-                                            $name = $venue->getTranslation('name', $locale) ?? $venue->getTranslation('name', 'en') ?? '';
-                                            $city = $venue->city ?? '';
-                                            return str_contains(strtolower($name), $searchLower)
-                                                || str_contains(strtolower($city), $searchLower);
-                                        })
-                                        ->take(50)
-                                        ->mapWithKeys(function ($venue) use ($locale) {
-                                            $name = $venue->getTranslation('name', $locale) ?? $venue->getTranslation('name', 'en') ?? 'Unnamed Venue';
-                                            $city = $venue->city ?? null;
-                                            $label = $city ? "{$name} ({$city})" : $name;
-                                            return [$venue->id => $label];
-                                        });
-                                })
-                                ->required()
-                                ->searchable()
+                                ->searchable(['name', 'city'])
                                 ->preload()
+                                ->required()
                                 ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('name')
-                                ->label('Nume layout')
+                                ->label('Nume model hartă')
                                 ->required()
                                 ->maxLength(255)
                                 ->columnSpan(1),

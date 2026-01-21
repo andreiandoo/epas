@@ -1,5 +1,6 @@
 <x-filament-panels::page>
     <div class="space-y-6"
+         wire:ignore.self
          x-data="konvaDesigner()"
          x-init="init()"
          @@keydown.window="handleKeyDown($event)"

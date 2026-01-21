@@ -1579,7 +1579,7 @@ const EventPage = {
                 // Header
                 '<div class="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border">' +
                     '<div>' +
-                        '<h2 class="text-lg md:text-xl font-bold text-secondary">Alege locurile</h2>' +
+                        '<h2 class="text-lg md:text-xl font-bold text-secondary">Alege locurile tale la ' + (this.event?.title || 'eveniment') + '</h2>' +
                         '<p class="text-xs md:text-sm text-muted" id="seat-selection-subtitle">Selectează locurile dorite pe hartă</p>' +
                     '</div>' +
                     '<button onclick="EventPage.closeSeatSelection()" class="p-2 transition-colors rounded-lg hover:bg-surface">' +
