@@ -1670,34 +1670,30 @@ const EventPage = {
                         '</div>' +
                         '<div id="seat-selected-tickets" class="flex-1 overflow-y-auto p-3 space-y-2"></div>' +
                         '<div class="p-3 border-t border-border bg-surface/30">' +
-                            '<button onclick="EventPage.confirmSeatSelection()" class="w-full px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Comandă</button>' +
+                            '<div class="mb-3 text-center">' +
+                                '<span class="text-sm text-muted">Locuri selectate: </span>' +
+                                '<span id="selected-seats-count" class="font-bold text-secondary">0</span>' +
+                                '<span class="mx-2 text-muted">|</span>' +
+                                '<span class="text-sm text-muted">Total: </span>' +
+                                '<span id="selected-seats-total" class="font-bold text-primary">0 lei</span>' +
+                            '</div>' +
+                            '<div class="flex gap-2">' +
+                                '<button onclick="EventPage.confirmSeatSelection()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Comandă</button>' +
+                                '<button onclick="EventPage.clearAllSelections()" class="p-2.5 text-red-500 border border-red-200 rounded-xl hover:bg-red-50 transition-colors" title="Golește coșul">' +
+                                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
+                                '</button>' +
+                            '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
-                // Legend - price tiers
+                // Legend - price tiers (only Selectat and Ocupat)
                 '<div class="px-4 md:px-6 py-2 border-t border-border bg-white">' +
                     '<div class="flex flex-wrap items-center justify-between gap-3">' +
                         '<div class="flex flex-wrap items-center gap-3 md:gap-4 text-xs md:text-sm">' +
-                            '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-green-500"></span> Disponibil</div>' +
-                            '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-primary"></span> Selectat</div>' +
+                            '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-red-500"></span> Selectat</div>' +
                             '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-300"></span> Ocupat</div>' +
-                            '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-100 border border-gray-300"></span> Indisponibil</div>' +
                         '</div>' +
                         '<div id="price-legend" class="flex flex-wrap items-center gap-3 text-xs md:text-sm"></div>' +
-                    '</div>' +
-                '</div>' +
-                // Footer
-                '<div class="flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-3 border-t border-border bg-white gap-3">' +
-                    '<div class="text-center md:text-left">' +
-                        '<span class="text-sm text-muted">Locuri selectate: </span>' +
-                        '<span id="selected-seats-count" class="font-bold text-secondary">0</span>' +
-                        '<span class="mx-2 text-muted">|</span>' +
-                        '<span class="text-sm text-muted">Total: </span>' +
-                        '<span id="selected-seats-total" class="font-bold text-primary">0 lei</span>' +
-                    '</div>' +
-                    '<div class="flex gap-2 md:gap-3">' +
-                        '<button onclick="EventPage.closeSeatSelection()" class="px-4 md:px-6 py-2 text-sm font-semibold text-muted border border-border rounded-xl hover:bg-surface transition-colors">Anulează</button>' +
-                        '<button onclick="EventPage.confirmSeatSelection()" class="px-4 md:px-6 py-2 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Comandă</button>' +
                     '</div>' +
                 '</div>' +
             '</div>';
@@ -1875,6 +1871,28 @@ const EventPage = {
     },
 
     /**
+     * Clear all seat selections
+     */
+    clearAllSelections() {
+        var self = this;
+
+        // Clear all selected seats
+        this.ticketTypes.forEach(function(tt) {
+            if (tt.has_seating) {
+                self.selectedSeats[tt.id] = [];
+                self.quantities[tt.id] = 0;
+            }
+        });
+
+        // Re-render everything
+        var allAssignedSectionIds = Object.keys(this.sectionToTicketTypeMap).map(function(id) { return parseInt(id); });
+        this.renderSeatingMapAllSections(allAssignedSectionIds);
+        this.renderSelectedTicketsPanel();
+        this.renderModalTicketTypes(this.currentTicketTypeId);
+        this.updateSeatSelectionSummary();
+    },
+
+    /**
      * Render price legend showing ticket type colors
      */
     renderPriceLegend() {
@@ -1893,9 +1911,9 @@ const EventPage = {
 
         var html = '<span class="font-medium text-muted mr-2">Preț bilete:</span>';
         html += ticketTypesWithSeating.map(function(tt) {
-            // Use section color if available, otherwise use a default color
-            var color = tt.seating_sections && tt.seating_sections[0] && tt.seating_sections[0].color_hex
-                ? tt.seating_sections[0].color_hex
+            // Use seat_color if available, otherwise use a default color
+            var color = tt.seating_sections && tt.seating_sections[0] && tt.seating_sections[0].seat_color
+                ? tt.seating_sections[0].seat_color
                 : '#22C55E';
             return '<div class="flex items-center gap-1">' +
                 '<span class="w-3 h-3 rounded" style="background-color: ' + color + '"></span>' +
@@ -1962,6 +1980,10 @@ const EventPage = {
             // Create a group for the section with rotation
             svg += '<g' + transform + '>';
 
+            // Section background fill at 5% opacity
+            var sectionBgColor = section.color_hex || '#6B7280';
+            svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionBgColor + '" fill-opacity="0.05" rx="4"/>';
+
             // Section name (positioned ABOVE the section, outside)
             var textY = section.y - 5;
             var textX = section.x + (section.width / 2);
@@ -1983,13 +2005,10 @@ const EventPage = {
                         var startX = section.x + padding;
 
                         row.seats.forEach(function(seat, seatIndex) {
-                            // Use stored x/y coordinates if available (these are relative to section)
-                            var seatX = seat.x !== null && seat.x !== undefined
-                                ? parseFloat(section.x) + parseFloat(seat.x)
-                                : startX + seatIndex * seatSpacing;
-                            var seatY = seat.y !== null && seat.y !== undefined
-                                ? parseFloat(section.y) + parseFloat(seat.y)
-                                : startY + rowIndex * rowSpacing;
+                            // Always calculate positions based on metadata spacing
+                            // This ensures proper spacing regardless of stored x/y values
+                            var seatX = startX + seatIndex * seatSpacing;
+                            var seatY = startY + rowIndex * rowSpacing;
 
                             var isSelected = self.isSeatSelected(ticketTypeId, seat.id);
                             var status = seat.status || 'available';
@@ -2003,7 +2022,7 @@ const EventPage = {
                                 cursor = 'not-allowed';
                                 isClickable = false;
                             } else if (isSelected) {
-                                seatColor = '#3B82F6'; // Selected - primary blue
+                                seatColor = '#EF4444'; // Selected - red
                                 cursor = 'pointer';
                                 isClickable = true;
                             } else if (status === 'available') {
@@ -2023,7 +2042,7 @@ const EventPage = {
                             var clickHandler = isClickable ?
                                 'onclick="EventPage.toggleSeat(\'' + ticketTypeId + '\', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\')"' : '';
 
-                            var strokeColor = isSelected ? '#1D4ED8' : (isAllowed && status === 'available' ? '#16A34A' : '#D1D5DB');
+                            var strokeColor = isSelected ? '#B91C1C' : (isAllowed && status === 'available' ? '#16A34A' : '#D1D5DB');
                             var strokeWidth = isSelected ? '2' : '1';
 
                             // Tooltip text
@@ -2094,6 +2113,10 @@ const EventPage = {
 
             svg += '<g' + transform + '>';
 
+            // Section background fill at 5% opacity
+            var sectionBgColor = section.color_hex || '#6B7280';
+            svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionBgColor + '" fill-opacity="0.05" rx="4"/>';
+
             // Section name
             var textY = section.y - 5;
             var textX = section.x + (section.width / 2);
@@ -2115,13 +2138,10 @@ const EventPage = {
                         var startX = section.x + padding;
 
                         row.seats.forEach(function(seat, seatIndex) {
-                            // Use stored x/y coordinates if available (these are relative to section)
-                            var seatX = seat.x !== null && seat.x !== undefined
-                                ? parseFloat(section.x) + parseFloat(seat.x)
-                                : startX + seatIndex * seatSpacing;
-                            var seatY = seat.y !== null && seat.y !== undefined
-                                ? parseFloat(section.y) + parseFloat(seat.y)
-                                : startY + rowIndex * rowSpacing;
+                            // Always calculate positions based on metadata spacing
+                            // This ensures proper spacing regardless of stored x/y values
+                            var seatX = startX + seatIndex * seatSpacing;
+                            var seatY = startY + rowIndex * rowSpacing;
 
                             var isSelected = self.isSeatSelectedAny(seat.id);
                             var status = seat.status || 'available';
@@ -2154,7 +2174,7 @@ const EventPage = {
                             var clickHandler = isClickable ?
                                 'onclick="EventPage.toggleSeatAuto(' + section.id + ', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\')"' : '';
 
-                            var strokeColor = isSelected ? '#1D4ED8' : (isAssigned && status === 'available' ? '#16A34A' : '#D1D5DB');
+                            var strokeColor = isSelected ? '#B91C1C' : (isAssigned && status === 'available' ? '#16A34A' : '#D1D5DB');
                             var strokeWidth = isSelected ? '2' : '1';
 
                             var tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
