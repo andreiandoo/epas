@@ -143,7 +143,7 @@ class SeatingLayoutResource extends Resource
                                         })
                                         ->toArray();
                                 })
-                                ->live()
+                                ->live(debounce: 500)
                                 ->afterStateUpdated(function ($state, SSet $set) {
                                     $set('selected_layout_id', $state);
                                 })

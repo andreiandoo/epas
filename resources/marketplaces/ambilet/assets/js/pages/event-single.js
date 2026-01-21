@@ -17,6 +17,7 @@ const EventPage = {
     seatingLayout: null,
     selectedSeats: {},  // ticketTypeId -> [seatId, ...]
     seatSelectionModal: null,
+    sectionToTicketTypeMap: {},  // sectionId -> [ticketType, ...]
 
     // DOM element IDs
     elements: {
@@ -1529,38 +1530,59 @@ const EventPage = {
     },
 
     /**
-     * Open seat selection modal for a ticket type
+     * Build a mapping of section ID to ticket type(s) that can use it
+     */
+    buildSectionToTicketTypeMap() {
+        var map = {};
+        var self = this;
+        this.ticketTypes.forEach(function(tt) {
+            if (tt.seating_sections && tt.seating_sections.length > 0) {
+                tt.seating_sections.forEach(function(section) {
+                    if (!map[section.id]) {
+                        map[section.id] = [];
+                    }
+                    map[section.id].push(tt);
+                });
+            }
+        });
+        return map;
+    },
+
+    /**
+     * Open seat selection modal - shows ALL available seats
      */
     openSeatSelection(ticketTypeId) {
         var self = this;
-        var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketTypeId); });
-        if (!tt || !this.seatingLayout) return;
+        if (!this.seatingLayout) return;
 
-        console.log('[EventPage] Opening seat selection for:', tt.name, 'sections:', tt.seating_sections);
+        console.log('[EventPage] Opening seat selection modal');
         console.log('[EventPage] Seating layout:', this.seatingLayout);
 
-        // Get allowed section IDs for this ticket type
-        var allowedSectionIds = tt.seating_sections.map(function(s) { return s.id; });
+        // Build section to ticket type mapping
+        this.sectionToTicketTypeMap = this.buildSectionToTicketTypeMap();
+
+        // Get ALL section IDs that have ticket types assigned
+        var allAssignedSectionIds = Object.keys(this.sectionToTicketTypeMap).map(function(id) { return parseInt(id); });
 
         // Create modal if not exists
         if (!this.seatSelectionModal) {
             this.createSeatSelectionModal();
         }
 
-        // Store current ticket type for the modal
+        // Store the initially selected ticket type (for reference)
         this.currentTicketTypeId = ticketTypeId;
 
-        // Clear previous seat selection for this ticket type to avoid duplicates
-        this.selectedSeats[ticketTypeId] = [];
+        // Clear ALL previous seat selections
+        this.selectedSeats = {};
 
         // Reset zoom
         this.mapZoom = 1;
 
-        // Render ticket types sidebar
-        this.renderModalTicketTypes(ticketTypeId);
+        // Render the seating map with ALL assigned sections
+        this.renderSeatingMapAllSections(allAssignedSectionIds);
 
-        // Render the seating map
-        this.renderSeatingMap(allowedSectionIds, ticketTypeId);
+        // Update summary
+        this.updateSeatSelectionSummary();
 
         // Show modal
         document.getElementById('seat-selection-modal').classList.remove('hidden');
@@ -1901,7 +1923,132 @@ const EventPage = {
         svg += '</svg>';
         container.innerHTML = svg;
 
-        this.updateSeatSelectionSummary(ticketTypeId);
+        this.updateSeatSelectionSummary();
+    },
+
+    /**
+     * Render seating map showing ALL sections (for multi-ticket-type selection)
+     */
+    renderSeatingMapAllSections(assignedSectionIds) {
+        var self = this;
+        var layout = this.seatingLayout;
+        var container = document.getElementById('seat-map-svg');
+
+        if (!layout || !layout.sections) {
+            container.innerHTML = '<div class="text-center text-muted">Nu există hartă de locuri disponibilă.</div>';
+            return;
+        }
+
+        var canvasW = layout.canvas_width || 1920;
+        var canvasH = layout.canvas_height || 1080;
+
+        var svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" class="w-full h-full" style="min-width: ' + canvasW + 'px; min-height: ' + canvasH + 'px;" preserveAspectRatio="xMidYMid meet">';
+        svg += '<style>.seat-hover:hover rect { stroke-width: 3; filter: brightness(1.1); } .seat-hover { transition: all 0.15s; }</style>';
+
+        // Background image if exists
+        if (layout.background_image) {
+            var bgScale = layout.background_scale || 1;
+            var bgX = layout.background_x || 0;
+            var bgY = layout.background_y || 0;
+            var bgOpacity = layout.background_opacity || 0.5;
+            var bgW = canvasW * bgScale;
+            var bgH = canvasH * bgScale;
+            svg += '<image href="' + layout.background_image + '" x="' + bgX + '" y="' + bgY + '" width="' + bgW + '" height="' + bgH + '" opacity="' + bgOpacity + '" preserveAspectRatio="xMidYMid meet"/>';
+        }
+
+        // Render ALL sections
+        layout.sections.forEach(function(section) {
+            var isAssigned = assignedSectionIds.includes(section.id);
+            var ticketTypesForSection = self.sectionToTicketTypeMap[section.id] || [];
+
+            var rotation = section.rotation || 0;
+            var transform = rotation !== 0 ? ' transform="rotate(' + rotation + ' ' + section.x + ' ' + section.y + ')"' : '';
+
+            svg += '<g' + transform + '>';
+
+            // Section name
+            var textY = section.y - 5;
+            var textX = section.x + (section.width / 2);
+            var textColor = isAssigned ? '#1F2937' : '#9CA3AF';
+            svg += '<text x="' + textX + '" y="' + textY + '" text-anchor="middle" font-size="11" font-weight="600" fill="' + textColor + '" style="text-shadow: 0 0 3px white, 0 0 3px white;">' + section.name + '</text>';
+
+            // Render seats
+            if (section.rows) {
+                var seatSize = 18;
+                var seatGap = 3;
+                var rowGap = 4;
+                var startY = section.y + 4;
+
+                section.rows.forEach(function(row, rowIndex) {
+                    if (row.seats) {
+                        var startX = section.x + 4;
+
+                        row.seats.forEach(function(seat, seatIndex) {
+                            var seatX = seat.x !== null && seat.x !== undefined ? parseFloat(section.x) + parseFloat(seat.x) : startX + seatIndex * (seatSize + seatGap);
+                            var seatY = seat.y !== null && seat.y !== undefined ? parseFloat(section.y) + parseFloat(seat.y) : startY + rowIndex * (seatSize + rowGap);
+
+                            var isSelected = self.isSeatSelectedAny(seat.id);
+                            var status = seat.status || 'available';
+
+                            var seatColor, cursor, isClickable;
+
+                            if (!isAssigned) {
+                                seatColor = '#E5E7EB';
+                                cursor = 'not-allowed';
+                                isClickable = false;
+                            } else if (isSelected) {
+                                seatColor = '#3B82F6';
+                                cursor = 'pointer';
+                                isClickable = true;
+                            } else if (status === 'available') {
+                                seatColor = '#22C55E';
+                                cursor = 'pointer';
+                                isClickable = true;
+                            } else if (status === 'sold' || status === 'held') {
+                                seatColor = '#9CA3AF';
+                                cursor = 'not-allowed';
+                                isClickable = false;
+                            } else {
+                                seatColor = '#E5E7EB';
+                                cursor = 'not-allowed';
+                                isClickable = false;
+                            }
+
+                            // Click handler passes section ID to auto-detect ticket type
+                            var clickHandler = isClickable ?
+                                'onclick="EventPage.toggleSeatAuto(' + section.id + ', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\')"' : '';
+
+                            var strokeColor = isSelected ? '#1D4ED8' : (isAssigned && status === 'available' ? '#16A34A' : '#D1D5DB');
+                            var strokeWidth = isSelected ? '2' : '1';
+
+                            var tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
+                            if (ticketTypesForSection.length > 0) {
+                                tooltipText += ' (' + ticketTypesForSection[0].name + ')';
+                            }
+                            if (!isAssigned) {
+                                tooltipText += ' (indisponibil)';
+                            } else if (status === 'sold') {
+                                tooltipText += ' (vândut)';
+                            } else if (status === 'held') {
+                                tooltipText += ' (rezervat)';
+                            }
+
+                            svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + '">' +
+                                '<title>' + tooltipText + '</title>' +
+                                '<rect x="' + seatX + '" y="' + seatY + '" width="' + seatSize + '" height="' + seatSize + '" rx="3" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '"/>' +
+                            '</g>';
+                        });
+                    }
+                });
+            }
+
+            svg += '</g>';
+        });
+
+        svg += '</svg>';
+        container.innerHTML = svg;
+
+        this.updateSeatSelectionSummary();
     },
 
     /**
@@ -1913,7 +2060,68 @@ const EventPage = {
     },
 
     /**
-     * Toggle seat selection
+     * Check if a seat is selected in ANY ticket type
+     */
+    isSeatSelectedAny(seatId) {
+        var self = this;
+        return Object.keys(this.selectedSeats).some(function(ttId) {
+            return self.selectedSeats[ttId].some(function(s) { return s.id === seatId; });
+        });
+    },
+
+    /**
+     * Find which ticket type a seat belongs to (based on section)
+     */
+    findTicketTypeForSection(sectionId) {
+        var ticketTypes = this.sectionToTicketTypeMap[sectionId] || [];
+        // Return the first matching ticket type (could be multiple, pick first)
+        return ticketTypes.length > 0 ? ticketTypes[0] : null;
+    },
+
+    /**
+     * Toggle seat selection - auto-detects ticket type from section
+     */
+    toggleSeatAuto(sectionId, seatId, sectionName, rowLabel, seatLabel) {
+        var tt = this.findTicketTypeForSection(sectionId);
+
+        if (!tt) {
+            console.warn('[EventPage] No ticket type found for section:', sectionId);
+            return;
+        }
+
+        var ticketTypeId = String(tt.id);
+
+        if (!this.selectedSeats[ticketTypeId]) {
+            this.selectedSeats[ticketTypeId] = [];
+        }
+
+        var existingIndex = this.selectedSeats[ticketTypeId].findIndex(function(s) { return s.id === seatId; });
+
+        if (existingIndex >= 0) {
+            // Deselect
+            this.selectedSeats[ticketTypeId].splice(existingIndex, 1);
+        } else {
+            // Select
+            this.selectedSeats[ticketTypeId].push({
+                id: seatId,
+                section: sectionName,
+                row: rowLabel,
+                seat: seatLabel
+            });
+        }
+
+        // Update quantities
+        this.quantities[ticketTypeId] = this.selectedSeats[ticketTypeId].length;
+
+        console.log('[EventPage] Selected seats for', tt.name, ':', this.selectedSeats[ticketTypeId]);
+
+        // Re-render map
+        var allAssignedSectionIds = Object.keys(this.sectionToTicketTypeMap).map(function(id) { return parseInt(id); });
+        this.renderSeatingMapAllSections(allAssignedSectionIds);
+    },
+
+    /**
+     * Toggle seat selection (old method - kept for compatibility)
      */
     toggleSeat(ticketTypeId, seatId, sectionName, rowLabel, seatLabel) {
         var self = this;
@@ -1954,49 +2162,101 @@ const EventPage = {
     /**
      * Update seat selection summary in modal footer
      */
-    updateSeatSelectionSummary(ticketTypeId) {
-        var seats = this.selectedSeats[ticketTypeId] || [];
-        var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketTypeId); });
-        var price = tt ? tt.price : 0;
+    updateSeatSelectionSummary() {
+        var self = this;
+        var totalSeats = 0;
+        var totalPrice = 0;
+        var seatDetails = [];
 
-        document.getElementById('selected-seats-count').textContent = seats.length;
-        document.getElementById('selected-seats-total').textContent = (seats.length * price).toFixed(2) + ' lei';
+        // Calculate totals across ALL ticket types
+        Object.keys(this.selectedSeats).forEach(function(ttId) {
+            var seats = self.selectedSeats[ttId] || [];
+            var tt = self.ticketTypes.find(function(t) { return String(t.id) === String(ttId); });
+            var price = tt ? tt.price : 0;
 
-        // Update subtitle with selected seats
+            totalSeats += seats.length;
+            totalPrice += seats.length * price;
+
+            seats.forEach(function(s) {
+                seatDetails.push({
+                    ticketType: tt ? tt.name : 'Bilet',
+                    section: s.section,
+                    row: s.row,
+                    seat: s.seat
+                });
+            });
+        });
+
+        document.getElementById('selected-seats-count').textContent = totalSeats;
+        document.getElementById('selected-seats-total').textContent = totalPrice.toFixed(2) + ' lei';
+
+        // Update subtitle
         var subtitle = document.getElementById('seat-selection-subtitle');
-        if (seats.length > 0) {
-            var seatNames = seats.map(function(s) { return s.section + ', rând ' + s.row + ', loc ' + s.seat; }).join('; ');
-            subtitle.textContent = 'Selectate: ' + seatNames;
+        if (seatDetails.length > 0) {
+            var details = seatDetails.map(function(d) {
+                return d.section + ', rând ' + d.row + ', loc ' + d.seat;
+            }).slice(0, 3).join('; ');
+            if (seatDetails.length > 3) {
+                details += ' și încă ' + (seatDetails.length - 3) + ' locuri';
+            }
+            subtitle.textContent = 'Selectate: ' + details;
         } else {
             subtitle.textContent = 'Selectează locurile dorite pe hartă';
         }
     },
 
     /**
-     * Close seat selection modal
+     * Close seat selection modal - syncs quantities with selected seats
      */
     closeSeatSelection() {
+        var self = this;
+
+        // Sync quantities for all ticket types based on selected seats
+        Object.keys(this.selectedSeats).forEach(function(ttId) {
+            self.quantities[ttId] = self.selectedSeats[ttId].length;
+        });
+
+        // Hide modal
         document.getElementById('seat-selection-modal').classList.add('hidden');
         document.body.style.overflow = '';
+
+        // Re-render ticket types to show updated selections
+        this.renderTicketTypes();
+
+        // Update cart summary
+        this.updateCart();
+
+        // Update checkout button
+        this.updateCheckoutButton();
+
+        console.log('[EventPage] Modal closed, quantities synced:', this.quantities);
     },
 
     /**
      * Confirm seat selection, add to cart, and redirect to cart page
      */
     confirmSeatSelection() {
-        var ticketTypeId = this.currentTicketTypeId;
-        var seats = this.selectedSeats[ticketTypeId] || [];
+        var self = this;
 
-        if (seats.length === 0) {
+        // Check if any seats are selected across all ticket types
+        var totalSeats = 0;
+        Object.keys(this.selectedSeats).forEach(function(ttId) {
+            totalSeats += self.selectedSeats[ttId].length;
+        });
+
+        if (totalSeats === 0) {
             alert('Te rugăm să selectezi cel puțin un loc.');
             return;
         }
 
-        // Update quantities based on selected seats
-        this.quantities[ticketTypeId] = seats.length;
+        // Update quantities for all ticket types based on selected seats
+        Object.keys(this.selectedSeats).forEach(function(ttId) {
+            self.quantities[ttId] = self.selectedSeats[ttId].length;
+        });
 
-        // Close modal
-        this.closeSeatSelection();
+        // Hide modal (don't call closeSeatSelection to avoid double-syncing)
+        document.getElementById('seat-selection-modal').classList.add('hidden');
+        document.body.style.overflow = '';
 
         // Re-render ticket types to show updated count
         this.renderTicketTypes();
@@ -2005,13 +2265,146 @@ const EventPage = {
         this.updateCart();
 
         // Add to cart and redirect
-        console.log('[EventPage] Seats confirmed:', seats.length, 'for ticket type:', ticketTypeId);
+        console.log('[EventPage] Seats confirmed, total:', totalSeats);
+        console.log('[EventPage] Selected seats by ticket type:', this.selectedSeats);
+        console.log('[EventPage] Quantities:', this.quantities);
+
+        // IMPORTANT: Clear existing items for this event from cart first
+        // This prevents the "adding to existing quantity" problem
+        this.clearEventFromCart();
 
         // Add tickets to cart with seat information
-        this.addToCart();
+        this.addToCartWithSeats();
 
         // Redirect to cart page
         window.location.href = '/cos';
+    },
+
+    /**
+     * Clear all items for the current event from the cart
+     */
+    clearEventFromCart() {
+        if (!this.event || !this.event.id) return;
+
+        var eventId = this.event.id;
+        var items = AmbiletCart.getItems();
+        var filteredItems = items.filter(function(item) {
+            return item.eventId !== eventId;
+        });
+
+        // Only save if something was removed
+        if (filteredItems.length !== items.length) {
+            AmbiletCart.save(filteredItems);
+            console.log('[EventPage] Cleared', items.length - filteredItems.length, 'items for event', eventId);
+        }
+    },
+
+    /**
+     * Add to cart with seat information (for seated events)
+     */
+    addToCartWithSeats() {
+        var self = this;
+        var commissionRate = this.event.commission_rate || 5;
+        var commissionMode = this.event.commission_mode || 'included';
+
+        console.log('[EventPage] addToCartWithSeats called');
+        console.log('[EventPage] Selected seats:', this.selectedSeats);
+
+        // Build event data once
+        var targetPrice = self.event.target_price ? parseFloat(self.event.target_price) : null;
+        var eventData = {
+            id: self.event.id,
+            title: self.event.title,
+            slug: self.event.slug,
+            start_date: self.event.start_date || self.event.date,
+            start_time: self.event.start_time,
+            image: self.event.image,
+            venue: self.event.venue,
+            taxes: self.event.taxes || [],
+            target_price: targetPrice,
+            commission_rate: commissionRate,
+            commission_mode: commissionMode
+        };
+
+        // Get cart once before the loop
+        var cart = AmbiletCart.getCart();
+
+        // For each ticket type with selected seats, add to cart
+        Object.keys(this.selectedSeats).forEach(function(ticketTypeId) {
+            var seats = self.selectedSeats[ticketTypeId];
+            if (!seats || seats.length === 0) return;
+
+            var tt = self.ticketTypes.find(function(t) { return String(t.id) === String(ticketTypeId); });
+            if (!tt) {
+                console.warn('[EventPage] Ticket type not found:', ticketTypeId);
+                return;
+            }
+
+            var basePrice = tt.price;
+            var baseOriginalPrice = tt.original_price;
+
+            if (targetPrice && basePrice < targetPrice) {
+                baseOriginalPrice = targetPrice;
+            }
+
+            var ticketTypeData = {
+                id: tt.id,
+                name: tt.name,
+                price: basePrice,
+                original_price: baseOriginalPrice,
+                description: tt.description
+            };
+
+            // Add item with seat information
+            var qty = seats.length;
+            console.log('[EventPage] Adding', qty, 'x', tt.name, 'with seats:', seats);
+
+            var itemKey = self.event.id + '_' + tt.id;
+
+            // Remove existing item for this ticket type (if any - shouldn't be after clearEventFromCart)
+            cart.items = cart.items.filter(function(item) { return item.key !== itemKey; });
+
+            // Add new item with seats
+            cart.items.push({
+                key: itemKey,
+                eventId: self.event.id,
+                event: {
+                    id: eventData.id,
+                    title: eventData.title,
+                    slug: eventData.slug,
+                    date: eventData.start_date,
+                    time: eventData.start_time,
+                    image: eventData.image,
+                    venue: eventData.venue,
+                    city: eventData.venue?.city,
+                    taxes: eventData.taxes,
+                    target_price: eventData.target_price,
+                    commission_rate: eventData.commission_rate,
+                    commission_mode: eventData.commission_mode
+                },
+                ticketTypeId: tt.id,
+                ticketType: {
+                    id: ticketTypeData.id,
+                    name: ticketTypeData.name,
+                    price: ticketTypeData.price,
+                    originalPrice: ticketTypeData.original_price,
+                    description: ticketTypeData.description
+                },
+                quantity: qty,
+                seats: seats,  // Include seat information!
+                addedAt: new Date().toISOString()
+            });
+        });
+
+        // Save the cart once after all items are added
+        AmbiletCart.save(cart.items);
+
+        // Start reservation timer
+        if (typeof AmbiletCart.startReservationTimer === 'function') {
+            AmbiletCart.startReservationTimer();
+        }
+
+        console.log('[EventPage] Cart after adding seats:', AmbiletCart.getCart());
     }
 };
 

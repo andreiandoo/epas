@@ -375,6 +375,7 @@ const CartPage = {
         const price = item.ticketType?.price || item.price || 0;
         const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
         const quantity = item.quantity || 1;
+        const seats = item.seats || [];
 
         // Get commission info from event data
         const commissionRate = item.event?.commission_rate || 5;
@@ -423,6 +424,7 @@ const CartPage = {
                                 '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
                             '</div>' +
                             (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
+                            (seats.length > 0 ? '<p class="text-xs text-primary mt-1"><svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
                             '<div class="tooltip absolute left-0 top-full mt-2 w-72 bg-secondary text-white p-4 rounded-xl shadow-xl z-10">' + tooltipHtml + '</div>' +
                         '</div>' +
                         '<div class="flex items-center ml-auto mr-8 gap-2">' +
@@ -605,6 +607,30 @@ const CartPage = {
         pointsEl.classList.remove('points-animation');
         void pointsEl.offsetWidth; // Force reflow
         pointsEl.classList.add('points-animation');
+    },
+
+    /**
+     * Format seat information for display
+     */
+    formatSeats(seats) {
+        if (!seats || seats.length === 0) return '';
+
+        // Group seats by section and row
+        const grouped = {};
+        seats.forEach(seat => {
+            const key = (seat.section || 'Secțiune') + ' - Rând ' + (seat.row || '?');
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(seat.seat || seat.label || '?');
+        });
+
+        // Format output
+        const parts = [];
+        Object.keys(grouped).forEach(key => {
+            const seatLabels = grouped[key].join(', ');
+            parts.push(key + ': Loc ' + seatLabels);
+        });
+
+        return parts.join(' | ');
     },
 
     async applyPromo() {

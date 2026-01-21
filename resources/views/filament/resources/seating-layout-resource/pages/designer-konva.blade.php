@@ -1616,6 +1616,9 @@
 
                     // Click to select
                     group.on('click', (e) => {
+                        // Stop propagation to prevent stage click handler from clearing selection
+                        e.cancelBubble = true;
+
                         if (this.drawMode === 'multiselect') {
                             // Toggle section highlight in multi-select mode
                             const bb = group.findOne('.boundingBox');
@@ -1623,14 +1626,16 @@
                                 bb.visible(!bb.visible());
                                 this.layer.batchDraw();
                             }
-                            // Also update Livewire selectedSection for Edit Section modal
+                            // Also update Livewire selectedSection for Edit Section modal (deferred to avoid re-render)
                             if (bb && bb.visible()) {
-                                @this.set('selectedSection', section.id);
+                                $wire.set('selectedSection', section.id, false);
                             }
                         } else {
                             this.transformer.nodes([group]);
                             this.selectedSection = section.id;
-                            @this.set('selectedSection', section.id);
+                            this.layer.batchDraw();
+                            // Defer Livewire sync to avoid re-render issues - only needed for Edit Section modal
+                            $wire.set('selectedSection', section.id, false);
                         }
                     });
 
@@ -1838,12 +1843,12 @@
                                 this.layer.batchDraw();
                             }
                             if (bb && bb.visible()) {
-                                @this.set('selectedSection', section.id);
+                                $wire.set('selectedSection', section.id, false);
                             }
                         } else {
                             this.transformer.nodes([group]);
                             this.selectedSection = section.id;
-                            @this.set('selectedSection', section.id);
+                            $wire.selectedSection = section.id;
                         }
                     });
 

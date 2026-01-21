@@ -839,6 +839,11 @@ class DesignerSeatingLayout extends Page
                     $section = SeatingSection::find($data['section_id']);
                     if (!$section) return;
 
+                    // Get old metadata for comparison
+                    $oldMetadata = $section->metadata ?? [];
+                    $oldSeatSpacing = $oldMetadata['seat_spacing'] ?? 18;
+                    $oldRowSpacing = $oldMetadata['row_spacing'] ?? 25;
+
                     // Update basic fields
                     $updates = [
                         'name' => $data['name'],
@@ -860,13 +865,20 @@ class DesignerSeatingLayout extends Page
 
                     // Update metadata with seat settings
                     $metadata = $section->metadata ?? [];
+                    $newSeatSpacing = (int) ($data['seat_spacing'] ?? 18);
+                    $newRowSpacing = (int) ($data['row_spacing'] ?? 25);
                     $metadata['seat_size'] = (int) ($data['seat_size'] ?? 10);
-                    $metadata['seat_spacing'] = (int) ($data['seat_spacing'] ?? 18);
-                    $metadata['row_spacing'] = (int) ($data['row_spacing'] ?? 25);
+                    $metadata['seat_spacing'] = $newSeatSpacing;
+                    $metadata['row_spacing'] = $newRowSpacing;
                     $metadata['seat_shape'] = $data['seat_shape'] ?? 'circle';
                     $updates['metadata'] = $metadata;
 
                     $section->update($updates);
+
+                    // Recalculate seat positions if spacing changed
+                    if ($newSeatSpacing !== $oldSeatSpacing || $newRowSpacing !== $oldRowSpacing) {
+                        $this->recalculateSeatPositions($section, $newSeatSpacing, $newRowSpacing);
+                    }
 
                     $this->reloadSections();
                     $this->dispatch('layout-updated', sections: $this->sections);
@@ -1757,6 +1769,65 @@ class DesignerSeatingLayout extends Page
             }
             $number++;
         }
+    }
+
+    /**
+     * Recalculate seat positions based on new spacing values
+     */
+    protected function recalculateSeatPositions(SeatingSection $section, int $seatSpacing, int $rowSpacing): void
+    {
+        $padding = 10; // Same padding used when creating seats
+
+        // Load rows ordered by Y position (or label)
+        $rows = $section->rows()->orderBy('y', 'asc')->get();
+
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        // Find max seats per row to calculate section width
+        $maxSeatsPerRow = 0;
+        $rowIndex = 0;
+
+        foreach ($rows as $row) {
+            // Calculate new row Y position
+            $newRowY = $padding + ($rowIndex * $rowSpacing);
+            $row->update(['y' => $newRowY]);
+
+            // Get seats for this row ordered by X position
+            $seats = $row->seats()->orderBy('x', 'asc')->get();
+
+            $seatsCount = $seats->count();
+            if ($seatsCount > $maxSeatsPerRow) {
+                $maxSeatsPerRow = $seatsCount;
+            }
+
+            $seatIndex = 0;
+            foreach ($seats as $seat) {
+                // Calculate new seat X and Y position
+                $newSeatX = $padding + ($seatIndex * $seatSpacing);
+                $newSeatY = $newRowY; // Y is same as row Y
+
+                $seat->update([
+                    'x' => $newSeatX,
+                    'y' => $newSeatY,
+                ]);
+
+                $seatIndex++;
+            }
+
+            $rowIndex++;
+        }
+
+        // Update section dimensions to fit the new layout
+        $numRows = $rows->count();
+        $newWidth = ($maxSeatsPerRow * $seatSpacing) + $padding;
+        $newHeight = ($numRows * $rowSpacing) + $padding;
+
+        $section->update([
+            'width' => $newWidth,
+            'height' => $newHeight,
+        ]);
     }
 
     /**
