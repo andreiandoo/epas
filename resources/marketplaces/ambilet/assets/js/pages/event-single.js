@@ -1042,12 +1042,16 @@ const EventPage = {
                     '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center">' + currentQty + '</span>' +
                     '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">+</button>';
 
-                // Add "Alege locuri" button for seating tickets when quantity > 0
+                // Add "Alege locul/locurile" button for seating tickets when quantity > 0
                 if (hasSeating && currentQty > 0) {
+                    var btnLabel = currentQty === 1 ? 'Alege locul' : 'Alege locurile';
+                    if (selectedCount > 0) {
+                        btnLabel = selectedCount + ' loc' + (selectedCount > 1 ? 'uri' : '') + ' selectat' + (selectedCount > 1 ? 'e' : '');
+                    }
                     controlsHtml += '<button onclick="EventPage.openSeatSelection(\'' + tt.id + '\')" class="flex items-center gap-2 px-3 py-2 ml-2 text-xs font-semibold transition-colors rounded-lg ' +
                         (selectedCount > 0 ? 'bg-green-500 text-white' : 'bg-accent text-white hover:bg-accent/80') + '">' +
                         '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>' +
-                        (selectedCount > 0 ? selectedCount + '/' + currentQty + ' selectate' : 'Alege locuri') +
+                        btnLabel +
                     '</button>';
                 }
 
@@ -1229,7 +1233,7 @@ const EventPage = {
         if (needingSelection.length > 0) {
             // Need to select seats
             var totalNeeded = needingSelection.reduce(function(sum, item) { return sum + (item.required - item.selected); }, 0);
-            btnText.textContent = 'Alege ' + totalNeeded + ' loc' + (totalNeeded > 1 ? 'uri' : '');
+            btnText.textContent = totalNeeded === 1 ? 'Alege locul' : 'Alege locurile';
             if (btnIcon) {
                 btnIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>';
             }
@@ -1546,6 +1550,9 @@ const EventPage = {
         // Store current ticket type for the modal
         this.currentTicketTypeId = ticketTypeId;
 
+        // Clear previous seat selection for this ticket type to avoid duplicates
+        this.selectedSeats[ticketTypeId] = [];
+
         // Reset zoom
         this.mapZoom = 1;
 
@@ -1646,7 +1653,7 @@ const EventPage = {
                     '</div>' +
                     '<div class="flex gap-2 md:gap-3">' +
                         '<button onclick="EventPage.closeSeatSelection()" class="px-4 md:px-6 py-2 text-sm font-semibold text-muted border border-border rounded-xl hover:bg-surface transition-colors">Anulează</button>' +
-                        '<button onclick="EventPage.confirmSeatSelection()" class="px-4 md:px-6 py-2 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Confirmă</button>' +
+                        '<button onclick="EventPage.confirmSeatSelection()" class="px-4 md:px-6 py-2 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Comandă</button>' +
                     '</div>' +
                 '</div>' +
             '</div>';
@@ -1974,7 +1981,7 @@ const EventPage = {
     },
 
     /**
-     * Confirm seat selection and update cart
+     * Confirm seat selection, add to cart, and redirect to cart page
      */
     confirmSeatSelection() {
         var ticketTypeId = this.currentTicketTypeId;
@@ -1994,10 +2001,17 @@ const EventPage = {
         // Re-render ticket types to show updated count
         this.renderTicketTypes();
 
-        // Update cart
+        // Update cart display
         this.updateCart();
 
+        // Add to cart and redirect
         console.log('[EventPage] Seats confirmed:', seats.length, 'for ticket type:', ticketTypeId);
+
+        // Add tickets to cart with seat information
+        this.addToCart();
+
+        // Redirect to cart page
+        window.location.href = '/cos';
     }
 };
 
