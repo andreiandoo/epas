@@ -30,11 +30,11 @@
                     </button>
                     <button @click="resetView" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200">Reset</button>
                     <button @click="zoomToFit" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Fit all content in view">Fit</button>
-                    <button @click="toggleGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm rounded-md" :class="showGrid ? 'bg-blue-500 text-white' : 'bg-gray-100'">
-                        <x-svg-icon name="konvagrid" class="w-5 h-5 text-purple-600" />
+                    <button @click="toggleGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm rounded-md" :class="showGrid ? 'bg-blue-600 text-white' : 'bg-gray-100'">
+                        <x-svg-icon name="konvagrid" class="w-4 h-4 text-gray-100" />
                         Grid
                     </button>
-                    <button @click="toggleSnapToGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm rounded-md" :class="snapToGrid ? 'bg-indigo-500 text-white' : 'bg-gray-100'" title="Snap sections to grid when moving">
+                    <button @click="toggleSnapToGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm rounded-md" :class="snapToGrid ? 'bg-blue-600 text-white' : 'bg-gray-100'" title="Snap sections to grid when moving">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"></path>
                         </svg>
@@ -42,10 +42,10 @@
                     </button>
 
                     {{-- Background image controls toggle button --}}
-                    <div x-show="backgroundUrl" class="mb-4">
+                    <div x-show="backgroundUrl" class="">
                         <button @click="showBackgroundControls = !showBackgroundControls" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg"
-                            :class="showBackgroundControls ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'">
+                            :class="showBackgroundControls ? 'bg-blue-600 text-white' : 'text-gray-100 hover:bg-gray-200'">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                             </svg>
@@ -54,34 +54,26 @@
 
                     <div class="h-6 mx-1 border-l border-gray-300"></div>
 
-                    <button @click="setDrawMode('select')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'select' ? 'bg-blue-500 text-white' : 'bg-gray-100'">
-                        <x-svg-icon name="konvaselect" class="w-5 h-5 text-purple-600" />
+                    <button @click="setDrawMode('select')" type="button" class="flex items-center gap-2 px-3 py-2 text-sm border rounded-md border-slate-200" :class="drawMode === 'select' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-gray-100'">
+                        <x-svg-icon name="konvaselect" class="w-4 h-4 text-gray-100" />
                         Select
                     </button>
-                    <button @click="setDrawMode('multiselect')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'multiselect' ? 'bg-orange-500 text-white' : 'bg-gray-100'">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button @click="setDrawMode('multiselect')" type="button" class="flex items-center gap-2 px-3 py-2 text-sm border rounded-md border-slate-200" :class="drawMode === 'multiselect' ? 'bg-orange-500 text-white' : 'bg-gray-100'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
                         </svg>
                         Multi-Select
                     </button>
-                    <button @click="setDrawMode('selectseats')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'selectseats' ? 'bg-pink-500 text-white' : 'bg-gray-100'" title="Select individual seats - drag to select multiple">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <circle cx="6" cy="6" r="2" stroke-width="2" fill="currentColor"/>
-                            <circle cx="12" cy="6" r="2" stroke-width="2"/>
-                            <circle cx="18" cy="6" r="2" stroke-width="2"/>
-                            <circle cx="6" cy="12" r="2" stroke-width="2"/>
-                            <circle cx="12" cy="12" r="2" stroke-width="2" fill="currentColor"/>
-                            <circle cx="18" cy="12" r="2" stroke-width="2"/>
-                            <rect x="3" y="3" width="8" height="12" stroke-width="1.5" stroke-dasharray="2,2" fill="none"/>
-                        </svg>
+                    <button @click="setDrawMode('selectseats')" type="button" class="flex items-center gap-2 px-3 py-2 text-sm border rounded-md border-slate-200" :class="drawMode === 'selectseats' ? 'bg-pink-500 text-white' : 'bg-gray-100'" title="Select individual seats - drag to select multiple">
+                        <svg viewBox="0 0 64 64" style="enable-background:new 0 0 512 512"  class="w-4 h-54"><g><path d="M17.5 36.944a8.257 8.257 0 0 1 7.25-4.316c.111 0 .22.012.33.017v-.343c0-.578-.077-1.132-.229-1.646a6.172 6.172 0 0 0-1.598-2.767 6.214 6.214 0 0 0-4.423-1.838c-.402 0-.78.037-1.124.109a6.227 6.227 0 0 0-5.126 6.141v.667a8.286 8.286 0 0 1 4.92 3.976zM45.5 24.41v-1.288a6.195 6.195 0 0 0-1.827-4.413 6.218 6.218 0 0 0-4.423-1.837 6.257 6.257 0 0 0-6.25 6.25v.945c.111-.004.217-.016.33-.016 2.201 0 4.274.861 5.837 2.423a8.152 8.152 0 0 1 1.417 1.93 8.232 8.232 0 0 1 4.916-3.995zM39.25 32.628c.111 0 .22.012.33.017v-.343c0-.578-.077-1.132-.229-1.646a6.172 6.172 0 0 0-1.598-2.767 6.214 6.214 0 0 0-4.423-1.838c-.402 0-.78.037-1.124.109a6.237 6.237 0 0 0-4.892 4.474 5.89 5.89 0 0 0-.234 1.667v.667A8.286 8.286 0 0 1 32 36.944a8.257 8.257 0 0 1 7.25-4.316zM24.75 34.628a6.257 6.257 0 0 0-6.25 6.25v6.25H31v-6.25a6.257 6.257 0 0 0-6.25-6.25zM60 40.878c0-3.446-2.804-6.25-6.25-6.25s-6.25 2.804-6.25 6.25v6.25H60zM46.5 36.944a8.257 8.257 0 0 1 7.25-4.316c.111 0 .22.012.33.017v-.343a6.199 6.199 0 0 0-1.827-4.413 6.217 6.217 0 0 0-4.423-1.837c-.402 0-.78.037-1.124.109a6.237 6.237 0 0 0-4.892 4.474 5.89 5.89 0 0 0-.234 1.667v.667a8.286 8.286 0 0 1 4.92 3.976zM31 24.41v-1.288a6.195 6.195 0 0 0-1.827-4.413 6.218 6.218 0 0 0-4.423-1.837 6.257 6.257 0 0 0-6.25 6.25v.945c.111-.004.217-.016.33-.016 2.201 0 4.274.861 5.837 2.423a8.152 8.152 0 0 1 1.417 1.93A8.232 8.232 0 0 1 31 24.409zM45.5 40.878c0-3.446-2.804-6.25-6.25-6.25S33 37.432 33 40.878v6.25h12.5zM16.5 40.878c0-3.446-2.804-6.25-6.25-6.25S4 37.432 4 40.878v6.25h12.5z" fill="currentColor" opacity="1"  class=""></path></g></svg>
                         Select Seats
                     </button>
                     <button @click="setDrawMode('polygon')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'polygon' ? 'bg-green-500 text-white' : 'bg-gray-100'">
-                        <x-svg-icon name="konvapolygon" class="w-5 h-5 text-purple-600" />
+                        <x-svg-icon name="konvapolygon" class="w-4 h-4 text-purple-600" />
                         Polygon
                     </button>
                     <button @click="setDrawMode('circle')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'circle' ? 'bg-green-500 text-white' : 'bg-gray-100'">
-                        <x-svg-icon name="konvacircle" class="w-5 h-5 text-purple-600" />
+                        <x-svg-icon name="konvacircle" class="w-4 h-4 text-purple-600" />
                         Circle
                     </button>
                     <button @click="setDrawMode('seat')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'seat' ? 'bg-purple-500 text-white' : 'bg-gray-100'">
@@ -114,7 +106,7 @@
                     </button>
 
                     <button @click="showExportModal = true" type="button" class="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Export layout">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                         </svg>
                     </button>
@@ -920,6 +912,7 @@
                             if (e.target === this.stage || e.target.getLayer() === this.backgroundLayer) {
                                 this.transformer.nodes([]);
                                 this.selectedSection = null;
+                                this.hideAllCurveHandles();
                                 this.clearSelection();
                             }
                         }
@@ -1885,6 +1878,68 @@
                     });
                     group.add(boundingBox);
 
+                    // Add curve handle (diamond shape at top center, draggable vertically)
+                    // Only for sections with seats (not decorative zones)
+                    if (!isDecorativeZone && section.rows && section.rows.length > 0) {
+                        const sectionWidth = section.width || 200;
+                        const initialCurve = parseFloat(metadata.curve_amount || 0);
+
+                        const curveHandle = new Konva.RegularPolygon({
+                            x: sectionWidth / 2,
+                            y: -20 - initialCurve, // Position above section, offset by current curve
+                            sides: 4, // Diamond shape
+                            radius: 10,
+                            fill: '#8B5CF6',
+                            stroke: '#6D28D9',
+                            strokeWidth: 2,
+                            rotation: 0,
+                            draggable: true,
+                            visible: false, // Only visible when section selected
+                            name: 'curveHandle',
+                            cursor: 'ns-resize',
+                        });
+
+                        // Store initial Y for calculating delta
+                        let curveHandleStartY = curveHandle.y();
+                        let currentCurveAmount = initialCurve;
+
+                        curveHandle.on('dragstart', () => {
+                            curveHandleStartY = curveHandle.y();
+                        });
+
+                        curveHandle.on('dragmove', () => {
+                            // Constrain to vertical movement only
+                            curveHandle.x(sectionWidth / 2);
+
+                            // Calculate new curve amount from drag delta
+                            // Moving up (negative Y) = positive curve, moving down = negative curve
+                            const deltaY = curveHandleStartY - curveHandle.y();
+                            currentCurveAmount = initialCurve + deltaY;
+
+                            // Clamp curve amount to reasonable range
+                            currentCurveAmount = Math.max(-100, Math.min(100, currentCurveAmount));
+
+                            // Update seats in real-time with new curve
+                            this.updateSectionCurveVisual(group, section, currentCurveAmount);
+                        });
+
+                        curveHandle.on('dragend', () => {
+                            // Save the curve amount to backend
+                            this.saveSectionCurve(section.id, Math.round(currentCurveAmount));
+
+                            // Update the section's metadata locally
+                            const sectionIndex = this.sections.findIndex(s => s.id === section.id);
+                            if (sectionIndex !== -1) {
+                                if (!this.sections[sectionIndex].metadata) {
+                                    this.sections[sectionIndex].metadata = {};
+                                }
+                                this.sections[sectionIndex].metadata.curve_amount = currentCurveAmount;
+                            }
+                        });
+
+                        group.add(curveHandle);
+                    }
+
                     // Click to select
                     group.on('click', (e) => {
                         // Stop propagation to prevent stage click handler from clearing selection
@@ -1902,8 +1957,14 @@
                                 this.setLivewireSelectedSection( section.id);
                             }
                         } else {
+                            // Hide all curve handles first
+                            this.hideAllCurveHandles();
+                            // Select this section
                             this.transformer.nodes([group]);
                             this.selectedSection = section.id;
+                            // Show curve handle for this section
+                            const ch = group.findOne('.curveHandle');
+                            if (ch) ch.visible(true);
                             this.layer.batchDraw();
                             // Defer Livewire sync to avoid re-render issues - only needed for Edit Section modal
                             this.setLivewireSelectedSection( section.id);
@@ -2272,14 +2333,18 @@
                 // Now accepts optional seatSize, seatShape, row and curveOffset from section metadata
                 createSeat(seat, seatColor, sectionId, sectionSeatSize = null, sectionSeatShape = null, row = null, curveOffset = 0) {
                     const x = parseFloat(seat.x || 0);
+                    const baseY = parseFloat(seat.y || 0); // Original Y without curve
                     // Apply curve offset to Y position (negative = curve up, positive = curve down)
-                    const y = parseFloat(seat.y || 0) + curveOffset;
+                    const y = baseY + curveOffset;
                     const angle = parseFloat(seat.angle || 0);
                     // Use section's configured values if provided, otherwise fall back to defaults
                     const shape = sectionSeatShape || seat.shape || 'circle';
                     const seatSize = sectionSeatSize || this.seatSize || 8;
                     const rowId = row ? row.id : null;
                     const rowLabel = row ? row.label : null;
+
+                    // Store original seat data for curve recalculation
+                    const seatData = { x: x, y: baseY };
 
                     let seatShape;
                     if (shape === 'circle') {
@@ -2296,6 +2361,7 @@
                             sectionId: sectionId,
                             rowId: rowId,
                             rowLabel: rowLabel,
+                            seatData: seatData,
                             draggable: false, // Enable for row drag
                         });
                     } else if (shape === 'rect') {
@@ -2314,6 +2380,7 @@
                             sectionId: sectionId,
                             rowId: rowId,
                             rowLabel: rowLabel,
+                            seatData: seatData,
                             draggable: false,
                         });
                     } else { // stadium
@@ -2333,6 +2400,7 @@
                             sectionId: sectionId,
                             rowId: rowId,
                             rowLabel: rowLabel,
+                            seatData: seatData,
                             draggable: false,
                         });
                     }
@@ -2424,11 +2492,78 @@
                         .catch(err => console.error('Failed to save section:', err));
                 },
 
+                // Update section curve visually (real-time as handle is dragged)
+                updateSectionCurveVisual(group, section, curveAmount) {
+                    const sectionWidth = section.width || 200;
+                    const metadata = section.metadata || {};
+                    const sectionSeatSize = metadata.seat_size || 10;
+
+                    // Find all seats in this group and update their Y position
+                    group.find('.seat').forEach(seatNode => {
+                        const seatData = seatNode.getAttr('seatData');
+                        if (seatData) {
+                            const baseY = parseFloat(seatData.y || 0);
+                            const seatX = parseFloat(seatData.x || 0);
+
+                            // Calculate new curve offset
+                            let curveOffset = 0;
+                            if (curveAmount !== 0) {
+                                const xNormalized = seatX / sectionWidth;
+                                curveOffset = curveAmount * (1 - 4 * Math.pow(xNormalized - 0.5, 2));
+                            }
+
+                            // Update seat Y position
+                            // For circles, y() is center; for rects, y() is top-left, so we need to adjust
+                            if (seatNode.getClassName() === 'Circle') {
+                                seatNode.y(baseY + curveOffset);
+                            } else {
+                                // Rect/Stadium: position is top-left corner, so offset by half size
+                                seatNode.y(baseY + curveOffset - sectionSeatSize / 2);
+                            }
+                        }
+                    });
+
+                    this.layer.batchDraw();
+                },
+
+                // Save section curve amount to backend
+                saveSectionCurve(sectionId, curveAmount) {
+                    console.log('Saving section curve', sectionId, curveAmount);
+                    @this.call('updateSectionCurve', sectionId, curveAmount)
+                        .then(() => console.log('Section curve saved successfully'))
+                        .catch(err => console.error('Failed to save section curve:', err));
+                },
+
+                // Show/hide curve handles for a section
+                showCurveHandle(sectionId, visible) {
+                    const group = this.stage.findOne(`#section-${sectionId}`);
+                    if (group) {
+                        const curveHandle = group.findOne('.curveHandle');
+                        if (curveHandle) {
+                            curveHandle.visible(visible);
+                            this.layer.batchDraw();
+                        }
+                    }
+                },
+
+                // Hide all curve handles
+                hideAllCurveHandles() {
+                    this.layer.find('.curveHandle').forEach(handle => {
+                        handle.visible(false);
+                    });
+                    this.layer.batchDraw();
+                },
+
                 selectSection(sectionId) {
                     const node = this.stage.findOne(`#section-${sectionId}`);
                     if (node) {
+                        // Hide all curve handles first
+                        this.hideAllCurveHandles();
+                        // Select this section
                         this.transformer.nodes([node]);
                         this.selectedSection = sectionId;
+                        // Show curve handle for selected section
+                        this.showCurveHandle(sectionId, true);
                         this.layer.batchDraw();
                     }
                 },

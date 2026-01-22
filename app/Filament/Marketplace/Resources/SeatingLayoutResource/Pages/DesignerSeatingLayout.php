@@ -1378,6 +1378,38 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Update section curve amount (called from frontend curve handle drag)
+     */
+    public function updateSectionCurve($sectionId, $curveAmount): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            return;
+        }
+
+        // Update curve_amount in metadata
+        $metadata = $section->metadata ?? [];
+        $metadata['curve_amount'] = (int) $curveAmount;
+        $section->update(['metadata' => $metadata]);
+
+        // Update local sections array to keep PHP state in sync
+        foreach ($this->sections as &$s) {
+            if ($s['id'] === (int) $sectionId) {
+                if (!isset($s['metadata'])) {
+                    $s['metadata'] = [];
+                }
+                $s['metadata']['curve_amount'] = (int) $curveAmount;
+                break;
+            }
+        }
+        unset($s);
+
+        // Skip render to prevent snap-back
+        $this->skipRender();
+    }
+
+    /**
      * Delete section (called from Konva.js)
      */
     public function deleteSection($sectionId): void
