@@ -284,12 +284,15 @@ const CartPage = {
         this.timerInterval = setInterval(() => this.updateCountdown(), 1000);
     },
 
+    warningShown: false,  // Track if 5-minute warning was shown
+
     updateCountdown() {
         const remaining = Math.max(0, this.endTime - Date.now());
         const minutes = Math.floor(remaining / 60000);
         const seconds = Math.floor((remaining % 60000) / 1000);
 
         const countdownEl = document.getElementById('countdown');
+        const timerBar = document.getElementById('timer-bar');
         countdownEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
         if (remaining <= 0) {
@@ -297,16 +300,59 @@ const CartPage = {
             countdownEl.textContent = '00:00';
             countdownEl.classList.remove('text-warning');
             countdownEl.classList.add('text-primary');
-            AmbiletCart.clear();
-            localStorage.removeItem('cart_end_time');
-            this.render();
-            if (typeof AmbiletNotifications !== 'undefined') {
-                AmbiletNotifications.warning('Timpul de rezervare a expirat. Biletele au fost eliberate.');
-            }
+
+            // Release held seats via API before clearing cart
+            this.releaseAllSeats().then(() => {
+                AmbiletCart.clear();
+                localStorage.removeItem('cart_end_time');
+                this.render();
+                if (typeof AmbiletNotifications !== 'undefined') {
+                    AmbiletNotifications.warning('Timpul de rezervare a expirat. Locurile au fost eliberate.');
+                }
+            });
         } else if (remaining < 60000) {
-            // Less than 1 minute - make it red
+            // Less than 1 minute - make it red/urgent
             countdownEl.classList.remove('text-warning');
             countdownEl.classList.add('text-primary');
+            if (timerBar) {
+                timerBar.classList.remove('bg-warning/10', 'border-warning/20');
+                timerBar.classList.add('bg-red-50', 'border-red-200');
+            }
+        } else if (remaining <= 5 * 60 * 1000 && !this.warningShown) {
+            // 5 minutes remaining - show warning notification
+            this.warningShown = true;
+            countdownEl.classList.remove('text-warning');
+            countdownEl.classList.add('text-orange-500');
+            if (timerBar) {
+                timerBar.classList.add('animate-pulse');
+            }
+            if (typeof AmbiletNotifications !== 'undefined') {
+                AmbiletNotifications.warning('Mai ai doar 5 minute pentru a finaliza comanda! După expirare, locurile vor fi eliberate.');
+            }
+        }
+    },
+
+    /**
+     * Release all held seats via API
+     */
+    async releaseAllSeats() {
+        const items = AmbiletCart.getItems();
+
+        for (const item of items) {
+            // Check if this item has held seats
+            if (item.seat_uids && item.seat_uids.length > 0 && item.event_seating_id) {
+                try {
+                    console.log('[CartPage] Releasing seats for item:', item.key, item.seat_uids);
+                    await AmbiletAPI.delete('/cart/seats', {
+                        event_seating_id: item.event_seating_id,
+                        seat_uids: item.seat_uids
+                    });
+                    console.log('[CartPage] Seats released successfully');
+                } catch (error) {
+                    console.error('[CartPage] Failed to release seats:', error);
+                    // Continue even if release fails - cleanup job will handle it
+                }
+            }
         }
     },
 
@@ -475,9 +521,25 @@ const CartPage = {
         }
     },
 
-    removeItem(index) {
+    async removeItem(index) {
         const items = AmbiletCart.getItems();
+        const item = items[index];
         const itemEl = document.querySelector(`[data-index="${index}"]`) || document.querySelector(`.cart-item:nth-child(${index + 1})`);
+
+        // Release seats if this item has them
+        if (item && item.seat_uids && item.seat_uids.length > 0 && item.event_seating_id) {
+            try {
+                console.log('[CartPage] Releasing seats for removed item:', item.seat_uids);
+                await AmbiletAPI.delete('/cart/seats', {
+                    event_seating_id: item.event_seating_id,
+                    seat_uids: item.seat_uids
+                });
+                console.log('[CartPage] Seats released successfully');
+            } catch (error) {
+                console.error('[CartPage] Failed to release seats:', error);
+                // Continue with removal even if API fails
+            }
+        }
 
         if (itemEl) {
             itemEl.style.opacity = '0';
