@@ -397,6 +397,56 @@
                 </div>
             </div>
         </div>
+
+        {{-- Section Context Menu --}}
+        <div x-show="showContextMenu"
+             x-transition:enter="transition ease-out duration-100"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-75"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             :style="`position: fixed; left: ${contextMenuX}px; top: ${contextMenuY}px; z-index: 100;`"
+             @click.away="showContextMenu = false"
+             class="w-48 bg-white border border-gray-200 rounded-lg shadow-xl">
+            <div class="py-1">
+                <button @click="openEditSectionModal()" class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    Edit Section
+                </button>
+                <template x-if="contextMenuSectionType === 'standard'">
+                    <div>
+                        <button @click="selectRowsBySectionFromMenu()" class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-blue-700 hover:bg-blue-50">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            </svg>
+                            Select Rows
+                        </button>
+                        <button @click="editColorsFromMenu()" class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                            </svg>
+                            Edit Colors
+                        </button>
+                        <button @click="recalcRowsFromMenu()" class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-orange-700 hover:bg-orange-50">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            Recalc Rows
+                        </button>
+                    </div>
+                </template>
+                <div class="border-t border-gray-200"></div>
+                <button @click="deleteFromMenu()" class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Delete Section
+                </button>
+            </div>
+        </div>
     </div>
 
     @push('scripts')
@@ -438,6 +488,13 @@
                 editSectionId: null,
                 editColorHex: '#3B82F6',
                 editSeatColor: '#22C55E',
+
+                // Context menu
+                showContextMenu: false,
+                contextMenuX: 0,
+                contextMenuY: 0,
+                contextMenuSectionId: null,
+                contextMenuSectionType: 'standard',
 
                 // Snap to grid
                 snapToGrid: false,
@@ -1329,6 +1386,67 @@
                     }
                 },
 
+                // Context menu methods
+                showSectionContextMenu(sectionId, x, y) {
+                    const section = this.sections.find(s => s.id === sectionId);
+                    this.contextMenuSectionId = sectionId;
+                    this.contextMenuSectionType = section?.section_type || 'standard';
+                    this.contextMenuX = x;
+                    this.contextMenuY = y;
+                    this.showContextMenu = true;
+                },
+
+                hideContextMenu() {
+                    this.showContextMenu = false;
+                    this.contextMenuSectionId = null;
+                },
+
+                openEditSectionModal() {
+                    if (this.contextMenuSectionId) {
+                        // Set the selected section and trigger the Filament action
+                        $wire.set('selectedSection', this.contextMenuSectionId);
+                        // Use Filament's action system
+                        $wire.mountAction('editSection');
+                    }
+                    this.hideContextMenu();
+                },
+
+                selectRowsBySectionFromMenu() {
+                    if (this.contextMenuSectionId) {
+                        this.selectRowsBySection(this.contextMenuSectionId);
+                    }
+                    this.hideContextMenu();
+                },
+
+                editColorsFromMenu() {
+                    if (this.contextMenuSectionId) {
+                        const section = this.sections.find(s => s.id === this.contextMenuSectionId);
+                        if (section) {
+                            this.editSectionColors(
+                                this.contextMenuSectionId,
+                                section.color_hex || '#3B82F6',
+                                section.seat_color || '#22C55E'
+                            );
+                        }
+                    }
+                    this.hideContextMenu();
+                },
+
+                recalcRowsFromMenu() {
+                    if (this.contextMenuSectionId) {
+                        this.recalculateRows(this.contextMenuSectionId);
+                    }
+                    this.hideContextMenu();
+                },
+
+                deleteFromMenu() {
+                    if (this.contextMenuSectionId) {
+                        this.selectedSection = this.contextMenuSectionId;
+                        this.deleteSelected();
+                    }
+                    this.hideContextMenu();
+                },
+
                 // Export SVG
                 exportSVG() {
                     // Create SVG content (avoid PHP parsing by splitting xml)
@@ -1639,6 +1757,19 @@
                         }
                     });
 
+                    // Right-click context menu
+                    group.on('contextmenu', (e) => {
+                        e.evt.preventDefault();
+                        e.cancelBubble = true;
+                        // Select this section
+                        this.transformer.nodes([group]);
+                        this.selectedSection = section.id;
+                        $wire.set('selectedSection', section.id);
+                        this.layer.batchDraw();
+                        // Show context menu at mouse position
+                        this.showSectionContextMenu(section.id, e.evt.clientX, e.evt.clientY);
+                    });
+
                     // Simple drag end handler - seats are children of group, move automatically
                     group.on('dragend', () => {
                         // Apply snap to grid if enabled
@@ -1850,6 +1981,19 @@
                             this.selectedSection = section.id;
                             $wire.selectedSection = section.id;
                         }
+                    });
+
+                    // Right-click context menu for decorative zones
+                    group.on('contextmenu', (e) => {
+                        e.evt.preventDefault();
+                        e.cancelBubble = true;
+                        // Select this section
+                        this.transformer.nodes([group]);
+                        this.selectedSection = section.id;
+                        $wire.set('selectedSection', section.id);
+                        this.layer.batchDraw();
+                        // Show context menu at mouse position
+                        this.showSectionContextMenu(section.id, e.evt.clientX, e.evt.clientY);
                     });
 
                     // Drag handlers
@@ -2086,6 +2230,17 @@
 
                 saveSection(sectionId, updates) {
                     console.log('Saving section', sectionId, updates);
+
+                    // Update local sections array immediately to stay in sync
+                    const sectionIndex = this.sections.findIndex(s => s.id === sectionId);
+                    if (sectionIndex !== -1) {
+                        if (updates.x_position !== undefined) this.sections[sectionIndex].x_position = updates.x_position;
+                        if (updates.y_position !== undefined) this.sections[sectionIndex].y_position = updates.y_position;
+                        if (updates.width !== undefined) this.sections[sectionIndex].width = updates.width;
+                        if (updates.height !== undefined) this.sections[sectionIndex].height = updates.height;
+                        if (updates.rotation !== undefined) this.sections[sectionIndex].rotation = updates.rotation;
+                    }
+
                     @this.call('updateSection', sectionId, updates)
                         .then(() => console.log('Section saved successfully'))
                         .catch(err => console.error('Failed to save section:', err));

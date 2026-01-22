@@ -1819,15 +1819,22 @@ class DesignerSeatingLayout extends Page
             $rowIndex++;
         }
 
-        // Update section dimensions to fit the new layout
+        // Only EXPAND section dimensions if seats would overflow (never shrink)
         $numRows = $rows->count();
-        $newWidth = ($maxSeatsPerRow * $seatSpacing) + $padding;
-        $newHeight = ($numRows * $rowSpacing) + $padding;
+        $requiredWidth = ($maxSeatsPerRow * $seatSpacing) + $padding;
+        $requiredHeight = ($numRows * $rowSpacing) + $padding;
 
-        $section->update([
-            'width' => $newWidth,
-            'height' => $newHeight,
-        ]);
+        $updates = [];
+        if ($requiredWidth > $section->width) {
+            $updates['width'] = $requiredWidth;
+        }
+        if ($requiredHeight > $section->height) {
+            $updates['height'] = $requiredHeight;
+        }
+
+        if (!empty($updates)) {
+            $section->update($updates);
+        }
     }
 
     /**
