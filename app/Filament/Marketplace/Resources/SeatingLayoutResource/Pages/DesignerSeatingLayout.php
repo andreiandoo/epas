@@ -1148,10 +1148,21 @@ class DesignerSeatingLayout extends Page
         }
         $section->save();
 
-        // Note: We intentionally do NOT call reloadSections() or show notifications here.
-        // The frontend already updated its local sections array in saveSection().
-        // Notifications can trigger Livewire re-renders that cause snap-back issues.
-        // The section is silently saved to the database, data stays consistent.
+        // Also update the local sections array to keep PHP state in sync
+        // This prevents stale data from being sent back if Livewire re-renders
+        foreach ($this->sections as &$s) {
+            if ($s['id'] === (int) $sectionId) {
+                foreach ($filteredUpdates as $field => $value) {
+                    $s[$field] = (int) $value;
+                }
+                break;
+            }
+        }
+        unset($s);
+
+        // Skip render to prevent Livewire from sending back component updates
+        // This is a "silent" save - the frontend already updated its local state
+        $this->skipRender();
     }
 
     /**
@@ -1169,9 +1180,21 @@ class DesignerSeatingLayout extends Page
         $section->y_position = max(0, $section->y_position + (int) $deltaY);
         $section->save();
 
-        // Note: We intentionally do NOT call reloadSections() here.
-        // The frontend already handles the visual movement.
+        // Update local sections array to keep PHP state in sync
+        foreach ($this->sections as &$s) {
+            if ($s['id'] === (int) $sectionId) {
+                $s['x_position'] = $section->x_position;
+                $s['y_position'] = $section->y_position;
+                break;
+            }
+        }
+        unset($s);
+
+        // Dispatch event for frontend (optional, frontend already moved visually)
         $this->dispatch('section-moved', sectionId: $sectionId, x: $section->x_position, y: $section->y_position);
+
+        // Skip render to prevent snap-back
+        $this->skipRender();
     }
 
     /**
