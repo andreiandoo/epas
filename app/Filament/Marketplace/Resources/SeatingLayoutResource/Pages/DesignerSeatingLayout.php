@@ -714,6 +714,17 @@ class DesignerSeatingLayout extends Page
                         $section = SeatingSection::find($this->selectedSection);
                         if ($section && $section->layout_id === $this->seatingLayout->id) {
                             $metadata = $section->metadata ?? [];
+
+                            // Load rows for this section
+                            $rows = $section->rows()->orderBy('y', 'asc')->get()->map(function ($row) {
+                                return [
+                                    'id' => $row->id,
+                                    'label' => $row->label,
+                                    'seat_start_number' => $row->seat_start_number ?? 1,
+                                    'alignment' => $row->alignment ?? 'left',
+                                ];
+                            })->toArray();
+
                             return [
                                 'section_id' => $section->id,
                                 'name' => $section->name,
@@ -726,6 +737,8 @@ class DesignerSeatingLayout extends Page
                                 'seat_spacing' => $metadata['seat_spacing'] ?? 18,
                                 'row_spacing' => $metadata['row_spacing'] ?? 25,
                                 'seat_shape' => $metadata['seat_shape'] ?? 'circle',
+                                'rows' => $rows,
+                                'curve_amount' => $metadata['curve_amount'] ?? 0,
                             ];
                         }
                     }
@@ -755,6 +768,18 @@ class DesignerSeatingLayout extends Page
                                     $set('seat_spacing', $metadata['seat_spacing'] ?? 18);
                                     $set('row_spacing', $metadata['row_spacing'] ?? 25);
                                     $set('seat_shape', $metadata['seat_shape'] ?? 'circle');
+                                    $set('curve_amount', $metadata['curve_amount'] ?? 0);
+
+                                    // Load rows for this section
+                                    $rows = $section->rows()->orderBy('y', 'asc')->get()->map(function ($row) {
+                                        return [
+                                            'id' => $row->id,
+                                            'label' => $row->label,
+                                            'seat_start_number' => $row->seat_start_number ?? 1,
+                                            'alignment' => $row->alignment ?? 'left',
+                                        ];
+                                    })->toArray();
+                                    $set('rows', $rows);
                                 }
                             }
                         })
@@ -834,6 +859,60 @@ class DesignerSeatingLayout extends Page
                                 ->columnSpan(1),
                         ])
                         ->columns(2),
+
+                    SC\Section::make('Row Settings')
+                        ->description('Configure individual row settings (numbering start and alignment)')
+                        ->schema([
+                            Forms\Components\Repeater::make('rows')
+                                ->schema([
+                                    Forms\Components\TextInput::make('label')
+                                        ->label('Row Label')
+                                        ->disabled()
+                                        ->columnSpan(1),
+
+                                    Forms\Components\TextInput::make('seat_start_number')
+                                        ->label('Start Number')
+                                        ->numeric()
+                                        ->minValue(1)
+                                        ->default(1)
+                                        ->helperText('First seat number')
+                                        ->columnSpan(1),
+
+                                    Forms\Components\Select::make('alignment')
+                                        ->label('Alignment')
+                                        ->options([
+                                            'left' => 'Left',
+                                            'center' => 'Center',
+                                            'right' => 'Right',
+                                        ])
+                                        ->default('left')
+                                        ->columnSpan(1),
+                                ])
+                                ->columns(3)
+                                ->addable(false)
+                                ->deletable(false)
+                                ->reorderable(false)
+                                ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
+                                ->columnSpanFull(),
+                        ])
+                        ->collapsed()
+                        ->collapsible(),
+
+                    SC\Section::make('Curve Settings')
+                        ->description('Curve/bulge the section and its rows')
+                        ->schema([
+                            Forms\Components\TextInput::make('curve_amount')
+                                ->label('Curve Amount')
+                                ->numeric()
+                                ->minValue(-100)
+                                ->maxValue(100)
+                                ->default(0)
+                                ->helperText('Positive = curve up, Negative = curve down. 0 = no curve.')
+                                ->suffix('px')
+                                ->columnSpan(1),
+                        ])
+                        ->collapsed()
+                        ->collapsible(),
                 ])
                 ->action(function (array $data): void {
                     $section = SeatingSection::find($data['section_id']);
@@ -871,6 +950,9 @@ class DesignerSeatingLayout extends Page
                     $metadata['seat_spacing'] = $newSeatSpacing;
                     $metadata['row_spacing'] = $newRowSpacing;
                     $metadata['seat_shape'] = $data['seat_shape'] ?? 'circle';
+
+                    // Save curve amount to metadata
+                    $metadata['curve_amount'] = (int) ($data['curve_amount'] ?? 0);
                     $updates['metadata'] = $metadata;
 
                     $section->update($updates);
@@ -878,6 +960,24 @@ class DesignerSeatingLayout extends Page
                     // Recalculate seat positions if spacing changed
                     if ($newSeatSpacing !== $oldSeatSpacing || $newRowSpacing !== $oldRowSpacing) {
                         $this->recalculateSeatPositions($section, $newSeatSpacing, $newRowSpacing);
+                    }
+
+                    // Update row settings (seat_start_number and alignment)
+                    if (!empty($data['rows']) && is_array($data['rows'])) {
+                        foreach ($data['rows'] as $rowData) {
+                            if (!empty($rowData['id'])) {
+                                $row = SeatingRow::find($rowData['id']);
+                                if ($row && $row->section_id === $section->id) {
+                                    $row->update([
+                                        'seat_start_number' => (int) ($rowData['seat_start_number'] ?? 1),
+                                        'alignment' => $rowData['alignment'] ?? 'left',
+                                    ]);
+
+                                    // Renumber seats if start number changed
+                                    $this->renumberSeatsInRow($row, (int) ($rowData['seat_start_number'] ?? 1));
+                                }
+                            }
+                        }
                     }
 
                     $this->reloadSections();
@@ -1192,6 +1292,58 @@ class DesignerSeatingLayout extends Page
 
         // Dispatch event for frontend (optional, frontend already moved visually)
         $this->dispatch('section-moved', sectionId: $sectionId, x: $section->x_position, y: $section->y_position);
+
+        // Skip render to prevent snap-back
+        $this->skipRender();
+    }
+
+    /**
+     * Move an entire row by delta (called from CTRL+drag on frontend)
+     */
+    public function moveRow($sectionId, $rowId, $deltaX, $deltaY): void
+    {
+        $section = SeatingSection::find($sectionId);
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            return;
+        }
+
+        $row = SeatingRow::find($rowId);
+        if (!$row || $row->section_id !== $section->id) {
+            return;
+        }
+
+        // Update Y position of the row itself
+        $row->y = max(0, $row->y + (float) $deltaY);
+        $row->save();
+
+        // Update all seats in this row
+        $row->seats()->each(function ($seat) use ($deltaX, $deltaY) {
+            $seat->x = max(0, $seat->x + (float) $deltaX);
+            $seat->y = max(0, $seat->y + (float) $deltaY);
+            $seat->save();
+        });
+
+        // Update local sections array to keep PHP state in sync
+        foreach ($this->sections as &$s) {
+            if ($s['id'] === (int) $sectionId && isset($s['rows'])) {
+                foreach ($s['rows'] as &$r) {
+                    if ($r['id'] === (int) $rowId) {
+                        $r['y'] = $row->y;
+                        if (isset($r['seats'])) {
+                            foreach ($r['seats'] as &$seat) {
+                                $seat['x'] = max(0, $seat['x'] + (float) $deltaX);
+                                $seat['y'] = max(0, $seat['y'] + (float) $deltaY);
+                            }
+                            unset($seat);
+                        }
+                        break;
+                    }
+                }
+                unset($r);
+                break;
+            }
+        }
+        unset($s);
 
         // Skip render to prevent snap-back
         $this->skipRender();
@@ -1880,6 +2032,26 @@ class DesignerSeatingLayout extends Page
 
         if (!empty($updates)) {
             $section->update($updates);
+        }
+    }
+
+    /**
+     * Renumber seats in a row starting from a given number
+     */
+    protected function renumberSeatsInRow(SeatingRow $row, int $startNumber): void
+    {
+        // Get seats ordered by X position
+        $seats = $row->seats()->orderBy('x', 'asc')->get();
+
+        $seatIndex = 0;
+        foreach ($seats as $seat) {
+            $newLabel = (string) ($startNumber + $seatIndex);
+            $seat->update([
+                'label' => $newLabel,
+                'display_name' => $row->section->generateSeatDisplayName($row->label, $newLabel),
+                'seat_uid' => $row->section->generateSeatUid($row->label, $newLabel),
+            ]);
+            $seatIndex++;
         }
     }
 

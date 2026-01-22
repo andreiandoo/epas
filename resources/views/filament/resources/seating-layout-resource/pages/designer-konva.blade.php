@@ -478,6 +478,8 @@
                 // Multi-select state
                 selectedSeats: [],
                 selectedRows: [],
+                selectedRowForDrag: null, // Track row being dragged with CTRL
+                rowDragStartPos: null, // Start position for row drag
                 selectionRect: null,
                 selectionStartPos: null,
                 assignToSectionId: '',
@@ -1276,9 +1278,12 @@
                         if (seat.node) {
                             seat.node.stroke('#1F2937');
                             seat.node.strokeWidth(1);
+                            seat.node.draggable(false);
                         }
                     });
                     this.selectedSeats = [];
+                    // Also clear row drag selection
+                    this.clearRowDragSelection();
                     if (this.seatsLayer) this.seatsLayer.batchDraw();
                     this.layer.batchDraw();
                 },
@@ -1393,6 +1398,114 @@
                     });
 
                     this.clearRowSelection();
+                },
+
+                // CTRL+click to select entire row for dragging
+                selectEntireRow(sectionId, rowId) {
+                    // Clear previous seat selection
+                    this.clearSelection();
+
+                    // Find the section group
+                    const sectionGroup = this.stage.findOne(`#section-${sectionId}`);
+                    if (!sectionGroup) return;
+
+                    // Find all seats belonging to this row
+                    const rowSeats = sectionGroup.find('.seat').filter(seat => {
+                        return seat.getAttr('rowId') === rowId;
+                    });
+
+                    if (rowSeats.length === 0) return;
+
+                    // Track the selected row for drag
+                    this.selectedRowForDrag = {
+                        sectionId: sectionId,
+                        rowId: rowId,
+                        seats: rowSeats,
+                        startPositions: rowSeats.map(seat => ({
+                            node: seat,
+                            x: seat.x(),
+                            y: seat.y()
+                        }))
+                    };
+
+                    // Highlight all seats in row and add to selectedSeats
+                    rowSeats.forEach(seat => {
+                        seat.stroke('#3B82F6'); // Blue for row selection
+                        seat.strokeWidth(3);
+                        seat.draggable(true); // Enable drag
+                        this.selectedSeats.push({
+                            id: seat.getAttr('seatId'),
+                            node: seat,
+                            rowId: rowId
+                        });
+                    });
+
+                    // Set up drag handlers for the first seat (leader)
+                    const leaderSeat = rowSeats[0];
+                    if (leaderSeat) {
+                        // Track drag start
+                        leaderSeat.on('dragstart.rowdrag', () => {
+                            this.rowDragStartPos = { x: leaderSeat.x(), y: leaderSeat.y() };
+                        });
+
+                        // Move all seats together
+                        leaderSeat.on('dragmove.rowdrag', () => {
+                            if (!this.rowDragStartPos || !this.selectedRowForDrag) return;
+
+                            const dx = leaderSeat.x() - this.rowDragStartPos.x;
+                            const dy = leaderSeat.y() - this.rowDragStartPos.y;
+
+                            // Move all other seats by the same delta
+                            this.selectedRowForDrag.startPositions.forEach((pos, index) => {
+                                if (index > 0) { // Skip leader (already moved by Konva)
+                                    pos.node.x(pos.x + dx);
+                                    pos.node.y(pos.y + dy);
+                                }
+                            });
+                            this.layer.batchDraw();
+                        });
+
+                        // Save on drag end
+                        leaderSeat.on('dragend.rowdrag', () => {
+                            if (!this.rowDragStartPos || !this.selectedRowForDrag) return;
+
+                            const dx = leaderSeat.x() - this.selectedRowForDrag.startPositions[0].x;
+                            const dy = leaderSeat.y() - this.selectedRowForDrag.startPositions[0].y;
+
+                            // Update start positions for next drag
+                            this.selectedRowForDrag.startPositions.forEach(pos => {
+                                pos.x = pos.node.x();
+                                pos.y = pos.node.y();
+                            });
+
+                            // Save the row movement to backend
+                            this.saveRowMovement(sectionId, rowId, dx, dy);
+
+                            this.rowDragStartPos = null;
+                        });
+                    }
+
+                    console.log(`Selected row ${rowId} with ${rowSeats.length} seats for drag`);
+                },
+
+                // Clear row drag selection
+                clearRowDragSelection() {
+                    if (this.selectedRowForDrag) {
+                        this.selectedRowForDrag.seats.forEach(seat => {
+                            seat.off('.rowdrag');
+                            seat.draggable(false);
+                        });
+                        this.selectedRowForDrag = null;
+                    }
+                    this.rowDragStartPos = null;
+                },
+
+                // Save row movement to backend
+                saveRowMovement(sectionId, rowId, dx, dy) {
+                    console.log('Saving row movement', { sectionId, rowId, dx, dy });
+                    @this.call('moveRow', sectionId, rowId, dx, dy)
+                        .then(() => console.log('Row movement saved'))
+                        .catch(err => console.error('Failed to save row movement:', err));
                 },
 
                 // Color edit methods
@@ -1735,13 +1848,26 @@
                         const metadata = section.metadata || {};
                         const sectionSeatSize = metadata.seat_size || 10;
                         const sectionSeatShape = metadata.seat_shape || 'circle';
+                        const curveAmount = parseFloat(metadata.curve_amount || 0);
+                        const sectionWidth = section.width || 200;
 
                         section.rows.forEach(row => {
                             if (row.seats && row.seats.length > 0) {
                                 row.seats.forEach(seat => {
+                                    // Calculate curve offset for this seat
+                                    // Parabolic curve: center seats get max offset, edges get 0
+                                    let curveOffset = 0;
+                                    if (curveAmount !== 0) {
+                                        const seatX = parseFloat(seat.x || 0);
+                                        const xNormalized = seatX / sectionWidth; // 0 to 1
+                                        // Parabola: max at center (0.5), zero at edges (0, 1)
+                                        curveOffset = curveAmount * (1 - 4 * Math.pow(xNormalized - 0.5, 2));
+                                    }
+
                                     // Create seat with local coordinates (relative to section origin)
                                     // Use section's configured seat size and shape
-                                    const seatShape = this.createSeat(seat, seatColor, section.id, sectionSeatSize, sectionSeatShape);
+                                    // Pass row info for CTRL+drag row selection
+                                    const seatShape = this.createSeat(seat, seatColor, section.id, sectionSeatSize, sectionSeatShape, row, curveOffset);
                                     group.add(seatShape);
                                 });
                             }
@@ -2146,14 +2272,17 @@
                 },
 
                 // Legacy createSeat for compatibility (relative coordinates within group)
-                // Now accepts optional seatSize and seatShape from section metadata
-                createSeat(seat, seatColor, sectionId, sectionSeatSize = null, sectionSeatShape = null) {
+                // Now accepts optional seatSize, seatShape, row and curveOffset from section metadata
+                createSeat(seat, seatColor, sectionId, sectionSeatSize = null, sectionSeatShape = null, row = null, curveOffset = 0) {
                     const x = parseFloat(seat.x || 0);
-                    const y = parseFloat(seat.y || 0);
+                    // Apply curve offset to Y position (negative = curve up, positive = curve down)
+                    const y = parseFloat(seat.y || 0) + curveOffset;
                     const angle = parseFloat(seat.angle || 0);
                     // Use section's configured values if provided, otherwise fall back to defaults
                     const shape = sectionSeatShape || seat.shape || 'circle';
                     const seatSize = sectionSeatSize || this.seatSize || 8;
+                    const rowId = row ? row.id : null;
+                    const rowLabel = row ? row.label : null;
 
                     let seatShape;
                     if (shape === 'circle') {
@@ -2168,6 +2297,9 @@
                             name: 'seat',
                             seatId: seat.id,
                             sectionId: sectionId,
+                            rowId: rowId,
+                            rowLabel: rowLabel,
+                            draggable: false, // Enable for row drag
                         });
                     } else if (shape === 'rect') {
                         seatShape = new Konva.Rect({
@@ -2183,6 +2315,9 @@
                             name: 'seat',
                             seatId: seat.id,
                             sectionId: sectionId,
+                            rowId: rowId,
+                            rowLabel: rowLabel,
+                            draggable: false,
                         });
                     } else { // stadium
                         seatShape = new Konva.Rect({
@@ -2199,6 +2334,9 @@
                             name: 'seat',
                             seatId: seat.id,
                             sectionId: sectionId,
+                            rowId: rowId,
+                            rowLabel: rowLabel,
+                            draggable: false,
                         });
                     }
 
@@ -2222,9 +2360,16 @@
                         this.layer.batchDraw();
                     });
 
-                    // Click to select individual seat
+                    // Click to select individual seat or entire row (CTRL+click)
                     seatShape.on('click', (e) => {
                         e.cancelBubble = true; // Stop propagation to section
+
+                        // CTRL+click to select entire row
+                        if (e.evt.ctrlKey && rowId) {
+                            this.selectEntireRow(sectionId, rowId);
+                            this.layer.batchDraw();
+                            return;
+                        }
 
                         if (this.drawMode === 'select') {
                             // Toggle selection in select mode
@@ -2725,7 +2870,16 @@
                             const metadata = section.metadata || {};
                             const sectionSeatSize = metadata.seat_size || 10;
                             const sectionSeatShape = metadata.seat_shape || 'circle';
-                            const seatShape = this.createSeat(seat, section.seat_color || section.color_hex, sectionId, sectionSeatSize, sectionSeatShape);
+                            // Calculate curve offset for manually placed seats
+                            const curveAmount = parseFloat(metadata.curve_amount || 0);
+                            const sectionWidth = section.width || 200;
+                            let curveOffset = 0;
+                            if (curveAmount !== 0) {
+                                const seatX = parseFloat(seat.x || 0);
+                                const xNormalized = seatX / sectionWidth;
+                                curveOffset = curveAmount * (1 - 4 * Math.pow(xNormalized - 0.5, 2));
+                            }
+                            const seatShape = this.createSeat(seat, section.seat_color || section.color_hex, sectionId, sectionSeatSize, sectionSeatShape, row, curveOffset);
                             sectionNode.add(seatShape);
                             this.layer.batchDraw();
                         }
