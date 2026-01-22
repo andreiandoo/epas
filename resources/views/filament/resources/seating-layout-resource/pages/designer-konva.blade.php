@@ -532,7 +532,13 @@
                 // Export modal
                 showExportModal: false,
 
+                // Livewire wire reference (needed for Konva event handlers)
+                wire: null,
+
                 init() {
+                    // Capture $wire reference for use in Konva event handlers
+                    this.wire = this.$wire;
+
                     this.createStage();
                     this.loadSections();
                     this.createTooltip();
@@ -1404,9 +1410,9 @@
                 openEditSectionModal() {
                     if (this.contextMenuSectionId) {
                         // Set the selected section and trigger the Filament action
-                        $wire.set('selectedSection', this.contextMenuSectionId);
+                        this.wire.set('selectedSection', this.contextMenuSectionId);
                         // Use Filament's action system
-                        $wire.mountAction('editSection');
+                        this.wire.mountAction('editSection');
                     }
                     this.hideContextMenu();
                 },
@@ -1707,11 +1713,17 @@
                     // Draw seats INSIDE the section group with local coordinates (skip for decorative zones)
                     // This way seats automatically rotate with the section
                     if (!isDecorativeZone && section.rows && section.rows.length > 0) {
+                        // Get seat size and shape from section metadata
+                        const metadata = section.metadata || {};
+                        const sectionSeatSize = metadata.seat_size || 10;
+                        const sectionSeatShape = metadata.seat_shape || 'circle';
+
                         section.rows.forEach(row => {
                             if (row.seats && row.seats.length > 0) {
                                 row.seats.forEach(seat => {
                                     // Create seat with local coordinates (relative to section origin)
-                                    const seatShape = this.createSeat(seat, seatColor, section.id);
+                                    // Use section's configured seat size and shape
+                                    const seatShape = this.createSeat(seat, seatColor, section.id, sectionSeatSize, sectionSeatShape);
                                     group.add(seatShape);
                                 });
                             }
@@ -1746,14 +1758,14 @@
                             }
                             // Also update Livewire selectedSection for Edit Section modal (deferred to avoid re-render)
                             if (bb && bb.visible()) {
-                                $wire.set('selectedSection', section.id);
+                                this.wire.set('selectedSection', section.id);
                             }
                         } else {
                             this.transformer.nodes([group]);
                             this.selectedSection = section.id;
                             this.layer.batchDraw();
                             // Defer Livewire sync to avoid re-render issues - only needed for Edit Section modal
-                            $wire.set('selectedSection', section.id);
+                            this.wire.set('selectedSection', section.id);
                         }
                     });
 
@@ -1764,7 +1776,7 @@
                         // Select this section
                         this.transformer.nodes([group]);
                         this.selectedSection = section.id;
-                        $wire.set('selectedSection', section.id);
+                        this.wire.set('selectedSection', section.id);
                         this.layer.batchDraw();
                         // Show context menu at mouse position
                         this.showSectionContextMenu(section.id, e.evt.clientX, e.evt.clientY);
@@ -1974,12 +1986,12 @@
                                 this.layer.batchDraw();
                             }
                             if (bb && bb.visible()) {
-                                $wire.set('selectedSection', section.id);
+                                this.wire.set('selectedSection', section.id);
                             }
                         } else {
                             this.transformer.nodes([group]);
                             this.selectedSection = section.id;
-                            $wire.selectedSection = section.id;
+                            this.wire.set('selectedSection', section.id);
                         }
                     });
 
@@ -1990,7 +2002,7 @@
                         // Select this section
                         this.transformer.nodes([group]);
                         this.selectedSection = section.id;
-                        $wire.set('selectedSection', section.id);
+                        this.wire.set('selectedSection', section.id);
                         this.layer.batchDraw();
                         // Show context menu at mouse position
                         this.showSectionContextMenu(section.id, e.evt.clientX, e.evt.clientY);
@@ -2112,12 +2124,14 @@
                 },
 
                 // Legacy createSeat for compatibility (relative coordinates within group)
-                createSeat(seat, seatColor, sectionId) {
+                // Now accepts optional seatSize and seatShape from section metadata
+                createSeat(seat, seatColor, sectionId, sectionSeatSize = null, sectionSeatShape = null) {
                     const x = parseFloat(seat.x || 0);
                     const y = parseFloat(seat.y || 0);
                     const angle = parseFloat(seat.angle || 0);
-                    const shape = seat.shape || 'circle';
-                    const seatSize = this.seatSize || 8;
+                    // Use section's configured values if provided, otherwise fall back to defaults
+                    const shape = sectionSeatShape || seat.shape || 'circle';
+                    const seatSize = sectionSeatSize || this.seatSize || 8;
 
                     let seatShape;
                     if (shape === 'circle') {
@@ -2672,7 +2686,11 @@
                         // Draw the seat on canvas
                         const sectionNode = this.stage.findOne(`#section-${sectionId}`);
                         if (sectionNode) {
-                            const seatShape = this.createSeat(seat, section.seat_color || section.color_hex, sectionId);
+                            // Get seat size and shape from section metadata
+                            const metadata = section.metadata || {};
+                            const sectionSeatSize = metadata.seat_size || 10;
+                            const sectionSeatShape = metadata.seat_shape || 'circle';
+                            const seatShape = this.createSeat(seat, section.seat_color || section.color_hex, sectionId, sectionSeatSize, sectionSeatShape);
                             sectionNode.add(seatShape);
                             this.layer.batchDraw();
                         }

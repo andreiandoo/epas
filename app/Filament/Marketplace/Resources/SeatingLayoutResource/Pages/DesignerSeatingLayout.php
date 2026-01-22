@@ -1135,7 +1135,11 @@ class DesignerSeatingLayout extends Page
         }
         $section->save();
 
-        $this->reloadSections();
+        // Note: We intentionally do NOT call reloadSections() here.
+        // The frontend already updated its local sections array in saveSection().
+        // Calling reloadSections() would update $this->sections and potentially
+        // trigger Livewire reactivity that could cause snap-back issues.
+        // The section is already saved to the database, so data is consistent.
 
         Notification::make()
             ->success()
@@ -1159,7 +1163,8 @@ class DesignerSeatingLayout extends Page
         $section->y_position = max(0, $section->y_position + (int) $deltaY);
         $section->save();
 
-        $this->reloadSections();
+        // Note: We intentionally do NOT call reloadSections() here.
+        // The frontend already handles the visual movement.
         $this->dispatch('section-moved', sectionId: $sectionId, x: $section->x_position, y: $section->y_position);
     }
 
