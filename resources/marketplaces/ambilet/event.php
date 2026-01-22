@@ -267,7 +267,7 @@ require_once __DIR__ . '/includes/head.php';
 
                                 <!-- Summary -->
                                 <div class="mb-4 space-y-2">
-                                    <div class="flex justify-between hidden text-sm">
+                                    <div class="flex justify-between text-sm">
                                         <span class="text-muted">Subtotal:</span>
                                         <span id="subtotal" class="font-medium">0 lei</span>
                                     </div>
@@ -385,7 +385,7 @@ require_once __DIR__ . '/includes/head.php';
             </div>
             <!-- Summary Details -->
             <div class="mb-3 space-y-2">
-                <div class="flex justify-between text-sm">
+                <div class="flex justify-between hidden text-sm">
                     <span class="text-muted">Subtotal:</span>
                     <span id="drawerSubtotal" class="font-medium">0 lei</span>
                 </div>

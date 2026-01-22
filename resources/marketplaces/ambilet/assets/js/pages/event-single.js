@@ -1777,7 +1777,6 @@ const EventPage = {
      * Render ticket types in modal sidebar
      */
     renderModalTicketTypes(currentTicketTypeId) {
-        var self = this;
         var container = document.getElementById('seat-modal-ticket-types');
         if (!container) return;
 
@@ -1785,8 +1784,6 @@ const EventPage = {
             return tt.has_seating && !tt.is_sold_out;
         }).map(function(tt) {
             var isActive = String(tt.id) === String(currentTicketTypeId);
-            var selectedCount = self.selectedSeats[tt.id]?.length || 0;
-            var requiredCount = self.quantities[tt.id] || 0;
 
             return '<div class="p-3 rounded-xl border-2 cursor-pointer transition-all ' +
                 (isActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50') + '" ' +
@@ -1796,11 +1793,6 @@ const EventPage = {
                     '<span class="font-bold text-primary">' + tt.price.toFixed(0) + ' lei</span>' +
                 '</div>' +
                 '<div class="text-xs text-muted">' + (tt.description || 'Acces general') + '</div>' +
-                (requiredCount > 0 ?
-                    '<div class="mt-2 text-xs font-medium ' + (selectedCount >= requiredCount ? 'text-green-600' : 'text-accent') + '">' +
-                        selectedCount + '/' + requiredCount + ' locuri selectate' +
-                    '</div>' : ''
-                ) +
             '</div>';
         }).join('');
 
@@ -1914,7 +1906,7 @@ const EventPage = {
             return;
         }
 
-        var html = '<span class="font-medium text-muted mr-2">Preț bilete:</span>';
+        var html = '';
         html += ticketTypesWithSeating.map(function(tt) {
             // Use seat_color if available, otherwise use a default color
             var color = tt.seating_sections && tt.seating_sections[0] && tt.seating_sections[0].seat_color

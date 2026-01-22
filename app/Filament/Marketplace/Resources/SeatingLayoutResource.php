@@ -284,7 +284,7 @@ class SeatingLayoutResource extends Resource
                         ->schema([
                             Forms\Components\Select::make('venue_id')
                                 ->label('Locație')
-                                ->description('Locația trebuie să aparțină acestui marketplace.')
+                                ->helperText('Locația trebuie să aparțină acestui marketplace.')
                                 ->relationship('venue', 'name', fn (Builder $query) => $query->where('marketplace_client_id', static::getMarketplaceClient()?->id))
                                 ->getOptionLabelFromRecordUsing(function ($record) {
                                     $locale = app()->getLocale();
@@ -363,7 +363,7 @@ class SeatingLayoutResource extends Resource
 
                     // Partner notes (internal)
                     SC\Section::make('Note interne')
-                        ->description('Note interne despre acest layout (nu sunt vizibile public)')
+                        ->helperText('Note interne despre acest layout (nu sunt vizibile public)')
                         ->icon('heroicon-o-lock-closed')
                         ->collapsible()
                         ->collapsed()
