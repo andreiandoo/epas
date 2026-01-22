@@ -5369,6 +5369,12 @@ html.dark {
 .opacity-30 {
 	opacity: 0.3;
 }
+.opacity-50 {
+	opacity: 0.5;
+}
+.opacity-100 {
+	opacity: 1;
+}
 
 .bg-opacity-20 {
 	--tw-bg-opacity: 0.2;

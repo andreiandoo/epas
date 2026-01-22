@@ -284,6 +284,7 @@ class SeatingLayoutResource extends Resource
                         ->schema([
                             Forms\Components\Select::make('venue_id')
                                 ->label('Locație')
+                                ->description('Atenție: Locația trebuie să aparțină acestui marketplace.')
                                 ->relationship('venue', 'name', fn (Builder $query) => $query->where('marketplace_client_id', static::getMarketplaceClient()?->id))
                                 ->getOptionLabelFromRecordUsing(function ($record) {
                                     $locale = app()->getLocale();
@@ -314,17 +315,18 @@ class SeatingLayoutResource extends Resource
 
                             Forms\Components\Textarea::make('notes')
                                 ->label('Note')
+                                ->placeholder('Note despre acest layout. Informatii de uz intern ...')
                                 ->maxLength(1000)
                                 ->rows(3)
                                 ->columnSpanFull(),
                         ])
                         ->columns(2),
 
-                    SC\Section::make('Setări Canvas')
+                    SC\Section::make('Setări Hartă')
                         ->icon('heroicon-o-photo')
                         ->schema([
                             Forms\Components\TextInput::make('canvas_w')
-                                ->label('Lățime Canvas (px)')
+                                ->label('Lățime hartă (px)')
                                 ->required()
                                 ->numeric()
                                 ->default(config('seating.canvas.default_width', 1920))
@@ -333,7 +335,7 @@ class SeatingLayoutResource extends Resource
                                 ->columnSpan(1),
 
                             Forms\Components\TextInput::make('canvas_h')
-                                ->label('Înălțime Canvas (px)')
+                                ->label('Înălțime hartă (px)')
                                 ->required()
                                 ->numeric()
                                 ->default(config('seating.canvas.default_height', 1080))
@@ -349,6 +351,11 @@ class SeatingLayoutResource extends Resource
                                 ->maxSize(10240)
                                 ->preserveFilenames()
                                 ->imagePreviewHeight('250')
+                                ->image()
+                                ->imageEditor()
+                                ->visibility('public')
+                                ->openable()
+                                ->downloadable()
                                 ->hintIcon('heroicon-o-information-circle', tooltip: 'Plan opțional al locației sau imagine de fundal (max 10MB)')
                                 ->columnSpanFull(),
                         ])

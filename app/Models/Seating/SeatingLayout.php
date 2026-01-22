@@ -64,7 +64,9 @@ class SeatingLayout extends Model
 
         // Auto-set tenant_id and created_by on create
         static::creating(function ($layout) {
-            if (!$layout->tenant_id && auth()->check() && isset(auth()->user()->tenant_id)) {
+            // Only set tenant_id if not provided AND user has a tenant_id AND no marketplace_client_id
+            // (marketplace layouts don't need tenant_id)
+            if (!$layout->tenant_id && !$layout->marketplace_client_id && auth()->check() && isset(auth()->user()->tenant_id)) {
                 $layout->tenant_id = auth()->user()->tenant_id;
             }
             // Only set created_by if the authenticated user is a User model (not MarketplaceAdmin)

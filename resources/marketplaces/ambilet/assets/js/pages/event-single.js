@@ -1680,7 +1680,7 @@ const EventPage = {
                             '</div>' +
                             '<div class="flex gap-2">' +
                                 '<button onclick="EventPage.confirmSeatSelection()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Comandă</button>' +
-                                '<button onclick="EventPage.clearAllSelections()" class="p-2.5 text-red-500 border border-red-200 rounded-xl hover:bg-red-50 transition-colors" title="Golește coșul">' +
+                                '<button onclick="EventPage.clearAllSelections()" class="p-2.5 text-secondary border border-secondary rounded-xl opacity-50 hover:bg-red-50 hover:opacity-100 hover:border-red-600 hover:text-red-600 transition-all" title="Golește coșul">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
                                 '</button>' +
                             '</div>' +
@@ -1988,9 +1988,9 @@ const EventPage = {
             // Create a group for the section with rotation
             svg += '<g' + transform + '>';
 
-            // Section background fill at 5% opacity
+            // Section background fill at 25% opacity
             var sectionBgColor = section.color_hex || '#6B7280';
-            svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionBgColor + '" fill-opacity="0.05" rx="4"/>';
+            svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionBgColor + '" fill-opacity="0.25" rx="4"/>';
 
             // Section name (positioned ABOVE the section, outside)
             var textY = section.y - 5;
@@ -2004,7 +2004,8 @@ const EventPage = {
                 var metadata = section.metadata || {};
                 var seatSize = metadata.seat_size || 20; // Base size from admin
                 var seatH = seatSize;
-                var seatW = Math.round(seatH * 0.83); // Aspect ratio 0.83
+                //var seatW = Math.round(seatH * 0.83); // Aspect ratio 0.83
+                var seatW = seatSize;
                 var cornerR = Math.max(2, Math.round(seatW * 0.17)); // Proportional corner radius
                 var bottomH = Math.max(2, Math.round(seatH * 0.2)); // 3D bottom effect height proportional
 
@@ -2144,9 +2145,9 @@ const EventPage = {
 
             svg += '<g' + transform + '>';
 
-            // Section background fill at 5% opacity
+            // Section background fill at 25% opacity
             var sectionBgColor = section.color_hex || '#6B7280';
-            svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionBgColor + '" fill-opacity="0.05" rx="4"/>';
+            svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionBgColor + '" fill-opacity="0.25" rx="4"/>';
 
             // Section name
             var textY = section.y - 5;
