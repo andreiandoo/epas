@@ -911,9 +911,17 @@ class DesignerSeatingLayout extends Page
 
         $rowPrefix  = $data['row_prefix']  ?? '';
         $seatPrefix = $data['seat_prefix'] ?? '';
-        $rowSpacing = $data['row_spacing'] ?? 40;
-        $seatSpacing = $data['seat_spacing'] ?? 30;
+        $rowSpacing = $data['row_spacing'] ?? 40;  // Gap between rows
+        $seatSpacing = $data['seat_spacing'] ?? 30; // Gap between seats
         $numRows = (int) $data['num_rows'];
+
+        // Get seat size from section metadata or use default
+        $metadata = $section->metadata ?? [];
+        $seatSize = $metadata['seat_size'] ?? 10;
+
+        // Calculate step between seat/row centers (size + gap)
+        $stepX = $seatSize + $seatSpacing;
+        $stepY = $seatSize + $rowSpacing;
 
         // Parse variable seats configuration
         $seatsPerRowArray = [];
@@ -969,9 +977,9 @@ class DesignerSeatingLayout extends Page
         $groupSize = $useGrouping ? (int) ($data['group_size'] ?? 3) : 0;
         $aisleSpacing = $useGrouping ? (int) ($data['aisle_spacing'] ?? 80) : 0;
 
-        // Calculate max row width for alignment purposes
+        // Calculate max row width for alignment purposes (using step, not just spacing)
         $maxSeats = max($seatsPerRowArray);
-        $maxRowWidth = ($maxSeats - 1) * $seatSpacing;
+        $maxRowWidth = ($maxSeats - 1) * $stepX;
 
         $currentY = 0;
 
@@ -988,7 +996,7 @@ class DesignerSeatingLayout extends Page
             ]);
 
             // Calculate row width and starting X position based on alignment
-            $rowWidth = ($seatsInThisRow - 1) * $seatSpacing;
+            $rowWidth = ($seatsInThisRow - 1) * $stepX;
             $startX = 0;
 
             switch ($rowAlignment) {
@@ -1011,7 +1019,7 @@ class DesignerSeatingLayout extends Page
                     'row_id'   => $row->id,
                     'label'    => $seatLabel,
                     'display_name' => $section->generateSeatDisplayName($rowLabel, $seatLabel),
-                    'x'        => $startX + (($s - 1) * $seatSpacing),
+                    'x'        => $startX + (($s - 1) * $stepX),
                     'y'        => 0,
                     'angle'    => 0,
                     'shape'    => 'circle',
@@ -1021,7 +1029,7 @@ class DesignerSeatingLayout extends Page
 
             $row->update(['seat_count' => $seatsInThisRow]);
 
-            $currentY += $rowSpacing;
+            $currentY += $stepY;
 
             if ($useGrouping && $r < $numRows && $r % $groupSize === 0) {
                 $currentY += $aisleSpacing;
@@ -1034,6 +1042,7 @@ class DesignerSeatingLayout extends Page
 
     /**
      * Create rows and seats for a new section
+     * Note: seatSpacing and rowSpacing represent the GAP between seats/rows
      */
     protected function createSectionSeats(
         SeatingSection $section,
@@ -1048,13 +1057,17 @@ class DesignerSeatingLayout extends Page
     ): void {
         $padding = 10; // Offset from section edge
 
+        // Calculate step between seat/row centers (size + gap)
+        $stepX = $seatSize + $seatSpacing;
+        $stepY = $seatSize + $rowSpacing;
+
         for ($r = 1; $r <= $numRows; $r++) {
             // Determine row label based on numbering direction
             $rowIndex = $rowNumbering === 'btt' ? ($numRows - $r + 1) : $r;
             $rowLabel = (string) $rowIndex;
 
-            // Calculate Y position for this row
-            $rowY = $padding + (($r - 1) * $rowSpacing);
+            // Calculate Y position for this row (center of seat at padding + step)
+            $rowY = $padding + (($r - 1) * $stepY);
 
             $row = SeatingRow::create([
                 'section_id' => $section->id,
@@ -1069,8 +1082,8 @@ class DesignerSeatingLayout extends Page
                 $seatIndex = $seatNumbering === 'rtl' ? ($seatsPerRow - $s + 1) : $s;
                 $seatLabel = (string) $seatIndex;
 
-                // Calculate X position for this seat
-                $seatX = $padding + (($s - 1) * $seatSpacing);
+                // Calculate X position for this seat (center of seat at padding + step)
+                $seatX = $padding + (($s - 1) * $stepX);
 
                 SeatingSeat::create([
                     'row_id' => $row->id,
@@ -1135,17 +1148,10 @@ class DesignerSeatingLayout extends Page
         }
         $section->save();
 
-        // Note: We intentionally do NOT call reloadSections() here.
+        // Note: We intentionally do NOT call reloadSections() or show notifications here.
         // The frontend already updated its local sections array in saveSection().
-        // Calling reloadSections() would update $this->sections and potentially
-        // trigger Livewire reactivity that could cause snap-back issues.
-        // The section is already saved to the database, so data is consistent.
-
-        Notification::make()
-            ->success()
-            ->title('Section updated')
-            ->body('Position and dimensions saved')
-            ->send();
+        // Notifications can trigger Livewire re-renders that cause snap-back issues.
+        // The section is silently saved to the database, data stays consistent.
     }
 
     /**
@@ -1778,10 +1784,21 @@ class DesignerSeatingLayout extends Page
 
     /**
      * Recalculate seat positions based on new spacing values
+     * Note: seatSpacing and rowSpacing represent the GAP between seats/rows, not center-to-center distance
      */
     protected function recalculateSeatPositions(SeatingSection $section, int $seatSpacing, int $rowSpacing): void
     {
-        $padding = 10; // Same padding used when creating seats
+        $padding = 10; // Padding from section edge
+
+        // Get seat size from metadata (diameter/side length)
+        $metadata = $section->metadata ?? [];
+        $seatSize = $metadata['seat_size'] ?? 10;
+
+        // Calculate step between seat/row centers:
+        // stepX = seatSize + seatSpacing (size plus gap)
+        // stepY = seatSize + rowSpacing (size plus gap)
+        $stepX = $seatSize + $seatSpacing;
+        $stepY = $seatSize + $rowSpacing;
 
         // Load rows ordered by Y position (or label)
         $rows = $section->rows()->orderBy('y', 'asc')->get();
@@ -1795,8 +1812,8 @@ class DesignerSeatingLayout extends Page
         $rowIndex = 0;
 
         foreach ($rows as $row) {
-            // Calculate new row Y position
-            $newRowY = $padding + ($rowIndex * $rowSpacing);
+            // Calculate new row Y position (center of first seat at padding, then step by stepY)
+            $newRowY = $padding + ($rowIndex * $stepY);
             $row->update(['y' => $newRowY]);
 
             // Get seats for this row ordered by X position
@@ -1809,8 +1826,8 @@ class DesignerSeatingLayout extends Page
 
             $seatIndex = 0;
             foreach ($seats as $seat) {
-                // Calculate new seat X and Y position
-                $newSeatX = $padding + ($seatIndex * $seatSpacing);
+                // Calculate new seat X position (center of first seat at padding, then step by stepX)
+                $newSeatX = $padding + ($seatIndex * $stepX);
                 $newSeatY = $newRowY; // Y is same as row Y
 
                 $seat->update([
@@ -1826,8 +1843,9 @@ class DesignerSeatingLayout extends Page
 
         // Only EXPAND section dimensions if seats would overflow (never shrink)
         $numRows = $rows->count();
-        $requiredWidth = ($maxSeatsPerRow * $seatSpacing) + $padding;
-        $requiredHeight = ($numRows * $rowSpacing) + $padding;
+        // Width = (seats-1) * stepX + seatSize + 2*padding (for last seat to fit)
+        $requiredWidth = (($maxSeatsPerRow - 1) * $stepX) + $seatSize + (2 * $padding);
+        $requiredHeight = (($numRows - 1) * $stepY) + $seatSize + (2 * $padding);
 
         $updates = [];
         if ($requiredWidth > $section->width) {

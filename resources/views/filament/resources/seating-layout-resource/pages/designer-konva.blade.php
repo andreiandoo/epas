@@ -532,16 +532,20 @@
                 // Export modal
                 showExportModal: false,
 
-                // Livewire wire reference (needed for Konva event handlers)
-                wire: null,
-
                 init() {
-                    // Capture $wire reference for use in Konva event handlers
-                    this.wire = this.$wire;
-
                     this.createStage();
                     this.loadSections();
                     this.createTooltip();
+                },
+
+                // Wrapper methods to access Livewire from Konva handlers
+                // These use @this which is Blade syntax that compiles to the component reference
+                setLivewireSelectedSection(sectionId) {
+                    @this.set('selectedSection', sectionId);
+                },
+
+                mountLivewireAction(actionName) {
+                    @this.mountAction(actionName);
                 },
 
                 // Keyboard shortcuts handler
@@ -1410,9 +1414,9 @@
                 openEditSectionModal() {
                     if (this.contextMenuSectionId) {
                         // Set the selected section and trigger the Filament action
-                        this.wire.set('selectedSection', this.contextMenuSectionId);
+                        this.setLivewireSelectedSection( this.contextMenuSectionId);
                         // Use Filament's action system
-                        this.wire.mountAction('editSection');
+                        this.mountLivewireAction('editSection');
                     }
                     this.hideContextMenu();
                 },
@@ -1758,14 +1762,14 @@
                             }
                             // Also update Livewire selectedSection for Edit Section modal (deferred to avoid re-render)
                             if (bb && bb.visible()) {
-                                this.wire.set('selectedSection', section.id);
+                                this.setLivewireSelectedSection( section.id);
                             }
                         } else {
                             this.transformer.nodes([group]);
                             this.selectedSection = section.id;
                             this.layer.batchDraw();
                             // Defer Livewire sync to avoid re-render issues - only needed for Edit Section modal
-                            this.wire.set('selectedSection', section.id);
+                            this.setLivewireSelectedSection( section.id);
                         }
                     });
 
@@ -1776,7 +1780,7 @@
                         // Select this section
                         this.transformer.nodes([group]);
                         this.selectedSection = section.id;
-                        this.wire.set('selectedSection', section.id);
+                        this.setLivewireSelectedSection( section.id);
                         this.layer.batchDraw();
                         // Show context menu at mouse position
                         this.showSectionContextMenu(section.id, e.evt.clientX, e.evt.clientY);
@@ -1986,12 +1990,12 @@
                                 this.layer.batchDraw();
                             }
                             if (bb && bb.visible()) {
-                                this.wire.set('selectedSection', section.id);
+                                this.setLivewireSelectedSection( section.id);
                             }
                         } else {
                             this.transformer.nodes([group]);
                             this.selectedSection = section.id;
-                            this.wire.set('selectedSection', section.id);
+                            this.setLivewireSelectedSection( section.id);
                         }
                     });
 
@@ -2002,7 +2006,7 @@
                         // Select this section
                         this.transformer.nodes([group]);
                         this.selectedSection = section.id;
-                        this.wire.set('selectedSection', section.id);
+                        this.setLivewireSelectedSection( section.id);
                         this.layer.batchDraw();
                         // Show context menu at mouse position
                         this.showSectionContextMenu(section.id, e.evt.clientX, e.evt.clientY);
