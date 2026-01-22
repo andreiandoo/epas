@@ -11,7 +11,7 @@
          @@layout-updated.window="handleLayoutUpdated($event.detail)">
         {{-- Canvas Container --}}
         <div class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div class="flex flex-col gap-y-4 items-center justify-between mb-4">
+            <div class="flex flex-col items-center justify-between mb-4 gap-y-4">
                 <div class="flex flex-row items-center gap-x-4">
                     <h3 class="text-lg font-semibold text-gray-900">Canvas Designer </h3>
                     <p class="text-sm text-gray-500">Layout: {{ $canvasWidth }}x{{ $canvasHeight }}px</p>
@@ -30,16 +30,27 @@
                     </button>
                     <button @click="resetView" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200">Reset</button>
                     <button @click="zoomToFit" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Fit all content in view">Fit</button>
-                    <button @click="toggleGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm" :class="showGrid ? 'bg-blue-500 text-white' : 'bg-gray-100'">
+                    <button @click="toggleGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm rounded-md" :class="showGrid ? 'bg-blue-500 text-white' : 'bg-gray-100'">
                         <x-svg-icon name="konvagrid" class="w-5 h-5 text-purple-600" />
                         Grid
                     </button>
-                    <button @click="toggleSnapToGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm" :class="snapToGrid ? 'bg-indigo-500 text-white' : 'bg-gray-100'" title="Snap sections to grid when moving">
+                    <button @click="toggleSnapToGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm rounded-md" :class="snapToGrid ? 'bg-indigo-500 text-white' : 'bg-gray-100'" title="Snap sections to grid when moving">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"></path>
                         </svg>
                         Snap
                     </button>
+
+                    {{-- Background image controls toggle button --}}
+                    <div x-show="backgroundUrl" class="mb-4">
+                        <button @click="showBackgroundControls = !showBackgroundControls" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg"
+                            :class="showBackgroundControls ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </button>
+                    </div>
 
                     <div class="h-6 mx-1 border-l border-gray-300"></div>
 
@@ -77,7 +88,8 @@
                         <x-svg-icon name="konvaseats" class="w-5 h-5 text-purple-600" />
                         Add Seats
                     </button>
-                    <div x-show="drawMode === 'seat'" x-transition class="flex items-center gap-2 px-2 py-1 ml-1 border rounded-md bg-purple-50 border-purple-200">
+                    
+                    <div x-show="drawMode === 'seat'" x-transition class="flex items-center gap-2 px-2 py-1 ml-1 border border-purple-200 rounded-md bg-purple-50">
                         <label class="text-xs text-purple-700">Size:</label>
                         <input type="number" x-model="seatSize" min="4" max="30" step="1" class="w-12 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
                         <select x-model="seatShape" class="px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
@@ -110,7 +122,7 @@
             </div>
 
             {{-- Seats selection toolbar --}}
-            <div x-show="selectedSeats.length > 0" x-transition class="flex items-center gap-4 p-3 mb-4 border rounded-lg bg-orange-50 border-orange-200">
+            <div x-show="selectedSeats.length > 0" x-transition class="flex items-center gap-4 p-3 mb-4 border border-orange-200 rounded-lg bg-orange-50">
                 <div class="flex items-center gap-2">
                     <span class="text-sm font-medium text-orange-800" x-text="`${selectedSeats.length} seats selected`"></span>
                 </div>
@@ -123,7 +135,7 @@
                             @endif
                         @endforeach
                     </select>
-                    <input type="text" x-model="assignToRowLabel" placeholder="Row label (e.g., A, 1)" class="w-32 text-sm text-gray-900 bg-white border-gray-300 rounded-md placeholder-gray-400">
+                    <input type="text" x-model="assignToRowLabel" placeholder="Row label (e.g., A, 1)" class="w-32 text-sm text-gray-900 placeholder-gray-400 bg-white border-gray-300 rounded-md">
                     <button @click="assignSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-orange-600 rounded-md hover:bg-orange-700" :disabled="!assignToSectionId || !assignToRowLabel">
                         Assign to Row
                     </button>
@@ -137,7 +149,7 @@
             </div>
 
             {{-- Rows selection toolbar --}}
-            <div x-show="selectedRows.length > 0" x-transition class="flex items-center gap-4 p-3 mb-4 border rounded-lg bg-blue-50 border-blue-200">
+            <div x-show="selectedRows.length > 0" x-transition class="flex items-center gap-4 p-3 mb-4 border border-blue-200 rounded-lg bg-blue-50">
                 <div class="flex items-center gap-2">
                     <span class="text-sm font-medium text-blue-800" x-text="`${selectedRows.length} rows selected`"></span>
                 </div>
@@ -164,23 +176,8 @@
                 </div>
             </div>
 
-            {{-- Background image controls toggle button --}}
-            <div x-show="backgroundUrl" class="mb-4">
-                <button @click="showBackgroundControls = !showBackgroundControls" type="button"
-                    class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg"
-                    :class="showBackgroundControls ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    Background Settings
-                    <svg class="w-4 h-4 transition-transform" :class="showBackgroundControls ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </button>
-            </div>
-
             {{-- Background image controls (collapsible) --}}
-            <div x-show="backgroundUrl && showBackgroundControls" x-transition class="flex flex-wrap items-center gap-4 p-3 mb-4 border rounded-lg bg-indigo-50 border-indigo-200">
+            <div x-show="backgroundUrl && showBackgroundControls" x-transition class="flex flex-wrap items-center gap-4 p-3 mb-4 border border-indigo-200 rounded-lg bg-indigo-50">
                 <div class="flex items-center gap-2">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" x-model="backgroundVisible" @change="toggleBackgroundVisibility()" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
@@ -206,7 +203,7 @@
                 <div class="flex items-center gap-1">
                     <label class="text-xs text-indigo-700">Opacity:</label>
                     <input type="range" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-16" :disabled="!backgroundVisible">
-                    <input type="number" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-14 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
+                    <input type="number" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded w-14" :disabled="!backgroundVisible">
                 </div>
                 <button @click="resetBackgroundPosition" type="button" class="px-2 py-1 text-xs text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200">Reset</button>
                 <button @click="saveBackgroundSettings" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Save Settings</button>
@@ -362,7 +359,7 @@
                                     <div class="flex items-center justify-between px-2 py-1 text-sm rounded hover:bg-gray-100"
                                          :class="selectedRows.find(r => r.rowId === {{ $row['id'] }}) ? 'bg-blue-100' : ''">
                                         <button @click.stop="selectRow({{ $section['id'] }}, {{ $row['id'] }})"
-                                                class="flex items-center gap-2 flex-1 text-left">
+                                                class="flex items-center flex-1 gap-2 text-left">
                                             <span class="font-medium">Row {{ $row['label'] }}</span>
                                             <span class="text-xs text-gray-500">{{ count($row['seats'] ?? []) }} seats</span>
                                         </button>

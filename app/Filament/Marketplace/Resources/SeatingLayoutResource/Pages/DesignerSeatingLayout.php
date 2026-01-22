@@ -1933,31 +1933,6 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
-     * Renumber seats in a row after deletion (orders by X position left-to-right)
-     */
-    protected function renumberSeatsInRow(SeatingRow $row): void
-    {
-        // Get remaining seats ordered by X position (left to right)
-        $seats = $row->seats()->orderBy('x', 'asc')->get();
-
-        $number = 1;
-        foreach ($seats as $seat) {
-            $newLabel = (string) $number;
-
-            // Only update if label changed
-            if ($seat->label !== $newLabel) {
-                $section = $row->section;
-                $seat->update([
-                    'label' => $newLabel,
-                    'display_name' => $section ? $section->generateSeatDisplayName($row->label, $newLabel) : $newLabel,
-                    'seat_uid' => $section ? $section->generateSeatUid($row->label, $newLabel) : uniqid(),
-                ]);
-            }
-            $number++;
-        }
-    }
-
-    /**
      * Recalculate seat positions based on new spacing values
      * Note: seatSpacing and rowSpacing represent the GAP between seats/rows, not center-to-center distance
      */
@@ -2038,7 +2013,7 @@ class DesignerSeatingLayout extends Page
     /**
      * Renumber seats in a row starting from a given number
      */
-    protected function renumberSeatsInRow(SeatingRow $row, int $startNumber): void
+    protected function renumberSeatsInRow(SeatingRow $row, int $startNumber = 1): void
     {
         // Get seats ordered by X position
         $seats = $row->seats()->orderBy('x', 'asc')->get();
