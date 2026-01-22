@@ -153,7 +153,7 @@ require_once __DIR__ . '/includes/head.php';
                         <h1 id="event-title" class="mb-4 text-2xl font-extrabold md:text-4xl text-secondary"></h1>
 
                         <!-- Key Details -->
-                        <div class="grid gap-4 mb-6 grid-cols-2">
+                        <div class="grid grid-cols-2 gap-4 mb-6">
                             <div class="flex items-start gap-3 p-4 bg-surface rounded-xl mobile:rounded-none mobile:p-0 mobile:bg-transparent">
                                 <div class="flex-shrink-0 px-3 py-2 text-center text-white date-badge rounded-xl">
                                     <span id="event-day" class="block text-xl font-bold leading-none">--</span>
@@ -267,7 +267,7 @@ require_once __DIR__ . '/includes/head.php';
 
                                 <!-- Summary -->
                                 <div class="mb-4 space-y-2">
-                                    <div class="flex justify-between text-sm">
+                                    <div class="flex justify-between hidden text-sm">
                                         <span class="text-muted">Subtotal:</span>
                                         <span id="subtotal" class="font-medium">0 lei</span>
                                     </div>
@@ -313,7 +313,7 @@ require_once __DIR__ . '/includes/head.php';
 
         <!-- Mobile Fixed Bottom Button (shows on mobile only) -->
         <div id="mobileTicketBtn" class="hidden sticky bottom-0 left-0 right-0 z-[105] p-4 bg-primary border-t lg:hidden border-border border-b safe-area-bottom mobile:block">
-            <button onclick="openTicketDrawer()" class="flex items-center justify-center w-full gap-3 py-4 text-lg font-bold text-primary bg-white rounded-xl">
+            <button onclick="openTicketDrawer()" class="flex items-center justify-center w-full gap-3 py-4 text-lg font-bold bg-white text-primary rounded-xl">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 <span>Cumpără bilete</span>
                 <span id="mobileMinPrice" class="px-2 py-1 text-sm font-semibold rounded-lg bg-white/20">de la -- lei</span>
@@ -322,7 +322,7 @@ require_once __DIR__ . '/includes/head.php';
     </main>
 
     <!-- Custom Recommended Events (Îți recomandăm) - Premium Section -->
-    <section class="relative mt-16 -mx-4 md:-mx-8 lg:-mx-12 overflow-hidden" id="custom-related-section" style="display:none;">
+    <section class="relative mt-16 -mx-4 overflow-hidden md:-mx-8 lg:-mx-12" id="custom-related-section" style="display:none;">
         <!-- Premium gradient background -->
         <div class="absolute inset-0 bg-gradient-to-b from-primary to-primary/80"></div>
 

@@ -8,6 +8,7 @@ use App\Services\Seating\MarketplaceEventSeatingService;
 use App\Models\Seating\EventSeatingLayout;
 use Filament\Actions;
 use Filament\Forms;
+use Filament\Schemas\Components\Utilities\Get as SGet;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
@@ -115,7 +116,7 @@ class EditEvent extends EditRecord
 
                 Forms\Components\Select::make('row_label')
                     ->label('Row')
-                    ->options(function (Forms\Get $get) use ($eventSeating) {
+                    ->options(function (SGet $get) use ($eventSeating) {
                         $sectionName = $get('section_name');
                         if (!$eventSeating || !$sectionName) return [];
 
@@ -150,7 +151,7 @@ class EditEvent extends EditRecord
 
                 Forms\Components\Placeholder::make('current_blocked')
                     ->label('Current Blocked Seats in Row')
-                    ->content(function (Forms\Get $get) use ($eventSeating) {
+                    ->content(function (SGet $get) use ($eventSeating) {
                         $sectionName = $get('section_name');
                         $rowLabel = $get('row_label');
 
