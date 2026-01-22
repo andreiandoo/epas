@@ -352,7 +352,6 @@ class SeatingLayoutResource extends Resource
                                 ->preserveFilenames()
                                 ->imagePreviewHeight('250')
                                 ->image()
-                                ->imageEditor()
                                 ->visibility('public')
                                 ->openable()
                                 ->downloadable()
