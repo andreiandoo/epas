@@ -1988,6 +1988,62 @@ const EventPage = {
             // Create a group for the section with rotation
             svg += '<g' + transform + '>';
 
+            // Handle ICON sections differently
+            if (section.section_type === 'icon') {
+                var metadata = section.metadata || {};
+                var iconSize = metadata.icon_size || 40;
+                var bgColor = metadata.background_color || section.color_hex || '#3B82F6';
+                var iconColor = metadata.icon_color || '#FFFFFF';
+                var iconX = section.x;
+                var iconY = section.y;
+
+                // Icon background circle
+                var radius = iconSize / 2;
+                svg += '<circle cx="' + (iconX + radius) + '" cy="' + (iconY + radius) + '" r="' + radius + '" fill="' + bgColor + '"/>';
+
+                // Render the SVG icon if available
+                if (section.icon_svg) {
+                    // Calculate scale to fit the icon inside the circle (70% of diameter)
+                    var innerSize = iconSize * 0.6;
+                    var iconOffset = (iconSize - innerSize) / 2;
+
+                    // Parse and embed the SVG icon
+                    var iconSvgContent = section.icon_svg;
+                    // Extract path/content from full SVG or use as path data
+                    if (iconSvgContent.indexOf('<svg') !== -1) {
+                        // Full SVG - extract viewBox and inner content
+                        var viewBoxMatch = iconSvgContent.match(/viewBox="([^"]+)"/);
+                        var viewBox = viewBoxMatch ? viewBoxMatch[1] : '0 0 512 512';
+                        var innerMatch = iconSvgContent.match(/<g[^>]*>([\s\S]*?)<\/g>/);
+                        var innerContent = innerMatch ? innerMatch[1] : '';
+
+                        // If no <g> found, try to get content between <svg> and </svg>
+                        if (!innerContent) {
+                            innerMatch = iconSvgContent.match(/<svg[^>]*>([\s\S]*?)<\/svg>/);
+                            innerContent = innerMatch ? innerMatch[1] : '';
+                        }
+
+                        svg += '<svg x="' + (iconX + iconOffset) + '" y="' + (iconY + iconOffset) + '" width="' + innerSize + '" height="' + innerSize + '" viewBox="' + viewBox + '">';
+                        // Apply icon color by wrapping in a group with fill
+                        svg += '<g fill="' + iconColor + '">' + innerContent.replace(/fill="[^"]*"/g, 'fill="' + iconColor + '"') + '</g>';
+                        svg += '</svg>';
+                    } else {
+                        // Just path data
+                        svg += '<svg x="' + (iconX + iconOffset) + '" y="' + (iconY + iconOffset) + '" width="' + innerSize + '" height="' + innerSize + '" viewBox="0 0 24 24">';
+                        svg += '<path d="' + iconSvgContent + '" fill="' + iconColor + '"/>';
+                        svg += '</svg>';
+                    }
+                }
+
+                // Icon label below
+                var labelY = iconY + iconSize + 12;
+                var labelX = iconX + (iconSize / 2);
+                svg += '<text x="' + labelX + '" y="' + labelY + '" text-anchor="middle" font-size="10" font-weight="500" fill="#1F2937" style="text-shadow: 0 0 3px white, 0 0 3px white;">' + (section.icon_label || section.name) + '</text>';
+
+                svg += '</g>'; // Close section group
+                return; // Skip rest of section rendering for icons
+            }
+
             // Section background fill at 25% opacity
             var sectionBgColor = section.color_hex || '#6B7280';
             svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionBgColor + '" fill-opacity="0.25" rx="4"/>';
@@ -2032,7 +2088,14 @@ const EventPage = {
                             // Determine seat color and interactivity
                             var seatColor, cursor, isClickable;
 
-                            if (!isAllowed) {
+                            // Check for disabled (imposibil) seats first
+                            var isDisabled = (status === 'disabled' || seat.base_status === 'imposibil');
+
+                            if (isDisabled) {
+                                seatColor = '#6B7280'; // Gray for imposibil seats
+                                cursor = 'not-allowed';
+                                isClickable = false;
+                            } else if (!isAllowed) {
                                 seatColor = '#E5E7EB'; // Light gray
                                 cursor = 'not-allowed';
                                 isClickable = false;
@@ -2049,19 +2112,21 @@ const EventPage = {
                                 cursor = 'not-allowed';
                                 isClickable = false;
                             } else {
-                                seatColor = '#E5E7EB'; // Disabled/blocked - light gray
+                                seatColor = '#E5E7EB'; // Other disabled/blocked - light gray
                                 cursor = 'not-allowed';
                                 isClickable = false;
                             }
 
                             var clickHandler = isClickable ?
-                                'onclick="EventPage.toggleSeat(\'' + ticketTypeId + '\', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\')"' : '';
+                                'onclick="EventPage.toggleSeat(\'' + ticketTypeId + '\', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\', \'' + (seat.seat_uid || '') + '\')"' : '';
 
                             var strokeColor = isSelected ? '#7a141f' : (isAllowed && status === 'available' ? '#16A34A' : '#D1D5DB');
 
                             // Tooltip text
                             var tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
-                            if (!isAllowed) {
+                            if (isDisabled) {
+                                tooltipText += ' (indisponibil permanent)';
+                            } else if (!isAllowed) {
                                 tooltipText += ' (indisponibil pentru acest bilet)';
                             } else if (status === 'sold') {
                                 tooltipText += ' (vândut)';
@@ -2086,8 +2151,20 @@ const EventPage = {
                             svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + '; transform-origin: ' + (seatX + seatW/2) + 'px ' + (seatY + seatH/2) + 'px;">' +
                                 '<title>' + tooltipText + '</title>' +
                                 '<rect x="' + bottomX + '" y="' + bottomY + '" width="' + bottomW + '" height="' + bottomH + '" rx="2" fill="' + seatColor + '" style="filter: brightness(0.7);"/>' +
-                                '<path d="' + seatPath + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="1"/>' +
-                            '</g>';
+                                '<path d="' + seatPath + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="1"/>';
+
+                            // Add X marker for disabled (imposibil) seats
+                            if (isDisabled) {
+                                var xPadding = 4;
+                                var x1 = seatX + xPadding;
+                                var y1 = seatY + xPadding;
+                                var x2 = seatX + seatW - xPadding;
+                                var y2 = seatY + seatH - xPadding;
+                                svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#374151" stroke-width="2" stroke-linecap="round"/>' +
+                                       '<line x1="' + x2 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y2 + '" stroke="#374151" stroke-width="2" stroke-linecap="round"/>';
+                            }
+
+                            svg += '</g>';
                         });
                     }
                 });
@@ -2145,6 +2222,53 @@ const EventPage = {
 
             svg += '<g' + transform + '>';
 
+            // Handle ICON sections differently
+            if (section.section_type === 'icon') {
+                var metadata = section.metadata || {};
+                var iconSize = metadata.icon_size || 40;
+                var bgColor = metadata.background_color || section.color_hex || '#3B82F6';
+                var iconColor = metadata.icon_color || '#FFFFFF';
+                var iconX = section.x;
+                var iconY = section.y;
+
+                // Icon background circle
+                var radius = iconSize / 2;
+                svg += '<circle cx="' + (iconX + radius) + '" cy="' + (iconY + radius) + '" r="' + radius + '" fill="' + bgColor + '"/>';
+
+                // Render the SVG icon if available
+                if (section.icon_svg) {
+                    var innerSize = iconSize * 0.6;
+                    var iconOffset = (iconSize - innerSize) / 2;
+
+                    var iconSvgContent = section.icon_svg;
+                    if (iconSvgContent.indexOf('<svg') !== -1) {
+                        var viewBoxMatch = iconSvgContent.match(/viewBox="([^"]+)"/);
+                        var viewBox = viewBoxMatch ? viewBoxMatch[1] : '0 0 512 512';
+                        var innerMatch = iconSvgContent.match(/<g[^>]*>([\s\S]*?)<\/g>/);
+                        var innerContent = innerMatch ? innerMatch[1] : '';
+                        if (!innerContent) {
+                            innerMatch = iconSvgContent.match(/<svg[^>]*>([\s\S]*?)<\/svg>/);
+                            innerContent = innerMatch ? innerMatch[1] : '';
+                        }
+                        svg += '<svg x="' + (iconX + iconOffset) + '" y="' + (iconY + iconOffset) + '" width="' + innerSize + '" height="' + innerSize + '" viewBox="' + viewBox + '">';
+                        svg += '<g fill="' + iconColor + '">' + innerContent.replace(/fill="[^"]*"/g, 'fill="' + iconColor + '"') + '</g>';
+                        svg += '</svg>';
+                    } else {
+                        svg += '<svg x="' + (iconX + iconOffset) + '" y="' + (iconY + iconOffset) + '" width="' + innerSize + '" height="' + innerSize + '" viewBox="0 0 24 24">';
+                        svg += '<path d="' + iconSvgContent + '" fill="' + iconColor + '"/>';
+                        svg += '</svg>';
+                    }
+                }
+
+                // Icon label below
+                var labelY = iconY + iconSize + 12;
+                var labelX = iconX + (iconSize / 2);
+                svg += '<text x="' + labelX + '" y="' + labelY + '" text-anchor="middle" font-size="10" font-weight="500" fill="#1F2937" style="text-shadow: 0 0 3px white, 0 0 3px white;">' + (section.icon_label || section.name) + '</text>';
+
+                svg += '</g>'; // Close section group
+                return; // Skip rest of section rendering for icons
+            }
+
             // Section background fill at 25% opacity
             var sectionBgColor = section.color_hex || '#6B7280';
             svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionBgColor + '" fill-opacity="0.25" rx="4"/>';
@@ -2187,7 +2311,14 @@ const EventPage = {
 
                             var seatColor, cursor, isClickable;
 
-                            if (!isAssigned) {
+                            // Check for disabled (imposibil) seats first
+                            var isDisabled = (status === 'disabled' || seat.base_status === 'imposibil');
+
+                            if (isDisabled) {
+                                seatColor = '#6B7280'; // Gray for imposibil seats
+                                cursor = 'not-allowed';
+                                isClickable = false;
+                            } else if (!isAssigned) {
                                 seatColor = '#E5E7EB';
                                 cursor = 'not-allowed';
                                 isClickable = false;
@@ -2211,7 +2342,7 @@ const EventPage = {
 
                             // Click handler passes section ID to auto-detect ticket type
                             var clickHandler = isClickable ?
-                                'onclick="EventPage.toggleSeatAuto(' + section.id + ', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\')"' : '';
+                                'onclick="EventPage.toggleSeatAuto(' + section.id + ', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\', \'' + (seat.seat_uid || '') + '\')"' : '';
 
                             var strokeColor = isSelected ? '#7a141f' : (isAssigned && status === 'available' ? '#16A34A' : '#D1D5DB');
 
@@ -2219,7 +2350,9 @@ const EventPage = {
                             if (ticketTypesForSection.length > 0) {
                                 tooltipText += ' (' + ticketTypesForSection[0].name + ')';
                             }
-                            if (!isAssigned) {
+                            if (isDisabled) {
+                                tooltipText += ' (indisponibil permanent)';
+                            } else if (!isAssigned) {
                                 tooltipText += ' (indisponibil)';
                             } else if (status === 'sold') {
                                 tooltipText += ' (vândut)';
@@ -2244,8 +2377,20 @@ const EventPage = {
                             svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + '; transform-origin: ' + (seatX + seatW/2) + 'px ' + (seatY + seatH/2) + 'px;">' +
                                 '<title>' + tooltipText + '</title>' +
                                 '<rect x="' + bottomX + '" y="' + bottomY + '" width="' + bottomW + '" height="' + bottomH + '" rx="2" fill="' + seatColor + '" style="filter: brightness(0.7);"/>' +
-                                '<path d="' + seatPath + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="1"/>' +
-                            '</g>';
+                                '<path d="' + seatPath + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="1"/>';
+
+                            // Add X marker for disabled (imposibil) seats
+                            if (isDisabled) {
+                                var xPadding = 4;
+                                var x1 = seatX + xPadding;
+                                var y1 = seatY + xPadding;
+                                var x2 = seatX + seatW - xPadding;
+                                var y2 = seatY + seatH - xPadding;
+                                svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#374151" stroke-width="2" stroke-linecap="round"/>' +
+                                       '<line x1="' + x2 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y2 + '" stroke="#374151" stroke-width="2" stroke-linecap="round"/>';
+                            }
+
+                            svg += '</g>';
                         });
                     }
                 });
@@ -2290,7 +2435,7 @@ const EventPage = {
     /**
      * Toggle seat selection - auto-detects ticket type from section
      */
-    toggleSeatAuto(sectionId, seatId, sectionName, rowLabel, seatLabel) {
+    toggleSeatAuto(sectionId, seatId, sectionName, rowLabel, seatLabel, seatUid) {
         var tt = this.findTicketTypeForSection(sectionId);
 
         if (!tt) {
@@ -2313,6 +2458,7 @@ const EventPage = {
             // Select
             this.selectedSeats[ticketTypeId].push({
                 id: seatId,
+                seat_uid: seatUid, // Include seat_uid for API calls
                 section: sectionName,
                 row: rowLabel,
                 seat: seatLabel
@@ -2334,7 +2480,7 @@ const EventPage = {
     /**
      * Toggle seat selection (old method - kept for compatibility)
      */
-    toggleSeat(ticketTypeId, seatId, sectionName, rowLabel, seatLabel) {
+    toggleSeat(ticketTypeId, seatId, sectionName, rowLabel, seatLabel, seatUid) {
         var self = this;
         if (!this.selectedSeats[ticketTypeId]) {
             this.selectedSeats[ticketTypeId] = [];
@@ -2351,6 +2497,7 @@ const EventPage = {
             // Select - no limit, user can select as many as they want
             this.selectedSeats[ticketTypeId].push({
                 id: seatId,
+                seat_uid: seatUid, // Include seat_uid for API calls
                 section: sectionName,
                 row: rowLabel,
                 seat: seatLabel
@@ -2446,7 +2593,7 @@ const EventPage = {
     /**
      * Confirm seat selection, add to cart, and redirect to cart page
      */
-    confirmSeatSelection() {
+    async confirmSeatSelection() {
         var self = this;
 
         // Check if any seats are selected across all ticket types
@@ -2484,10 +2631,10 @@ const EventPage = {
         // This prevents the "adding to existing quantity" problem
         this.clearEventFromCart();
 
-        // Add tickets to cart with seat information
-        this.addToCartWithSeats();
+        // Add tickets to cart with seat information (wait for API to complete)
+        await this.addToCartWithSeats();
 
-        // Redirect to cart page
+        // Redirect to cart page (only after seats are successfully held)
         window.location.href = '/cos';
     },
 
@@ -2512,14 +2659,17 @@ const EventPage = {
 
     /**
      * Add to cart with seat information (for seated events)
+     * Calls API to hold seats before adding to local cart
      */
-    addToCartWithSeats() {
+    async addToCartWithSeats() {
         var self = this;
         var commissionRate = this.event.commission_rate || 5;
         var commissionMode = this.event.commission_mode || 'included';
+        var eventSeatingId = this.seatingLayout?.event_seating_id;
 
         console.log('[EventPage] addToCartWithSeats called');
         console.log('[EventPage] Selected seats:', this.selectedSeats);
+        console.log('[EventPage] Event seating ID:', eventSeatingId);
 
         // Build event data once
         var targetPrice = self.event.target_price ? parseFloat(self.event.target_price) : null;
@@ -2540,15 +2690,18 @@ const EventPage = {
         // Get cart once before the loop
         var cart = AmbiletCart.getCart();
 
-        // For each ticket type with selected seats, add to cart
-        Object.keys(this.selectedSeats).forEach(function(ticketTypeId) {
+        // For each ticket type with selected seats, hold via API then add to cart
+        var ticketTypeIds = Object.keys(this.selectedSeats);
+
+        for (var i = 0; i < ticketTypeIds.length; i++) {
+            var ticketTypeId = ticketTypeIds[i];
             var seats = self.selectedSeats[ticketTypeId];
-            if (!seats || seats.length === 0) return;
+            if (!seats || seats.length === 0) continue;
 
             var tt = self.ticketTypes.find(function(t) { return String(t.id) === String(ticketTypeId); });
             if (!tt) {
                 console.warn('[EventPage] Ticket type not found:', ticketTypeId);
-                return;
+                continue;
             }
 
             var basePrice = tt.price;
@@ -2566,51 +2719,126 @@ const EventPage = {
                 description: tt.description
             };
 
-            // Add item with seat information
-            var qty = seats.length;
-            console.log('[EventPage] Adding', qty, 'x', tt.name, 'with seats:', seats);
+            // Extract seat_uids for API call
+            var seatUids = seats.map(function(s) { return s.seat_uid; }).filter(function(uid) { return uid; });
 
-            var itemKey = self.event.id + '_' + tt.id;
+            // If we have event_seating_id and seat_uids, call API to hold seats
+            if (eventSeatingId && seatUids.length > 0) {
+                try {
+                    console.log('[EventPage] Calling API to hold seats:', seatUids);
 
-            // Remove existing item for this ticket type (if any - shouldn't be after clearEventFromCart)
-            cart.items = cart.items.filter(function(item) { return item.key !== itemKey; });
+                    var response = await AmbiletAPI.post('/cart/items/with-seats', {
+                        event_id: self.event.id,
+                        ticket_type_id: tt.id,
+                        event_seating_id: eventSeatingId,
+                        seat_uids: seatUids,
+                        seats: seats.map(function(s) {
+                            return {
+                                seat_uid: s.seat_uid,
+                                section_name: s.section,
+                                row_label: s.row,
+                                seat_label: s.seat
+                            };
+                        })
+                    });
 
-            // Add new item with seats
-            cart.items.push({
-                key: itemKey,
-                eventId: self.event.id,
-                event: {
-                    id: eventData.id,
-                    title: eventData.title,
-                    slug: eventData.slug,
-                    date: eventData.start_date,
-                    time: eventData.start_time,
-                    image: eventData.image,
-                    venue: eventData.venue,
-                    city: eventData.venue?.city,
-                    taxes: eventData.taxes,
-                    target_price: eventData.target_price,
-                    commission_rate: eventData.commission_rate,
-                    commission_mode: eventData.commission_mode
-                },
-                ticketTypeId: tt.id,
-                ticketType: {
-                    id: ticketTypeData.id,
-                    name: ticketTypeData.name,
-                    price: ticketTypeData.price,
-                    originalPrice: ticketTypeData.original_price,
-                    description: ticketTypeData.description
-                },
-                quantity: qty,
-                seats: seats,  // Include seat information!
-                addedAt: new Date().toISOString()
-            });
-        });
+                    if (response.success && response.data) {
+                        console.log('[EventPage] Seats held successfully:', response.data);
+
+                        // Get hold expiry from API response
+                        var holdExpiresAt = response.data.hold_expires_at || null;
+
+                        // Update cart items from API response (seats are now held server-side)
+                        var itemKey = self.event.id + '_' + tt.id;
+                        cart.items = cart.items.filter(function(item) { return item.key !== itemKey; });
+
+                        cart.items.push({
+                            key: itemKey,
+                            eventId: self.event.id,
+                            event: {
+                                id: eventData.id,
+                                title: eventData.title,
+                                slug: eventData.slug,
+                                date: eventData.start_date,
+                                time: eventData.start_time,
+                                image: eventData.image,
+                                venue: eventData.venue,
+                                city: eventData.venue?.city,
+                                taxes: eventData.taxes,
+                                target_price: eventData.target_price,
+                                commission_rate: eventData.commission_rate,
+                                commission_mode: eventData.commission_mode
+                            },
+                            ticketTypeId: tt.id,
+                            ticketType: {
+                                id: ticketTypeData.id,
+                                name: ticketTypeData.name,
+                                price: ticketTypeData.price,
+                                originalPrice: ticketTypeData.original_price,
+                                description: ticketTypeData.description
+                            },
+                            quantity: seats.length,
+                            seats: seats,
+                            seat_uids: seatUids,
+                            event_seating_id: eventSeatingId,
+                            hold_expires_at: holdExpiresAt,
+                            addedAt: new Date().toISOString()
+                        });
+                    } else {
+                        // Handle API error
+                        var errorMsg = response.message || 'Locurile selectate nu mai sunt disponibile';
+                        console.error('[EventPage] Failed to hold seats:', errorMsg);
+                        alert(errorMsg);
+                        return; // Stop processing
+                    }
+                } catch (error) {
+                    console.error('[EventPage] API error holding seats:', error);
+                    alert('A apărut o eroare la rezervarea locurilor. Vă rugăm încercați din nou.');
+                    return; // Stop processing
+                }
+            } else {
+                // Fallback: no event_seating_id (shouldn't happen for seated events)
+                console.warn('[EventPage] No event_seating_id, adding to cart without API hold');
+
+                var itemKey = self.event.id + '_' + tt.id;
+                cart.items = cart.items.filter(function(item) { return item.key !== itemKey; });
+
+                cart.items.push({
+                    key: itemKey,
+                    eventId: self.event.id,
+                    event: {
+                        id: eventData.id,
+                        title: eventData.title,
+                        slug: eventData.slug,
+                        date: eventData.start_date,
+                        time: eventData.start_time,
+                        image: eventData.image,
+                        venue: eventData.venue,
+                        city: eventData.venue?.city,
+                        taxes: eventData.taxes,
+                        target_price: eventData.target_price,
+                        commission_rate: eventData.commission_rate,
+                        commission_mode: eventData.commission_mode
+                    },
+                    ticketTypeId: tt.id,
+                    ticketType: {
+                        id: ticketTypeData.id,
+                        name: ticketTypeData.name,
+                        price: ticketTypeData.price,
+                        originalPrice: ticketTypeData.original_price,
+                        description: ticketTypeData.description
+                    },
+                    quantity: seats.length,
+                    seats: seats,
+                    addedAt: new Date().toISOString()
+                });
+            }
+        }
 
         // Save the cart once after all items are added
         AmbiletCart.save(cart.items);
 
-        // Start reservation timer
+        // Start reservation timer (15 minutes)
         if (typeof AmbiletCart.startReservationTimer === 'function') {
             AmbiletCart.startReservationTimer();
         }

@@ -24,11 +24,11 @@ return [
     | user hasn't completed checkout, seats are automatically released back
     | to the available pool.
     |
-    | Default: 600 seconds (10 minutes)
+    | Default: 900 seconds (15 minutes) - matches cart checkout timer
     |
     */
 
-    'hold_ttl_seconds' => env('SEATING_HOLD_TTL_SECONDS', 600),
+    'hold_ttl_seconds' => env('SEATING_HOLD_TTL_SECONDS', 900),
 
     /*
     |--------------------------------------------------------------------------

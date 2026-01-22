@@ -1797,10 +1797,14 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         ->name('api.marketplace-client.customer.cart');
     Route::post('/cart/items', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'addItem'])
         ->name('api.marketplace-client.customer.cart.add');
+    Route::post('/cart/items/with-seats', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'addItemWithSeats'])
+        ->name('api.marketplace-client.customer.cart.add-with-seats');
     Route::put('/cart/items/{itemKey}', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'updateItem'])
         ->name('api.marketplace-client.customer.cart.update');
     Route::delete('/cart/items/{itemKey}', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'removeItem'])
         ->name('api.marketplace-client.customer.cart.remove');
+    Route::delete('/cart/seats', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'releaseSeats'])
+        ->name('api.marketplace-client.customer.cart.release-seats');
     Route::delete('/cart', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'clear'])
         ->name('api.marketplace-client.customer.cart.clear');
     Route::post('/cart/promo-code', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'applyPromoCode'])

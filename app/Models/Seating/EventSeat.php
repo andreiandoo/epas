@@ -81,6 +81,11 @@ class EventSeat extends Model
         return $query->where('status', 'blocked');
     }
 
+    public function scopeDisabled($query)
+    {
+        return $query->where('status', 'disabled');
+    }
+
     /**
      * Status checks
      */
@@ -102,6 +107,19 @@ class EventSeat extends Model
     public function isBlocked(): bool
     {
         return $this->status === 'blocked';
+    }
+
+    public function isDisabled(): bool
+    {
+        return $this->status === 'disabled';
+    }
+
+    /**
+     * Check if seat can be purchased/held
+     */
+    public function isPurchasable(): bool
+    {
+        return $this->status === 'available';
     }
 
     /**

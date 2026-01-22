@@ -7,6 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SeatingSeat extends Model
 {
+    /**
+     * Seat statuses for the base layout (template)
+     * - active: Normal seat available for events
+     * - imposibil: Permanently unavailable (pillar, blocked view, etc.) - not selectable
+     */
+    public const STATUS_ACTIVE = 'active';
+    public const STATUS_IMPOSIBIL = 'imposibil';
+
     protected $fillable = [
         'row_id',
         'label',
@@ -16,6 +24,7 @@ class SeatingSeat extends Model
         'angle',
         'shape',
         'seat_uid',
+        'status',
     ];
 
     protected $casts = [
@@ -27,7 +36,60 @@ class SeatingSeat extends Model
     protected $attributes = [
         'angle' => 0,
         'shape' => 'circle',
+        'status' => 'active',
     ];
+
+    /**
+     * Check if the seat is active (available for events)
+     */
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
+
+    /**
+     * Check if the seat is permanently unavailable
+     */
+    public function isImposibil(): bool
+    {
+        return $this->status === self::STATUS_IMPOSIBIL;
+    }
+
+    /**
+     * Mark seat as permanently unavailable
+     */
+    public function markAsImposibil(): self
+    {
+        $this->status = self::STATUS_IMPOSIBIL;
+        $this->save();
+        return $this;
+    }
+
+    /**
+     * Mark seat as active
+     */
+    public function markAsActive(): self
+    {
+        $this->status = self::STATUS_ACTIVE;
+        $this->save();
+        return $this;
+    }
+
+    /**
+     * Scope: Only active seats
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    /**
+     * Scope: Only imposibil seats
+     */
+    public function scopeImposibil($query)
+    {
+        return $query->where('status', self::STATUS_IMPOSIBIL);
+    }
 
     /**
      * Relationships

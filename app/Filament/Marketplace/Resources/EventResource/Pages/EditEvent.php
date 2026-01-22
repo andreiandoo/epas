@@ -4,8 +4,12 @@ namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 
 use App\Filament\Marketplace\Resources\EventResource;
 use App\Services\EventSchedulingService;
+use App\Services\Seating\MarketplaceEventSeatingService;
+use App\Models\Seating\EventSeatingLayout;
 use Filament\Actions;
+use Filament\Forms;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Notifications\Notification;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class EditEvent extends EditRecord
@@ -67,9 +71,218 @@ class EditEvent extends EditRecord
                 ->url(fn () => route('filament.marketplace.pages.invitations') . '?event=' . $this->record->id);
         }
 
+        // Block Seats action - only show if event has seating layout
+        if ($this->record->venue?->seatingLayouts()->where('status', 'published')->exists()) {
+            $actions[] = $this->getBlockSeatsAction($hasInvitations);
+        }
+
         $actions[] = Actions\DeleteAction::make();
 
         return $actions;
+    }
+
+    /**
+     * Get the Block Seats action for managing event-level seat blocking
+     */
+    protected function getBlockSeatsAction(bool $hasInvitations): Actions\Action
+    {
+        $seatingService = app(MarketplaceEventSeatingService::class);
+        $eventSeating = $seatingService->getOrCreateEventSeating($this->record->id);
+
+        return Actions\Action::make('blockSeats')
+            ->label('Block Seats')
+            ->icon('heroicon-o-lock-closed')
+            ->color('danger')
+            ->modalHeading('Block Seats from Purchase')
+            ->modalDescription('Block seats to prevent them from being purchased. Blocked seats can still be used for invitations.')
+            ->modalWidth('lg')
+            ->form([
+                Forms\Components\Select::make('section_name')
+                    ->label('Section')
+                    ->options(function () use ($eventSeating) {
+                        if (!$eventSeating) return [];
+
+                        return \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+                            ->select('section_name')
+                            ->distinct()
+                            ->orderBy('section_name')
+                            ->pluck('section_name', 'section_name');
+                    })
+                    ->required()
+                    ->searchable()
+                    ->live()
+                    ->columnSpanFull(),
+
+                Forms\Components\Select::make('row_label')
+                    ->label('Row')
+                    ->options(function (Forms\Get $get) use ($eventSeating) {
+                        $sectionName = $get('section_name');
+                        if (!$eventSeating || !$sectionName) return [];
+
+                        return \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+                            ->where('section_name', $sectionName)
+                            ->select('row_label')
+                            ->distinct()
+                            ->orderByRaw('CAST(row_label AS UNSIGNED), row_label')
+                            ->pluck('row_label', 'row_label');
+                    })
+                    ->required()
+                    ->searchable()
+                    ->live()
+                    ->columnSpanFull(),
+
+                Forms\Components\Select::make('action')
+                    ->label('Action')
+                    ->options([
+                        'block' => 'Block seats (prevent purchase)',
+                        'unblock' => 'Unblock seats (make available)',
+                    ])
+                    ->required()
+                    ->default('block')
+                    ->columnSpanFull(),
+
+                Forms\Components\TextInput::make('seat_range')
+                    ->label('Seat Range')
+                    ->helperText('Enter seat numbers to modify. Examples: "1,3,5" or "1-5" or "1-3,7,9-12"')
+                    ->required()
+                    ->placeholder('e.g., 1-5,8,10-12')
+                    ->columnSpanFull(),
+
+                Forms\Components\Placeholder::make('current_blocked')
+                    ->label('Current Blocked Seats in Row')
+                    ->content(function (Forms\Get $get) use ($eventSeating) {
+                        $sectionName = $get('section_name');
+                        $rowLabel = $get('row_label');
+
+                        if (!$eventSeating || !$sectionName || !$rowLabel) {
+                            return 'Select section and row to see blocked seats';
+                        }
+
+                        $blockedSeats = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+                            ->where('section_name', $sectionName)
+                            ->where('row_label', $rowLabel)
+                            ->where('status', 'blocked')
+                            ->orderByRaw('CAST(seat_label AS UNSIGNED), seat_label')
+                            ->pluck('seat_label')
+                            ->toArray();
+
+                        if (empty($blockedSeats)) {
+                            return 'No blocked seats in this row';
+                        }
+
+                        return 'Blocked: ' . implode(', ', $blockedSeats);
+                    })
+                    ->columnSpanFull(),
+
+                $hasInvitations ? Forms\Components\Toggle::make('create_invitations')
+                    ->label('Generate invitation for blocked seats')
+                    ->helperText('If enabled, invitations will be created for the blocked seats.')
+                    ->default(false)
+                    ->columnSpanFull() : Forms\Components\Hidden::make('create_invitations')->default(false),
+            ])
+            ->action(function (array $data) use ($seatingService, $eventSeating, $hasInvitations): void {
+                if (!$eventSeating) {
+                    Notification::make()
+                        ->danger()
+                        ->title('Event seating not found')
+                        ->send();
+                    return;
+                }
+
+                // Parse seat range
+                $seatLabels = $this->parseSeatRange($data['seat_range']);
+                if (empty($seatLabels)) {
+                    Notification::make()
+                        ->danger()
+                        ->title('Invalid seat range')
+                        ->body('Could not parse the seat range. Use format: 1-5 or 1,3,5 or 1-3,7')
+                        ->send();
+                    return;
+                }
+
+                $updated = 0;
+                if ($data['action'] === 'block') {
+                    $updated = $seatingService->blockSeatsByLocation(
+                        $eventSeating->id,
+                        $data['section_name'],
+                        $data['row_label'],
+                        $seatLabels
+                    );
+
+                    // Create invitations if requested
+                    if ($hasInvitations && ($data['create_invitations'] ?? false) && $updated > 0) {
+                        // Store blocked seat info for invitation creation
+                        session()->flash('blocked_seats_for_invitation', [
+                            'event_id' => $this->record->id,
+                            'section' => $data['section_name'],
+                            'row' => $data['row_label'],
+                            'seats' => $seatLabels,
+                        ]);
+
+                        Notification::make()
+                            ->success()
+                            ->title("{$updated} seats blocked")
+                            ->body('Redirecting to invitation creation...')
+                            ->send();
+
+                        redirect(route('filament.marketplace.pages.invitations') . '?event=' . $this->record->id . '&prefill_seats=1');
+                        return;
+                    }
+
+                    Notification::make()
+                        ->success()
+                        ->title('Seats blocked')
+                        ->body("{$updated} seats have been blocked from purchase")
+                        ->send();
+                } else {
+                    // Find blocked seats by location and unblock them
+                    $updated = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+                        ->where('section_name', $data['section_name'])
+                        ->where('row_label', $data['row_label'])
+                        ->whereIn('seat_label', $seatLabels)
+                        ->where('status', 'blocked')
+                        ->update([
+                            'status' => 'available',
+                            'version' => \Illuminate\Support\Facades\DB::raw('version + 1'),
+                        ]);
+
+                    Notification::make()
+                        ->success()
+                        ->title('Seats unblocked')
+                        ->body("{$updated} seats are now available for purchase")
+                        ->send();
+                }
+            });
+    }
+
+    /**
+     * Parse seat range string like "1-5,8,10-12" into array of labels
+     */
+    protected function parseSeatRange(string $range): array
+    {
+        $labels = [];
+        $parts = explode(',', $range);
+
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if (str_contains($part, '-')) {
+                [$start, $end] = explode('-', $part, 2);
+                $start = (int) trim($start);
+                $end = (int) trim($end);
+                if ($start > 0 && $end > 0 && $end >= $start) {
+                    for ($i = $start; $i <= $end; $i++) {
+                        $labels[] = (string) $i;
+                    }
+                }
+            } else {
+                $num = (int) trim($part);
+                if ($num > 0) {
+                    $labels[] = (string) $num;
+                }
+            }
+        }
+
+        return array_unique($labels);
     }
 
     protected function afterSave(): void

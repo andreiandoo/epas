@@ -12,6 +12,7 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\Event;
 use App\Models\TicketType;
+use App\Services\Seating\SeatHoldService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,9 @@ use Illuminate\Support\Str;
 
 class CheckoutController extends BaseController
 {
+    public function __construct(
+        protected SeatHoldService $seatHoldService
+    ) {}
     /**
      * Create order from cart (checkout)
      */
@@ -59,13 +63,22 @@ class CheckoutController extends BaseController
                 $ticketTypeName = $item['ticketType']['name'] ?? $item['ticket_type_name'] ?? 'Bilet';
 
                 if ($eventId && $ticketTypeId) {
-                    $cartItems[] = [
+                    $cartItem = [
                         'event_id' => $eventId,
                         'ticket_type_id' => $ticketTypeId,
                         'quantity' => $quantity,
                         'price' => $price,
                         'ticket_type_name' => $ticketTypeName,
                     ];
+
+                    // Preserve seat information if present
+                    if (!empty($item['seat_uids'])) {
+                        $cartItem['seat_uids'] = $item['seat_uids'];
+                        $cartItem['event_seating_id'] = $item['event_seating_id'] ?? null;
+                        $cartItem['seats'] = $item['seats'] ?? [];
+                    }
+
+                    $cartItems[] = $cartItem;
                 }
             }
         }
@@ -182,6 +195,10 @@ class CheckoutController extends BaseController
                         'quantity' => $quantity,
                         'unit_price' => $unitPrice,
                         'total' => $itemTotal,
+                        // Preserve seat information for ticket creation
+                        'seat_uids' => $item['seat_uids'] ?? [],
+                        'seats' => $item['seats'] ?? [],
+                        'event_seating_id' => $item['event_seating_id'] ?? null,
                     ];
                 }
 
@@ -250,6 +267,49 @@ class CheckoutController extends BaseController
                     for ($i = 0; $i < $item['quantity']; $i++) {
                         $beneficiary = $validated['beneficiaries'][$ticketIndex] ?? null;
 
+                        // Get seat info for this ticket (if available)
+                        $seatUid = $item['seat_uids'][$i] ?? null;
+                        $seatInfo = null;
+                        if ($seatUid && !empty($item['seats'])) {
+                            // Find matching seat details
+                            foreach ($item['seats'] as $seat) {
+                                if (($seat['seat_uid'] ?? null) === $seatUid) {
+                                    $seatInfo = $seat;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Build seat label and meta for seated tickets
+                        $seatLabel = null;
+                        $seatMeta = null;
+
+                        if ($seatUid) {
+                            // Build display label: "Section A, Row 1, Seat 5"
+                            $labelParts = [];
+                            if ($seatInfo) {
+                                if (!empty($seatInfo['section_name'])) {
+                                    $labelParts[] = $seatInfo['section_name'];
+                                }
+                                if (!empty($seatInfo['row_label'])) {
+                                    $labelParts[] = 'Row ' . $seatInfo['row_label'];
+                                }
+                                if (!empty($seatInfo['seat_label'])) {
+                                    $labelParts[] = 'Seat ' . $seatInfo['seat_label'];
+                                }
+                            }
+                            $seatLabel = !empty($labelParts) ? implode(', ', $labelParts) : $seatUid;
+
+                            // Store full seat data in meta
+                            $seatMeta = [
+                                'seat_uid' => $seatUid,
+                                'event_seating_id' => $item['event_seating_id'],
+                                'section_name' => $seatInfo['section_name'] ?? null,
+                                'row_label' => $seatInfo['row_label'] ?? null,
+                                'seat_number' => $seatInfo['seat_label'] ?? null,
+                            ];
+                        }
+
                         Ticket::create([
                             'marketplace_client_id' => $client->id,
                             'tenant_id' => $event->tenant_id,
@@ -262,8 +322,10 @@ class CheckoutController extends BaseController
                             'barcode' => Str::uuid()->toString(),
                             'status' => 'pending',
                             'price' => $item['unit_price'],
+                            'seat_label' => $seatLabel,
                             'attendee_name' => $beneficiary['name'] ?? null,
                             'attendee_email' => $beneficiary['email'] ?? null,
+                            'meta' => $seatMeta,
                         ]);
 
                         $ticketIndex++;
@@ -288,6 +350,39 @@ class CheckoutController extends BaseController
                     'currency' => $order->currency,
                     'expires_at' => $order->expires_at->toIso8601String(),
                 ];
+            }
+
+            // Confirm seat purchases for items with seats
+            $sessionId = $this->getSessionId($request);
+            $seatedItems = collect($cartItems)->filter(fn($item) => !empty($item['seat_uids']));
+
+            foreach ($seatedItems as $item) {
+                if (!empty($item['event_seating_id']) && !empty($item['seat_uids'])) {
+                    $totalAmountCents = (int) (($item['price'] ?? 0) * ($item['quantity'] ?? 1) * 100);
+
+                    $confirmResult = $this->seatHoldService->confirmPurchase(
+                        $item['event_seating_id'],
+                        $item['seat_uids'],
+                        $sessionId,
+                        $totalAmountCents
+                    );
+
+                    if (!empty($confirmResult['failed'])) {
+                        Log::channel('marketplace')->error('Failed to confirm seat purchase', [
+                            'client_id' => $client->id,
+                            'event_seating_id' => $item['event_seating_id'],
+                            'failed_seats' => $confirmResult['failed'],
+                        ]);
+
+                        throw new \Exception('Failed to confirm seat reservations. Please try again.');
+                    }
+
+                    Log::channel('marketplace')->info('Confirmed seat purchase', [
+                        'client_id' => $client->id,
+                        'event_seating_id' => $item['event_seating_id'],
+                        'confirmed_seats' => count($confirmResult['confirmed']),
+                    ]);
+                }
             }
 
             // Clear the cart if it exists in database

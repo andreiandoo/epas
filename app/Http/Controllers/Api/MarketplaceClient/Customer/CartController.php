@@ -8,12 +8,17 @@ use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceTicketType;
 use App\Models\MarketplacePromoCode;
+use App\Services\Seating\SeatHoldService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CartController extends BaseController
 {
+    public function __construct(
+        protected SeatHoldService $seatHoldService
+    ) {}
     /**
      * Get cart contents
      */
@@ -128,6 +133,192 @@ class CartController extends BaseController
     }
 
     /**
+     * Add item with specific seats to cart (for seated events)
+     * This method holds the seats for 15 minutes
+     */
+    public function addItemWithSeats(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'event_id' => 'required|integer',
+            'ticket_type_id' => 'required|integer',
+            'event_seating_id' => 'required|integer',
+            'seat_uids' => 'required|array|min:1|max:10',
+            'seat_uids.*' => 'required|string|max:32',
+            'seats' => 'nullable|array', // Optional seat details for display
+        ]);
+
+        // Validate event exists and belongs to this marketplace
+        $event = MarketplaceEvent::where('marketplace_client_id', $client->id)
+            ->where('id', $validated['event_id'])
+            ->where('status', 'published')
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found or not available', 404);
+        }
+
+        // Validate ticket type
+        $ticketType = MarketplaceTicketType::where('marketplace_event_id', $event->id)
+            ->where('id', $validated['ticket_type_id'])
+            ->where('status', 'on_sale')
+            ->where('is_visible', true)
+            ->first();
+
+        if (!$ticketType) {
+            return $this->error('Ticket type not available', 404);
+        }
+
+        $sessionId = $this->getSessionId($request);
+        $quantity = count($validated['seat_uids']);
+
+        // Check max per order
+        if ($ticketType->max_per_order && $quantity > $ticketType->max_per_order) {
+            return $this->error("Maximum {$ticketType->max_per_order} tickets per order", 400);
+        }
+
+        // Try to hold the seats
+        try {
+            $holdResult = $this->seatHoldService->holdSeats(
+                $validated['event_seating_id'],
+                $validated['seat_uids'],
+                $sessionId
+            );
+
+            // Check if all seats were held
+            if (!empty($holdResult['failed'])) {
+                $failedUids = array_column($holdResult['failed'], 'seat_uid');
+                $reasons = array_column($holdResult['failed'], 'reason');
+
+                Log::warning('CartController: Some seats could not be held', [
+                    'event_id' => $event->id,
+                    'session_id' => $sessionId,
+                    'failed' => $holdResult['failed'],
+                ]);
+
+                // Release any seats that were held
+                if (!empty($holdResult['held'])) {
+                    $this->seatHoldService->releaseSeats(
+                        $validated['event_seating_id'],
+                        $holdResult['held'],
+                        $sessionId
+                    );
+                }
+
+                return $this->error('Some seats are no longer available', 409, [
+                    'unavailable_seats' => $failedUids,
+                    'reasons' => $reasons,
+                ]);
+            }
+
+            // All seats held successfully - add to cart
+            $customerId = $this->getCustomerId($request);
+            $cart = MarketplaceCart::getOrCreate($sessionId, $client->id, $customerId);
+
+            // Remove existing item for this ticket type (seats replace, not add)
+            $itemKey = $event->id . '_' . $ticketType->id;
+            $items = $cart->items ?? [];
+
+            // If there are existing seats for this item, release them first
+            if (isset($items[$itemKey]['seat_uids']) && !empty($items[$itemKey]['seat_uids'])) {
+                $this->seatHoldService->releaseSeats(
+                    $items[$itemKey]['event_seating_id'],
+                    $items[$itemKey]['seat_uids'],
+                    $sessionId
+                );
+            }
+
+            // Add/update item with seat information
+            $cart->addItem([
+                'event_id' => $event->id,
+                'event_name' => $event->name,
+                'event_date' => $event->starts_at->toIso8601String(),
+                'event_image' => $event->image,
+                'ticket_type_id' => $ticketType->id,
+                'ticket_type_name' => $ticketType->name,
+                'price' => (float) $ticketType->price,
+                'quantity' => $quantity,
+                'currency' => $ticketType->currency,
+                'event_seating_id' => $validated['event_seating_id'],
+                'seat_uids' => $holdResult['held'],
+                'seats' => $validated['seats'] ?? [], // Display info (section, row, seat labels)
+                'hold_expires_at' => $holdResult['expires_at'],
+            ]);
+
+            // Extend cart expiration to match hold TTL (15 minutes)
+            $cart->extendExpiration(15);
+            $cart->save();
+
+            Log::info('CartController: Added seats to cart', [
+                'event_id' => $event->id,
+                'ticket_type_id' => $ticketType->id,
+                'session_id' => $sessionId,
+                'seats_held' => count($holdResult['held']),
+                'expires_at' => $holdResult['expires_at'],
+            ]);
+
+            return $this->success([
+                'cart' => $this->formatCart($cart),
+                'message' => 'Seats added to cart',
+                'hold_expires_at' => $holdResult['expires_at'],
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('CartController: Failed to hold seats', [
+                'event_id' => $event->id,
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->error('Failed to reserve seats. Please try again.', 500);
+        }
+    }
+
+    /**
+     * Release seats for a cart item (without removing the item)
+     * Used when customer deselects seats but keeps the ticket type
+     */
+    public function releaseSeats(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'event_seating_id' => 'required|integer',
+            'seat_uids' => 'required|array|min:1',
+            'seat_uids.*' => 'required|string|max:32',
+        ]);
+
+        $sessionId = $this->getSessionId($request);
+
+        try {
+            $result = $this->seatHoldService->releaseSeats(
+                $validated['event_seating_id'],
+                $validated['seat_uids'],
+                $sessionId
+            );
+
+            Log::info('CartController: Released seats', [
+                'session_id' => $sessionId,
+                'released' => count($result['released']),
+            ]);
+
+            return $this->success([
+                'released' => $result['released'],
+                'message' => 'Seats released',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('CartController: Failed to release seats', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->error('Failed to release seats', 500);
+        }
+    }
+
+    /**
      * Update cart item quantity
      */
     public function updateItem(Request $request, string $itemKey): JsonResponse
@@ -185,7 +376,7 @@ class CartController extends BaseController
     }
 
     /**
-     * Remove item from cart
+     * Remove item from cart (and release any held seats)
      */
     public function removeItem(Request $request, string $itemKey): JsonResponse
     {
@@ -198,10 +389,36 @@ class CartController extends BaseController
             return $this->error('Cart not found', 404);
         }
 
-        if (!$cart->removeItem($itemKey)) {
+        $items = $cart->items ?? [];
+        if (!isset($items[$itemKey])) {
             return $this->error('Item not found in cart', 404);
         }
 
+        // Release any held seats before removing the item
+        $item = $items[$itemKey];
+        if (!empty($item['seat_uids']) && !empty($item['event_seating_id'])) {
+            try {
+                $this->seatHoldService->releaseSeats(
+                    $item['event_seating_id'],
+                    $item['seat_uids'],
+                    $sessionId
+                );
+
+                Log::info('CartController: Released seats on item removal', [
+                    'session_id' => $sessionId,
+                    'item_key' => $itemKey,
+                    'seats_released' => count($item['seat_uids']),
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('CartController: Failed to release seats on item removal', [
+                    'session_id' => $sessionId,
+                    'error' => $e->getMessage(),
+                ]);
+                // Continue with removal even if seat release fails
+            }
+        }
+
+        $cart->removeItem($itemKey);
         $cart->save();
 
         return $this->success([
@@ -211,7 +428,7 @@ class CartController extends BaseController
     }
 
     /**
-     * Clear cart
+     * Clear cart (and release all held seats)
      */
     public function clear(Request $request): JsonResponse
     {
@@ -221,6 +438,32 @@ class CartController extends BaseController
         $cart = MarketplaceCart::bySession($sessionId, $client->id)->first();
 
         if ($cart) {
+            // Release all held seats before clearing
+            $items = $cart->items ?? [];
+            foreach ($items as $itemKey => $item) {
+                if (!empty($item['seat_uids']) && !empty($item['event_seating_id'])) {
+                    try {
+                        $this->seatHoldService->releaseSeats(
+                            $item['event_seating_id'],
+                            $item['seat_uids'],
+                            $sessionId
+                        );
+
+                        Log::info('CartController: Released seats on cart clear', [
+                            'session_id' => $sessionId,
+                            'event_seating_id' => $item['event_seating_id'],
+                            'seats_released' => count($item['seat_uids']),
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::warning('CartController: Failed to release seats on cart clear', [
+                            'session_id' => $sessionId,
+                            'error' => $e->getMessage(),
+                        ]);
+                        // Continue clearing even if seat release fails
+                    }
+                }
+            }
+
             $cart->clearItems();
             $cart->save();
         }
@@ -366,7 +609,7 @@ class CartController extends BaseController
     protected function formatCart(MarketplaceCart $cart): array
     {
         $items = collect($cart->items ?? [])->map(function ($item, $key) {
-            return [
+            $formattedItem = [
                 'key' => $key,
                 'event_id' => $item['event_id'],
                 'event_name' => $item['event_name'],
@@ -379,6 +622,19 @@ class CartController extends BaseController
                 'total' => (float) ($item['price'] * $item['quantity']),
                 'currency' => $item['currency'] ?? 'RON',
             ];
+
+            // Include seat information if present
+            if (!empty($item['seat_uids'])) {
+                $formattedItem['has_seats'] = true;
+                $formattedItem['event_seating_id'] = $item['event_seating_id'] ?? null;
+                $formattedItem['seat_uids'] = $item['seat_uids'];
+                $formattedItem['seats'] = $item['seats'] ?? [];
+                $formattedItem['hold_expires_at'] = $item['hold_expires_at'] ?? null;
+            } else {
+                $formattedItem['has_seats'] = false;
+            }
+
+            return $formattedItem;
         })->values();
 
         return [

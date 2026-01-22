@@ -303,6 +303,17 @@ class DesignerSeatingLayout extends Page
                                 ])
                                 ->default('ttb')
                                 ->columnSpan(1),
+
+                            Forms\Components\Select::make('numbering_mode')
+                                ->label('Seat Numbering Mode')
+                                ->options([
+                                    'normal' => 'Normal (per row: 1-10, 1-10, 1-10...)',
+                                    'section' => 'Section (continuous: 1-10, 11-20, 21-30...)',
+                                    'snake' => 'Snake (alternating: 1-10→, ←11-20, 21-30→...)',
+                                ])
+                                ->default('normal')
+                                ->helperText('How seat numbers are assigned across rows')
+                                ->columnSpanFull(),
                         ])
                         ->columns(2),
 
@@ -362,12 +373,13 @@ class DesignerSeatingLayout extends Page
                         'seat_spacing' => $seatSpacing,
                         'row_spacing' => $rowSpacing,
                         'seat_shape' => $data['seat_shape'] ?? 'circle',
+                        'numbering_mode' => $data['numbering_mode'] ?? 'normal',
                     ]);
 
                     // Remove form-only fields before creating
                     $createData = collect($data)->except([
                         'num_rows', 'seats_per_row', 'seat_shape', 'seat_size',
-                        'row_spacing', 'seat_spacing', 'seat_numbering', 'row_numbering'
+                        'row_spacing', 'seat_spacing', 'seat_numbering', 'row_numbering', 'numbering_mode'
                     ])->toArray();
 
                     $section = SeatingSection::create($createData);
@@ -383,7 +395,8 @@ class DesignerSeatingLayout extends Page
                             $seatSpacing,
                             $data['seat_shape'] ?? 'circle',
                             $data['seat_numbering'] ?? 'ltr',
-                            $data['row_numbering'] ?? 'ttb'
+                            $data['row_numbering'] ?? 'ttb',
+                            $data['numbering_mode'] ?? 'normal'
                         );
                     }
 
@@ -726,6 +739,7 @@ class DesignerSeatingLayout extends Page
                                 'seat_spacing' => $metadata['seat_spacing'] ?? 18,
                                 'row_spacing' => $metadata['row_spacing'] ?? 25,
                                 'seat_shape' => $metadata['seat_shape'] ?? 'circle',
+                                'numbering_mode' => $metadata['numbering_mode'] ?? 'normal',
                             ];
                         }
                     }
@@ -755,6 +769,7 @@ class DesignerSeatingLayout extends Page
                                     $set('seat_spacing', $metadata['seat_spacing'] ?? 18);
                                     $set('row_spacing', $metadata['row_spacing'] ?? 25);
                                     $set('seat_shape', $metadata['seat_shape'] ?? 'circle');
+                                    $set('numbering_mode', $metadata['numbering_mode'] ?? 'normal');
                                 }
                             }
                         })
@@ -832,6 +847,17 @@ class DesignerSeatingLayout extends Page
                                 ->maxValue(100)
                                 ->helperText('Vertical distance between rows')
                                 ->columnSpan(1),
+
+                            Forms\Components\Select::make('numbering_mode')
+                                ->label('Seat Numbering Mode')
+                                ->options([
+                                    'normal' => 'Normal (per row: 1-10, 1-10, 1-10...)',
+                                    'section' => 'Section (continuous: 1-10, 11-20, 21-30...)',
+                                    'snake' => 'Snake (alternating: 1-10→, ←11-20, 21-30→...)',
+                                ])
+                                ->default('normal')
+                                ->helperText('How seats are numbered across rows')
+                                ->columnSpanFull(),
                         ])
                         ->columns(2),
                 ])
@@ -864,6 +890,7 @@ class DesignerSeatingLayout extends Page
                     $metadata['seat_spacing'] = (int) ($data['seat_spacing'] ?? 18);
                     $metadata['row_spacing'] = (int) ($data['row_spacing'] ?? 25);
                     $metadata['seat_shape'] = $data['seat_shape'] ?? 'circle';
+                    $metadata['numbering_mode'] = $data['numbering_mode'] ?? 'normal';
                     $updates['metadata'] = $metadata;
 
                     $section->update($updates);
@@ -878,12 +905,151 @@ class DesignerSeatingLayout extends Page
                         ->send();
                 }),
 
+            Actions\Action::make('manageSeatStatus')
+                ->label('Seat Status')
+                ->icon('heroicon-o-no-symbol')
+                ->color('danger')
+                ->modalHeading('Manage Seat Status')
+                ->modalDescription('Mark seats as "Imposibil" (permanently unavailable) - they won\'t affect numbering but cannot be selected by customers.')
+                ->modalWidth('lg')
+                ->form([
+                    Forms\Components\Select::make('section_id')
+                        ->label('Section')
+                        ->options(fn () => $this->seatingLayout->sections()
+                            ->where('section_type', 'standard')
+                            ->orderBy('display_order')
+                            ->pluck('name', 'id'))
+                        ->required()
+                        ->searchable()
+                        ->reactive()
+                        ->columnSpanFull(),
+
+                    Forms\Components\Select::make('row_id')
+                        ->label('Row')
+                        ->options(function ($get) {
+                            $sectionId = $get('section_id');
+                            if (!$sectionId) return [];
+
+                            return SeatingRow::where('section_id', $sectionId)
+                                ->orderBy('y')
+                                ->pluck('label', 'id');
+                        })
+                        ->searchable()
+                        ->reactive()
+                        ->columnSpanFull(),
+
+                    Forms\Components\Select::make('action')
+                        ->label('Action')
+                        ->options([
+                            'set_imposibil' => 'Mark as Imposibil (permanently unavailable)',
+                            'set_active' => 'Mark as Active (normal seat)',
+                        ])
+                        ->required()
+                        ->columnSpanFull(),
+
+                    Forms\Components\TextInput::make('seat_range')
+                        ->label('Seat Range')
+                        ->helperText('Enter seat numbers to modify. Examples: "1,3,5" or "1-5" or "1-3,7,9-12"')
+                        ->required()
+                        ->placeholder('e.g., 1-5,8,10-12')
+                        ->columnSpanFull(),
+
+                    Forms\Components\Placeholder::make('current_imposibil')
+                        ->label('Current Imposibil Seats')
+                        ->content(function ($get) {
+                            $rowId = $get('row_id');
+                            if (!$rowId) return 'Select a row to see imposibil seats';
+
+                            $imposibilSeats = SeatingSeat::where('row_id', $rowId)
+                                ->where('status', SeatingSeat::STATUS_IMPOSIBIL)
+                                ->orderBy('label')
+                                ->pluck('label')
+                                ->toArray();
+
+                            if (empty($imposibilSeats)) {
+                                return 'No imposibil seats in this row';
+                            }
+
+                            return 'Imposibil seats: ' . implode(', ', $imposibilSeats);
+                        })
+                        ->columnSpanFull(),
+                ])
+                ->action(function (array $data): void {
+                    $row = SeatingRow::find($data['row_id']);
+                    if (!$row) {
+                        Notification::make()
+                            ->danger()
+                            ->title('Row not found')
+                            ->send();
+                        return;
+                    }
+
+                    // Parse seat range
+                    $seatLabels = $this->parseSeatRange($data['seat_range']);
+                    if (empty($seatLabels)) {
+                        Notification::make()
+                            ->danger()
+                            ->title('Invalid seat range')
+                            ->body('Could not parse the seat range. Use format: 1-5 or 1,3,5 or 1-3,7')
+                            ->send();
+                        return;
+                    }
+
+                    $newStatus = $data['action'] === 'set_imposibil'
+                        ? SeatingSeat::STATUS_IMPOSIBIL
+                        : SeatingSeat::STATUS_ACTIVE;
+
+                    $updated = SeatingSeat::where('row_id', $row->id)
+                        ->whereIn('label', $seatLabels)
+                        ->update(['status' => $newStatus]);
+
+                    $this->reloadSections();
+                    $this->dispatch('layout-updated', sections: $this->sections);
+
+                    $statusLabel = $data['action'] === 'set_imposibil' ? 'Imposibil' : 'Active';
+                    Notification::make()
+                        ->success()
+                        ->title('Seats updated')
+                        ->body("{$updated} seats marked as {$statusLabel}")
+                        ->send();
+                }),
+
             Actions\Action::make('backToEdit')
                 ->label('Layout Settings')
                 ->icon('heroicon-o-cog-6-tooth')
                 ->color('gray')
                 ->url(fn () => static::getResource()::getUrl('edit', ['record' => $this->seatingLayout])),
         ];
+    }
+
+    /**
+     * Parse seat range string like "1-5,8,10-12" into array of labels
+     */
+    protected function parseSeatRange(string $range): array
+    {
+        $labels = [];
+        $parts = explode(',', $range);
+
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if (str_contains($part, '-')) {
+                [$start, $end] = explode('-', $part, 2);
+                $start = (int) trim($start);
+                $end = (int) trim($end);
+                if ($start > 0 && $end > 0 && $end >= $start) {
+                    for ($i = $start; $i <= $end; $i++) {
+                        $labels[] = (string) $i;
+                    }
+                }
+            } else {
+                $num = (int) trim($part);
+                if ($num > 0) {
+                    $labels[] = (string) $num;
+                }
+            }
+        }
+
+        return array_unique($labels);
     }
 
     /**
@@ -961,7 +1127,12 @@ class DesignerSeatingLayout extends Page
         $maxSeats = max($seatsPerRowArray);
         $maxRowWidth = ($maxSeats - 1) * $seatSpacing;
 
+        // Get numbering mode from section metadata
+        $sectionMetadata = $section->metadata ?? [];
+        $numberingMode = $sectionMetadata['numbering_mode'] ?? 'normal';
+
         $currentY = 0;
+        $continuousSeatNumber = 1; // For section/snake numbering modes
 
         for ($r = 1; $r <= $numRows; $r++) {
             $rowLabel = $rowPrefix . $r;
@@ -992,14 +1163,41 @@ class DesignerSeatingLayout extends Page
                     break;
             }
 
+            // Determine if this row should be reversed (for snake mode)
+            $isReversedRow = ($numberingMode === 'snake' && $r % 2 === 0);
+
             for ($s = 1; $s <= $seatsInThisRow; $s++) {
-                $seatLabel = $seatPrefix . $s;
+                // Calculate seat label based on numbering mode
+                switch ($numberingMode) {
+                    case 'section':
+                        // Continuous numbering across all rows
+                        $seatLabel = $seatPrefix . $continuousSeatNumber;
+                        $continuousSeatNumber++;
+                        break;
+
+                    case 'snake':
+                        // Alternating direction - odd rows L→R, even rows R→L
+                        $seatLabel = $seatPrefix . $continuousSeatNumber;
+                        $continuousSeatNumber++;
+                        break;
+
+                    case 'normal':
+                    default:
+                        // Standard per-row numbering
+                        $seatLabel = $seatPrefix . $s;
+                        break;
+                }
+
+                // Calculate X position (reversed for snake mode on even rows)
+                $seatX = $isReversedRow
+                    ? $startX + (($seatsInThisRow - $s) * $seatSpacing)
+                    : $startX + (($s - 1) * $seatSpacing);
 
                 SeatingSeat::create([
                     'row_id'   => $row->id,
                     'label'    => $seatLabel,
                     'display_name' => $section->generateSeatDisplayName($rowLabel, $seatLabel),
-                    'x'        => $startX + (($s - 1) * $seatSpacing),
+                    'x'        => $seatX,
                     'y'        => 0,
                     'angle'    => 0,
                     'shape'    => 'circle',
@@ -1032,9 +1230,11 @@ class DesignerSeatingLayout extends Page
         int $seatSpacing,
         string $seatShape,
         string $seatNumbering,
-        string $rowNumbering
+        string $rowNumbering,
+        string $numberingMode = 'normal'
     ): void {
         $padding = 10; // Offset from section edge
+        $continuousSeatNumber = 1; // For section/snake numbering modes
 
         for ($r = 1; $r <= $numRows; $r++) {
             // Determine row label based on numbering direction
@@ -1052,13 +1252,36 @@ class DesignerSeatingLayout extends Page
                 'seat_count' => $seatsPerRow,
             ]);
 
-            for ($s = 1; $s <= $seatsPerRow; $s++) {
-                // Determine seat label based on numbering direction
-                $seatIndex = $seatNumbering === 'rtl' ? ($seatsPerRow - $s + 1) : $s;
-                $seatLabel = (string) $seatIndex;
+            // Determine if this row should be reversed (for snake mode)
+            $isReversedRow = ($numberingMode === 'snake' && $r % 2 === 0);
 
-                // Calculate X position for this seat
-                $seatX = $padding + (($s - 1) * $seatSpacing);
+            for ($s = 1; $s <= $seatsPerRow; $s++) {
+                // Calculate seat label based on numbering mode
+                switch ($numberingMode) {
+                    case 'section':
+                        // Continuous numbering across all rows
+                        $seatLabel = (string) $continuousSeatNumber;
+                        $continuousSeatNumber++;
+                        break;
+
+                    case 'snake':
+                        // Alternating direction - odd rows L→R, even rows R→L
+                        $seatLabel = (string) $continuousSeatNumber;
+                        $continuousSeatNumber++;
+                        break;
+
+                    case 'normal':
+                    default:
+                        // Standard per-row numbering with direction
+                        $seatIndex = $seatNumbering === 'rtl' ? ($seatsPerRow - $s + 1) : $s;
+                        $seatLabel = (string) $seatIndex;
+                        break;
+                }
+
+                // Calculate X position for this seat (reversed for snake mode on even rows)
+                $seatX = $isReversedRow
+                    ? $padding + (($seatsPerRow - $s) * $seatSpacing)
+                    : $padding + (($s - 1) * $seatSpacing);
 
                 SeatingSeat::create([
                     'row_id' => $row->id,

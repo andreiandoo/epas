@@ -466,8 +466,8 @@ class MarketplaceEventsController extends BaseController
             'commission_mode' => $commissionMode,
             'commission_rate' => (float) $commissionRate,
             'taxes' => $taxes,
-            // Seating layout if venue has one
-            'seating_layout' => $this->getSeatingLayout($venue),
+            // Seating layout if venue has one (includes event_seating_id for seat holds)
+            'seating_layout' => $this->getSeatingLayout($venue, $event),
             // Custom related events (array at root level for frontend)
             'custom_related_events' => $this->getCustomRelatedEvents($event, $language, $client),
         ]);
@@ -972,9 +972,12 @@ class MarketplaceEventsController extends BaseController
     }
 
     /**
-     * Get seating layout data for a venue
+     * Get seating layout data for a venue with per-event seat status
+     *
+     * @param $venue The venue model
+     * @param $event The event model (for per-event seating)
      */
-    protected function getSeatingLayout($venue): ?array
+    protected function getSeatingLayout($venue, $event = null): ?array
     {
         if (!$venue || !$venue->relationLoaded('seatingLayouts')) {
             return null;
@@ -985,6 +988,25 @@ class MarketplaceEventsController extends BaseController
             return null;
         }
 
+        // Get or create per-event seating if event is provided
+        $eventSeatingId = null;
+        $seatStatusMap = [];
+
+        if ($event) {
+            $seatingService = app(\App\Services\Seating\MarketplaceEventSeatingService::class);
+            $eventSeating = $seatingService->getOrCreateEventSeating($event->id);
+
+            if ($eventSeating) {
+                $eventSeatingId = $eventSeating->id;
+
+                // Build seat status map for quick lookup
+                $eventSeats = $eventSeating->seats()->get(['seat_uid', 'status']);
+                foreach ($eventSeats as $es) {
+                    $seatStatusMap[$es->seat_uid] = $es->status;
+                }
+            }
+        }
+
         // Build geometry data
         $sections = [];
         foreach ($layout->sections as $section) {
@@ -992,12 +1014,25 @@ class MarketplaceEventsController extends BaseController
             foreach ($section->rows as $row) {
                 $seats = [];
                 foreach ($row->seats as $seat) {
+                    // Check if seat is marked as 'imposibil' in the base layout
+                    $baseStatus = $seat->status ?? 'active';
+
+                    // If seat is 'imposibil' in base layout, it's always disabled
+                    // Otherwise, use event seating status
+                    if ($baseStatus === 'imposibil') {
+                        $status = 'disabled';
+                    } else {
+                        $status = $seatStatusMap[$seat->seat_uid] ?? 'available';
+                    }
+
                     $seats[] = [
                         'id' => $seat->id,
+                        'seat_uid' => $seat->seat_uid, // Include for cart/hold API
                         'label' => $seat->label,
                         'x' => (float) $seat->x,
                         'y' => (float) $seat->y,
-                        'status' => 'available', // Will be updated by availability check
+                        'status' => $status,
+                        'base_status' => $baseStatus, // Include base status for display
                     ];
                 }
                 $rows[] = [
@@ -1006,9 +1041,10 @@ class MarketplaceEventsController extends BaseController
                     'seats' => $seats,
                 ];
             }
-            $sections[] = [
+            $sectionData = [
                 'id' => $section->id,
                 'name' => $section->name,
+                'section_type' => $section->section_type ?? 'standard',
                 'color' => $section->color_hex,
                 'color_hex' => $section->color_hex,
                 'seat_color' => $section->seat_color,
@@ -1025,6 +1061,16 @@ class MarketplaceEventsController extends BaseController
                 ],
                 'rows' => $rows,
             ];
+
+            // For icon sections, include icon SVG data from config
+            if ($section->section_type === 'icon') {
+                $iconKey = $section->metadata['icon_key'] ?? 'info_point';
+                $iconDefinitions = config('seating-icons', []);
+                $sectionData['icon_svg'] = $iconDefinitions[$iconKey]['svg'] ?? '';
+                $sectionData['icon_label'] = $iconDefinitions[$iconKey]['label'] ?? $section->name;
+            }
+
+            $sections[] = $sectionData;
         }
 
         // Generate seating map preview image URL
@@ -1036,6 +1082,7 @@ class MarketplaceEventsController extends BaseController
 
         return [
             'id' => $layout->id,
+            'event_seating_id' => $eventSeatingId, // For seat hold/release API
             'name' => $layout->name,
             'canvas_width' => $layout->canvas_w,
             'canvas_height' => $layout->canvas_h,

@@ -608,3 +608,21 @@ Schedule::command('analytics:process-reports --type=cleanup')
     ->onFailure(function () {
         \Log::error('Failed to cleanup analytics export files');
     });
+
+/*
+|--------------------------------------------------------------------------
+| Seating Module Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Release expired seat holds (every minute)
+// This is the fallback cleanup for when Redis is disabled or as a safety net
+Schedule::command('seating:release-expired-holds')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::debug('Expired seat holds released');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to release expired seat holds');
+    });
