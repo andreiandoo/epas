@@ -540,11 +540,25 @@
 
                 // Wrapper methods to access Livewire from Konva handlers
                 // These use @this which is Blade syntax that compiles to the component reference
+
+                // Set selectedSection locally without triggering a Livewire network request
+                // The third parameter 'false' prevents the network round-trip that causes deselection
                 setLivewireSelectedSection(sectionId) {
-                    @this.set('selectedSection', sectionId);
+                    @this.set('selectedSection', sectionId, false);
+                },
+
+                // Sync selectedSection to server (when we actually need it on server, like before modal opens)
+                syncSelectedSectionToServer() {
+                    if (this.selectedSection) {
+                        @this.call('setSelectedSection', this.selectedSection);
+                    }
                 },
 
                 mountLivewireAction(actionName) {
+                    // Sync selectedSection to server before mounting action (for Edit Section modal)
+                    if (this.selectedSection) {
+                        @this.set('selectedSection', this.selectedSection);
+                    }
                     @this.mountAction(actionName);
                 },
 
@@ -1983,6 +1997,9 @@
 
                     // Click handler
                     group.on('click', (e) => {
+                        // Stop propagation to prevent stage click handler from clearing selection
+                        e.cancelBubble = true;
+
                         if (this.drawMode === 'multiselect') {
                             const bb = group.findOne('.boundingBox');
                             if (bb) {
@@ -1996,6 +2013,7 @@
                             this.transformer.nodes([group]);
                             this.selectedSection = section.id;
                             this.setLivewireSelectedSection( section.id);
+                            this.layer.batchDraw();
                         }
                     });
 
@@ -2597,6 +2615,9 @@
                 },
 
                 handleLayoutUpdated(detail) {
+                    // Preserve the currently selected section ID before rebuilding
+                    const previouslySelectedSection = this.selectedSection;
+
                     // Reload all sections after update
                     this.sections = detail.sections;
 
@@ -2619,6 +2640,16 @@
 
                     // Reload sections
                     this.loadSections();
+
+                    // Restore selection after sections are recreated
+                    if (previouslySelectedSection) {
+                        const sectionNode = this.stage.findOne(`#section-${previouslySelectedSection}`);
+                        if (sectionNode) {
+                            this.transformer.nodes([sectionNode]);
+                            this.selectedSection = previouslySelectedSection;
+                            this.layer.batchDraw();
+                        }
+                    }
                 },
 
                 addSeatAtPosition(stagePos) {
