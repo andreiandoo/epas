@@ -363,7 +363,7 @@ class SeatingLayoutResource extends Resource
 
                     // Partner notes (internal)
                     SC\Section::make('Note interne')
-                        ->helperText('Note interne despre acest layout (nu sunt vizibile public)')
+                        ->description('Note interne despre acest layout (nu sunt vizibile public)')
                         ->icon('heroicon-o-lock-closed')
                         ->collapsible()
                         ->collapsed()
