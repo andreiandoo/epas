@@ -284,7 +284,7 @@ class SeatingLayoutResource extends Resource
                         ->schema([
                             Forms\Components\Select::make('venue_id')
                                 ->label('Locație')
-                                ->description('Atenție: Locația trebuie să aparțină acestui marketplace.')
+                                ->description('Locația trebuie să aparțină acestui marketplace.')
                                 ->relationship('venue', 'name', fn (Builder $query) => $query->where('marketplace_client_id', static::getMarketplaceClient()?->id))
                                 ->getOptionLabelFromRecordUsing(function ($record) {
                                     $locale = app()->getLocale();
