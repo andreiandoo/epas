@@ -1530,9 +1530,9 @@
 
                 openEditSectionModal() {
                     if (this.contextMenuSectionId) {
-                        // Set the selected section and trigger the Filament action
-                        this.setLivewireSelectedSection( this.contextMenuSectionId);
-                        // Use Filament's action system
+                        // Update Alpine variable so mountLivewireAction can sync it to server
+                        this.selectedSection = this.contextMenuSectionId;
+                        this.setLivewireSelectedSection(this.contextMenuSectionId);
                         this.mountLivewireAction('editSection');
                     }
                     this.hideContextMenu();

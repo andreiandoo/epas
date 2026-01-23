@@ -104,6 +104,26 @@ class Invitations extends Page
                 $this->preselectedEventId = (int) $eventId;
             }
         }
+
+        // Handle prefill from Block Seats action
+        if (request()->query('prefill_seats') && $this->preselectedEventId) {
+            $seatData = session()->pull('blocked_seats_for_invitation');
+
+            $seatCount = $seatData ? count($seatData['seats'] ?? []) : 1;
+            $seatNotes = '';
+            if ($seatData) {
+                $seatNotes = "Blocked seats: Section {$seatData['section']}, Row {$seatData['row']}, Seats: " . implode(', ', $seatData['seats']);
+            }
+
+            $this->batchData = [
+                'event_ref' => $this->preselectedEventId,
+                'name' => 'Blocked Seats Invitations',
+                'qty_planned' => $seatCount,
+                'seat_mode' => 'manual',
+                'notes' => $seatNotes,
+            ];
+            $this->showCreateModal = true;
+        }
     }
 
     public function getBatches()

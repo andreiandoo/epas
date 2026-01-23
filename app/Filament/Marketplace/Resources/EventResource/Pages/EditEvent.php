@@ -213,21 +213,23 @@ class EditEvent extends EditRecord
 
                     // Create invitations if requested
                     if ($hasInvitations && ($data['create_invitations'] ?? false) && $updated > 0) {
-                        // Store blocked seat info for invitation creation
-                        session()->flash('blocked_seats_for_invitation', [
+                        // Store blocked seat info in session for the invitations page to pick up
+                        session()->put('blocked_seats_for_invitation', [
                             'event_id' => $this->record->id,
                             'section' => $data['section_name'],
                             'row' => $data['row_label'],
                             'seats' => $seatLabels,
                         ]);
 
+                        $url = route('filament.marketplace.pages.invitations') . '?event=' . $this->record->id . '&prefill_seats=1';
+
                         Notification::make()
                             ->success()
                             ->title("{$updated} seats blocked")
-                            ->body('Redirecting to invitation creation...')
+                            ->body('Opening invitation creation in new tab...')
                             ->send();
 
-                        redirect(route('filament.marketplace.pages.invitations') . '?event=' . $this->record->id . '&prefill_seats=1');
+                        $this->js("window.open('{$url}', '_blank')");
                         return;
                     }
 
