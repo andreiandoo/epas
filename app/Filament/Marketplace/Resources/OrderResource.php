@@ -500,12 +500,12 @@ class OrderResource extends Resource
         $html = '';
 
         foreach ($record->tickets as $ticket) {
-            $typeNameRaw = $ticket->ticketType?->name;
+            $typeNameRaw = $ticket->marketplaceTicketType?->name ?? $ticket->ticketType?->name;
             $typeName = is_array($typeNameRaw) ? ($typeNameRaw['ro'] ?? $typeNameRaw['en'] ?? reset($typeNameRaw) ?: 'Bilet') : ($typeNameRaw ?? 'Bilet');
             $code = $ticket->code ?? $ticket->unique_code ?? 'N/A';
             $barcode = $ticket->barcode ?? $code;
             $price = number_format($ticket->price ?? 0, 2);
-            $currency = $ticket->ticketType?->currency ?? 'RON';
+            $currency = $ticket->marketplaceTicketType?->currency ?? $ticket->ticketType?->currency ?? 'RON';
 
             // Get beneficiary from meta or order
             $meta = $ticket->meta ?? [];
@@ -519,12 +519,32 @@ class OrderResource extends Resource
                 default => '',
             };
 
-            // Generate QR code URL using a simple QR generator API (Google Charts or similar)
+            // Seat info
+            $seatLabel = $ticket->seat_label ?? '';
+            $seatSection = $meta['section_name'] ?? '';
+            $seatRow = $meta['row_label'] ?? '';
+            $seatNumber = $meta['seat_number'] ?? '';
+            $seatDisplay = '';
+            if ($seatLabel || $seatSection || $seatRow || $seatNumber) {
+                $parts = array_filter([$seatSection, $seatRow ? "Rând {$seatRow}" : '', $seatNumber ? "Loc {$seatNumber}" : '']);
+                $seatDisplay = implode(', ', $parts) ?: $seatLabel;
+            }
+
+            // Generate QR code URL using a simple QR generator API
             $qrData = urlencode($barcode);
             $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=80x80&data={$qrData}";
 
             // View URL for ticket
             $viewUrl = TicketResource::getUrl('view', ['record' => $ticket->id]);
+
+            $seatHtml = $seatDisplay ? "
+                        <div style='display: flex; align-items: center; gap: 8px; margin-top: 4px;'>
+                            <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='width: 14px; height: 14px; color: #64748B;'>
+                                <path stroke-linecap='round' stroke-linejoin='round' d='M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z' />
+                                <path stroke-linecap='round' stroke-linejoin='round' d='M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z' />
+                            </svg>
+                            <span style='font-size: 11px; color: #A78BFA; font-weight: 500;'>" . e($seatDisplay) . "</span>
+                        </div>" : '';
 
             $html .= "
                 <div style='display: flex; align-items: stretch; gap: 16px; padding: 16px; background: #0F172A; border-radius: 12px; margin-bottom: 12px; border: 1px solid #334155;'>
@@ -540,7 +560,7 @@ class OrderResource extends Resource
                             <span style='font-size: 14px; font-weight: 600; color: white;'>" . e($typeName) . "</span>
                             {$statusBadge}
                         </div>
-                        <div style='font-size: 12px; color: #64748B; display: flex; align-items: center; gap: 4px; margin-bottom: 6px;'>
+                        <div style='font-size: 12px; color: #64748B; display: flex; align-items: center; gap: 4px; margin-bottom: 4px;'>
                             <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='width: 16px; height: 16px;'>
                                 <path stroke-linecap='round' stroke-linejoin='round' d='M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z' />
                             </svg>
@@ -551,6 +571,7 @@ class OrderResource extends Resource
                             <span style='font-size: 11px; color: #64748B;'>Cod:</span>
                             <span style='padding: 2px 8px; background: #334155; border-radius: 4px; font-size: 11px; font-family: monospace; color: #94A3B8; letter-spacing: 1px;'>" . e($barcode) . "</span>
                         </div>
+                        {$seatHtml}
                     </div>
 
                     <!-- Price and actions -->

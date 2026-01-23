@@ -758,8 +758,34 @@ class DesignerSeatingLayout extends Page
                     SC\Section::make('Row Settings')
                         ->description('Configure individual row settings (numbering start and alignment)')
                         ->schema([
+                            Forms\Components\Grid::make(3)
+                                ->schema([
+                                    Forms\Components\TextInput::make('row_renumber_start')
+                                        ->label('Renumber rows from')
+                                        ->placeholder('e.g. 5')
+                                        ->helperText('Renumber all row labels starting from this number')
+                                        ->columnSpan(1),
+
+                                    Forms\Components\Select::make('row_renumber_type')
+                                        ->label('Label type')
+                                        ->options([
+                                            'numeric' => 'Numeric (1, 2, 3...)',
+                                            'alpha_upper' => 'Letters A, B, C...',
+                                            'alpha_lower' => 'Letters a, b, c...',
+                                        ])
+                                        ->default('numeric')
+                                        ->columnSpan(1),
+
+                                    Forms\Components\Placeholder::make('row_renumber_info')
+                                        ->label(' ')
+                                        ->content('Fill in start value and save to renumber all rows')
+                                        ->columnSpan(1),
+                                ]),
+
                             Forms\Components\Repeater::make('rows')
                                 ->schema([
+                                    Forms\Components\Hidden::make('id'),
+
                                     Forms\Components\TextInput::make('label')
                                         ->label('Row Label')
                                         ->disabled()
@@ -855,6 +881,34 @@ class DesignerSeatingLayout extends Page
                     // Recalculate seat positions if spacing changed
                     if ($newSeatSpacing !== $oldSeatSpacing || $newRowSpacing !== $oldRowSpacing) {
                         $this->recalculateSeatPositions($section, $newSeatSpacing, $newRowSpacing);
+                    }
+
+                    // Renumber row labels if requested
+                    if (!empty($data['row_renumber_start'])) {
+                        $startValue = $data['row_renumber_start'];
+                        $type = $data['row_renumber_type'] ?? 'numeric';
+                        $rows = $section->rows()->orderBy('y', 'asc')->get();
+
+                        foreach ($rows as $index => $row) {
+                            $newLabel = match ($type) {
+                                'alpha_upper' => $this->numberToAlpha($startValue, $index, true),
+                                'alpha_lower' => $this->numberToAlpha($startValue, $index, false),
+                                default => (string) ((int) $startValue + $index),
+                            };
+
+                            $oldLabel = $row->label;
+                            $row->update(['label' => $newLabel]);
+
+                            // Update seat display names and UIDs for renamed row
+                            if ($oldLabel !== $newLabel) {
+                                foreach ($row->seats as $seat) {
+                                    $seat->update([
+                                        'display_name' => $section->generateSeatDisplayName($newLabel, $seat->label),
+                                        'seat_uid' => $section->generateSeatUid($newLabel, $seat->label),
+                                    ]);
+                                }
+                            }
+                        }
                     }
 
                     // Update row settings (seat_start_number and alignment)
@@ -1935,6 +1989,29 @@ class DesignerSeatingLayout extends Page
         if (!empty($updates)) {
             $section->update($updates);
         }
+    }
+
+    /**
+     * Convert a starting value + offset to alphabetic label
+     */
+    protected function numberToAlpha(string $start, int $offset, bool $uppercase = true): string
+    {
+        // If start is a letter, use letter-based offset
+        if (ctype_alpha($start)) {
+            $base = $uppercase ? ord('A') : ord('a');
+            $startOrd = ord(strtoupper($start)) - ord('A');
+            $result = $startOrd + $offset;
+            // Wrap around if beyond Z (26 letters)
+            $char = chr($base + ($result % 26));
+            return $char;
+        }
+
+        // If start is numeric, convert number to letter
+        $num = (int) $start + $offset;
+        $base = $uppercase ? ord('A') : ord('a');
+        if ($num < 1) $num = 1;
+        $char = chr($base + (($num - 1) % 26));
+        return $char;
     }
 
     /**

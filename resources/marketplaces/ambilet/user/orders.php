@@ -208,7 +208,7 @@ const UserOrders = {
         const isPast = order.status === 'completed' || order.status === 'refunded';
 
         // Get event info with fallbacks
-        const eventImage = order.event?.image || order.event?.featured_image || order.tickets?.[0]?.event?.image || '/assets/images/placeholder-event.jpg';
+        const eventImage = order.event?.image || order.event?.featured_image || order.tickets?.[0]?.event?.image || '/assets/images/default-event.png';
         const eventTitle = order.event?.title || order.event_name || order.tickets?.[0]?.event?.title || 'Eveniment';
         const orderRef = order.reference || order.order_number || '#' + String(order.id).padStart(6, '0');
 
@@ -222,7 +222,7 @@ const UserOrders = {
                 <button onclick="toggleOrder(this)" class="w-full p-4 text-left lg:p-5">
                     <div class="flex items-center gap-4">
                         <div class="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 ${isPast ? 'grayscale opacity-75' : ''}">
-                            <img src="${eventImage}" class="object-cover w-full h-full" alt="" onerror="this.src='/assets/images/placeholder-event.jpg'">
+                            <img src="${eventImage}" class="object-cover w-full h-full" alt="" onerror="this.src='/assets/images/default-event.png'">
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
@@ -231,7 +231,7 @@ const UserOrders = {
                             <h3 class="font-semibold text-secondary">${eventTitle}</h3>
                             <p class="text-sm text-muted">${this.formatDateTime(order.created_at)} • ${ticketCount < 2 ? '1 bilet' : ticketCount + ' bilete'} ${ticketName}</p>
                         </div>
-                        <div class="flex items-center gap-x-4 flex-shrink-0 text-right">
+                        <div class="flex items-center flex-shrink-0 text-right gap-x-4">
                             ${order.status === 'refunded' ?
                                 `<p class="font-bold line-through text-muted">${order.total} lei</p><p class="text-xs text-error">Rambursat</p>` :
                                 `<span class="flex items-center justify-center px-2 py-0.5 ${statusClass} text-xs font-bold rounded">${statusLabel}</span> <p class="font-bold text-secondary">${order.total} lei</p>${order.points_earned ? `<p class="text-xs text-success">+${order.points_earned} puncte</p>` : ''}`
@@ -256,13 +256,13 @@ const UserOrders = {
             <div class="mb-6">
                 <h4 class="mb-3 text-sm font-semibold text-secondary">Status comandă</h4>
                 <div class="flex items-center justify-between">
-                    <div class="flex-1 flex items-center">
+                    <div class="flex items-center flex-1">
                         <div class="flex items-center justify-center w-8 h-8 rounded-full bg-success">
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         </div>
                         <div class="w-full h-1 bg-success"></div>
                     </div>
-                    <div class="flex-1 flex items-center">
+                    <div class="flex items-center flex-1">
                         <div class="flex items-center justify-center w-8 h-8 rounded-full bg-success">
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         </div>

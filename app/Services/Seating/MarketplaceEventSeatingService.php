@@ -39,26 +39,56 @@ class MarketplaceEventSeatingService
             // If event seating exists but has no seats, delete and recreate
             // This handles cases where the base layout had no seats when first created
             if ($existing->seats()->count() === 0) {
+                Log::warning('MarketplaceEventSeatingService: EventSeatingLayout has 0 seats, deleting to recreate', [
+                    'marketplace_event_id' => $marketplaceEventId,
+                    'event_seating_id' => $existing->id,
+                ]);
+                $existing->seats()->delete();
                 $existing->delete();
             } else {
                 return $existing;
             }
         }
 
-        // Get marketplace event with venue and seating layout
-        // Use withoutGlobalScopes on seatingLayouts to bypass TenantScope in marketplace context
-        $event = MarketplaceEvent::with(['venue.seatingLayouts' => function ($q) {
-            $q->withoutGlobalScopes()
-                ->where('status', 'published')
-                ->with(['sections.rows.seats']);
-        }])->find($marketplaceEventId);
+        // Get marketplace event with venue
+        $event = MarketplaceEvent::with(['venue'])->find($marketplaceEventId);
 
         if (!$event || !$event->venue) {
+            Log::warning('MarketplaceEventSeatingService: No venue found', [
+                'marketplace_event_id' => $marketplaceEventId,
+                'venue_id' => $event?->venue_id,
+            ]);
             return null;
         }
 
-        $layout = $event->venue->seatingLayouts->first();
+        // Load seating layout separately with withoutGlobalScopes to bypass TenantScope
+        $layout = SeatingLayout::withoutGlobalScopes()
+            ->where('venue_id', $event->venue_id)
+            ->where('status', 'published')
+            ->first();
+
         if (!$layout) {
+            Log::warning('MarketplaceEventSeatingService: No published SeatingLayout for venue', [
+                'marketplace_event_id' => $marketplaceEventId,
+                'venue_id' => $event->venue_id,
+            ]);
+            return null;
+        }
+
+        // Explicitly load sections with rows and seats (bypass any potential scope issues)
+        $layout->load(['sections.rows.seats']);
+
+        Log::info('MarketplaceEventSeatingService: Found layout with sections', [
+            'layout_id' => $layout->id,
+            'sections_count' => $layout->sections->count(),
+            'total_rows' => $layout->sections->sum(fn ($s) => $s->rows->count()),
+            'total_seats' => $layout->sections->sum(fn ($s) => $s->rows->sum(fn ($r) => $r->seats->count())),
+        ]);
+
+        if ($layout->sections->isEmpty()) {
+            Log::warning('MarketplaceEventSeatingService: Layout has no sections', [
+                'layout_id' => $layout->id,
+            ]);
             return null;
         }
 
@@ -172,12 +202,16 @@ class MarketplaceEventSeatingService
             return true;
         }
 
-        // Check if venue has a published seating layout
-        $event = MarketplaceEvent::with(['venue.seatingLayouts' => function ($q) {
-            $q->where('status', 'published');
-        }])->find($marketplaceEventId);
+        // Check if venue has a published seating layout (bypass TenantScope)
+        $event = MarketplaceEvent::find($marketplaceEventId);
+        if (!$event || !$event->venue_id) {
+            return false;
+        }
 
-        return $event?->venue?->seatingLayouts?->isNotEmpty() ?? false;
+        return SeatingLayout::withoutGlobalScopes()
+            ->where('venue_id', $event->venue_id)
+            ->where('status', 'published')
+            ->exists();
     }
 
     /**

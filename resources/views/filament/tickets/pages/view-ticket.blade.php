@@ -6,7 +6,35 @@
         $venue = $event?->venue;
         $venueName = $venue ? ($venue->getTranslation('name', app()->getLocale()) ?? 'N/A') : 'N/A';
         $beneficiary = $ticket->meta['beneficiary'] ?? null;
-        $isAdminPanel = filament()->getCurrentPanel()->getId() === 'admin';
+        $currentPanelId = filament()->getCurrentPanel()->getId();
+        $isAdminPanel = $currentPanelId === 'admin';
+        $isMarketplacePanel = $currentPanelId === 'marketplace';
+
+        // Resolve seat info: try meta first, then fallback to EventSeat lookup
+        $seatMeta = $ticket->meta ?? [];
+        $seatUid = $seatMeta['seat_uid'] ?? null;
+        $seatLabel = $ticket->seat_label ?? null;
+        $seatSection = $seatMeta['section_name'] ?? null;
+        $seatRow = $seatMeta['row_label'] ?? null;
+        $seatNumber = $seatMeta['seat_number'] ?? null;
+
+        // Fallback: if we have seat_uid but missing details, look up from EventSeat
+        if ($seatUid && $ticket->marketplace_event_id && (!$seatSection || !$seatRow)) {
+            $eventSeat = \App\Models\Seating\EventSeat::where('seat_uid', $seatUid)
+                ->whereHas('eventSeating', function ($q) use ($ticket) {
+                    $q->where('marketplace_event_id', $ticket->marketplace_event_id);
+                })
+                ->first();
+
+            if ($eventSeat) {
+                $seatSection = $seatSection ?: $eventSeat->section_name;
+                $seatRow = $seatRow ?: $eventSeat->row_label;
+                $seatNumber = $seatNumber ?: $eventSeat->seat_label;
+                $seatLabel = $seatLabel ?: $eventSeat->seat_label;
+            }
+        }
+
+        $hasSeatInfo = $seatLabel || $seatSection || $seatRow || $seatNumber;
     @endphp
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
@@ -52,30 +80,31 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Tip bilet</span>
-                        <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $ticket->ticketType?->name ?? 'N/A' }}</p>
+                        <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $ticket->marketplaceTicketType?->name ?? $ticket->ticketType?->name ?? 'N/A' }}</p>
                     </div>
-                    @if($ticket->seat_label)
-                        <div>
-                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Loc</span>
-                            <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $ticket->seat_label }}</p>
-                        </div>
-                        @php $seatMeta = $ticket->meta ?? []; @endphp
-                        @if(!empty($seatMeta['section_name']))
+                    @if($hasSeatInfo)
+                        @if($seatLabel)
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Loc</span>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatLabel }}</p>
+                            </div>
+                        @endif
+                        @if($seatSection)
                             <div>
                                 <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Secțiune</span>
-                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatMeta['section_name'] }}</p>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatSection }}</p>
                             </div>
                         @endif
-                        @if(!empty($seatMeta['row_label']))
+                        @if($seatRow)
                             <div>
                                 <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Rând</span>
-                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatMeta['row_label'] }}</p>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatRow }}</p>
                             </div>
                         @endif
-                        @if(!empty($seatMeta['seat_number']))
+                        @if($seatNumber)
                             <div>
                                 <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Număr loc</span>
-                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatMeta['seat_number'] }}</p>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatNumber }}</p>
                             </div>
                         @endif
                     @endif
@@ -104,6 +133,10 @@
                             <p class="text-lg font-bold text-gray-900 dark:text-white">
                                 @if($isAdminPanel)
                                     <a href="{{ \App\Filament\Resources\Events\EventResource::getUrl('edit', ['record' => $event]) }}" class="text-primary-600 hover:underline">
+                                        {{ $eventTitle }}
+                                    </a>
+                                @elseif($isMarketplacePanel)
+                                    <a href="{{ \App\Filament\Marketplace\Resources\EventResource::getUrl('edit', ['record' => $event]) }}" class="text-primary-600 hover:underline">
                                         {{ $eventTitle }}
                                     </a>
                                 @else
@@ -145,6 +178,10 @@
                             <p class="text-base font-semibold text-gray-900 dark:text-white">
                                 @if($isAdminPanel)
                                     <a href="{{ \App\Filament\Resources\Orders\OrderResource::getUrl('view', ['record' => $ticket->order]) }}" class="text-primary-600 hover:underline">
+                                        #{{ str_pad($ticket->order->id, 6, '0', STR_PAD_LEFT) }}
+                                    </a>
+                                @elseif($isMarketplacePanel)
+                                    <a href="{{ \App\Filament\Marketplace\Resources\OrderResource::getUrl('view', ['record' => $ticket->order]) }}" class="text-primary-600 hover:underline">
                                         #{{ str_pad($ticket->order->id, 6, '0', STR_PAD_LEFT) }}
                                     </a>
                                 @else

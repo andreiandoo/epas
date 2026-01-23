@@ -873,69 +873,69 @@ switch ($action) {
     case 'organizer.register':
         $method = 'POST';
         $body = file_get_contents('php://input');
-        $endpoint = '/marketplace-client/organizer/register';
+        $endpoint = '/organizer/register';
         break;
 
     case 'organizer.login':
         $method = 'POST';
         $body = file_get_contents('php://input');
-        $endpoint = '/marketplace-client/organizer/login';
+        $endpoint = '/organizer/login';
         break;
 
     case 'organizer.logout':
         $method = 'POST';
-        $endpoint = '/marketplace-client/organizer/logout';
+        $endpoint = '/organizer/logout';
         $requiresAuth = true;
         break;
 
     case 'organizer.me':
         $method = 'GET';
-        $endpoint = '/marketplace-client/organizer/me';
+        $endpoint = '/organizer/me';
         $requiresAuth = true;
         break;
 
     case 'organizer.profile':
         $method = 'PUT';
         $body = file_get_contents('php://input');
-        $endpoint = '/marketplace-client/organizer/profile';
+        $endpoint = '/organizer/profile';
         $requiresAuth = true;
         break;
 
     case 'organizer.password':
         $method = 'PUT';
         $body = file_get_contents('php://input');
-        $endpoint = '/marketplace-client/organizer/password';
+        $endpoint = '/organizer/password';
         $requiresAuth = true;
         break;
 
     case 'organizer.forgot-password':
         $method = 'POST';
         $body = file_get_contents('php://input');
-        $endpoint = '/marketplace-client/organizer/forgot-password';
+        $endpoint = '/organizer/forgot-password';
         break;
 
     case 'organizer.reset-password':
         $method = 'POST';
         $body = file_get_contents('php://input');
-        $endpoint = '/marketplace-client/organizer/reset-password';
+        $endpoint = '/organizer/reset-password';
         break;
 
     case 'organizer.verify-email':
         $method = 'POST';
         $body = file_get_contents('php://input');
-        $endpoint = '/marketplace-client/organizer/verify-email';
+        $endpoint = '/organizer/verify-email';
         break;
 
     case 'organizer.resend-verification':
         $method = 'POST';
         $body = file_get_contents('php://input');
-        $endpoint = '/marketplace-client/organizer/resend-verification';
+        $endpoint = '/organizer/resend-verification';
         break;
 
     case 'organizer.payout-details':
         $method = 'PUT';
         $body = file_get_contents('php://input');
-        $endpoint = '/marketplace-client/organizer/payout-details';
+        $endpoint = '/organizer/payout-details';
         $requiresAuth = true;
         break;
 
@@ -943,7 +943,7 @@ switch ($action) {
 
     case 'organizer.dashboard':
         $method = 'GET';
-        $endpoint = '/marketplace-client/organizer/dashboard';
+        $endpoint = '/organizer/dashboard';
         $requiresAuth = true;
         break;
 
@@ -953,7 +953,7 @@ switch ($action) {
         if (isset($_GET['period'])) $params['period'] = $_GET['period'];
         if (isset($_GET['start_date'])) $params['start_date'] = $_GET['start_date'];
         if (isset($_GET['end_date'])) $params['end_date'] = $_GET['end_date'];
-        $endpoint = '/marketplace-client/organizer/dashboard/timeline' . ($params ? '?' . http_build_query($params) : '');
+        $endpoint = '/organizer/dashboard/timeline' . ($params ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;
 
@@ -969,7 +969,7 @@ switch ($action) {
             if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
             if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
         }
-        $endpoint = '/marketplace-client/organizer/events' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $endpoint = '/organizer/events' . (!empty($params) ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;
 
@@ -984,7 +984,7 @@ switch ($action) {
         if ($method === 'PUT') {
             $body = file_get_contents('php://input');
         }
-        $endpoint = '/marketplace-client/organizer/events/' . urlencode($eventId);
+        $endpoint = '/organizer/events/' . urlencode($eventId);
         $requiresAuth = true;
         break;
 
@@ -996,7 +996,7 @@ switch ($action) {
             exit;
         }
         $method = 'POST';
-        $endpoint = '/marketplace-client/organizer/events/' . urlencode($eventId) . '/submit';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/submit';
         $requiresAuth = true;
         break;
 
@@ -1008,7 +1008,7 @@ switch ($action) {
             exit;
         }
         $method = 'POST';
-        $endpoint = '/marketplace-client/organizer/events/' . urlencode($eventId) . '/cancel';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/cancel';
         $requiresAuth = true;
         break;
 
@@ -1025,7 +1025,7 @@ switch ($action) {
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 100);
         if (isset($_GET['search'])) $params['search'] = $_GET['search'];
         if (isset($_GET['status'])) $params['status'] = $_GET['status'];
-        $endpoint = '/marketplace-client/organizer/events/' . urlencode($eventId) . '/participants' . ($params ? '?' . http_build_query($params) : '');
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/participants' . ($params ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;
 
@@ -1037,7 +1037,7 @@ switch ($action) {
             exit;
         }
         $method = 'GET';
-        $endpoint = '/marketplace-client/organizer/events/' . urlencode($eventId) . '/participants/export';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/participants/export';
         $requiresAuth = true;
         break;
 
@@ -1050,7 +1050,7 @@ switch ($action) {
             exit;
         }
         $method = $_SERVER['REQUEST_METHOD'];
-        $endpoint = '/marketplace-client/organizer/events/' . urlencode($eventId) . '/check-in/' . urlencode($barcode);
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/check-in/' . urlencode($barcode);
         $requiresAuth = true;
         break;
 
@@ -1063,7 +1063,7 @@ switch ($action) {
         if (isset($_GET['status'])) $params['status'] = $_GET['status'];
         if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
-        $endpoint = '/marketplace-client/organizer/orders' . ($params ? '?' . http_build_query($params) : '');
+        $endpoint = '/organizer/orders' . ($params ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;
 
@@ -1071,7 +1071,7 @@ switch ($action) {
 
     case 'organizer.balance':
         $method = 'GET';
-        $endpoint = '/marketplace-client/organizer/balance';
+        $endpoint = '/organizer/balance';
         $requiresAuth = true;
         break;
 
@@ -1081,7 +1081,7 @@ switch ($action) {
         if (isset($_GET['type'])) $params['type'] = $_GET['type'];
         if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
-        $endpoint = '/marketplace-client/organizer/transactions' . ($params ? '?' . http_build_query($params) : '');
+        $endpoint = '/organizer/transactions' . ($params ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;
 
@@ -1095,7 +1095,7 @@ switch ($action) {
             if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
             if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
         }
-        $endpoint = '/marketplace-client/organizer/payouts' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $endpoint = '/organizer/payouts' . (!empty($params) ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;
 
@@ -1107,7 +1107,7 @@ switch ($action) {
             exit;
         }
         $method = $_SERVER['REQUEST_METHOD']; // DELETE for canceling
-        $endpoint = '/marketplace-client/organizer/payouts/' . urlencode($payoutId);
+        $endpoint = '/organizer/payouts/' . urlencode($payoutId);
         $requiresAuth = true;
         break;
 
@@ -1124,7 +1124,7 @@ switch ($action) {
             if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
             if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
         }
-        $endpoint = '/marketplace-client/organizer/promo-codes' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $endpoint = '/organizer/promo-codes' . (!empty($params) ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;
 
@@ -1139,7 +1139,7 @@ switch ($action) {
         if ($method === 'PUT') {
             $body = file_get_contents('php://input');
         }
-        $endpoint = '/marketplace-client/organizer/promo-codes/' . urlencode($codeId);
+        $endpoint = '/organizer/promo-codes/' . urlencode($codeId);
         $requiresAuth = true;
         break;
 

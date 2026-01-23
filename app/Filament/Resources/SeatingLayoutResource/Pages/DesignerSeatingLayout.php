@@ -894,6 +894,7 @@ class DesignerSeatingLayout extends Page
                                     'rename' => 'Rename a row',
                                     'add' => 'Add a new row',
                                     'delete' => 'Delete a row',
+                                    'renumber' => 'Renumber all rows',
                                 ])
                                 ->default('')
                                 ->reactive()
@@ -946,6 +947,25 @@ class DesignerSeatingLayout extends Page
                                 ->visible(fn ($get) => $get('row_action') === 'delete')
                                 ->helperText('Warning: This will delete the row and all its seats')
                                 ->columnSpanFull(),
+
+                            // Renumber rows fields
+                            Forms\Components\TextInput::make('renumber_start')
+                                ->label('Start from')
+                                ->placeholder('e.g. 5 or A')
+                                ->helperText('Renumber all row labels starting from this value')
+                                ->visible(fn ($get) => $get('row_action') === 'renumber')
+                                ->columnSpan(1),
+
+                            Forms\Components\Select::make('renumber_type')
+                                ->label('Label type')
+                                ->options([
+                                    'numeric' => 'Numeric (1, 2, 3...)',
+                                    'alpha_upper' => 'Letters A, B, C...',
+                                    'alpha_lower' => 'Letters a, b, c...',
+                                ])
+                                ->default('numeric')
+                                ->visible(fn ($get) => $get('row_action') === 'renumber')
+                                ->columnSpan(1),
                         ])
                         ->columns(2),
 
@@ -1081,6 +1101,31 @@ class DesignerSeatingLayout extends Page
                         if ($row && $row->section_id === $section->id) {
                             $row->seats()->delete();
                             $row->delete();
+                        }
+                    } elseif ($rowAction === 'renumber' && !empty($data['renumber_start'])) {
+                        $startValue = $data['renumber_start'];
+                        $type = $data['renumber_type'] ?? 'numeric';
+                        $rows = $section->rows()->orderBy('y', 'asc')->get();
+
+                        foreach ($rows as $index => $row) {
+                            $newLabel = match ($type) {
+                                'alpha_upper' => $this->numberToAlpha($startValue, $index, true),
+                                'alpha_lower' => $this->numberToAlpha($startValue, $index, false),
+                                default => (string) ((int) $startValue + $index),
+                            };
+
+                            $oldLabel = $row->label;
+                            $row->update(['label' => $newLabel]);
+
+                            // Update seat display names and UIDs for renamed row
+                            if ($oldLabel !== $newLabel) {
+                                foreach ($row->seats as $seat) {
+                                    $seat->update([
+                                        'display_name' => $section->generateSeatDisplayName($newLabel, $seat->label),
+                                        'seat_uid' => $section->generateSeatUid($newLabel, $seat->label),
+                                    ]);
+                                }
+                            }
                         }
                     }
 
@@ -2174,6 +2219,28 @@ class DesignerSeatingLayout extends Page
             ->title('Seats deleted')
             ->body("Deleted {$deletedCount} seats")
             ->send();
+    }
+
+    /**
+     * Convert a starting value + offset to alphabetic label
+     */
+    protected function numberToAlpha(string $start, int $offset, bool $uppercase = true): string
+    {
+        // If start is a letter, use letter-based offset
+        if (ctype_alpha($start)) {
+            $base = $uppercase ? ord('A') : ord('a');
+            $startOrd = ord(strtoupper($start)) - ord('A');
+            $result = $startOrd + $offset;
+            $char = chr($base + ($result % 26));
+            return $char;
+        }
+
+        // If start is numeric, convert number to letter
+        $num = (int) $start + $offset;
+        $base = $uppercase ? ord('A') : ord('a');
+        if ($num < 1) $num = 1;
+        $char = chr($base + (($num - 1) % 26));
+        return $char;
     }
 
     /**

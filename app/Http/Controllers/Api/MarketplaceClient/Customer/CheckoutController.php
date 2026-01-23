@@ -147,9 +147,19 @@ class CheckoutController extends BaseController
             $orders = [];
 
             foreach ($itemsByEvent as $eventId => $eventItems) {
-                // Use Event model (tenant events), not MarketplaceEvent
+                // Look up MarketplaceEvent (cart stores MarketplaceEvent.id as event_id)
+                $marketplaceEvent = MarketplaceEvent::find($eventId);
+
+                // Use Event model (tenant events) - find by marketplace event's name/date or direct ID
                 $event = Event::with('tenant')->find($eventId);
-                if (!$event) {
+                if (!$event && $marketplaceEvent) {
+                    // If no tenant Event with this ID, the event_id IS a MarketplaceEvent ID
+                    // Try to find the tenant event by matching the marketplace event
+                    Log::channel('marketplace')->info('Checkout: Using MarketplaceEvent as primary', [
+                        'marketplace_event_id' => $eventId,
+                    ]);
+                }
+                if (!$event && !$marketplaceEvent) {
                     Log::channel('marketplace')->warning('Checkout: Event not found', ['event_id' => $eventId]);
                     continue;
                 }
@@ -159,39 +169,77 @@ class CheckoutController extends BaseController
                 $orderItems = [];
 
                 foreach ($eventItems as $item) {
-                    // Use TicketType model (tenant ticket types), not MarketplaceTicketType
-                    $ticketType = TicketType::where('id', $item['ticket_type_id'])
-                        ->lockForUpdate()
-                        ->first();
-
-                    if (!$ticketType) {
-                        throw new \Exception("Ticket type not found: {$item['ticket_type_id']}");
-                    }
-
                     $quantity = (int) $item['quantity'];
+                    $ticketTypeId = $item['ticket_type_id'];
 
-                    // Check and reserve tickets - TicketType uses quota_total/quota_sold
-                    $available = $ticketType->quota_total === null
-                        ? PHP_INT_MAX
-                        : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
+                    // Determine which model the ticket_type_id belongs to by checking event context
+                    $mktTicketType = null;
+                    $ticketType = null;
 
-                    if ($available < $quantity) {
-                        throw new \Exception("Not enough tickets for {$ticketType->name}");
+                    // If we have a MarketplaceEvent, check if this ticket type belongs to it
+                    if ($marketplaceEvent) {
+                        $mktTicketType = MarketplaceTicketType::where('id', $ticketTypeId)
+                            ->where('marketplace_event_id', $marketplaceEvent->id)
+                            ->lockForUpdate()
+                            ->first();
                     }
 
-                    // Reserve tickets by incrementing quota_sold
-                    // Note: For marketplace, we mark as sold immediately since payment follows
-                    if ($ticketType->quota_total !== null) {
-                        $ticketType->increment('quota_sold', $quantity);
+                    // If not found as MarketplaceTicketType, try TicketType (event_id matches)
+                    if (!$mktTicketType) {
+                        $ticketType = TicketType::where('id', $ticketTypeId)
+                            ->when($event, fn ($q) => $q->where('event_id', $event->id))
+                            ->lockForUpdate()
+                            ->first();
                     }
 
-                    // TicketType uses price_cents (in cents), convert to price
-                    $unitPrice = ($ticketType->sale_price_cents ?? $ticketType->price_cents) / 100;
+                    if (!$ticketType && !$mktTicketType) {
+                        throw new \Exception("Ticket type not found: {$ticketTypeId}");
+                    }
+
+                    // Check availability and update stock
+                    if ($mktTicketType) {
+                        $available = $mktTicketType->quantity === null
+                            ? PHP_INT_MAX
+                            : max(0, $mktTicketType->quantity - ($mktTicketType->quantity_sold ?? 0) - ($mktTicketType->quantity_reserved ?? 0));
+
+                        if ($available < $quantity) {
+                            throw new \Exception("Not enough tickets for {$mktTicketType->name}");
+                        }
+
+                        $mktTicketType->increment('quantity_sold', $quantity);
+
+                        if ($mktTicketType->quantity !== null && ($mktTicketType->quantity_sold >= $mktTicketType->quantity)) {
+                            $mktTicketType->update(['status' => 'sold_out']);
+                        }
+                    } elseif ($ticketType) {
+                        $available = $ticketType->quota_total === null
+                            ? PHP_INT_MAX
+                            : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
+
+                        if ($available < $quantity) {
+                            throw new \Exception("Not enough tickets for {$ticketType->name}");
+                        }
+
+                        if ($ticketType->quota_total !== null) {
+                            $ticketType->increment('quota_sold', $quantity);
+                        }
+                    }
+
+                    // Determine unit price
+                    if ($mktTicketType) {
+                        $unitPrice = (float) $mktTicketType->price;
+                    } elseif ($ticketType) {
+                        $unitPrice = ($ticketType->sale_price_cents ?? $ticketType->price_cents) / 100;
+                    } else {
+                        $unitPrice = (float) ($item['price'] ?? 0);
+                    }
+
                     $itemTotal = $unitPrice * $quantity;
                     $subtotal += $itemTotal;
 
                     $orderItems[] = [
                         'ticket_type' => $ticketType,
+                        'marketplace_ticket_type' => $mktTicketType,
                         'quantity' => $quantity,
                         'unit_price' => $unitPrice,
                         'total' => $itemTotal,
@@ -213,7 +261,7 @@ class CheckoutController extends BaseController
                 }
 
                 // Calculate commission - for tenant events, use tenant or client commission rate
-                $commissionRate = $event->tenant?->commission_rate ?? $client->commission_rate ?? 5;
+                $commissionRate = $event?->tenant?->commission_rate ?? $client->commission_rate ?? 5;
                 $netAmount = $subtotal - $discount;
                 $commissionAmount = round($netAmount * ($commissionRate / 100), 2);
 
@@ -221,12 +269,13 @@ class CheckoutController extends BaseController
                 $currency = isset($cart) ? $cart->currency : ($client->currency ?? 'RON');
 
                 // Create order
-                // Note: For tenant events sold via marketplace, we store both tenant_id and marketplace references
+                // Note: For marketplace events, we store marketplace_event_id
                 $order = Order::create([
                     'marketplace_client_id' => $client->id,
-                    'tenant_id' => $event->tenant_id,  // Store tenant who owns the event
+                    'tenant_id' => $event?->tenant_id,
                     'marketplace_customer_id' => $customer->id,
-                    'event_id' => $event->id,  // Use event_id for tenant events
+                    'event_id' => $event?->id,
+                    'marketplace_event_id' => $marketplaceEvent?->id,
                     'order_number' => 'MKT-' . strtoupper(Str::random(8)),
                     'status' => 'pending',
                     'payment_status' => 'pending',
@@ -253,11 +302,25 @@ class CheckoutController extends BaseController
                 // Create order items and pending tickets
                 $ticketIndex = 0;
                 foreach ($orderItems as $item) {
+                    // Resolve ticket type name from MarketplaceTicketType (primary) or TicketType (fallback)
+                    $mtt = $item['marketplace_ticket_type'];
+                    $tt = $item['ticket_type'];
+
+                    if ($mtt) {
+                        $itemName = is_array($mtt->name)
+                            ? ($mtt->name['ro'] ?? $mtt->name['en'] ?? array_values($mtt->name)[0] ?? 'Bilet')
+                            : ($mtt->name ?? 'Bilet');
+                    } elseif ($tt) {
+                        $itemName = is_array($tt->name)
+                            ? ($tt->name['ro'] ?? $tt->name['en'] ?? array_values($tt->name)[0] ?? 'Bilet')
+                            : ($tt->name ?? 'Bilet');
+                    } else {
+                        $itemName = 'Bilet';
+                    }
+
                     $orderItem = $order->items()->create([
-                        'ticket_type_id' => $item['ticket_type']->id,
-                        'name' => is_array($item['ticket_type']->name)
-                            ? ($item['ticket_type']->name['ro'] ?? $item['ticket_type']->name['en'] ?? array_values($item['ticket_type']->name)[0] ?? 'Ticket')
-                            : ($item['ticket_type']->name ?? 'Ticket'),
+                        'ticket_type_id' => $tt->id ?? $mtt->id ?? null,
+                        'name' => $itemName,
                         'quantity' => $item['quantity'],
                         'unit_price' => $item['unit_price'],
                         'total' => $item['total'],
@@ -312,13 +375,15 @@ class CheckoutController extends BaseController
 
                         Ticket::create([
                             'marketplace_client_id' => $client->id,
-                            'tenant_id' => $event->tenant_id,
+                            'tenant_id' => $event?->tenant_id,
                             'order_id' => $order->id,
                             'order_item_id' => $orderItem->id,
-                            'event_id' => $event->id,  // Use event_id for tenant events
-                            'ticket_type_id' => $item['ticket_type']->id,  // Use ticket_type_id for tenant ticket types
+                            'event_id' => $event?->id,
+                            'marketplace_event_id' => $marketplaceEvent?->id,
+                            'ticket_type_id' => $tt->id ?? null,
+                            'marketplace_ticket_type_id' => $mtt->id ?? null,
                             'marketplace_customer_id' => $customer->id,
-                            'code' => strtoupper(Str::random(8)),  // Short alphanumeric code
+                            'code' => strtoupper(Str::random(8)),
                             'barcode' => Str::uuid()->toString(),
                             'status' => 'pending',
                             'price' => $item['unit_price'],
@@ -337,12 +402,14 @@ class CheckoutController extends BaseController
                     MarketplacePromoCode::where('code', $promoCode['code'])->increment('times_used');
                 }
 
+                $eventName = $event->name ?? ($marketplaceEvent ? ($marketplaceEvent->title['ro'] ?? $marketplaceEvent->title['en'] ?? 'Event') : 'Event');
+
                 $orders[] = [
                     'id' => $order->id,
                     'order_number' => $order->order_number,
                     'event' => [
-                        'id' => $event->id,
-                        'name' => $event->name,
+                        'id' => $event->id ?? $marketplaceEvent?->id,
+                        'name' => $eventName,
                     ],
                     'subtotal' => (float) $order->subtotal,
                     'discount' => (float) $order->discount_amount,
@@ -491,14 +558,51 @@ class CheckoutController extends BaseController
 
         foreach ($items as $key => $item) {
             $ticketTypeId = $item['ticket_type_id'] ?? null;
+            $itemEventId = $item['event_id'] ?? null;
+
             if (!$ticketTypeId) {
                 Log::channel('marketplace')->debug('Validation: missing ticket_type_id', ['item' => $item]);
                 $errors[$key] = 'Invalid item: missing ticket type';
                 continue;
             }
 
-            // Use TicketType model (tenant ticket types), not MarketplaceTicketType
-            $ticketType = TicketType::with('event')->find($ticketTypeId);
+            // Determine which model by checking event context
+            $mktTicketType = null;
+            $ticketType = null;
+
+            // Check MarketplaceTicketType if event_id matches a MarketplaceEvent
+            if ($itemEventId) {
+                $mktTicketType = MarketplaceTicketType::where('id', $ticketTypeId)
+                    ->where('marketplace_event_id', $itemEventId)
+                    ->first();
+            }
+
+            if ($mktTicketType) {
+                if ($mktTicketType->status === 'sold_out') {
+                    $errors[$key] = 'Ticket type is sold out';
+                    continue;
+                }
+                if ($mktTicketType->status !== 'on_sale' && $mktTicketType->status !== 'active') {
+                    $errors[$key] = "Ticket type is not available (status: {$mktTicketType->status})";
+                    continue;
+                }
+
+                $available = $mktTicketType->quantity === null
+                    ? PHP_INT_MAX
+                    : max(0, $mktTicketType->quantity - ($mktTicketType->quantity_sold ?? 0) - ($mktTicketType->quantity_reserved ?? 0));
+
+                $quantity = $item['quantity'] ?? 1;
+                if ($quantity > $available) {
+                    $errors[$key] = "Only {$available} tickets available";
+                }
+                continue;
+            }
+
+            // Fallback: try TicketType (tenant ticket types)
+            $ticketType = TicketType::with('event')
+                ->where('id', $ticketTypeId)
+                ->when($itemEventId, fn ($q) => $q->where('event_id', $itemEventId))
+                ->first();
 
             if (!$ticketType) {
                 Log::channel('marketplace')->debug('Validation: ticket type not found', ['ticket_type_id' => $ticketTypeId]);
@@ -506,27 +610,16 @@ class CheckoutController extends BaseController
                 continue;
             }
 
-            // TicketType uses 'active' status, not 'on_sale'
             if ($ticketType->status !== 'active') {
-                Log::channel('marketplace')->debug('Validation: ticket not active', [
-                    'ticket_type_id' => $ticketTypeId,
-                    'status' => $ticketType->status,
-                ]);
                 $errors[$key] = "Ticket type is not available (status: {$ticketType->status})";
                 continue;
             }
 
             if (!$ticketType->event || $ticketType->event->status !== 'published') {
-                Log::channel('marketplace')->debug('Validation: event not published', [
-                    'ticket_type_id' => $ticketTypeId,
-                    'event_id' => $ticketType->event_id,
-                    'event_status' => $ticketType->event?->status,
-                ]);
-                $errors[$key] = "Event is no longer available (status: " . ($ticketType->event?->status ?? 'null') . ")";
+                $errors[$key] = "Event is no longer available";
                 continue;
             }
 
-            // TicketType uses quota_total and quota_sold
             $available = $ticketType->quota_total === null
                 ? PHP_INT_MAX
                 : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));

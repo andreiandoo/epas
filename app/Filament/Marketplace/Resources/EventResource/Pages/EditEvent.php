@@ -73,7 +73,8 @@ class EditEvent extends EditRecord
         }
 
         // Block Seats action - only show if event has seating layout
-        if ($this->record->venue?->seatingLayouts()->where('status', 'published')->exists()) {
+        // Use withoutGlobalScopes() to bypass TenantScope on SeatingLayout in marketplace context
+        if ($this->record->venue?->seatingLayouts()->withoutGlobalScopes()->where('status', 'published')->exists()) {
             $actions[] = $this->getBlockSeatsAction($hasInvitations);
         }
 

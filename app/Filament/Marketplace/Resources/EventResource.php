@@ -1075,9 +1075,12 @@ class EventResource extends Resource
                                                 ->numeric()
                                                 ->minValue(0)
                                                 ->nullable()
+                                                ->hint(fn ($record) => $record && $record->quota_sold > 0
+                                                    ? "Vândute: {$record->quota_sold}"
+                                                    : null)
                                                 ->live(onBlur: true)
                                                 ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                                    // Auto-generate series_end based on capacity if not already set
+                                                    // Auto-generate series_end based on quantity if not already set
                                                     $seriesEnd = $get('series_end');
                                                     if (!$seriesEnd && $state && (int)$state > 0) {
                                                         $eventSeries = $get('../../event_series');
@@ -1853,12 +1856,12 @@ class EventResource extends Resource
                                         }
 
                                         // Get stats from the event or calculate from ticket types
-                                        // TicketType uses quota_sold (not quantity_sold), capacity accessor (quota_total), and display_price
+                                        // TicketType uses quota_sold for sold count and capacity accessor for total
                                         $ticketsSold = $record->tickets_sold ?? $record->ticketTypes->sum('quota_sold') ?? 0;
                                         // Calculate revenue from ticket types (sold * display_price)
                                         $calculatedRevenue = $record->ticketTypes->sum(fn ($tt) => ($tt->quota_sold ?? 0) * ($tt->display_price ?? 0));
                                         $totalRevenue = $record->revenue ?? $calculatedRevenue ?? 0;
-                                        $totalCapacity = $record->capacity ?? $record->ticketTypes->sum('capacity') ?? 0;
+                                        $totalCapacity = $record->capacity ?? $record->ticketTypes->sum(fn ($tt) => $tt->capacity ?? 0) ?? 0;
                                         $views = $record->views ?? $record->views_count ?? 0;
 
                                         $percentSold = $totalCapacity > 0 ? round(($ticketsSold / $totalCapacity) * 100) : 0;
@@ -2054,9 +2057,8 @@ class EventResource extends Resource
                                             // Duplicate ticket types
                                             foreach ($record->ticketTypes as $ticketType) {
                                                 $newTicketType = $ticketType->replicate();
-                                                $newTicketType->marketplace_event_id = $newEvent->id;
-                                                $newTicketType->quantity_sold = 0;
-                                                $newTicketType->quantity_reserved = 0;
+                                                $newTicketType->event_id = $newEvent->id;
+                                                $newTicketType->quota_sold = 0;
                                                 $newTicketType->save();
                                             }
 
@@ -2102,7 +2104,7 @@ class EventResource extends Resource
                                             // Export event data as JSON
                                             $data = [
                                                 'event' => $record->only(['name', 'slug', 'description', 'short_description', 'starts_at', 'ends_at', 'doors_open_at', 'venue_name', 'venue_address', 'venue_city', 'status', 'capacity', 'tickets_sold', 'revenue', 'views']),
-                                                'ticket_types' => $record->ticketTypes->map(fn ($tt) => $tt->only(['name', 'price', 'quantity', 'quantity_sold', 'status']))->toArray(),
+                                                'ticket_types' => $record->ticketTypes->map(fn ($tt) => $tt->only(['name', 'display_price', 'capacity', 'quota_sold', 'status']))->toArray(),
                                                 'exported_at' => now()->toIso8601String(),
                                             ];
 
