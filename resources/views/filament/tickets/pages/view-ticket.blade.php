@@ -59,6 +59,25 @@
                             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Loc</span>
                             <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $ticket->seat_label }}</p>
                         </div>
+                        @php $seatMeta = $ticket->meta ?? []; @endphp
+                        @if(!empty($seatMeta['section_name']))
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Secțiune</span>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatMeta['section_name'] }}</p>
+                            </div>
+                        @endif
+                        @if(!empty($seatMeta['row_label']))
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Rând</span>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatMeta['row_label'] }}</p>
+                            </div>
+                        @endif
+                        @if(!empty($seatMeta['seat_number']))
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Număr loc</span>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatMeta['seat_number'] }}</p>
+                            </div>
+                        @endif
                     @endif
                     <div>
                         <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Preț</span>

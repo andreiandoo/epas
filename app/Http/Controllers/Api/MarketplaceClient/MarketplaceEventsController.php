@@ -256,7 +256,9 @@ class MarketplaceEventsController extends BaseController
             'marketplaceOrganizer',
             'venue',
             'venue.seatingLayouts' => function ($q) {
-                $q->where('status', 'published')->with(['sections.rows.seats']);
+                $q->withoutGlobalScopes()
+                    ->where('status', 'published')
+                    ->with(['sections.rows.seats']);
             },
             'marketplaceEventCategory',
             'ticketTypes.seatingSections',

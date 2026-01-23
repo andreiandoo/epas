@@ -6,6 +6,7 @@ use App\Models\MarketplaceEvent;
 use App\Models\Seating\EventSeatingLayout;
 use App\Models\Seating\EventSeat;
 use App\Models\Seating\SeatingLayout;
+use App\Models\Ticket;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -111,10 +112,31 @@ class MarketplaceEventSeatingService
                 }
             }
 
+            // Mark seats as 'sold' if there are already purchased tickets for this event
+            $soldSeatUids = Ticket::where('marketplace_event_id', $event->id)
+                ->whereIn('status', ['valid', 'used', 'pending'])
+                ->whereNotNull('meta')
+                ->get()
+                ->pluck('meta.seat_uid')
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+
+            if (!empty($soldSeatUids)) {
+                EventSeat::where('event_seating_id', $eventSeating->id)
+                    ->whereIn('seat_uid', $soldSeatUids)
+                    ->update([
+                        'status' => 'sold',
+                        'version' => DB::raw('version + 1'),
+                    ]);
+            }
+
             Log::info('MarketplaceEventSeatingService: Created event seating', [
                 'marketplace_event_id' => $event->id,
                 'event_seating_id' => $eventSeating->id,
                 'seat_count' => $eventSeating->seats()->count(),
+                'sold_seats_restored' => count($soldSeatUids),
             ]);
 
             return $eventSeating;
