@@ -186,10 +186,10 @@ RewriteRule ^user/reviews/?$ /cont/recenzii [R=301,L]
 # Handle organizer dashboard routes - /organizator/dashboard, /organizator/events, etc.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support)/?$ organizer/$1.php [L]
+RewriteRule ^organizator/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email)/?$ organizer/$1.php [L]
 
 # Legacy: redirect /organizer/* dashboard routes to /organizator/*
-RewriteRule ^organizer/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support)/?$ /organizator/$1 [R=301,L]
+RewriteRule ^organizer/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email)/?$ /organizator/$1 [R=301,L]
 
 # ============================================
 # AUTH ROUTES
