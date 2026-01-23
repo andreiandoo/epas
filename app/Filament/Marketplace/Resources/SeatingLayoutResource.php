@@ -292,7 +292,15 @@ class SeatingLayoutResource extends Resource
                                     $city = $record->city ?? null;
                                     return $city ? "{$name} ({$city})" : $name;
                                 })
-                                ->searchable(['name', 'city'])
+                                ->getOptionLabelUsing(function ($value) {
+                                    $record = \App\Models\Venue::find($value);
+                                    if (!$record) return $value;
+                                    $locale = app()->getLocale();
+                                    $name = $record->getTranslation('name', $locale) ?? $record->getTranslation('name', 'en') ?? 'Unnamed Venue';
+                                    $city = $record->city ?? null;
+                                    return $city ? "{$name} ({$city})" : $name;
+                                })
+                                ->searchable()
                                 ->preload()
                                 ->required()
                                 ->columnSpanFull(),
@@ -435,20 +443,6 @@ class SeatingLayoutResource extends Resource
                                 }),
                         ]),
 
-                    // Quick Actions (doar pe Edit)
-                    SC\Section::make('Acțiuni rapide')
-                        ->icon('heroicon-o-bolt')
-                        ->compact()
-                        ->visible(fn ($operation) => $operation === 'edit')
-                        ->schema([
-                            SC\Actions::make([
-                                Action::make('open_designer')
-                                    ->label('Deschide Designer')
-                                    ->icon('heroicon-o-paint-brush')
-                                    ->color('primary')
-                                    ->url(fn (?SeatingLayout $record) => $record ? static::getUrl('designer', ['record' => $record]) : null),
-                            ]),
-                        ]),
 
                     // Partner status (only on edit)
                     SC\Section::make('Status partener')
