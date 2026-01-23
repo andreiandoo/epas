@@ -63,6 +63,8 @@ class MarketplacePanelProvider extends PanelProvider
             ->routes(function () {
                 Route::get('/microservices/{slug}/settings', \App\Filament\Marketplace\Pages\MicroserviceSettings::class)
                     ->name('filament.marketplace.pages.microservice-settings');
+                Route::get('/organizers/{id}/balance', \App\Filament\Marketplace\Pages\OrganizerBalance::class)
+                    ->name('filament.marketplace.pages.organizer-balance');
             })
 
             // Define navigation group order
