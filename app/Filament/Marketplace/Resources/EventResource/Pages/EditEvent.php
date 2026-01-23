@@ -234,7 +234,7 @@ class EditEvent extends EditRecord
                             ->body('Opening invitation creation in new tab...')
                             ->send();
 
-                        $this->js("window.open('{$url}', '_blank')");
+                        $this->js("window.open('{$url}', '_blank'); setTimeout(() => window.location.reload(), 800)");
                         return;
                     }
 
@@ -243,6 +243,9 @@ class EditEvent extends EditRecord
                         ->title('Seats blocked')
                         ->body("{$updated} seats have been blocked from purchase")
                         ->send();
+
+                    // Reload page to avoid Alpine re-render errors with file upload components
+                    $this->js('setTimeout(() => window.location.reload(), 800)');
                 } else {
                     // Find blocked seats by location and unblock them
                     $updated = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
@@ -265,6 +268,9 @@ class EditEvent extends EditRecord
                         ->title('Seats unblocked')
                         ->body("{$updated} seats are now available for purchase")
                         ->send();
+
+                    // Reload page to avoid Alpine re-render errors with file upload components
+                    $this->js('setTimeout(() => window.location.reload(), 800)');
                 }
             });
     }
