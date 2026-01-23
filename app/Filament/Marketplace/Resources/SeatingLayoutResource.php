@@ -350,8 +350,6 @@ class SeatingLayoutResource extends Resource
                                 ->directory('seating/backgrounds')
                                 ->maxSize(10240)
                                 ->preserveFilenames()
-                                ->imagePreviewHeight('250')
-                                ->image()
                                 ->visibility('public')
                                 ->openable()
                                 ->downloadable()
