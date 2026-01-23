@@ -126,6 +126,10 @@ const UserTickets = {
                 // API already provides is_upcoming flag
                 this.tickets.upcoming = tickets.filter(t => t.event?.is_upcoming === true);
                 this.tickets.past = tickets.filter(t => t.event?.is_upcoming === false);
+                // Sort upcoming by date ASC (closest events first)
+                this.tickets.upcoming.sort((a, b) => new Date(a.event?.date) - new Date(b.event?.date));
+                // Sort past by date DESC (most recent first)
+                this.tickets.past.sort((a, b) => new Date(b.event?.date) - new Date(a.event?.date));
                 console.log('Upcoming:', this.tickets.upcoming.length, 'Past:', this.tickets.past.length);
             } else {
                 console.log('No data, using demo');
@@ -273,6 +277,10 @@ const UserTickets = {
                     <div class="flex items-center justify-between mb-4">
                         <p class="text-sm font-semibold text-secondary">${tickets.length > 1 ? 'Biletele tale' : 'Biletul tău'}</p>
                         <div class="flex gap-2 no-print">
+                            <button onclick="UserTickets.printEventTickets(${idx})" class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-secondary text-xs font-medium rounded-lg border border-border hover:border-primary hover:text-primary transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                                Printează
+                            </button>
                             <button onclick="UserTickets.showCalendarOptions(${idx})" class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-secondary text-xs font-medium rounded-lg border border-border hover:border-primary hover:text-primary transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 Calendar
@@ -292,6 +300,7 @@ const UserTickets = {
                             ${t.attendee_name ? `<p class="text-[10px] text-secondary font-medium truncate">${t.attendee_name}</p>` : ''}
                             <p class="text-[10px] text-muted font-mono truncate">${t.code}</p>
                             <p class="mt-1 text-xs font-medium text-secondary">${t.type}</p>
+                            ${t.seat ? `<p class="mt-0.5 text-[10px] text-muted">${[t.seat.section_name, t.seat.row_label ? 'R' + t.seat.row_label : '', t.seat.seat_number ? 'Loc ' + t.seat.seat_number : ''].filter(Boolean).join(', ')}</p>` : ''}
                         </div>
                         `).join('')}
                     </div>
@@ -578,6 +587,99 @@ const UserTickets = {
         if (typeof AmbiletNotifications !== 'undefined') {
             AmbiletNotifications.success('Eveniment descărcat! Deschide fișierul .ics pentru a-l adăuga în calendar.');
         }
+    },
+
+    /**
+     * Print tickets for a specific event group (1 ticket per A4 page)
+     */
+    async printEventTickets(idx) {
+        const group = this.eventGroups?.[idx];
+        if (!group) return;
+
+        const event = group.event || {};
+        const tickets = group.tickets || [];
+        const timeDisplay = this.formatTimeDisplay(event);
+
+        // Generate QR code data URLs for print
+        const qrDataUrls = {};
+        for (const t of tickets) {
+            try {
+                const canvas = document.createElement('canvas');
+                await QRCode.toCanvas(canvas, t.code, {
+                    width: 200,
+                    margin: 1,
+                    color: { dark: '#181622', light: '#ffffff' }
+                });
+                qrDataUrls[t.code] = canvas.toDataURL('image/png');
+            } catch (e) {
+                qrDataUrls[t.code] = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(t.code)}&color=181622&margin=0`;
+            }
+        }
+
+        // Build print HTML - 1 ticket per A4 page
+        const printHtml = `<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>Bilete - ${event.name || 'Eveniment'}</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1a1a2e; }
+    @page { size: A4; margin: 15mm; }
+    .ticket-page { page-break-after: always; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px 0; }
+    .ticket-page:last-child { page-break-after: avoid; }
+    .ticket-header { text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; }
+    .event-name { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .event-details { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; color: #4b5563; font-size: 14px; margin-top: 12px; }
+    .event-details span { display: flex; align-items: center; gap: 6px; }
+    .ticket-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+    .qr-section { text-align: center; }
+    .qr-section img { width: 200px; height: 200px; }
+    .ticket-code { font-family: monospace; font-size: 18px; font-weight: 700; margin-top: 8px; letter-spacing: 1px; }
+    .ticket-info { text-align: center; }
+    .ticket-type { font-size: 18px; font-weight: 600; color: #1a1a2e; }
+    .ticket-seat { font-size: 14px; color: #4b5563; margin-top: 4px; }
+    .ticket-attendee { font-size: 14px; color: #6b7280; margin-top: 4px; }
+    .ticket-number { font-size: 12px; color: #9ca3af; }
+    .ticket-footer { text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px; font-size: 11px; color: #9ca3af; }
+</style>
+</head><body>
+${tickets.map((t, i) => {
+    const seatInfo = t.seat ? [t.seat.section_name, t.seat.row_label ? 'Rând ' + t.seat.row_label : '', t.seat.seat_number ? 'Loc ' + t.seat.seat_number : ''].filter(Boolean).join(', ') : '';
+    return `
+    <div class="ticket-page">
+        <div class="ticket-header">
+            <div class="event-name">${event.name || 'Eveniment'}</div>
+            <div class="event-details">
+                <span>📅 ${event.date_formatted || this.formatDateShort(event.date)}</span>
+                ${timeDisplay ? `<span>🕐 ${timeDisplay}</span>` : ''}
+                ${event.venue ? `<span>📍 ${event.venue}${event.city ? ', ' + event.city : ''}</span>` : ''}
+            </div>
+        </div>
+        <div class="ticket-body">
+            <div class="ticket-number">Bilet ${i + 1} din ${tickets.length}</div>
+            <div class="qr-section">
+                <img src="${qrDataUrls[t.code] || ''}" alt="QR Code">
+                <div class="ticket-code">${t.code}</div>
+            </div>
+            <div class="ticket-info">
+                <div class="ticket-type">${t.type || 'Bilet Standard'}</div>
+                ${seatInfo ? `<div class="ticket-seat">${seatInfo}</div>` : ''}
+                ${t.attendee_name ? `<div class="ticket-attendee">${t.attendee_name}</div>` : ''}
+            </div>
+        </div>
+        <div class="ticket-footer">
+            Prezintă acest cod QR la intrare • ${event.venue ? event.venue : ''}${event.city ? ', ' + event.city : ''}
+        </div>
+    </div>`;
+}).join('')}
+</body></html>`;
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(printHtml);
+        printWindow.document.close();
+        printWindow.onload = function() {
+            printWindow.print();
+        };
     },
 
     downloadPDF(idx) {
