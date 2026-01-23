@@ -35,12 +35,21 @@ class MarketplaceEventSeatingService
             ->first();
 
         if ($existing) {
-            return $existing;
+            // If event seating exists but has no seats, delete and recreate
+            // This handles cases where the base layout had no seats when first created
+            if ($existing->seats()->count() === 0) {
+                $existing->delete();
+            } else {
+                return $existing;
+            }
         }
 
         // Get marketplace event with venue and seating layout
+        // Use withoutGlobalScopes on seatingLayouts to bypass TenantScope in marketplace context
         $event = MarketplaceEvent::with(['venue.seatingLayouts' => function ($q) {
-            $q->where('status', 'published')->with(['sections.rows.seats']);
+            $q->withoutGlobalScopes()
+                ->where('status', 'published')
+                ->with(['sections.rows.seats']);
         }])->find($marketplaceEventId);
 
         if (!$event || !$event->venue) {
