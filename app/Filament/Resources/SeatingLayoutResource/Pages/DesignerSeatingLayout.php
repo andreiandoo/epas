@@ -1055,6 +1055,9 @@ class DesignerSeatingLayout extends Page
 
                     // Update metadata with seat settings
                     $metadata = $section->metadata ?? [];
+                    $oldSeatSpacing = (int) ($metadata['seat_spacing'] ?? 18);
+                    $oldRowSpacing = (int) ($metadata['row_spacing'] ?? 25);
+
                     $metadata['seat_size'] = (int) ($data['seat_size'] ?? 10);
                     $metadata['seat_spacing'] = (int) ($data['seat_spacing'] ?? 18);
                     $metadata['row_spacing'] = (int) ($data['row_spacing'] ?? 25);
@@ -1063,6 +1066,29 @@ class DesignerSeatingLayout extends Page
                     $updates['metadata'] = $metadata;
 
                     $section->update($updates);
+
+                    // Recalculate seat positions if spacing changed
+                    $newSeatSpacing = (int) ($data['seat_spacing'] ?? 18);
+                    $newRowSpacing = (int) ($data['row_spacing'] ?? 25);
+
+                    if ($oldSeatSpacing !== $newSeatSpacing || $oldRowSpacing !== $newRowSpacing) {
+                        $rows = $section->rows()->orderBy('y')->with('seats')->get();
+
+                        foreach ($rows->values() as $rowIndex => $row) {
+                            // Recalculate row Y position
+                            $newRowY = $rowIndex * $newRowSpacing;
+                            $row->update(['y' => $newRowY]);
+
+                            // Recalculate seat positions within row
+                            $seats = $row->seats()->orderBy('x')->get();
+                            foreach ($seats->values() as $seatIndex => $seat) {
+                                $seat->update([
+                                    'x' => $seatIndex * $newSeatSpacing,
+                                    'y' => $newRowY,
+                                ]);
+                            }
+                        }
+                    }
 
                     // Handle Row Configuration actions
                     $rowAction = $data['row_action'] ?? '';

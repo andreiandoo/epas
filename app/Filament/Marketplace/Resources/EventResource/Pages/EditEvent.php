@@ -211,6 +211,11 @@ class EditEvent extends EditRecord
                         $seatLabels
                     );
 
+                    // Reduce ticket type stock for the affected section
+                    if ($updated > 0) {
+                        $this->adjustTicketTypeStock($data['section_name'], -$updated);
+                    }
+
                     // Create invitations if requested
                     if ($hasInvitations && ($data['create_invitations'] ?? false) && $updated > 0) {
                         // Store blocked seat info in session for the invitations page to pick up
@@ -250,6 +255,11 @@ class EditEvent extends EditRecord
                             'version' => \Illuminate\Support\Facades\DB::raw('version + 1'),
                         ]);
 
+                    // Restore ticket type stock for the affected section
+                    if ($updated > 0) {
+                        $this->adjustTicketTypeStock($data['section_name'], $updated);
+                    }
+
                     Notification::make()
                         ->success()
                         ->title('Seats unblocked')
@@ -287,6 +297,41 @@ class EditEvent extends EditRecord
         }
 
         return array_unique($labels);
+    }
+
+    /**
+     * Adjust ticket type stock when seats are blocked/unblocked.
+     * Negative $amount = reduce stock (blocking), positive = restore stock (unblocking).
+     */
+    protected function adjustTicketTypeStock(string $sectionName, int $amount): void
+    {
+        // Find the SeatingSection by name in this event's venue layout
+        $section = \App\Models\Seating\SeatingSection::where('name', $sectionName)
+            ->whereHas('layout', function ($q) {
+                $q->withoutGlobalScopes()
+                    ->where('venue_id', $this->record->venue_id)
+                    ->where('status', 'published');
+            })
+            ->first();
+
+        if (!$section) {
+            return;
+        }
+
+        // Find the ticket type for this event that has this section assigned
+        $ticketType = \App\Models\TicketType::where('event_id', $this->record->id)
+            ->whereHas('seatingSections', function ($q) use ($section) {
+                $q->where('seating_sections.id', $section->id);
+            })
+            ->first();
+
+        if (!$ticketType) {
+            return;
+        }
+
+        // Adjust quota_total (ensure it doesn't go below quota_sold)
+        $newTotal = max($ticketType->quota_sold ?? 0, ($ticketType->quota_total ?? 0) + $amount);
+        \App\Models\TicketType::where('id', $ticketType->id)->update(['quota_total' => $newTotal]);
     }
 
     protected function afterSave(): void

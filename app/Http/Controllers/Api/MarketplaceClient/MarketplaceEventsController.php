@@ -996,7 +996,7 @@ class MarketplaceEventsController extends BaseController
 
         if ($event) {
             $seatingService = app(\App\Services\Seating\MarketplaceEventSeatingService::class);
-            $eventSeating = $seatingService->getOrCreateEventSeating($event->id);
+            $eventSeating = $seatingService->getOrCreateEventSeatingByEventId($event->id);
 
             if ($eventSeating) {
                 $eventSeatingId = $eventSeating->id;
