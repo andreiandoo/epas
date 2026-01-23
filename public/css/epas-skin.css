@@ -4168,8 +4168,9 @@ html.dark {
 	color: var(--metro-text-primary) !important;
 }
 
+/* .dark span:not(.fi-badge-label):not(.fi-btn-label), */
+
 .dark p,
-.dark span:not(.fi-badge-label):not(.fi-btn-label),
 .dark label {
 	color: var(--metro-text-secondary);
 }
