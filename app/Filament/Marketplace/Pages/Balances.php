@@ -38,7 +38,9 @@ class Balances extends Page implements HasForms, HasTable
                 Tables\Columns\TextColumn::make('name')
                     ->label('Organizer')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->url(fn ($record) => url('/marketplace/organizers/' . $record->id . '/balance'))
+                    ->color('primary'),
                 Tables\Columns\TextColumn::make('total_revenue')
                     ->label('Total Earned')
                     ->money('RON')
@@ -70,13 +72,6 @@ class Balances extends Page implements HasForms, HasTable
                         default => 'gray',
                     }),
             ])
-            ->defaultSort('available_balance', 'desc')
-            ->actions([
-                Tables\Actions\Action::make('view_balance')
-                    ->label('View Balance')
-                    ->icon('heroicon-o-wallet')
-                    ->color('warning')
-                    ->url(fn ($record) => route('filament.marketplace.pages.organizer-balance', ['id' => $record->id])),
-            ]);
+            ->defaultSort('available_balance', 'desc');
     }
 }

@@ -42,7 +42,7 @@ class OrganizerBalance extends Page
     public function getBreadcrumbs(): array
     {
         return [
-            route('filament.marketplace.pages.balances') => 'Balances',
+            url('/marketplace/balances') => 'Balances',
             '#' => $this->organizer?->name ?? 'Organizer',
         ];
     }
@@ -52,7 +52,7 @@ class OrganizerBalance extends Page
         return [
             Actions\Action::make('back')
                 ->label('Back to Balances')
-                ->url(route('filament.marketplace.pages.balances'))
+                ->url(url('/marketplace/balances'))
                 ->color('gray')
                 ->icon('heroicon-o-arrow-left'),
             Actions\Action::make('create_payout')

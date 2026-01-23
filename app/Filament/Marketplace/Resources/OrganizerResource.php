@@ -253,13 +253,13 @@ class OrganizerResource extends Resource
                                     ->label('View Balance')
                                     ->icon('heroicon-o-wallet')
                                     ->color('warning')
-                                    ->url(fn ($record) => route('filament.marketplace.pages.organizer-balance', ['id' => $record->id])),
+                                    ->url(fn ($record) => url('/marketplace/organizers/' . $record->id . '/balance')),
                                 Action::make('create_payout')
                                     ->label('Create Payout')
                                     ->icon('heroicon-o-banknotes')
                                     ->color('info')
                                     ->visible(fn ($record) => $record->available_balance > 0)
-                                    ->url(fn ($record) => route('filament.marketplace.pages.organizer-balance', ['id' => $record->id])),
+                                    ->url(fn ($record) => url('/marketplace/organizers/' . $record->id . '/balance')),
                                 Action::make('suspend')
                                     ->label('Suspend Organizer')
                                     ->icon('heroicon-o-x-circle')
