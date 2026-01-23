@@ -21,8 +21,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
     .qr-modal-qr { width: 280px; height: 280px; margin: 1rem auto; background: white; padding: 1rem; border-radius: 1rem; }
     .qr-modal-qr canvas { width: 100% !important; height: 100% !important; }
 </style>
-<!-- QRCode.js library for local QR generation -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<!-- QRCode.js library for local QR generation (with fallback) -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js" onerror="window._qrLibFailed=true"></script>
 
 <?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
         <!-- Page Header -->
@@ -162,7 +162,7 @@ const UserTickets = {
         }
     },
 
-    // Generate QR code using QRCode.js library
+    // Generate QR code using QRCode.js library (with fallback to external API)
     async generateQRCode(code, elementId) {
         const element = document.getElementById(elementId);
         if (!element) return;
@@ -174,21 +174,33 @@ const UserTickets = {
             return;
         }
 
-        try {
-            const canvas = document.createElement('canvas');
-            await QRCode.toCanvas(canvas, code, {
-                width: 120,
-                margin: 0,
-                color: { dark: '#181622', light: '#ffffff' }
-            });
-            this.qrCodes[code] = canvas;
-            element.innerHTML = '';
-            element.appendChild(canvas);
-        } catch (error) {
-            console.error('QR generation error:', error);
-            // Fallback to external API
-            element.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(code)}&color=181622&margin=0" alt="QR" class="w-full h-full">`;
+        // Check if QRCode library is available
+        if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
+            try {
+                const canvas = document.createElement('canvas');
+                await QRCode.toCanvas(canvas, code, {
+                    width: 120,
+                    margin: 0,
+                    color: { dark: '#181622', light: '#ffffff' }
+                });
+                this.qrCodes[code] = canvas;
+                element.innerHTML = '';
+                element.appendChild(canvas);
+                return;
+            } catch (error) {
+                console.warn('QR canvas generation failed, using API fallback:', error.message);
+            }
         }
+
+        // Fallback to external API (always works, no JS library needed)
+        const img = document.createElement('img');
+        img.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(code)}&color=181622&margin=0`;
+        img.alt = 'QR';
+        img.className = 'w-full h-full';
+        img.style.maxWidth = '120px';
+        this.qrCodes[code] = img;
+        element.innerHTML = '';
+        element.appendChild(img);
     },
 
     // Format time display with doors
@@ -399,18 +411,24 @@ const UserTickets = {
         document.body.style.overflow = 'hidden';
 
         // Generate larger QR code for modal
-        try {
-            const canvas = document.createElement('canvas');
-            await QRCode.toCanvas(canvas, code, {
-                width: 280,
-                margin: 1,
-                color: { dark: '#181622', light: '#ffffff' }
-            });
-            qrContainer.innerHTML = '';
-            qrContainer.appendChild(canvas);
-        } catch (error) {
-            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(code)}&color=181622&margin=0" alt="QR" class="w-full h-full">`;
+        if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
+            try {
+                const canvas = document.createElement('canvas');
+                await QRCode.toCanvas(canvas, code, {
+                    width: 280,
+                    margin: 1,
+                    color: { dark: '#181622', light: '#ffffff' }
+                });
+                qrContainer.innerHTML = '';
+                qrContainer.appendChild(canvas);
+                return;
+            } catch (error) {
+                // Fall through to API fallback
+            }
         }
+        // Fallback to external API
+        qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(code)}&color=181622&margin=0" alt="QR" style="width:100%;height:100%">`;
+
     },
 
     hideQRModal(event) {
@@ -603,17 +621,21 @@ const UserTickets = {
         // Generate QR code data URLs for print
         const qrDataUrls = {};
         for (const t of tickets) {
-            try {
-                const canvas = document.createElement('canvas');
-                await QRCode.toCanvas(canvas, t.code, {
-                    width: 200,
-                    margin: 1,
-                    color: { dark: '#181622', light: '#ffffff' }
-                });
-                qrDataUrls[t.code] = canvas.toDataURL('image/png');
-            } catch (e) {
-                qrDataUrls[t.code] = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(t.code)}&color=181622&margin=0`;
+            if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
+                try {
+                    const canvas = document.createElement('canvas');
+                    await QRCode.toCanvas(canvas, t.code, {
+                        width: 200,
+                        margin: 1,
+                        color: { dark: '#181622', light: '#ffffff' }
+                    });
+                    qrDataUrls[t.code] = canvas.toDataURL('image/png');
+                    continue;
+                } catch (e) {
+                    // Fall through to API fallback
+                }
             }
+            qrDataUrls[t.code] = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(t.code)}&color=181622&margin=0`;
         }
 
         // Build print HTML - 1 ticket per A4 page
