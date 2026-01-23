@@ -2,6 +2,7 @@
 
 namespace App\Services\Seating;
 
+use App\Models\Event;
 use App\Models\MarketplaceEvent;
 use App\Models\Seating\EventSeatingLayout;
 use App\Models\Seating\EventSeat;
@@ -164,6 +165,135 @@ class MarketplaceEventSeatingService
 
             Log::info('MarketplaceEventSeatingService: Created event seating', [
                 'marketplace_event_id' => $event->id,
+                'event_seating_id' => $eventSeating->id,
+                'seat_count' => $eventSeating->seats()->count(),
+                'sold_seats_restored' => count($soldSeatUids),
+            ]);
+
+            return $eventSeating;
+        });
+    }
+
+    /**
+     * Get or create EventSeatingLayout for an Event (from events table)
+     *
+     * @param int $eventId
+     * @return EventSeatingLayout|null
+     */
+    public function getOrCreateEventSeatingByEventId(int $eventId): ?EventSeatingLayout
+    {
+        // Check if event seating already exists using event_id
+        $existing = EventSeatingLayout::where('event_id', $eventId)
+            ->published()
+            ->first();
+
+        if ($existing) {
+            if ($existing->seats()->count() === 0) {
+                Log::warning('MarketplaceEventSeatingService: EventSeatingLayout (by event_id) has 0 seats, deleting to recreate', [
+                    'event_id' => $eventId,
+                    'event_seating_id' => $existing->id,
+                ]);
+                $existing->seats()->delete();
+                $existing->delete();
+            } else {
+                return $existing;
+            }
+        }
+
+        // Get Event with venue
+        $event = Event::with(['venue'])->find($eventId);
+
+        if (!$event || !$event->venue) {
+            Log::warning('MarketplaceEventSeatingService: No venue found for event', [
+                'event_id' => $eventId,
+                'venue_id' => $event?->venue_id,
+            ]);
+            return null;
+        }
+
+        // Load seating layout (bypass TenantScope)
+        $layout = SeatingLayout::withoutGlobalScopes()
+            ->where('venue_id', $event->venue_id)
+            ->where('status', 'published')
+            ->first();
+
+        if (!$layout) {
+            Log::warning('MarketplaceEventSeatingService: No published SeatingLayout for venue (event_id lookup)', [
+                'event_id' => $eventId,
+                'venue_id' => $event->venue_id,
+            ]);
+            return null;
+        }
+
+        $layout->load(['sections.rows.seats']);
+
+        if ($layout->sections->isEmpty()) {
+            return null;
+        }
+
+        return $this->createEventSeatingFromEvent($event, $layout);
+    }
+
+    /**
+     * Create EventSeatingLayout from an Event model (events table)
+     */
+    protected function createEventSeatingFromEvent(Event $event, SeatingLayout $layout): EventSeatingLayout
+    {
+        return DB::transaction(function () use ($event, $layout) {
+            $geometry = $this->geometry->generateGeometrySnapshot($layout);
+
+            $eventSeating = EventSeatingLayout::create([
+                'event_id' => $event->id,
+                'layout_id' => $layout->id,
+                'marketplace_client_id' => $event->marketplace_client_id,
+                'is_partner' => $layout->is_partner ?? false,
+                'partner_notes' => $layout->partner_notes,
+                'json_geometry' => $geometry,
+                'status' => 'active',
+                'published_at' => now(),
+            ]);
+
+            foreach ($layout->sections as $section) {
+                foreach ($section->rows as $row) {
+                    foreach ($row->seats as $seat) {
+                        $baseStatus = $seat->status ?? 'active';
+                        $eventSeatStatus = ($baseStatus === 'imposibil') ? 'disabled' : 'available';
+
+                        EventSeat::create([
+                            'event_seating_id' => $eventSeating->id,
+                            'seat_uid' => $seat->seat_uid,
+                            'section_name' => $section->name,
+                            'row_label' => $row->label,
+                            'seat_label' => $seat->label,
+                            'status' => $eventSeatStatus,
+                            'version' => 1,
+                        ]);
+                    }
+                }
+            }
+
+            // Mark seats as 'sold' if there are already purchased tickets
+            $soldSeatUids = Ticket::where('event_id', $event->id)
+                ->whereIn('status', ['valid', 'used', 'pending'])
+                ->whereNotNull('meta')
+                ->get()
+                ->pluck('meta.seat_uid')
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+
+            if (!empty($soldSeatUids)) {
+                EventSeat::where('event_seating_id', $eventSeating->id)
+                    ->whereIn('seat_uid', $soldSeatUids)
+                    ->update([
+                        'status' => 'sold',
+                        'version' => DB::raw('version + 1'),
+                    ]);
+            }
+
+            Log::info('MarketplaceEventSeatingService: Created event seating (by event_id)', [
+                'event_id' => $event->id,
                 'event_seating_id' => $eventSeating->id,
                 'seat_count' => $eventSeating->seats()->count(),
                 'sold_seats_restored' => count($soldSeatUids),

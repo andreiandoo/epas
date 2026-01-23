@@ -966,6 +966,16 @@ class DesignerSeatingLayout extends Page
                                 ->default('numeric')
                                 ->visible(fn ($get) => $get('row_action') === 'renumber')
                                 ->columnSpan(1),
+
+                            Forms\Components\Select::make('renumber_direction')
+                                ->label('Direction')
+                                ->options([
+                                    'top_to_bottom' => 'Top to bottom',
+                                    'bottom_to_top' => 'Bottom to top',
+                                ])
+                                ->default('top_to_bottom')
+                                ->visible(fn ($get) => $get('row_action') === 'renumber')
+                                ->columnSpanFull(),
                         ])
                         ->columns(2),
 
@@ -1105,7 +1115,9 @@ class DesignerSeatingLayout extends Page
                     } elseif ($rowAction === 'renumber' && !empty($data['renumber_start'])) {
                         $startValue = $data['renumber_start'];
                         $type = $data['renumber_type'] ?? 'numeric';
-                        $rows = $section->rows()->orderBy('y', 'asc')->get();
+                        $direction = $data['renumber_direction'] ?? 'top_to_bottom';
+                        $orderDir = $direction === 'bottom_to_top' ? 'desc' : 'asc';
+                        $rows = $section->rows()->orderBy('y', $orderDir)->get();
 
                         foreach ($rows as $index => $row) {
                             $newLabel = match ($type) {

@@ -776,9 +776,13 @@ class DesignerSeatingLayout extends Page
                                         ->default('numeric')
                                         ->columnSpan(1),
 
-                                    Forms\Components\Placeholder::make('row_renumber_info')
-                                        ->label(' ')
-                                        ->content('Fill in start value and save to renumber all rows')
+                                    Forms\Components\Select::make('row_renumber_direction')
+                                        ->label('Direction')
+                                        ->options([
+                                            'top_to_bottom' => 'Top to bottom',
+                                            'bottom_to_top' => 'Bottom to top',
+                                        ])
+                                        ->default('top_to_bottom')
                                         ->columnSpan(1),
                                 ]),
 
@@ -887,7 +891,9 @@ class DesignerSeatingLayout extends Page
                     if (!empty($data['row_renumber_start'])) {
                         $startValue = $data['row_renumber_start'];
                         $type = $data['row_renumber_type'] ?? 'numeric';
-                        $rows = $section->rows()->orderBy('y', 'asc')->get();
+                        $direction = $data['row_renumber_direction'] ?? 'top_to_bottom';
+                        $orderDir = $direction === 'bottom_to_top' ? 'desc' : 'asc';
+                        $rows = $section->rows()->orderBy('y', $orderDir)->get();
 
                         foreach ($rows as $index => $row) {
                             $newLabel = match ($type) {

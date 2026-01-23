@@ -89,7 +89,7 @@ class EditEvent extends EditRecord
     protected function getBlockSeatsAction(bool $hasInvitations): Actions\Action
     {
         $seatingService = app(MarketplaceEventSeatingService::class);
-        $eventSeating = $seatingService->getOrCreateEventSeating($this->record->id);
+        $eventSeating = $seatingService->getOrCreateEventSeatingByEventId($this->record->id);
 
         return Actions\Action::make('blockSeats')
             ->label('Block Seats')
