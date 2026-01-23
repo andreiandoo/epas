@@ -1252,6 +1252,73 @@ class EventResource extends Resource
                                             })
                                             ->columnSpan(12),
 
+                                        // Blocked seats info for assigned sections
+                                        Forms\Components\Placeholder::make('blocked_seats_info')
+                                            ->label('')
+                                            ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id') && !empty($get('seatingSections')))
+                                            ->content(function (SGet $get) {
+                                                $eventId = $get('../../id');
+                                                $selectedSections = $get('seatingSections') ?? [];
+
+                                                if (!$eventId || empty($selectedSections)) {
+                                                    return '';
+                                                }
+
+                                                // Get the event seating layout
+                                                $eventSeating = \App\Models\Seating\EventSeatingLayout::where('event_id', $eventId)
+                                                    ->published()
+                                                    ->first();
+
+                                                if (!$eventSeating) {
+                                                    return '';
+                                                }
+
+                                                // Get section names from IDs
+                                                $sectionNames = SeatingSection::whereIn('id', $selectedSections)
+                                                    ->pluck('name')
+                                                    ->toArray();
+
+                                                if (empty($sectionNames)) {
+                                                    return '';
+                                                }
+
+                                                // Get blocked seats for these sections
+                                                $blockedSeats = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+                                                    ->whereIn('section_name', $sectionNames)
+                                                    ->where('status', 'blocked')
+                                                    ->orderBy('section_name')
+                                                    ->orderByRaw('CAST(row_label AS UNSIGNED), row_label')
+                                                    ->orderByRaw('CAST(seat_label AS UNSIGNED), seat_label')
+                                                    ->get();
+
+                                                if ($blockedSeats->isEmpty()) {
+                                                    return '';
+                                                }
+
+                                                // Group by section and row
+                                                $grouped = $blockedSeats->groupBy('section_name');
+                                                $html = "<div class='p-3 bg-red-950/30 rounded-lg border border-red-800/50 mt-2'>";
+                                                $html .= "<div class='flex items-center gap-2 mb-2'>";
+                                                $html .= "<svg class='w-4 h-4 text-red-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'/></svg>";
+                                                $html .= "<span class='text-sm font-medium text-red-400'>Locuri blocate: " . $blockedSeats->count() . "</span>";
+                                                $html .= "</div>";
+
+                                                foreach ($grouped as $sectionName => $seats) {
+                                                    $byRow = $seats->groupBy('row_label');
+                                                    foreach ($byRow as $rowLabel => $rowSeats) {
+                                                        $seatLabels = $rowSeats->pluck('seat_label')->sort(fn($a, $b) => (int)$a - (int)$b)->values()->implode(', ');
+                                                        $html .= "<div class='text-xs text-gray-300 ml-6'>";
+                                                        $html .= "<span class='text-gray-500'>{$sectionName} / Rând {$rowLabel}:</span> ";
+                                                        $html .= "<span class='text-red-300'>{$seatLabels}</span>";
+                                                        $html .= "</div>";
+                                                    }
+                                                }
+
+                                                $html .= "</div>";
+                                                return new \Illuminate\Support\HtmlString($html);
+                                            })
+                                            ->columnSpan(12),
+
                                         // Commission calculation for this ticket
                                         Forms\Components\Placeholder::make('ticket_commission_calc')
                                             ->live()
@@ -1900,6 +1967,110 @@ class EventResource extends Resource
                                                 <span class='text-white'>" . number_format($views) . "</span>
                                             </div>
                                         ");
+                                    }),
+                            ]),
+
+                        // Blocked Seats Overview
+                        SC\Section::make('Locuri Blocate')
+                            ->icon('heroicon-o-lock-closed')
+                            ->compact()
+                            ->visible(fn (?Event $record) => $record && $record->exists && $record->venue?->seatingLayouts()->withoutGlobalScopes()->where('status', 'published')->exists())
+                            ->schema([
+                                Forms\Components\Placeholder::make('blocked_seats_overview')
+                                    ->hiddenLabel()
+                                    ->content(function (?Event $record) {
+                                        if (!$record || !$record->exists) {
+                                            return '';
+                                        }
+
+                                        // Get event seating layout
+                                        $eventSeating = \App\Models\Seating\EventSeatingLayout::where('event_id', $record->id)
+                                            ->published()
+                                            ->first();
+
+                                        if (!$eventSeating) {
+                                            return new HtmlString('<div class="text-xs text-gray-500">Nu există layout de locuri activ.</div>');
+                                        }
+
+                                        // Get all blocked seats
+                                        $blockedSeats = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+                                            ->where('status', 'blocked')
+                                            ->orderBy('section_name')
+                                            ->orderByRaw('CAST(row_label AS UNSIGNED), row_label')
+                                            ->orderByRaw('CAST(seat_label AS UNSIGNED), seat_label')
+                                            ->get();
+
+                                        if ($blockedSeats->isEmpty()) {
+                                            return new HtmlString('<div class="text-xs text-gray-500">Nu există locuri blocate.</div>');
+                                        }
+
+                                        // Get invitations for this event that have seat_ref
+                                        $batchIds = \App\Models\InviteBatch::where('marketplace_client_id', $record->marketplace_client_id)
+                                            ->where('event_ref', $record->id)
+                                            ->pluck('id')
+                                            ->toArray();
+
+                                        $inviteSeatRefs = [];
+                                        if (!empty($batchIds)) {
+                                            $inviteSeatRefs = \App\Models\Invite::whereIn('batch_id', $batchIds)
+                                                ->whereNotNull('seat_ref')
+                                                ->where('seat_ref', '!=', '')
+                                                ->where('status', '!=', 'void')
+                                                ->pluck('seat_ref')
+                                                ->map(fn ($ref) => trim($ref))
+                                                ->toArray();
+                                        }
+
+                                        // Build display
+                                        $totalBlocked = $blockedSeats->count();
+                                        $totalWithInvite = 0;
+
+                                        $html = "<div class='space-y-2'>";
+                                        $html .= "<div class='flex items-center justify-between'>";
+                                        $html .= "<span class='text-sm font-semibold text-red-400'>{$totalBlocked} locuri blocate</span>";
+                                        $html .= "</div>";
+
+                                        // Group by section then row
+                                        $grouped = $blockedSeats->groupBy('section_name');
+                                        foreach ($grouped as $sectionName => $sectionSeats) {
+                                            $html .= "<div class='mt-2'>";
+                                            $html .= "<div class='text-xs font-medium text-gray-300 mb-1'>" . e($sectionName) . "</div>";
+
+                                            $byRow = $sectionSeats->groupBy('row_label');
+                                            foreach ($byRow as $rowLabel => $rowSeats) {
+                                                $html .= "<div class='ml-3 text-xs text-gray-400 flex flex-wrap items-center gap-1 mb-1'>";
+                                                $html .= "<span class='text-gray-500 shrink-0'>R{$rowLabel}:</span> ";
+
+                                                foreach ($rowSeats->sortBy(fn($s) => (int)$s->seat_label) as $seat) {
+                                                    $seatLabel = $seat->seat_label;
+                                                    // Check if this seat has an invitation by matching seat_ref
+                                                    $hasInvite = in_array($seatLabel, $inviteSeatRefs);
+                                                    if ($hasInvite) {
+                                                        $totalWithInvite++;
+                                                        $html .= "<span class='inline-flex items-center px-1.5 py-0.5 rounded bg-purple-900/50 text-purple-300 ring-1 ring-purple-700/50' title='Are invitație'>{$seatLabel}</span>";
+                                                    } else {
+                                                        $html .= "<span class='inline-flex items-center px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 ring-1 ring-red-800/50'>{$seatLabel}</span>";
+                                                    }
+                                                }
+
+                                                $html .= "</div>";
+                                            }
+
+                                            $html .= "</div>";
+                                        }
+
+                                        // Legend
+                                        $html .= "<div class='mt-3 pt-2 border-t border-gray-700/50 flex flex-wrap gap-3 text-xs'>";
+                                        $html .= "<span class='flex items-center gap-1'><span class='w-3 h-3 rounded bg-red-900/40 ring-1 ring-red-800/50'></span> Blocat</span>";
+                                        $html .= "<span class='flex items-center gap-1'><span class='w-3 h-3 rounded bg-purple-900/50 ring-1 ring-purple-700/50'></span> Cu invitație</span>";
+                                        $html .= "</div>";
+
+                                        if ($totalWithInvite > 0) {
+                                            $html .= "<div class='text-xs text-purple-400 mt-1'>{$totalWithInvite} din {$totalBlocked} au invitații</div>";
+                                        }
+
+                                        $html .= "</div>";
+                                        return new HtmlString($html);
                                     }),
                             ]),
 
