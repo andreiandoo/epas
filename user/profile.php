@@ -181,28 +181,38 @@ require_once dirname(__DIR__) . '/includes/user-footer.php';
 $scriptsExtra = <<<'JS'
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Render profile from centralized demo data
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof DEMO_DATA === 'undefined') {
-        console.error('DEMO_DATA not loaded');
-        return;
-    }
+// TODO: API integration needed - fetch profile data from customer API
+document.addEventListener('DOMContentLoaded', async function() {
+    let customer = {};
+    let tasteProfile = [];
+    let topArtists = [];
+    let citiesVisited = [];
+    let insights = [];
+    let badges = [];
+    let activityData = [];
 
-    const customer = DEMO_DATA.customer || {};
-    const tasteProfile = DEMO_DATA.tasteProfile || [];
-    const topArtists = DEMO_DATA.topArtists || [];
-    const citiesVisited = DEMO_DATA.citiesVisited || [];
-    const insights = DEMO_DATA.insights || [];
-    const badges = DEMO_DATA.badges?.unlocked || [];
-    const activityData = DEMO_DATA.activityData || [];
+    try {
+        const response = await AmbiletAPI.customer.getProfile();
+        if (response.success && response.data) {
+            customer = response.data.customer || response.data || {};
+            tasteProfile = response.data.tasteProfile || [];
+            topArtists = response.data.topArtists || [];
+            citiesVisited = response.data.citiesVisited || [];
+            insights = response.data.insights || [];
+            badges = response.data.badges?.unlocked || response.data.badges || [];
+            activityData = response.data.activityData || [];
+        }
+    } catch (error) {
+        console.error('Failed to load profile data:', error);
+    }
 
     // Update user info
     document.getElementById('user-initials').textContent = customer.initials || '--';
     document.getElementById('user-name').textContent = customer.name || 'User';
     document.getElementById('user-member-since').textContent = customer.member_since || '...';
     document.getElementById('user-level-badge').textContent = customer.level || 0;
-    document.getElementById('user-type-badge').innerHTML = `🎸 ${customer.type || 'Fan'}`;
-    document.getElementById('user-level-text').textContent = `Nivel ${customer.level || 0}`;
+    document.getElementById('user-type-badge').innerHTML = customer.type || 'Fan';
+    document.getElementById('user-level-text').textContent = 'Nivel ' + (customer.level || 0);
 
     // Update stats
     const stats = customer.stats || {};
@@ -213,8 +223,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('taste-events-count').textContent = stats.events || 0;
 
     // Update user type section
-    document.getElementById('user-type-title').textContent = customer.type || 'Music Fan';
-    document.getElementById('user-type-desc').textContent = 'Esti pasionat de concerte rock si metal. Preferi evenimentele live cu energie mare si nu ratezi niciodata o trupa buna din Romania.';
+    document.getElementById('user-type-title').textContent = customer.type || 'Fan';
+    document.getElementById('user-type-desc').textContent = customer.type_description || '';
 
     // Render taste profile
     renderTasteProfile(tasteProfile);

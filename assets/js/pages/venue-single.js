@@ -63,13 +63,6 @@ const VenuePage = {
      */
     async loadVenueData() {
         try {
-            // In demo mode, use mock data
-            if (window.AMBILET_CONFIG?.DEMO_MODE) {
-                this.venue = this.getMockData();
-                this.render();
-                return;
-            }
-
             var response = await AmbiletAPI.getVenue(this.venueSlug);
             if (response.success && response.data) {
                 this.venue = this.transformApiData(response.data);
@@ -92,7 +85,7 @@ const VenuePage = {
      */
     transformApiData(apiData) {
         if (!apiData) {
-            return this.getMockData();
+            return null;
         }
 
         var self = this;
@@ -196,51 +189,6 @@ const VenuePage = {
                     '</div>' +
                 '</div>';
         }
-    },
-
-    /**
-     * Get mock data for demo mode
-     */
-    getMockData() {
-        return {
-            name: 'Sala Palatului',
-            slug: 'sala-palatului',
-            type: 'Sală de concerte',
-            location: 'București, Sector 1',
-            address: 'Str. Ion Câmpineanu 28, Sector 1, București 010039',
-            latitude: 44.4396,
-            longitude: 26.0983,
-            capacity: '4.000',
-            rating: '4.8',
-            reviewsCount: 324,
-            yearBuilt: 1960,
-            eventsCount: 28,
-            image: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=1920&h=800&fit=crop',
-            description: 'Sala Palatului este una dintre cele mai importante și prestigioase săli de spectacole din România, situată în inima Bucureștiului. Inaugurată în 1960, aceasta găzduiește anual sute de evenimente culturale, de la concerte și spectacole de operă până la conferințe și gale.\n\nCu o capacitate de aproximativ 4.000 de locuri, sala oferă o acustică excepțională și o vizibilitate perfectă din orice unghi.',
-            phone: '+40 21 315 6170',
-            email: 'contact@salapalatului.ro',
-            website: 'salapalatului.ro',
-            schedule: 'Luni - Duminică, în funcție de evenimente',
-            amenities: ['Parcare', 'Acces dizabilități', 'Garderobă', 'Bar & Cafenea', 'WiFi gratuit', 'Aer condiționat'],
-            gallery: [
-                'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=800&h=600&fit=crop',
-                'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop',
-                'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400&h=300&fit=crop',
-                'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop',
-                'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop'
-            ],
-            events: [
-                { slug: 'carlas-dreams-turneul-national-2025', day: '15', month: 'MAR', category: 'Concert', title: "Carla's Dreams - Turneul Național 2025", time: '20:00', price: 149, currency: 'RON' },
-                { slug: 'stefan-banica-jr-spectacol-paste', day: '22', month: 'MAR', category: 'Concert', title: 'Ștefan Bănică Jr. - Spectacol de Paște', time: '19:30', price: 199, currency: 'RON' },
-                { slug: 'opera-nationala-la-traviata', day: '05', month: 'APR', category: 'Operă', title: 'Opera Națională - La Traviata', time: '19:00', price: 120, currency: 'RON' }
-            ],
-            similarVenues: [
-                { slug: 'ateneul-roman', name: 'Ateneul Român', location: 'București · 800 locuri', events: 15, image: 'https://images.unsplash.com/photo-1503095396549-807759245b35?w=400&h=250&fit=crop' },
-                { slug: 'opera-nationala', name: 'Opera Națională', location: 'București · 1.000 locuri', events: 32, image: 'https://images.unsplash.com/photo-1522158637959-30385a09e0da?w=400&h=250&fit=crop' },
-                { slug: 'teatrul-national', name: 'Teatrul Național', location: 'București · 1.200 locuri', events: 42, image: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=400&h=250&fit=crop' },
-                { slug: 'arenele-romane', name: 'Arenele Romane', location: 'București · 5.000 locuri', events: 15, image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=250&fit=crop' }
-            ]
-        };
     },
 
     /**

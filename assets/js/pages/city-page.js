@@ -177,29 +177,7 @@ const CityPage = {
             }
         } catch (e) {
             console.error('Failed to load events:', e);
-            // Show demo events in demo mode
-            if (window.AMBILET_CONFIG?.DEMO_MODE || window.AMBILET?.demoMode) {
-                this.loadDemoEvents();
-            } else {
-                this.showEmptyState();
-            }
-        }
-    },
-
-    /**
-     * Load demo events for development
-     */
-    loadDemoEvents() {
-        const demoEvents = [
-            { slug: 'concert-demo-1', title: 'Concert Rock în Centrul Vechi', image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600', event_date: '2025-02-15', venue: { name: 'Club Underground' }, min_price: 60, category: 'Concerte' },
-            { slug: 'standup-demo', title: 'Stand-up Comedy Night', image_url: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=600', event_date: '2025-02-18', venue: { name: 'Comedy Club' }, min_price: 45, category: 'Stand-up' },
-            { slug: 'teatru-demo', title: 'Hamlet - Premiera', image_url: 'https://images.unsplash.com/photo-1503095396549-807759245b35?w=600', event_date: '2025-02-20', venue: { name: 'Teatrul Național' }, min_price: 80, category: 'Teatru' },
-            { slug: 'festival-demo', title: 'Electronic Music Festival', image_url: 'https://images.unsplash.com/photo-1571266028243-e4c3a0d64c10?w=600', event_date: '2025-03-01', venue: { name: 'Arena Events' }, min_price: 120, category: 'Festivaluri' },
-        ];
-
-        const container = document.getElementById(this.elements.grid);
-        if (container) {
-            container.innerHTML = AmbiletEventCard.renderMany(demoEvents);
+            this.showEmptyState();
         }
     },
 

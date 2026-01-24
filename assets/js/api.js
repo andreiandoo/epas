@@ -1,207 +1,14 @@
 /**
  * Ambilet.ro - API Client
  * Wrapper for fetch with automatic authentication and error handling
- *
- * Supports DEMO_MODE for testing without API connection
  */
 
 const AmbiletAPI = {
-    /**
-     * Check if demo mode is enabled
-     */
-    isDemoMode() {
-        // Check both old and new config structures for backwards compatibility
-        return window.AMBILET?.demoMode === true || window.AMBILET_CONFIG?.DEMO_MODE === true;
-    },
-
     /**
      * Get API base URL (uses proxy for security)
      */
     getApiUrl() {
         return window.AMBILET?.apiUrl || '/api/proxy.php';
-    },
-
-    /**
-     * Handle demo mode requests
-     */
-    handleDemoRequest(endpoint, options = {}) {
-        const method = options.method || 'GET';
-        const body = options.body ? JSON.parse(options.body) : {};
-
-        // Simulate network delay
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                try {
-                    const result = this.getDemoResponse(endpoint, method, body);
-                    resolve(result);
-                } catch (error) {
-                    reject(error);
-                }
-            }, 200 + Math.random() * 300);
-        });
-    },
-
-    /**
-     * Get demo response based on endpoint
-     */
-    getDemoResponse(endpoint, method, body) {
-        // Public endpoints
-        if (endpoint.includes('/marketplace-events/featured')) {
-            const events = DEMO_DATA.events.filter(e => e.is_featured).map(e => ({ ...e, date: e.start_date }));
-            return { success: true, data: events };
-        }
-        if (endpoint.includes('/marketplace-events/categories')) {
-            return { success: true, data: DEMO_DATA.categories };
-        }
-        if (endpoint.includes('/marketplace-events/cities')) {
-            return { success: true, data: DEMO_DATA.cities };
-        }
-        if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+$/i)) {
-            const slug = endpoint.split('/').pop();
-            const event = DEMO_DATA.events.find(e => e.slug === slug);
-            if (event) {
-                const eventWithTickets = { ...event };
-                eventWithTickets.ticket_types = DEMO_DATA.ticketTypes[event.id] || [];
-                eventWithTickets.date = event.start_date;
-                return { success: true, data: eventWithTickets };
-            }
-            return { success: false, message: 'Eveniment negasit' };
-        }
-        if (endpoint.includes('/marketplace-events')) {
-            const events = DEMO_DATA.events.map(e => ({ ...e, date: e.start_date }));
-            return { success: true, data: events };
-        }
-
-        // Customer endpoints
-        if (endpoint === '/customer/login' && method === 'POST') {
-            if (body.email === DEMO_DATA.customer.email && body.password === DEMO_DATA.customer.password) {
-                localStorage.setItem('demo_customer_logged_in', 'true');
-                return {
-                    success: true,
-                    data: {
-                        token: 'demo_customer_token_' + Date.now(),
-                        customer: DEMO_DATA.customer
-                    }
-                };
-            }
-            return { success: false, message: 'Email sau parola incorecta' };
-        }
-        if (endpoint === '/customer/me') {
-            if (localStorage.getItem('demo_customer_logged_in') === 'true') {
-                return { success: true, data: DEMO_DATA.customer };
-            }
-            throw new APIError('Nu esti autentificat', 401);
-        }
-        if (endpoint === '/customer/stats' || endpoint.startsWith('/customer/stats?')) {
-            return {
-                success: true,
-                data: {
-                    active_tickets: DEMO_DATA.customerTickets.filter(t => t.status === 'valid').length,
-                    attended_events: 5,
-                    points: DEMO_DATA.customer.points || 0,
-                    favorites: DEMO_DATA.customerWatchlist?.length || 0
-                }
-            };
-        }
-        if (endpoint === '/customer/orders' || endpoint.startsWith('/customer/orders?')) {
-            // Normalize order data for dashboard compatibility
-            const orders = DEMO_DATA.customerOrders.map(order => ({
-                ...order,
-                reference: order.id, // Add reference alias for id
-                total: order.grand_total || order.total,
-                status: order.status === 'confirmed' ? 'completed' : order.status
-            }));
-            return { success: true, data: orders };
-        }
-        if (endpoint === '/customer/tickets' || endpoint.startsWith('/customer/tickets?')) {
-            // Normalize ticket data for dashboard compatibility
-            const tickets = DEMO_DATA.customerTickets.map(ticket => ({
-                ...ticket,
-                ticket_type: { name: ticket.ticket_type },
-                event: {
-                    ...ticket.event,
-                    date: ticket.event.date,
-                    image: ticket.event.image
-                }
-            }));
-            return { success: true, data: tickets };
-        }
-        if (endpoint === '/customer/logout' && method === 'POST') {
-            localStorage.removeItem('demo_customer_logged_in');
-            return { success: true };
-        }
-        if (endpoint === '/customer/register' && method === 'POST') {
-            localStorage.setItem('demo_customer_logged_in', 'true');
-            return {
-                success: true,
-                data: {
-                    token: 'demo_customer_token_' + Date.now(),
-                    customer: { ...DEMO_DATA.customer, name: body.name || body.first_name, email: body.email }
-                }
-            };
-        }
-
-        // Organizer endpoints
-        if (endpoint === '/organizer/login' && method === 'POST') {
-            if (body.email === DEMO_DATA.organizer.email && body.password === DEMO_DATA.organizer.password) {
-                localStorage.setItem('demo_organizer_logged_in', 'true');
-                return {
-                    success: true,
-                    data: {
-                        token: 'demo_organizer_token_' + Date.now(),
-                        organizer: DEMO_DATA.organizer
-                    }
-                };
-            }
-            return { success: false, message: 'Email sau parola incorecta' };
-        }
-        if (endpoint === '/organizer/me') {
-            if (localStorage.getItem('demo_organizer_logged_in') === 'true') {
-                return { success: true, data: DEMO_DATA.organizer };
-            }
-            throw new APIError('Nu esti autentificat', 401);
-        }
-        if (endpoint === '/organizer/logout' && method === 'POST') {
-            localStorage.removeItem('demo_organizer_logged_in');
-            return { success: true };
-        }
-        if (endpoint === '/organizer/register' && method === 'POST') {
-            localStorage.setItem('demo_organizer_logged_in', 'true');
-            return {
-                success: true,
-                data: {
-                    token: 'demo_organizer_token_' + Date.now(),
-                    organizer: { ...DEMO_DATA.organizer, name: body.company_name, email: body.email }
-                }
-            };
-        }
-        if (endpoint === '/organizer/dashboard') {
-            return { success: true, data: DEMO_DATA.organizerSales };
-        }
-        if (endpoint === '/organizer/events') {
-            if (method === 'POST') {
-                return { success: true, data: { id: 999, ...body }, message: 'Eveniment creat cu succes' };
-            }
-            return { success: true, data: DEMO_DATA.organizerEvents };
-        }
-        if (endpoint === '/organizer/balance') {
-            return { success: true, data: DEMO_DATA.organizerFinance };
-        }
-        if (endpoint === '/organizer/transactions') {
-            return { success: true, data: DEMO_DATA.organizerFinance.transactions };
-        }
-        if (endpoint === '/organizer/promo-codes') {
-            if (method === 'POST') {
-                return { success: true, data: { id: 999, ...body }, message: 'Cod promotional creat' };
-            }
-            return { success: true, data: DEMO_DATA.organizerPromoCodes };
-        }
-        if (endpoint.includes('/organizer/events') && endpoint.includes('/participants')) {
-            return { success: true, data: DEMO_DATA.organizerParticipants };
-        }
-
-        // Default success response for other endpoints
-        return { success: true, data: null, message: 'Demo mode - endpoint not implemented' };
     },
 
     /**
@@ -211,11 +18,6 @@ const AmbiletAPI = {
      * @returns {Promise<Object>} - API response data
      */
     async request(endpoint, options = {}) {
-        // Check for demo mode
-        if (this.isDemoMode()) {
-            return this.handleDemoRequest(endpoint, options);
-        }
-
         // Build proxy URL - the API key is handled server-side
         const baseUrl = this.getApiUrl();
         const action = this.getProxyAction(endpoint);
@@ -329,6 +131,11 @@ const AmbiletAPI = {
         if (endpoint.includes('/customer/referrals/validate')) return 'customer.referrals.validate';
         if (endpoint === '/customer/referrals' || endpoint.includes('/customer/referrals?')) return 'customer.referrals';
 
+        // Organizer event categories, genres, venues (MUST be before public patterns that use .includes())
+        if (endpoint === '/organizer/event-categories') return 'organizer.event-categories';
+        if (endpoint === '/organizer/event-genres' || endpoint.includes('/organizer/event-genres?')) return 'organizer.event-genres';
+        if (endpoint === '/organizer/venues' || endpoint.includes('/organizer/venues?')) return 'organizer.venues';
+
         // Public endpoints
         if (endpoint.includes('/search')) return 'search';
         if (endpoint.includes('/marketplace-events/categories')) return 'categories';
@@ -417,11 +224,6 @@ const AmbiletAPI = {
         // Organizer dashboard
         if (endpoint === '/organizer/dashboard') return 'organizer.dashboard';
         if (endpoint === '/organizer/dashboard/timeline') return 'organizer.dashboard.timeline';
-
-        // Organizer event categories, genres, venues
-        if (endpoint === '/organizer/event-categories') return 'organizer.event-categories';
-        if (endpoint === '/organizer/event-genres' || endpoint.includes('/organizer/event-genres?')) return 'organizer.event-genres';
-        if (endpoint === '/organizer/venues' || endpoint.includes('/organizer/venues?')) return 'organizer.venues';
 
         // Organizer events
         if (endpoint.match(/\/organizer\/events\/\d+\/participants\/export$/)) return 'organizer.event.participants.export';

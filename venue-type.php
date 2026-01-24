@@ -383,9 +383,10 @@ const VenueTypePage = {
         try {
             const response = await fetch(`/api/proxy.php?action=venues&type=${this.type}`);
             const data = await response.json();
-            this.venues = data.success && data.data ? (data.data.venues || data.data || []) : this.getMockData();
+            this.venues = data.success && data.data ? (data.data.venues || data.data || []) : [];
         } catch (err) {
-            this.venues = this.getMockData();
+            console.error('Failed to load venues:', err);
+            this.venues = [];
         }
 
         this.filteredVenues = [...this.venues];
@@ -397,17 +398,6 @@ const VenueTypePage = {
         this.loadEvents();
     },
 
-    getMockData() {
-        const gradients = ['from-emerald-500 to-teal-600', 'from-rose-500 to-pink-600', 'from-amber-400 to-yellow-500', 'from-blue-500 to-cyan-600', 'from-purple-500 to-violet-600', 'from-orange-500 to-red-600'];
-        return [
-            { id: 1, name: 'Arena Națională', slug: 'arena-nationala', city: 'București', capacity: 55600, events_count: 18, rating: 4.8, image: null, gradient: gradients[0], is_featured: true, address: 'Bd. Basarabia 37-39', facilities: ['parking', 'indoor'], description: 'Cea mai mare arenă multifuncțională din România.' },
-            { id: 2, name: 'Cluj Arena', slug: 'cluj-arena', city: 'Cluj-Napoca', capacity: 30000, events_count: 12, rating: 4.7, image: null, gradient: gradients[1], is_featured: false, address: 'Calea Someșeni', facilities: ['parking'] },
-            { id: 3, name: 'BT Arena (Romexpo)', slug: 'bt-arena', city: 'București', capacity: 16000, events_count: 8, rating: 4.5, image: null, gradient: gradients[2], is_featured: false, address: 'Bd. Expozitiei', facilities: ['parking', 'indoor', 'metro'] },
-            { id: 4, name: 'Stadionul Ion Oblemenco', slug: 'stadion-craiova', city: 'Craiova', capacity: 32000, events_count: 5, rating: 4.6, image: null, gradient: gradients[3], is_featured: false, address: 'Calea Severinului', facilities: ['parking'] },
-            { id: 5, name: 'Arenele Romane', slug: 'arenele-romane', city: 'București', capacity: 10000, events_count: 6, rating: 4.8, image: null, gradient: gradients[4], is_featured: false, address: 'Parcul Carol I', facilities: [] },
-            { id: 6, name: 'Sala Polivalentă', slug: 'sala-polivalenta', city: 'București', capacity: 5000, events_count: 3, rating: 4.3, image: null, gradient: gradients[5], is_featured: false, address: 'Bd. Tineretului', facilities: ['indoor', 'metro'] },
-        ];
-    },
 
     updateStats() {
         const totalCapacity = this.venues.reduce((sum, v) => sum + (v.capacity || 0), 0);
@@ -576,35 +566,12 @@ const VenueTypePage = {
         `).join('');
     },
 
-    loadEvents() {
-        const mockEvents = [
-            { name: 'Coldplay - Music of the Spheres Tour', slug: 'coldplay-tour', date: '15 Iunie 2025', time: '20:00', venue: 'Arena Națională', price: 350, gradient: 'from-indigo-500 to-purple-600' },
-            { name: 'UNTOLD Festival 2025', slug: 'untold-2025', date: '7-10 August 2025', venue: 'Cluj Arena', price: 499, gradient: 'from-emerald-500 to-teal-600' },
-            { name: 'FCSB vs CFR Cluj', slug: 'fcsb-cfr', date: '12 Aprilie 2025', time: '18:00', venue: 'Arena Națională', price: 45, gradient: 'from-rose-500 to-pink-600' },
-            { name: 'Subcarpați - Concert Aniversar', slug: 'subcarpati-15', date: '20 Aprilie 2025', time: '21:00', venue: 'Arenele Romane', price: 120, gradient: 'from-amber-400 to-yellow-500' },
-        ];
-
-        if (mockEvents.length > 0) {
-            document.getElementById('eventsSection').classList.remove('hidden');
-            document.getElementById('totalEventsCount').textContent = mockEvents.length;
-            document.getElementById('eventsScroll').innerHTML = mockEvents.map(e => `
-                <article class="flex-shrink-0 w-[300px] overflow-hidden bg-white border rounded-2xl border-slate-200 hover:-translate-y-0.5 hover:shadow-lg transition-all group">
-                    <a href="/bilete/${e.slug}">
-                        <div class="relative h-[140px] bg-gradient-to-br ${e.gradient} flex items-center justify-center">
-                            <svg class="w-9 h-9 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
-                            <span class="absolute px-2 py-1 text-[10px] font-semibold text-white bg-black/70 backdrop-blur-sm bottom-2 left-2 rounded">${e.venue}</span>
-                        </div>
-                        <div class="p-4">
-                            <div class="mb-1 text-[11px] font-semibold tracking-wider uppercase text-primary">${e.date}${e.time ? ' • ' + e.time : ''}</div>
-                            <h3 class="mb-3 text-[15px] font-bold leading-snug text-slate-800 line-clamp-2 group-hover:text-primary">${e.name}</h3>
-                            <div class="flex items-center justify-between">
-                                <span class="text-[15px] font-bold text-slate-800">${e.price} RON <span class="text-xs font-normal text-slate-400">de la</span></span>
-                                <button class="px-3 py-1.5 text-xs font-semibold text-white rounded-md bg-gradient-to-r from-primary to-red-700">Bilete</button>
-                            </div>
-                        </div>
-                    </a>
-                </article>
-            `).join('');
+    async loadEvents() {
+        // TODO: API integration needed for events by venue type
+        // Hide events section when no data available
+        const eventsSection = document.getElementById('eventsSection');
+        if (eventsSection) {
+            eventsSection.classList.add('hidden');
         }
     },
 

@@ -232,8 +232,7 @@ const RewardsPage = {
                 }
             }
         } catch (error) {
-            console.log('Points API error:', error);
-            this.loadDemoPoints();
+            console.error('Points API error:', error);
         }
     },
 
@@ -252,8 +251,7 @@ const RewardsPage = {
                 }
             }
         } catch (error) {
-            console.log('XP API error:', error);
-            this.loadDemoXP();
+            console.error('XP API error:', error);
         }
     },
 
@@ -267,8 +265,7 @@ const RewardsPage = {
                 };
             }
         } catch (error) {
-            console.log('Badges API error:', error);
-            this.loadDemoBadges();
+            console.error('Badges API error:', error);
         }
     },
 
@@ -279,8 +276,7 @@ const RewardsPage = {
                 this.rewards = response.data.rewards || response.data || [];
             }
         } catch (error) {
-            console.log('Rewards API error:', error);
-            this.loadDemoRewards();
+            console.error('Rewards API error:', error);
         }
     },
 
@@ -291,45 +287,10 @@ const RewardsPage = {
                 this.pointsHistory = response.data.history || response.data || [];
             }
         } catch (error) {
-            console.log('History API error:', error);
+            console.error('History API error:', error);
         }
     },
 
-    loadDemoPoints() {
-        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customer) {
-            this.points = DEMO_DATA.customer.points || 0;
-        }
-        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.pointsHistory) {
-            this.pointsHistory = DEMO_DATA.pointsHistory;
-        }
-    },
-
-    loadDemoXP() {
-        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customer) {
-            this.xp = DEMO_DATA.customer.xp || DEMO_DATA.customer.points || 0;
-            this.level = DEMO_DATA.customer.level || 1;
-            this.levelName = DEMO_DATA.customer.level_name || 'Newbie';
-            this.nextLevelXP = DEMO_DATA.customer.next_level_xp || 1000;
-        }
-        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.levels) {
-            this.levels = DEMO_DATA.levels;
-        }
-    },
-
-    loadDemoBadges() {
-        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.badges) {
-            this.badges = {
-                earned: DEMO_DATA.badges.unlocked || [],
-                available: DEMO_DATA.badges.locked || []
-            };
-        }
-    },
-
-    loadDemoRewards() {
-        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.rewards) {
-            this.rewards = DEMO_DATA.rewards;
-        }
-    },
 
     render() {
         // Update hero section with points

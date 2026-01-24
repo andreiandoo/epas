@@ -120,7 +120,6 @@ const UserTickets = {
         try {
             // Use getAllTickets to get all tickets (upcoming + past)
             const response = await AmbiletAPI.customer.getAllTickets('all');
-            console.log('Tickets response:', response);
             if (response.success && response.data) {
                 const tickets = response.data.tickets || response.data || [];
                 // API already provides is_upcoming flag
@@ -130,14 +129,15 @@ const UserTickets = {
                 this.tickets.upcoming.sort((a, b) => new Date(a.event?.date) - new Date(b.event?.date));
                 // Sort past by date DESC (most recent first)
                 this.tickets.past.sort((a, b) => new Date(b.event?.date) - new Date(a.event?.date));
-                console.log('Upcoming:', this.tickets.upcoming.length, 'Past:', this.tickets.past.length);
             } else {
-                console.log('No data, using demo');
-                this.loadDemoData();
+                console.warn('No ticket data in API response');
+                this.tickets.upcoming = [];
+                this.tickets.past = [];
             }
         } catch (error) {
             console.error('Error loading tickets:', error);
-            this.loadDemoData();
+            this.tickets.upcoming = [];
+            this.tickets.past = [];
         }
 
         document.getElementById('upcoming-count').textContent = this.tickets.upcoming.length;
@@ -152,15 +152,6 @@ const UserTickets = {
         }
     },
 
-    loadDemoData() {
-        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customerTickets) {
-            this.tickets.upcoming = DEMO_DATA.customerTickets.upcoming || [];
-            this.tickets.past = DEMO_DATA.customerTickets.past || [];
-        } else {
-            this.tickets.upcoming = [];
-            this.tickets.past = [];
-        }
-    },
 
     // Generate QR code using QRCode.js library (with fallback to external API)
     async generateQRCode(code, elementId) {

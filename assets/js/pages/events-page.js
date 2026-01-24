@@ -122,74 +122,8 @@ const EventsPage = {
             }
         } catch (error) {
             console.error('Error loading events:', error);
-            // Try demo data fallback
-            if (window.AMBILET?.demoMode) {
-                this.loadDemoData();
-            } else {
-                this.showEmpty();
-            }
+            this.showEmpty();
         }
-    },
-
-    /**
-     * Load demo data as fallback
-     */
-    loadDemoData() {
-        this.events = [
-            {
-                id: 1,
-                title: 'Coldplay - Music of the Spheres Tour',
-                slug: 'coldplay-music-of-the-spheres',
-                date: '2025-06-15',
-                time: '20:00',
-                venue: 'Arena Nationala',
-                city: 'Bucuresti',
-                category: 'Concerte',
-                price_from: 299,
-                image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=500&fit=crop'
-            },
-            {
-                id: 2,
-                title: 'UNTOLD Festival 2025',
-                slug: 'untold-2025',
-                date: '2025-08-07',
-                time: '16:00',
-                venue: 'Cluj Arena',
-                city: 'Cluj-Napoca',
-                category: 'Festivaluri',
-                price_from: 449,
-                image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=500&fit=crop'
-            },
-            {
-                id: 3,
-                title: 'Electric Castle 2025',
-                slug: 'electric-castle-2025',
-                date: '2025-07-16',
-                time: '14:00',
-                venue: 'Castelul Banffy',
-                city: 'Bontida',
-                category: 'Festivaluri',
-                price_from: 359,
-                image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&h=500&fit=crop'
-            },
-            {
-                id: 4,
-                title: 'Micutzu - Stand-up Comedy',
-                slug: 'micutzu-stand-up',
-                date: '2025-02-20',
-                time: '19:00',
-                venue: 'Sala Palatului',
-                city: 'Bucuresti',
-                category: 'Stand-up',
-                price_from: 89,
-                image: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=800&h=500&fit=crop'
-            }
-        ];
-
-        const resultsEl = document.getElementById(this.elements.resultsCount);
-        if (resultsEl) resultsEl.textContent = this.events.length;
-
-        this.renderEvents();
     },
 
     /**

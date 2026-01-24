@@ -14,9 +14,6 @@ if (!defined('AMBILET_ROOT')) {
 define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
 define('API_KEY', 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCISPFB'); // Replace with actual API key
 
-// Demo Mode - set to true to use mock data instead of API
-define('DEMO_MODE', false);
-
 // Site Configuration
 define('SITE_NAME', 'AmBilet');
 define('SITE_TAGLINE', 'Bilete Evenimente Romania');

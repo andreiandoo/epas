@@ -283,82 +283,25 @@ const OrganizerPage = {
     },
 
     async loadOrganizerData() {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        const data = this.getMockData();
-        this.renderOrganizer(data);
-    },
-
-    getMockData() {
-        return {
-            name: "Events Pro Romania",
-            tagline: "Organizator de evenimente premium din 2015. Festivaluri, concerte și experiențe de neuitat.",
-            location: "București, România",
-            avatar: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=300&h=300&fit=crop",
-            cover: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1920&h=600&fit=crop",
-            verified: true,
-            pro: true,
-            stats: {
-                events: 156,
-                tickets: "2.4M",
-                followers: "45K",
-                rating: 4.9
-            },
-            about: "Events Pro Romania este unul dintre cei mai mari organizatori de evenimente din România, cu peste 9 ani de experiență în industria entertainment-ului. Am organizat festivaluri memorabile, concerte de top și experiențe unice pentru milioane de participanți.",
-            facts: [
-                { icon: "calendar", label: "Activ din", value: "2015" },
-                { icon: "location", label: "Orașe acoperite", value: "București, Cluj, Timișoara" },
-                { icon: "star", label: "Specializare", value: "Festivaluri, Concerte, Corporate" },
-                { icon: "shield", label: "Garanție", value: "Rambursare 100% dacă evenimentul e anulat" }
-            ],
-            upcomingEvents: [
-                {
-                    image: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600&h=340&fit=crop",
-                    day: "15", month: "IUN",
-                    category: "Festival",
-                    title: "Summer Fest 2025",
-                    venue: "București", time: "16:00",
-                    price: 249,
-                    status: "soon"
-                },
-                {
-                    image: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&h=340&fit=crop",
-                    day: "22", month: "IUN",
-                    category: "Concert",
-                    title: "Electric Nights - Martin Garrix",
-                    venue: "Arena Națională", time: "20:00",
-                    price: 199,
-                    status: null
-                },
-                {
-                    image: "https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=600&h=340&fit=crop",
-                    day: "28", month: "IUN",
-                    category: "Stand-up",
-                    title: "Comedy Night Special",
-                    venue: "Sala Palatului", time: "19:30",
-                    price: 89,
-                    status: null
-                },
-                {
-                    image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&h=340&fit=crop",
-                    day: "05", month: "IUL",
-                    category: "Festival",
-                    title: "Bucharest Jazz Festival",
-                    venue: "Grădina Botanică", time: "18:00",
-                    price: 149,
-                    status: "soldout"
-                }
-            ],
-            pastEvents: [
-                { image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=200&h=200&fit=crop", date: "15 Decembrie 2024", title: "Winter Gala 2024", participants: "12.500", rating: "4.9" },
-                { image: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200&h=200&fit=crop", date: "28 Octombrie 2024", title: "Autumn Concert Series", participants: "8.200", rating: "4.8" },
-                { image: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=200&h=200&fit=crop", date: "20 August 2024", title: "Summer Fest 2024", participants: "45.000", rating: "4.9" }
-            ],
-            social: {
-                facebook: "#",
-                instagram: "#",
-                website: "#"
+        // TODO: API integration needed - fetch organizer data from API
+        try {
+            const slug = window.location.pathname.split('/').pop();
+            const response = await AmbiletAPI.get('/api/proxy.php?action=organizer&slug=' + slug);
+            if (response.success && response.data) {
+                this.renderOrganizer(response.data);
+                return;
             }
-        };
+        } catch (e) {
+            console.error('Failed to load organizer data:', e);
+        }
+        // Show empty state when no data available
+        document.getElementById('profileCard').innerHTML = `
+            <div class="py-12 text-center col-span-full">
+                <p class="text-lg font-medium text-gray-500">Datele organizatorului nu sunt disponibile momentan.</p>
+            </div>
+        `;
+        document.getElementById('eventsGrid').innerHTML = '';
+        document.getElementById('pastEventsGrid').innerHTML = '';
     },
 
     renderOrganizer(data) {

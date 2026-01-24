@@ -347,14 +347,8 @@ const UserDashboard = {
             }
         } catch (e) {}
 
-        // Use demo data
-        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.events) {
-            this.renderRecommendedEvents(DEMO_DATA.events.slice(0, 2).map(e => ({
-                slug: e.id, title: e.title, image: e.image, start_date: e.date, venue: { name: e.venue }, min_price: e.price, category: e.genre, match: 90
-            })));
-        } else {
-            this.renderRecommendedEvents([]);
-        }
+        // No data available - show empty state
+        this.renderRecommendedEvents([]);
     },
 
     renderRecommendedEvents(events) {
