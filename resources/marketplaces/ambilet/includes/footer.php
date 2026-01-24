@@ -128,6 +128,7 @@ $currentYear = date('Y');
                             <li><a href="/evenimente-copii" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Evenimente copii</a></li>
                             <li><a href="/comedie" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Stand-up Comedy</a></li>
                             <li><a href="/calendar" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Calendar evenimente</a></li>
+                            <li><a href="/evenimente-trecute" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Evenimente trecute</a></li>
                         </ul>
                     </div>
 

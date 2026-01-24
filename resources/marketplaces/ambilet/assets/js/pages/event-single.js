@@ -559,6 +559,10 @@ const EventPage = {
         const mobileBtn = document.getElementById('mobileTicketBtn');
         if (mobileBtn) mobileBtn.style.display = 'none';
 
+        // Hide social stats (interested, views, share)
+        const socialStats = document.getElementById('social-stats');
+        if (socialStats) socialStats.style.display = 'none';
+
         // Insert ended banner before #event-content
         this.renderEndedBanner();
     },

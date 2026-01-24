@@ -42,6 +42,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^evenimente/?$ events.php [L,QSA]
 
+# Handle past events listing - /evenimente-trecute
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^evenimente-trecute/?$ past-events.php [L,QSA]
+
 # Handle venues - /locatii and /locatie/venue-slug
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

@@ -31,10 +31,20 @@ class EventsController extends BaseController
             ->where(function ($q) {
                 $q->where('is_public', true)->orWhereNull('is_public');
             })
-            // Filter upcoming: marketplace events use event_date, tenant events use starts_at
-            ->where(function ($q) {
-                $q->where('event_date', '>=', now()->toDateString())
-                  ->orWhere('starts_at', '>=', now());
+            // Filter by time scope: upcoming (default) or past
+            ->when($request->get('time_scope') === 'past', function ($q) {
+                $q->where(function ($sq) {
+                    $sq->where(function ($inner) {
+                        $inner->whereNotNull('event_date')->where('event_date', '<', now()->toDateString());
+                    })->orWhere(function ($inner) {
+                        $inner->whereNull('event_date')->whereNotNull('starts_at')->where('starts_at', '<', now());
+                    });
+                });
+            }, function ($q) {
+                $q->where(function ($sq) {
+                    $sq->where('event_date', '>=', now()->toDateString())
+                      ->orWhere('starts_at', '>=', now());
+                });
             })
             // Exclude cancelled events
             ->where(function ($q) {
@@ -142,7 +152,8 @@ class EventsController extends BaseController
 
         // Sorting - use COALESCE to handle both event_date (marketplace) and starts_at (tenant)
         $sortField = $request->get('sort', 'date');
-        $sortDir = strtoupper($request->get('order', 'asc')) === 'DESC' ? 'DESC' : 'ASC';
+        $defaultOrder = $request->get('time_scope') === 'past' ? 'desc' : 'asc';
+        $sortDir = strtoupper($request->get('order', $defaultOrder)) === 'DESC' ? 'DESC' : 'ASC';
 
         if ($sortField === 'latest') {
             // Sort by creation date (newest first)

@@ -155,8 +155,12 @@ const EventsPage = {
             groups[monthKey].events.push({ raw: event, normalized: normalized });
         });
 
-        // Sort by month key and return as array
-        return Object.values(groups).sort((a, b) => a.key.localeCompare(b.key));
+        // Sort by month key (descending for past events, ascending for upcoming)
+        const sortedGroups = Object.values(groups);
+        if (this.filters.time_scope === 'past') {
+            return sortedGroups.sort((a, b) => b.key.localeCompare(a.key));
+        }
+        return sortedGroups.sort((a, b) => a.key.localeCompare(b.key));
     },
 
     /**
@@ -320,6 +324,7 @@ const EventsPage = {
      * Clear all filters
      */
     clearFilters() {
+        const preservedTimeScope = this.filters.time_scope || '';
         this.filters = {
             category: '',
             city: '',
@@ -331,6 +336,7 @@ const EventsPage = {
             sort: 'date',
             search: ''
         };
+        if (preservedTimeScope) this.filters.time_scope = preservedTimeScope;
 
         // Reset category buttons visual state
         const buttons = document.querySelectorAll('#' + this.elements.categoryFilters + ' .category-btn');
@@ -392,7 +398,8 @@ const EventsPage = {
         if (this.filters.sort && this.filters.sort !== 'date') params.set('sortare', this.filters.sort);
         if (this.filters.search) params.set('q', this.filters.search);
 
-        const newURL = params.toString() ? '/evenimente?' + params.toString() : '/evenimente';
+        const basePath = this.filters.time_scope === 'past' ? '/evenimente-trecute' : '/evenimente';
+        const newURL = params.toString() ? basePath + '?' + params.toString() : basePath;
         history.pushState({}, '', newURL);
     },
 

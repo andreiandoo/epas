@@ -89,13 +89,13 @@ const ArtistPage = {
                     '<svg class="w-24 h-24 mb-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                         '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>' +
                     '</svg>' +
-                    '<h1 class="mb-3 text-3xl font-bold text-gray-700">Artist negasit</h1>' +
-                    '<p class="mb-8 text-gray-500">Ne pare rau, nu am putut gasi artistul cautat.</p>' +
+                    '<h1 class="mb-3 text-3xl font-bold text-gray-700">Artist negăsit</h1>' +
+                    '<p class="mb-8 text-gray-500">Ne pare rău, nu am putut găsi artistul căutat.</p>' +
                     '<a href="/artisti" class="inline-flex items-center gap-2 px-6 py-3 font-semibold text-white transition-all rounded-xl bg-primary hover:bg-primary-dark hover:shadow-lg">' +
                         '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                             '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>' +
                         '</svg>' +
-                        'Inapoi la artisti' +
+                        'Înapoi la artiști' +
                     '</a>' +
                 '</div>';
         }
@@ -107,7 +107,7 @@ const ArtistPage = {
         }
 
         // Update page title
-        document.title = 'Artist negasit - ' + (window.AMBILET_CONFIG?.SITE_NAME || 'Ambilet');
+        document.title = 'Artist negăsit - ' + (window.AMBILET_CONFIG?.SITE_NAME || 'Ambilet');
     },
 
     /**
@@ -154,7 +154,7 @@ const ArtistPage = {
                 upcomingEvents: api.stats?.upcoming_events || events.length,
                 spotifyListenersRaw: api.stats?.spotify_listeners || 0  
             },
-            about: api.biography ? [api.biography] : ['Informatii despre acest artist vor fi adaugate in curand.'],
+            about: api.biography ? [api.biography] : ['Informații despre acest artist vor fi adăugate în curând.'],
             facts: [
                 { label: 'Origine', value: [api.city, api.country].filter(Boolean).join(', ') || '-' },
                 { label: 'Gen muzical', value: (api.genres || []).map(function(g) { return g.name || g; }).join(', ') || '-' },
@@ -317,7 +317,7 @@ const ArtistPage = {
         container.innerHTML =
             '<div class="text-center flex-1 min-w-[100px]">' +
                 '<div class="text-[28px] font-extrabold text-gray-900">' + stats.spotifyListeners + '</div>' +
-                '<div class="text-[13px] text-gray-500 mt-1">Ascultatori lunari</div>' +
+                '<div class="text-[13px] text-gray-500 mt-1">Ascultători lunari</div>' +
             '</div>' + divider +
             '<div class="text-center flex-1 min-w-[100px]">' +
                 '<div class="text-[28px] font-extrabold text-gray-900">' + stats.totalFollowers + '</div>' +
@@ -418,7 +418,7 @@ const ArtistPage = {
                         '<line x1="3" y1="10" x2="21" y2="10"/>' +
                     '</svg>' +
                     '<h3 class="mb-2 text-lg font-semibold text-gray-700">Niciun concert programat</h3>' +
-                    '<p class="text-sm text-gray-500">Urmareste artistul pentru a fi notificat cand apar concerte noi.</p>' +
+                    '<p class="text-sm text-gray-500">Urmărește artistul pentru a fi notificat când apar concerte noi.</p>' +
                 '</div>';
         }
     },
