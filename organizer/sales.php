@@ -82,24 +82,17 @@ async function loadSalesData() {
             document.getElementById('avg-order').textContent = AmbiletUtils.formatCurrency(data.avg_order_value || 0);
             if (data.chart_data) { salesChart.data.labels = data.chart_data.labels; salesChart.data.datasets[0].data = data.chart_data.revenue; salesChart.update(); }
             if (data.sales_by_event) { eventsChart.data.labels = data.sales_by_event.map(e => e.name); eventsChart.data.datasets[0].data = data.sales_by_event.map(e => e.revenue); eventsChart.update(); }
+            if (data.orders) { renderOrders(data.orders); }
         }
-    } catch (error) { loadMockData(); }
+    } catch (error) { showEmptyState(); }
 }
 
-function loadMockData() {
-    document.getElementById('total-revenue').textContent = AmbiletUtils.formatCurrency(45250);
-    document.getElementById('tickets-sold').textContent = '312';
-    document.getElementById('total-orders').textContent = '145';
-    document.getElementById('avg-order').textContent = AmbiletUtils.formatCurrency(312);
-    salesChart.data.labels = ['1 Dec', '5 Dec', '10 Dec', '15 Dec', '20 Dec', '25 Dec', '30 Dec'];
-    salesChart.data.datasets[0].data = [2500, 4200, 3800, 5100, 6500, 8200, 9500]; salesChart.update();
-    eventsChart.data.labels = ['Concert Revelion', 'Festival Folk', 'Stand-up', 'Teatru', 'Altele'];
-    eventsChart.data.datasets[0].data = [15000, 12000, 8500, 6000, 3750]; eventsChart.update();
-    const orders = [
-        { id: 'ORD-001', customer: 'Maria Ionescu', event: 'Concert Revelion', total: 350, status: 'completed', date: '2024-12-26' },
-        { id: 'ORD-002', customer: 'Ion Popescu', event: 'Festival Folk', total: 480, status: 'completed', date: '2024-12-25' },
-        { id: 'ORD-003', customer: 'Elena Marin', event: 'Stand-up', total: 120, status: 'pending', date: '2024-12-24' }
-    ];
+function showEmptyState() {
+    document.getElementById('orders-list').innerHTML = '<tr><td colspan="6" class="px-6 py-12 text-center text-muted">Nu exista vanzari momentan</td></tr>';
+}
+
+function renderOrders(orders) {
+    if (!orders.length) { showEmptyState(); return; }
     document.getElementById('orders-list').innerHTML = orders.map(o => `<tr class="hover:bg-surface/50"><td class="px-6 py-4 font-medium text-secondary">${o.id}</td><td class="px-6 py-4">${o.customer}</td><td class="px-6 py-4">${o.event}</td><td class="px-6 py-4 font-semibold">${AmbiletUtils.formatCurrency(o.total)}</td><td class="px-6 py-4"><span class="px-3 py-1 bg-${o.status === 'completed' ? 'success' : 'warning'}/10 text-${o.status === 'completed' ? 'success' : 'warning'} text-sm rounded-full">${o.status === 'completed' ? 'Finalizata' : 'In asteptare'}</span></td><td class="px-6 py-4 text-muted">${AmbiletUtils.formatDate(o.date)}</td></tr>`).join('');
 }
 

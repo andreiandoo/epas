@@ -79,21 +79,24 @@ document.addEventListener('DOMContentLoaded', function() { loadPromoCodes(); loa
 function setupDiscountType() { document.querySelectorAll('input[name="discount_type"]').forEach(r => r.addEventListener('change', function() { document.getElementById('discount-suffix').textContent = this.value === 'percentage' ? '%' : 'RON'; document.getElementById('discount-value').max = this.value === 'percentage' ? 100 : 10000; })); }
 
 async function loadEvents() {
-    try { const res = await AmbiletAPI.get('/organizer/events'); if (res.success) { const sel = document.getElementById('promo-event'); res.data.events.forEach(e => { const opt = document.createElement('option'); opt.value = e.id; opt.textContent = e.title; sel.appendChild(opt); }); } }
-    catch (e) { ['Concert Revelion', 'Festival Folk', 'Stand-up'].forEach((n, i) => { const opt = document.createElement('option'); opt.value = i+1; opt.textContent = n; document.getElementById('promo-event').appendChild(opt); }); }
+    try {
+        const res = await AmbiletAPI.get('/organizer/events');
+        if (res.success && res.data.events) { const sel = document.getElementById('promo-event'); res.data.events.forEach(e => { const opt = document.createElement('option'); opt.value = e.id; opt.textContent = e.title; sel.appendChild(opt); }); }
+    } catch (e) { /* Events will load when API is available */ }
 }
 
-function loadPromoCodes() {
-    promoCodes = [
-        { id: 1, code: 'REVELION20', discount_type: 'percentage', discount_value: 20, event: 'Concert Revelion', usage_count: 45, usage_limit: 100, start_date: '2024-12-01', end_date: '2024-12-31', status: 'active' },
-        { id: 2, code: 'EARLYBIRD', discount_type: 'percentage', discount_value: 15, event: null, usage_count: 120, usage_limit: null, start_date: '2024-11-01', end_date: '2024-12-15', status: 'expired' },
-        { id: 3, code: 'FRIEND50', discount_type: 'fixed', discount_value: 50, event: 'Festival Folk', usage_count: 25, usage_limit: 50, start_date: '2024-12-01', end_date: '2025-01-31', status: 'active' }
-    ];
-    renderPromoCodes();
-    document.getElementById('active-codes').textContent = promoCodes.filter(c => c.status === 'active').length;
-    document.getElementById('total-uses').textContent = promoCodes.reduce((s, c) => s + c.usage_count, 0);
-    document.getElementById('total-discounts').textContent = AmbiletUtils.formatCurrency(3250);
-    document.getElementById('revenue-codes').textContent = AmbiletUtils.formatCurrency(18500);
+async function loadPromoCodes() {
+    try {
+        const response = await AmbiletAPI.get('/organizer/promo-codes');
+        if (response.success) {
+            promoCodes = response.data.promo_codes || [];
+            renderPromoCodes();
+            document.getElementById('active-codes').textContent = promoCodes.filter(c => c.status === 'active').length;
+            document.getElementById('total-uses').textContent = promoCodes.reduce((s, c) => s + (c.usage_count || 0), 0);
+            document.getElementById('total-discounts').textContent = AmbiletUtils.formatCurrency(response.data.total_discounts || 0);
+            document.getElementById('revenue-codes').textContent = AmbiletUtils.formatCurrency(response.data.revenue_generated || 0);
+        } else { promoCodes = []; renderPromoCodes(); }
+    } catch (error) { promoCodes = []; renderPromoCodes(); }
 }
 
 function renderPromoCodes() {
@@ -116,8 +119,32 @@ function closePromoModal() { document.getElementById('promo-modal').classList.ad
 function editCode(id) { const code = promoCodes.find(c => c.id === id); if (!code) return; document.getElementById('modal-title').textContent = 'Editeaza Cod'; document.getElementById('promo-id').value = code.id; document.getElementById('promo-code').value = code.code; document.getElementById('discount-value').value = code.discount_value; document.getElementById('promo-event').value = code.event_id || ''; document.getElementById('usage-limit').value = code.usage_limit || ''; document.getElementById('start-date').value = code.start_date; document.getElementById('end-date').value = code.end_date; document.querySelector(`input[name="discount_type"][value="${code.discount_type}"]`).checked = true; document.getElementById('promo-modal').classList.remove('hidden'); document.getElementById('promo-modal').classList.add('flex'); }
 function generateCode() { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let code = ''; for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length)); document.getElementById('promo-code').value = code; }
 function copyCode(code) { navigator.clipboard.writeText(code); AmbiletNotifications.success('Codul a fost copiat'); }
-function deleteCode(id) { if (!confirm('Stergi acest cod?')) return; promoCodes = promoCodes.filter(c => c.id !== id); renderPromoCodes(); AmbiletNotifications.success('Codul a fost sters'); }
-function savePromoCode(e) { e.preventDefault(); AmbiletNotifications.success('Codul a fost salvat'); closePromoModal(); loadPromoCodes(); }
+async function deleteCode(id) {
+    if (!confirm('Stergi acest cod?')) return;
+    try {
+        const response = await AmbiletAPI.delete('/organizer/promo-codes/' + id);
+        if (response.success) { AmbiletNotifications.success('Codul a fost sters'); loadPromoCodes(); }
+        else { AmbiletNotifications.error(response.message || 'Eroare la stergere'); }
+    } catch (error) { AmbiletNotifications.error('Eroare la stergere'); }
+}
+async function savePromoCode(e) {
+    e.preventDefault();
+    const data = {
+        code: document.getElementById('promo-code').value,
+        discount_type: document.querySelector('input[name="discount_type"]:checked').value,
+        discount_value: document.getElementById('discount-value').value,
+        event_id: document.getElementById('promo-event').value || null,
+        usage_limit: document.getElementById('usage-limit').value || null,
+        start_date: document.getElementById('start-date').value,
+        end_date: document.getElementById('end-date').value
+    };
+    const id = document.getElementById('promo-id').value;
+    try {
+        const response = id ? await AmbiletAPI.put('/organizer/promo-codes/' + id, data) : await AmbiletAPI.post('/organizer/promo-codes', data);
+        if (response.success) { AmbiletNotifications.success('Codul a fost salvat'); closePromoModal(); loadPromoCodes(); }
+        else { AmbiletNotifications.error(response.message || 'Eroare la salvare'); }
+    } catch (error) { AmbiletNotifications.error('Eroare la salvare'); }
+}
 
 document.getElementById('search-codes').addEventListener('input', AmbiletUtils.debounce(function() { const q = this.value.toLowerCase(); const status = document.getElementById('status-filter').value; const filtered = promoCodes.filter(c => (!q || c.code.toLowerCase().includes(q)) && (!status || c.status === status)); const temp = promoCodes; promoCodes = filtered; renderPromoCodes(); promoCodes = temp; }, 300));
 document.getElementById('status-filter').addEventListener('change', function() { const q = document.getElementById('search-codes').value.toLowerCase(); const status = this.value; const filtered = promoCodes.filter(c => (!q || c.code.toLowerCase().includes(q)) && (!status || c.status === status)); const temp = promoCodes; promoCodes = filtered; renderPromoCodes(); promoCodes = temp; });

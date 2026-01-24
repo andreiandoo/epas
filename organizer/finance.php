@@ -81,21 +81,35 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 $scriptsExtra = <<<'JS'
 <script>
 AmbiletAuth.requireOrganizerAuth();
-let availableBalance = 12500;
+let availableBalance = 0;
 
 document.addEventListener('DOMContentLoaded', function() { loadFinanceData(); });
 
-function loadFinanceData() {
-    document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(availableBalance);
-    document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(3200);
-    document.getElementById('total-earned').textContent = AmbiletUtils.formatCurrency(45800);
+async function loadFinanceData() {
+    try {
+        const response = await AmbiletAPI.get('/organizer/finance');
+        if (response.success) {
+            const data = response.data;
+            availableBalance = data.available_balance || 0;
+            document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(availableBalance);
+            document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(data.pending_balance || 0);
+            document.getElementById('total-earned').textContent = AmbiletUtils.formatCurrency(data.total_earned || 0);
+            renderTransactions(data.transactions || []);
+            renderPayouts(data.payouts || []);
+        } else { showEmptyFinance(); }
+    } catch (error) { showEmptyFinance(); }
+}
 
-    const transactions = [
-        { type: 'sale', description: 'Vanzare bilet - Concert Revelion', amount: 175, date: '2024-12-26' },
-        { type: 'sale', description: 'Vanzare bilete (x2) - Concert Revelion', amount: 350, date: '2024-12-25' },
-        { type: 'refund', description: 'Rambursare - Festival Folk', amount: -120, date: '2024-12-24' },
-        { type: 'payout', description: 'Plata catre cont ING', amount: -5000, date: '2024-12-20' }
-    ];
+function showEmptyFinance() {
+    document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(0);
+    document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(0);
+    document.getElementById('total-earned').textContent = AmbiletUtils.formatCurrency(0);
+    document.getElementById('transactions-list').innerHTML = '<div class="p-6 text-center text-muted">Nu exista tranzactii momentan</div>';
+    document.getElementById('payouts-list').innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center text-muted">Nu exista plati momentan</td></tr>';
+}
+
+function renderTransactions(transactions) {
+    if (!transactions.length) { document.getElementById('transactions-list').innerHTML = '<div class="p-6 text-center text-muted">Nu exista tranzactii momentan</div>'; return; }
     document.getElementById('transactions-list').innerHTML = transactions.map(t => `
         <div class="p-4 flex items-center justify-between hover:bg-surface/50">
             <div class="flex items-center gap-4">
@@ -107,12 +121,10 @@ function loadFinanceData() {
             <span class="font-semibold ${t.amount >= 0 ? 'text-success' : 'text-error'}">${t.amount >= 0 ? '+' : ''}${AmbiletUtils.formatCurrency(t.amount)}</span>
         </div>
     `).join('');
+}
 
-    const payouts = [
-        { id: 'PAY-001', amount: 5000, account: 'ING Bank - ****3456', status: 'completed', date: '2024-12-20' },
-        { id: 'PAY-002', amount: 3500, account: 'BRD - ****4321', status: 'completed', date: '2024-12-10' },
-        { id: 'PAY-003', amount: 2800, account: 'ING Bank - ****3456', status: 'pending', date: '2024-12-27' }
-    ];
+function renderPayouts(payouts) {
+    if (!payouts.length) { document.getElementById('payouts-list').innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center text-muted">Nu exista plati momentan</td></tr>'; return; }
     document.getElementById('payouts-list').innerHTML = payouts.map(p => `
         <tr class="hover:bg-surface/50"><td class="px-6 py-4 font-medium text-secondary">${p.id}</td><td class="px-6 py-4 font-semibold">${AmbiletUtils.formatCurrency(p.amount)}</td><td class="px-6 py-4 text-muted">${p.account}</td><td class="px-6 py-4"><span class="px-3 py-1 bg-${p.status === 'completed' ? 'success' : 'warning'}/10 text-${p.status === 'completed' ? 'success' : 'warning'} text-sm rounded-full">${p.status === 'completed' ? 'Finalizata' : 'In procesare'}</span></td><td class="px-6 py-4 text-muted">${AmbiletUtils.formatDate(p.date)}</td></tr>
     `).join('');

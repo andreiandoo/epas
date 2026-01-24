@@ -325,10 +325,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                 </button>
                                             </div>
-                                            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors" id="poster-upload-area">
+                                            <label class="drop-zone flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors" id="poster-upload-area" data-target="poster">
                                                 <svg class="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                                <span class="text-sm text-muted">Click pentru upload</span>
-                                                <span class="text-xs text-muted mt-1">JPG, PNG (max 5MB)</span>
+                                                <span class="text-sm text-muted">Trage imaginea aici sau click pentru upload</span>
+                                                <span class="text-xs text-muted mt-1">JPG, PNG (recomandat 800x1200, max 5MB)</span>
                                                 <input type="file" name="poster" accept="image/*" class="hidden" onchange="previewPoster(this)">
                                             </label>
                                         </div>
@@ -342,10 +342,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                 </button>
                                             </div>
-                                            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors" id="cover-upload-area">
+                                            <label class="drop-zone flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors" id="cover-upload-area" data-target="cover">
                                                 <svg class="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                                <span class="text-sm text-muted">Click pentru upload</span>
-                                                <span class="text-xs text-muted mt-1">JPG, PNG (recomandat 1200x630)</span>
+                                                <span class="text-sm text-muted">Trage imaginea aici sau click pentru upload</span>
+                                                <span class="text-xs text-muted mt-1">JPG, PNG (recomandat 1200x630, max 5MB)</span>
                                                 <input type="file" name="cover_image" accept="image/*" class="hidden" onchange="previewCover(this)">
                                             </label>
                                         </div>
@@ -504,6 +504,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         .multiselect-option.create-new { color: var(--color-primary, #6366f1); font-weight: 500; border-top: 1px solid #e5e7eb; }
         .venue-option { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.1s; }
         .venue-option:hover { background-color: #f9fafb; }
+        .venue-option.bg-amber-50 { background-color: #fffbeb; }
+        .venue-option.bg-amber-50:hover { background-color: #fef3c7; }
         .venue-option:last-child { border-bottom: none; }
         .tox-tinymce { border-radius: 0.75rem !important; border-color: #e5e7eb !important; }
         .tox .tox-edit-area__iframe { min-height: 160px; }
@@ -588,6 +590,7 @@ function showCreateForm() {
     initVenueSearch();
     initArtistSearch();
     initGenreSearch();
+    initDragDrop();
     initShortDescWordCount();
 }
 
@@ -845,8 +848,11 @@ function initVenueSearch() {
             }
 
             dropdown.innerHTML = venues.map(venue => `
-                <div class="venue-option" onclick="selectVenue(${JSON.stringify(venue).replace(/"/g, '&quot;')})">
-                    <div class="font-medium text-sm text-secondary">${venue.name}</div>
+                <div class="venue-option ${venue.is_marketplace ? 'bg-amber-50' : ''}" onclick="selectVenue(${JSON.stringify(venue).replace(/"/g, '&quot;')})">
+                    <div class="flex items-center gap-2">
+                        <div class="font-medium text-sm text-secondary">${venue.name}</div>
+                        ${venue.is_marketplace ? '<span class="text-[10px] px-1.5 py-0.5 bg-amber-200 text-amber-800 rounded font-medium">Marketplace</span>' : ''}
+                    </div>
                     <div class="text-xs text-muted">${[venue.city, venue.address].filter(Boolean).join(' - ')}</div>
                 </div>
             `).join('');
@@ -1210,6 +1216,32 @@ function removeCover() {
     document.getElementById('cover-upload-area').classList.remove('hidden');
     document.querySelector('[name="cover_image"]').value = '';
     updateSummaries();
+}
+
+// ==================== DRAG & DROP ====================
+
+function initDragDrop() {
+    document.querySelectorAll('.drop-zone').forEach(zone => {
+        ['dragenter', 'dragover'].forEach(evt => {
+            zone.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); zone.classList.add('border-primary', 'bg-primary/10'); });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            zone.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); zone.classList.remove('border-primary', 'bg-primary/10'); });
+        });
+        zone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length === 0) return;
+            const file = files[0];
+            if (!file.type.startsWith('image/')) { AmbiletNotifications.error('Doar fisiere imagine sunt acceptate'); return; }
+            if (file.size > 5 * 1024 * 1024) { AmbiletNotifications.error('Fisierul depaseste 5MB'); return; }
+            const input = zone.querySelector('input[type="file"]');
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+            if (zone.dataset.target === 'poster') { previewPoster(input); }
+            else if (zone.dataset.target === 'cover') { previewCover(input); }
+        });
+    });
 }
 
 // ==================== SAVE EVENT ====================
