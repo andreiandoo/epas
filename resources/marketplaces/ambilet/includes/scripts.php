@@ -7,14 +7,10 @@
             siteUrl: '<?= SITE_URL ?>',
             locale: '<?= SITE_LOCALE ?>',
             currency: 'RON',
-            currencySymbol: 'lei',
-            demoMode: <?= DEMO_MODE ? 'true' : 'false' ?>
+            currencySymbol: 'lei'
         };
     </script>
     <script src="<?= asset('assets/js/config.js') ?>"></script>
-    <?php if (DEMO_MODE): ?>
-    <script src="<?= asset('assets/js/demo-data.js') ?>"></script>
-    <?php endif; ?>
     <!-- Utilities -->
     <script src="<?= asset('assets/js/utils.js') ?>"></script>
     <script src="<?= asset('assets/js/utils/data-transformer.js') ?>"></script>

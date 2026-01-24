@@ -229,35 +229,15 @@ const VenuesPage = {
     },
 
     async loadVenues() {
-        if (window.AMBILET_CONFIG?.DEMO_MODE) {
-            this.venues = this.getMockData();
-            this.renderFeatured();
-            this.renderVenues();
-            return;
-        }
-
         try {
             this.venues = await AmbiletAPI.getVenues();
             this.renderFeatured();
             this.renderVenues();
         } catch (err) {
-            this.venues = this.getMockData();
-            this.renderFeatured();
+            console.error('Failed to load venues:', err);
+            this.venues = [];
             this.renderVenues();
         }
-    },
-
-    getMockData() {
-        return [
-            { id: 1, name: 'Arena Națională', slug: 'arena-nationala', type: 'Arena', location: 'București, Sector 2', capacity: '55.000', eventsCount: 12, image: 'https://images.unsplash.com/photo-1522158637959-30385a09e0da?w=800&h=450&fit=crop', featured: true, category: 'arena', eventTypes: 'Concerte, Sport' },
-            { id: 2, name: 'Sala Palatului', slug: 'sala-palatului', type: 'Sală de concerte', location: 'București, Sector 1', capacity: '4.000', eventsCount: 28, image: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=800&h=450&fit=crop', featured: true, category: 'theater', eventTypes: 'Concerte, Gale' },
-            { id: 3, name: 'BT Arena', slug: 'bt-arena', type: 'Arena', location: 'Cluj-Napoca', capacity: '10.000', eventsCount: 18, image: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600&h=400&fit=crop', category: 'arena', eventTypes: 'Concerte, Sport' },
-            { id: 4, name: 'Teatrul Național București', slug: 'teatrul-national', type: 'Teatru', location: 'București, Sector 1', capacity: '1.200', eventsCount: 42, image: 'https://images.unsplash.com/photo-1503095396549-807759245b35?w=600&h=400&fit=crop', category: 'theater', eventTypes: 'Teatru, Operă' },
-            { id: 5, name: 'Arenele Romane', slug: 'arenele-romane', type: 'Open Air', location: 'București, Sector 2', capacity: '5.000', eventsCount: 15, image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&h=400&fit=crop', category: 'openair', eventTypes: 'Concerte' },
-            { id: 6, name: 'Romexpo', slug: 'romexpo', type: 'Complex expozițional', location: 'București, Sector 1', capacity: '12.000', eventsCount: 8, image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&h=400&fit=crop', category: 'arena', eventTypes: 'Expoziții, Concerte' },
-            { id: 7, name: 'Fratelli Studios', slug: 'fratelli-studios', type: 'Club', location: 'București, Sector 1', capacity: '2.500', eventsCount: 24, image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&h=400&fit=crop', category: 'club', eventTypes: 'Clubbing, Concerte' },
-            { id: 8, name: 'Berăria H', slug: 'beraria-h', type: 'Berărie', location: 'București, Sector 2', capacity: '1.800', eventsCount: 32, image: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=600&h=400&fit=crop', category: 'club', eventTypes: 'Concerte, Stand-up' }
-        ];
     },
 
     renderFeatured() {

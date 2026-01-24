@@ -103,49 +103,23 @@ const UserOrders = {
     },
 
     async loadOrders() {
-        console.log('=== LOADING ORDERS ===');
         try {
             const response = await AmbiletAPI.customer.getOrders();
-            console.log('Orders API response:', response);
             if (response.success && response.data) {
                 this.orders = response.data.orders || response.data || [];
-                // Debug: Log refund eligibility for each order
-                console.log('=== ORDERS REFUND DEBUG ===');
-                this.orders.forEach(order => {
-                    console.log(`Order ${order.id} (${order.reference || order.order_number}):`, {
-                        status: order.status,
-                        can_request_refund: order.can_request_refund,
-                        refund_reason: order.refund_reason
-                    });
-                });
-                console.log('===========================');
             } else {
-                console.log('No orders in response, using demo data');
-                this.loadDemoData();
-                return; // loadDemoData handles rendering
+                console.warn('No orders in API response');
+                this.orders = [];
             }
         } catch (error) {
-            console.log('Using demo data:', error);
-            this.loadDemoData();
-            return; // loadDemoData handles rendering
-        }
-
-        this.updateStats();
-        this.renderOrders();
-    },
-
-    loadDemoData() {
-        // Load from centralized DEMO_DATA
-        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customerOrders) {
-            this.orders = DEMO_DATA.customerOrders;
-        } else {
-            console.warn('DEMO_DATA.customerOrders not found');
+            console.error('Failed to load orders:', error);
             this.orders = [];
         }
 
         this.updateStats();
         this.renderOrders();
     },
+
 
     updateStats() {
         // Only count confirmed/paid orders for stats

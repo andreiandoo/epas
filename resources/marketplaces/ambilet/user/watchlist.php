@@ -144,20 +144,15 @@ const WatchlistPage = {
                 this.venues = [];
             }
         } catch (error) {
-            console.log('Watchlist API error:', error);
-            this.loadDemoData();
+            console.error('Watchlist API error:', error);
+            this.events = [];
+            this.artists = [];
+            this.venues = [];
         }
 
         this.render();
     },
 
-    loadDemoData() {
-        if (typeof DEMO_DATA !== 'undefined') {
-            this.events = DEMO_DATA.watchlistEvents || [];
-            this.artists = DEMO_DATA.watchlistArtists || [];
-            this.venues = DEMO_DATA.watchlistVenues || [];
-        }
-    },
 
     render() {
         // Update counts

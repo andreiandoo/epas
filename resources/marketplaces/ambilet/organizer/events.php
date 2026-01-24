@@ -4,8 +4,8 @@ $pageTitle = 'Evenimente';
 $bodyClass = 'min-h-screen flex bg-slate-100';
 $currentPage = 'events';
 $headExtra = <<<'HTML'
-<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jodit/4.2.27/jodit.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jodit/4.2.27/jodit.min.js"></script>
 HTML;
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
@@ -279,14 +279,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <div class="space-y-6 pt-2 border-t border-gray-100">
                                 <div>
                                     <label class="label">Descriere completa</label>
-                                    <div id="description-editor" class="bg-white border border-gray-200 rounded-xl overflow-hidden"></div>
-                                    <textarea name="description" class="hidden" id="description-textarea"></textarea>
+                                    <textarea name="description" id="description-editor"></textarea>
                                     <p class="text-xs text-muted mt-1">Descrie evenimentul in detaliu: lineup, program, reguli de acces, etc.</p>
                                 </div>
                                 <div>
                                     <label class="label">Conditii eveniment</label>
-                                    <div id="ticket-terms-editor" class="bg-white border border-gray-200 rounded-xl overflow-hidden"></div>
-                                    <textarea name="ticket_terms" class="hidden" id="ticket-terms-textarea"></textarea>
+                                    <textarea name="ticket_terms" id="ticket-terms-editor"></textarea>
                                     <p class="text-xs text-muted mt-1">Conditii de participare, restrictii de varsta, reguli speciale, politica de retur, etc.</p>
                                 </div>
                             </div>
@@ -489,9 +487,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         .venue-option { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.1s; }
         .venue-option:hover { background-color: #f9fafb; }
         .venue-option:last-child { border-bottom: none; }
-        #description-editor .ql-editor, #ticket-terms-editor .ql-editor { min-height: 160px; font-size: 0.875rem; }
-        #description-editor .ql-toolbar, #ticket-terms-editor .ql-toolbar { border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; border-color: #e5e7eb; }
-        #description-editor .ql-container, #ticket-terms-editor .ql-container { border-bottom-left-radius: 0.75rem; border-bottom-right-radius: 0.75rem; border-color: #e5e7eb; }
+        .jodit-container { border-radius: 0.75rem !important; border-color: #e5e7eb !important; }
+        .jodit-workplace { min-height: 160px; font-size: 0.875rem; }
     </style>
 
 <?php
@@ -500,8 +497,8 @@ $scriptsExtra = <<<'JS'
 AmbiletAuth.requireOrganizerAuth();
 
 let ticketTypeCount = 1;
-let descriptionQuill = null;
-let ticketTermsQuill = null;
+let descriptionEditor = null;
+let ticketTermsEditor = null;
 let categoriesData = [];
 let venueSearchTimeout = null;
 
@@ -738,35 +735,34 @@ function selectVenue(venue) {
 // ==================== WYSIWYG EDITORS ====================
 
 function initEditors() {
-    if (descriptionQuill) return; // Already initialized
+    if (descriptionEditor) return; // Already initialized
 
-    const toolbarOptions = [
-        [{ 'header': [2, 3, false] }],
-        ['bold', 'italic', 'underline'],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        ['link'],
-        ['clean']
-    ];
+    const editorConfig = {
+        height: 250,
+        toolbarButtonSize: 'small',
+        buttons: 'bold,italic,underline,|,ul,ol,|,paragraph,|,link,|,hr,|,undo,redo,|,eraser',
+        showCharsCounter: false,
+        showWordsCounter: false,
+        showXPathInStatusbar: false,
+        askBeforePasteHTML: false,
+        askBeforePasteFromWord: false,
+        defaultActionOnPaste: 'insert_clear_html',
+        language: 'ro',
+        uploader: { insertImageAsBase64URI: true }
+    };
 
-    descriptionQuill = new Quill('#description-editor', {
-        theme: 'snow',
-        modules: { toolbar: toolbarOptions },
-        placeholder: 'Scrie descrierea evenimentului aici...'
+    descriptionEditor = Jodit.make('#description-editor', {
+        ...editorConfig,
+        placeholder: 'Scrie descrierea evenimentului aici...',
+        events: {
+            change: function(value) { updateSummaries(); }
+        }
     });
 
-    descriptionQuill.on('text-change', () => {
-        document.getElementById('description-textarea').value = descriptionQuill.root.innerHTML;
-        updateSummaries();
-    });
-
-    ticketTermsQuill = new Quill('#ticket-terms-editor', {
-        theme: 'snow',
-        modules: { toolbar: toolbarOptions },
+    ticketTermsEditor = Jodit.make('#ticket-terms-editor', {
+        ...editorConfig,
+        height: 200,
         placeholder: 'Conditii de participare, restrictii, politica de retur...'
-    });
-
-    ticketTermsQuill.on('text-change', () => {
-        document.getElementById('ticket-terms-textarea').value = ticketTermsQuill.root.innerHTML;
     });
 }
 
@@ -1136,13 +1132,13 @@ function collectFormData() {
     const shortDesc = form.querySelector('[name="short_description"]').value;
     if (shortDesc) data.short_description = shortDesc;
 
-    // Description (from Quill)
-    const description = form.querySelector('[name="description"]').value;
-    if (description && description !== '<p><br></p>') data.description = description;
+    // Description
+    const description = descriptionEditor ? descriptionEditor.value : '';
+    if (description && description !== '<p><br></p>' && description.trim() !== '') data.description = description;
 
-    // Ticket terms (from Quill)
-    const ticketTerms = form.querySelector('[name="ticket_terms"]').value;
-    if (ticketTerms && ticketTerms !== '<p><br></p>') data.ticket_terms = ticketTerms;
+    // Ticket terms
+    const ticketTerms = ticketTermsEditor ? ticketTermsEditor.value : '';
+    if (ticketTerms && ticketTerms !== '<p><br></p>' && ticketTerms.trim() !== '') data.ticket_terms = ticketTerms;
 
     if (tags && tags.length > 0) data.tags = tags;
     if (endsAt) data.ends_at = endsAt;

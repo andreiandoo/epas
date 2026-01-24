@@ -221,31 +221,19 @@ const RegionPage = {
                 await this.loadEvents();
                 await this.loadFestivals();
             } else {
-                this.loadDemoData();
+                console.warn('No region data available');
+                this.region = null;
+                this.cities = [];
+                this.renderRegion();
+                this.renderCities();
             }
         } catch (e) {
             console.error('Failed to load region:', e);
-            this.loadDemoData();
+            this.region = null;
+            this.cities = [];
+            this.renderRegion();
+            this.renderCities();
         }
-    },
-
-    loadDemoData() {
-        this.region = {
-            id: 1,
-            name: 'Transilvania',
-            slug: 'transilvania',
-            description: 'Inima Romaniei, cu orase pline de istorie si cultura. De la festivalurile legendare ale Clujului la spectacolele din cetatile medievale ale Sibiului si Brasovului, Transilvania te asteapta cu experiente de neuitat.'
-        };
-        this.cities = [
-            { id: 2, name: 'Cluj-Napoca', slug: 'cluj-napoca', image: 'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=400&h=300&fit=crop', events_count: 156 },
-            { id: 5, name: 'Brasov', slug: 'brasov', image: 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=400&h=300&fit=crop', events_count: 89 },
-            { id: 16, name: 'Sibiu', slug: 'sibiu', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop', events_count: 72 },
-            { id: 17, name: 'Targu Mures', slug: 'targu-mures', image: null, events_count: 45 }
-        ];
-        this.renderRegion();
-        this.renderCities();
-        this.loadDemoEvents();
-        this.loadDemoFestivals();
     },
 
     async loadAllRegions() {
@@ -256,23 +244,14 @@ const RegionPage = {
                 this.otherRegions = response.data.regions.filter(r => r.slug !== this.slug);
                 this.renderOtherRegions();
             } else {
-                this.loadDemoOtherRegions();
+                this.otherRegions = [];
+                this.renderOtherRegions();
             }
         } catch (e) {
             console.error('Failed to load regions:', e);
-            this.loadDemoOtherRegions();
+            this.otherRegions = [];
+            this.renderOtherRegions();
         }
-    },
-
-    loadDemoOtherRegions() {
-        this.otherRegions = [
-            { name: 'Muntenia', slug: 'muntenia', events_count: 312, icon: '🏛️' },
-            { name: 'Moldova', slug: 'moldova', events_count: 145, icon: '⛪' },
-            { name: 'Banat', slug: 'banat', events_count: 98, icon: '🎻' },
-            { name: 'Dobrogea', slug: 'dobrogea', events_count: 87, icon: '🏖️' },
-            { name: 'Oltenia', slug: 'oltenia', events_count: 64, icon: '🏔️' }
-        ];
-        this.renderOtherRegions();
     },
 
     renderRegion() {
@@ -419,21 +398,12 @@ const RegionPage = {
             if (response.data && response.data.length > 0) {
                 this.renderEvents(response.data);
             } else {
-                this.loadDemoEvents();
+                this.renderEvents([]);
             }
         } catch (e) {
             console.error('Failed to load events:', e);
-            this.loadDemoEvents();
+            this.renderEvents([]);
         }
-    },
-
-    loadDemoEvents() {
-        const demoEvents = [
-            { slug: 'concert-cargo', title: 'Concert Cargo - Turneu National', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600', start_date: '2025-03-22', time: '21:00', venue: { name: 'BT Arena', city: 'Cluj-Napoca' }, min_price: 95, badge: 'hot' },
-            { slug: 'standup-comedy', title: 'Stand-up Comedy Tour - Brasov', image: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=600', start_date: '2025-03-28', time: '20:00', venue: { name: 'Centrul Cultural Reduta', city: 'Brasov' }, min_price: 65, badge: 'new' },
-            { slug: 'hamlet-sibiu', title: 'Hamlet - Teatrul National Sibiu', image: 'https://images.unsplash.com/photo-1503095396549-807759245b35?w=600', start_date: '2025-04-05', time: '19:00', venue: { name: 'Teatrul National Radu Stanca', city: 'Sibiu' }, min_price: 55, badge: null }
-        ];
-        this.renderEvents(demoEvents);
     },
 
     renderEvents(events) {
@@ -509,20 +479,17 @@ const RegionPage = {
     },
 
     async loadFestivals() {
-        // For now, use demo festivals
-        this.loadDemoFestivals();
-    },
-
-    loadDemoFestivals() {
-        const festivals = [
-            { slug: 'untold-2025', title: 'UNTOLD Festival 2025', image: null, date: '7-10 August 2025', venue: { name: 'Cluj Arena', city: 'Cluj-Napoca' }, min_price: 499, badge: 'Sold Out Soon', gradient: 'from-indigo-500 to-purple-600' },
-            { slug: 'electric-castle-2025', title: 'Electric Castle 2025', image: null, date: '18-21 Iulie 2025', venue: { name: 'Castelul Banffy', city: 'Bontida' }, min_price: 649, badge: null, gradient: 'from-emerald-500 to-teal-600' }
-        ];
-        this.renderFestivals(festivals);
+        // TODO: API integration needed for festivals endpoint
+        this.renderFestivals([]);
     },
 
     renderFestivals(festivals) {
         const container = document.getElementById('festivalsGrid');
+
+        if (!festivals.length) {
+            container.innerHTML = this.getEmptyState('Nu am gasit festivaluri in aceasta regiune');
+            return;
+        }
 
         container.innerHTML = festivals.map(fest => `
             <div class="overflow-hidden transition-all bg-white border rounded-2xl border-border hover:-translate-y-0.5 hover:shadow-xl">
@@ -558,6 +525,11 @@ const RegionPage = {
 
     renderOtherRegions() {
         const container = document.getElementById('otherRegionsGrid');
+
+        if (!this.otherRegions.length) {
+            container.innerHTML = '';
+            return;
+        }
 
         const icons = {
             'muntenia': '🏛️',
