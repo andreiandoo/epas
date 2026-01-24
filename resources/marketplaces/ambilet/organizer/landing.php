@@ -18,7 +18,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
                     <h1 class="text-4xl lg:text-5xl font-extrabold mb-6">Vinde bilete si creste-ti audienta cu <?= SITE_NAME ?></h1>
                     <p class="text-lg text-white/80 mb-8">Gestioneaza-ti evenimentele, vinde bilete online si primeste platile direct in contul tau bancar. Fara costuri ascunse, comision mic.</p>
                     <div class="flex flex-wrap gap-4">
-                        <a href="/organizer/register" class="btn bg-white text-primary hover:bg-white/90 text-lg px-8 py-3">Incepe gratuit</a>
+                        <a href="/organizator/register" class="btn bg-white text-primary hover:bg-white/90 text-lg px-8 py-3">Incepe gratuit</a>
                         <a href="#features" class="btn bg-white/20 text-white hover:bg-white/30 text-lg px-8 py-3">Afla mai multe</a>
                     </div>
                     <div class="flex items-center gap-8 mt-8 text-white/80">
@@ -108,7 +108,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
                         <li class="flex items-center gap-2 text-muted"><svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Rapoarte de baza</li>
                         <li class="flex items-center gap-2 text-muted"><svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Suport email</li>
                     </ul>
-                    <a href="/organizer/register" class="btn btn-secondary w-full">Incepe gratuit</a>
+                    <a href="/organizator/register" class="btn btn-secondary w-full">Incepe gratuit</a>
                 </div>
                 <div class="bg-primary rounded-2xl p-8 text-white relative">
                     <div class="absolute -top-4 left-1/2 -translate-x-1/2"><span class="bg-accent text-white text-sm font-bold px-4 py-1 rounded-full">Popular</span></div>
@@ -121,7 +121,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
                         <li class="flex items-center gap-2 text-white/90"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Coduri promotionale</li>
                         <li class="flex items-center gap-2 text-white/90"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Suport prioritar</li>
                     </ul>
-                    <a href="/organizer/register" class="btn bg-white text-primary hover:bg-white/90 w-full">Incepe gratuit</a>
+                    <a href="/organizator/register" class="btn bg-white text-primary hover:bg-white/90 w-full">Incepe gratuit</a>
                 </div>
                 <div class="bg-white rounded-2xl border border-border p-8">
                     <h3 class="text-xl font-bold text-secondary mb-2">Enterprise</h3>
@@ -144,8 +144,8 @@ require_once dirname(__DIR__) . '/includes/head.php';
             <h2 class="text-3xl lg:text-4xl font-bold text-white mb-6">Gata sa incepi?</h2>
             <p class="text-lg text-white/80 mb-8">Inregistreaza-te gratuit si creeaza primul tau eveniment in mai putin de 5 minute.</p>
             <div class="flex flex-wrap justify-center gap-4">
-                <a href="/organizer/register" class="btn bg-primary text-white hover:bg-primary-dark text-lg px-8 py-3">Creeaza cont gratuit</a>
-                <a href="/organizer/login" class="btn bg-white/10 text-white hover:bg-white/20 text-lg px-8 py-3">Am deja cont</a>
+                <a href="/organizator/register" class="btn bg-primary text-white hover:bg-primary-dark text-lg px-8 py-3">Creeaza cont gratuit</a>
+                <a href="/organizator/login" class="btn bg-white/10 text-white hover:bg-white/20 text-lg px-8 py-3">Am deja cont</a>
             </div>
         </div>
     </section>

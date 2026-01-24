@@ -47,7 +47,7 @@ require_once __DIR__ . '/includes/header.php';
                         <li class="flex items-start gap-3 text-[15px] text-slate-700"><svg class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Bilete PDF</li>
                         <li class="flex items-start gap-3 text-[15px] text-slate-400"><svg class="w-5 h-5 text-slate-300 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Branding personalizat</li>
                     </ul>
-                    <a href="/organizer/register" class="block w-full py-4 text-center bg-slate-100 rounded-xl text-[15px] font-bold text-slate-700 hover:bg-slate-200 transition-all">Incepe gratuit</a>
+                    <a href="/organizator/register" class="block w-full py-4 text-center bg-slate-100 rounded-xl text-[15px] font-bold text-slate-700 hover:bg-slate-200 transition-all">Incepe gratuit</a>
                 </div>
 
                 <!-- Pro (Featured) -->
@@ -213,7 +213,7 @@ require_once __DIR__ . '/includes/header.php';
             <h2 class="text-2xl md:text-[32px] font-extrabold text-slate-800 mb-4">Pregatit sa incepi?</h2>
             <p class="text-[17px] text-slate-500 mb-8">Creeaza contul gratuit si organizeaza primul tau eveniment in cateva minute.</p>
             <div class="flex flex-col justify-center gap-4 sm:flex-row">
-                <a href="/organizer/register" class="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl text-[15px] font-bold bg-gradient-to-br from-primary to-red-600 text-white hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(165,28,48,0.3)] transition-all">
+                <a href="/organizator/register" class="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl text-[15px] font-bold bg-gradient-to-br from-primary to-red-600 text-white hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(165,28,48,0.3)] transition-all">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>
                     Creeaza cont gratuit
                 </a>

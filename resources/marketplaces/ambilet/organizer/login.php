@@ -54,7 +54,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <label class="label mb-0">Parola</label>
-                            <a href="/organizer/forgot-password" class="text-sm text-primary font-medium">Ai uitat parola?</a>
+                            <a href="/organizator/forgot-password" class="text-sm text-primary font-medium">Ai uitat parola?</a>
                         </div>
                         <div class="relative">
                             <input type="password" name="password" required placeholder="********" class="input pr-12" id="password-input" autocomplete="current-password">
@@ -94,7 +94,7 @@ function togglePassword() {
         icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`;
     }
 }
-if (AmbiletAuth.isOrganizer()) { window.location.href = '/organizer/dashboard'; }
+if (AmbiletAuth.isOrganizer()) { window.location.href = '/organizator/dashboard'; }
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -107,7 +107,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         const result = await AmbiletAuth.loginOrganizer(form.email.value, form.password.value);
         if (result.success) {
             AmbiletNotifications.success('Autentificare reusita!');
-            setTimeout(() => { window.location.href = '/organizer/dashboard'; }, 500);
+            setTimeout(() => { window.location.href = '/organizator/dashboard'; }, 500);
         } else {
             errorDiv.textContent = result.message || 'Autentificare esuata. Verifica email-ul si parola.';
             errorDiv.classList.remove('hidden');

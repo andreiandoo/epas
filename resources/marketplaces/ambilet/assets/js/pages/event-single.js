@@ -117,7 +117,7 @@ const EventPage = {
                 // Update views count only (interest button now shows text, not count)
                 if (response.data.views_count !== undefined) {
                     document.getElementById(this.elements.eventViews).textContent =
-                        this.formatCount(response.data.views_count) + ' vizualizari';
+                        this.formatCount(response.data.views_count) + ' vizualizări';
                 }
             }
         } catch (e) {
@@ -574,12 +574,11 @@ const EventPage = {
         banner.id = 'event-ended-banner';
         banner.className = 'w-full mb-8';
         banner.innerHTML =
-            '<div class="bg-gray-50 border border-gray-200 rounded-2xl p-6 text-center">' +
-                '<div class="flex items-center justify-center gap-3 mb-2">' +
-                    '<svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
-                    '<h2 class="text-xl font-bold text-secondary">Evenimentul s-a încheiat</h2>' +
+            '<div class="bg-primary text-white rounded-2xl p-6 text-center">' +
+                '<div class="flex items-center justify-center gap-3">' +
+                    '<h2 class="text-xl font-bold">Evenimentul s-a încheiat</h2>' +
                 '</div>' +
-                '<p class="text-muted mb-6">dar încă mai găsești bilete la:</p>' +
+                '<p class="mb-6">dar încă mai găsești bilete la:</p>' +
                 '<div id="ended-related-events" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>' +
                 '<div id="ended-related-loading" class="py-8 text-muted text-sm">Se încarcă evenimente...</div>' +
             '</div>';
@@ -685,7 +684,7 @@ const EventPage = {
         document.getElementById(this.elements.eventDoors).textContent = 'Doors: ' + (e.doors_time || '19:00');
 
         // Venue
-        document.getElementById(this.elements.venueName).textContent = e.venue?.name || e.location || 'Locatie TBA';
+        document.getElementById(this.elements.venueName).textContent = e.venue?.name || e.location || 'Locație TBA';
         document.getElementById(this.elements.venueAddress).textContent = e.venue?.address || '';
 
         var venueLink = document.getElementById(this.elements.venueLink);
@@ -700,7 +699,7 @@ const EventPage = {
         }
 
         // Stats (views only - interest button text is handled separately)
-        document.getElementById(this.elements.eventViews).textContent = this.formatCount(e.views_count || 0) + ' vizualizari';
+        document.getElementById(this.elements.eventViews).textContent = this.formatCount(e.views_count || 0) + ' vizualizări';
 
         // Description
         document.getElementById(this.elements.eventDescription).innerHTML = this.formatDescription(e.description || e.content);
@@ -711,7 +710,7 @@ const EventPage = {
         }
 
         // Venue section
-        this.renderVenue(e.venue || { name: e.location || 'Locatie TBA' });
+        this.renderVenue(e.venue || { name: e.location || 'Locație TBA' });
 
         // Seating layout
         this.seatingLayout = e.seating_layout || null;

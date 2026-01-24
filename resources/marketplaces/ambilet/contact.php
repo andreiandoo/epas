@@ -333,7 +333,7 @@ require_once __DIR__ . '/includes/header.php';
                     </svg>
                     Cum devin organizator pe Ambilet?
                 </h3>
-                <p class="text-sm leading-relaxed text-gray-500 pl-[30px]">Pentru a deveni organizator, creează un cont și accesează <a href="/organizer/register" class="text-primary">"Devino organizator"</a>. Completează formularul și echipa noastră te va contacta pentru verificare.</p>
+                <p class="text-sm leading-relaxed text-gray-500 pl-[30px]">Pentru a deveni organizator, creează un cont și accesează <a href="/organizator/register" class="text-primary">"Devino organizator"</a>. Completează formularul și echipa noastră te va contacta pentru verificare.</p>
             </div>
         </div>
     </section>

@@ -10,7 +10,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
                 <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg></div>
                 <span class="text-xl font-extrabold text-secondary"><?= strtoupper(SITE_NAME) ?></span>
             </a>
-            <a href="/organizer/login.php" class="text-sm text-muted hover:text-primary">Am deja cont &rarr;</a>
+            <a href="/organizator/login" class="text-sm text-muted hover:text-primary">Am deja cont &rarr;</a>
         </div>
     </header>
 
@@ -174,7 +174,7 @@ async function submitRegistration() {
     btn.disabled = true; btnText.classList.add('hidden'); btnSpinner.classList.remove('hidden');
     try {
         const result = await AmbiletAuth.registerOrganizer(formData);
-        if (result.success) { AmbiletNotifications.success('Contul a fost creat cu succes!'); setTimeout(() => { window.location.href = '/organizer/login.php?registered=1'; }, 1500); }
+        if (result.success) { AmbiletNotifications.success('Contul a fost creat cu succes!'); setTimeout(() => { window.location.href = '/organizator/login?registered=1'; }, 1500); }
         else { document.getElementById('error-message').textContent = result.message || 'Eroare la inregistrare.'; document.getElementById('error-message').classList.remove('hidden'); goToStep(1); btn.disabled = false; btnText.classList.remove('hidden'); btnSpinner.classList.add('hidden'); }
     } catch (error) { AmbiletNotifications.error('A aparut o eroare. Incearca din nou.'); btn.disabled = false; btnText.classList.remove('hidden'); btnSpinner.classList.add('hidden'); }
 }

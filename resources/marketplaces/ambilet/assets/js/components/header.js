@@ -194,7 +194,7 @@ const AmbiletHeader = {
 
                     <div class="p-4 border-t border-border">
                         ${isLoggedIn
-                            ? `<a href="${isOrganizer ? '/organizer/dashboard' : '/user/dashboard'}" class="btn btn-primary w-full">Contul meu</a>`
+                            ? `<a href="${isOrganizer ? '/organizator/dashboard' : '/user/dashboard'}" class="btn btn-primary w-full">Contul meu</a>`
                             : `<a href="/login" class="btn btn-primary w-full">Autentificare</a>`
                         }
                     </div>
@@ -233,9 +233,9 @@ const AmbiletHeader = {
                         <p class="text-xs text-muted">${user?.email || ''}</p>
                     </div>
                     ${isOrganizer
-                        ? `<a href="/organizer/dashboard" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Dashboard</a>
-                           <a href="/organizer/events" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Evenimentele mele</a>
-                           <a href="/organizer/finance" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Finanțe</a>`
+                        ? `<a href="/organizator/dashboard" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Dashboard</a>
+                           <a href="/organizator/events" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Evenimentele mele</a>
+                           <a href="/organizator/finance" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Finanțe</a>`
                         : `<a href="/user/dashboard" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Contul meu</a>
                            <a href="/user/tickets" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Biletele mele</a>
                            <a href="/user/orders" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Comenzile mele</a>`

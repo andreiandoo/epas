@@ -568,7 +568,7 @@ function renderEvents(events) {
                         <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vandute</p></div>
                         <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Vanzari</p></div>
                         <div class="flex items-center justify-end gap-2">
-                            <a href="/organizer/events.php?id=${event.id}" class="btn btn-sm btn-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>Editeaza</a>
+                            <a href="/organizator/events?id=${event.id}" class="btn btn-sm btn-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>Editeaza</a>
                             <a href="/event.php?slug=${event.slug}" target="_blank" class="btn btn-sm btn-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg></a>
                         </div>
                     </div>
@@ -583,7 +583,7 @@ function renderEvents(events) {
 function showCreateForm() {
     document.getElementById('events-view').classList.add('hidden');
     document.getElementById('create-event-view').classList.remove('hidden');
-    history.pushState({}, '', '/organizer/events?action=create');
+    history.pushState({}, '', '/organizator/events?action=create');
     toggleAccordion(1);
     loadCategories();
     initEditors();
@@ -597,7 +597,7 @@ function showCreateForm() {
 function hideCreateForm() {
     document.getElementById('create-event-view').classList.add('hidden');
     document.getElementById('events-view').classList.remove('hidden');
-    history.pushState({}, '', '/organizer/events');
+    history.pushState({}, '', '/organizator/events');
     loadEvents();
 }
 
@@ -1384,24 +1384,6 @@ async function saveEventDraft() {
         return;
     }
 
-    if (!data.starts_at) {
-        AmbiletNotifications.error('Data si ora evenimentului sunt obligatorii.');
-        toggleAccordion(2);
-        return;
-    }
-
-    if (!data.venue_name || !data.venue_city) {
-        AmbiletNotifications.error('Numele locatiei si orasul sunt obligatorii.');
-        toggleAccordion(3);
-        return;
-    }
-
-    if (!data.ticket_types || data.ticket_types.length === 0) {
-        AmbiletNotifications.error('Adauga cel putin un tip de bilet.');
-        toggleAccordion(6);
-        return;
-    }
-
     // Word count validation for short description
     if (data.short_description) {
         const wordCount = data.short_description.trim().split(/\s+/).filter(w => w.length > 0).length;
@@ -1411,6 +1393,8 @@ async function saveEventDraft() {
             return;
         }
     }
+
+    data.is_draft = true;
 
     const btnText = document.getElementById('save-btn-text');
     const btnSpinner = document.getElementById('save-btn-spinner');

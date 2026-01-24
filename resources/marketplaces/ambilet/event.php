@@ -104,9 +104,9 @@ require_once __DIR__ . '/includes/head.php';
     <div class="bg-white border-b border-border mt-28 mobile:hidden">
         <div class="px-4 py-3 mx-auto max-w-7xl">
             <nav class="flex items-center gap-2 text-sm" id="breadcrumb">
-                <a href="/" class="transition-colors text-muted hover:text-primary">Acasa</a>
+                <a href="/" class="transition-colors text-muted hover:text-primary">Acasă</a>
                 <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                <span class="font-medium text-secondary" id="breadcrumb-title">Se incarca...</span>
+                <span class="font-medium text-secondary" id="breadcrumb-title">Se încarcă...</span>
             </nav>
         </div>
     </div>
@@ -184,7 +184,7 @@ require_once __DIR__ . '/includes/head.php';
                                 <p id="venue-name" class="font-semibold text-secondary"></p>
                                 <p id="venue-address" class="text-sm text-muted"></p>
                             </div>
-                            <a id="venue-link" href="#venue" class="text-sm font-semibold text-primary">Vezi locatia &rarr;</a>
+                            <a id="venue-link" href="#venue" class="text-sm font-semibold text-primary">Vezi locația &rarr;</a>
                         </div>
 
                         <!-- Social Stats -->
@@ -197,7 +197,7 @@ require_once __DIR__ . '/includes/head.php';
                             <!-- Views -->
                             <span class="flex items-center gap-2 text-sm text-muted">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                <span id="event-views">0 vizualizari</span>
+                                <span id="event-views">0 vizualizări</span>
                             </span>
                             <!-- Share Dropdown -->
                             <div class="relative" id="share-dropdown">
@@ -220,7 +220,7 @@ require_once __DIR__ . '/includes/head.php';
                                     </a>
                                     <a href="#" onclick="EventPage.copyLink(); return false;" class="flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-surface">
                                         <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                                        Copiaza link
+                                        Copiază link
                                     </a>
                                 </div>
                             </div>
@@ -246,8 +246,8 @@ require_once __DIR__ . '/includes/head.php';
                 <div class="sticky-cart">
                     <div class="bg-white border rounded-3xl border-border">
                         <div class="p-6 border-b border-border">
-                            <h2 class="mb-2 text-xl font-bold text-secondary">Selecteaza bilete</h2>
-                            <p class="text-sm text-muted">Alege tipul de bilet si cantitatea</p>
+                            <h2 class="mb-2 text-xl font-bold text-secondary">Selectează bilete</h2>
+                            <p class="text-sm text-muted">Alege tipul de bilet și cantitatea</p>
                         </div>
 
                         <!-- Ticket Types -->
@@ -283,14 +283,14 @@ require_once __DIR__ . '/includes/head.php';
 
                                 <button id="checkoutBtn" onclick="EventPage.handleCheckout()" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl">
                                     <svg id="checkoutBtnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-                                    <span id="checkoutBtnText">Cumpara bilete</span>
+                                    <span id="checkoutBtnText">Cumpără bilete</span>
                                 </button>
                             </div>
                         </div>
 
                         <!-- Empty State -->
                         <div id="emptyCart" class="p-4 text-center border-t border-border">
-                            <p class="text-sm text-muted">Selecteaza cel putin un bilet pentru a continua</p>
+                            <p class="text-sm text-muted">Selectează cel puțin un bilet pentru a continua</p>
                         </div>
                     </div>
 
@@ -299,7 +299,7 @@ require_once __DIR__ . '/includes/head.php';
                         <div class="flex items-center justify-center gap-6">
                             <div class="flex items-center gap-2 text-xs text-muted">
                                 <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                                Plata securizata
+                                Plată securizată
                             </div>
                             <div class="flex items-center gap-2 text-xs text-muted">
                                 <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>

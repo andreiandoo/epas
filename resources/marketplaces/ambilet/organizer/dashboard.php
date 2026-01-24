@@ -21,7 +21,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="relative">
                     <h1 class="text-2xl md:text-3xl font-bold mb-2">Bun venit inapoi! 👋</h1>
                     <p id="welcome-stat" class="text-white/80 mb-4">Ai vandut 0 bilete in ultima saptamana. Continua tot asa!</p>
-                    <a href="/organizer/events?new=1" class="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-primary rounded-xl font-semibold hover:bg-white/90 transition-colors text-sm">
+                    <a href="/organizator/events?new=1" class="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-primary rounded-xl font-semibold hover:bg-white/90 transition-colors text-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                         Creeaza eveniment nou
                     </a>
@@ -103,7 +103,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <h2 class="text-lg font-bold text-secondary">Evenimentele tale</h2>
                                 <p id="events-count-text" class="text-sm text-muted">0 evenimente active</p>
                             </div>
-                            <a href="/organizer/events" class="text-sm text-primary font-medium">Vezi toate &rarr;</a>
+                            <a href="/organizator/events" class="text-sm text-primary font-medium">Vezi toate &rarr;</a>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full" id="events-table">
@@ -122,7 +122,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <div id="no-events" class="hidden text-center py-12">
                             <svg class="w-12 h-12 text-muted/30 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                             <p class="text-muted mb-3">Nu ai evenimente inca</p>
-                            <a href="/organizer/events?new=1" class="btn-primary px-4 py-2 rounded-xl text-white text-sm font-medium">Creeaza primul eveniment</a>
+                            <a href="/organizator/events?new=1" class="btn-primary px-4 py-2 rounded-xl text-white text-sm font-medium">Creeaza primul eveniment</a>
                         </div>
                     </div>
                 </div>
@@ -141,7 +141,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div class="bg-white rounded-2xl border border-border p-5">
                         <h2 class="font-bold text-secondary mb-4">Actiuni rapide</h2>
                         <div class="space-y-2">
-                            <a href="/organizer/events?new=1" class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
+                            <a href="/organizator/events?new=1" class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
                                 <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                 </div>
@@ -150,7 +150,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <p class="text-xs text-muted">Adauga un eveniment nou</p>
                                 </div>
                             </a>
-                            <a href="/organizer/reports" class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
+                            <a href="/organizator/reports" class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
                                 <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                                 </div>
@@ -159,7 +159,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <p class="text-xs text-muted">Export vanzari si taxe</p>
                                 </div>
                             </a>
-                            <a href="/organizer/promo" class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
+                            <a href="/organizator/promo" class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
                                 <div class="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                                 </div>
@@ -168,7 +168,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <p class="text-xs text-muted">Creeaza reduceri</p>
                                 </div>
                             </a>
-                            <a href="/organizer/email" class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
+                            <a href="/organizator/email" class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
                                 <div class="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                 </div>
@@ -210,7 +210,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div class="bg-white rounded-2xl border border-border p-5">
                         <h2 class="font-bold text-secondary mb-4">Activitate recenta</h2>
                         <div id="recent-activity" class="space-y-4"></div>
-                        <a href="/organizer/activity" class="block text-center text-sm text-primary font-medium mt-4">Vezi toata activitatea</a>
+                        <a href="/organizator/activity" class="block text-center text-sm text-primary font-medium mt-4">Vezi toata activitatea</a>
                     </div>
                 </div>
             </div>
@@ -406,8 +406,8 @@ const OrgDashboard = {
                 </div>
             </div>
             <div class="flex gap-2">
-                <a href="/organizer/checkin?event=${event.id}" class="flex-1 btn-primary py-2.5 rounded-xl font-semibold text-white text-sm text-center">Check-in</a>
-                <a href="/organizer/events?id=${event.id}" class="flex-1 py-2.5 rounded-xl font-semibold text-secondary text-sm text-center border border-border hover:border-primary transition-colors">Detalii</a>
+                <a href="/organizator/checkin?event=${event.id}" class="flex-1 btn-primary py-2.5 rounded-xl font-semibold text-white text-sm text-center">Check-in</a>
+                <a href="/organizator/events?id=${event.id}" class="flex-1 py-2.5 rounded-xl font-semibold text-secondary text-sm text-center border border-border hover:border-primary transition-colors">Detalii</a>
             </div>
         `;
     },
@@ -542,7 +542,7 @@ const OrgDashboard = {
 
     logout() {
         AmbiletAuth.logoutOrganizer();
-        window.location.href = '/organizer/login';
+        window.location.href = '/organizator/login';
     },
 
     getInitials(firstName, lastName) {

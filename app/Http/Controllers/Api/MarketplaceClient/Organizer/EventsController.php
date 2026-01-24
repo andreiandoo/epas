@@ -85,18 +85,20 @@ class EventsController extends BaseController
             return $this->error('Your account must be approved before creating events', 403);
         }
 
-        $validated = $request->validate([
+        $isDraft = $request->boolean('is_draft', false);
+
+        $rules = [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:10000',
             'ticket_terms' => 'nullable|string|max:10000',
             'short_description' => 'nullable|string|max:500',
-            'starts_at' => 'required|date|after:now',
-            'ends_at' => 'nullable|date|after:starts_at',
-            'doors_open_at' => 'nullable|date|before:starts_at',
+            'starts_at' => $isDraft ? 'nullable|date' : 'required|date|after:now',
+            'ends_at' => 'nullable|date',
+            'doors_open_at' => 'nullable|date',
             'venue_id' => 'nullable|integer|exists:venues,id',
-            'venue_name' => 'required|string|max:255',
+            'venue_name' => $isDraft ? 'nullable|string|max:255' : 'required|string|max:255',
             'venue_address' => 'nullable|string|max:500',
-            'venue_city' => 'required|string|max:100',
+            'venue_city' => $isDraft ? 'nullable|string|max:100' : 'required|string|max:100',
             'marketplace_event_category_id' => 'nullable|integer|exists:marketplace_event_categories,id',
             'genre_ids' => 'nullable|array',
             'artist_ids' => 'nullable|array',
@@ -107,15 +109,17 @@ class EventsController extends BaseController
             'capacity' => 'nullable|integer|min:1',
             'max_tickets_per_order' => 'nullable|integer|min:1|max:50',
             'sales_start_at' => 'nullable|date',
-            'sales_end_at' => 'nullable|date|after:sales_start_at',
-            'ticket_types' => 'required|array|min:1',
+            'sales_end_at' => 'nullable|date',
+            'ticket_types' => $isDraft ? 'nullable|array' : 'required|array|min:1',
             'ticket_types.*.name' => 'required|string|max:255',
             'ticket_types.*.description' => 'nullable|string|max:500',
             'ticket_types.*.price' => 'required|numeric|min:0',
             'ticket_types.*.quantity' => 'nullable|integer|min:1',
             'ticket_types.*.min_per_order' => 'nullable|integer|min:1',
             'ticket_types.*.max_per_order' => 'nullable|integer|min:1',
-        ]);
+        ];
+
+        $validated = $request->validate($rules);
 
         try {
             DB::beginTransaction();
@@ -128,13 +132,13 @@ class EventsController extends BaseController
                 'description' => $validated['description'] ?? null,
                 'ticket_terms' => $validated['ticket_terms'] ?? null,
                 'short_description' => $validated['short_description'] ?? null,
-                'starts_at' => $validated['starts_at'],
+                'starts_at' => $validated['starts_at'] ?? null,
                 'ends_at' => $validated['ends_at'] ?? null,
                 'doors_open_at' => $validated['doors_open_at'] ?? null,
                 'venue_id' => $validated['venue_id'] ?? null,
-                'venue_name' => $validated['venue_name'],
+                'venue_name' => $validated['venue_name'] ?? null,
                 'venue_address' => $validated['venue_address'] ?? null,
-                'venue_city' => $validated['venue_city'],
+                'venue_city' => $validated['venue_city'] ?? null,
                 'marketplace_event_category_id' => $validated['marketplace_event_category_id'] ?? null,
                 'genre_ids' => $validated['genre_ids'] ?? null,
                 'artist_ids' => $validated['artist_ids'] ?? null,
@@ -150,7 +154,7 @@ class EventsController extends BaseController
             ]);
 
             // Create ticket types
-            foreach ($validated['ticket_types'] as $index => $ticketTypeData) {
+            foreach ($validated['ticket_types'] ?? [] as $index => $ticketTypeData) {
                 MarketplaceTicketType::create([
                     'marketplace_event_id' => $event->id,
                     'name' => $ticketTypeData['name'],
@@ -213,13 +217,14 @@ class EventsController extends BaseController
         ];
 
         if (!$isPublished) {
+            $isDraft = $request->boolean('is_draft', false);
             $rules = array_merge($rules, [
-                'starts_at' => 'sometimes|date|after:now',
-                'ends_at' => 'nullable|date|after:starts_at',
+                'starts_at' => $isDraft ? 'nullable|date' : 'sometimes|date|after:now',
+                'ends_at' => 'nullable|date',
                 'venue_id' => 'nullable|integer|exists:venues,id',
-                'venue_name' => 'sometimes|string|max:255',
+                'venue_name' => 'nullable|string|max:255',
                 'venue_address' => 'nullable|string|max:500',
-                'venue_city' => 'sometimes|string|max:100',
+                'venue_city' => 'nullable|string|max:100',
                 'capacity' => 'nullable|integer|min:1',
                 'max_tickets_per_order' => 'nullable|integer|min:1|max:50',
                 'sales_start_at' => 'nullable|date',
@@ -782,10 +787,11 @@ class EventsController extends BaseController
             });
 
         if (strlen($search) >= 2) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('city', 'like', "%{$search}%")
-                    ->orWhere('address', 'like', "%{$search}%");
+            $searchLower = mb_strtolower($search);
+            $query->where(function ($q) use ($searchLower) {
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$searchLower}%"])
+                    ->orWhereRaw('LOWER(city) LIKE ?', ["%{$searchLower}%"])
+                    ->orWhereRaw('LOWER(address) LIKE ?', ["%{$searchLower}%"]);
             });
         }
 
