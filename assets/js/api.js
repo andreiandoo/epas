@@ -217,6 +217,8 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/settings') return 'organizer.me';
         if (endpoint === '/organizer/settings/profile') return 'organizer.profile';
         if (endpoint === '/organizer/settings/company') return 'organizer.profile';
+        if (endpoint === '/organizer/settings/verify-cui') return 'organizer.verify-cui';
+        if (endpoint === '/organizer/contract') return 'organizer.contract';
         if (endpoint === '/organizer/profile') return 'organizer.profile';
         if (endpoint === '/organizer/password') return 'organizer.password';
         if (endpoint === '/organizer/forgot-password') return 'organizer.forgot-password';
@@ -243,6 +245,7 @@ const AmbiletAPI = {
 
         // Organizer finance
         if (endpoint === '/organizer/balance') return 'organizer.balance';
+        if (endpoint === '/organizer/finance') return 'organizer.finance';
         if (endpoint === '/organizer/transactions' || endpoint.includes('/organizer/transactions?')) return 'organizer.transactions';
         if (endpoint.match(/\/organizer\/payouts\/\d+$/)) return 'organizer.payout';
         if (endpoint === '/organizer/payouts' || endpoint.includes('/organizer/payouts?')) return 'organizer.payouts';

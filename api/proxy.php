@@ -942,6 +942,19 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.verify-cui':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/verify-cui';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.contract':
+        $method = 'GET';
+        $endpoint = '/organizer/contract';
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER DASHBOARD ====================
 
     case 'organizer.dashboard':
@@ -1111,6 +1124,12 @@ switch ($action) {
     case 'organizer.balance':
         $method = 'GET';
         $endpoint = '/organizer/balance';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.finance':
+        $method = 'GET';
+        $endpoint = '/organizer/finance';
         $requiresAuth = true;
         break;
 
