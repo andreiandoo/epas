@@ -121,6 +121,64 @@ class MarketplaceEventsController extends BaseController
             });
         }
 
+        // Filter by named date range
+        if ($request->has('date') && !$request->has('from_date')) {
+            $today = now()->startOfDay();
+            switch ($request->date) {
+                case 'today':
+                    $query->whereDate('event_date', $today);
+                    break;
+                case 'tomorrow':
+                    $query->whereDate('event_date', $today->copy()->addDay());
+                    break;
+                case 'weekend':
+                    $saturday = $today->copy()->next(\Carbon\Carbon::SATURDAY);
+                    if ($today->isSaturday()) $saturday = $today->copy();
+                    if ($today->isSunday()) $saturday = $today->copy()->subDay();
+                    $sunday = $saturday->copy()->addDay();
+                    $query->whereBetween('event_date', [$saturday->toDateString(), $sunday->toDateString()]);
+                    break;
+                case 'week':
+                    $query->whereBetween('event_date', [$today->toDateString(), $today->copy()->endOfWeek()->toDateString()]);
+                    break;
+                case 'month':
+                    $query->whereBetween('event_date', [$today->toDateString(), $today->copy()->endOfMonth()->toDateString()]);
+                    break;
+                case 'next-month':
+                    $nextMonth = $today->copy()->addMonth()->startOfMonth();
+                    $query->whereBetween('event_date', [$nextMonth->toDateString(), $nextMonth->copy()->endOfMonth()->toDateString()]);
+                    break;
+            }
+        }
+
+        // Filter by price range
+        if ($request->has('price')) {
+            $priceFilter = $request->price;
+            if ($priceFilter === 'free') {
+                $query->whereHas('ticketTypes', function ($q) {
+                    $q->where('status', 'active')
+                        ->where(function ($sq) {
+                            $sq->where('price_cents', 0)
+                                ->orWhereNull('price_cents');
+                        });
+                });
+            } elseif (preg_match('/^(\d+)-(\d+)$/', $priceFilter, $matches)) {
+                $minCents = (int) $matches[1] * 100;
+                $maxCents = (int) $matches[2] * 100;
+                $query->whereHas('ticketTypes', function ($q) use ($minCents, $maxCents) {
+                    $q->where('status', 'active')
+                        ->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) >= ?', [$minCents])
+                        ->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) <= ?', [$maxCents]);
+                });
+            } elseif (preg_match('/^(\d+)\+$/', $priceFilter, $matches)) {
+                $minCents = (int) $matches[1] * 100;
+                $query->whereHas('ticketTypes', function ($q) use ($minCents) {
+                    $q->where('status', 'active')
+                        ->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) >= ?', [$minCents]);
+                });
+            }
+        }
+
         // Featured only
         if ($request->boolean('featured_only') || $request->boolean('featured')) {
             $query->where('is_homepage_featured', true)
@@ -133,12 +191,19 @@ class MarketplaceEventsController extends BaseController
             case 'date_desc':
                 $query->orderBy('event_date', 'desc')->orderBy('start_time', 'desc');
                 break;
+            case 'price_asc':
+                $query->orderByRaw('COALESCE((SELECT MIN(CASE WHEN sale_price_cents > 0 THEN sale_price_cents ELSE price_cents END) FROM ticket_types WHERE ticket_types.event_id = events.id AND ticket_types.status = ?), 999999999) ASC', ['active']);
+                break;
+            case 'price_desc':
+                $query->orderByRaw('COALESCE((SELECT MIN(CASE WHEN sale_price_cents > 0 THEN sale_price_cents ELSE price_cents END) FROM ticket_types WHERE ticket_types.event_id = events.id AND ticket_types.status = ?), 0) DESC', ['active']);
+                break;
             case 'name_asc':
                 $query->orderBy("title->{$language}", 'asc');
                 break;
             case 'name_desc':
                 $query->orderBy("title->{$language}", 'desc');
                 break;
+            case 'newest':
             case 'latest':
                 // Sort by creation date (newest first)
                 $query->orderBy('created_at', 'desc');

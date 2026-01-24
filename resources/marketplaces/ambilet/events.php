@@ -92,7 +92,7 @@ require_once __DIR__ . '/includes/header.php';
             Filtre
             <span id="mobileFilterCount" class="hidden px-2 py-0.5 text-xs font-bold text-white rounded-full bg-primary">0</span>
         </button>
-        <select id="sortFilterMobile" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="EventsPage.applyFilters()">
+        <select id="sortFilterMobile" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="syncFilters('sort'); EventsPage.applyFilters()">
             <option value="date" <?= $filterSort === 'date' ? 'selected' : '' ?>>Data</option>
             <option value="popular" <?= $filterSort === 'popular' ? 'selected' : '' ?>>Popular</option>
             <option value="price_asc" <?= $filterSort === 'price_asc' ? 'selected' : '' ?>>Preț ↑</option>

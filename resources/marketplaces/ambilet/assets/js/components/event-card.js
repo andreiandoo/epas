@@ -131,24 +131,24 @@ const AmbiletEventCard = {
         // Date section - show range for festivals
         let dateHtml;
         if (event.isDateRange && event.dateRangeFormatted) {
-            dateHtml = '<div class="flex flex-col items-center justify-center flex-shrink-0 w-28 py-5 text-center bg-gradient-to-br from-primary to-primary-light">' +
+            dateHtml = '<div class="flex flex-col items-center justify-center flex-shrink-0 w-28 py-5 text-center bg-gradient-to-br from-primary to-primary-light mobile:max-w-[96px]">' +
                 '<div class="px-2 text-xs font-semibold leading-tight text-white">' + this.escapeHtml(event.dateRangeFormatted) + '</div>' +
             '</div>';
         } else {
-            dateHtml = '<div class="flex flex-col items-center justify-center flex-shrink-0 w-24 py-5 text-center bg-gradient-to-br from-primary to-primary-light">' +
+            dateHtml = '<div class="flex flex-col items-center justify-center flex-shrink-0 w-24 py-5 text-center bg-gradient-to-br from-primary to-primary-light mobile:max-w-[96px]">' +
                 '<div class="text-3xl font-extrabold leading-none text-white">' + event.day + '</div>' +
                 '<div class="mt-1 text-sm font-semibold uppercase text-white/90">' + event.month + '</div>' +
             '</div>';
         }
 
         return '<a href="' + eventUrl + '" class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all mobile:flex-col">' +
-            '<div class="mobile:flex mobile:items-center">' +
+            '<div class="mobile:flex">' +
             dateHtml +
-            '<div class="flex flex-col justify-center flex-1 px-5 py-4 mobile:py-2 mobile:px-4">' +
+            '<div class="flex flex-col justify-center flex-1 px-5 py-4 mobile:py-2 mobile:px-4 mobile:border-b mobile:border-border">' +
                 (event.categoryName ? '<div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">' + this.escapeHtml(event.categoryName) + '</div>' : '') +
-                '<h3 class="mb-2 text-base font-bold leading-tight text-secondary mobile:text-lg">' + this.escapeHtml(event.title) + '</h3>' +
+                '<h3 class="mb-2 text-base font-bold leading-tight text-secondary mobile:text-lg mobile:leading-tight">' + this.escapeHtml(event.title) + '</h3>' +
                 '<div class="flex gap-4 text-sm text-muted">' +
-                    '<span class="flex items-center gap-1">' +
+                    '<span class="flex items-center gap-1 mobile:hidden">' +
                         '<svg class="w-3.5 h-3.5 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
                         event.time +
                     '</span>' +
@@ -156,7 +156,7 @@ const AmbiletEventCard = {
                 '</div>' +
             '</div>' +
             '</div>' +
-            '<div class="py-4 px-5 flex flex-col items-end justify-center gap-1.5 mobile:flex-row mobile:items-center mobile:justify-between mobile:py-2 mobile:px-4">' +
+            '<div class="py-4 px-5 flex flex-col items-end justify-center gap-1.5 mobile:flex-row mobile:items-center mobile:justify-between mobile:py-2 mobile:px-2">' +
                 priceHtml +
                 buttonHtml +
             '</div>' +
@@ -372,9 +372,9 @@ const AmbiletEventCard = {
 
             if (startYear === endYear) {
                 if (startMonth === endMonth) {
-                    dateRangeFormatted = startDay + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
+                    dateRangeFormatted = startDay + ' - ' + endDay + ' ' + endMonth;
                 } else {
-                    dateRangeFormatted = startDay + ' ' + startMonth + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
+                    dateRangeFormatted = startDay + ' ' + startMonth + ' - ' + endDay + ' ' + endMonth;
                 }
             } else {
                 dateRangeFormatted = startDay + ' ' + startMonth + ' ' + startYear + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;

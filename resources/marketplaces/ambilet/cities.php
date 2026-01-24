@@ -73,7 +73,7 @@ include __DIR__ . '/includes/header.php';
             </h2>
         </div>
 
-        <div id="featuredCities" class="grid grid-cols-4 gap-6 mobile:grid-cols-1">
+        <div id="featuredCities" class="grid grid-cols-4 gap-6 mobile:grid-cols-2">
             <!-- First card spans 2 rows -->
             <a href="/bucuresti" class="relative row-span-2 overflow-hidden rounded-2xl group">
                 <img src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=800&h=1000&fit=crop" alt="București" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
@@ -85,7 +85,7 @@ include __DIR__ . '/includes/header.php';
                         </svg>
                         Capitala
                     </span>
-                    <h3 class="mb-2 text-4xl font-extrabold text-white">București</h3>
+                    <h3 class="mb-2 text-4xl font-extrabold text-white mobile:text-xl">București</h3>
                     <div class="flex gap-5">
                         <span class="flex items-center gap-1.5 text-sm text-white/85">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -110,7 +110,7 @@ include __DIR__ . '/includes/header.php';
                 <img src="https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=600&h=750&fit=crop" alt="Cluj-Napoca" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-7">
-                    <h3 class="mb-2 text-3xl font-extrabold text-white">Cluj-Napoca</h3>
+                    <h3 class="mb-2 text-3xl font-extrabold text-white mobile:text-xl">Cluj-Napoca</h3>
                     <div class="flex gap-5">
                         <span class="flex items-center gap-1.5 text-sm text-white/85">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -128,7 +128,7 @@ include __DIR__ . '/includes/header.php';
                 <img src="https://images.unsplash.com/photo-1598971861713-54ad16a7e72e?w=600&h=750&fit=crop" alt="Timișoara" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-7">
-                    <h3 class="mb-2 text-3xl font-extrabold text-white">Timișoara</h3>
+                    <h3 class="mb-2 text-3xl font-extrabold text-white mobile:text-xl">Timișoara</h3>
                     <div class="flex gap-5">
                         <span class="flex items-center gap-1.5 text-sm text-white/85">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -146,7 +146,7 @@ include __DIR__ . '/includes/header.php';
                 <img src="https://images.unsplash.com/photo-1560969184-10fe8719e047?w=600&h=750&fit=crop" alt="Iași" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-7">
-                    <h3 class="mb-2 text-3xl font-extrabold text-white">Iași</h3>
+                    <h3 class="mb-2 text-3xl font-extrabold text-white mobile:text-xl">Iași</h3>
                     <div class="flex gap-5">
                         <span class="flex items-center gap-1.5 text-sm text-white/85">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -164,7 +164,7 @@ include __DIR__ . '/includes/header.php';
                 <img src="https://images.unsplash.com/photo-1565264216052-3c9012481015?w=600&h=750&fit=crop" alt="Brașov" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-7">
-                    <h3 class="mb-2 text-3xl font-extrabold text-white">Brașov</h3>
+                    <h3 class="mb-2 text-3xl font-extrabold text-white mobile:text-xl">Brașov</h3>
                     <div class="flex gap-5">
                         <span class="flex items-center gap-1.5 text-sm text-white/85">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -409,7 +409,7 @@ const CitiesPage = {
         const container = document.getElementById('alphabetNav');
 
         container.innerHTML = `
-            <a href="#" data-letter="" class="w-12 h-9 flex items-center justify-center ${!this.currentLetter ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-gray-100 hover:text-secondary'} rounded-lg text-sm font-semibold transition-all">Toate</a>
+            <a href="#" data-letter="" class="w-12 mobile:w-16 h-9 flex items-center justify-center ${!this.currentLetter ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-gray-100 hover:text-secondary'} rounded-lg text-sm font-semibold transition-all">Toate</a>
         ` + alphabet.map(letter => {
             const isActive = this.activeLetters.includes(letter);
             const isCurrent = this.currentLetter === letter;

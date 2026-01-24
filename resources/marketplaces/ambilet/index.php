@@ -29,7 +29,7 @@ require_once __DIR__ . '/includes/header.php';
 
         <!-- Content overlay -->
         <div class="absolute inset-0 flex items-center">
-            <div class="px-4 mx-auto max-w-7xl w-full">
+            <div class="w-full px-4 mx-auto max-w-7xl">
                 <div class="max-w-xl text-white fade-in">
                     <span class="inline-flex items-center gap-2 px-4 py-2 mb-5 text-sm font-bold rounded-full bg-primary">
                         <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
@@ -70,15 +70,15 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <!-- Slider Navigation Arrows -->
-        <button id="heroPrev" class="absolute hidden md:flex left-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors text-white z-10">
+        <button id="heroPrev" class="absolute z-10 items-center justify-center hidden w-12 h-12 text-white transition-colors -translate-y-1/2 rounded-full md:flex left-4 top-1/2 bg-white/20 backdrop-blur-sm hover:bg-white/30">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </button>
-        <button id="heroNext" class="absolute hidden md:flex right-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors text-white z-10">
+        <button id="heroNext" class="absolute z-10 items-center justify-center hidden w-12 h-12 text-white transition-colors -translate-y-1/2 rounded-full md:flex right-4 top-1/2 bg-white/20 backdrop-blur-sm hover:bg-white/30">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
         </button>
 
         <!-- Slider Dots -->
-        <div id="heroDots" class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10"></div>
+        <div id="heroDots" class="absolute z-10 flex gap-2 -translate-x-1/2 bottom-6 left-1/2"></div>
     </div>
 </section>
 
@@ -466,12 +466,12 @@ function renderCities(cities) {
     const container = document.getElementById('citiesGrid');
 
     if (!cities || cities.length === 0) {
-        container.innerHTML = '<p class="text-muted col-span-full">Nu sunt orase disponibile.</p>';
+        container.innerHTML = '<p class="text-muted col-span-full">Nu sunt orașe disponibile.</p>';
         return;
     }
 
     container.innerHTML = cities.map(city => `
-        <a href="/${city.slug}" class="relative overflow-hidden city-card group h-36 md:h-44 rounded-2xl">
+        <a href="/${city.slug}" class="relative overflow-hidden city-card group h-36 md:h-44 mobile:w-auto mobile:h-auto rounded-2xl">
             <img src="${city.image || '/assets/images/default-city.png'}" alt="${city.name}" class="absolute inset-0 object-cover w-full h-full city-image" loading="lazy">
             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
             <div class="absolute bottom-3 left-3 right-3">

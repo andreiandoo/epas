@@ -345,7 +345,7 @@ const EventsPage = {
             }
         });
 
-        // Reset dropdown filters
+        // Reset dropdown filters (desktop)
         const cityEl = document.getElementById(this.elements.cityFilter);
         const genreEl = document.getElementById(this.elements.genreFilter);
         const dateEl = document.getElementById(this.elements.dateFilter);
@@ -359,6 +359,18 @@ const EventsPage = {
         if (priceEl) priceEl.value = '';
         if (sortEl) sortEl.value = 'date';
         if (searchEl) searchEl.value = '';
+
+        // Reset mobile filter elements
+        const mobileSuffixes = ['cityFilterMobile', 'genreFilterMobile', 'dateFilterMobile', 'priceFilterMobile'];
+        mobileSuffixes.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const sortMobileEl = document.getElementById('sortFilterMobile');
+        if (sortMobileEl) sortMobileEl.value = 'date';
+
+        // Update mobile filter count badge
+        if (typeof updateMobileFilterCount === 'function') updateMobileFilterCount();
 
         this.page = 1;
         this.updateURL();

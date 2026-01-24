@@ -224,7 +224,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             </div>
         </div>
     </div>
-    <div class="px-6 mx-auto max-w-7xl">
+    <div class="px-6 mx-auto max-w-7xl mobile:px-4">
         <div class="flex items-center justify-between h-[72px]">
             <!-- Logo -->
             <a href="/" class="flex items-center gap-2.5 no-underline flex-shrink-0">
@@ -260,7 +260,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     </button>
                     <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
                         <div class="w-[700px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2">
-                            <div class="flex items-center justify-between mb-2 px-1">
+                            <div class="flex items-center justify-between px-1 mb-2">
                                 <span class="text-[13px] font-semibold text-gray-400 uppercase tracking-wider">Alege orașul</span>
                                 <a href="/orase" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
                                     Toate orașele
@@ -331,7 +331,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             </div>
 
                             <!-- Featured Events -->
-                            <div class="flex-1 p-3 flex flex-col justify-between">
+                            <div class="flex flex-col justify-between flex-1 p-3">
                                 <div class="flex items-center justify-between mb-4">
                                     <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                                         <svg class="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
@@ -353,7 +353,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                         <div class="w-[72px] h-[72px] rounded-lg overflow-hidden flex-shrink-0 flex-none">
                                             <img src="<?= $event['image'] ?>" alt="<?= htmlspecialchars($event['name']) ?>" class="object-cover w-full h-full">
                                         </div>
-                                        <div class="ml-0 flex flex-col justify-center flex-1">
+                                        <div class="flex flex-col justify-center flex-1 ml-0">
                                             <div class="text-[11px] font-semibold text-primary uppercase tracking-wide mb-1"><?= htmlspecialchars($event['category']) ?></div>
                                             <div class="text-sm font-bold text-gray-900 mb-1.5 leading-tight"><?= htmlspecialchars($event['name']) ?></div>
                                             <div class="flex gap-3 text-xs text-gray-500">
@@ -394,7 +394,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     </button>
                     <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
                         <div class="w-[780px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2">
-                            <div class="flex items-center justify-between mb-2 px-1">
+                            <div class="flex items-center justify-between px-1 mb-2">
                                 <span class="text-[13px] font-semibold text-gray-400 uppercase tracking-wider">Locații populare</span>
                                 <a href="/locatii" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
                                     Toate locațiile
@@ -540,7 +540,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
                     <div class="absolute bottom-0 left-0 p-2.5">
                         <div class="text-sm font-bold text-white"><?= htmlspecialchars($city['name']) ?></div>
-                        <div class="text-[11px] text-white/85 flex items-center gap-1.5">
+                        <div class="text-xs text-white/85 flex items-center gap-1.5">
                             <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
                             <?= $city['count'] ?> evenimente
                         </div>
@@ -600,7 +600,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     </div>
 
     <!-- Mobile Actions -->
-    <div class="flex flex-col gap-3 px-4 pt-6 mt-6 border-t border-gray-200">
+    <div class="flex flex-col gap-3 px-4 pt-6 mt-6">
         <a href="/autentificare" class="w-full py-3.5 text-center border border-gray-200 rounded-lg text-gray-900 text-[15px] font-semibold hover:bg-gray-50 transition-all">Autentificare</a>
         <a href="/inregistrare" class="w-full py-3.5 text-center bg-gradient-to-br from-primary to-primary-light rounded-lg text-white text-[15px] font-semibold">Înregistrare</a>
     </div>

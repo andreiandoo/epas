@@ -106,8 +106,23 @@ require_once __DIR__ . '/includes/header.php'; ?>
             </div>
         </div>
 
-        <!-- Filters Bar -->
-        <div class="flex flex-col justify-between gap-4 p-4 mb-8 bg-white border md:flex-row md:items-center rounded-2xl border-border">
+        <!-- Mobile Filters Button -->
+        <div class="flex items-center justify-between gap-3 mb-4 lg:hidden">
+            <button onclick="openCatFiltersDrawer()" class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                Filtre
+                <span id="mobileFilterCount" class="hidden px-2 py-0.5 text-xs font-bold text-white rounded-full bg-primary">0</span>
+            </button>
+            <select id="sortEventsMobile" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('sortEvents').value = this.value; CategoryPage.loadEvents();">
+                <option value="date_asc">Data</option>
+                <option value="popularity">Popular</option>
+                <option value="price_asc">Preț ↑</option>
+                <option value="price_desc">Preț ↓</option>
+            </select>
+        </div>
+
+        <!-- Desktop Filters Bar -->
+        <div class="flex-col justify-between hidden gap-4 p-4 mb-8 bg-white border lg:flex md:flex-row md:items-center rounded-2xl border-border">
             <div class="flex flex-wrap items-center gap-3">
                 <select id="filterCity" class="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20">
                     <option value="">Toate orasele</option>
@@ -138,6 +153,80 @@ require_once __DIR__ . '/includes/header.php'; ?>
                 </select>
             </div>
         </div>
+
+        <!-- Mobile Filters Drawer -->
+        <div id="catFiltersBackdrop" class="fixed inset-0 z-[105] transition-opacity duration-300 bg-black/50 backdrop-blur-sm lg:hidden" style="opacity: 0; visibility: hidden;" onclick="closeCatFiltersDrawer()"></div>
+        <div id="catFiltersDrawer" class="fixed bottom-0 left-0 right-0 z-[110] overflow-hidden transition-transform duration-300 bg-white lg:hidden rounded-t-3xl max-h-[85vh]" style="transform: translateY(100%);">
+            <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-200">
+                <h2 class="text-lg font-bold text-gray-900">Filtre</h2>
+                <button onclick="closeCatFiltersDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-gray-100 hover:bg-gray-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
+                <div>
+                    <label class="block mb-2 text-sm font-medium text-gray-700">Oraș</label>
+                    <select id="filterCityMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('filterCity').value = this.value;">
+                        <option value="">Toate orasele</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block mb-2 text-sm font-medium text-gray-700">Dată</label>
+                    <select id="filterDateMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('filterDate').value = this.value;">
+                        <option value="">Oricand</option>
+                        <option value="today">Astazi</option>
+                        <option value="tomorrow">Maine</option>
+                        <option value="this_week">Saptamana aceasta</option>
+                        <option value="this_month">Luna aceasta</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block mb-2 text-sm font-medium text-gray-700">Preț</label>
+                    <select id="filterPriceMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('filterPrice').value = this.value;">
+                        <option value="">Orice pret</option>
+                        <option value="0-50">Sub 50 lei</option>
+                        <option value="50-100">50 - 100 lei</option>
+                        <option value="100-200">100 - 200 lei</option>
+                        <option value="200-">Peste 200 lei</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-3 p-4 border-t border-gray-200 bg-gray-50">
+                <button onclick="clearCatFilters(); closeCatFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-200 rounded-xl hover:bg-gray-50">
+                    Șterge filtre
+                </button>
+                <button onclick="CategoryPage.loadEvents(); closeCatFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-bold text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark">
+                    Aplică filtre
+                </button>
+            </div>
+        </div>
+
+        <script>
+        function openCatFiltersDrawer() {
+            document.getElementById('catFiltersBackdrop').style.opacity = '1';
+            document.getElementById('catFiltersBackdrop').style.visibility = 'visible';
+            document.getElementById('catFiltersDrawer').style.transform = 'translateY(0)';
+            document.body.style.overflow = 'hidden';
+            document.getElementById('filterCityMobile').value = document.getElementById('filterCity').value;
+            document.getElementById('filterDateMobile').value = document.getElementById('filterDate').value;
+            document.getElementById('filterPriceMobile').value = document.getElementById('filterPrice').value;
+        }
+        function closeCatFiltersDrawer() {
+            document.getElementById('catFiltersBackdrop').style.opacity = '0';
+            document.getElementById('catFiltersBackdrop').style.visibility = 'hidden';
+            document.getElementById('catFiltersDrawer').style.transform = 'translateY(100%)';
+            document.body.style.overflow = '';
+        }
+        function clearCatFilters() {
+            document.getElementById('filterCity').value = '';
+            document.getElementById('filterDate').value = '';
+            document.getElementById('filterPrice').value = '';
+            document.getElementById('filterCityMobile').value = '';
+            document.getElementById('filterDateMobile').value = '';
+            document.getElementById('filterPriceMobile').value = '';
+            CategoryPage.loadEvents();
+        }
+        </script>
 
         <!-- Events Grid -->
         <div id="eventsGrid" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
