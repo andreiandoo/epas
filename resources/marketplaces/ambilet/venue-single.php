@@ -277,7 +277,7 @@ include __DIR__ . '/includes/header.php';
     </div>
 
     <!-- Similar Venues -->
-    <section class="mt-10 mb-16">
+    <section id="similarVenuesSection" class="mt-10 mb-16">
         <div class="flex items-center mb-5">
             <h2 class="text-xl font-bold text-secondary flex items-center gap-2.5">
                 <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

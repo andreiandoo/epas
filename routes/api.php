@@ -1513,6 +1513,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.events.submit');
         Route::post('/events/{event}/cancel', [OrganizerEventsController::class, 'cancel'])
             ->name('api.marketplace-client.organizer.events.cancel');
+        Route::delete('/events/{event}', [OrganizerEventsController::class, 'destroy'])
+            ->name('api.marketplace-client.organizer.events.destroy');
         Route::get('/events/{event}/statistics', [OrganizerEventsController::class, 'statistics'])
             ->name('api.marketplace-client.organizer.events.statistics');
 

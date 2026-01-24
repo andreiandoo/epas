@@ -37,6 +37,7 @@ const VenuePage = {
         gallerySection: 'gallerySection',
         eventsList: 'eventsList',
         similarVenues: 'similarVenues',
+        similarVenuesSection: 'similarVenuesSection',
         followBtn: 'follow-btn',
         followIcon: 'follow-icon',
         followText: 'follow-text'
@@ -500,12 +501,17 @@ const VenuePage = {
      */
     renderSimilarVenues(venues) {
         var container = document.getElementById(this.elements.similarVenues);
+        var section = document.getElementById(this.elements.similarVenuesSection);
         if (!container) return;
 
+        // Hide entire section if no similar venues
         if (!venues || venues.length === 0) {
-            container.innerHTML = '<div class="flex items-center justify-center col-span-4 py-12 text-gray-400"><p>Nu există locații similare de afișat</p></div>';
+            if (section) section.style.display = 'none';
             return;
         }
+
+        // Show section if it was hidden
+        if (section) section.style.display = '';
 
         var self = this;
         var html = venues.map(function(v) {

@@ -128,11 +128,22 @@ class VenuesController extends BaseController
         }
 
         $language = $client->language ?? 'ro';
+        $venueName = $venue->getTranslation('name', 'ro') ?: $venue->name;
 
         // Get upcoming marketplace events at this venue
-        $upcomingEvents = $venue->marketplaceEvents()
+        // Match by venue_id OR by venue_name/city for events without venue_id
+        $upcomingEvents = \App\Models\MarketplaceEvent::query()
+            ->where('marketplace_client_id', $venue->marketplace_client_id)
             ->where('status', 'published')
             ->where('starts_at', '>=', now())
+            ->where(function ($query) use ($venue, $venueName) {
+                $query->where('venue_id', $venue->id)
+                    ->orWhere(function ($q) use ($venueName, $venue) {
+                        $q->whereNull('venue_id')
+                          ->whereRaw('LOWER(venue_name) = ?', [strtolower($venueName)])
+                          ->whereRaw('LOWER(venue_city) = ?', [strtolower($venue->city)]);
+                    });
+            })
             ->with(['ticketTypes', 'marketplaceOrganizer:id,default_commission_mode,commission_rate', 'marketplaceEventCategory'])
             ->orderBy('starts_at')
             ->limit(10)
@@ -200,10 +211,7 @@ class VenuesController extends BaseController
                 'slug' => $cat->slug,
             ]),
             'upcoming_events' => $upcomingEvents,
-            'events_count' => $venue->marketplaceEvents()
-                ->where('status', 'published')
-                ->where('starts_at', '>=', now())
-                ->count(),
+            'events_count' => $this->countVenueEvents($venue),
         ];
 
         return $this->success($data);
@@ -222,10 +230,7 @@ class VenuesController extends BaseController
             'address' => $venue->address,
             'capacity' => $venue->capacity,
             'image' => $this->formatImageUrl($venue->image_url),
-            'events_count' => $venue->marketplaceEvents()
-                ->where('status', 'published')
-                ->where('starts_at', '>=', now())
-                ->count(),
+            'events_count' => $this->countVenueEvents($venue),
             'is_featured' => $venue->is_featured ?? false,
             'is_partner' => $venue->is_partner ?? false,
             'categories' => $venue->venueCategories->map(fn ($cat) => [
@@ -234,6 +239,28 @@ class VenuesController extends BaseController
                 'slug' => $cat->slug,
             ]),
         ];
+    }
+
+    /**
+     * Count upcoming published events for a venue
+     * Counts events by venue_id OR by matching venue_name/city (for events without venue_id)
+     */
+    protected function countVenueEvents(Venue $venue): int
+    {
+        $venueName = $venue->getTranslation('name', 'ro') ?: $venue->name;
+
+        return \App\Models\MarketplaceEvent::where('marketplace_client_id', $venue->marketplace_client_id)
+            ->where('status', 'published')
+            ->where('starts_at', '>=', now())
+            ->where(function ($query) use ($venue, $venueName) {
+                $query->where('venue_id', $venue->id)
+                    ->orWhere(function ($q) use ($venueName, $venue) {
+                        $q->whereNull('venue_id')
+                          ->whereRaw('LOWER(venue_name) = ?', [strtolower($venueName)])
+                          ->whereRaw('LOWER(venue_city) = ?', [strtolower($venue->city)]);
+                    });
+            })
+            ->count();
     }
 
     /**

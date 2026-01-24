@@ -442,6 +442,53 @@ class EventsController extends BaseController
     }
 
     /**
+     * Delete an event (only draft/rejected events without orders)
+     */
+    public function destroy(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = MarketplaceEvent::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        // Only allow deletion of draft or rejected events
+        if (!in_array($event->status, ['draft', 'rejected'])) {
+            return $this->error('Only draft or rejected events can be deleted', 400);
+        }
+
+        // Check for any orders
+        if ($event->orders()->exists()) {
+            return $this->error('Cannot delete event with existing orders', 400);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Delete ticket types
+            $event->ticketTypes()->delete();
+
+            // Delete the event
+            $event->delete();
+
+            // Update organizer stats
+            $organizer->updateStats();
+
+            DB::commit();
+
+            return $this->success(null, 'Event deleted successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to delete event: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * Get event participants (ticket holders)
      */
     public function participants(Request $request, int $eventId): JsonResponse

@@ -240,8 +240,15 @@ async function verifyCUI() {
     AmbiletNotifications.info('Verificare ANAF...');
     try {
         const response = await AmbiletAPI.post('/organizer/settings/verify-cui', { cui });
-        if (response.success) { AmbiletNotifications.success('Date verificate'); if (response.data) { document.getElementById('company-name').value = response.data.company_name || ''; document.getElementById('company-address').value = response.data.address || ''; } }
-        else { AmbiletNotifications.error(response.message || 'CUI invalid'); }
+        if (response.success && response.data) {
+            AmbiletNotifications.success('Date verificate');
+            document.getElementById('company-name').value = response.data.company_name || '';
+            document.getElementById('company-reg').value = response.data.reg_com || '';
+            document.getElementById('company-address').value = response.data.address || '';
+            document.getElementById('company-city').value = response.data.city || '';
+            document.getElementById('company-county').value = response.data.county || '';
+            document.getElementById('company-vat').value = response.data.vat_payer ? '1' : '0';
+        } else { AmbiletNotifications.error(response.message || 'CUI invalid'); }
     } catch (error) { AmbiletNotifications.error('Eroare la verificare'); }
 }
 function openBankModal() { document.getElementById('bank-modal').classList.remove('hidden'); document.getElementById('bank-modal').classList.add('flex'); }
