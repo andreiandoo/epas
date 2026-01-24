@@ -1522,6 +1522,14 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::delete('/events/{event}/check-in/{barcode}', [OrganizerEventsController::class, 'undoCheckIn'])
             ->name('api.marketplace-client.organizer.events.check-in.undo');
 
+        // Event form helpers (categories, genres, venues)
+        Route::get('/event-categories', [OrganizerEventsController::class, 'categories'])
+            ->name('api.marketplace-client.organizer.event-categories');
+        Route::get('/event-genres', [OrganizerEventsController::class, 'genres'])
+            ->name('api.marketplace-client.organizer.event-genres');
+        Route::get('/venues', [OrganizerEventsController::class, 'venues'])
+            ->name('api.marketplace-client.organizer.venues');
+
         // Payouts & Balance
         Route::get('/balance', [OrganizerPayoutController::class, 'balance'])
             ->name('api.marketplace-client.organizer.balance');

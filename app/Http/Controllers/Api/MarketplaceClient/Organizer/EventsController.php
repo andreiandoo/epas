@@ -88,13 +88,16 @@ class EventsController extends BaseController
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:10000',
+            'ticket_terms' => 'nullable|string|max:10000',
             'short_description' => 'nullable|string|max:500',
             'starts_at' => 'required|date|after:now',
             'ends_at' => 'nullable|date|after:starts_at',
             'doors_open_at' => 'nullable|date|before:starts_at',
+            'venue_id' => 'nullable|integer|exists:venues,id',
             'venue_name' => 'required|string|max:255',
             'venue_address' => 'nullable|string|max:500',
             'venue_city' => 'required|string|max:100',
+            'marketplace_event_category_id' => 'nullable|integer|exists:marketplace_event_categories,id',
             'category' => 'nullable|string|max:100',
             'tags' => 'nullable|array',
             'capacity' => 'nullable|integer|min:1',
@@ -119,13 +122,16 @@ class EventsController extends BaseController
                 'name' => $validated['name'],
                 'slug' => Str::slug($validated['name']),
                 'description' => $validated['description'] ?? null,
+                'ticket_terms' => $validated['ticket_terms'] ?? null,
                 'short_description' => $validated['short_description'] ?? null,
                 'starts_at' => $validated['starts_at'],
                 'ends_at' => $validated['ends_at'] ?? null,
                 'doors_open_at' => $validated['doors_open_at'] ?? null,
+                'venue_id' => $validated['venue_id'] ?? null,
                 'venue_name' => $validated['venue_name'],
                 'venue_address' => $validated['venue_address'] ?? null,
                 'venue_city' => $validated['venue_city'],
+                'marketplace_event_category_id' => $validated['marketplace_event_category_id'] ?? null,
                 'category' => $validated['category'] ?? null,
                 'tags' => $validated['tags'] ?? null,
                 'capacity' => $validated['capacity'] ?? null,
@@ -186,8 +192,10 @@ class EventsController extends BaseController
         $rules = [
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string|max:10000',
+            'ticket_terms' => 'nullable|string|max:10000',
             'short_description' => 'nullable|string|max:500',
             'doors_open_at' => 'nullable|date',
+            'marketplace_event_category_id' => 'nullable|integer|exists:marketplace_event_categories,id',
             'category' => 'nullable|string|max:100',
             'tags' => 'nullable|array',
         ];
@@ -196,6 +204,7 @@ class EventsController extends BaseController
             $rules = array_merge($rules, [
                 'starts_at' => 'sometimes|date|after:now',
                 'ends_at' => 'nullable|date|after:starts_at',
+                'venue_id' => 'nullable|integer|exists:venues,id',
                 'venue_name' => 'sometimes|string|max:255',
                 'venue_address' => 'nullable|string|max:500',
                 'venue_city' => 'sometimes|string|max:100',
@@ -687,6 +696,106 @@ class EventsController extends BaseController
     }
 
     /**
+     * Get available event categories for the marketplace
+     */
+    public function categories(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $categories = \App\Models\MarketplaceEventCategory::where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->where('is_visible', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function ($cat) {
+                $name = is_array($cat->name) ? ($cat->name['ro'] ?? $cat->name['en'] ?? array_values($cat->name)[0] ?? '') : $cat->name;
+                return [
+                    'id' => $cat->id,
+                    'name' => $name,
+                    'slug' => $cat->slug,
+                    'icon' => $cat->icon,
+                    'icon_emoji' => $cat->icon_emoji,
+                    'event_type_ids' => $cat->event_type_ids ?? [],
+                ];
+            });
+
+        return $this->success(['categories' => $categories]);
+    }
+
+    /**
+     * Get event genres filtered by event type IDs
+     */
+    public function genres(Request $request): JsonResponse
+    {
+        $this->requireOrganizer($request);
+
+        $typeIds = $request->input('type_ids', []);
+        if (!is_array($typeIds) || empty($typeIds)) {
+            return $this->success(['genres' => []]);
+        }
+
+        $genres = \App\Models\EventGenre::query()
+            ->whereExists(function ($sub) use ($typeIds) {
+                $sub->selectRaw('1')
+                    ->from('event_type_event_genre as eteg')
+                    ->whereColumn('eteg.event_genre_id', 'event_genres.id')
+                    ->whereIn('eteg.event_type_id', $typeIds);
+            })
+            ->orderBy('name')
+            ->get()
+            ->map(function ($genre) {
+                $name = is_array($genre->name) ? ($genre->name['ro'] ?? $genre->name['en'] ?? array_values($genre->name)[0] ?? '') : $genre->name;
+                return [
+                    'id' => $genre->id,
+                    'name' => $name,
+                    'slug' => $genre->slug,
+                ];
+            });
+
+        return $this->success(['genres' => $genres]);
+    }
+
+    /**
+     * Search venues available for the marketplace
+     */
+    public function venues(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $search = $request->input('search', '');
+
+        $query = \App\Models\Venue::query()
+            ->where(function ($q) use ($organizer) {
+                $q->whereNull('marketplace_client_id')
+                    ->orWhere('marketplace_client_id', $organizer->marketplace_client_id);
+            });
+
+        if (strlen($search) >= 2) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('city', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%");
+            });
+        }
+
+        $venues = $query->orderBy('name')
+            ->limit(50)
+            ->get()
+            ->map(function ($venue) {
+                $name = is_array($venue->name) ? ($venue->name['ro'] ?? $venue->name['en'] ?? array_values($venue->name)[0] ?? '') : $venue->name;
+                return [
+                    'id' => $venue->id,
+                    'name' => $name,
+                    'city' => $venue->city,
+                    'address' => $venue->address,
+                    'capacity' => $venue->capacity,
+                    'website_url' => $venue->website_url,
+                ];
+            });
+
+        return $this->success(['venues' => $venues]);
+    }
+
+    /**
      * Require authenticated organizer
      */
     protected function requireOrganizer(Request $request): MarketplaceOrganizer
@@ -732,13 +841,16 @@ class EventsController extends BaseController
             'name' => $event->name,
             'slug' => $event->slug,
             'description' => $event->description,
+            'ticket_terms' => $event->ticket_terms,
             'short_description' => $event->short_description,
             'starts_at' => $event->starts_at->toIso8601String(),
             'ends_at' => $event->ends_at?->toIso8601String(),
             'doors_open_at' => $event->doors_open_at?->toIso8601String(),
+            'venue_id' => $event->venue_id,
             'venue_name' => $event->venue_name,
             'venue_address' => $event->venue_address,
             'venue_city' => $event->venue_city,
+            'marketplace_event_category_id' => $event->marketplace_event_category_id,
             'category' => $event->category,
             'tags' => $event->tags,
             'image' => $event->image_url,

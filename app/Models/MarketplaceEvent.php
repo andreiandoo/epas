@@ -19,6 +19,7 @@ class MarketplaceEvent extends Model
         'name',
         'slug',
         'description',
+        'ticket_terms',
         'short_description',
         'starts_at',
         'ends_at',
