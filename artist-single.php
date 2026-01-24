@@ -60,7 +60,7 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <!-- Profile Section -->
-<div class="px-6 mx-auto max-w-7xl">
+<div id="profile-section" class="px-6 mx-auto max-w-7xl">
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 -mt-20 relative z-20">
         <!-- Stats Card -->
         <div class="flex flex-wrap items-center gap-8 bg-white shadow-lg rounded-2xl p-7">

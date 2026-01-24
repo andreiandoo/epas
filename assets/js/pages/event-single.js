@@ -339,14 +339,14 @@ const EventPage = {
                 console.log('[EventPage] Event ticket_types:', this.ticketTypes);
                 this.render();
             } else {
-                this.showError('Eveniment negasit');
+                this.showError('Eveniment negăsit');
             }
         } catch (error) {
             console.error('Failed to load event:', error);
             if (error.status === 404) {
-                this.showError('Eveniment negasit');
+                this.showError('Eveniment negăsit');
             } else {
-                this.showError('Eroare la incarcarea evenimentului');
+                this.showError('Eroare la încărcarea evenimentului');
             }
         }
     },
@@ -478,7 +478,7 @@ const EventPage = {
                 '<h1 class="mb-4 text-2xl font-bold text-secondary">' + message + '</h1>' +
                 '<a href="/" class="inline-flex items-center gap-2 px-6 py-3 font-semibold text-white transition-colors bg-primary rounded-xl hover:bg-primary-dark">' +
                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>' +
-                    'Inapoi acasa' +
+                    'Înapoi acasă' +
                 '</a>' +
             '</div>';
     },
@@ -559,6 +559,10 @@ const EventPage = {
         const mobileBtn = document.getElementById('mobileTicketBtn');
         if (mobileBtn) mobileBtn.style.display = 'none';
 
+        // Hide social stats (interested, views, share)
+        const socialStats = document.getElementById('social-stats');
+        if (socialStats) socialStats.style.display = 'none';
+
         // Insert ended banner before #event-content
         this.renderEndedBanner();
     },
@@ -574,13 +578,13 @@ const EventPage = {
         banner.id = 'event-ended-banner';
         banner.className = 'w-full mb-8';
         banner.innerHTML =
-            '<div class="bg-primary text-white rounded-2xl p-6 text-center">' +
+            '<div class="bg-primary text-white rounded-2xl p-6">' +
                 '<div class="flex items-center justify-center gap-3">' +
                     '<h2 class="text-xl font-bold">Evenimentul s-a încheiat</h2>' +
                 '</div>' +
-                '<p class="mb-6">dar încă mai găsești bilete la:</p>' +
+                '<p class="mb-6 text-center">dar încă mai găsești bilete la:</p>' +
                 '<div id="ended-related-events" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>' +
-                '<div id="ended-related-loading" class="py-8 text-sm">Se caută sugestii de evenimente...</div>' +
+                '<div id="ended-related-loading" class="py-8 text-sm text-center">Se caută sugestii de evenimente...</div>' +
             '</div>';
 
         eventContent.parentNode.insertBefore(banner, eventContent);
@@ -620,10 +624,10 @@ const EventPage = {
                         urlPrefix: '/bilete/'
                     });
                 } else if (container) {
-                    container.innerHTML = '<p class="col-span-full text-muted text-sm">Nu sunt alte evenimente disponibile momentan.</p>';
+                    container.innerHTML = '<p class="col-span-full text-muted text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
                 }
             } else if (container) {
-                container.innerHTML = '<p class="col-span-full text-muted text-sm">Nu sunt alte evenimente disponibile momentan.</p>';
+                container.innerHTML = '<p class="col-span-full text-muted text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
             }
         } catch (e) {
             console.error('Failed to load ended related events:', e);
@@ -706,7 +710,8 @@ const EventPage = {
 
         // Artist section
         if (e.artist || e.artists?.length) {
-            this.renderArtist(e.artist || e.artists[0]);
+            var artists = e.artists && e.artists.length ? e.artists : (e.artist ? [e.artist] : []);
+            this.renderArtists(artists);
         }
 
         // Venue section
@@ -949,19 +954,12 @@ const EventPage = {
     },
 
     /**
-     * Render artist section
+     * Render all artists in the artist section
      */
-    renderArtist(artist) {
-        if (!artist) return;
+    renderArtists(artists) {
+        if (!artists || !artists.length) return;
         document.getElementById(this.elements.artistSection).style.display = 'block';
 
-        var artistImage = artist.image_url || artist.image || '/assets/images/default-artist.png';
-        var artistLink = artist.slug ? '/artist/' + artist.slug : '#';
-        var artistDescription = artist.bio || artist.description || '';
-
-        // Build social links HTML
-        var socialLinksHtml = '';
-        var socialLinks = artist.social_links || {};
         var socialIcons = {
             facebook: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
             instagram: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>',
@@ -979,37 +977,49 @@ const EventPage = {
             website: 'hover:text-primary'
         };
 
-        if (Object.keys(socialLinks).length > 0) {
-            socialLinksHtml = '<div class="flex items-center gap-3 mb-4">';
-            for (var platform in socialLinks) {
-                if (socialLinks.hasOwnProperty(platform) && socialIcons[platform]) {
-                    socialLinksHtml += '<a href="' + socialLinks[platform] + '" target="_blank" rel="noopener noreferrer" class="p-2 text-muted transition-colors rounded-full bg-surface ' + (socialColors[platform] || 'hover:text-primary') + '" title="' + platform.charAt(0).toUpperCase() + platform.slice(1) + '">' + socialIcons[platform] + '</a>';
+        var allHtml = '';
+        for (var i = 0; i < artists.length; i++) {
+            var artist = artists[i];
+            if (!artist) continue;
+
+            var artistImage = artist.image_url || artist.image || '/assets/images/default-artist.png';
+            var artistLink = artist.slug ? '/artist/' + artist.slug : '#';
+            var artistDescription = artist.bio || artist.description || '';
+
+            var socialLinksHtml = '';
+            var socialLinks = artist.social_links || {};
+            if (Object.keys(socialLinks).length > 0) {
+                socialLinksHtml = '<div class="flex items-center gap-3 mb-4">';
+                for (var platform in socialLinks) {
+                    if (socialLinks.hasOwnProperty(platform) && socialIcons[platform]) {
+                        socialLinksHtml += '<a href="' + socialLinks[platform] + '" target="_blank" rel="noopener noreferrer" class="p-2 text-muted transition-colors rounded-full bg-surface ' + (socialColors[platform] || 'hover:text-primary') + '" title="' + platform.charAt(0).toUpperCase() + platform.slice(1) + '">' + socialIcons[platform] + '</a>';
+                    }
                 }
+                socialLinksHtml += '</div>';
             }
-            socialLinksHtml += '</div>';
+
+            allHtml += '<div class="flex flex-col gap-6 md:flex-row' + (i > 0 ? ' pt-6 mt-6 border-t border-border' : '') + '">' +
+                '<div class="md:w-1/3">' +
+                    '<a href="' + artistLink + '">' +
+                        '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105">' +
+                    '</a>' +
+                '</div>' +
+                '<div class="md:w-2/3">' +
+                    '<div class="flex items-center gap-3 mb-4 mobile:justify-between">' +
+                        '<a href="' + artistLink + '" class="text-2xl font-bold text-secondary hover:text-primary">' + artist.name + '</a>' +
+                        (artist.verified ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary">Verified</span>' : '') +
+                    '</div>' +
+                    (artistDescription ? '<p class="mb-4 leading-relaxed text-muted">' + artistDescription + '</p>' : '<p class="mb-4 leading-relaxed text-muted">Detalii despre artist vor fi disponibile in curand.</p>') +
+                    socialLinksHtml +
+                    '<a href="' + artistLink + '" class="inline-flex mobile:flex items-center gap-2 font-semibold text-primary border border-primary rounded-md py-2 px-6 mobile:justify-center hover:bg-primary hover:text-white transition-all ease-in-out duration-200">' +
+                        'Vezi profilul artistului' +
+                        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>' +
+                    '</a>' +
+                '</div>' +
+            '</div>';
         }
 
-        var html = '<div class="flex flex-col gap-6 md:flex-row">' +
-            '<div class="md:w-1/3">' +
-                '<a href="' + artistLink + '">' +
-                    '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105">' +
-                '</a>' +
-            '</div>' +
-            '<div class="md:w-2/3">' +
-                '<div class="flex items-center gap-3 mb-4 mobile:justify-between">' +
-                    '<a href="' + artistLink + '" class="text-2xl font-bold text-secondary hover:text-primary">' + artist.name + '</a>' +
-                    (artist.verified ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary">Verified</span>' : '') +
-                '</div>' +
-                (artistDescription ? '<p class="mb-4 leading-relaxed text-muted">' + artistDescription + '</p>' : '<p class="mb-4 leading-relaxed text-muted">Detalii despre artist vor fi disponibile in curand.</p>') +
-                socialLinksHtml +
-                '<a href="' + artistLink + '" class="inline-flex mobile:flex items-center gap-2 font-semibold text-primary border border-primary rounded-md py-2 px-6 mobile:justify-center">' +
-                    'Vezi profilul artistului' +
-                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>' +
-                '</a>' +
-            '</div>' +
-        '</div>';
-
-        document.getElementById(this.elements.artistContent).innerHTML = html;
+        document.getElementById(this.elements.artistContent).innerHTML = allHtml;
     },
 
     /**
@@ -1036,7 +1046,7 @@ const EventPage = {
             '<div class="md:w-2/3">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
                 '<p class="mb-4 text-muted">' + venueAddress + '</p>' +
-                '<p class="mb-4 leading-relaxed text-muted">' + (venue.description || '') + '</p>';
+                '<div class="mb-4 leading-relaxed text-muted">' + (venue.description || '') + '</div>';
 
         if (venue.amenities && venue.amenities.length) {
             html += '<div class="mb-6 space-y-3">';
@@ -1052,7 +1062,7 @@ const EventPage = {
         }
 
         if (googleMapsUrl) {
-            html += '<a href="' + googleMapsUrl + '" target="_blank" class="inline-flex items-center gap-2 font-semibold text-primary border border-primary rounded-md py-2 px-6">' +
+            html += '<a href="' + googleMapsUrl + '" target="_blank" class="inline-flex items-center gap-2 font-semibold text-secondary border border-secondary text-sm rounded-md py-2 px-6 hover:bg-secondary hover:text-white transition-all ease-in-out duration-200">' +
                 '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
                 'Deschide in Google Maps' +
             '</a>';

@@ -176,9 +176,12 @@ switch ($action) {
     case 'venues':
         $params = [];
         if (isset($_GET['city'])) $params['city'] = $_GET['city'];
-        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['sort'])) $params['sort'] = $_GET['sort'];
         if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
-        $endpoint = '/venues?' . http_build_query($params);
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/venues' . ($params ? '?' . http_build_query($params) : '');
         break;
 
     case 'venue':
