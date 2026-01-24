@@ -98,6 +98,10 @@ class EventsController extends BaseController
             'venue_address' => 'nullable|string|max:500',
             'venue_city' => 'required|string|max:100',
             'marketplace_event_category_id' => 'nullable|integer|exists:marketplace_event_categories,id',
+            'genre_ids' => 'nullable|array',
+            'artist_ids' => 'nullable|array',
+            'website_url' => 'nullable|url|max:500',
+            'facebook_url' => 'nullable|url|max:500',
             'category' => 'nullable|string|max:100',
             'tags' => 'nullable|array',
             'capacity' => 'nullable|integer|min:1',
@@ -132,6 +136,10 @@ class EventsController extends BaseController
                 'venue_address' => $validated['venue_address'] ?? null,
                 'venue_city' => $validated['venue_city'],
                 'marketplace_event_category_id' => $validated['marketplace_event_category_id'] ?? null,
+                'genre_ids' => $validated['genre_ids'] ?? null,
+                'artist_ids' => $validated['artist_ids'] ?? null,
+                'website_url' => $validated['website_url'] ?? null,
+                'facebook_url' => $validated['facebook_url'] ?? null,
                 'category' => $validated['category'] ?? null,
                 'tags' => $validated['tags'] ?? null,
                 'capacity' => $validated['capacity'] ?? null,
@@ -196,6 +204,10 @@ class EventsController extends BaseController
             'short_description' => 'nullable|string|max:500',
             'doors_open_at' => 'nullable|date',
             'marketplace_event_category_id' => 'nullable|integer|exists:marketplace_event_categories,id',
+            'genre_ids' => 'nullable|array',
+            'artist_ids' => 'nullable|array',
+            'website_url' => 'nullable|url|max:500',
+            'facebook_url' => 'nullable|url|max:500',
             'category' => 'nullable|string|max:100',
             'tags' => 'nullable|array',
         ];
@@ -793,6 +805,69 @@ class EventsController extends BaseController
             });
 
         return $this->success(['venues' => $venues]);
+    }
+
+    /**
+     * Search artists available for the marketplace
+     */
+    public function artists(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $search = $request->input('search', '');
+
+        $query = \App\Models\Artist::query()
+            ->where(function ($q) use ($organizer) {
+                $q->whereNull('marketplace_client_id')
+                    ->orWhere('marketplace_client_id', $organizer->marketplace_client_id);
+            })
+            ->where('is_active', true);
+
+        if (strlen($search) >= 2) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        $artists = $query->orderBy('name')
+            ->limit(50)
+            ->get()
+            ->map(function ($artist) {
+                return [
+                    'id' => $artist->id,
+                    'name' => $artist->name,
+                    'slug' => $artist->slug,
+                    'image' => $artist->main_image_url,
+                ];
+            });
+
+        return $this->success(['artists' => $artists]);
+    }
+
+    /**
+     * Create a new artist for the marketplace
+     */
+    public function storeArtist(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $artist = \App\Models\Artist::create([
+            'name' => $validated['name'],
+            'slug' => \Illuminate\Support\Str::slug($validated['name']),
+            'marketplace_client_id' => $organizer->marketplace_client_id,
+            'is_active' => true,
+        ]);
+
+        return $this->success([
+            'artist' => [
+                'id' => $artist->id,
+                'name' => $artist->name,
+                'slug' => $artist->slug,
+                'image' => null,
+            ],
+        ], 'Artist created', 201);
     }
 
     /**

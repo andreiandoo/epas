@@ -1036,6 +1036,18 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.artists':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        } else {
+            $params = [];
+            if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        }
+        $endpoint = '/organizer/artists' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.participants':
         $eventId = $_GET['event_id'] ?? '';
         if (!$eventId) {

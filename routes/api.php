@@ -1529,6 +1529,10 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.event-genres');
         Route::get('/venues', [OrganizerEventsController::class, 'venues'])
             ->name('api.marketplace-client.organizer.venues');
+        Route::get('/artists', [OrganizerEventsController::class, 'artists'])
+            ->name('api.marketplace-client.organizer.artists');
+        Route::post('/artists', [OrganizerEventsController::class, 'storeArtist'])
+            ->name('api.marketplace-client.organizer.artists.store');
 
         // Payouts & Balance
         Route::get('/balance', [OrganizerPayoutController::class, 'balance'])
