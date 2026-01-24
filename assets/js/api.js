@@ -418,6 +418,11 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/dashboard') return 'organizer.dashboard';
         if (endpoint === '/organizer/dashboard/timeline') return 'organizer.dashboard.timeline';
 
+        // Organizer event categories, genres, venues
+        if (endpoint === '/organizer/event-categories') return 'organizer.event-categories';
+        if (endpoint === '/organizer/event-genres' || endpoint.includes('/organizer/event-genres?')) return 'organizer.event-genres';
+        if (endpoint === '/organizer/venues' || endpoint.includes('/organizer/venues?')) return 'organizer.venues';
+
         // Organizer events
         if (endpoint.match(/\/organizer\/events\/\d+\/participants\/export$/)) return 'organizer.event.participants.export';
         if (endpoint.match(/\/organizer\/events\/\d+\/participants$/)) return 'organizer.event.participants';
@@ -1396,6 +1401,27 @@ const AmbiletAPI = {
          */
         async cancelEvent(eventId) {
             return AmbiletAPI.post(`/organizer/events/${eventId}/cancel`);
+        },
+
+        /**
+         * Get event categories for the marketplace
+         */
+        async getEventCategories() {
+            return AmbiletAPI.get('/organizer/event-categories');
+        },
+
+        /**
+         * Get event genres filtered by event type IDs
+         */
+        async getEventGenres(typeIds = []) {
+            return AmbiletAPI.get('/organizer/event-genres', { type_ids: typeIds });
+        },
+
+        /**
+         * Search venues
+         */
+        async searchVenues(search = '') {
+            return AmbiletAPI.get('/organizer/venues', { search });
         },
 
         /**

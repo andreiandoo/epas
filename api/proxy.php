@@ -1012,6 +1012,30 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event-categories':
+        $method = 'GET';
+        $endpoint = '/organizer/event-categories';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event-genres':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['type_ids'])) {
+            $params['type_ids'] = is_array($_GET['type_ids']) ? $_GET['type_ids'] : explode(',', $_GET['type_ids']);
+        }
+        $endpoint = '/organizer/event-genres' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.venues':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        $endpoint = '/organizer/venues' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.participants':
         $eventId = $_GET['event_id'] ?? '';
         if (!$eventId) {

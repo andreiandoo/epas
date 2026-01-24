@@ -3,6 +3,10 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Evenimente';
 $bodyClass = 'min-h-screen flex bg-slate-100';
 $currentPage = 'events';
+$headExtra = <<<'HTML'
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+HTML;
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>
@@ -68,8 +72,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                 <!-- Accordion Form -->
                 <form id="create-event-form" class="space-y-3">
-                    <!-- Hidden field for saved event ID (for intermediate saves) -->
+                    <!-- Hidden fields -->
                     <input type="hidden" id="saved-event-id" value="">
+                    <input type="hidden" id="selected-event-type-ids" value="">
+                    <input type="hidden" id="selected-venue-id" value="">
 
                     <!-- ============ STEP 1: Detalii Eveniment ============ -->
                     <div class="accordion-section bg-white rounded-2xl border border-border overflow-hidden" data-step="1">
@@ -92,29 +98,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <div class="grid md:grid-cols-2 gap-4">
                                     <div>
                                         <label class="label">Categorie</label>
-                                        <select name="category" class="input">
+                                        <select name="marketplace_event_category_id" class="input" id="category-select" onchange="onCategoryChange(this.value)">
                                             <option value="">Selecteaza categoria</option>
-                                            <option value="concert">Concert</option>
-                                            <option value="festival">Festival</option>
-                                            <option value="teatru">Teatru</option>
-                                            <option value="stand-up">Stand-up Comedy</option>
-                                            <option value="sport">Sport</option>
-                                            <option value="conferinta">Conferinta</option>
-                                            <option value="workshop">Workshop</option>
-                                            <option value="expozitie">Expozitie</option>
-                                            <option value="altele">Altele</option>
+                                            <!-- Populated dynamically -->
                                         </select>
                                     </div>
-                                    <div>
-                                        <label class="label">Etichete</label>
-                                        <input type="text" name="tags" class="input" placeholder="rock, live, outdoor (separate cu virgula)">
-                                        <p class="text-xs text-muted mt-1">Separa etichetele cu virgula</p>
+                                    <div id="genres-container" class="hidden">
+                                        <label class="label">Gen eveniment</label>
+                                        <div id="genres-list" class="flex flex-wrap gap-2 p-3 border border-gray-200 rounded-xl min-h-[42px] max-h-[140px] overflow-y-auto">
+                                            <!-- Populated dynamically as checkboxes -->
+                                        </div>
+                                        <p class="text-xs text-muted mt-1">Selecteaza genurile aplicabile</p>
                                     </div>
                                 </div>
                                 <div>
                                     <label class="label">Descriere scurta</label>
-                                    <textarea name="short_description" rows="2" class="input" placeholder="O scurta descriere a evenimentului (max 500 caractere)" maxlength="500"></textarea>
-                                    <p class="text-xs text-muted mt-1"><span id="short-desc-count">0</span>/500 caractere</p>
+                                    <textarea name="short_description" rows="3" class="input" placeholder="O scurta descriere a evenimentului (max 120 cuvinte)" id="short-desc-input"></textarea>
+                                    <p class="text-xs text-muted mt-1"><span id="short-desc-count">0</span>/120 cuvinte</p>
+                                </div>
+                                <div>
+                                    <label class="label">Etichete</label>
+                                    <input type="text" name="tags" class="input" placeholder="rock, live, outdoor (separate cu virgula)">
+                                    <p class="text-xs text-muted mt-1">Separa etichetele cu virgula</p>
                                 </div>
                             </div>
                         </div>
@@ -134,33 +139,77 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </button>
                         <div class="accordion-body px-5 pb-5 hidden" id="accordion-body-2">
                             <div class="space-y-4 pt-2 border-t border-gray-100">
-                                <div class="grid md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="label">Data eveniment <span class="text-red-500">*</span></label>
-                                        <input type="date" name="start_date" required class="input">
-                                    </div>
-                                    <div>
-                                        <label class="label">Ora incepere <span class="text-red-500">*</span></label>
-                                        <input type="time" name="start_time" required class="input">
+                                <!-- Duration Mode Selector -->
+                                <div>
+                                    <label class="label">Tipul duratei <span class="text-red-500">*</span></label>
+                                    <div class="grid grid-cols-2 gap-3" id="duration-mode-selector">
+                                        <label class="duration-mode-option flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
+                                            <input type="radio" name="duration_mode" value="single_day" class="accent-primary" onchange="onDurationModeChange('single_day')">
+                                            <div>
+                                                <span class="text-sm font-medium text-secondary">O singura zi</span>
+                                                <p class="text-xs text-muted">Evenimentul are loc intr-o singura zi</p>
+                                            </div>
+                                        </label>
+                                        <label class="duration-mode-option flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
+                                            <input type="radio" name="duration_mode" value="range" class="accent-primary" onchange="onDurationModeChange('range')">
+                                            <div>
+                                                <span class="text-sm font-medium text-secondary">Interval de zile</span>
+                                                <p class="text-xs text-muted">Evenimentul se intinde pe mai multe zile</p>
+                                            </div>
+                                        </label>
                                     </div>
                                 </div>
-                                <div class="grid md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="label">Data sfarsit</label>
-                                        <input type="date" name="end_date" class="input">
-                                        <p class="text-xs text-muted mt-1">Optional - doar daca evenimentul se termina in alta zi</p>
+
+                                <!-- Date/Time fields - hidden until duration mode selected -->
+                                <div id="schedule-fields" class="hidden space-y-4">
+                                    <div class="grid md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="label">Data eveniment <span class="text-red-500">*</span></label>
+                                            <input type="date" name="start_date" required class="input">
+                                        </div>
+                                        <div>
+                                            <label class="label">Ora incepere <span class="text-red-500">*</span></label>
+                                            <input type="time" name="start_time" required class="input">
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label class="label">Ora sfarsit</label>
-                                        <input type="time" name="end_time" class="input">
+                                    <div id="end-date-fields" class="hidden">
+                                        <div class="grid md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="label">Data sfarsit <span class="text-red-500">*</span></label>
+                                                <input type="date" name="end_date" class="input">
+                                            </div>
+                                            <div>
+                                                <label class="label">Ora sfarsit</label>
+                                                <input type="time" name="end_time" class="input">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="single-end-time" class="hidden">
+                                        <div class="grid md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="label">Ora sfarsit</label>
+                                                <input type="time" name="end_time_single" class="input">
+                                            </div>
+                                            <div>
+                                                <label class="label">Ora deschidere usi</label>
+                                                <input type="time" name="door_time" class="input">
+                                                <p class="text-xs text-muted mt-1">Ora la care se deschid usile</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="range-door-time" class="hidden">
+                                        <div class="grid md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="label">Ora deschidere usi</label>
+                                                <input type="time" name="door_time_range" class="input">
+                                                <p class="text-xs text-muted mt-1">Ora la care se deschid usile</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="grid md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="label">Ora deschidere usi</label>
-                                        <input type="time" name="door_time" class="input">
-                                        <p class="text-xs text-muted mt-1">Ora la care se deschid usile</p>
-                                    </div>
+
+                                <div id="duration-mode-hint" class="text-sm text-muted italic">
+                                    Selecteaza tipul duratei pentru a configura programul.
                                 </div>
                             </div>
                         </div>
@@ -180,19 +229,25 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </button>
                         <div class="accordion-body px-5 pb-5 hidden" id="accordion-body-3">
                             <div class="space-y-4 pt-2 border-t border-gray-100">
+                                <div>
+                                    <label class="label">Nume locatie / sala <span class="text-red-500">*</span></label>
+                                    <div class="relative">
+                                        <input type="text" name="venue_name" required class="input" placeholder="Cauta sau scrie numele locatiei..." id="venue-search-input" autocomplete="off">
+                                        <div id="venue-dropdown" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                                            <!-- Populated dynamically -->
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-muted mt-1">Cauta in biblioteca de locatii sau scrie manual</p>
+                                </div>
                                 <div class="grid md:grid-cols-2 gap-4">
                                     <div>
-                                        <label class="label">Nume locatie / sala <span class="text-red-500">*</span></label>
-                                        <input type="text" name="venue_name" required class="input" placeholder="ex: Sala Palatului">
+                                        <label class="label">Oras <span class="text-red-500">*</span></label>
+                                        <input type="text" name="venue_city" required class="input" placeholder="ex: Bucuresti" id="venue-city-input">
                                     </div>
                                     <div>
-                                        <label class="label">Oras <span class="text-red-500">*</span></label>
-                                        <input type="text" name="venue_city" required class="input" placeholder="ex: Bucuresti">
+                                        <label class="label">Adresa</label>
+                                        <input type="text" name="venue_address" class="input" placeholder="ex: Str. Lipscani nr. 10" id="venue-address-input">
                                     </div>
-                                </div>
-                                <div>
-                                    <label class="label">Adresa</label>
-                                    <input type="text" name="venue_address" class="input" placeholder="ex: Str. Lipscani nr. 10">
                                 </div>
                                 <div class="grid md:grid-cols-2 gap-4">
                                     <div>
@@ -221,12 +276,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <svg class="w-5 h-5 text-muted accordion-chevron transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
                         <div class="accordion-body px-5 pb-5 hidden" id="accordion-body-4">
-                            <div class="space-y-4 pt-2 border-t border-gray-100">
+                            <div class="space-y-6 pt-2 border-t border-gray-100">
                                 <div>
                                     <label class="label">Descriere completa</label>
-                                    <div id="description-editor" class="min-h-[200px] bg-white border border-gray-200 rounded-xl"></div>
+                                    <div id="description-editor" class="bg-white border border-gray-200 rounded-xl overflow-hidden"></div>
                                     <textarea name="description" class="hidden" id="description-textarea"></textarea>
                                     <p class="text-xs text-muted mt-1">Descrie evenimentul in detaliu: lineup, program, reguli de acces, etc.</p>
+                                </div>
+                                <div>
+                                    <label class="label">Conditii eveniment</label>
+                                    <div id="ticket-terms-editor" class="bg-white border border-gray-200 rounded-xl overflow-hidden"></div>
+                                    <textarea name="ticket_terms" class="hidden" id="ticket-terms-textarea"></textarea>
+                                    <p class="text-xs text-muted mt-1">Conditii de participare, restrictii de varsta, reguli speciale, politica de retur, etc.</p>
                                 </div>
                             </div>
                         </div>
@@ -421,8 +482,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         .step-indicator.completed { background-color: #10b981 !important; color: white !important; }
         .btn-success { background-color: #10b981; color: white; }
         .btn-success:hover { background-color: #059669; }
-        #description-editor { padding: 1rem; }
-        #description-editor:focus-within { border-color: var(--color-primary, #6366f1); outline: none; ring: 2px; }
+        .duration-mode-option:has(input:checked) { border-color: var(--color-primary, #6366f1); background-color: rgba(99, 102, 241, 0.05); }
+        .genre-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; cursor: pointer; border: 1px solid #e5e7eb; background: white; transition: all 0.15s; }
+        .genre-chip:hover { border-color: var(--color-primary, #6366f1); }
+        .genre-chip.selected { background-color: var(--color-primary, #6366f1); color: white; border-color: var(--color-primary, #6366f1); }
+        .venue-option { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.1s; }
+        .venue-option:hover { background-color: #f9fafb; }
+        .venue-option:last-child { border-bottom: none; }
+        #description-editor .ql-editor, #ticket-terms-editor .ql-editor { min-height: 160px; font-size: 0.875rem; }
+        #description-editor .ql-toolbar, #ticket-terms-editor .ql-toolbar { border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; border-color: #e5e7eb; }
+        #description-editor .ql-container, #ticket-terms-editor .ql-container { border-bottom-left-radius: 0.75rem; border-bottom-right-radius: 0.75rem; border-color: #e5e7eb; }
     </style>
 
 <?php
@@ -431,8 +500,10 @@ $scriptsExtra = <<<'JS'
 AmbiletAuth.requireOrganizerAuth();
 
 let ticketTypeCount = 1;
-let currentOpenStep = 1;
-let quillEditor = null;
+let descriptionQuill = null;
+let ticketTermsQuill = null;
+let categoriesData = [];
+let venueSearchTimeout = null;
 
 // Check if we should show create form on load
 const urlParams = new URLSearchParams(window.location.search);
@@ -491,21 +562,234 @@ function renderEvents(events) {
 function showCreateForm() {
     document.getElementById('events-view').classList.add('hidden');
     document.getElementById('create-event-view').classList.remove('hidden');
-    // Update URL without reload
     history.pushState({}, '', '/organizer/events?action=create');
-    // Open first accordion step
     toggleAccordion(1);
-    // Initialize rich text editor
-    initDescriptionEditor();
+    loadCategories();
+    initEditors();
+    initVenueSearch();
+    initShortDescWordCount();
 }
 
 function hideCreateForm() {
     document.getElementById('create-event-view').classList.add('hidden');
     document.getElementById('events-view').classList.remove('hidden');
-    // Update URL
     history.pushState({}, '', '/organizer/events');
-    // Reload events
     loadEvents();
+}
+
+// ==================== CATEGORIES & GENRES ====================
+
+async function loadCategories() {
+    try {
+        const response = await AmbiletAPI.organizer.getEventCategories();
+        const categories = response.data?.categories || response.categories || [];
+        categoriesData = categories;
+        const select = document.getElementById('category-select');
+        // Keep first option
+        select.innerHTML = '<option value="">Selecteaza categoria</option>';
+        categories.forEach(cat => {
+            const icon = cat.icon_emoji ? cat.icon_emoji + ' ' : '';
+            select.innerHTML += `<option value="${cat.id}" data-type-ids="${JSON.stringify(cat.event_type_ids || [])}">${icon}${cat.name}</option>`;
+        });
+    } catch (e) {
+        console.error('Failed to load categories:', e);
+    }
+}
+
+async function onCategoryChange(categoryId) {
+    const genresContainer = document.getElementById('genres-container');
+    const genresList = document.getElementById('genres-list');
+    const typeIdsInput = document.getElementById('selected-event-type-ids');
+
+    if (!categoryId) {
+        genresContainer.classList.add('hidden');
+        genresList.innerHTML = '';
+        typeIdsInput.value = '';
+        return;
+    }
+
+    // Get event_type_ids from selected category
+    const category = categoriesData.find(c => c.id == categoryId);
+    const typeIds = category?.event_type_ids || [];
+    typeIdsInput.value = JSON.stringify(typeIds);
+
+    if (typeIds.length === 0) {
+        genresContainer.classList.add('hidden');
+        genresList.innerHTML = '';
+        return;
+    }
+
+    // Load genres filtered by type_ids
+    try {
+        const response = await AmbiletAPI.organizer.getEventGenres(typeIds);
+        const genres = response.data?.genres || response.genres || [];
+
+        if (genres.length === 0) {
+            genresContainer.classList.add('hidden');
+            genresList.innerHTML = '';
+            return;
+        }
+
+        genresContainer.classList.remove('hidden');
+        genresList.innerHTML = genres.map(genre => `
+            <span class="genre-chip" data-genre-id="${genre.id}" onclick="toggleGenre(this)">
+                ${genre.name}
+            </span>
+        `).join('');
+    } catch (e) {
+        console.error('Failed to load genres:', e);
+        genresContainer.classList.add('hidden');
+    }
+}
+
+function toggleGenre(chip) {
+    chip.classList.toggle('selected');
+}
+
+function getSelectedGenreIds() {
+    return Array.from(document.querySelectorAll('.genre-chip.selected'))
+        .map(chip => parseInt(chip.dataset.genreId));
+}
+
+// ==================== DURATION MODE ====================
+
+function onDurationModeChange(mode) {
+    const scheduleFields = document.getElementById('schedule-fields');
+    const endDateFields = document.getElementById('end-date-fields');
+    const singleEndTime = document.getElementById('single-end-time');
+    const rangeDoorTime = document.getElementById('range-door-time');
+    const hint = document.getElementById('duration-mode-hint');
+
+    scheduleFields.classList.remove('hidden');
+    hint.classList.add('hidden');
+
+    if (mode === 'single_day') {
+        endDateFields.classList.add('hidden');
+        singleEndTime.classList.remove('hidden');
+        rangeDoorTime.classList.add('hidden');
+    } else if (mode === 'range') {
+        endDateFields.classList.remove('hidden');
+        singleEndTime.classList.add('hidden');
+        rangeDoorTime.classList.remove('hidden');
+    }
+
+    updateSummaries();
+}
+
+// ==================== VENUE SEARCH ====================
+
+function initVenueSearch() {
+    const input = document.getElementById('venue-search-input');
+    const dropdown = document.getElementById('venue-dropdown');
+
+    input.addEventListener('input', function () {
+        clearTimeout(venueSearchTimeout);
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+
+        venueSearchTimeout = setTimeout(async () => {
+            try {
+                const response = await AmbiletAPI.organizer.searchVenues(query);
+                const venues = response.data?.venues || response.venues || [];
+
+                if (venues.length === 0) {
+                    dropdown.classList.add('hidden');
+                    return;
+                }
+
+                dropdown.innerHTML = venues.map(venue => `
+                    <div class="venue-option" onclick="selectVenue(${JSON.stringify(venue).replace(/"/g, '&quot;')})">
+                        <div class="font-medium text-sm text-secondary">${venue.name}</div>
+                        <div class="text-xs text-muted">${[venue.city, venue.address].filter(Boolean).join(' - ')}</div>
+                    </div>
+                `).join('');
+                dropdown.classList.remove('hidden');
+            } catch (e) {
+                console.error('Venue search failed:', e);
+                dropdown.classList.add('hidden');
+            }
+        }, 300);
+    });
+
+    // Hide dropdown on blur (with slight delay for click)
+    input.addEventListener('blur', () => {
+        setTimeout(() => dropdown.classList.add('hidden'), 200);
+    });
+
+    // Clear venue_id if user types manually
+    input.addEventListener('input', function () {
+        document.getElementById('selected-venue-id').value = '';
+    });
+}
+
+function selectVenue(venue) {
+    document.getElementById('venue-search-input').value = venue.name;
+    document.getElementById('venue-city-input').value = venue.city || '';
+    document.getElementById('venue-address-input').value = venue.address || '';
+    document.getElementById('selected-venue-id').value = venue.id;
+    document.getElementById('venue-dropdown').classList.add('hidden');
+    updateSummaries();
+}
+
+// ==================== WYSIWYG EDITORS ====================
+
+function initEditors() {
+    if (descriptionQuill) return; // Already initialized
+
+    const toolbarOptions = [
+        [{ 'header': [2, 3, false] }],
+        ['bold', 'italic', 'underline'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        ['link'],
+        ['clean']
+    ];
+
+    descriptionQuill = new Quill('#description-editor', {
+        theme: 'snow',
+        modules: { toolbar: toolbarOptions },
+        placeholder: 'Scrie descrierea evenimentului aici...'
+    });
+
+    descriptionQuill.on('text-change', () => {
+        document.getElementById('description-textarea').value = descriptionQuill.root.innerHTML;
+        updateSummaries();
+    });
+
+    ticketTermsQuill = new Quill('#ticket-terms-editor', {
+        theme: 'snow',
+        modules: { toolbar: toolbarOptions },
+        placeholder: 'Conditii de participare, restrictii, politica de retur...'
+    });
+
+    ticketTermsQuill.on('text-change', () => {
+        document.getElementById('ticket-terms-textarea').value = ticketTermsQuill.root.innerHTML;
+    });
+}
+
+// ==================== SHORT DESCRIPTION WORD COUNT ====================
+
+function initShortDescWordCount() {
+    const input = document.getElementById('short-desc-input');
+    const counter = document.getElementById('short-desc-count');
+
+    input.addEventListener('input', function () {
+        const words = this.value.trim().split(/\s+/).filter(w => w.length > 0);
+        const wordCount = words.length;
+        counter.textContent = wordCount;
+
+        if (wordCount > 120) {
+            counter.parentElement.classList.add('text-red-500');
+            counter.parentElement.classList.remove('text-muted');
+        } else {
+            counter.parentElement.classList.remove('text-red-500');
+            counter.parentElement.classList.add('text-muted');
+        }
+        updateSummaries();
+    });
 }
 
 // ==================== ACCORDION ====================
@@ -531,17 +815,26 @@ function updateSummaries() {
 
     // Step 1 summary
     const name = form.querySelector('[name="name"]').value;
-    const category = form.querySelector('[name="category"]').value;
-    if (name || category) {
-        document.getElementById('summary-1').textContent = [name, category].filter(Boolean).join(' • ');
+    const catSelect = form.querySelector('[name="marketplace_event_category_id"]');
+    const catText = catSelect.selectedOptions[0]?.text || '';
+    if (name || (catText && catText !== 'Selecteaza categoria')) {
+        document.getElementById('summary-1').textContent = [name, catText !== 'Selecteaza categoria' ? catText : ''].filter(Boolean).join(' • ');
     }
 
     // Step 2 summary
+    const durationMode = form.querySelector('[name="duration_mode"]:checked')?.value;
     const startDate = form.querySelector('[name="start_date"]').value;
     const startTime = form.querySelector('[name="start_time"]').value;
     if (startDate) {
         const dateStr = new Date(startDate).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' });
-        document.getElementById('summary-2').textContent = dateStr + (startTime ? ` la ${startTime}` : '');
+        let summary = dateStr + (startTime ? ` la ${startTime}` : '');
+        if (durationMode === 'range') {
+            const endDate = form.querySelector('[name="end_date"]').value;
+            if (endDate) {
+                summary += ' - ' + new Date(endDate).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
+            }
+        }
+        document.getElementById('summary-2').textContent = summary;
     }
 
     // Step 3 summary
@@ -584,42 +877,34 @@ function updateSummaries() {
     if (maxTickets) settingsItems.push(`Max/comanda: ${maxTickets}`);
     document.getElementById('summary-7').textContent = settingsItems.join(' • ');
 
-    // Update step indicators
     updateStepIndicators();
 }
 
 function updateStepIndicators() {
     const form = document.getElementById('create-event-form');
 
-    // Step 1: has name
     const step1Done = !!form.querySelector('[name="name"]').value;
     setStepComplete(1, step1Done);
 
-    // Step 2: has date and time
     const step2Done = !!form.querySelector('[name="start_date"]').value && !!form.querySelector('[name="start_time"]').value;
     setStepComplete(2, step2Done);
 
-    // Step 3: has venue and city
     const step3Done = !!form.querySelector('[name="venue_name"]').value && !!form.querySelector('[name="venue_city"]').value;
     setStepComplete(3, step3Done);
 
-    // Step 4: has description (optional, just mark if filled)
     const step4Done = !!form.querySelector('[name="description"]').value;
     setStepComplete(4, step4Done);
 
-    // Step 5: has at least one image
     const posterInput = form.querySelector('[name="poster"]');
     const coverInput = form.querySelector('[name="cover_image"]');
     const step5Done = (posterInput?.files?.length > 0) || (coverInput?.files?.length > 0);
     setStepComplete(5, step5Done);
 
-    // Step 6: has at least one ticket type
     const firstTicketName = form.querySelector('[name="ticket_name_0"]')?.value;
     const firstTicketPrice = form.querySelector('[name="ticket_price_0"]')?.value;
     const step6Done = !!firstTicketName && !!firstTicketPrice;
     setStepComplete(6, step6Done);
 
-    // Step 7: optional, mark if any field filled
     const step7Done = !!form.querySelector('[name="capacity"]').value || !!form.querySelector('[name="max_tickets_per_order"]').value;
     setStepComplete(7, step7Done);
 }
@@ -710,7 +995,6 @@ function renumberTicketTypes() {
     items.forEach((item, i) => {
         item.setAttribute('data-index', i);
         item.querySelector('h4').textContent = `Tip bilet #${i + 1}`;
-        // Rename inputs
         item.querySelector('[name^="ticket_name_"]').name = `ticket_name_${i}`;
         item.querySelector('[name^="ticket_price_"]').name = `ticket_price_${i}`;
         item.querySelector('[name^="ticket_quantity_"]').name = `ticket_quantity_${i}`;
@@ -763,80 +1047,11 @@ function removeCover() {
     updateSummaries();
 }
 
-// ==================== RICH TEXT EDITOR ====================
-
-function initDescriptionEditor() {
-    const editorEl = document.getElementById('description-editor');
-    if (!editorEl || quillEditor) return;
-
-    // Simple contenteditable fallback (no external deps)
-    editorEl.setAttribute('contenteditable', 'true');
-    editorEl.style.minHeight = '200px';
-    editorEl.style.outline = 'none';
-    editorEl.setAttribute('data-placeholder', 'Scrie descrierea evenimentului aici...');
-
-    // Sync to hidden textarea on input
-    editorEl.addEventListener('input', () => {
-        document.getElementById('description-textarea').value = editorEl.innerHTML;
-        updateSummaries();
-    });
-
-    // Placeholder behavior
-    editorEl.addEventListener('focus', () => {
-        if (editorEl.textContent.trim() === '') {
-            editorEl.innerHTML = '';
-        }
-    });
-    editorEl.addEventListener('blur', () => {
-        if (editorEl.textContent.trim() === '') {
-            editorEl.innerHTML = '';
-        }
-    });
-
-    // Show placeholder initially
-    if (editorEl.textContent.trim() === '') {
-        editorEl.classList.add('text-gray-400');
-        editorEl.textContent = 'Scrie descrierea evenimentului aici...';
-        editorEl.addEventListener('focus', function clearPlaceholder() {
-            if (editorEl.classList.contains('text-gray-400')) {
-                editorEl.textContent = '';
-                editorEl.classList.remove('text-gray-400');
-            }
-            editorEl.removeEventListener('focus', clearPlaceholder);
-        });
-    }
-}
-
-// ==================== SHORT DESCRIPTION COUNTER ====================
-
-document.addEventListener('DOMContentLoaded', () => {
-    const shortDesc = document.querySelector('[name="short_description"]');
-    if (shortDesc) {
-        shortDesc.addEventListener('input', () => {
-            document.getElementById('short-desc-count').textContent = shortDesc.value.length;
-            updateSummaries();
-        });
-    }
-
-    // Add change listeners to all form inputs for summary updates
-    document.querySelectorAll('#create-event-form input, #create-event-form select, #create-event-form textarea').forEach(el => {
-        el.addEventListener('change', updateSummaries);
-        el.addEventListener('input', debounce(updateSummaries, 300));
-    });
-});
-
-function debounce(fn, ms) {
-    let timer;
-    return function(...args) {
-        clearTimeout(timer);
-        timer = setTimeout(() => fn.apply(this, args), ms);
-    };
-}
-
 // ==================== SAVE EVENT ====================
 
 function collectFormData() {
     const form = document.getElementById('create-event-form');
+    const durationMode = form.querySelector('[name="duration_mode"]:checked')?.value;
 
     // Build starts_at from date + time
     const startDate = form.querySelector('[name="start_date"]').value;
@@ -849,18 +1064,28 @@ function collectFormData() {
     }
 
     // Build ends_at
-    const endDate = form.querySelector('[name="end_date"]').value || startDate;
-    const endTime = form.querySelector('[name="end_time"]').value;
     let endsAt = null;
-    if (endTime && endDate) {
-        endsAt = `${endDate}T${endTime}:00`;
+    if (durationMode === 'range') {
+        const endDate = form.querySelector('[name="end_date"]').value;
+        const endTime = form.querySelector('[name="end_time"]')?.value;
+        if (endDate) {
+            endsAt = endTime ? `${endDate}T${endTime}:00` : `${endDate}T23:59:00`;
+        }
+    } else if (durationMode === 'single_day') {
+        const endTimeSingle = form.querySelector('[name="end_time_single"]').value;
+        if (endTimeSingle && startDate) {
+            endsAt = `${startDate}T${endTimeSingle}:00`;
+        }
     }
 
     // Build doors_open_at
-    const doorTime = form.querySelector('[name="door_time"]').value;
     let doorsOpenAt = null;
-    if (doorTime && startDate) {
-        doorsOpenAt = `${startDate}T${doorTime}:00`;
+    if (durationMode === 'single_day') {
+        const doorTime = form.querySelector('[name="door_time"]').value;
+        if (doorTime && startDate) doorsOpenAt = `${startDate}T${doorTime}:00`;
+    } else if (durationMode === 'range') {
+        const doorTimeRange = form.querySelector('[name="door_time_range"]').value;
+        if (doorTimeRange && startDate) doorsOpenAt = `${startDate}T${doorTimeRange}:00`;
     }
 
     // Collect ticket types
@@ -870,10 +1095,7 @@ function collectFormData() {
         const tName = item.querySelector(`[name="ticket_name_${i}"]`)?.value;
         const tPrice = item.querySelector(`[name="ticket_price_${i}"]`)?.value;
         if (tName && tPrice !== '') {
-            const ticket = {
-                name: tName,
-                price: parseFloat(tPrice),
-            };
+            const ticket = { name: tName, price: parseFloat(tPrice) };
             const tQty = item.querySelector(`[name="ticket_quantity_${i}"]`)?.value;
             const tDesc = item.querySelector(`[name="ticket_desc_${i}"]`)?.value;
             const tMin = item.querySelector(`[name="ticket_min_${i}"]`)?.value;
@@ -898,18 +1120,31 @@ function collectFormData() {
         venue_city: form.querySelector('[name="venue_city"]').value,
     };
 
-    // Optional fields
+    // Category
+    const categoryId = form.querySelector('[name="marketplace_event_category_id"]').value;
+    if (categoryId) data.marketplace_event_category_id = parseInt(categoryId);
+
+    // Venue ID (if selected from library)
+    const venueId = document.getElementById('selected-venue-id').value;
+    if (venueId) data.venue_id = parseInt(venueId);
+
+    // Event genres
+    const genreIds = getSelectedGenreIds();
+    if (genreIds.length > 0) data.genre_ids = genreIds;
+
+    // Short description
     const shortDesc = form.querySelector('[name="short_description"]').value;
     if (shortDesc) data.short_description = shortDesc;
 
+    // Description (from Quill)
     const description = form.querySelector('[name="description"]').value;
-    if (description) data.description = description;
+    if (description && description !== '<p><br></p>') data.description = description;
 
-    const category = form.querySelector('[name="category"]').value;
-    if (category) data.category = category;
+    // Ticket terms (from Quill)
+    const ticketTerms = form.querySelector('[name="ticket_terms"]').value;
+    if (ticketTerms && ticketTerms !== '<p><br></p>') data.ticket_terms = ticketTerms;
 
     if (tags && tags.length > 0) data.tags = tags;
-
     if (endsAt) data.ends_at = endsAt;
     if (doorsOpenAt) data.doors_open_at = doorsOpenAt;
 
@@ -942,7 +1177,6 @@ function collectFormData() {
 async function saveEventDraft() {
     const data = collectFormData();
 
-    // Basic validation
     if (!data.name) {
         AmbiletNotifications.error('Numele evenimentului este obligatoriu.');
         toggleAccordion(1);
@@ -967,7 +1201,16 @@ async function saveEventDraft() {
         return;
     }
 
-    // Show loading
+    // Word count validation for short description
+    if (data.short_description) {
+        const wordCount = data.short_description.trim().split(/\s+/).filter(w => w.length > 0).length;
+        if (wordCount > 120) {
+            AmbiletNotifications.error('Descrierea scurta nu poate depasi 120 de cuvinte.');
+            toggleAccordion(1);
+            return;
+        }
+    }
+
     const btnText = document.getElementById('save-btn-text');
     const btnSpinner = document.getElementById('save-btn-spinner');
     const saveStatus = document.getElementById('save-status');
@@ -979,15 +1222,12 @@ async function saveEventDraft() {
         let result;
 
         if (savedEventId) {
-            // Update existing draft
             result = await AmbiletAPI.organizer.updateEvent(savedEventId, data);
         } else {
-            // Create new event
             result = await AmbiletAPI.organizer.createEvent(data);
         }
 
         if (result.success !== false) {
-            // Store the event ID for subsequent saves
             const eventId = result.data?.event?.id || result.data?.id || savedEventId;
             if (eventId) {
                 document.getElementById('saved-event-id').value = eventId;
@@ -1012,7 +1252,6 @@ async function saveEventDraft() {
 async function saveAndSubmitEvent() {
     const data = collectFormData();
 
-    // Full validation for submission
     if (!data.name) {
         AmbiletNotifications.error('Numele evenimentului este obligatoriu.');
         toggleAccordion(1);
@@ -1039,10 +1278,8 @@ async function saveAndSubmitEvent() {
         let eventId = savedEventId;
 
         if (savedEventId) {
-            // Update then submit
             await AmbiletAPI.organizer.updateEvent(savedEventId, data);
         } else {
-            // Create first
             const result = await AmbiletAPI.organizer.createEvent(data);
             if (result.success === false) {
                 AmbiletNotifications.error(result.message || 'Eroare la creare.');
@@ -1055,7 +1292,6 @@ async function saveAndSubmitEvent() {
         }
 
         if (eventId) {
-            // Submit for review
             const submitResult = await AmbiletAPI.organizer.submitEvent(eventId);
             if (submitResult.success !== false) {
                 AmbiletNotifications.success('Evenimentul a fost trimis spre aprobare!');
@@ -1071,7 +1307,8 @@ async function saveAndSubmitEvent() {
     }
 }
 
-// Handle browser back button
+// ==================== EVENT LISTENERS ====================
+
 window.addEventListener('popstate', () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('action') === 'create') {
@@ -1082,7 +1319,6 @@ window.addEventListener('popstate', () => {
 });
 
 document.addEventListener('keydown', (e) => {
-    // Ctrl+S to save draft
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         if (!document.getElementById('create-event-view').classList.contains('hidden')) {
             e.preventDefault();
@@ -1090,6 +1326,22 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+// Add change listeners for summary updates
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#create-event-form input, #create-event-form select, #create-event-form textarea').forEach(el => {
+        el.addEventListener('change', updateSummaries);
+        el.addEventListener('input', debounce(updateSummaries, 300));
+    });
+});
+
+function debounce(fn, ms) {
+    let timer;
+    return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), ms);
+    };
+}
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';
