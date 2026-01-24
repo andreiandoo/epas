@@ -789,10 +789,12 @@ class EventsController extends BaseController
             });
         }
 
-        $venues = $query->orderBy('name')
+        $venues = $query
+            ->orderByRaw('CASE WHEN marketplace_client_id IS NOT NULL THEN 0 ELSE 1 END')
+            ->orderBy('name')
             ->limit(50)
             ->get()
-            ->map(function ($venue) {
+            ->map(function ($venue) use ($organizer) {
                 $name = is_array($venue->name) ? ($venue->name['ro'] ?? $venue->name['en'] ?? array_values($venue->name)[0] ?? '') : $venue->name;
                 return [
                     'id' => $venue->id,
@@ -801,6 +803,7 @@ class EventsController extends BaseController
                     'address' => $venue->address,
                     'capacity' => $venue->capacity,
                     'website_url' => $venue->website_url,
+                    'is_marketplace' => $venue->marketplace_client_id === $organizer->marketplace_client_id,
                 ];
             });
 

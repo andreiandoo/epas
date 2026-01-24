@@ -61,27 +61,16 @@ AmbiletAuth.requireOrganizerAuth();
 loadParticipants();
 
 async function loadParticipants() {
-    try { const response = await AmbiletAPI.get('/organizer/participants'); if (response.success) { renderParticipants(response.data.participants); updateStats(response.data.stats); } }
-    catch (error) { loadMockData(); }
-}
-
-function loadMockData() {
-    const participants = [
-        { id: 1, name: 'Maria Ionescu', email: 'maria@email.com', event: 'Concert Revelion', ticket_type: 'VIP', ticket_code: 'TKT-ABC123', checked_in: true },
-        { id: 2, name: 'Ion Popescu', email: 'ion@email.com', event: 'Concert Revelion', ticket_type: 'Standard', ticket_code: 'TKT-DEF456', checked_in: true },
-        { id: 3, name: 'Elena Marin', email: 'elena@email.com', event: 'Festival Folk', ticket_type: 'Standard', ticket_code: 'TKT-GHI789', checked_in: false },
-        { id: 4, name: 'Andrei Stan', email: 'andrei@email.com', event: 'Stand-up', ticket_type: 'Early Bird', ticket_code: 'TKT-JKL012', checked_in: false }
-    ];
-    renderParticipants(participants);
-    const checkedIn = participants.filter(p => p.checked_in).length;
-    document.getElementById('total-participants').textContent = participants.length;
-    document.getElementById('checked-in').textContent = checkedIn;
-    document.getElementById('pending-checkin').textContent = participants.length - checkedIn;
-    document.getElementById('checkin-rate').textContent = Math.round((checkedIn / participants.length) * 100) + '%';
+    try {
+        const response = await AmbiletAPI.get('/organizer/participants');
+        if (response.success) { renderParticipants(response.data.participants || []); updateStats(response.data.stats); }
+        else { renderParticipants([]); }
+    } catch (error) { renderParticipants([]); }
 }
 
 function renderParticipants(participants) {
     const container = document.getElementById('participants-list');
+    if (!participants.length) { container.innerHTML = '<tr><td colspan="6" class="px-6 py-12 text-center text-muted">Nu exista participanti momentan</td></tr>'; return; }
     container.innerHTML = participants.map(p => `
         <tr class="hover:bg-surface/50">
             <td class="px-6 py-4"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center"><span class="text-sm font-semibold text-primary">${p.name.split(' ').map(n => n[0]).join('')}</span></div><div><p class="font-medium text-secondary">${p.name}</p><p class="text-sm text-muted">${p.email}</p></div></div></td>
@@ -98,7 +87,13 @@ function updateStats(stats) { if (!stats) return; document.getElementById('total
 function openScanner() { document.getElementById('manual-checkin-modal').classList.remove('hidden'); document.getElementById('manual-checkin-modal').classList.add('flex'); }
 function closeManualCheckin() { document.getElementById('manual-checkin-modal').classList.add('hidden'); document.getElementById('manual-checkin-modal').classList.remove('flex'); }
 function processManualCheckin(e) { e.preventDefault(); const code = document.getElementById('manual-ticket-code').value; closeManualCheckin(); doCheckin(code); }
-async function doCheckin(ticketCode) { AmbiletNotifications.success('Check-in reusit pentru ' + ticketCode); loadMockData(); }
+async function doCheckin(ticketCode) {
+    try {
+        const response = await AmbiletAPI.post('/organizer/participants/checkin', { ticket_code: ticketCode });
+        if (response.success) { AmbiletNotifications.success('Check-in reusit pentru ' + ticketCode); loadParticipants(); }
+        else { AmbiletNotifications.error(response.message || 'Eroare la check-in'); }
+    } catch (error) { AmbiletNotifications.error('Eroare la check-in'); }
+}
 function exportParticipants() { AmbiletNotifications.success('Lista participantilor a fost exportata'); }
 document.getElementById('event-filter').addEventListener('change', loadParticipants);
 document.getElementById('checkin-filter').addEventListener('change', loadParticipants);
