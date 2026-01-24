@@ -580,7 +580,7 @@ const EventPage = {
                 '</div>' +
                 '<p class="mb-6">dar încă mai găsești bilete la:</p>' +
                 '<div id="ended-related-events" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>' +
-                '<div id="ended-related-loading" class="py-8 text-muted text-sm">Se încarcă evenimente...</div>' +
+                '<div id="ended-related-loading" class="py-8 text-sm">Se caută sugestii de evenimente...</div>' +
             '</div>';
 
         eventContent.parentNode.insertBefore(banner, eventContent);
