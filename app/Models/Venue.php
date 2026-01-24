@@ -327,6 +327,11 @@ class Venue extends Model
         return $this->hasMany(\App\Models\Event::class);
     }
 
+    public function marketplaceEvents(): HasMany
+    {
+        return $this->hasMany(\App\Models\MarketplaceEvent::class);
+    }
+
     public function seatingLayouts(): HasMany
     {
         return $this->hasMany(\App\Models\Seating\SeatingLayout::class);

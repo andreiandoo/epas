@@ -100,8 +100,8 @@ const ArtistPage = {
                 '</div>';
         }
 
-        // Hide other sections
-        var profileSection = document.querySelector('.max-w-7xl.px-6.-mt-20');
+        // Hide profile section
+        var profileSection = document.getElementById('profile-section');
         if (profileSection) {
             profileSection.style.display = 'none';
         }

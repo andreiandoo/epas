@@ -16,6 +16,7 @@ class VenuesController extends BaseController
         $client = $this->requireClient($request);
 
         $query = Venue::query()
+            ->with('venueCategories')
             ->where('marketplace_client_id', $client->id);
 
         // Filter by city
@@ -57,9 +58,10 @@ class VenuesController extends BaseController
 
         switch ($sort) {
             case 'events':
-                $query->withCount(['events' => function ($q) {
-                    $q->where('event_date', '>=', now()->toDateString());
-                }])->orderBy('events_count', 'desc');
+                $query->withCount(['marketplaceEvents' => function ($q) {
+                    $q->where('status', 'published')
+                      ->where('starts_at', '>=', now());
+                }])->orderBy('marketplace_events_count', 'desc');
                 break;
             case 'capacity':
                 $query->orderBy('capacity', $order);
@@ -127,12 +129,12 @@ class VenuesController extends BaseController
 
         $language = $client->language ?? 'ro';
 
-        // Get upcoming events at this venue
-        $upcomingEvents = $venue->events()
-            ->where('event_date', '>=', now()->toDateString())
-            ->where('is_cancelled', false)
+        // Get upcoming marketplace events at this venue
+        $upcomingEvents = $venue->marketplaceEvents()
+            ->where('status', 'published')
+            ->where('starts_at', '>=', now())
             ->with(['ticketTypes', 'marketplaceOrganizer:id,default_commission_mode,commission_rate', 'marketplaceEventCategory'])
-            ->orderBy('event_date')
+            ->orderBy('starts_at')
             ->limit(10)
             ->get()
             ->map(function ($event) use ($language, $client) {
@@ -143,16 +145,8 @@ class VenuesController extends BaseController
                         return ($tt->sale_price_cents ?? $tt->price_cents) / 100;
                     })->filter()->min();
 
-                // Get image URL - use APP_URL for consistent domain
-                $imageUrl = null;
-                $imagePath = $event->poster_url ?? $event->hero_image_url ?? null;
-                if ($imagePath) {
-                    if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
-                        $imageUrl = $imagePath;
-                    } else {
-                        $imageUrl = rtrim(config('app.url'), '/') . '/storage/' . ltrim($imagePath, '/');
-                    }
-                }
+                // Get image URL
+                $imageUrl = $this->formatImageUrl($event->image);
 
                 // Get commission settings (event > organizer > marketplace default)
                 $organizer = $event->marketplaceOrganizer;
@@ -164,12 +158,11 @@ class VenuesController extends BaseController
 
                 return [
                     'id' => $event->id,
-                    'name' => $event->getTranslation('title', $language),
+                    'name' => $event->name,
                     'slug' => $event->slug,
-                    'starts_at' => $event->event_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
-                    'start_time' => $event->start_time,
+                    'starts_at' => $event->starts_at?->toIso8601String(),
                     'price_from' => $minPrice,
-                    'currency' => $event->currency ?? 'RON',
+                    'currency' => $event->ticketTypes->first()?->currency ?? 'RON',
                     'image' => $imageUrl,
                     'is_sold_out' => $event->is_sold_out ?? false,
                     'category' => $categoryName ? ['name' => $categoryName] : null,
@@ -207,7 +200,10 @@ class VenuesController extends BaseController
                 'slug' => $cat->slug,
             ]),
             'upcoming_events' => $upcomingEvents,
-            'events_count' => $venue->events()->where('event_date', '>=', now()->toDateString())->count(),
+            'events_count' => $venue->marketplaceEvents()
+                ->where('status', 'published')
+                ->where('starts_at', '>=', now())
+                ->count(),
         ];
 
         return $this->success($data);
@@ -226,7 +222,10 @@ class VenuesController extends BaseController
             'address' => $venue->address,
             'capacity' => $venue->capacity,
             'image' => $this->formatImageUrl($venue->image_url),
-            'events_count' => $venue->events()->where('event_date', '>=', now()->toDateString())->count(),
+            'events_count' => $venue->marketplaceEvents()
+                ->where('status', 'published')
+                ->where('starts_at', '>=', now())
+                ->count(),
             'is_featured' => $venue->is_featured ?? false,
             'is_partner' => $venue->is_partner ?? false,
             'categories' => $venue->venueCategories->map(fn ($cat) => [

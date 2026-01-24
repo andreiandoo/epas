@@ -230,7 +230,21 @@ const VenuesPage = {
 
     async loadVenues() {
         try {
-            this.venues = await AmbiletAPI.getVenues();
+            const response = await AmbiletAPI.getVenues({ per_page: 50 });
+            const raw = response.data || response || [];
+            this.venues = (Array.isArray(raw) ? raw : []).map(v => ({
+                id: v.id,
+                name: v.name || '',
+                slug: v.slug || '',
+                image: v.image || '/assets/images/placeholder-venue.jpg',
+                location: v.city || '',
+                capacity: v.capacity || 0,
+                eventsCount: v.events_count || 0,
+                featured: v.is_featured || false,
+                type: (v.categories && v.categories[0]?.name) || 'Locație',
+                category: (v.categories && v.categories[0]?.slug) || 'other',
+                eventTypes: v.categories ? v.categories.map(c => c.name).join(', ') : ''
+            }));
             this.renderFeatured();
             this.renderVenues();
         } catch (err) {
@@ -243,6 +257,12 @@ const VenuesPage = {
     renderFeatured() {
         const featured = this.venues.filter(v => v.featured);
         const container = document.getElementById('featuredVenues');
+        const section = container?.closest('section');
+        if (!featured.length) {
+            if (section) section.style.display = 'none';
+            return;
+        }
+        if (section) section.style.display = '';
 
         container.innerHTML = featured.map(v => `
             <a href="/locatie/${v.slug}" class="relative overflow-hidden rounded-2xl aspect-video group">
