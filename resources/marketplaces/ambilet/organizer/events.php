@@ -11,7 +11,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>
 
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col min-h-screen lg:ml-0">
+    <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
         <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
                 <!-- Page Content -->
         <main class="flex-1 p-4 lg:p-8">
@@ -29,17 +29,17 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
 
                 <div class="flex flex-wrap items-center gap-4 mb-6">
-                    <div class="flex-1 min-w-[200px]"><input type="text" placeholder="Cauta evenimente..." class="input w-full" id="search-input"></div>
-                    <select class="input w-auto" id="status-filter"><option value="">Toate statusurile</option><option value="published">Publicate</option><option value="draft">Ciorne</option><option value="ended">Incheiate</option></select>
-                    <select class="input w-auto" id="sort-filter"><option value="date_desc">Cele mai recente</option><option value="date_asc">Cele mai vechi</option><option value="sales_desc">Cele mai vandute</option></select>
+                    <div class="flex-1 min-w-[200px]"><input type="text" placeholder="Cauta evenimente..." class="w-full input" id="search-input"></div>
+                    <select class="w-auto input" id="status-filter"><option value="">Toate statusurile</option><option value="published">Publicate</option><option value="draft">Ciorne</option><option value="ended">Incheiate</option></select>
+                    <select class="w-auto input" id="sort-filter"><option value="date_desc">Cele mai recente</option><option value="date_asc">Cele mai vechi</option><option value="sales_desc">Cele mai vandute</option></select>
                 </div>
 
-                <div id="events-list" class="space-y-4"><div class="animate-pulse bg-white rounded-2xl border border-border p-6"><div class="flex gap-6"><div class="w-32 h-24 bg-surface rounded-lg"></div><div class="flex-1 space-y-3"><div class="h-5 bg-surface rounded w-1/3"></div><div class="h-4 bg-surface rounded w-1/4"></div></div></div></div></div>
+                <div id="events-list" class="space-y-4"><div class="p-6 bg-white border animate-pulse rounded-2xl border-border"><div class="flex gap-6"><div class="w-32 h-24 rounded-lg bg-surface"></div><div class="flex-1 space-y-3"><div class="w-1/3 h-5 rounded bg-surface"></div><div class="w-1/4 h-4 rounded bg-surface"></div></div></div></div></div>
 
-                <div id="no-events" class="hidden text-center py-16 bg-white rounded-2xl border border-border">
-                    <div class="w-24 h-24 bg-muted/10 rounded-full flex items-center justify-center mx-auto mb-6"><svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
-                    <h2 class="text-xl font-bold text-secondary mb-2">Nu ai evenimente inca</h2>
-                    <p class="text-muted mb-6">Creeaza primul tau eveniment si incepe sa vinzi bilete!</p>
+                <div id="no-events" class="hidden py-16 text-center bg-white border rounded-2xl border-border">
+                    <div class="flex items-center justify-center w-24 h-24 mx-auto mb-6 rounded-full bg-muted/10"><svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+                    <h2 class="mb-2 text-xl font-bold text-secondary">Nu ai evenimente inca</h2>
+                    <p class="mb-6 text-muted">Creeaza primul tau eveniment si incepe sa vinzi bilete!</p>
                     <button onclick="showCreateForm()" class="btn btn-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Creeaza eveniment</button>
                 </div>
             </div>
@@ -51,7 +51,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <!-- Header -->
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center gap-4">
-                        <button onclick="hideCreateForm()" class="p-2 rounded-lg hover:bg-white text-muted hover:text-secondary transition-colors">
+                        <button onclick="hideCreateForm()" class="p-2 transition-colors rounded-lg hover:bg-white text-muted hover:text-secondary">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                         </button>
                         <div>
@@ -60,7 +60,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
-                        <span id="save-status" class="text-sm text-muted hidden"></span>
+                        <span id="save-status" class="hidden text-sm text-muted"></span>
                         <button onclick="saveEventDraft()" class="btn btn-primary" id="save-draft-btn">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                             <span id="save-btn-text">Salveaza ciorna</span>
@@ -77,24 +77,24 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <input type="hidden" id="selected-venue-id" value="">
 
                     <!-- ============ STEP 1: Detalii Eveniment ============ -->
-                    <div class="accordion-section bg-white rounded-2xl border border-border overflow-hidden" data-step="1">
-                        <button type="button" class="accordion-header w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors" onclick="toggleAccordion(1)">
+                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="1">
+                        <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(1)">
                             <div class="flex items-center gap-3">
-                                <div class="step-indicator w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold">1</div>
+                                <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-full step-indicator bg-primary">1</div>
                                 <div>
                                     <h3 class="font-semibold text-secondary">Detalii eveniment</h3>
                                     <p class="text-xs text-muted mt-0.5 accordion-summary" id="summary-1"></p>
                                 </div>
                             </div>
-                            <svg class="w-5 h-5 text-muted accordion-chevron transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <svg class="w-5 h-5 transition-transform text-muted accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div class="accordion-body px-5 pb-5" id="accordion-body-1">
-                            <div class="space-y-4 pt-2 border-t border-gray-100">
+                        <div class="px-5 pb-5 accordion-body" id="accordion-body-1">
+                            <div class="pt-2 space-y-4 border-t border-gray-100">
                                 <div>
                                     <label class="label">Numele evenimentului <span class="text-red-500">*</span></label>
                                     <input type="text" name="name" required class="input" placeholder="ex: Concert Rock in Parc">
                                 </div>
-                                <div class="grid md:grid-cols-2 gap-4">
+                                <div class="grid gap-4 md:grid-cols-2">
                                     <div>
                                         <label class="label">Categorie</label>
                                         <select name="marketplace_event_category_id" class="input" id="category-select" onchange="onCategoryChange(this.value)">
@@ -106,9 +106,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <div class="multiselect-wrapper" id="genres-multiselect">
                                             <div class="multiselect-tags" id="genres-selected"></div>
                                             <input type="text" class="multiselect-input" placeholder="Cauta genuri..." id="genres-search-input" autocomplete="off">
-                                            <div class="multiselect-dropdown hidden" id="genres-dropdown"></div>
+                                            <div class="hidden multiselect-dropdown" id="genres-dropdown"></div>
                                         </div>
-                                        <p class="text-xs text-muted mt-1">Selecteaza genurile aplicabile</p>
+                                        <p class="mt-1 text-xs text-muted">Selecteaza genurile aplicabile</p>
                                     </div>
                                 </div>
                                 <!-- Artist Selection -->
@@ -117,50 +117,50 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <div class="multiselect-wrapper" id="artists-multiselect">
                                         <div class="multiselect-tags" id="artists-selected"></div>
                                         <input type="text" class="multiselect-input" placeholder="Cauta artisti..." id="artists-search-input" autocomplete="off">
-                                        <div class="multiselect-dropdown hidden" id="artists-dropdown"></div>
+                                        <div class="hidden multiselect-dropdown" id="artists-dropdown"></div>
                                     </div>
-                                    <p class="text-xs text-muted mt-1">Cauta in biblioteca sau scrie un nume nou pentru a-l adauga</p>
+                                    <p class="mt-1 text-xs text-muted">Cauta in biblioteca sau scrie un nume nou pentru a-l adauga</p>
                                 </div>
                                 <div>
                                     <label class="label">Descriere scurta</label>
                                     <textarea name="short_description" rows="3" class="input" placeholder="O scurta descriere a evenimentului (max 120 cuvinte)" id="short-desc-input"></textarea>
-                                    <p class="text-xs text-muted mt-1"><span id="short-desc-count">0</span>/120 cuvinte</p>
+                                    <p class="mt-1 text-xs text-muted"><span id="short-desc-count">0</span>/120 cuvinte</p>
                                 </div>
                                 <div>
                                     <label class="label">Etichete</label>
                                     <input type="text" name="tags" class="input" placeholder="rock, live, outdoor (separate cu virgula)">
-                                    <p class="text-xs text-muted mt-1">Separa etichetele cu virgula</p>
+                                    <p class="mt-1 text-xs text-muted">Separa etichetele cu virgula</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- ============ STEP 2: Program ============ -->
-                    <div class="accordion-section bg-white rounded-2xl border border-border overflow-hidden" data-step="2">
-                        <button type="button" class="accordion-header w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors" onclick="toggleAccordion(2)">
+                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="2">
+                        <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(2)">
                             <div class="flex items-center gap-3">
-                                <div class="step-indicator w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-bold">2</div>
+                                <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-600 bg-gray-200 rounded-full step-indicator">2</div>
                                 <div>
                                     <h3 class="font-semibold text-secondary">Program</h3>
                                     <p class="text-xs text-muted mt-0.5 accordion-summary" id="summary-2"></p>
                                 </div>
                             </div>
-                            <svg class="w-5 h-5 text-muted accordion-chevron transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <svg class="w-5 h-5 transition-transform text-muted accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div class="accordion-body px-5 pb-5 hidden" id="accordion-body-2">
-                            <div class="space-y-4 pt-2 border-t border-gray-100">
+                        <div class="hidden px-5 pb-5 accordion-body" id="accordion-body-2">
+                            <div class="pt-2 space-y-4 border-t border-gray-100">
                                 <!-- Duration Mode Selector -->
                                 <div>
                                     <label class="label">Tipul duratei <span class="text-red-500">*</span></label>
                                     <div class="grid grid-cols-2 gap-3" id="duration-mode-selector">
-                                        <label class="duration-mode-option flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
+                                        <label class="flex items-center gap-3 p-3 transition-colors border-2 border-gray-200 cursor-pointer duration-mode-option rounded-xl hover:border-primary/50">
                                             <input type="radio" name="duration_mode" value="single_day" class="accent-primary" onchange="onDurationModeChange('single_day')">
                                             <div>
                                                 <span class="text-sm font-medium text-secondary">O singura zi</span>
                                                 <p class="text-xs text-muted">Evenimentul are loc intr-o singura zi</p>
                                             </div>
                                         </label>
-                                        <label class="duration-mode-option flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
+                                        <label class="flex items-center gap-3 p-3 transition-colors border-2 border-gray-200 cursor-pointer duration-mode-option rounded-xl hover:border-primary/50">
                                             <input type="radio" name="duration_mode" value="range" class="accent-primary" onchange="onDurationModeChange('range')">
                                             <div>
                                                 <span class="text-sm font-medium text-secondary">Interval de zile</span>
@@ -172,7 +172,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                                 <!-- Date/Time fields - hidden until duration mode selected -->
                                 <div id="schedule-fields" class="hidden space-y-4">
-                                    <div class="grid md:grid-cols-2 gap-4">
+                                    <div class="grid gap-4 md:grid-cols-2">
                                         <div>
                                             <label class="label">Data eveniment <span class="text-red-500">*</span></label>
                                             <input type="date" name="start_date" required class="input">
@@ -183,7 +183,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         </div>
                                     </div>
                                     <div id="end-date-fields" class="hidden">
-                                        <div class="grid md:grid-cols-2 gap-4">
+                                        <div class="grid gap-4 md:grid-cols-2">
                                             <div>
                                                 <label class="label">Data sfarsit <span class="text-red-500">*</span></label>
                                                 <input type="date" name="end_date" class="input">
@@ -195,7 +195,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         </div>
                                     </div>
                                     <div id="single-end-time" class="hidden">
-                                        <div class="grid md:grid-cols-2 gap-4">
+                                        <div class="grid gap-4 md:grid-cols-2">
                                             <div>
                                                 <label class="label">Ora sfarsit</label>
                                                 <input type="time" name="end_time_single" class="input">
@@ -203,22 +203,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                             <div>
                                                 <label class="label">Ora deschidere usi</label>
                                                 <input type="time" name="door_time" class="input">
-                                                <p class="text-xs text-muted mt-1">Ora la care se deschid usile</p>
+                                                <p class="mt-1 text-xs text-muted">Ora la care se deschid usile</p>
                                             </div>
                                         </div>
                                     </div>
                                     <div id="range-door-time" class="hidden">
-                                        <div class="grid md:grid-cols-2 gap-4">
+                                        <div class="grid gap-4 md:grid-cols-2">
                                             <div>
                                                 <label class="label">Ora deschidere usi</label>
                                                 <input type="time" name="door_time_range" class="input">
-                                                <p class="text-xs text-muted mt-1">Ora la care se deschid usile</p>
+                                                <p class="mt-1 text-xs text-muted">Ora la care se deschid usile</p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div id="duration-mode-hint" class="text-sm text-muted italic">
+                                <div id="duration-mode-hint" class="text-sm italic text-muted">
                                     Selecteaza tipul duratei pentru a configura programul.
                                 </div>
                             </div>
@@ -226,30 +226,30 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <!-- ============ STEP 3: Locatie ============ -->
-                    <div class="accordion-section bg-white rounded-2xl border border-border overflow-hidden" data-step="3">
-                        <button type="button" class="accordion-header w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors" onclick="toggleAccordion(3)">
+                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="3">
+                        <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(3)">
                             <div class="flex items-center gap-3">
-                                <div class="step-indicator w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-bold">3</div>
+                                <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-600 bg-gray-200 rounded-full step-indicator">3</div>
                                 <div>
                                     <h3 class="font-semibold text-secondary">Locatie</h3>
                                     <p class="text-xs text-muted mt-0.5 accordion-summary" id="summary-3"></p>
                                 </div>
                             </div>
-                            <svg class="w-5 h-5 text-muted accordion-chevron transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <svg class="w-5 h-5 transition-transform text-muted accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div class="accordion-body px-5 pb-5 hidden" id="accordion-body-3">
-                            <div class="space-y-4 pt-2 border-t border-gray-100">
+                        <div class="hidden px-5 pb-5 accordion-body" id="accordion-body-3">
+                            <div class="pt-2 space-y-4 border-t border-gray-100">
                                 <div>
                                     <label class="label">Nume locatie / sala <span class="text-red-500">*</span></label>
                                     <div class="relative">
                                         <input type="text" name="venue_name" required class="input" placeholder="Cauta sau scrie numele locatiei..." id="venue-search-input" autocomplete="off">
-                                        <div id="venue-dropdown" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                                        <div id="venue-dropdown" class="absolute z-50 hidden w-full mt-1 overflow-y-auto bg-white border border-gray-200 shadow-lg rounded-xl max-h-60">
                                             <!-- Populated dynamically -->
                                         </div>
                                     </div>
-                                    <p class="text-xs text-muted mt-1">Cauta in biblioteca de locatii sau scrie manual</p>
+                                    <p class="mt-1 text-xs text-muted">Cauta in biblioteca de locatii sau scrie manual</p>
                                 </div>
-                                <div class="grid md:grid-cols-2 gap-4">
+                                <div class="grid gap-4 md:grid-cols-2">
                                     <div>
                                         <label class="label">Oras <span class="text-red-500">*</span></label>
                                         <input type="text" name="venue_city" required class="input" placeholder="ex: Bucuresti" id="venue-city-input">
@@ -259,7 +259,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <input type="text" name="venue_address" class="input" placeholder="ex: Str. Lipscani nr. 10" id="venue-address-input">
                                     </div>
                                 </div>
-                                <div class="grid md:grid-cols-2 gap-4">
+                                <div class="grid gap-4 md:grid-cols-2">
                                     <div>
                                         <label class="label">Website eveniment</label>
                                         <input type="url" name="website_url" class="input" placeholder="https://...">
@@ -274,61 +274,61 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <!-- ============ STEP 4: Continut ============ -->
-                    <div class="accordion-section bg-white rounded-2xl border border-border overflow-hidden" data-step="4">
-                        <button type="button" class="accordion-header w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors" onclick="toggleAccordion(4)">
+                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="4">
+                        <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(4)">
                             <div class="flex items-center gap-3">
-                                <div class="step-indicator w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-bold">4</div>
+                                <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-600 bg-gray-200 rounded-full step-indicator">4</div>
                                 <div>
                                     <h3 class="font-semibold text-secondary">Continut & Descriere</h3>
                                     <p class="text-xs text-muted mt-0.5 accordion-summary" id="summary-4"></p>
                                 </div>
                             </div>
-                            <svg class="w-5 h-5 text-muted accordion-chevron transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <svg class="w-5 h-5 transition-transform text-muted accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div class="accordion-body px-5 pb-5 hidden" id="accordion-body-4">
-                            <div class="space-y-6 pt-2 border-t border-gray-100">
+                        <div class="hidden px-5 pb-5 accordion-body" id="accordion-body-4">
+                            <div class="pt-2 space-y-6 border-t border-gray-100">
                                 <div>
                                     <label class="label">Descriere completa</label>
                                     <textarea name="description" id="description-editor"></textarea>
-                                    <p class="text-xs text-muted mt-1">Descrie evenimentul in detaliu: lineup, program, reguli de acces, etc.</p>
+                                    <p class="mt-1 text-xs text-muted">Descrie evenimentul in detaliu: lineup, program, reguli de acces, etc.</p>
                                 </div>
                                 <div>
                                     <label class="label">Conditii eveniment</label>
                                     <textarea name="ticket_terms" id="ticket-terms-editor"></textarea>
-                                    <p class="text-xs text-muted mt-1">Conditii de participare, restrictii de varsta, reguli speciale, politica de retur, etc.</p>
+                                    <p class="mt-1 text-xs text-muted">Conditii de participare, restrictii de varsta, reguli speciale, politica de retur, etc.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- ============ STEP 5: Media ============ -->
-                    <div class="accordion-section bg-white rounded-2xl border border-border overflow-hidden" data-step="5">
-                        <button type="button" class="accordion-header w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors" onclick="toggleAccordion(5)">
+                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="5">
+                        <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(5)">
                             <div class="flex items-center gap-3">
-                                <div class="step-indicator w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-bold">5</div>
+                                <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-600 bg-gray-200 rounded-full step-indicator">5</div>
                                 <div>
                                     <h3 class="font-semibold text-secondary">Media</h3>
                                     <p class="text-xs text-muted mt-0.5 accordion-summary" id="summary-5"></p>
                                 </div>
                             </div>
-                            <svg class="w-5 h-5 text-muted accordion-chevron transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <svg class="w-5 h-5 transition-transform text-muted accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div class="accordion-body px-5 pb-5 hidden" id="accordion-body-5">
-                            <div class="space-y-4 pt-2 border-t border-gray-100">
-                                <div class="grid md:grid-cols-2 gap-6">
+                        <div class="hidden px-5 pb-5 accordion-body" id="accordion-body-5">
+                            <div class="pt-2 space-y-4 border-t border-gray-100">
+                                <div class="grid gap-6 md:grid-cols-2">
                                     <div>
                                         <label class="label">Poster (vertical)</label>
                                         <div class="relative">
                                             <div id="poster-preview" class="hidden mb-3">
                                                 <img id="poster-img" src="" alt="Poster" class="w-full max-w-[200px] rounded-xl border border-border">
-                                                <button type="button" onclick="removePoster()" class="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600">
+                                                <button type="button" onclick="removePoster()" class="absolute p-1 text-white bg-red-500 rounded-full top-2 right-2 hover:bg-red-600">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                 </button>
                                             </div>
-                                            <label class="drop-zone flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors" id="poster-upload-area" data-target="poster">
-                                                <svg class="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            <label class="flex flex-col items-center justify-center w-full h-32 transition-colors border-2 border-gray-300 border-dashed cursor-pointer drop-zone rounded-xl hover:border-primary hover:bg-primary/5" id="poster-upload-area" data-target="poster">
+                                                <svg class="w-8 h-8 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                                 <span class="text-sm text-muted">Trage imaginea aici sau click pentru upload</span>
-                                                <span class="text-xs text-muted mt-1">JPG, PNG (recomandat 800x1200, max 5MB)</span>
+                                                <span class="mt-1 text-xs text-muted">JPG, PNG (recomandat 800x1200, max 5MB)</span>
                                                 <input type="file" name="poster" accept="image/*" class="hidden" onchange="previewPoster(this)">
                                             </label>
                                         </div>
@@ -337,15 +337,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <label class="label">Imagine cover (orizontala)</label>
                                         <div class="relative">
                                             <div id="cover-preview" class="hidden mb-3">
-                                                <img id="cover-img" src="" alt="Cover" class="w-full rounded-xl border border-border">
-                                                <button type="button" onclick="removeCover()" class="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600">
+                                                <img id="cover-img" src="" alt="Cover" class="w-full border rounded-xl border-border">
+                                                <button type="button" onclick="removeCover()" class="absolute p-1 text-white bg-red-500 rounded-full top-2 right-2 hover:bg-red-600">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                 </button>
                                             </div>
-                                            <label class="drop-zone flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors" id="cover-upload-area" data-target="cover">
-                                                <svg class="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            <label class="flex flex-col items-center justify-center w-full h-32 transition-colors border-2 border-gray-300 border-dashed cursor-pointer drop-zone rounded-xl hover:border-primary hover:bg-primary/5" id="cover-upload-area" data-target="cover">
+                                                <svg class="w-8 h-8 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                                 <span class="text-sm text-muted">Trage imaginea aici sau click pentru upload</span>
-                                                <span class="text-xs text-muted mt-1">JPG, PNG (recomandat 1200x630, max 5MB)</span>
+                                                <span class="mt-1 text-xs text-muted">JPG, PNG (recomandat 1200x630, max 5MB)</span>
                                                 <input type="file" name="cover_image" accept="image/*" class="hidden" onchange="previewCover(this)">
                                             </label>
                                         </div>
@@ -356,62 +356,62 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <!-- ============ STEP 6: Bilete ============ -->
-                    <div class="accordion-section bg-white rounded-2xl border border-border overflow-hidden" data-step="6">
-                        <button type="button" class="accordion-header w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors" onclick="toggleAccordion(6)">
+                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="6">
+                        <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(6)">
                             <div class="flex items-center gap-3">
-                                <div class="step-indicator w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-bold">6</div>
+                                <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-600 bg-gray-200 rounded-full step-indicator">6</div>
                                 <div>
                                     <h3 class="font-semibold text-secondary">Bilete</h3>
                                     <p class="text-xs text-muted mt-0.5 accordion-summary" id="summary-6"></p>
                                 </div>
                             </div>
-                            <svg class="w-5 h-5 text-muted accordion-chevron transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <svg class="w-5 h-5 transition-transform text-muted accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div class="accordion-body px-5 pb-5 hidden" id="accordion-body-6">
-                            <div class="space-y-4 pt-2 border-t border-gray-100">
+                        <div class="hidden px-5 pb-5 accordion-body" id="accordion-body-6">
+                            <div class="pt-2 space-y-4 border-t border-gray-100">
                                 <p class="text-sm text-muted">Adauga cel putin un tip de bilet. Poti adauga mai multe categorii (ex: Early Bird, Standard, VIP).</p>
 
                                 <div id="ticket-types-container" class="space-y-4">
                                     <!-- First ticket type (default) -->
-                                    <div class="ticket-type-item border border-gray-200 rounded-xl p-4" data-index="0">
+                                    <div class="p-4 border border-gray-200 ticket-type-item rounded-xl" data-index="0">
                                         <div class="flex items-center justify-between mb-3">
                                             <h4 class="text-sm font-semibold text-secondary">Tip bilet #1</h4>
-                                            <button type="button" onclick="removeTicketType(this)" class="text-red-400 hover:text-red-600 hidden remove-ticket-btn">
+                                            <button type="button" onclick="removeTicketType(this)" class="hidden text-red-400 hover:text-red-600 remove-ticket-btn">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                             </button>
                                         </div>
-                                        <div class="grid md:grid-cols-3 gap-3">
+                                        <div class="grid gap-3 md:grid-cols-3">
                                             <div>
-                                                <label class="label text-xs">Nume bilet <span class="text-red-500">*</span></label>
+                                                <label class="text-xs label">Nume bilet <span class="text-red-500">*</span></label>
                                                 <input type="text" name="ticket_name_0" required class="input" placeholder="ex: Standard, VIP, Early Bird">
                                             </div>
                                             <div>
-                                                <label class="label text-xs">Pret (RON) <span class="text-red-500">*</span></label>
+                                                <label class="text-xs label">Pret (RON) <span class="text-red-500">*</span></label>
                                                 <input type="number" name="ticket_price_0" required class="input" placeholder="0.00" step="0.01" min="0">
                                             </div>
                                             <div>
-                                                <label class="label text-xs">Stoc bilete</label>
+                                                <label class="text-xs label">Stoc bilete</label>
                                                 <input type="number" name="ticket_quantity_0" class="input" placeholder="Nelimitat" min="1">
                                             </div>
                                         </div>
                                         <div class="mt-3">
-                                            <label class="label text-xs">Descriere bilet</label>
+                                            <label class="text-xs label">Descriere bilet</label>
                                             <input type="text" name="ticket_desc_0" class="input" placeholder="ex: Acces general, loc nenumerotat">
                                         </div>
-                                        <div class="grid md:grid-cols-2 gap-3 mt-3">
+                                        <div class="grid gap-3 mt-3 md:grid-cols-2">
                                             <div>
-                                                <label class="label text-xs">Min. bilete/comanda</label>
+                                                <label class="text-xs label">Min. bilete/comanda</label>
                                                 <input type="number" name="ticket_min_0" class="input" placeholder="1" min="1">
                                             </div>
                                             <div>
-                                                <label class="label text-xs">Max. bilete/comanda</label>
+                                                <label class="text-xs label">Max. bilete/comanda</label>
                                                 <input type="number" name="ticket_max_0" class="input" placeholder="10" min="1">
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <button type="button" onclick="addTicketType()" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-muted hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2">
+                                <button type="button" onclick="addTicketType()" class="flex items-center justify-center w-full gap-2 py-3 text-sm font-medium transition-colors border-2 border-gray-300 border-dashed rounded-xl text-muted hover:border-primary hover:text-primary">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                     Adauga alt tip de bilet
                                 </button>
@@ -420,41 +420,41 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <!-- ============ STEP 7: Setari vanzari ============ -->
-                    <div class="accordion-section bg-white rounded-2xl border border-border overflow-hidden" data-step="7">
-                        <button type="button" class="accordion-header w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors" onclick="toggleAccordion(7)">
+                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="7">
+                        <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(7)">
                             <div class="flex items-center gap-3">
-                                <div class="step-indicator w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-bold">7</div>
+                                <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-600 bg-gray-200 rounded-full step-indicator">7</div>
                                 <div>
                                     <h3 class="font-semibold text-secondary">Setari vanzari</h3>
                                     <p class="text-xs text-muted mt-0.5 accordion-summary" id="summary-7"></p>
                                 </div>
                             </div>
-                            <svg class="w-5 h-5 text-muted accordion-chevron transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <svg class="w-5 h-5 transition-transform text-muted accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div class="accordion-body px-5 pb-5 hidden" id="accordion-body-7">
-                            <div class="space-y-4 pt-2 border-t border-gray-100">
-                                <div class="grid md:grid-cols-2 gap-4">
+                        <div class="hidden px-5 pb-5 accordion-body" id="accordion-body-7">
+                            <div class="pt-2 space-y-4 border-t border-gray-100">
+                                <div class="grid gap-4 md:grid-cols-2">
                                     <div>
                                         <label class="label">Capacitate totala</label>
                                         <input type="number" name="capacity" class="input" placeholder="ex: 500" min="1">
-                                        <p class="text-xs text-muted mt-1">Numarul total de locuri disponibile</p>
+                                        <p class="mt-1 text-xs text-muted">Numarul total de locuri disponibile</p>
                                     </div>
                                     <div>
                                         <label class="label">Max. bilete per comanda</label>
                                         <input type="number" name="max_tickets_per_order" class="input" placeholder="10" min="1" max="50">
-                                        <p class="text-xs text-muted mt-1">Cate bilete poate cumpara un client intr-o comanda</p>
+                                        <p class="mt-1 text-xs text-muted">Cate bilete poate cumpara un client intr-o comanda</p>
                                     </div>
                                 </div>
-                                <div class="grid md:grid-cols-2 gap-4">
+                                <div class="grid gap-4 md:grid-cols-2">
                                     <div>
                                         <label class="label">Inceput vanzari</label>
                                         <input type="datetime-local" name="sales_start_at" class="input">
-                                        <p class="text-xs text-muted mt-1">Cand incep vanzarile (gol = imediat)</p>
+                                        <p class="mt-1 text-xs text-muted">Cand incep vanzarile (gol = imediat)</p>
                                     </div>
                                     <div>
                                         <label class="label">Sfarsit vanzari</label>
                                         <input type="datetime-local" name="sales_end_at" class="input">
-                                        <p class="text-xs text-muted mt-1">Cand se opresc vanzarile (gol = la inceput eveniment)</p>
+                                        <p class="mt-1 text-xs text-muted">Cand se opresc vanzarile (gol = la inceput eveniment)</p>
                                     </div>
                                 </div>
                             </div>
@@ -550,13 +550,13 @@ function renderEvents(events) {
     const statusColors = { published: 'success', draft: 'warning', ended: 'muted', pending_review: 'info' };
     const statusLabels = { published: 'Publicat', draft: 'Ciorna', ended: 'Incheiat', pending_review: 'In asteptare' };
     container.innerHTML = events.map(event => `
-        <div class="bg-white rounded-2xl border border-border p-6 hover:border-primary/30 transition-colors">
-            <div class="flex flex-col md:flex-row gap-6">
-                <img src="${event.image || AMBILET_CONFIG.PLACEHOLDER_EVENT}" alt="${event.name || event.title}" class="w-full md:w-40 h-28 rounded-xl object-cover">
+        <div class="p-6 transition-colors bg-white border rounded-2xl border-border hover:border-primary/30">
+            <div class="flex flex-col gap-6 md:flex-row">
+                <img src="${event.image || AMBILET_CONFIG.PLACEHOLDER_EVENT}" alt="${event.name || event.title}" class="object-cover w-full md:w-40 h-28 rounded-xl">
                 <div class="flex-1">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <h3 class="text-lg font-bold text-secondary mb-1">${event.name || event.title}</h3>
+                            <h3 class="mb-1 text-lg font-bold text-secondary">${event.name || event.title}</h3>
                             <div class="flex flex-wrap items-center gap-3 text-sm text-muted">
                                 <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${event.starts_at ? AmbiletUtils.formatDate(event.starts_at) : (event.start_date ? AmbiletUtils.formatDate(event.start_date) : '')}</span>
                                 <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>${event.venue_city || event.venue?.city || event.city || ''}</span>
@@ -564,7 +564,7 @@ function renderEvents(events) {
                         </div>
                         <span class="badge badge-${statusColors[event.status] || 'secondary'}">${statusLabels[event.status] || event.status}</span>
                     </div>
-                    <div class="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border">
+                    <div class="grid grid-cols-3 gap-4 pt-4 mt-4 border-t border-border">
                         <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vandute</p></div>
                         <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Vanzari</p></div>
                         <div class="flex items-center justify-end gap-2">
@@ -842,7 +842,7 @@ function initVenueSearch() {
             const venues = response.data?.venues || response.venues || [];
 
             if (venues.length === 0) {
-                dropdown.innerHTML = '<div class="venue-option" style="cursor:default;color:#9ca3af;">Niciun rezultat gasit</div>';
+                dropdown.innerHTML = '<div class="venue-option" style="cursor:default;color:#9ca3af;">Niciun rezultat găsit</div>';
                 dropdown.classList.remove('hidden');
                 return;
             }
@@ -850,8 +850,8 @@ function initVenueSearch() {
             dropdown.innerHTML = venues.map(venue => `
                 <div class="venue-option ${venue.is_marketplace ? 'bg-amber-50' : ''}" onclick="selectVenue(${JSON.stringify(venue).replace(/"/g, '&quot;')})">
                     <div class="flex items-center gap-2">
-                        <div class="font-medium text-sm text-secondary">${venue.name}</div>
-                        ${venue.is_marketplace ? '<span class="text-[10px] px-1.5 py-0.5 bg-amber-200 text-amber-800 rounded font-medium">Marketplace</span>' : ''}
+                        <div class="text-sm font-medium text-secondary">${venue.name}</div>
+                        ${venue.is_marketplace ? '<span class="text-[10px] px-1.5 py-0.5 bg-amber-200 text-amber-800 rounded font-medium">Partener AmBilet</span>' : ''}
                     </div>
                     <div class="text-xs text-muted">${[venue.city, venue.address].filter(Boolean).join(' - ')}</div>
                 </div>
@@ -859,7 +859,7 @@ function initVenueSearch() {
             dropdown.classList.remove('hidden');
         } catch (e) {
             console.error('Venue search failed:', e);
-            dropdown.innerHTML = '<div class="venue-option" style="cursor:default;color:#ef4444;">Eroare la cautare</div>';
+            dropdown.innerHTML = '<div class="venue-option" style="cursor:default;color:#ef4444;">Eroare la căutare</div>';
             dropdown.classList.remove('hidden');
         }
     }
@@ -1028,7 +1028,7 @@ function updateSummaries() {
     const mediaItems = [];
     if (posterInput && posterInput.files.length > 0) mediaItems.push('Poster');
     if (coverInput && coverInput.files.length > 0) mediaItems.push('Cover');
-    document.getElementById('summary-5').textContent = mediaItems.length > 0 ? mediaItems.join(', ') + ' adaugate' : '';
+    document.getElementById('summary-5').textContent = mediaItems.length > 0 ? mediaItems.join(', ') + ' adăugate' : '';
 
     // Step 6 summary
     const ticketItems = document.querySelectorAll('.ticket-type-item');
@@ -1045,7 +1045,7 @@ function updateSummaries() {
     const maxTickets = form.querySelector('[name="max_tickets_per_order"]').value;
     const settingsItems = [];
     if (capacity) settingsItems.push(`Capacitate: ${capacity}`);
-    if (maxTickets) settingsItems.push(`Max/comanda: ${maxTickets}`);
+    if (maxTickets) settingsItems.push(`Max/comandă: ${maxTickets}`);
     document.getElementById('summary-7').textContent = settingsItems.join(' • ');
 
     updateStepIndicators();
@@ -1100,38 +1100,38 @@ function addTicketType() {
     ticketTypeCount++;
 
     const html = `
-        <div class="ticket-type-item border border-gray-200 rounded-xl p-4" data-index="${index}">
+        <div class="p-4 border border-gray-200 ticket-type-item rounded-xl" data-index="${index}">
             <div class="flex items-center justify-between mb-3">
                 <h4 class="text-sm font-semibold text-secondary">Tip bilet #${index + 1}</h4>
                 <button type="button" onclick="removeTicketType(this)" class="text-red-400 hover:text-red-600 remove-ticket-btn">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 </button>
             </div>
-            <div class="grid md:grid-cols-3 gap-3">
+            <div class="grid gap-3 md:grid-cols-3">
                 <div>
-                    <label class="label text-xs">Nume bilet <span class="text-red-500">*</span></label>
+                    <label class="text-xs label">Nume bilet <span class="text-red-500">*</span></label>
                     <input type="text" name="ticket_name_${index}" required class="input" placeholder="ex: Standard, VIP, Early Bird">
                 </div>
                 <div>
-                    <label class="label text-xs">Pret (RON) <span class="text-red-500">*</span></label>
+                    <label class="text-xs label">Preț (RON) <span class="text-red-500">*</span></label>
                     <input type="number" name="ticket_price_${index}" required class="input" placeholder="0.00" step="0.01" min="0">
                 </div>
                 <div>
-                    <label class="label text-xs">Stoc bilete</label>
+                    <label class="text-xs label">Stoc bilete</label>
                     <input type="number" name="ticket_quantity_${index}" class="input" placeholder="Nelimitat" min="1">
                 </div>
             </div>
             <div class="mt-3">
-                <label class="label text-xs">Descriere bilet</label>
+                <label class="text-xs label">Descriere bilet</label>
                 <input type="text" name="ticket_desc_${index}" class="input" placeholder="ex: Acces general, loc nenumerotat">
             </div>
-            <div class="grid md:grid-cols-2 gap-3 mt-3">
+            <div class="grid gap-3 mt-3 md:grid-cols-2">
                 <div>
-                    <label class="label text-xs">Min. bilete/comanda</label>
+                    <label class="text-xs label">Min. bilete/comandă</label>
                     <input type="number" name="ticket_min_${index}" class="input" placeholder="1" min="1">
                 </div>
                 <div>
-                    <label class="label text-xs">Max. bilete/comanda</label>
+                    <label class="text-xs label">Max. bilete/comandă</label>
                     <input type="number" name="ticket_max_${index}" class="input" placeholder="10" min="1">
                 </div>
             </div>
@@ -1232,8 +1232,8 @@ function initDragDrop() {
             const files = e.dataTransfer.files;
             if (files.length === 0) return;
             const file = files[0];
-            if (!file.type.startsWith('image/')) { AmbiletNotifications.error('Doar fisiere imagine sunt acceptate'); return; }
-            if (file.size > 5 * 1024 * 1024) { AmbiletNotifications.error('Fisierul depaseste 5MB'); return; }
+            if (!file.type.startsWith('image/')) { AmbiletNotifications.error('Doar fișiere imagine sunt acceptate'); return; }
+            if (file.size > 5 * 1024 * 1024) { AmbiletNotifications.error('Fișierul depășește 5MB'); return; }
             const input = zone.querySelector('input[type="file"]');
             const dt = new DataTransfer();
             dt.items.add(file);
@@ -1388,7 +1388,7 @@ async function saveEventDraft() {
     if (data.short_description) {
         const wordCount = data.short_description.trim().split(/\s+/).filter(w => w.length > 0).length;
         if (wordCount > 120) {
-            AmbiletNotifications.error('Descrierea scurta nu poate depasi 120 de cuvinte.');
+            AmbiletNotifications.error('Descrierea scurtă nu poate depăși 120 de cuvinte.');
             toggleAccordion(1);
             return;
         }
@@ -1420,13 +1420,13 @@ async function saveEventDraft() {
 
             saveStatus.textContent = 'Salvat la ' + new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
             saveStatus.classList.remove('hidden');
-            AmbiletNotifications.success('Evenimentul a fost salvat ca ciorna!');
+            AmbiletNotifications.success('Evenimentul a fost salvat ca ciornă!');
         } else {
             const msg = result.message || 'Eroare la salvare.';
             AmbiletNotifications.error(msg);
         }
     } catch (error) {
-        const errorMsg = error.message || 'A aparut o eroare. Incearca din nou.';
+        const errorMsg = error.message || 'A apărut o eroare. Încearcă din nou.';
         AmbiletNotifications.error(errorMsg);
     }
 
@@ -1443,17 +1443,17 @@ async function saveAndSubmitEvent() {
         return;
     }
     if (!data.starts_at) {
-        AmbiletNotifications.error('Data si ora evenimentului sunt obligatorii.');
+        AmbiletNotifications.error('Data și ora evenimentului sunt obligatorii.');
         toggleAccordion(2);
         return;
     }
     if (!data.venue_name || !data.venue_city) {
-        AmbiletNotifications.error('Numele locatiei si orasul sunt obligatorii.');
+        AmbiletNotifications.error('Numele locației și orașul sunt obligatorii.');
         toggleAccordion(3);
         return;
     }
     if (!data.ticket_types || data.ticket_types.length === 0) {
-        AmbiletNotifications.error('Adauga cel putin un tip de bilet pentru a trimite spre aprobare.');
+        AmbiletNotifications.error('Adaugă cel puțin un tip de bilet pentru a trimite spre aprobare.');
         toggleAccordion(6);
         return;
     }
@@ -1488,7 +1488,7 @@ async function saveAndSubmitEvent() {
             AmbiletNotifications.error('Nu s-a putut identifica evenimentul creat.');
         }
     } catch (error) {
-        AmbiletNotifications.error(error.message || 'A aparut o eroare. Incearca din nou.');
+        AmbiletNotifications.error(error.message || 'A apărut o eroare. Încearcă din nou.');
     }
 }
 

@@ -300,7 +300,15 @@ class MarketplaceEvent extends Model
 
     public function getVenueDisplayNameAttribute(): string
     {
-        return $this->venue?->name ?? $this->venue_name ?? 'TBA';
+        $venue = $this->venue;
+        if ($venue) {
+            $name = $venue->getTranslation('name');
+            if ($name) {
+                return $name;
+            }
+        }
+
+        return $this->venue_name ?? 'TBA';
     }
 
     public function getVenueDisplayCityAttribute(): ?string

@@ -545,7 +545,7 @@ class EventsController extends BaseController
                 'barcode' => $ticket->barcode,
                 'ticket_type' => $ticket->marketplaceTicketType?->name,
                 'status' => $ticket->status,
-                'checked_in_at' => $ticket->checked_in_at->toIso8601String(),
+                'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
             ],
             'customer' => [
                 'name' => $customer
@@ -911,7 +911,7 @@ class EventsController extends BaseController
             'id' => $event->id,
             'name' => $event->name,
             'slug' => $event->slug,
-            'starts_at' => $event->starts_at->toIso8601String(),
+            'starts_at' => $event->starts_at?->toIso8601String(),
             'venue_name' => $event->venue_display_name,
             'venue_city' => $event->venue_display_city,
             'category' => $event->category,
@@ -936,7 +936,7 @@ class EventsController extends BaseController
             'description' => $event->description,
             'ticket_terms' => $event->ticket_terms,
             'short_description' => $event->short_description,
-            'starts_at' => $event->starts_at->toIso8601String(),
+            'starts_at' => $event->starts_at?->toIso8601String(),
             'ends_at' => $event->ends_at?->toIso8601String(),
             'doors_open_at' => $event->doors_open_at?->toIso8601String(),
             'venue_id' => $event->venue_id,
@@ -976,7 +976,7 @@ class EventsController extends BaseController
                     'is_visible' => $tt->is_visible,
                 ];
             }),
-            'created_at' => $event->created_at->toIso8601String(),
+            'created_at' => $event->created_at?->toIso8601String(),
         ];
     }
 }
