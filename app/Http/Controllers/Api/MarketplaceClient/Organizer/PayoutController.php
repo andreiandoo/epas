@@ -45,6 +45,54 @@ class PayoutController extends BaseController
     }
 
     /**
+     * Get combined finance overview (balance + recent transactions + payouts)
+     */
+    public function finance(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        // Get recent transactions
+        $transactions = MarketplaceTransaction::where('marketplace_organizer_id', $organizer->id)
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get()
+            ->map(function ($tx) {
+                return [
+                    'id' => $tx->id,
+                    'type' => $tx->type,
+                    'type_label' => $tx->getTypeLabel(),
+                    'amount' => (float) $tx->amount,
+                    'balance_after' => (float) $tx->balance_after,
+                    'currency' => $tx->currency,
+                    'description' => $tx->description,
+                    'order_id' => $tx->order_id,
+                    'payout_id' => $tx->marketplace_payout_id,
+                    'created_at' => $tx->created_at->toIso8601String(),
+                ];
+            });
+
+        // Get recent payouts
+        $payouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get()
+            ->map(function ($payout) {
+                return $this->formatPayout($payout);
+            });
+
+        return $this->success([
+            'available_balance' => (float) $organizer->available_balance,
+            'pending_balance' => (float) $organizer->pending_balance,
+            'total_earned' => (float) $organizer->total_revenue,
+            'total_paid_out' => (float) $organizer->total_paid_out,
+            'commission_rate' => $organizer->getEffectiveCommissionRate(),
+            'commission_mode' => $organizer->getEffectiveCommissionMode(),
+            'transactions' => $transactions,
+            'payouts' => $payouts,
+        ]);
+    }
+
+    /**
      * Get transaction history
      */
     public function transactions(Request $request): JsonResponse

@@ -40,7 +40,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-8">
                 <div class="flex items-start gap-4">
                     <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-                    <div><h3 class="font-semibold text-secondary mb-1">Informatii Comisioane</h3><p class="text-sm text-muted">Comisionul <?= SITE_NAME ?> este de <span class="font-semibold text-primary">2%</span> din valoarea fiecarui bilet vandut. Acest comision este retinut automat din fiecare tranzactie.</p></div>
+                    <div><h3 class="font-semibold text-secondary mb-1">Informatii Comisioane</h3><p class="text-sm text-muted">Comisionul <?= SITE_NAME ?> este de <span class="font-semibold text-primary" id="commission-rate-display">--%</span> din valoarea fiecarui bilet vandut. <span id="commission-mode-display"></span></p></div>
                 </div>
             </div>
 
@@ -83,7 +83,29 @@ $scriptsExtra = <<<'JS'
 AmbiletAuth.requireOrganizerAuth();
 let availableBalance = 0;
 
-document.addEventListener('DOMContentLoaded', function() { loadFinanceData(); });
+document.addEventListener('DOMContentLoaded', function() { loadFinanceData(); loadCommissionInfo(); });
+
+async function loadCommissionInfo() {
+    // Try to get from localStorage first
+    const orgData = JSON.parse(localStorage.getItem('ambilet_organizer_data') || 'null');
+    if (orgData && orgData.commission_rate !== undefined) {
+        updateCommissionDisplay(orgData.commission_rate, orgData.commission_mode);
+    } else {
+        // Fetch from API
+        try {
+            const response = await AmbiletAPI.get('/organizer/contract');
+            if (response.success) {
+                updateCommissionDisplay(response.data.commission_rate, response.data.commission_mode);
+            }
+        } catch (error) { /* Use default */ }
+    }
+}
+
+function updateCommissionDisplay(rate, mode) {
+    document.getElementById('commission-rate-display').textContent = rate + '%';
+    const modeText = mode === 'added_on_top' ? 'Acest comision se adauga la pretul biletului.' : 'Acest comision este inclus in pretul biletului.';
+    document.getElementById('commission-mode-display').textContent = modeText;
+}
 
 async function loadFinanceData() {
     try {

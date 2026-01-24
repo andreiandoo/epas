@@ -238,16 +238,59 @@ class EventsController extends BaseController
                 'max_tickets_per_order' => 'nullable|integer|min:1|max:50',
                 'sales_start_at' => 'nullable|date',
                 'sales_end_at' => 'nullable|date',
+                'ticket_types' => 'nullable|array',
+                'ticket_types.*.name' => 'required|string|max:255',
+                'ticket_types.*.description' => 'nullable|string|max:500',
+                'ticket_types.*.price' => 'required|numeric|min:0',
+                'ticket_types.*.quantity' => 'nullable|integer|min:1',
+                'ticket_types.*.min_per_order' => 'nullable|integer|min:1',
+                'ticket_types.*.max_per_order' => 'nullable|integer|min:1',
             ]);
         }
 
         $validated = $request->validate($rules);
 
-        $event->update($validated);
+        try {
+            DB::beginTransaction();
 
-        return $this->success([
-            'event' => $this->formatEventDetailed($event->fresh()->load('ticketTypes')),
-        ], 'Event updated');
+            // Remove ticket_types from validated data before updating event
+            $ticketTypesData = $validated['ticket_types'] ?? null;
+            unset($validated['ticket_types']);
+
+            $event->update($validated);
+
+            // Sync ticket types if provided
+            if ($ticketTypesData !== null && !$isPublished) {
+                // Delete existing ticket types and recreate
+                $event->ticketTypes()->delete();
+
+                foreach ($ticketTypesData as $index => $ticketTypeData) {
+                    MarketplaceTicketType::create([
+                        'marketplace_event_id' => $event->id,
+                        'name' => $ticketTypeData['name'],
+                        'description' => $ticketTypeData['description'] ?? null,
+                        'price' => $ticketTypeData['price'],
+                        'currency' => 'RON',
+                        'quantity' => $ticketTypeData['quantity'] ?? null,
+                        'min_per_order' => $ticketTypeData['min_per_order'] ?? 1,
+                        'max_per_order' => $ticketTypeData['max_per_order'] ?? 10,
+                        'status' => 'on_sale',
+                        'is_visible' => true,
+                        'sort_order' => $index,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return $this->success([
+                'event' => $this->formatEventDetailed($event->fresh()->load('ticketTypes')),
+            ], 'Event updated');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to update event: ' . $e->getMessage(), 500);
+        }
     }
 
     /**

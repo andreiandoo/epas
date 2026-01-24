@@ -1479,6 +1479,10 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.password.update');
         Route::put('/payout-details', [OrganizerAuthController::class, 'updatePayoutDetails'])
             ->name('api.marketplace-client.organizer.payout-details.update');
+        Route::post('/verify-cui', [OrganizerAuthController::class, 'verifyCui'])
+            ->name('api.marketplace-client.organizer.verify-cui');
+        Route::get('/contract', [OrganizerAuthController::class, 'contract'])
+            ->name('api.marketplace-client.organizer.contract');
 
         // Dashboard
         Route::get('/dashboard', [OrganizerDashboardController::class, 'index'])
@@ -1537,6 +1541,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         // Payouts & Balance
         Route::get('/balance', [OrganizerPayoutController::class, 'balance'])
             ->name('api.marketplace-client.organizer.balance');
+        Route::get('/finance', [OrganizerPayoutController::class, 'finance'])
+            ->name('api.marketplace-client.organizer.finance');
         Route::get('/transactions', [OrganizerPayoutController::class, 'transactions'])
             ->name('api.marketplace-client.organizer.transactions');
         Route::get('/payouts', [OrganizerPayoutController::class, 'payouts'])

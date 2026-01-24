@@ -396,6 +396,56 @@ class AuthController extends BaseController
     }
 
     /**
+     * Verify CUI via ANAF
+     */
+    public function verifyCui(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'cui' => 'required|string|max:20',
+        ]);
+
+        $anafService = app(\App\Services\AnafService::class);
+        $result = $anafService->lookupByCui($validated['cui']);
+
+        if (!$result) {
+            return $this->error('CUI invalid sau nu a putut fi verificat', 422);
+        }
+
+        return $this->success([
+            'company_name' => $result['company_name'] ?? null,
+            'reg_com' => $result['reg_com'] ?? null,
+            'address' => $result['address'] ?? null,
+            'city' => $result['city'] ?? null,
+            'county' => $result['state'] ?? null,
+            'vat_payer' => $result['vat_payer'] ?? false,
+            'is_active' => $result['is_active'] ?? false,
+        ], 'Date verificate cu succes');
+    }
+
+    /**
+     * Get contract/commission info
+     */
+    public function contract(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        return $this->success([
+            'commission_rate' => $organizer->getEffectiveCommissionRate(),
+            'commission_mode' => $organizer->getEffectiveCommissionMode(),
+            'terms' => [
+                'Comisionul se aplica doar biletelor vandute',
+                'Plata comisionului se face automat la procesarea platilor',
+                'Nu exista costuri fixe sau abonamente lunare',
+                'Decontarea se face in maxim 7 zile lucratoare dupa eveniment',
+            ],
+        ]);
+    }
+
+    /**
      * Format organizer for response
      */
     protected function formatOrganizer(MarketplaceOrganizer $organizer): array
@@ -418,6 +468,7 @@ class AuthController extends BaseController
             'status' => $organizer->status,
             'is_verified' => $organizer->isVerified(),
             'commission_rate' => $organizer->getEffectiveCommissionRate(),
+            'commission_mode' => $organizer->getEffectiveCommissionMode(),
             'stats' => [
                 'total_events' => $organizer->total_events,
                 'total_tickets_sold' => $organizer->total_tickets_sold,
