@@ -409,6 +409,8 @@ class AuthController extends BaseController
             'phone' => $organizer->phone,
             'company_name' => $organizer->company_name,
             'company_tax_id' => $organizer->company_tax_id,
+            'company_registration' => $organizer->company_registration,
+            'company_address' => $organizer->company_address,
             'logo' => $organizer->logo_url,
             'description' => $organizer->description,
             'website' => $organizer->website,

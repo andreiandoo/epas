@@ -526,10 +526,12 @@ let selectedGenres = []; // [{id, name}]
 let selectedArtists = []; // [{id, name}]
 let availableGenres = []; // full list from API
 
-// Check if we should show create form on load
+// Check if we should show create form or edit on load
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('action') === 'create') {
     showCreateForm();
+} else if (urlParams.get('id')) {
+    loadEventForEdit(urlParams.get('id'));
 } else {
     loadEvents();
 }
@@ -594,9 +596,202 @@ function showCreateForm() {
     initShortDescWordCount();
 }
 
+async function loadEventForEdit(eventId) {
+    // Show the form first
+    showCreateForm();
+
+    // Update page title for edit mode
+    const titleEl = document.querySelector('#create-event-view h1');
+    if (titleEl) titleEl.textContent = 'Editare eveniment';
+
+    // Set the event ID so subsequent saves update instead of create
+    document.getElementById('saved-event-id').value = eventId;
+
+    try {
+        const response = await AmbiletAPI.organizer.getEvent(eventId);
+        const event = response.data?.event || response.event || response.data || response;
+
+        if (!event || !event.id) {
+            AmbiletNotifications.error('Evenimentul nu a fost gasit.');
+            return;
+        }
+
+        const form = document.getElementById('create-event-form');
+
+        // Step 1: Basic details
+        if (event.name) form.querySelector('[name="name"]').value = event.name;
+        if (event.short_description) {
+            form.querySelector('[name="short_description"]').value = event.short_description;
+            // Update word count
+            const wordCount = event.short_description.trim().split(/\s+/).filter(w => w.length > 0).length;
+            const countEl = document.getElementById('short-desc-count');
+            if (countEl) countEl.textContent = wordCount;
+        }
+        if (event.tags) {
+            const tagsStr = Array.isArray(event.tags) ? event.tags.join(', ') : event.tags;
+            form.querySelector('[name="tags"]').value = tagsStr;
+        }
+
+        // Category
+        if (event.marketplace_event_category_id) {
+            // Wait for categories to load then set value
+            setTimeout(() => {
+                const catSelect = form.querySelector('[name="marketplace_event_category_id"]');
+                if (catSelect) {
+                    catSelect.value = event.marketplace_event_category_id;
+                    onCategoryChange(event.marketplace_event_category_id);
+                }
+            }, 500);
+        }
+
+        // Step 2: Schedule - parse starts_at/ends_at/doors_open_at
+        if (event.starts_at) {
+            const startDt = new Date(event.starts_at);
+            const startDate = startDt.toISOString().split('T')[0];
+            const startTime = startDt.toTimeString().slice(0, 5);
+            form.querySelector('[name="start_date"]').value = startDate;
+            form.querySelector('[name="start_time"]').value = startTime;
+
+            // Determine duration mode
+            if (event.ends_at) {
+                const endDt = new Date(event.ends_at);
+                const endDate = endDt.toISOString().split('T')[0];
+                const endTime = endDt.toTimeString().slice(0, 5);
+
+                if (endDate === startDate) {
+                    // Single day
+                    const radio = form.querySelector('[name="duration_mode"][value="single_day"]');
+                    if (radio) { radio.checked = true; onDurationModeChange('single_day'); }
+                    form.querySelector('[name="end_time_single"]').value = endTime;
+                } else {
+                    // Date range
+                    const radio = form.querySelector('[name="duration_mode"][value="range"]');
+                    if (radio) { radio.checked = true; onDurationModeChange('range'); }
+                    form.querySelector('[name="end_date"]').value = endDate;
+                    const endTimeInput = form.querySelector('[name="end_time"]');
+                    if (endTimeInput) endTimeInput.value = endTime;
+                }
+            } else {
+                // No end date - single day mode
+                const radio = form.querySelector('[name="duration_mode"][value="single_day"]');
+                if (radio) { radio.checked = true; onDurationModeChange('single_day'); }
+            }
+
+            // Doors open
+            if (event.doors_open_at) {
+                const doorDt = new Date(event.doors_open_at);
+                const doorTime = doorDt.toTimeString().slice(0, 5);
+                const durationMode = form.querySelector('[name="duration_mode"]:checked')?.value;
+                if (durationMode === 'range') {
+                    form.querySelector('[name="door_time_range"]').value = doorTime;
+                } else {
+                    form.querySelector('[name="door_time"]').value = doorTime;
+                }
+            }
+        }
+
+        // Step 3: Venue
+        if (event.venue_name) form.querySelector('[name="venue_name"]').value = event.venue_name;
+        if (event.venue_city) form.querySelector('[name="venue_city"]').value = event.venue_city;
+        if (event.venue_address) form.querySelector('[name="venue_address"]').value = event.venue_address;
+        if (event.venue_id) document.getElementById('selected-venue-id').value = event.venue_id;
+
+        // Links
+        if (event.website_url) form.querySelector('[name="website_url"]').value = event.website_url;
+        if (event.facebook_url) form.querySelector('[name="facebook_url"]').value = event.facebook_url;
+
+        // Step 4: Content - set editors content after they initialize
+        setTimeout(() => {
+            if (event.description && descriptionEditor) {
+                descriptionEditor.setContent(event.description);
+            }
+            if (event.ticket_terms && ticketTermsEditor) {
+                ticketTermsEditor.setContent(event.ticket_terms);
+            }
+        }, 1000);
+
+        // Step 6: Ticket types
+        if (event.ticket_types && event.ticket_types.length > 0) {
+            const container = document.getElementById('ticket-types-container');
+            // Clear default ticket type
+            container.innerHTML = '';
+            ticketTypeCount = 0;
+
+            event.ticket_types.forEach((tt, i) => {
+                ticketTypeCount = i + 1;
+                const removeBtn = i === 0 ? 'hidden' : '';
+                container.innerHTML += `
+                    <div class="p-4 border border-gray-200 ticket-type-item rounded-xl" data-index="${i}">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-sm font-semibold text-secondary">Tip bilet #${i + 1}</h4>
+                            <button type="button" onclick="removeTicketType(this)" class="${removeBtn} text-red-400 hover:text-red-600 remove-ticket-btn">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
+                        <div class="grid gap-3 md:grid-cols-3">
+                            <div>
+                                <label class="text-xs label">Nume bilet <span class="text-red-500">*</span></label>
+                                <input type="text" name="ticket_name_${i}" required class="input" placeholder="ex: Standard, VIP" value="${tt.name || ''}">
+                            </div>
+                            <div>
+                                <label class="text-xs label">Pret (RON) <span class="text-red-500">*</span></label>
+                                <input type="number" name="ticket_price_${i}" required class="input" placeholder="0.00" step="0.01" min="0" value="${tt.price || 0}">
+                            </div>
+                            <div>
+                                <label class="text-xs label">Stoc bilete</label>
+                                <input type="number" name="ticket_quantity_${i}" class="input" placeholder="Nelimitat" min="1" value="${tt.quantity || ''}">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="text-xs label">Descriere bilet</label>
+                            <input type="text" name="ticket_desc_${i}" class="input" placeholder="ex: Acces general" value="${tt.description || ''}">
+                        </div>
+                        <div class="grid gap-3 mt-3 md:grid-cols-2">
+                            <div>
+                                <label class="text-xs label">Min. bilete/comanda</label>
+                                <input type="number" name="ticket_min_${i}" class="input" placeholder="1" min="1" value="${tt.min_per_order || ''}">
+                            </div>
+                            <div>
+                                <label class="text-xs label">Max. bilete/comanda</label>
+                                <input type="number" name="ticket_max_${i}" class="input" placeholder="10" min="1" value="${tt.max_per_order || ''}">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Step 7: Sales settings
+        if (event.capacity) form.querySelector('[name="capacity"]').value = event.capacity;
+        if (event.max_tickets_per_order) form.querySelector('[name="max_tickets_per_order"]').value = event.max_tickets_per_order;
+        if (event.sales_start_at) {
+            const dt = new Date(event.sales_start_at);
+            form.querySelector('[name="sales_start_at"]').value = dt.toISOString().slice(0, 16);
+        }
+        if (event.sales_end_at) {
+            const dt = new Date(event.sales_end_at);
+            form.querySelector('[name="sales_end_at"]').value = dt.toISOString().slice(0, 16);
+        }
+
+        // Update summaries
+        updateSummaries();
+
+    } catch (error) {
+        AmbiletNotifications.error('Eroare la incarcarea evenimentului: ' + (error.message || 'Incearca din nou.'));
+    }
+}
+
 function hideCreateForm() {
     document.getElementById('create-event-view').classList.add('hidden');
     document.getElementById('events-view').classList.remove('hidden');
+
+    // Reset title back
+    const titleEl = document.querySelector('#create-event-view h1');
+    if (titleEl) titleEl.textContent = 'Eveniment nou';
+
+    // Reset saved event ID
+    document.getElementById('saved-event-id').value = '';
+
     history.pushState({}, '', '/organizator/events');
     loadEvents();
 }
