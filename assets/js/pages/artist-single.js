@@ -21,6 +21,7 @@ const ArtistPage = {
         artistName: 'artistName',
         genreTags: 'genreTags',
         statsContainer: 'statsContainer',
+        spotifyListenersCountDiv: 'spotifyListenersCount',
         eventsList: 'eventsList',
         viewAllEventsLink: 'viewAllEventsLink',
         aboutCard: 'aboutCard',
@@ -305,6 +306,9 @@ const ArtistPage = {
      */
     renderStats(stats) {
         var container = document.getElementById(this.elements.statsContainer);
+        var spotifyListenersCount = document.getElementById(this.elements.spotifyListenersCountDiv);
+        spotifyListenersCount.innerText = stats.spotifyListeners;
+
         if (!container) return;
 
         var divider = '<div class="hidden w-px h-12 bg-gray-200 lg:block"></div>';

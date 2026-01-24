@@ -137,9 +137,9 @@ require_once __DIR__ . '/includes/head.php';
             <!-- Left Column - Event Details -->
             <div class="lg:w-2/3">
                 <!-- Event Header -->
-                <div class="mb-8 bg-white border rounded-3xl border-border mobile:border-0 mobile:rounded-none">
+                <div class="mb-8 bg-white border rounded-3xl border-border mobile:border-0 mobile:border-b mobile:rounded-none">
                     <!-- Main Image -->
-                    <div class="relative overflow-hidden rounded-t-3xl h-72 md:h-96">
+                    <div class="relative overflow-hidden rounded-t-3xl h-72 md:h-96 mobile:rounded-none">
                         <img id="mainImage" src="" alt="" class="object-cover w-full h-full">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                         <div class="absolute flex gap-2 top-4 left-4" id="event-badges"></div>
@@ -149,7 +149,7 @@ require_once __DIR__ . '/includes/head.php';
                     </div>
 
                     <!-- Event Info -->
-                    <div class="p-6 md:p-8">
+                    <div class="p-6 md:p-8 mobile:px-4">
                         <h1 id="event-title" class="mb-4 text-2xl font-extrabold md:text-4xl text-secondary"></h1>
 
                         <!-- Key Details -->
@@ -188,7 +188,7 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
 
                         <!-- Social Stats -->
-                        <div class="flex flex-wrap items-center gap-4 mb-8">
+                        <div class="flex flex-wrap items-center gap-4 mb-8 mobile:justify-between">
                             <!-- Interested Button -->
                             <button id="interest-btn" onclick="EventPage.toggleInterest()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all rounded-full border border-border hover:border-primary hover:text-primary">
                                 <svg id="interest-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
@@ -231,12 +231,12 @@ require_once __DIR__ . '/includes/head.php';
                 </div>
 
                 <!-- Artist Section -->
-                <div class="mb-8" id="artist-section" style="display:none;">
+                <div class="mb-8 mobile:mb-0" id="artist-section" style="display:none;">
                     <div id="artist-content" class="mobile:p-4"></div>
                 </div>
 
                 <!-- Venue Section -->
-                <div class="mb-8" id="venue">
+                <div class="mb-8 mobile:mb-0 mobile:border-b mobile:border-border" id="venue">
                     <div id="venue-content" class="mobile:p-4"></div>
                 </div>
             </div>
@@ -340,9 +340,9 @@ require_once __DIR__ . '/includes/head.php';
         </div>
     </section>
 
-    <div class="px-4 py-8 mx-auto max-w-7xl mobile:p-0 mobile:mt-18">
+    <div class="px-4 py-8 mx-auto max-w-7xl mobile:p-0">
         <!-- Related Events -->
-        <section class="mt-8 mobile:px-4 mobile:mb-8" id="related-events-section" style="display:none;">
+        <section class="mt-8 mobile:px-4 mobile:mb-8 mobile:mt-18" id="related-events-section" style="display:none;">
             <div class="flex items-center justify-between mb-8">
                 <div>
                     <h2 class="text-2xl font-bold text-secondary">Alte evenimente recomandate</h2>

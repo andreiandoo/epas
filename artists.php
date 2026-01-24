@@ -79,7 +79,7 @@ require_once __DIR__ . '/includes/head.php';
     </section>
 
     <!-- Trending Section -->
-    <section class="p-8 mb-12 bg-white border rounded-3xl border-border" id="trendingSection">
+    <section class="p-8 mb-12 bg-white border mobile:p-4 rounded-3xl border-border" id="trendingSection">
         <div class="flex items-center gap-4 mb-6">
             <div class="flex items-center justify-center w-12 h-12 text-white rounded-xl bg-primary">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,7 +166,7 @@ require_once __DIR__ . '/includes/head.php';
     <!-- Results Info -->
     <div class="flex flex-col items-start justify-between gap-4 mb-6 md:flex-row md:items-center">
         <span class="text-sm text-muted">Se afiseaza <strong class="text-secondary" id="resultsCount">--</strong> artisti</span>
-        <select id="sortSelect" class="px-4 py-3 pr-10 text-sm font-medium bg-white border rounded-xl border-border text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2394A3B8%27 stroke-width=%272%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 0.75rem center;">
+        <select id="sortSelect" class="px-4 py-3 pr-10 text-sm font-medium bg-white border appearance-none cursor-pointer rounded-xl border-border text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2394A3B8%27 stroke-width=%272%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 0.75rem center;">
             <option value="popular" <?= $sortBy === 'popular' ? 'selected' : '' ?>>Cei mai populari</option>
             <option value="events" <?= $sortBy === 'events' ? 'selected' : '' ?>>Dupa evenimente</option>
             <option value="followers" <?= $sortBy === 'followers' ? 'selected' : '' ?>>Dupa urmaritori</option>

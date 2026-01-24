@@ -224,7 +224,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             </div>
         </div>
     </div>
-    <div class="px-6 mx-auto max-w-7xl">
+    <div class="px-6 mx-auto max-w-7xl mobile:px-4">
         <div class="flex items-center justify-between h-[72px]">
             <!-- Logo -->
             <a href="/" class="flex items-center gap-2.5 no-underline flex-shrink-0">
