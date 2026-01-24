@@ -512,6 +512,8 @@ require_once __DIR__ . '/includes/head.php';
         const checkLoaded = setInterval(() => {
             if (typeof EventPage !== 'undefined' && EventPage.event && EventPage.ticketTypes?.length) {
                 clearInterval(checkLoaded);
+                // Don't show mobile ticket button for ended events
+                if (EventPage.eventEnded) return;
                 const mobileBtn = document.getElementById('mobileTicketBtn');
                 const minPriceEl = document.getElementById('mobileMinPrice');
                 if (mobileBtn) {

@@ -484,6 +484,156 @@ const EventPage = {
     },
 
     /**
+     * Check if event has ended based on its dates
+     * - Single day: ended when starts_at has passed
+     * - Range: ended when range_end_date + range_end_time has passed
+     * - Multi-day: ended when last slot date + end_time has passed
+     * - If ends_at is set, use that as the end time
+     */
+    isEventEnded() {
+        const e = this.event;
+        if (!e) return false;
+
+        const now = new Date();
+        const durationMode = e.duration_mode || 'single_day';
+
+        // If ends_at is explicitly set, use it
+        if (e.end_date) {
+            const endDate = new Date(e.end_date);
+            if (!isNaN(endDate.getTime()) && now > endDate) return true;
+        }
+
+        if (durationMode === 'range' && e.range_end_date) {
+            let endStr = e.range_end_date;
+            if (e.range_end_time) endStr += 'T' + e.range_end_time;
+            const endDate = new Date(endStr);
+            if (!isNaN(endDate.getTime()) && now > endDate) return true;
+            return false;
+        }
+
+        if (durationMode === 'multi_day' && e.multi_slots && e.multi_slots.length > 0) {
+            const lastSlot = e.multi_slots[e.multi_slots.length - 1];
+            let endStr = lastSlot.date;
+            if (lastSlot.end_time) endStr += 'T' + lastSlot.end_time;
+            else if (lastSlot.start_time) endStr += 'T' + lastSlot.start_time;
+            const endDate = new Date(endStr);
+            if (!isNaN(endDate.getTime()) && now > endDate) return true;
+            return false;
+        }
+
+        // Single day: use starts_at
+        const startDate = new Date(e.start_date || e.date);
+        if (!isNaN(startDate.getTime()) && now > startDate) return true;
+
+        return false;
+    },
+
+    /**
+     * Apply ended event layout:
+     * - Hide ticket sidebar
+     * - Center content column
+     * - Show "event ended" banner before #event-content with related events
+     * - Hide mobile ticket button
+     */
+    applyEndedLayout() {
+        // Hide ticket sidebar
+        const sidebar = document.querySelector('#event-content .sticky-cart-wrapper');
+        if (sidebar) sidebar.style.display = 'none';
+
+        // Make content full width and centered
+        const contentCol = document.querySelector('#event-content .lg\\:w-2\\/3');
+        if (contentCol) {
+            contentCol.classList.remove('lg:w-2/3');
+            contentCol.classList.add('lg:w-2/3', 'mx-auto');
+            contentCol.style.maxWidth = '800px';
+        }
+
+        // Remove flex-row layout since sidebar is gone
+        const eventContent = document.getElementById('event-content');
+        if (eventContent) {
+            eventContent.classList.remove('lg:flex-row');
+            eventContent.classList.add('flex-col', 'items-center');
+        }
+
+        // Hide mobile ticket button
+        const mobileBtn = document.getElementById('mobileTicketBtn');
+        if (mobileBtn) mobileBtn.style.display = 'none';
+
+        // Insert ended banner before #event-content
+        this.renderEndedBanner();
+    },
+
+    /**
+     * Render the "event ended" banner with related event recommendations
+     */
+    renderEndedBanner() {
+        const eventContent = document.getElementById('event-content');
+        if (!eventContent) return;
+
+        const banner = document.createElement('div');
+        banner.id = 'event-ended-banner';
+        banner.className = 'w-full mb-8';
+        banner.innerHTML =
+            '<div class="bg-gray-50 border border-gray-200 rounded-2xl p-6 text-center">' +
+                '<div class="flex items-center justify-center gap-3 mb-2">' +
+                    '<svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+                    '<h2 class="text-xl font-bold text-secondary">Evenimentul s-a încheiat</h2>' +
+                '</div>' +
+                '<p class="text-muted mb-6">dar încă mai găsești bilete la:</p>' +
+                '<div id="ended-related-events" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>' +
+                '<div id="ended-related-loading" class="py-8 text-muted text-sm">Se încarcă evenimente...</div>' +
+            '</div>';
+
+        eventContent.parentNode.insertBefore(banner, eventContent);
+
+        // Load related events for the banner
+        this.loadEndedRelatedEvents();
+    },
+
+    /**
+     * Load related events to show in the ended banner
+     */
+    async loadEndedRelatedEvents() {
+        try {
+            const params = new URLSearchParams({ limit: 8 });
+            if (this.event.category_slug) {
+                params.append('category', this.event.category_slug);
+            }
+
+            const response = await AmbiletAPI.get('/events?' + params.toString());
+            const container = document.getElementById('ended-related-events');
+            const loading = document.getElementById('ended-related-loading');
+
+            if (loading) loading.style.display = 'none';
+
+            if (response.success && response.data?.length) {
+                const currentId = this.event.id;
+                const currentSlug = this.event.slug;
+                const filtered = response.data.filter(function(e) {
+                    return e.id !== currentId && e.slug !== currentSlug;
+                }).slice(0, 4);
+
+                if (filtered.length > 0 && container) {
+                    container.innerHTML = AmbiletEventCard.renderMany(filtered, {
+                        showCategory: true,
+                        showPrice: true,
+                        showVenue: true,
+                        urlPrefix: '/bilete/'
+                    });
+                } else if (container) {
+                    container.innerHTML = '<p class="col-span-full text-muted text-sm">Nu sunt alte evenimente disponibile momentan.</p>';
+                }
+            } else if (container) {
+                container.innerHTML = '<p class="col-span-full text-muted text-sm">Nu sunt alte evenimente disponibile momentan.</p>';
+            }
+        } catch (e) {
+            console.error('Failed to load ended related events:', e);
+            const loading = document.getElementById('ended-related-loading');
+            if (loading) loading.textContent = 'Nu sunt alte evenimente disponibile momentan.';
+        }
+    },
+
+    /**
      * Render event details
      */
     render() {
@@ -498,6 +648,12 @@ const EventPage = {
         // Show content, hide loading
         document.getElementById(this.elements.loadingState).classList.add('hidden');
         document.getElementById(this.elements.eventContent).classList.remove('hidden');
+
+        // Check if event has ended
+        this.eventEnded = this.isEventEnded();
+        if (this.eventEnded) {
+            this.applyEndedLayout();
+        }
 
         // Main image
         const mainImg = e.image || e.images?.[0] || '/assets/images/default-event.png';
@@ -563,12 +719,16 @@ const EventPage = {
             console.log('[EventPage] Event has seating layout:', this.seatingLayout.name);
         }
 
-        // Ticket types
-        this.ticketTypes = e.ticket_types || this.getDefaultTicketTypes();
-        this.renderTicketTypes();
+        // Ticket types (skip for ended events)
+        if (!this.eventEnded) {
+            this.ticketTypes = e.ticket_types || this.getDefaultTicketTypes();
+            this.renderTicketTypes();
+        }
 
-        // Related events
-        this.loadRelatedEvents();
+        // Related events (skip for ended events - banner already shows them)
+        if (!this.eventEnded) {
+            this.loadRelatedEvents();
+        }
     },
 
     /**
@@ -582,6 +742,8 @@ const EventPage = {
             badgesHtml.push('<span class="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg uppercase">ANULAT</span>');
         } else if (e.is_postponed) {
             badgesHtml.push('<span class="px-3 py-1.5 bg-orange-500 text-white text-xs font-bold rounded-lg uppercase">AMÂNAT</span>');
+        } else if (this.eventEnded) {
+            badgesHtml.push('<span class="px-3 py-1.5 bg-gray-600 text-white text-xs font-bold rounded-lg uppercase">ÎNCHEIAT</span>');
         } else if (e.is_sold_out) {
             badgesHtml.push('<span class="px-3 py-1.5 bg-gray-600 text-white text-xs font-bold rounded-lg uppercase">SOLD OUT</span>');
         }
