@@ -131,10 +131,11 @@ const AmbiletAPI = {
         if (endpoint.includes('/customer/referrals/validate')) return 'customer.referrals.validate';
         if (endpoint === '/customer/referrals' || endpoint.includes('/customer/referrals?')) return 'customer.referrals';
 
-        // Organizer event categories, genres, venues (MUST be before public patterns that use .includes())
+        // Organizer event categories, genres, venues, artists (MUST be before public patterns that use .includes())
         if (endpoint === '/organizer/event-categories') return 'organizer.event-categories';
         if (endpoint === '/organizer/event-genres' || endpoint.includes('/organizer/event-genres?')) return 'organizer.event-genres';
         if (endpoint === '/organizer/venues' || endpoint.includes('/organizer/venues?')) return 'organizer.venues';
+        if (endpoint === '/organizer/artists' || endpoint.includes('/organizer/artists?')) return 'organizer.artists';
 
         // Public endpoints
         if (endpoint.includes('/search')) return 'search';
@@ -1224,6 +1225,20 @@ const AmbiletAPI = {
          */
         async searchVenues(search = '') {
             return AmbiletAPI.get('/organizer/venues', { search });
+        },
+
+        /**
+         * Search artists
+         */
+        async searchArtists(search = '') {
+            return AmbiletAPI.get('/organizer/artists', { search });
+        },
+
+        /**
+         * Create a new artist
+         */
+        async createArtist(name) {
+            return AmbiletAPI.post('/organizer/artists', { name });
         },
 
         /**

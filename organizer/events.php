@@ -4,8 +4,7 @@ $pageTitle = 'Evenimente';
 $bodyClass = 'min-h-screen flex bg-slate-100';
 $currentPage = 'events';
 $headExtra = <<<'HTML'
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jodit/4.2.27/jodit.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jodit/4.2.27/jodit.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.5/tinymce.min.js"></script>
 HTML;
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
@@ -100,16 +99,27 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <label class="label">Categorie</label>
                                         <select name="marketplace_event_category_id" class="input" id="category-select" onchange="onCategoryChange(this.value)">
                                             <option value="">Selecteaza categoria</option>
-                                            <!-- Populated dynamically -->
                                         </select>
                                     </div>
                                     <div id="genres-container" class="hidden">
                                         <label class="label">Gen eveniment</label>
-                                        <div id="genres-list" class="flex flex-wrap gap-2 p-3 border border-gray-200 rounded-xl min-h-[42px] max-h-[140px] overflow-y-auto">
-                                            <!-- Populated dynamically as checkboxes -->
+                                        <div class="multiselect-wrapper" id="genres-multiselect">
+                                            <div class="multiselect-tags" id="genres-selected"></div>
+                                            <input type="text" class="multiselect-input" placeholder="Cauta genuri..." id="genres-search-input" autocomplete="off">
+                                            <div class="multiselect-dropdown hidden" id="genres-dropdown"></div>
                                         </div>
                                         <p class="text-xs text-muted mt-1">Selecteaza genurile aplicabile</p>
                                     </div>
+                                </div>
+                                <!-- Artist Selection -->
+                                <div>
+                                    <label class="label">Artisti</label>
+                                    <div class="multiselect-wrapper" id="artists-multiselect">
+                                        <div class="multiselect-tags" id="artists-selected"></div>
+                                        <input type="text" class="multiselect-input" placeholder="Cauta artisti..." id="artists-search-input" autocomplete="off">
+                                        <div class="multiselect-dropdown hidden" id="artists-dropdown"></div>
+                                    </div>
+                                    <p class="text-xs text-muted mt-1">Cauta in biblioteca sau scrie un nume nou pentru a-l adauga</p>
                                 </div>
                                 <div>
                                     <label class="label">Descriere scurta</label>
@@ -481,14 +491,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         .btn-success { background-color: #10b981; color: white; }
         .btn-success:hover { background-color: #059669; }
         .duration-mode-option:has(input:checked) { border-color: var(--color-primary, #6366f1); background-color: rgba(99, 102, 241, 0.05); }
-        .genre-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; cursor: pointer; border: 1px solid #e5e7eb; background: white; transition: all 0.15s; }
-        .genre-chip:hover { border-color: var(--color-primary, #6366f1); }
-        .genre-chip.selected { background-color: var(--color-primary, #6366f1); color: white; border-color: var(--color-primary, #6366f1); }
+        .multiselect-wrapper { position: relative; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 42px; background: white; cursor: text; }
+        .multiselect-wrapper:focus-within { border-color: var(--color-primary, #6366f1); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1); }
+        .multiselect-tags { display: contents; }
+        .multiselect-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; background-color: var(--color-primary, #6366f1); color: white; white-space: nowrap; }
+        .multiselect-tag button { background: none; border: none; color: white; cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; opacity: 0.7; }
+        .multiselect-tag button:hover { opacity: 1; }
+        .multiselect-input { border: none; outline: none; flex: 1; min-width: 80px; font-size: 0.875rem; padding: 2px 4px; background: transparent; }
+        .multiselect-dropdown { position: absolute; z-index: 50; left: 0; right: 0; top: 100%; margin-top: 4px; background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto; }
+        .multiselect-option { padding: 8px 12px; cursor: pointer; font-size: 0.875rem; transition: background 0.1s; }
+        .multiselect-option:hover { background-color: #f3f4f6; }
+        .multiselect-option.create-new { color: var(--color-primary, #6366f1); font-weight: 500; border-top: 1px solid #e5e7eb; }
         .venue-option { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.1s; }
         .venue-option:hover { background-color: #f9fafb; }
         .venue-option:last-child { border-bottom: none; }
-        .jodit-container { border-radius: 0.75rem !important; border-color: #e5e7eb !important; }
-        .jodit-workplace { min-height: 160px; font-size: 0.875rem; }
+        .tox-tinymce { border-radius: 0.75rem !important; border-color: #e5e7eb !important; }
+        .tox .tox-edit-area__iframe { min-height: 160px; }
     </style>
 
 <?php
@@ -501,6 +519,10 @@ let descriptionEditor = null;
 let ticketTermsEditor = null;
 let categoriesData = [];
 let venueSearchTimeout = null;
+let artistSearchTimeout = null;
+let selectedGenres = []; // [{id, name}]
+let selectedArtists = []; // [{id, name}]
+let availableGenres = []; // full list from API
 
 // Check if we should show create form on load
 const urlParams = new URLSearchParams(window.location.search);
@@ -564,6 +586,8 @@ function showCreateForm() {
     loadCategories();
     initEditors();
     initVenueSearch();
+    initArtistSearch();
+    initGenreSearch();
     initShortDescWordCount();
 }
 
@@ -595,57 +619,187 @@ async function loadCategories() {
 
 async function onCategoryChange(categoryId) {
     const genresContainer = document.getElementById('genres-container');
-    const genresList = document.getElementById('genres-list');
     const typeIdsInput = document.getElementById('selected-event-type-ids');
 
     if (!categoryId) {
         genresContainer.classList.add('hidden');
-        genresList.innerHTML = '';
+        availableGenres = [];
+        selectedGenres = [];
+        renderGenreTags();
         typeIdsInput.value = '';
         return;
     }
 
-    // Get event_type_ids from selected category
     const category = categoriesData.find(c => c.id == categoryId);
     const typeIds = category?.event_type_ids || [];
     typeIdsInput.value = JSON.stringify(typeIds);
 
     if (typeIds.length === 0) {
         genresContainer.classList.add('hidden');
-        genresList.innerHTML = '';
+        availableGenres = [];
         return;
     }
 
-    // Load genres filtered by type_ids
     try {
         const response = await AmbiletAPI.organizer.getEventGenres(typeIds);
         const genres = response.data?.genres || response.genres || [];
 
         if (genres.length === 0) {
             genresContainer.classList.add('hidden');
-            genresList.innerHTML = '';
+            availableGenres = [];
             return;
         }
 
+        availableGenres = genres;
         genresContainer.classList.remove('hidden');
-        genresList.innerHTML = genres.map(genre => `
-            <span class="genre-chip" data-genre-id="${genre.id}" onclick="toggleGenre(this)">
-                ${genre.name}
-            </span>
-        `).join('');
+        // Clear selections that are no longer valid
+        selectedGenres = selectedGenres.filter(sg => genres.some(g => g.id === sg.id));
+        renderGenreTags();
     } catch (e) {
         console.error('Failed to load genres:', e);
         genresContainer.classList.add('hidden');
     }
 }
 
-function toggleGenre(chip) {
-    chip.classList.toggle('selected');
+// ==================== GENRE MULTISELECT ====================
+
+function initGenreSearch() {
+    const input = document.getElementById('genres-search-input');
+    const dropdown = document.getElementById('genres-dropdown');
+
+    input.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+        const filtered = availableGenres.filter(g =>
+            !selectedGenres.some(sg => sg.id === g.id) &&
+            (query === '' || g.name.toLowerCase().includes(query))
+        );
+        if (filtered.length === 0) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+        dropdown.innerHTML = filtered.map(g =>
+            `<div class="multiselect-option" onclick="selectGenre(${g.id}, '${g.name.replace(/'/g, "\\'")}')">${g.name}</div>`
+        ).join('');
+        dropdown.classList.remove('hidden');
+    });
+
+    input.addEventListener('focus', function() {
+        this.dispatchEvent(new Event('input'));
+    });
+
+    input.addEventListener('blur', () => {
+        setTimeout(() => dropdown.classList.add('hidden'), 200);
+    });
+
+    // Click on wrapper focuses input
+    document.getElementById('genres-multiselect').addEventListener('click', () => input.focus());
+}
+
+function selectGenre(id, name) {
+    if (!selectedGenres.some(g => g.id === id)) {
+        selectedGenres.push({ id, name });
+        renderGenreTags();
+    }
+    document.getElementById('genres-search-input').value = '';
+    document.getElementById('genres-dropdown').classList.add('hidden');
+}
+
+function removeGenre(id) {
+    selectedGenres = selectedGenres.filter(g => g.id !== id);
+    renderGenreTags();
+}
+
+function renderGenreTags() {
+    const container = document.getElementById('genres-selected');
+    container.innerHTML = selectedGenres.map(g =>
+        `<span class="multiselect-tag">${g.name}<button type="button" onclick="removeGenre(${g.id})">&times;</button></span>`
+    ).join('');
 }
 
 function getSelectedGenreIds() {
-    return Array.from(document.querySelectorAll('.genre-chip.selected'))
-        .map(chip => parseInt(chip.dataset.genreId));
+    return selectedGenres.map(g => g.id);
+}
+
+// ==================== ARTIST MULTISELECT ====================
+
+function initArtistSearch() {
+    const input = document.getElementById('artists-search-input');
+    const dropdown = document.getElementById('artists-dropdown');
+
+    input.addEventListener('input', function() {
+        clearTimeout(artistSearchTimeout);
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+
+        artistSearchTimeout = setTimeout(async () => {
+            try {
+                const response = await AmbiletAPI.organizer.searchArtists(query);
+                const artists = response.data?.artists || response.artists || [];
+                const filtered = artists.filter(a => !selectedArtists.some(sa => sa.id === a.id));
+
+                let html = filtered.map(a =>
+                    `<div class="multiselect-option" onclick="selectArtist(${a.id}, '${a.name.replace(/'/g, "\\'")}')">${a.name}</div>`
+                ).join('');
+
+                // Always show "create new" option
+                html += `<div class="multiselect-option create-new" onclick="createNewArtist()">+ Adauga "${query}" ca artist nou</div>`;
+
+                dropdown.innerHTML = html;
+                dropdown.classList.remove('hidden');
+            } catch (e) {
+                console.error('Artist search failed:', e);
+                dropdown.classList.add('hidden');
+            }
+        }, 300);
+    });
+
+    input.addEventListener('blur', () => {
+        setTimeout(() => dropdown.classList.add('hidden'), 200);
+    });
+
+    document.getElementById('artists-multiselect').addEventListener('click', () => input.focus());
+}
+
+function selectArtist(id, name) {
+    if (!selectedArtists.some(a => a.id === id)) {
+        selectedArtists.push({ id, name });
+        renderArtistTags();
+    }
+    document.getElementById('artists-search-input').value = '';
+    document.getElementById('artists-dropdown').classList.add('hidden');
+}
+
+function removeArtist(id) {
+    selectedArtists = selectedArtists.filter(a => a.id !== id);
+    renderArtistTags();
+}
+
+function renderArtistTags() {
+    const container = document.getElementById('artists-selected');
+    container.innerHTML = selectedArtists.map(a =>
+        `<span class="multiselect-tag">${a.name}<button type="button" onclick="removeArtist(${a.id})">&times;</button></span>`
+    ).join('');
+}
+
+async function createNewArtist() {
+    const input = document.getElementById('artists-search-input');
+    const name = input.value.trim();
+    if (!name) return;
+
+    try {
+        const response = await AmbiletAPI.organizer.createArtist(name);
+        const artist = response.data?.artist || response.artist;
+        if (artist) {
+            selectArtist(artist.id, artist.name);
+        }
+    } catch (e) {
+        console.error('Failed to create artist:', e);
+        AmbiletNotifications?.error?.('Nu s-a putut crea artistul');
+    }
 }
 
 // ==================== DURATION MODE ====================
@@ -679,47 +833,53 @@ function initVenueSearch() {
     const input = document.getElementById('venue-search-input');
     const dropdown = document.getElementById('venue-dropdown');
 
+    async function searchVenues(query) {
+        try {
+            const response = await AmbiletAPI.organizer.searchVenues(query);
+            const venues = response.data?.venues || response.venues || [];
+
+            if (venues.length === 0) {
+                dropdown.innerHTML = '<div class="venue-option" style="cursor:default;color:#9ca3af;">Niciun rezultat gasit</div>';
+                dropdown.classList.remove('hidden');
+                return;
+            }
+
+            dropdown.innerHTML = venues.map(venue => `
+                <div class="venue-option" onclick="selectVenue(${JSON.stringify(venue).replace(/"/g, '&quot;')})">
+                    <div class="font-medium text-sm text-secondary">${venue.name}</div>
+                    <div class="text-xs text-muted">${[venue.city, venue.address].filter(Boolean).join(' - ')}</div>
+                </div>
+            `).join('');
+            dropdown.classList.remove('hidden');
+        } catch (e) {
+            console.error('Venue search failed:', e);
+            dropdown.innerHTML = '<div class="venue-option" style="cursor:default;color:#ef4444;">Eroare la cautare</div>';
+            dropdown.classList.remove('hidden');
+        }
+    }
+
     input.addEventListener('input', function () {
         clearTimeout(venueSearchTimeout);
         const query = this.value.trim();
+        document.getElementById('selected-venue-id').value = '';
 
         if (query.length < 2) {
             dropdown.classList.add('hidden');
             return;
         }
 
-        venueSearchTimeout = setTimeout(async () => {
-            try {
-                const response = await AmbiletAPI.organizer.searchVenues(query);
-                const venues = response.data?.venues || response.venues || [];
-
-                if (venues.length === 0) {
-                    dropdown.classList.add('hidden');
-                    return;
-                }
-
-                dropdown.innerHTML = venues.map(venue => `
-                    <div class="venue-option" onclick="selectVenue(${JSON.stringify(venue).replace(/"/g, '&quot;')})">
-                        <div class="font-medium text-sm text-secondary">${venue.name}</div>
-                        <div class="text-xs text-muted">${[venue.city, venue.address].filter(Boolean).join(' - ')}</div>
-                    </div>
-                `).join('');
-                dropdown.classList.remove('hidden');
-            } catch (e) {
-                console.error('Venue search failed:', e);
-                dropdown.classList.add('hidden');
-            }
-        }, 300);
+        venueSearchTimeout = setTimeout(() => searchVenues(query), 300);
     });
 
-    // Hide dropdown on blur (with slight delay for click)
+    input.addEventListener('focus', function() {
+        const query = this.value.trim();
+        if (query.length >= 2) {
+            searchVenues(query);
+        }
+    });
+
     input.addEventListener('blur', () => {
         setTimeout(() => dropdown.classList.add('hidden'), 200);
-    });
-
-    // Clear venue_id if user types manually
-    input.addEventListener('input', function () {
-        document.getElementById('selected-venue-id').value = '';
     });
 }
 
@@ -737,32 +897,41 @@ function selectVenue(venue) {
 function initEditors() {
     if (descriptionEditor) return; // Already initialized
 
-    const editorConfig = {
-        height: 250,
-        toolbarButtonSize: 'small',
-        buttons: 'bold,italic,underline,|,ul,ol,|,paragraph,|,link,|,hr,|,undo,redo,|,eraser',
-        showCharsCounter: false,
-        showWordsCounter: false,
-        showXPathInStatusbar: false,
-        askBeforePasteHTML: false,
-        askBeforePasteFromWord: false,
-        defaultActionOnPaste: 'insert_clear_html',
-        language: 'ro',
-        uploader: { insertImageAsBase64URI: true }
+    const baseConfig = {
+        base_url: 'https://cdn.jsdelivr.net/npm/tinymce@6.8.5',
+        suffix: '.min',
+        menubar: false,
+        statusbar: false,
+        plugins: 'lists link autolink',
+        toolbar: 'bold italic underline | bullist numlist | link | hr | undo redo | removeformat',
+        content_style: 'body { font-family: Plus Jakarta Sans, sans-serif; font-size: 14px; }',
+        paste_as_text: false,
+        paste_block_drop: false,
+        smart_paste: true,
+        branding: false,
+        promotion: false,
+        license_key: 'gpl'
     };
 
-    descriptionEditor = Jodit.make('#description-editor', {
-        ...editorConfig,
+    tinymce.init({
+        ...baseConfig,
+        selector: '#description-editor',
+        height: 250,
         placeholder: 'Scrie descrierea evenimentului aici...',
-        events: {
-            change: function(value) { updateSummaries(); }
+        setup: function(editor) {
+            editor.on('Change KeyUp', function() { updateSummaries(); });
+            editor.on('init', function() { descriptionEditor = editor; });
         }
     });
 
-    ticketTermsEditor = Jodit.make('#ticket-terms-editor', {
-        ...editorConfig,
+    tinymce.init({
+        ...baseConfig,
+        selector: '#ticket-terms-editor',
         height: 200,
-        placeholder: 'Conditii de participare, restrictii, politica de retur...'
+        placeholder: 'Conditii de participare, restrictii, politica de retur...',
+        setup: function(editor) {
+            editor.on('init', function() { ticketTermsEditor = editor; });
+        }
     });
 }
 
@@ -1128,16 +1297,20 @@ function collectFormData() {
     const genreIds = getSelectedGenreIds();
     if (genreIds.length > 0) data.genre_ids = genreIds;
 
+    // Event artists
+    const artistIds = selectedArtists.map(a => a.id);
+    if (artistIds.length > 0) data.artist_ids = artistIds;
+
     // Short description
     const shortDesc = form.querySelector('[name="short_description"]').value;
     if (shortDesc) data.short_description = shortDesc;
 
     // Description
-    const description = descriptionEditor ? descriptionEditor.value : '';
+    const description = descriptionEditor ? descriptionEditor.getContent() : '';
     if (description && description !== '<p><br></p>' && description.trim() !== '') data.description = description;
 
     // Ticket terms
-    const ticketTerms = ticketTermsEditor ? ticketTermsEditor.value : '';
+    const ticketTerms = ticketTermsEditor ? ticketTermsEditor.getContent() : '';
     if (ticketTerms && ticketTerms !== '<p><br></p>' && ticketTerms.trim() !== '') data.ticket_terms = ticketTerms;
 
     if (tags && tags.length > 0) data.tags = tags;
