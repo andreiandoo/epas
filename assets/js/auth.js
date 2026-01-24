@@ -396,7 +396,7 @@ const AmbiletAuth = {
         if (!this.isOrganizer()) {
             const currentUrl = redirectUrl || window.location.href;
             this.setRedirectAfterLogin(currentUrl);
-            window.location.href = '/organizer/login';
+            window.location.href = '/organizator/login';
             return false;
         }
         return true;

@@ -91,10 +91,10 @@ const AmbiletFooter = {
                     <div>
                         <h4 class="text-sm font-semibold uppercase tracking-wider mb-4">Organizatori</h4>
                         <ul class="space-y-3">
-                            <li><a href="/organizer/landing.php" class="text-white/70 hover:text-white text-sm transition-colors">Vinde bilete</a></li>
-                            <li><a href="/organizer/register.php" class="text-white/70 hover:text-white text-sm transition-colors">Înregistrare organizator</a></li>
-                            <li><a href="/organizer/login.php" class="text-white/70 hover:text-white text-sm transition-colors">Login organizator</a></li>
-                            <li><a href="/organizer/help.php" class="text-white/70 hover:text-white text-sm transition-colors">Ghid organizatori</a></li>
+                            <li><a href="/organizator/landing" class="text-white/70 hover:text-white text-sm transition-colors">Vinde bilete</a></li>
+                            <li><a href="/organizator/register" class="text-white/70 hover:text-white text-sm transition-colors">Înregistrare organizator</a></li>
+                            <li><a href="/organizator/login" class="text-white/70 hover:text-white text-sm transition-colors">Login organizator</a></li>
+                            <li><a href="/organizator/help" class="text-white/70 hover:text-white text-sm transition-colors">Ghid organizatori</a></li>
                         </ul>
                     </div>
 

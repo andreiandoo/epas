@@ -131,12 +131,15 @@ const CategoryPage = {
             const params = this.category ? '?category=' + this.category : '';
             const response = await AmbiletAPI.get('/events/cities' + params);
             if (response.data) {
+                const optionsHtml = '<option value="">Toate orasele</option>' +
+                    response.data.map(city => '<option value="' + city.slug + '">' + city.name + ' (' + (city.events_count || 0) + ')</option>').join('');
                 const select = document.getElementById(this.elements.filterCity);
                 if (select) {
-                    select.innerHTML = '<option value="">Toate orasele</option>';
-                    response.data.forEach(city => {
-                        select.innerHTML += '<option value="' + city.slug + '">' + city.name + ' (' + (city.events_count || 0) + ')</option>';
-                    });
+                    select.innerHTML = optionsHtml;
+                }
+                const selectMobile = document.getElementById('filterCityMobile');
+                if (selectMobile) {
+                    selectMobile.innerHTML = optionsHtml;
                 }
 
                 // Update cities count

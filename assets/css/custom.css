@@ -335,6 +335,15 @@ select.pr-10 {
     flex-shrink: 0;
 }
 
+.scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
 /* ==================== NAVIGATION ==================== */
 .nav-dropdown {
     opacity: 0;

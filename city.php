@@ -106,8 +106,25 @@ require_once __DIR__ . '/includes/header.php'; ?>
     </div>
 </section>
 
-<!-- Filters -->
-<section class="sticky top-[72px] z-20 py-4 bg-white border-b border-border">
+<!-- Mobile Filters Button -->
+<section class="sticky top-[72px] z-20 py-3 bg-white border-b border-gray-200 shadow-sm lg:hidden">
+    <div class="flex items-center justify-between gap-3 px-4">
+        <button onclick="openCityFiltersDrawer()" class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+            Filtre
+            <span id="mobileFilterCount" class="hidden px-2 py-0.5 text-xs font-bold text-white rounded-full bg-primary">0</span>
+        </button>
+        <select id="sortSelectMobile" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('sortSelect').value = this.value; CityPage.filter();">
+            <option value="date">Data</option>
+            <option value="popular">Popular</option>
+            <option value="price_asc">Preț ↑</option>
+            <option value="price_desc">Preț ↓</option>
+        </select>
+    </div>
+</section>
+
+<!-- Desktop Filters -->
+<section class="sticky top-[72px] z-20 py-4 bg-white border-b border-border hidden lg:block">
     <div class="flex flex-wrap items-center gap-3 px-4 mx-auto max-w-7xl">
         <select id="categoryFilter" class="px-4 py-2.5 pr-10 text-sm font-medium bg-surface border-0 rounded-xl focus:ring-2 focus:ring-primary/20" onchange="CityPage.filter()">
             <option value="">Toate categoriile</option>
@@ -144,6 +161,85 @@ require_once __DIR__ . '/includes/header.php'; ?>
         </div>
     </div>
 </section>
+
+<!-- Mobile Filters Drawer -->
+<div id="cityFiltersBackdrop" class="fixed inset-0 z-[105] transition-opacity duration-300 bg-black/50 backdrop-blur-sm lg:hidden" style="opacity: 0; visibility: hidden;" onclick="closeCityFiltersDrawer()"></div>
+<div id="cityFiltersDrawer" class="fixed bottom-0 left-0 right-0 z-[110] overflow-hidden transition-transform duration-300 bg-white lg:hidden rounded-t-3xl max-h-[85vh]" style="transform: translateY(100%);">
+    <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-200">
+        <h2 class="text-lg font-bold text-gray-900">Filtre</h2>
+        <button onclick="closeCityFiltersDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-gray-100 hover:bg-gray-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
+    <div class="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
+        <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700">Categorie</label>
+            <select id="categoryFilterMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('categoryFilter').value = this.value;">
+                <option value="">Toate categoriile</option>
+                <?php foreach ($eventCategories as $category): ?>
+                <option value="<?= htmlspecialchars($category['slug']) ?>"><?= htmlspecialchars($category['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700">Dată</label>
+            <select id="dateFilterMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('dateFilter').value = this.value;">
+                <option value="">Oricând</option>
+                <option value="today">Astăzi</option>
+                <option value="weekend">Weekend</option>
+                <option value="week">Săptămâna asta</option>
+                <option value="month">Luna asta</option>
+            </select>
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700">Preț</label>
+            <select id="priceFilterMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('priceFilter').value = this.value;">
+                <option value="">Orice preț</option>
+                <option value="free">Gratuit</option>
+                <option value="0-50">Sub 50 lei</option>
+                <option value="50-100">50 - 100 lei</option>
+                <option value="100-200">100 - 200 lei</option>
+                <option value="200+">Peste 200 lei</option>
+            </select>
+        </div>
+    </div>
+    <div class="flex gap-3 p-4 border-t border-gray-200 bg-gray-50">
+        <button onclick="clearCityFilters(); closeCityFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-200 rounded-xl hover:bg-gray-50">
+            Șterge filtre
+        </button>
+        <button onclick="CityPage.filter(); closeCityFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-bold text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark">
+            Aplică filtre
+        </button>
+    </div>
+</div>
+
+<script>
+function openCityFiltersDrawer() {
+    document.getElementById('cityFiltersBackdrop').style.opacity = '1';
+    document.getElementById('cityFiltersBackdrop').style.visibility = 'visible';
+    document.getElementById('cityFiltersDrawer').style.transform = 'translateY(0)';
+    document.body.style.overflow = 'hidden';
+    // Sync desktop values to mobile
+    document.getElementById('categoryFilterMobile').value = document.getElementById('categoryFilter').value;
+    document.getElementById('dateFilterMobile').value = document.getElementById('dateFilter').value;
+    document.getElementById('priceFilterMobile').value = document.getElementById('priceFilter').value;
+}
+function closeCityFiltersDrawer() {
+    document.getElementById('cityFiltersBackdrop').style.opacity = '0';
+    document.getElementById('cityFiltersBackdrop').style.visibility = 'hidden';
+    document.getElementById('cityFiltersDrawer').style.transform = 'translateY(100%)';
+    document.body.style.overflow = '';
+}
+function clearCityFilters() {
+    document.getElementById('categoryFilter').value = '';
+    document.getElementById('dateFilter').value = '';
+    document.getElementById('priceFilter').value = '';
+    document.getElementById('categoryFilterMobile').value = '';
+    document.getElementById('dateFilterMobile').value = '';
+    document.getElementById('priceFilterMobile').value = '';
+    CityPage.filter();
+}
+</script>
 
 <!-- Events Grid -->
 <main class="px-4 py-12 mx-auto max-w-7xl">

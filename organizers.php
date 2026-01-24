@@ -212,7 +212,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
             </div>
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <?php foreach ($featuredOrganizers as $org): ?>
-                <a href="/organizer/<?= $org['slug'] ?>" class="overflow-hidden transition-all group bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl hover:-translate-y-1 hover:shadow-2xl">
+                <a href="/organizator/<?= $org['slug'] ?>" class="overflow-hidden transition-all group bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl hover:-translate-y-1 hover:shadow-2xl">
                     <div class="relative bg-center bg-cover h-28" style="background-image: url('<?= $org['cover'] ?>')">
                         <div class="absolute inset-0 bg-gradient-to-b from-transparent to-slate-800/80"></div>
                     </div>
@@ -312,7 +312,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
         <!-- Organizers Grid -->
         <div class="grid grid-cols-1 gap-6 mb-12 md:grid-cols-2 lg:grid-cols-3">
             <?php foreach ($organizers as $org): ?>
-            <a href="/organizer/<?= $org['slug'] ?>" class="overflow-hidden transition-all bg-white border border-gray-200 group rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
+            <a href="/organizator/<?= $org['slug'] ?>" class="overflow-hidden transition-all bg-white border border-gray-200 group rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
                 <div class="h-24 <?= $gradients[$org['gradient']] ?> relative">
                     <div class="absolute -bottom-9 left-6 w-[72px] h-[72px] rounded-2xl border-4 border-white bg-white overflow-hidden shadow-lg">
                         <img src="<?= $org['avatar'] ?>" alt="<?= $org['name'] ?>" class="object-cover w-full h-full">

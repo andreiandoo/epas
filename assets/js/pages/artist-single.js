@@ -151,7 +151,8 @@ const ArtistPage = {
                 totalFollowers: this.formatNumber(totalFollowers),
                 spotifyPopularity: api.stats?.spotify_popularity || 0,
                 youtubeViews: this.formatNumber(api.stats?.youtube_total_views || 0),
-                upcomingEvents: api.stats?.upcoming_events || events.length
+                upcomingEvents: api.stats?.upcoming_events || events.length,
+                spotifyListenersRaw: api.stats?.spotify_listeners || 0  
             },
             about: api.biography ? [api.biography] : ['Informatii despre acest artist vor fi adaugate in curand.'],
             facts: [
@@ -307,7 +308,7 @@ const ArtistPage = {
     renderStats(stats) {
         var container = document.getElementById(this.elements.statsContainer);
         var spotifyListenersCount = document.getElementById(this.elements.spotifyListenersCountDiv);
-        spotifyListenersCount.innerText = stats.spotifyListeners;
+        spotifyListenersCount.innerText = stats.spotifyListenersRaw;
 
         if (!container) return;
 
@@ -375,15 +376,16 @@ const ArtistPage = {
         // Update listeners text
         var listenersText = spotifySection.querySelector('p');
         if (listenersText && listeners) {
-            listenersText.innerHTML = 'Descopera toate albumele, single-urile si colaborarile. <br/>Peste ' + listeners + ' ascultatori lunari!';
+            listenersText.innerHTML = 'Descoperă toate albumele, single-urile și colaborările. <br/>Peste ' + listeners + ' ascultători lunari!';
         }
 
         // Add Spotify embed player if spotifyId is available
         var embedContainer = spotifySection.querySelector('.bg-gray-50.rounded-xl');
         if (embedContainer) {
             if (spotifyId) {
+                var embedHeight = window.innerWidth < 768 ? 400 : 152;
                 embedContainer.innerHTML = '<iframe style="border-radius:12px" src="https://open.spotify.com/embed/artist/' +
-                    spotifyId + '?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" ' +
+                    spotifyId + '?utm_source=generator&theme=0" width="100%" height="' + embedHeight + '" frameBorder="0" ' +
                     'allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
                 embedContainer.classList.remove('flex', 'items-center', 'justify-center', 'text-gray-400', 'text-sm');
             } else if (!spotifyUrl) {

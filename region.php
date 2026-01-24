@@ -211,7 +211,7 @@ const RegionPage = {
 
     async loadRegion() {
         try {
-            const response = await AmbiletAPI.get('/api/proxy.php?action=locations.region&slug=' + this.slug);
+            const response = await AmbiletAPI.get('/locations/regions/' + this.slug);
 
             if (response.success && response.data) {
                 this.region = response.data.region;
@@ -238,7 +238,7 @@ const RegionPage = {
 
     async loadAllRegions() {
         try {
-            const response = await AmbiletAPI.get('/api/proxy.php?action=locations.regions');
+            const response = await AmbiletAPI.get('/locations/regions');
 
             if (response.success && response.data && response.data.regions) {
                 this.otherRegions = response.data.regions.filter(r => r.slug !== this.slug);
@@ -393,7 +393,7 @@ const RegionPage = {
             const citySlugs = this.cities.map(c => c.slug);
             if (!citySlugs.length) return;
 
-            const response = await AmbiletAPI.get('/api/proxy.php?action=events&city=' + citySlugs[0] + '&limit=3');
+            const response = await AmbiletAPI.get('/events?city=' + citySlugs[0] + '&limit=3');
 
             if (response.data && response.data.length > 0) {
                 this.renderEvents(response.data);
