@@ -541,7 +541,13 @@ class EventResource extends Resource
                                     ->searchable()
                                     ->preload()
                                     ->live()
-                                    ->visible(fn (SGet $get) => (bool) $get('venue_id'))
+                                    ->visible(function (SGet $get) {
+                                        $venueId = $get('venue_id');
+                                        if (!$venueId) return false;
+                                        return SeatingLayout::where('venue_id', $venueId)
+                                            ->where('status', 'published')
+                                            ->exists();
+                                    })
                                     ->options(function (SGet $get) {
                                         $venueId = $get('venue_id');
                                         if (!$venueId) return [];

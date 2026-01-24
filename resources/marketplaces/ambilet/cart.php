@@ -111,7 +111,7 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
 
                             <!-- Savings -->
-                            <div id="savingsRow" class="hidden py-2 px-3 mb-3 bg-success/10 rounded-xl">
+                            <div id="savingsRow" class="hidden px-3 py-2 mb-3 bg-success/10 rounded-xl">
                                 <div class="flex flex-col gap-1">
                                     <div class="flex items-center justify-between gap-2">
                                         <span id="savingsText" class="text-sm font-medium text-success">Alegând [numebilet] economisești:</span>
@@ -439,13 +439,13 @@ const CartPage = {
         const totalWithCommission = price + commissionAmount;
 
         // Build tooltip HTML with price breakdown
-        let tooltipHtml = '<p class="font-semibold mb-3 text-sm border-b border-white/20 pb-2">Detalii preț bilet ' + ticketTypeName + '</p>' +
+        let tooltipHtml = '<p class="pb-2 mb-3 text-sm font-semibold border-b border-white/20">Detalii preț bilet ' + ticketTypeName + '</p>' +
             '<div class="space-y-2 text-xs">' +
                 '<div class="flex justify-between"><span class="text-white/70">Preț bilet:</span><span>' + price.toFixed(2) + ' lei</span></div>';
 
         if (commissionMode === 'added_on_top' && commissionAmount > 0) {
             tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionRate + '%):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
-                '<div class="flex justify-between border-t border-white/20 pt-2 mt-2"><span class="font-semibold">Total la plată:</span><span class="font-semibold">' + totalWithCommission.toFixed(2) + ' lei</span></div>';
+                '<div class="flex justify-between pt-2 mt-2 border-t border-white/20"><span class="font-semibold">Total la plată:</span><span class="font-semibold">' + totalWithCommission.toFixed(2) + ' lei</span></div>';
         }
 
         tooltipHtml += '</div>';
@@ -456,24 +456,33 @@ const CartPage = {
                     '<img src="' + eventImage + '" alt="' + eventTitle + '" class="object-cover w-full h-full">' +
                 '</div>' +
                 '<div class="flex-1 min-w-0">' +
-                    '<h3 class="font-semibold truncate text-secondary">' + eventTitle + '</h3>' +
-                    '<p class="text-sm text-muted">' +
-                        formattedDate +
-                        (venueName ? ' • ' + venueName : '') +
-                    '</p>' +
+                    '<div class="flex items-center justify-between">' +
+                        '<div class="flex-1 min-w-0">' +
+                            '<h3 class="font-semibold truncate text-secondary">' + eventTitle + '</h3>' +
+                            '<p class="text-sm text-muted">' +
+                                formattedDate +
+                                (venueName ? ' • ' + venueName : '') +
+                            '</p>' +
+                        '</div>' +
+                        '<button onclick="CartPage.removeItem(' + index + ')" class="self-start p-2 transition-colors rounded-lg text-muted hover:text-error hover:bg-red-50">' +
+                            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>' +
+                            '</svg>' +
+                        '</button>' +
+                    '<div>' +
                     '<div class="flex items-center justify-between mt-3">' +
-                        '<div class="tooltip-trigger relative inline-block">' +
+                        '<div class="relative inline-block tooltip-trigger">' +
                             '<div class="flex items-center gap-2">' +
-                                '<span class="inline-flex items-center px-2 py-1 text-sm font-semibold rounded bg-surface text-secondary">' + ticketTypeName +
+                                '<span class="inline-flex items-center px-2 py-1 text-sm font-semibold text-secondary">' + ticketTypeName +
                                     (hasDiscount ? ' <span class="discount-badge text-white text-[10px] font-bold py-0.5 px-1.5 rounded-full ml-1">-' + discountPercent + '%</span>' : '') +
                                 '</span>' +
                                 '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
                             '</div>' +
                             (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
-                            (seats.length > 0 ? '<p class="text-xs text-primary mt-1"><svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
-                            '<div class="tooltip absolute left-0 top-full mt-2 w-72 bg-secondary text-white p-4 rounded-xl shadow-xl z-10">' + tooltipHtml + '</div>' +
+                            (seats.length > 0 ? '<p class="mt-1 text-xs text-primary"><svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
+                            '<div class="absolute left-0 z-10 p-4 mt-2 text-white shadow-xl tooltip top-full w-72 bg-secondary rounded-xl">' + tooltipHtml + '</div>' +
                         '</div>' +
-                        '<div class="flex items-center ml-auto mr-8 gap-2">' +
+                        '<div class="flex items-center gap-2 ml-auto mr-8">' +
                             '<button onclick="CartPage.updateQuantity(' + index + ', -1)" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
                                 '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                                     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>' +
@@ -492,11 +501,6 @@ const CartPage = {
                         '</div>' +
                     '</div>' +
                 '</div>' +
-                '<button onclick="CartPage.removeItem(' + index + ')" class="self-start p-2 transition-colors rounded-lg text-muted hover:text-error hover:bg-red-50">' +
-                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>' +
-                    '</svg>' +
-                '</button>' +
             '</div>' +
         '</div>';
     },
@@ -629,7 +633,7 @@ const CartPage = {
 
             // Show commission as "Taxe procesare" only if on top
             if (commissionMode === 'added_on_top' && totalCommission > 0) {
-                breakdownHtml += '<div class="flex justify-between text-sm pt-2 mt-2 border-t border-border">' +
+                breakdownHtml += '<div class="flex justify-between pt-2 mt-2 text-sm border-t border-border">' +
                     '<span class="text-muted">Taxe procesare (' + commissionRate + '%)</span>' +
                     '<span class="font-medium">' + AmbiletUtils.formatCurrency(totalCommission) + '</span>' +
                 '</div>';

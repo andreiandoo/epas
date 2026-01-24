@@ -124,11 +124,20 @@ class EventsController extends BaseController
         try {
             DB::beginTransaction();
 
+            $baseSlug = Str::slug($validated['name']);
+            $slug = $baseSlug;
+            $counter = 1;
+            while (MarketplaceEvent::where('marketplace_client_id', $organizer->marketplace_client_id)
+                ->where('slug', $slug)->exists()) {
+                $slug = $baseSlug . '-' . $counter;
+                $counter++;
+            }
+
             $event = MarketplaceEvent::create([
                 'marketplace_client_id' => $organizer->marketplace_client_id,
                 'marketplace_organizer_id' => $organizer->id,
                 'name' => $validated['name'],
-                'slug' => Str::slug($validated['name']),
+                'slug' => $slug,
                 'description' => $validated['description'] ?? null,
                 'ticket_terms' => $validated['ticket_terms'] ?? null,
                 'short_description' => $validated['short_description'] ?? null,

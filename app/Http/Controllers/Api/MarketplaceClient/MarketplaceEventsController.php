@@ -413,7 +413,7 @@ class MarketplaceEventsController extends BaseController
                 // Schedule info
                 'duration_mode' => $event->duration_mode ?? 'single_day',
                 // Single day fields
-                'starts_at' => $event->event_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
+                'starts_at' => ($event->event_date?->format('Y-m-d') ?? $event->range_start_date?->format('Y-m-d')) . 'T' . ($event->start_time ?? '00:00:00'),
                 'ends_at' => $event->end_time ? $event->event_date?->format('Y-m-d') . 'T' . $event->end_time : null,
                 'doors_open_at' => $event->door_time ? $event->event_date?->format('Y-m-d') . 'T' . $event->door_time : null,
                 // Range/festival fields
@@ -980,7 +980,7 @@ class MarketplaceEventsController extends BaseController
                 'name' => $category->getTranslation('name', $language),
                 'slug' => $category->slug,
             ] : null,
-            'starts_at' => $event->event_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
+            'starts_at' => ($event->event_date?->format('Y-m-d') ?? $event->range_start_date?->format('Y-m-d')) . 'T' . ($event->start_time ?? '00:00:00'),
             'duration_mode' => $event->duration_mode ?? 'single_day',
             'range_start_date' => $event->range_start_date?->format('Y-m-d'),
             'range_end_date' => $event->range_end_date?->format('Y-m-d'),
@@ -1188,7 +1188,14 @@ class MarketplaceEventsController extends BaseController
                                 $q4->where('range_end_date', $today)
                                     ->where(function ($q5) use ($currentTime) {
                                         $q5->where('range_end_time', '>', $currentTime)
-                                            ->orWhereNull('range_end_time');
+                                            ->orWhere(function ($q6) use ($currentTime) {
+                                                // No end time: use start_time as cutoff
+                                                $q6->whereNull('range_end_time')
+                                                    ->where(function ($q7) use ($currentTime) {
+                                                        $q7->where('start_time', '>', $currentTime)
+                                                            ->orWhereNull('start_time');
+                                                    });
+                                            });
                                     });
                             });
                     });

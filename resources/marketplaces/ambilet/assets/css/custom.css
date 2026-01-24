@@ -1534,6 +1534,10 @@ select.pr-10 {
     font-size: 15px;
 }
 
+#ended-related-events a.border {
+    border-width: 0;
+}
+
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 1100px) {
     .mega-menu-cities .mega-menu-content {

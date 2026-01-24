@@ -200,10 +200,11 @@ const CityPage = {
         const groups = {};
 
         events.forEach(event => {
-            const dateStr = event.date || event.starts_at || event.event_date;
+            const dateStr = event.date || event.starts_at || event.range_start_date || event.event_date;
             if (!dateStr) return;
 
             const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return;
             const monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
             const monthLabel = this.monthNames[date.getMonth()] + ' ' + date.getFullYear();
 
