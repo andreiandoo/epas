@@ -214,6 +214,9 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/login') return 'organizer.login';
         if (endpoint === '/organizer/logout') return 'organizer.logout';
         if (endpoint === '/organizer/me') return 'organizer.me';
+        if (endpoint === '/organizer/settings') return 'organizer.me';
+        if (endpoint === '/organizer/settings/profile') return 'organizer.profile';
+        if (endpoint === '/organizer/settings/company') return 'organizer.profile';
         if (endpoint === '/organizer/profile') return 'organizer.profile';
         if (endpoint === '/organizer/password') return 'organizer.password';
         if (endpoint === '/organizer/forgot-password') return 'organizer.forgot-password';

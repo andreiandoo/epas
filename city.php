@@ -37,7 +37,7 @@ try {
             $city = $data['data']['city'];
             $cityConfig = [
                 'name' => $city['name'] ?? ucwords(str_replace('-', ' ', $citySlug)),
-                'description' => $city['description'] ?? 'Descopera cele mai bune evenimente din acest oras.',
+                'description' => $city['description'] ?? 'Descoperă cele mai bune evenimente din acest oraș.',
                 'hero_image' => $city['cover_image'] ?? $city['image'] ?? 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=1920&q=80',
                 'count' => $city['events_count'] ?? 0
             ];
@@ -61,7 +61,7 @@ if ($cityNotFound) {
 if (!$cityConfig) {
     $cityConfig = [
         'name' => ucwords(str_replace('-', ' ', $citySlug)),
-        'description' => 'Descopera cele mai bune evenimente din acest oras.',
+        'description' => 'Descoperă cele mai bune evenimente din acest oraș.',
         'hero_image' => 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=1920&q=80',
         'count' => 0
     ];
@@ -167,14 +167,14 @@ require_once __DIR__ . '/includes/header.php'; ?>
 <div id="cityFiltersDrawer" class="fixed bottom-0 left-0 right-0 z-[110] overflow-hidden transition-transform duration-300 bg-white lg:hidden rounded-t-3xl max-h-[85vh]" style="transform: translateY(100%);">
     <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-200">
         <h2 class="text-lg font-bold text-gray-900">Filtre</h2>
-        <button onclick="closeCityFiltersDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-gray-100 hover:bg-gray-200">
+        <button onclick="closeCityFiltersDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors bg-gray-100 rounded-full hover:bg-gray-200">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
     </div>
     <div class="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
         <div>
             <label class="block mb-2 text-sm font-medium text-gray-700">Categorie</label>
-            <select id="categoryFilterMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('categoryFilter').value = this.value;">
+            <select id="categoryFilterMobile" class="w-full px-4 py-3 text-sm font-medium border border-gray-200 bg-gray-50 rounded-xl" onchange="document.getElementById('categoryFilter').value = this.value;">
                 <option value="">Toate categoriile</option>
                 <?php foreach ($eventCategories as $category): ?>
                 <option value="<?= htmlspecialchars($category['slug']) ?>"><?= htmlspecialchars($category['name']) ?></option>
@@ -183,7 +183,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
         </div>
         <div>
             <label class="block mb-2 text-sm font-medium text-gray-700">Dată</label>
-            <select id="dateFilterMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('dateFilter').value = this.value;">
+            <select id="dateFilterMobile" class="w-full px-4 py-3 text-sm font-medium border border-gray-200 bg-gray-50 rounded-xl" onchange="document.getElementById('dateFilter').value = this.value;">
                 <option value="">Oricând</option>
                 <option value="today">Astăzi</option>
                 <option value="weekend">Weekend</option>
@@ -193,7 +193,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
         </div>
         <div>
             <label class="block mb-2 text-sm font-medium text-gray-700">Preț</label>
-            <select id="priceFilterMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('priceFilter').value = this.value;">
+            <select id="priceFilterMobile" class="w-full px-4 py-3 text-sm font-medium border border-gray-200 bg-gray-50 rounded-xl" onchange="document.getElementById('priceFilter').value = this.value;">
                 <option value="">Orice preț</option>
                 <option value="free">Gratuit</option>
                 <option value="0-50">Sub 50 lei</option>

@@ -85,3 +85,30 @@ $skipJsComponents = true;
         </div>
     </div>
 </header>
+
+<script>
+// Populate topbar with logged-in organizer data
+(function() {
+    try {
+        const orgData = JSON.parse(localStorage.getItem('ambilet_organizer_data') || 'null');
+        if (orgData) {
+            const nameEl = document.getElementById('topbar-org-name');
+            const emailEl = document.getElementById('topbar-org-email');
+            const initialsEl = document.getElementById('topbar-org-initials');
+
+            const name = orgData.name || orgData.company_name || 'Organizator';
+            const email = orgData.email || '';
+
+            if (nameEl) nameEl.textContent = name;
+            if (emailEl) emailEl.textContent = email;
+            if (initialsEl) {
+                const parts = name.trim().split(/\s+/);
+                const initials = parts.length > 1
+                    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                    : name.substring(0, 2).toUpperCase();
+                initialsEl.textContent = initials;
+            }
+        }
+    } catch (e) {}
+})();
+</script>
