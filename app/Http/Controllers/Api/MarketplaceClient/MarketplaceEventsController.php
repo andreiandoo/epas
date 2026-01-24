@@ -40,9 +40,9 @@ class MarketplaceEventsController extends BaseController
                 },
             ]);
 
-        // Filter upcoming only by default
+        // Filter upcoming only by default - exclude events that have already started
         if (!$request->has('include_past')) {
-            $query->where('event_date', '>=', now()->toDateString());
+            $this->applyUpcomingFilter($query);
         }
 
         // Filters
@@ -169,8 +169,9 @@ class MarketplaceEventsController extends BaseController
         $query = Event::where('marketplace_client_id', $client->id)
             ->where(function ($q) {
                 $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-            })
-            ->where('event_date', '>=', now()->toDateString());
+            });
+
+        $this->applyUpcomingFilter($query);
 
         // Featured type filter: homepage, general, category, or any
         $featuredType = $request->get('type', 'any');
@@ -484,14 +485,16 @@ class MarketplaceEventsController extends BaseController
             return [];
         }
 
-        $relatedEvents = Event::whereIn('id', $event->custom_related_event_ids)
+        $relatedQuery = Event::whereIn('id', $event->custom_related_event_ids)
             ->where('id', '!=', $event->id)
             ->where('marketplace_client_id', $client->id)
             ->where(function ($q) {
                 $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-            })
-            ->where('event_date', '>=', now()->toDateString())
-            ->with([
+            });
+
+        $this->applyUpcomingFilter($relatedQuery);
+
+        $relatedEvents = $relatedQuery->with([
                 'marketplaceOrganizer:id,name,slug,logo,verified_at,default_commission_mode,commission_rate',
                 'venue:id,name,city',
                 'marketplaceEventCategory',
@@ -553,12 +556,14 @@ class MarketplaceEventsController extends BaseController
         $language = $client->language ?? 'ro';
 
         // Get categories that have events
-        $categoryIds = Event::where('marketplace_client_id', $client->id)
+        $catQuery = Event::where('marketplace_client_id', $client->id)
             ->where(function ($q) {
                 $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-            })
-            ->where('event_date', '>=', now()->toDateString())
-            ->whereNotNull('marketplace_event_category_id')
+            });
+
+        $this->applyUpcomingFilter($catQuery);
+
+        $categoryIds = $catQuery->whereNotNull('marketplace_event_category_id')
             ->selectRaw('marketplace_event_category_id, COUNT(*) as event_count')
             ->groupBy('marketplace_event_category_id')
             ->pluck('event_count', 'marketplace_event_category_id');
@@ -589,8 +594,9 @@ class MarketplaceEventsController extends BaseController
         $query = Event::where('marketplace_client_id', $client->id)
             ->where(function ($q) {
                 $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-            })
-            ->where('event_date', '>=', now()->toDateString());
+            });
+
+        $this->applyUpcomingFilter($query);
 
         // Filter by genre if provided
         if ($request->has('genre')) {
@@ -945,17 +951,17 @@ class MarketplaceEventsController extends BaseController
         $genres = \App\Models\EventGenre::query()
             ->whereHas('events', function ($query) use ($client) {
                 $query->where('marketplace_client_id', $client->id)
-                    ->where('event_date', '>=', now()->toDateString())
                     ->where(function ($q) {
                         $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
                     });
+                $this->applyUpcomingFilter($query);
             })
             ->withCount(['events' => function ($query) use ($client) {
                 $query->where('marketplace_client_id', $client->id)
-                    ->where('event_date', '>=', now()->toDateString())
                     ->where(function ($q) {
                         $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
                     });
+                $this->applyUpcomingFilter($query);
             }])
             ->orderBy('name')
             ->get()
@@ -1095,5 +1101,55 @@ class MarketplaceEventsController extends BaseController
             'background_opacity' => $layout->background_opacity,
             'sections' => $sections,
         ];
+    }
+
+    /**
+     * Apply upcoming event filter - excludes events that have already started/ended
+     * based on their duration mode and respective date+time fields.
+     */
+    private function applyUpcomingFilter($query): void
+    {
+        $now = now();
+        $today = $now->toDateString();
+        $currentTime = $now->format('H:i:s');
+
+        $query->where(function ($q) use ($today, $currentTime) {
+            // Range events: use range_end_date + range_end_time
+            $q->where(function ($q2) use ($today, $currentTime) {
+                $q2->where('duration_mode', 'range')
+                    ->where(function ($q3) use ($today, $currentTime) {
+                        $q3->where('range_end_date', '>', $today)
+                            ->orWhere(function ($q4) use ($today, $currentTime) {
+                                $q4->where('range_end_date', $today)
+                                    ->where(function ($q5) use ($currentTime) {
+                                        $q5->where('range_end_time', '>', $currentTime)
+                                            ->orWhereNull('range_end_time');
+                                    });
+                            });
+                    });
+            })
+            // Single day events: use event_date + start_time
+            ->orWhere(function ($q2) use ($today, $currentTime) {
+                $q2->where(function ($q3) {
+                        $q3->where('duration_mode', 'single_day')
+                            ->orWhereNull('duration_mode');
+                    })
+                    ->where(function ($q3) use ($today, $currentTime) {
+                        $q3->where('event_date', '>', $today)
+                            ->orWhere(function ($q4) use ($today, $currentTime) {
+                                $q4->where('event_date', $today)
+                                    ->where(function ($q5) use ($currentTime) {
+                                        $q5->where('start_time', '>', $currentTime)
+                                            ->orWhereNull('start_time');
+                                    });
+                            });
+                    });
+            })
+            // Multi-day: check first slot date (simplified)
+            ->orWhere(function ($q2) use ($today) {
+                $q2->where('duration_mode', 'multi_day')
+                    ->where('event_date', '>=', $today);
+            });
+        });
     }
 }

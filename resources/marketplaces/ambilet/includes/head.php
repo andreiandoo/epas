@@ -274,6 +274,9 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <script type="application/ld+json"><?= json_encode($breadcrumbSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?></script>
     <?php endif; ?>
 
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>">
+
     <!-- Preconnect for Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -285,9 +288,6 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
 
     <!-- Tailwind CSS CDN & Config -->
     <?php require_once __DIR__ . '/tailwind-config.php'; ?>
-
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>">
 
     <!-- Page-specific head content -->
     <?php if (isset($headExtra)) echo $headExtra; ?>
