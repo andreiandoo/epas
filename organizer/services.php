@@ -505,24 +505,42 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                     <div class="space-y-4">
                         <label class="label">Metoda de plata</label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <label class="cursor-pointer">
+                        <div class="space-y-3">
+                            <label class="cursor-pointer block">
                                 <input type="radio" name="payment_method" value="card" class="peer sr-only" checked>
-                                <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5 flex items-center gap-3">
-                                    <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-                                    <span class="font-medium text-secondary">Card Bancar</span>
+                                <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5 flex items-center gap-4">
+                                    <div class="w-16 h-10 bg-gradient-to-r from-green-600 to-green-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <span class="text-white text-[10px] font-bold">NETOPIA</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-secondary">Card Bancar</p>
+                                        <p class="text-xs text-muted">Visa, Mastercard, Maestro</p>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <div class="w-8 h-5 bg-blue-600 rounded flex items-center justify-center">
+                                            <span class="text-white text-[8px] font-bold">VISA</span>
+                                        </div>
+                                        <div class="w-8 h-5 bg-red-500 rounded flex items-center justify-center">
+                                            <span class="text-white text-[6px] font-bold">MC</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </label>
-                            <label class="cursor-pointer">
+                            <label class="cursor-pointer block">
                                 <input type="radio" name="payment_method" value="transfer" class="peer sr-only">
-                                <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5 flex items-center gap-3">
-                                    <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
-                                    <span class="font-medium text-secondary">Transfer Bancar</span>
+                                <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5 flex items-center gap-4">
+                                    <div class="w-16 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-secondary">Transfer Bancar</p>
+                                        <p class="text-xs text-muted">Activare in 1-2 zile lucratoare</p>
+                                    </div>
                                 </div>
                             </label>
                         </div>
-                        <div id="card-payment-fields">
-                            <p class="text-sm text-muted">Vei fi redirectionat catre procesatorul de plati pentru a finaliza tranzactia in siguranta.</p>
+                        <div id="card-payment-fields" class="bg-green-50 rounded-xl p-4">
+                            <p class="text-sm text-green-800">Vei fi redirectionat catre Netopia Payments pentru a finaliza tranzactia in siguranta.</p>
                         </div>
                         <div id="transfer-payment-info" class="hidden bg-blue-50 rounded-xl p-4">
                             <p class="text-sm text-blue-800 font-medium mb-2">Detalii pentru transfer bancar:</p>
@@ -900,6 +918,17 @@ document.getElementById('service-event').addEventListener('change', function() {
 document.getElementById('service-form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
+    const payBtn = document.getElementById('btn-pay');
+    const originalBtnText = payBtn.innerHTML;
+    payBtn.disabled = true;
+    payBtn.innerHTML = `
+        <svg class="inline w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Se proceseaza...
+    `;
+
     const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
 
     const data = {
@@ -931,20 +960,75 @@ document.getElementById('service-form').addEventListener('submit', async functio
     }
 
     try {
+        // Step 1: Create service order
         const response = await AmbiletAPI.post('/organizer/services/orders', data);
-        if (response.success) {
-            if (paymentMethod === 'card' && response.data.payment_url) {
-                window.location.href = response.data.payment_url;
+
+        if (!response.success) {
+            throw new Error(response.message || 'Eroare la crearea comenzii');
+        }
+
+        const order = response.data.order;
+        if (!order) {
+            throw new Error('Nu s-a putut crea comanda');
+        }
+
+        // Step 2: Handle payment based on method
+        if (paymentMethod === 'card' && order.total > 0) {
+            // Initiate payment through marketplace payment gateway
+            payBtn.innerHTML = `
+                <svg class="inline w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Se redirectioneaza catre plata...
+            `;
+
+            const payResponse = await AmbiletAPI.post(`/organizer/services/orders/${order.id}/pay`, {
+                return_url: window.location.origin + '/organizator/services?success=1&order=' + order.id,
+                cancel_url: window.location.origin + '/organizator/services?cancelled=1'
+            });
+
+            if (payResponse.success && payResponse.data.payment_url) {
+                // Check if payment requires POST form submission (e.g., Netopia)
+                if (payResponse.data.method === 'POST' && payResponse.data.form_data) {
+                    // Create and submit a form for Netopia
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = payResponse.data.payment_url;
+
+                    for (const [key, value] of Object.entries(payResponse.data.form_data)) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.value = value;
+                        form.appendChild(input);
+                    }
+
+                    document.body.appendChild(form);
+                    form.submit();
+                } else {
+                    // Standard redirect for other payment processors
+                    window.location.href = payResponse.data.payment_url;
+                }
             } else {
-                AmbiletNotifications.success('Comanda a fost inregistrata! Vei primi un email cu instructiunile de plata.');
-                closeServiceModal();
-                loadActiveServices();
+                throw new Error(payResponse.message || 'Nu s-a putut initia plata');
             }
+        } else if (paymentMethod === 'transfer') {
+            // Bank transfer - show success message
+            AmbiletNotifications.success('Comanda a fost inregistrata! Vei primi un email cu instructiunile de plata prin transfer bancar.');
+            closeServiceModal();
+            loadActiveServices();
         } else {
-            AmbiletNotifications.error(response.message || 'Eroare la procesarea comenzii');
+            // Free service or zero total
+            AmbiletNotifications.success('Serviciul a fost activat cu succes!');
+            closeServiceModal();
+            loadActiveServices();
         }
     } catch (error) {
-        AmbiletNotifications.error('Eroare la procesarea comenzii');
+        console.error('Service order error:', error);
+        AmbiletNotifications.error(error.message || 'Eroare la procesarea comenzii. Incearca din nou.');
+        payBtn.disabled = false;
+        payBtn.innerHTML = originalBtnText;
     }
 });
 
