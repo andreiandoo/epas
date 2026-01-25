@@ -572,12 +572,34 @@ function renderEvents(events) {
                         <div class="flex items-center justify-end gap-2">
                             <a href="/organizator/events?id=${event.id}" class="btn btn-sm btn-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>Editeaza</a>
                             <a href="/event.php?slug=${event.slug}" target="_blank" class="btn btn-sm btn-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg></a>
+                            ${['draft', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Sterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     `).join('');
+}
+
+async function deleteEvent(eventId, eventName) {
+    if (!confirm(`Esti sigur ca vrei sa stergi evenimentul "${eventName}"?\n\nAceasta actiune este ireversibila.`)) {
+        return;
+    }
+
+    try {
+        AmbiletNotifications.info('Se sterge evenimentul...');
+        const response = await AmbiletAPI.delete(`/organizer/events/${eventId}`);
+
+        if (response.success) {
+            AmbiletNotifications.success('Evenimentul a fost sters cu succes');
+            loadEvents(); // Reload the events list
+        } else {
+            AmbiletNotifications.error(response.message || 'Eroare la stergerea evenimentului');
+        }
+    } catch (error) {
+        console.error('Delete event error:', error);
+        AmbiletNotifications.error(error.message || 'Eroare la stergerea evenimentului');
+    }
 }
 
 // ==================== CREATE FORM ====================

@@ -176,7 +176,7 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
 
                         <!-- Location -->
-                        <div class="flex items-center gap-3 p-4 mb-6 bg-surface rounded-xl mobile:rounded-none mobile:p-0 mobile:bg-transparent">
+                        <div id="venue-short-display" class="flex items-center gap-3 p-4 mb-6 bg-surface rounded-xl mobile:rounded-none mobile:p-0 mobile:bg-transparent">
                             <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl">
                                 <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             </div>

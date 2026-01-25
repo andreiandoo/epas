@@ -1000,6 +1000,7 @@ switch ($action) {
         if ($method === 'PUT') {
             $body = file_get_contents('php://input');
         }
+        // DELETE method is supported for draft/rejected events
         $endpoint = '/organizer/events/' . urlencode($eventId);
         $requiresAuth = true;
         break;
