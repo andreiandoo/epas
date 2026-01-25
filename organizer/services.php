@@ -12,6 +12,38 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
 
         <main class="flex-1 p-4 lg:p-8">
+            <!-- Success Messages -->
+            <div id="success-banner" class="hidden bg-success/10 border border-success/30 rounded-2xl p-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-success rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-success" id="success-title">Succes!</p>
+                        <p class="text-sm text-success/80" id="success-message">Operatiunea a fost finalizata cu succes.</p>
+                    </div>
+                    <button onclick="closeSuccessBanner()" class="p-2 hover:bg-success/10 rounded-lg">
+                        <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cancelled Message -->
+            <div id="cancelled-banner" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-amber-800">Plata Anulata</p>
+                        <p class="text-sm text-amber-700">Plata a fost anulata. Poti incerca din nou oricand doresti.</p>
+                    </div>
+                    <button onclick="closeCancelledBanner()" class="p-2 hover:bg-amber-100 rounded-lg">
+                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+
             <!-- Page Header -->
             <div class="flex items-center justify-between mb-6">
                 <div>
@@ -587,7 +619,43 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStats();
     setupPaymentMethodToggle();
     setupEmailCostCalculation();
+    checkUrlParams();
 });
+
+function checkUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+
+    // Check for success messages
+    if (params.get('featuring_activated') === '1') {
+        showSuccessBanner('Promovare Activata!', 'Evenimentul tau este acum afisat in sectiunile selectate.');
+    } else if (params.get('payment_success') === '1') {
+        showSuccessBanner('Plata Confirmata!', 'Serviciul a fost activat cu succes.');
+    }
+
+    // Check for cancelled payment
+    if (params.get('cancelled') === '1') {
+        document.getElementById('cancelled-banner').classList.remove('hidden');
+    }
+
+    // Clean URL parameters without refresh
+    if (params.toString()) {
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+}
+
+function showSuccessBanner(title, message) {
+    document.getElementById('success-title').textContent = title;
+    document.getElementById('success-message').textContent = message;
+    document.getElementById('success-banner').classList.remove('hidden');
+}
+
+function closeSuccessBanner() {
+    document.getElementById('success-banner').classList.add('hidden');
+}
+
+function closeCancelledBanner() {
+    document.getElementById('cancelled-banner').classList.add('hidden');
+}
 
 async function loadEvents() {
     try {
@@ -983,8 +1051,9 @@ document.getElementById('service-form').addEventListener('submit', async functio
                 Se redirectioneaza catre plata...
             `;
 
+            const eventId = document.getElementById('service-event').value;
             const payResponse = await AmbiletAPI.post(`/organizer/services/orders/${order.id}/pay`, {
-                return_url: window.location.origin + '/organizator/services?success=1&order=' + order.id,
+                return_url: window.location.origin + '/organizator/services/success?order=' + order.id + '&type=' + currentServiceType + '&event=' + eventId,
                 cancel_url: window.location.origin + '/organizator/services?cancelled=1'
             });
 
