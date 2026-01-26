@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 use App\Models\Event;
 use App\Models\MarketplaceEventCategory;
 use App\Models\MarketplaceOrganizer;
+use App\Models\ServiceOrder;
 use App\Models\Platform\CoreCustomerEvent;
 use App\Services\Analytics\RedisAnalyticsService;
 use App\Services\GeoIpService;
@@ -149,6 +150,25 @@ class MarketplaceEventsController extends BaseController
                     $query->whereBetween('event_date', [$nextMonth->toDateString(), $nextMonth->copy()->endOfMonth()->toDateString()]);
                     break;
             }
+        }
+
+        // Filter by active paid promotion (ServiceOrder featuring)
+        if ($request->boolean('promoted')) {
+            $today = now()->toDateString();
+            $query->whereHas('activeFeaturingOrders', function ($q) use ($today) {
+                $q->where('service_type', ServiceOrder::TYPE_FEATURING)
+                    ->where('status', ServiceOrder::STATUS_ACTIVE)
+                    ->where('service_start_date', '<=', $today)
+                    ->where('service_end_date', '>=', $today);
+            });
+        }
+
+        // Filter by recommended (homepage or general featured, excluding paid promotions for variety)
+        if ($request->boolean('recommended')) {
+            $query->where(function ($q) {
+                $q->where('is_homepage_featured', true)
+                    ->orWhere('is_general_featured', true);
+            });
         }
 
         // Filter by price range
@@ -987,6 +1007,7 @@ class MarketplaceEventsController extends BaseController
             'venue_name' => $venue?->getTranslation('name', $language),
             'venue_city' => $venue?->city,
             'is_featured' => $event->is_homepage_featured || $event->is_general_featured,
+            'has_paid_promotion' => $this->hasActivePaidPromotion($event),
             'is_sold_out' => (bool) ($event->is_sold_out ?? false),
             'is_cancelled' => (bool) ($event->is_cancelled ?? false),
             'is_postponed' => (bool) ($event->is_postponed ?? false),
@@ -1223,5 +1244,20 @@ class MarketplaceEventsController extends BaseController
                     ->where('event_date', '>=', $today);
             });
         });
+    }
+
+    /**
+     * Check if event has an active paid promotion (ServiceOrder featuring)
+     */
+    protected function hasActivePaidPromotion(Event $event): bool
+    {
+        $today = now()->toDateString();
+
+        return ServiceOrder::where('marketplace_event_id', $event->id)
+            ->where('service_type', ServiceOrder::TYPE_FEATURING)
+            ->where('status', ServiceOrder::STATUS_ACTIVE)
+            ->where('service_start_date', '<=', $today)
+            ->where('service_end_date', '>=', $today)
+            ->exists();
     }
 }

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('marketplace_organizer_team_members', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('marketplace_organizer_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('marketplace_organizer_id');
             $table->string('name');
             $table->string('email');
             $table->string('password')->nullable(); // Null until invite is accepted
@@ -26,11 +26,17 @@ return new class extends Migration
             $table->timestamp('accepted_at')->nullable();
             $table->timestamps();
 
+            // Foreign key with shorter name to avoid MySQL 64-char limit
+            $table->foreign('marketplace_organizer_id', 'mp_org_team_org_id_fk')
+                  ->references('id')
+                  ->on('marketplace_organizers')
+                  ->onDelete('cascade');
+
             // Unique email per organizer
-            $table->unique(['marketplace_organizer_id', 'email']);
+            $table->unique(['marketplace_organizer_id', 'email'], 'mp_org_team_org_email_unique');
 
             // Index for faster lookups
-            $table->index(['marketplace_organizer_id', 'status']);
+            $table->index(['marketplace_organizer_id', 'status'], 'mp_org_team_org_status_idx');
             $table->index('invite_token');
         });
     }

@@ -304,6 +304,24 @@ class Event extends Model
     }
 
     /**
+     * Get all service orders for this event
+     */
+    public function serviceOrders(): HasMany
+    {
+        return $this->hasMany(ServiceOrder::class, 'marketplace_event_id');
+    }
+
+    /**
+     * Get active featuring service orders (paid promotions)
+     */
+    public function activeFeaturingOrders(): HasMany
+    {
+        return $this->hasMany(ServiceOrder::class, 'marketplace_event_id')
+            ->where('service_type', ServiceOrder::TYPE_FEATURING)
+            ->where('status', ServiceOrder::STATUS_ACTIVE);
+    }
+
+    /**
      * Get available seating sections for this event
      * Based on the selected seating layout
      */
