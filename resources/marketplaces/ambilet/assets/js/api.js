@@ -268,6 +268,10 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/billing-info') return 'organizer.billing-info';
         if (endpoint === '/organizer/payment-methods') return 'organizer.payment-methods';
 
+        // Organizer participants (all events)
+        if (endpoint === '/organizer/participants' || endpoint.includes('/organizer/participants?')) return 'organizer.participants';
+        if (endpoint === '/organizer/participants/checkin') return 'organizer.participants.checkin';
+
         // Organizer API settings
         if (endpoint === '/organizer/api-key') return 'organizer.api-key';
         if (endpoint === '/organizer/api-key/regenerate') return 'organizer.api-key.regenerate';
