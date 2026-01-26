@@ -231,27 +231,48 @@ function renderCampaignDetails() {
     const details = document.getElementById('campaign-details');
     const audienceLabels = {
         'all': 'Baza Completa de Utilizatori',
-        'filtered': 'Audienta Filtrata (oras/categorie)',
-        'own': 'Clientii Tai Anteriori'
+        'filtered': 'Audienta Filtrata',
+        'own': 'Clientii Tai',
+        'marketplace': 'Baza de Date Marketplace'
     };
 
-    const audience = campaignData?.config?.audience || 'filtered';
-    const recipientCount = campaignData?.config?.recipient_count || 45000;
-    const cost = campaignData?.total || (recipientCount * 0.05);
+    const audienceType = campaignData?.config?.audience_type || campaignData?.config?.audience || 'own';
+    const recipientCount = campaignData?.config?.recipient_count || 0;
+    const pricePerEmail = campaignData?.config?.price_per_email || (audienceType === 'own' ? 0.40 : 0.50);
+    const cost = campaignData?.total || (recipientCount * pricePerEmail);
+
+    // Build filters display
+    let filtersHtml = '';
+    const filters = campaignData?.config?.filters || {};
+    if (filters.age_min || filters.age_max || filters.city || filters.category || filters.genre) {
+        const filterParts = [];
+        if (filters.age_min) filterParts.push(`Varsta min: ${filters.age_min}`);
+        if (filters.age_max) filterParts.push(`Varsta max: ${filters.age_max}`);
+        if (filters.city) filterParts.push(`Oras: ${filters.city}`);
+        if (filters.category) filterParts.push(`Categorie: ${filters.category}`);
+        if (filters.genre) filterParts.push(`Gen: ${filters.genre}`);
+        filtersHtml = `
+            <div class="flex justify-between py-2 border-b border-border">
+                <span class="text-muted">Filtre Aplicate:</span>
+                <span class="font-medium text-secondary text-right">${filterParts.join(', ')}</span>
+            </div>
+        `;
+    }
 
     details.innerHTML = `
         <div class="space-y-4">
             <div class="flex justify-between py-2 border-b border-border">
                 <span class="text-muted">Tip Audienta:</span>
-                <span class="font-medium text-secondary">${audienceLabels[audience]}</span>
+                <span class="font-medium text-secondary">${audienceLabels[audienceType] || audienceType}</span>
             </div>
+            ${filtersHtml}
             <div class="flex justify-between py-2 border-b border-border">
                 <span class="text-muted">Numar Destinatari:</span>
                 <span class="font-medium text-secondary">${AmbiletUtils.formatNumber(recipientCount)}</span>
             </div>
             <div class="flex justify-between py-2 border-b border-border">
                 <span class="text-muted">Cost per Email:</span>
-                <span class="font-medium text-secondary">0.05 RON</span>
+                <span class="font-medium text-secondary">${AmbiletUtils.formatCurrency(pricePerEmail)}</span>
             </div>
             <div class="flex justify-between py-2">
                 <span class="text-muted">Status Plata:</span>
@@ -294,15 +315,15 @@ function renderDemoData() {
         <div class="space-y-4">
             <div class="flex justify-between py-2 border-b border-border">
                 <span class="text-muted">Tip Audienta:</span>
-                <span class="font-medium text-secondary">Audienta Filtrata</span>
+                <span class="font-medium text-secondary">Clientii Tai</span>
             </div>
             <div class="flex justify-between py-2 border-b border-border">
                 <span class="text-muted">Numar Destinatari:</span>
-                <span class="font-medium text-secondary">~45,000</span>
+                <span class="font-medium text-secondary">~5,000</span>
             </div>
             <div class="flex justify-between py-2 border-b border-border">
                 <span class="text-muted">Cost per Email:</span>
-                <span class="font-medium text-secondary">0.05 RON</span>
+                <span class="font-medium text-secondary">0.40 RON</span>
             </div>
             <div class="flex justify-between py-2">
                 <span class="text-muted">Status Plata:</span>
@@ -326,8 +347,8 @@ function renderDemoData() {
 
     document.getElementById('email-subject').textContent = 'Nu rata: Eveniment Special';
     document.getElementById('email-preview-text').textContent = 'Biletele sunt disponibile acum. Rezerva-ti locul!';
-    document.getElementById('total-recipients').textContent = '~45,000';
-    document.getElementById('total-cost').textContent = '2,250 RON';
+    document.getElementById('total-recipients').textContent = '~5,000';
+    document.getElementById('total-cost').textContent = '2,000 RON';
 }
 
 function setupScheduleToggle() {
