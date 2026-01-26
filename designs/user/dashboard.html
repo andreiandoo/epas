@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Ambilet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 'sans': ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        'primary': '#A51C30',
+                        'primary-dark': '#8B1728',
+                        'secondary': '#1E293B',
+                        'accent': '#E67E22',
+                        'surface': '#F8FAFC',
+                        'muted': '#64748B',
+                        'border': '#E2E8F0',
+                        'success': '#10B981',
+                        'warning': '#F59E0B',
+                        'error': '#EF4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/assets/css/custom.css">
+</head>
+<body class="min-h-screen bg-surface">
+    <div id="header-container"></div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Sidebar -->
+            <aside class="lg:w-64 flex-shrink-0">
+                <div class="bg-white rounded-2xl border border-border p-4 sticky top-24">
+                    <!-- User Info -->
+                    <div class="flex items-center gap-3 pb-4 border-b border-border mb-4">
+                        <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                            <span class="text-lg font-bold text-primary" id="user-initials">--</span>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-secondary" id="user-name">Utilizator</p>
+                            <p class="text-sm text-muted" id="user-email">email@example.com</p>
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <nav class="space-y-1">
+                        <a href="/user/dashboard.html" class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-medium">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                            </svg>
+                            Dashboard
+                        </a>
+                        <a href="/user/tickets.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:bg-surface hover:text-secondary transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                            </svg>
+                            Biletele mele
+                        </a>
+                        <a href="/user/orders.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:bg-surface hover:text-secondary transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                            Comenzi
+                        </a>
+                        <a href="/user/rewards.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:bg-surface hover:text-secondary transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Puncte & Recompense
+                        </a>
+                        <a href="/user/watchlist.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:bg-surface hover:text-secondary transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            </svg>
+                            Favorite
+                        </a>
+                        <a href="/user/profile.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:bg-surface hover:text-secondary transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                            Profil
+                        </a>
+                        <a href="/user/settings.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:bg-surface hover:text-secondary transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            Setări
+                        </a>
+                        <a href="/user/help.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-muted hover:bg-surface hover:text-secondary transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Ajutor
+                        </a>
+                    </nav>
+
+                    <div class="mt-4 pt-4 border-t border-border">
+                        <button onclick="AmbiletAuth.logoutCustomer()" class="flex items-center gap-3 px-3 py-2 rounded-lg text-error hover:bg-error/10 transition-colors w-full">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                            </svg>
+                            Deconectare
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 min-w-0">
+                <h1 class="text-2xl font-bold text-secondary mb-6">Bine ai venit, <span id="welcome-name">!</span></h1>
+
+                <!-- Stats Grid -->
+                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white rounded-2xl border border-border p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-2xl font-bold text-secondary" id="stat-tickets">0</p>
+                        <p class="text-sm text-muted">Bilete active</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-border p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-2xl font-bold text-secondary" id="stat-orders">0</p>
+                        <p class="text-sm text-muted">Comenzi totale</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-border p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-2xl font-bold text-secondary" id="stat-points">0</p>
+                        <p class="text-sm text-muted">Puncte disponibile</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-border p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-10 h-10 bg-error/10 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-2xl font-bold text-secondary" id="stat-favorites">0</p>
+                        <p class="text-sm text-muted">Evenimente favorite</p>
+                    </div>
+                </div>
+
+                <!-- Upcoming Events -->
+                <div class="bg-white rounded-2xl border border-border p-6 mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-secondary">Evenimentele tale viitoare</h2>
+                        <a href="/user/tickets.html" class="text-sm text-primary hover:underline">Vezi toate</a>
+                    </div>
+
+                    <div id="upcoming-events" class="space-y-4">
+                        <!-- Loading -->
+                        <div class="animate-pulse flex gap-4">
+                            <div class="w-20 h-20 bg-surface rounded-lg"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="h-4 bg-surface rounded w-3/4"></div>
+                                <div class="h-4 bg-surface rounded w-1/2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="no-upcoming" class="hidden text-center py-8">
+                        <svg class="w-12 h-12 text-muted/30 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <p class="text-muted">Nu ai evenimente programate</p>
+                        <a href="/" class="text-primary text-sm hover:underline">Explorează evenimente</a>
+                    </div>
+                </div>
+
+                <!-- Recent Orders -->
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-secondary">Comenzi recente</h2>
+                        <a href="/user/orders.html" class="text-sm text-primary hover:underline">Vezi toate</a>
+                    </div>
+
+                    <div id="recent-orders" class="space-y-3">
+                        <!-- Loading -->
+                        <div class="animate-pulse flex gap-4 p-3 bg-surface rounded-xl">
+                            <div class="w-12 h-12 bg-border rounded-lg"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="h-4 bg-border rounded w-1/2"></div>
+                                <div class="h-3 bg-border rounded w-1/4"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="no-orders" class="hidden text-center py-8">
+                        <svg class="w-12 h-12 text-muted/30 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                        <p class="text-muted">Nu ai comenzi încă</p>
+                        <a href="/" class="text-primary text-sm hover:underline">Cumpără primul bilet</a>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="footer-container"></div>
+
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/utils.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/cart.js"></script>
+    <script src="/assets/js/components/header.js"></script>
+    <script src="/assets/js/components/footer.js"></script>
+    <script src="/assets/js/components/notifications.js"></script>
+
+    <script>
+        AmbiletHeader.init('header-container');
+        AmbiletFooter.init('footer-container');
+
+        // Require authentication
+        AmbiletAuth.requireCustomerAuth();
+
+        const user = AmbiletAuth.getCustomer();
+        if (user) {
+            // Update user info
+            document.getElementById('user-name').textContent = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Utilizator';
+            document.getElementById('user-email').textContent = user.email;
+            document.getElementById('user-initials').textContent = getInitials(user.first_name, user.last_name);
+            document.getElementById('welcome-name').textContent = user.first_name || 'Utilizator';
+
+            // Load dashboard data
+            loadDashboard();
+        }
+
+        function getInitials(first, last) {
+            return ((first?.[0] || '') + (last?.[0] || '')).toUpperCase() || 'U';
+        }
+
+        async function loadDashboard() {
+            try {
+                // Load dashboard stats
+                const dashboard = await AmbiletAPI.customer.getDashboard();
+
+                if (dashboard) {
+                    document.getElementById('stat-tickets').textContent = dashboard.active_tickets || 0;
+                    document.getElementById('stat-orders').textContent = dashboard.total_orders || 0;
+                    document.getElementById('stat-points').textContent = dashboard.points || 0;
+                    document.getElementById('stat-favorites').textContent = dashboard.favorites || 0;
+
+                    // Upcoming events
+                    if (dashboard.upcoming_events && dashboard.upcoming_events.length > 0) {
+                        renderUpcomingEvents(dashboard.upcoming_events);
+                    } else {
+                        document.getElementById('upcoming-events').classList.add('hidden');
+                        document.getElementById('no-upcoming').classList.remove('hidden');
+                    }
+
+                    // Recent orders
+                    if (dashboard.recent_orders && dashboard.recent_orders.length > 0) {
+                        renderRecentOrders(dashboard.recent_orders);
+                    } else {
+                        document.getElementById('recent-orders').classList.add('hidden');
+                        document.getElementById('no-orders').classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('upcoming-events').classList.add('hidden');
+                document.getElementById('no-upcoming').classList.remove('hidden');
+                document.getElementById('recent-orders').classList.add('hidden');
+                document.getElementById('no-orders').classList.remove('hidden');
+            }
+        }
+
+        function renderUpcomingEvents(events) {
+            const container = document.getElementById('upcoming-events');
+            container.innerHTML = events.slice(0, 3).map(event => `
+                <a href="/event.html?slug=${event.slug}" class="flex gap-4 p-3 rounded-xl hover:bg-surface transition-colors">
+                    <img src="${event.image || AMBILET_CONFIG.PLACEHOLDER_EVENT}" alt="${event.title}"
+                         class="w-20 h-20 rounded-lg object-cover">
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-secondary mb-1">${event.title}</h4>
+                        <p class="text-sm text-muted flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            ${AmbiletUtils.formatDate(event.start_date)}
+                        </p>
+                        <p class="text-sm text-muted flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            </svg>
+                            ${event.venue?.city || event.city || ''}
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <span class="badge badge-success">${event.tickets_count || 1} bilet${(event.tickets_count || 1) > 1 ? 'e' : ''}</span>
+                    </div>
+                </a>
+            `).join('');
+        }
+
+        function renderRecentOrders(orders) {
+            const container = document.getElementById('recent-orders');
+            container.innerHTML = orders.slice(0, 5).map(order => `
+                <a href="/user/orders.html?id=${order.id}" class="flex items-center gap-4 p-3 rounded-xl hover:bg-surface transition-colors">
+                    <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-secondary">#${order.order_number || order.id}</p>
+                        <p class="text-sm text-muted">${AmbiletUtils.formatDate(order.created_at)}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-secondary">${AmbiletUtils.formatCurrency(order.total)}</p>
+                        <span class="badge ${order.status === 'completed' ? 'badge-success' : order.status === 'pending' ? 'badge-warning' : 'badge-secondary'}">
+                            ${order.status === 'completed' ? 'Finalizată' : order.status === 'pending' ? 'În așteptare' : order.status}
+                        </span>
+                    </div>
+                </a>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
