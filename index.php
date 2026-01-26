@@ -9,6 +9,7 @@ require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Bilete Evenimente Romania';
 $pageDescription = 'Cumpara bilete online pentru concerte, festivaluri, teatru, sport si multe altele. Platforma de ticketing pentru evenimente din Romania.';
 $currentPage = 'home';
+$transparentHeader = true;
 
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
@@ -107,16 +108,6 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Events by City (Combined with Latest Events) -->
 <section class="py-10 bg-white md:py-14">
     <div class="px-4 mx-auto max-w-7xl">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold md:text-2xl text-secondary">Evenimente după oraș</h2>
-            <a href="/orase" class="items-center hidden gap-2 font-semibold md:flex text-primary">
-                Toate orasele
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
-            </a>
-        </div>
-
         <!-- City Filter Buttons -->
         <div class="flex flex-wrap gap-2 mb-8" id="cityFilterButtons">
             <button class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-full city-filter-btn active bg-primary" data-city="">
@@ -691,43 +682,60 @@ const CityEventsFilter = {
     selectedCity: '',
 
     async init() {
-        await Promise.all([
-            this.loadCities(),
-            this.loadEvents()
-        ]);
-    },
-
-    async loadCities() {
-        try {
-            const response = await AmbiletAPI.get('/locations/cities/featured?limit=10');
-            if (response.data && response.data.cities) {
-                this.cities = response.data.cities;
-                this.renderCityButtons();
-            }
-        } catch (error) {
-            console.warn('Failed to load cities:', error);
-        }
+        // Load events first, then extract cities from them
+        await this.loadEvents();
+        this.extractCitiesFromEvents();
+        this.renderCityButtons();
+        this.renderEvents();
     },
 
     async loadEvents() {
         try {
-            const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=20');
+            const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=30');
             if (response.data) {
                 this.allEvents = Array.isArray(response.data) ? response.data : (response.data.events || response.data.data || []);
-                this.renderEvents();
             }
         } catch (error) {
             console.warn('Failed to load events:', error);
         }
     },
 
+    extractCitiesFromEvents() {
+        // Extract unique cities from loaded events
+        const cityMap = new Map();
+
+        this.allEvents.forEach(event => {
+            // Get city from venue_city (API response) or venue.city
+            const cityName = event.venue_city || event.venue?.city || '';
+            if (!cityName) return;
+
+            // Normalize city name for deduplication
+            const normalizedKey = cityName.toLowerCase().trim();
+
+            if (!cityMap.has(normalizedKey)) {
+                cityMap.set(normalizedKey, {
+                    name: cityName,
+                    slug: normalizedKey.replace(/\s+/g, '-'),
+                    count: 1
+                });
+            } else {
+                cityMap.get(normalizedKey).count++;
+            }
+        });
+
+        // Sort by event count (most events first) and take top 10
+        this.cities = Array.from(cityMap.values())
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+    },
+
     renderCityButtons() {
         const container = document.getElementById('cityFilterButtons');
-        if (!container || this.cities.length === 0) return;
+        if (!container) return;
 
         // Keep "Toate" button, add city buttons
         const cityButtons = this.cities.map(city => `
-            <button class="px-4 py-2 text-sm font-semibold transition-all rounded-full city-filter-btn" data-city="${city.slug || city.name}">
+            <button class="px-4 py-2 text-sm font-semibold transition-all rounded-full city-filter-btn" data-city="${city.name}">
                 ${city.name}
             </button>
         `).join('');
@@ -745,12 +753,12 @@ const CityEventsFilter = {
         });
     },
 
-    filterByCity(citySlug) {
-        this.selectedCity = citySlug;
+    filterByCity(cityName) {
+        this.selectedCity = cityName;
 
         // Update active button
         document.querySelectorAll('.city-filter-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.city === citySlug);
+            btn.classList.toggle('active', btn.dataset.city === cityName);
         });
 
         this.renderEvents();
@@ -763,11 +771,10 @@ const CityEventsFilter = {
         // Filter events by city if selected
         let events = this.allEvents;
         if (this.selectedCity) {
+            const selectedCityLower = this.selectedCity.toLowerCase().trim();
             events = this.allEvents.filter(event => {
-                const eventCity = (event.city || event.venue?.city || '').toLowerCase();
-                const eventCitySlug = (event.city_slug || '').toLowerCase();
-                return eventCity.includes(this.selectedCity.toLowerCase()) ||
-                       eventCitySlug === this.selectedCity.toLowerCase();
+                const eventCity = (event.venue_city || event.venue?.city || '').toLowerCase().trim();
+                return eventCity === selectedCityLower;
             });
         }
 
@@ -785,36 +792,14 @@ const CityEventsFilter = {
                 showVenue: true
             });
         } else {
-            // Fallback rendering
-            container.innerHTML = events.slice(0, 10).map(event => this.renderEventCard(event)).join('');
+            // Fallback - shouldn't happen
+            container.innerHTML = '<p class="text-muted col-span-full">Nu sunt evenimente disponibile.</p>';
         }
 
         // Trigger reveal animation
         setTimeout(() => {
             document.querySelectorAll('.reveal').forEach(el => el.classList.add('active'));
         }, 100);
-    },
-
-    renderEventCard(event) {
-        const image = getStorageUrl(event.featured_image || event.image);
-        const date = new Date(event.starts_at || event.start_date || event.event_date);
-        const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
-        const location = event.venue_name || event.venue?.name || event.city || '';
-        const priceFrom = event.price_from ? `de la ${event.price_from} Lei` : '';
-
-        return `
-            <a href="/bilete/${event.slug || ''}" class="overflow-hidden transition-shadow bg-white border rounded-2xl border-border hover:shadow-lg">
-                <div class="relative h-44">
-                    <img src="${image}" alt="${event.title || 'Event'}" class="object-cover w-full h-full" loading="lazy">
-                </div>
-                <div class="p-4">
-                    <p class="mb-1 text-xs font-semibold text-primary">${formattedDate}</p>
-                    <h3 class="font-bold text-secondary line-clamp-2">${event.title || event.name || 'Eveniment'}</h3>
-                    ${location ? `<p class="mt-1 text-sm text-muted">${location}</p>` : ''}
-                    ${priceFrom ? `<p class="mt-2 text-sm font-semibold text-primary">${priceFrom}</p>` : ''}
-                </div>
-            </a>
-        `;
     }
 };
 
@@ -822,7 +807,7 @@ const CityEventsFilter = {
 const PromotedEvents = {
     async init() {
         try {
-            // Load promoted and recommended events
+            // Load promoted (paid) and recommended events
             const [promotedRes, recommendedRes] = await Promise.all([
                 AmbiletAPI.get('/marketplace-events?promoted=1&limit=5').catch(() => ({ data: [] })),
                 AmbiletAPI.get('/marketplace-events?recommended=1&limit=10').catch(() => ({ data: [] }))
@@ -831,10 +816,7 @@ const PromotedEvents = {
             const promoted = this.extractEvents(promotedRes);
             const recommended = this.extractEvents(recommendedRes);
 
-            // Mark promoted events
-            promoted.forEach(e => e._isPromoted = true);
-
-            // Combine and dedupe
+            // Combine and dedupe, keeping has_paid_promotion flag from API
             const combined = [...promoted];
             recommended.forEach(event => {
                 if (!combined.find(e => e.id === event.id)) {
@@ -863,48 +845,26 @@ const PromotedEvents = {
             return;
         }
 
-        container.innerHTML = events.map(event => this.renderCard(event)).join('');
+        // Use AmbiletEventCard component - only show Promovat badge for events with paid promotion
+        if (typeof AmbiletEventCard !== 'undefined') {
+            container.innerHTML = events.map(event =>
+                AmbiletEventCard.render(event, {
+                    urlPrefix: '/bilete/',
+                    showCategory: true,
+                    showPrice: true,
+                    showVenue: true,
+                    showPromotedBadge: event.has_paid_promotion === true
+                })
+            ).join('');
+        } else {
+            // Fallback - shouldn't happen
+            container.innerHTML = '<p class="text-muted col-span-full">Nu sunt evenimente disponibile.</p>';
+        }
 
         // Trigger reveal animation
         setTimeout(() => {
             document.querySelectorAll('.reveal').forEach(el => el.classList.add('active'));
         }, 100);
-    },
-
-    renderCard(event) {
-        const image = getStorageUrl(event.featured_image || event.image);
-        const date = new Date(event.starts_at || event.start_date || event.event_date);
-        const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
-        const location = event.venue_name || event.venue?.name || event.city || '';
-        const priceFrom = event.price_from ? `de la ${event.price_from} Lei` : '';
-        const promotedBadge = event._isPromoted ? `
-            <span class="promoted-badge">
-                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                Promovat
-            </span>
-        ` : '';
-
-        return `
-            <a href="/bilete/${event.slug || ''}" class="relative overflow-hidden transition-shadow bg-white border rounded-2xl border-border hover:shadow-lg group">
-                <div class="relative h-44">
-                    ${promotedBadge}
-                    <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">
-                </div>
-                <div class="p-4">
-                    <p class="mb-1 text-xs font-semibold text-primary">${formattedDate}</p>
-                    <h3 class="font-bold text-secondary line-clamp-2">${this.escapeHtml(event.title || event.name || 'Eveniment')}</h3>
-                    ${location ? `<p class="mt-1 text-sm text-muted">${this.escapeHtml(location)}</p>` : ''}
-                    ${priceFrom ? `<p class="mt-2 text-sm font-semibold text-primary">${priceFrom}</p>` : ''}
-                </div>
-            </a>
-        `;
-    },
-
-    escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>"']/g, m => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        }[m]));
     }
 };
 

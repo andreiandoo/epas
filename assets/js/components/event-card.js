@@ -34,10 +34,20 @@ const AmbiletEventCard = {
             showPrice = true,
             showVenue = true,
             urlPrefix = '/bilete/',
-            linkClass = ''
+            linkClass = '',
+            showPromotedBadge = false // Show "Promovat" badge for paid promotions
         } = options;
 
         const eventUrl = urlPrefix + event.slug;
+
+        // Promoted badge (shown on top-left for paid promotions)
+        let promotedBadge = '';
+        if (showPromotedBadge) {
+            promotedBadge = '<span class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 px-2 py-1 text-xs font-bold text-white uppercase rounded-lg" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);">' +
+                '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>' +
+                'Promovat' +
+            '</span>';
+        }
 
         // Status badges (cancelled, postponed, sold out take priority)
         let statusBadge = '';
@@ -67,7 +77,7 @@ const AmbiletEventCard = {
         return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
             '<div class="relative h-48 overflow-hidden">' +
                 '<img src="' + getStorageUrl(event.image) + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-2xl rounded-tr-2xl" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
-                '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>' +
+                (promotedBadge ? promotedBadge : '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>') +
                 statusBadge +
             '</div>' +
             '<div class="px-3 py-2">' +

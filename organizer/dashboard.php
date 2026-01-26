@@ -236,14 +236,22 @@ const OrgDashboard = {
 
     renderOrgInfo() {
         if (!this.org) return;
-        const name = this.org.company_name || `${this.org.first_name} ${this.org.last_name}`;
+        const name = this.org.company_name || this.org.name || `${this.org.first_name || ''} ${this.org.last_name || ''}`.trim() || 'Organizator';
         const initials = this.getInitials(this.org.first_name, this.org.last_name);
 
-        document.getElementById('sidebar-initials').textContent = initials;
-        document.getElementById('sidebar-name').textContent = name;
-        document.getElementById('header-initials').textContent = initials;
-        document.getElementById('dropdown-name').textContent = name;
-        document.getElementById('dropdown-email').textContent = this.org.email || '';
+        // Sidebar elements (use correct IDs from organizer-sidebar.php)
+        const sidebarInitials = document.getElementById('sidebar-org-initials');
+        const sidebarName = document.getElementById('sidebar-org-name');
+        if (sidebarInitials) sidebarInitials.textContent = initials;
+        if (sidebarName) sidebarName.textContent = name;
+
+        // Topbar elements (use correct IDs from organizer-topbar.php)
+        const topbarInitials = document.getElementById('topbar-org-initials');
+        const topbarName = document.getElementById('topbar-org-name');
+        const topbarEmail = document.getElementById('topbar-org-email');
+        if (topbarInitials) topbarInitials.textContent = initials;
+        if (topbarName) topbarName.textContent = name;
+        if (topbarEmail) topbarEmail.textContent = this.org.email || '';
     },
 
     async loadDashboard() {

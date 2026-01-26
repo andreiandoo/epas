@@ -227,6 +227,11 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/resend-verification') return 'organizer.resend-verification';
         if (endpoint === '/organizer/payout-details') return 'organizer.payout-details';
 
+        // Organizer bank accounts
+        if (endpoint === '/organizer/bank-accounts') return 'organizer.bank-accounts';
+        if (endpoint.match(/\/organizer\/bank-accounts\/\d+$/)) return 'organizer.bank-account.delete';
+        if (endpoint.match(/\/organizer\/bank-accounts\/\d+\/primary$/)) return 'organizer.bank-account.primary';
+
         // Organizer dashboard
         if (endpoint === '/organizer/dashboard') return 'organizer.dashboard';
         if (endpoint === '/organizer/dashboard/timeline') return 'organizer.dashboard.timeline';
@@ -407,6 +412,16 @@ const AmbiletAPI = {
         const organizerPayoutMatch = endpoint.match(/\/organizer\/payouts\/(\d+)$/);
         if (organizerPayoutMatch) {
             return `payout_id=${encodeURIComponent(organizerPayoutMatch[1])}`;
+        }
+
+        // Organizer bank account endpoint - extract account ID
+        const organizerBankAccountPrimaryMatch = endpoint.match(/\/organizer\/bank-accounts\/(\d+)\/primary$/);
+        if (organizerBankAccountPrimaryMatch) {
+            return `account_id=${encodeURIComponent(organizerBankAccountPrimaryMatch[1])}`;
+        }
+        const organizerBankAccountMatch = endpoint.match(/\/organizer\/bank-accounts\/(\d+)$/);
+        if (organizerBankAccountMatch) {
+            return `account_id=${encodeURIComponent(organizerBankAccountMatch[1])}`;
         }
 
         // Organizer promo code endpoint - extract code ID

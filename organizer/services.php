@@ -417,25 +417,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                             <!-- City -->
                             <div>
-                                <label class="label text-xs">Oras</label>
-                                <select id="email-filter-city" class="input w-full text-sm" onchange="updateEmailAudienceCount()">
-                                    <option value="">Toate orasele</option>
+                                <label class="label text-xs">Oras <span class="text-muted">(multiselect)</span></label>
+                                <select id="email-filter-city" class="input w-full text-sm" multiple size="4" onchange="updateEmailAudienceCount()">
                                 </select>
                             </div>
 
                             <!-- Event Type (Category) -->
                             <div>
-                                <label class="label text-xs">Tip Eveniment (Interese)</label>
-                                <select id="email-filter-category" class="input w-full text-sm" onchange="updateEmailAudienceCount()">
-                                    <option value="">Toate categoriile</option>
+                                <label class="label text-xs">Tip Eveniment <span class="text-muted">(multiselect)</span></label>
+                                <select id="email-filter-category" class="input w-full text-sm" multiple size="4" onchange="updateEmailAudienceCount()">
                                 </select>
                             </div>
 
                             <!-- Music Genre -->
                             <div>
-                                <label class="label text-xs">Gen Muzical (Interese)</label>
-                                <select id="email-filter-genre" class="input w-full text-sm" onchange="updateEmailAudienceCount()">
-                                    <option value="">Toate genurile</option>
+                                <label class="label text-xs">Gen Muzical <span class="text-muted">(multiselect)</span></label>
+                                <select id="email-filter-genre" class="input w-full text-sm" multiple size="4" onchange="updateEmailAudienceCount()">
                                 </select>
                             </div>
 
@@ -820,7 +817,11 @@ function closeCancelledBanner() {
 async function loadPricing() {
     try {
         const response = await AmbiletAPI.get('/organizer/services/pricing');
-        if (response.success && response.data) {
+        if (response.success && response.data?.pricing) {
+            servicePricing = response.data.pricing;
+            updatePricingUI();
+        } else if (response.success && response.data) {
+            // Fallback: if pricing is directly in data
             servicePricing = response.data;
             updatePricingUI();
         }
@@ -930,7 +931,9 @@ async function loadEvents() {
                 opt.textContent = e.name || e.title;
                 opt.dataset.image = e.image;
                 opt.dataset.date = e.starts_at || e.date;
-                opt.dataset.venue = e.venue_name || e.venue;
+                // Handle venue - can be string, object with name, or null
+                let venueName = e.venue_name || (typeof e.venue === 'object' && e.venue?.name) || (typeof e.venue === 'string' ? e.venue : '') || e.venue_city || '';
+                opt.dataset.venue = venueName;
                 select.appendChild(opt);
             });
         }
@@ -1090,7 +1093,7 @@ function nextStep() {
             document.getElementById('event-title').textContent = event.name || event.title || '';
             const eventDate = event.starts_at || event.date;
             document.getElementById('event-date').textContent = eventDate ? AmbiletUtils.formatDate(eventDate) : '';
-            document.getElementById('event-venue').textContent = event.venue_name || event.venue || '';
+            document.getElementById('event-venue').textContent = event.venue_name || (typeof event.venue === 'object' ? event.venue?.name : event.venue) || event.venue_city || '';
         }
     }
 
@@ -1342,15 +1345,25 @@ async function updateEmailAudienceCount() {
     const audienceType = document.querySelector('input[name="email_audience"]:checked')?.value || 'own';
     const eventId = document.getElementById('service-event').value;
 
+    // Get multiselect values as arrays
+    const getSelectedValues = (selectId) => {
+        const select = document.getElementById(selectId);
+        return Array.from(select.selectedOptions).map(opt => opt.value).filter(v => v);
+    };
+
     // Collect filters
+    const cities = getSelectedValues('email-filter-city');
+    const categories = getSelectedValues('email-filter-category');
+    const genres = getSelectedValues('email-filter-genre');
+
     const filters = {
         audience_type: audienceType,
         event_id: eventId,
         age_min: document.getElementById('email-filter-age-min').value || null,
         age_max: document.getElementById('email-filter-age-max').value || null,
-        city: document.getElementById('email-filter-city').value || null,
-        category: document.getElementById('email-filter-category').value || null,
-        genre: document.getElementById('email-filter-genre').value || null
+        cities: cities.length > 0 ? cities : null,
+        categories: categories.length > 0 ? categories : null,
+        genres: genres.length > 0 ? genres : null
     };
 
     // Remove null values
@@ -1400,9 +1413,13 @@ async function updateEmailAudienceCount() {
 function resetEmailFilters() {
     document.getElementById('email-filter-age-min').value = '';
     document.getElementById('email-filter-age-max').value = '';
-    document.getElementById('email-filter-city').value = '';
-    document.getElementById('email-filter-category').value = '';
-    document.getElementById('email-filter-genre').value = '';
+    // Clear multiselect selections
+    const citySelect = document.getElementById('email-filter-city');
+    const categorySelect = document.getElementById('email-filter-category');
+    const genreSelect = document.getElementById('email-filter-genre');
+    Array.from(citySelect.options).forEach(opt => opt.selected = false);
+    Array.from(categorySelect.options).forEach(opt => opt.selected = false);
+    Array.from(genreSelect.options).forEach(opt => opt.selected = false);
     updateEmailAudienceCount();
 }
 
@@ -1414,7 +1431,7 @@ document.getElementById('service-event').addEventListener('change', function() {
         document.getElementById('event-title').textContent = event.name || event.title || '';
         const eventDate = event.starts_at || event.date;
         document.getElementById('event-date').textContent = eventDate ? AmbiletUtils.formatDate(eventDate) : '';
-        document.getElementById('event-venue').textContent = event.venue_name || event.venue || '';
+        document.getElementById('event-venue').textContent = event.venue_name || (typeof event.venue === 'object' ? event.venue?.name : event.venue) || event.venue_city || '';
         // Update email audience counts for this event
         updateEmailAudienceCount();
     } else {
@@ -1455,12 +1472,17 @@ document.getElementById('service-form').addEventListener('submit', async functio
             data.audience_type = document.querySelector('input[name="email_audience"]:checked').value;
             data.send_date = document.getElementById('email-send-date').value;
             data.recipient_count = emailAudiences[data.audience_type]?.filtered_count || 0;
+            // Get multiselect values
+            const getSelectedVals = (selectId) => {
+                const select = document.getElementById(selectId);
+                return Array.from(select.selectedOptions).map(opt => opt.value).filter(v => v);
+            };
             data.filters = {
                 age_min: document.getElementById('email-filter-age-min').value || null,
                 age_max: document.getElementById('email-filter-age-max').value || null,
-                city: document.getElementById('email-filter-city').value || null,
-                category: document.getElementById('email-filter-category').value || null,
-                genre: document.getElementById('email-filter-genre').value || null
+                cities: getSelectedVals('email-filter-city'),
+                categories: getSelectedVals('email-filter-category'),
+                genres: getSelectedVals('email-filter-genre')
             };
             break;
         case 'tracking':
@@ -1576,7 +1598,7 @@ function showEmailPreview() {
 
     const eventName = event.name || event.title || '';
     const eventDate = event.starts_at || event.date;
-    const eventVenue = event.venue_name || event.venue || 'TBA';
+    const eventVenue = event.venue_name || (typeof event.venue === 'object' ? event.venue?.name : event.venue) || event.venue_city || 'TBA';
 
     // Update preview header
     document.getElementById('preview-recipients').textContent = AmbiletUtils.formatNumber(recipientCount) + ' destinatari';
