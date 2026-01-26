@@ -451,7 +451,7 @@ async function addBankAccount(e) {
 }
 async function setPrimaryAccount(id) {
     try {
-        const response = await AmbiletAPI.put('/organizer/bank-accounts/' + id + '/primary', {});
+        const response = await AmbiletAPI.post('/organizer/bank-accounts/' + id + '/primary', {});
         if (response.success) { AmbiletNotifications.success('Contul principal a fost schimbat'); loadBankAccounts(); }
         else { AmbiletNotifications.error(response.message || 'Eroare'); }
     } catch (error) { AmbiletNotifications.error('Eroare'); }

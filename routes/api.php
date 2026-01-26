@@ -1491,6 +1491,16 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::post('/api-key/regenerate', [OrganizerAuthController::class, 'regenerateApiKey'])
             ->name('api.marketplace-client.organizer.api-key.regenerate');
 
+        // Bank Accounts
+        Route::get('/bank-accounts', [OrganizerAuthController::class, 'getBankAccounts'])
+            ->name('api.marketplace-client.organizer.bank-accounts');
+        Route::post('/bank-accounts', [OrganizerAuthController::class, 'addBankAccount'])
+            ->name('api.marketplace-client.organizer.bank-accounts.store');
+        Route::delete('/bank-accounts/{accountId}', [OrganizerAuthController::class, 'deleteBankAccount'])
+            ->name('api.marketplace-client.organizer.bank-accounts.delete');
+        Route::post('/bank-accounts/{accountId}/primary', [OrganizerAuthController::class, 'setPrimaryBankAccount'])
+            ->name('api.marketplace-client.organizer.bank-accounts.primary');
+
         // Dashboard
         Route::get('/dashboard', [OrganizerDashboardController::class, 'index'])
             ->name('api.marketplace-client.organizer.dashboard');

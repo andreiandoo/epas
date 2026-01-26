@@ -124,6 +124,16 @@ class MarketplaceOrganizer extends Authenticatable
         return $this->hasMany(MarketplaceOrganizerPromoCode::class);
     }
 
+    public function bankAccounts(): HasMany
+    {
+        return $this->hasMany(MarketplaceOrganizerBankAccount::class);
+    }
+
+    public function primaryBankAccount()
+    {
+        return $this->hasOne(MarketplaceOrganizerBankAccount::class)->where('is_primary', true);
+    }
+
     // =========================================
     // Status Checks
     // =========================================

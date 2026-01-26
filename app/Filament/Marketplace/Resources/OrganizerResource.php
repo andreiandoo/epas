@@ -124,17 +124,63 @@ class OrganizerResource extends Resource
                                 ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('bank_name')
-                                ->label('Bank Name')
+                                ->label('Bank Name (Legacy)')
                                 ->maxLength(255)
-                                ->placeholder('e.g., ING Bank, BRD, BCR'),
+                                ->placeholder('e.g., ING Bank, BRD, BCR')
+                                ->helperText('Deprecated - use Bank Accounts section below'),
 
                             Forms\Components\TextInput::make('iban')
-                                ->label('IBAN')
+                                ->label('IBAN (Legacy)')
                                 ->maxLength(34)
                                 ->placeholder('e.g., RO49AAAA1B31007593840000')
-                                ->helperText('Used for payouts to this organizer'),
+                                ->helperText('Deprecated - use Bank Accounts section below'),
                         ])
                         ->columns(2),
+
+                    Section::make('Bank Accounts')
+                        ->icon('heroicon-o-credit-card')
+                        ->description('Manage organizer bank accounts for payouts. The primary account will be used for payments.')
+                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
+                        ->schema([
+                            Forms\Components\Placeholder::make('bank_accounts_list')
+                                ->hiddenLabel()
+                                ->content(fn (?MarketplaceOrganizer $record) => self::renderBankAccounts($record)),
+
+                            Forms\Components\Repeater::make('bankAccounts')
+                                ->relationship('bankAccounts')
+                                ->label('Add/Edit Bank Accounts')
+                                ->schema([
+                                    Forms\Components\TextInput::make('bank_name')
+                                        ->label('Bank Name')
+                                        ->required()
+                                        ->maxLength(100)
+                                        ->placeholder('e.g., ING Bank, BRD, BCR'),
+                                    Forms\Components\TextInput::make('iban')
+                                        ->label('IBAN')
+                                        ->required()
+                                        ->maxLength(34)
+                                        ->placeholder('RO49AAAA1B31007593840000')
+                                        ->regex('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/')
+                                        ->validationMessages([
+                                            'regex' => 'Invalid IBAN format. Must start with 2 letters, 2 digits, then alphanumeric characters.',
+                                        ]),
+                                    Forms\Components\TextInput::make('account_holder')
+                                        ->label('Account Holder')
+                                        ->required()
+                                        ->maxLength(255)
+                                        ->placeholder('Account holder name'),
+                                    Forms\Components\Toggle::make('is_primary')
+                                        ->label('Primary Account')
+                                        ->helperText('This account will be used for payouts'),
+                                ])
+                                ->columns(4)
+                                ->addActionLabel('Add Bank Account')
+                                ->reorderable(false)
+                                ->maxItems(5)
+                                ->collapsible()
+                                ->collapsed()
+                                ->itemLabel(fn (array $state): ?string => $state['bank_name'] ?? 'New Account'),
+                        ]),
 
                     Section::make('Termeni și Condiții Bilete')
                         ->icon('heroicon-o-document-text')
@@ -565,5 +611,56 @@ class OrganizerResource extends Resource
                 </div>
             </div>
         ");
+    }
+
+    protected static function renderBankAccounts(?MarketplaceOrganizer $record): HtmlString
+    {
+        if (!$record) return new HtmlString('');
+
+        $accounts = $record->bankAccounts()->orderByDesc('is_primary')->orderBy('created_at')->get();
+
+        if ($accounts->isEmpty()) {
+            return new HtmlString("
+                <div style='text-align: center; padding: 24px; color: #64748B;'>
+                    <svg style='width: 48px; height: 48px; margin: 0 auto 12px; opacity: 0.5;' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                        <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'/>
+                    </svg>
+                    <div style='font-size: 14px;'>No bank accounts added yet</div>
+                    <div style='font-size: 12px; margin-top: 4px;'>Add accounts using the form below</div>
+                </div>
+            ");
+        }
+
+        $html = "<div style='display: flex; flex-direction: column; gap: 12px;'>";
+
+        foreach ($accounts as $account) {
+            $primaryBadge = $account->is_primary
+                ? "<span style='display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; background: rgba(16, 185, 129, 0.15); color: #10B981;'>PRIMARY</span>"
+                : "";
+
+            $maskedIban = substr($account->iban, 0, 4) . str_repeat('•', strlen($account->iban) - 8) . substr($account->iban, -4);
+
+            $html .= "
+                <div style='display: flex; align-items: center; gap: 12px; padding: 12px; background: #0F172A; border-radius: 8px; border: 1px solid " . ($account->is_primary ? '#10B981' : '#1E293B') . ";'>
+                    <div style='width: 40px; height: 40px; border-radius: 8px; background: #1E293B; display: flex; align-items: center; justify-content: center;'>
+                        <svg style='width: 20px; height: 20px; color: #64748B;' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'/>
+                        </svg>
+                    </div>
+                    <div style='flex: 1;'>
+                        <div style='display: flex; align-items: center; gap: 8px;'>
+                            <span style='font-size: 14px; font-weight: 600; color: white;'>" . e($account->bank_name) . "</span>
+                            {$primaryBadge}
+                        </div>
+                        <div style='font-size: 12px; color: #64748B; font-family: monospace;'>{$maskedIban}</div>
+                        <div style='font-size: 11px; color: #64748B;'>" . e($account->account_holder) . "</div>
+                    </div>
+                </div>
+            ";
+        }
+
+        $html .= "</div>";
+
+        return new HtmlString($html);
     }
 }

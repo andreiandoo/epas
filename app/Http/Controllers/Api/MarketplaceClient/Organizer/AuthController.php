@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceOrganizer;
+use App\Models\MarketplaceOrganizerBankAccount;
 use App\Notifications\MarketplacePasswordResetNotification;
 use App\Notifications\MarketplaceEmailVerificationNotification;
 use Illuminate\Http\Request;
@@ -490,6 +491,137 @@ class AuthController extends BaseController
             'masked_key' => $organizer->getMaskedApiKey(),
             'regenerated_at' => now()->toIso8601String(),
         ], 'API key regenerated successfully. Please update your integrations with the new key.');
+    }
+
+    // =========================================
+    // Bank Accounts
+    // =========================================
+
+    /**
+     * Get organizer's bank accounts
+     */
+    public function getBankAccounts(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $accounts = $organizer->bankAccounts()->orderByDesc('is_primary')->orderBy('created_at')->get();
+
+        return $this->success([
+            'accounts' => $accounts->map(fn ($a) => [
+                'id' => $a->id,
+                'bank' => $a->bank_name,
+                'iban' => $a->iban,
+                'holder' => $a->account_holder,
+                'is_primary' => $a->is_primary,
+                'created_at' => $a->created_at->toIso8601String(),
+            ])->toArray(),
+        ]);
+    }
+
+    /**
+     * Add a new bank account
+     */
+    public function addBankAccount(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $validated = $request->validate([
+            'bank' => 'required|string|max:100',
+            'iban' => 'required|string|max:34|regex:/^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/',
+            'holder' => 'required|string|max:255',
+        ]);
+
+        // Check if IBAN already exists for this organizer
+        if ($organizer->bankAccounts()->where('iban', $validated['iban'])->exists()) {
+            return $this->error('Acest IBAN este deja adaugat', 422);
+        }
+
+        // Check limit (max 5 accounts per organizer)
+        if ($organizer->bankAccounts()->count() >= 5) {
+            return $this->error('Numarul maxim de conturi bancare este 5', 422);
+        }
+
+        $isFirst = $organizer->bankAccounts()->count() === 0;
+
+        $account = MarketplaceOrganizerBankAccount::create([
+            'marketplace_organizer_id' => $organizer->id,
+            'bank_name' => $validated['bank'],
+            'iban' => strtoupper($validated['iban']),
+            'account_holder' => $validated['holder'],
+            'is_primary' => $isFirst, // First account is automatically primary
+        ]);
+
+        return $this->success([
+            'account' => [
+                'id' => $account->id,
+                'bank' => $account->bank_name,
+                'iban' => $account->iban,
+                'holder' => $account->account_holder,
+                'is_primary' => $account->is_primary,
+                'created_at' => $account->created_at->toIso8601String(),
+            ],
+        ], 'Contul bancar a fost adaugat');
+    }
+
+    /**
+     * Delete a bank account
+     */
+    public function deleteBankAccount(Request $request, int $accountId): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $account = $organizer->bankAccounts()->find($accountId);
+
+        if (!$account) {
+            return $this->error('Contul bancar nu a fost gasit', 404);
+        }
+
+        $wasPrimary = $account->is_primary;
+        $account->delete();
+
+        // If deleted account was primary, set the first remaining as primary
+        if ($wasPrimary) {
+            $newPrimary = $organizer->bankAccounts()->first();
+            if ($newPrimary) {
+                $newPrimary->update(['is_primary' => true]);
+            }
+        }
+
+        return $this->success(null, 'Contul bancar a fost sters');
+    }
+
+    /**
+     * Set a bank account as primary
+     */
+    public function setPrimaryBankAccount(Request $request, int $accountId): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $account = $organizer->bankAccounts()->find($accountId);
+
+        if (!$account) {
+            return $this->error('Contul bancar nu a fost gasit', 404);
+        }
+
+        $account->setAsPrimary();
+
+        return $this->success(null, 'Contul bancar a fost setat ca principal');
     }
 
     /**
