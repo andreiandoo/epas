@@ -528,10 +528,17 @@ let availableGenres = []; // full list from API
 
 // Check if we should show create form or edit on load
 const urlParams = new URLSearchParams(window.location.search);
+// Extract event ID from path (e.g., /organizator/event/4) or query string
+const pathMatch = window.location.pathname.match(/\/organizator\/event\/(\d+)/);
+const eventIdFromPath = pathMatch ? pathMatch[1] : null;
+const eventIdFromQuery = urlParams.get('id');
+const eventId = eventIdFromPath || eventIdFromQuery;
+
 if (urlParams.get('action') === 'create') {
     showCreateForm();
-} else if (urlParams.get('id')) {
-    loadEventForEdit(urlParams.get('id'));
+} else if (eventId) {
+    // If we have an event ID (from path or query string), load for editing
+    loadEventForEdit(eventId);
 } else {
     loadEvents();
 }
@@ -552,11 +559,11 @@ function renderEvents(events) {
     const statusColors = { published: 'success', draft: 'warning', ended: 'muted', pending_review: 'info' };
     const statusLabels = { published: 'Publicat', draft: 'Ciorna', ended: 'Incheiat', pending_review: 'In asteptare' };
     container.innerHTML = events.map(event => `
-        <div class="p-6 transition-colors bg-white border rounded-2xl border-border hover:border-primary/30">
-            <div class="flex flex-col gap-6 md:flex-row">
-                <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full md:w-40 h-28 rounded-xl">
-                <div class="flex-1">
-                    <div class="flex items-start justify-between gap-4">
+        <div class="transition-colors bg-white border rounded-2xl border-border hover:border-primary/30">
+            <div class="flex flex-col gap-6 md:items-center md:flex-row">
+                <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full h-40 rounded-tr-none rounded-br-none md:w-40 rounded-xl">
+                <div class="flex-1 py-2">
+                    <div class="flex items-start justify-between gap-4 pr-4">
                         <div>
                             <h3 class="mb-1 text-lg font-bold text-secondary">${event.name || event.title}</h3>
                             <div class="flex flex-wrap items-center gap-3 text-sm text-muted">
@@ -569,7 +576,7 @@ function renderEvents(events) {
                     <div class="grid grid-cols-3 gap-4 pt-4 mt-4 border-t border-border">
                         <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vandute</p></div>
                         <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Vanzari</p></div>
-                        <div class="flex items-center justify-end gap-2">
+                        <div class="flex items-center justify-end gap-2 pr-4">
                             <a href="/organizator/event/${event.id}?action=edit" class="btn btn-sm btn-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>Editeaza</a>
                             <a href="/organizator/analytics/${event.id}" class="btn btn-sm btn-secondary" title="Analytics"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></a>
                             <a href="/event.php?slug=${event.slug}" target="_blank" class="btn btn-sm btn-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg></a>

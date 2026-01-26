@@ -4,6 +4,16 @@
  */
 
 const AmbiletUtils = {
+    // ==================== NUMBER FORMATTING ====================
+
+    /**
+     * Format number with locale separators
+     * @param {number} value - Number to format
+     */
+    formatNumber(value) {
+        return new Intl.NumberFormat(AMBILET_CONFIG.CURRENCY_LOCALE || 'ro-RO').format(value);
+    },
+
     // ==================== CURRENCY FORMATTING ====================
 
     /**
@@ -454,6 +464,7 @@ const AmbiletUtils = {
 window.AmbiletUtils = AmbiletUtils;
 
 // Shorthand aliases
+window.formatNumber = AmbiletUtils.formatNumber.bind(AmbiletUtils);
 window.formatCurrency = AmbiletUtils.formatCurrency.bind(AmbiletUtils);
 window.formatDate = AmbiletUtils.formatDate.bind(AmbiletUtils);
 window.debounce = AmbiletUtils.debounce;
