@@ -32,13 +32,13 @@ require_once __DIR__ . '/includes/header.php';
                 <div id="heroSlides" class="coverflow-track">
                     <!-- Loading Skeleton -->
                     <div class="coverflow-slide coverflow-left">
-                        <div class="coverflow-slide-inner skeleton" style="width: 450px; height: 360px;"></div>
+                        <div class="coverflow-slide-inner skeleton"></div>
                     </div>
                     <div class="coverflow-slide coverflow-center">
-                        <div class="coverflow-slide-inner skeleton" style="width: 450px; height: 360px;"></div>
+                        <div class="coverflow-slide-inner skeleton"></div>
                     </div>
                     <div class="coverflow-slide coverflow-right">
-                        <div class="coverflow-slide-inner skeleton" style="width: 450px; height: 360px;"></div>
+                        <div class="coverflow-slide-inner skeleton"></div>
                     </div>
                 </div>
             </div>
@@ -58,11 +58,11 @@ require_once __DIR__ . '/includes/header.php';
 
 <?php require_once __DIR__ . '/includes/featured-carousel.php'; ?>
 
-<!-- Latest Events -->
-<section class="py-10 md:py-14 bg-surface">
+<!-- Promoted & Recommended Events -->
+<section class="py-10 md:py-14 bg-white">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="flex items-center justify-between mb-8">
-            <h2 class="text-xl font-bold md:text-2xl text-secondary">Ultimele evenimente adăugate</h2>
+            <h2 class="text-xl font-bold md:text-2xl text-secondary">Evenimente recomandate</h2>
             <a href="/evenimente" class="items-center hidden gap-2 font-semibold md:flex text-primary">
                 Vezi toate
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,9 +71,9 @@ require_once __DIR__ . '/includes/header.php';
             </a>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="latestEventsGrid">
-            <!-- Latest events will be loaded dynamically -->
-            <?php for ($i = 0; $i < 20; $i++): ?>
+        <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="promotedEventsGrid">
+            <!-- Promoted events will be loaded dynamically -->
+            <?php for ($i = 0; $i < 10; $i++): ?>
             <div class="overflow-hidden bg-white border rounded-2xl border-border">
                 <div class="skeleton h-44"></div>
                 <div class="p-4">
@@ -83,15 +83,6 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
             </div>
             <?php endfor; ?>
-        </div>
-
-        <div class="mt-10 text-center">
-            <a href="/evenimente" class="inline-flex items-center gap-2 px-8 py-4 font-bold transition-all border-2 border-primary text-primary rounded-xl hover:bg-primary hover:text-white">
-                Vezi mai multe evenimente
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-            </a>
         </div>
     </div>
 </section>
@@ -113,11 +104,11 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<!-- Cities -->
+<!-- Events by City (Combined with Latest Events) -->
 <section class="py-10 bg-white md:py-14">
     <div class="px-4 mx-auto max-w-7xl">
-        <div class="flex items-center justify-between mb-8">
-            <h2 class="text-xl font-bold md:text-2xl text-secondary">Evenimente dupa oraș</h2>
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold md:text-2xl text-secondary">Evenimente după oraș</h2>
             <a href="/orase" class="items-center hidden gap-2 font-semibold md:flex text-primary">
                 Toate orasele
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -126,14 +117,36 @@ require_once __DIR__ . '/includes/header.php';
             </a>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6 md:gap-4" id="citiesGrid">
-            <!-- Cities will be loaded dynamically -->
-            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
+        <!-- City Filter Buttons -->
+        <div class="flex flex-wrap gap-2 mb-8" id="cityFilterButtons">
+            <button class="city-filter-btn active px-4 py-2 text-sm font-semibold rounded-full transition-all bg-primary text-white" data-city="">
+                Toate
+            </button>
+            <!-- City buttons will be loaded dynamically -->
+        </div>
+
+        <!-- Events Grid (filtered by city) -->
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="cityEventsGrid">
+            <!-- Events will be loaded dynamically -->
+            <?php for ($i = 0; $i < 10; $i++): ?>
+            <div class="overflow-hidden bg-white border rounded-2xl border-border">
+                <div class="skeleton h-44"></div>
+                <div class="p-4">
+                    <div class="w-1/3 mb-2 skeleton skeleton-text"></div>
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="w-2/3 mt-2 skeleton skeleton-text"></div>
+                </div>
+            </div>
+            <?php endfor; ?>
+        </div>
+
+        <div class="mt-10 text-center">
+            <a href="/evenimente" class="inline-flex items-center gap-2 px-8 py-4 font-bold transition-all border-2 border-primary text-primary rounded-xl hover:bg-primary hover:text-white">
+                Vezi mai multe evenimente
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </a>
         </div>
     </div>
 </section>
@@ -171,12 +184,13 @@ require_once __DIR__ . '/includes/header.php';
 <?php
 $scriptsExtra = <<<'SCRIPTS'
 <style>
-/* 3D Coverflow Carousel Styles */
+/* 3D Coverflow Carousel Styles - Fixed dimensions */
 .coverflow-container {
     perspective: 1200px;
-    overflow: visible;
+    overflow: hidden;
     padding: 20px 0;
     position: relative;
+    width: 100%;
 }
 .coverflow-track {
     display: flex;
@@ -184,11 +198,16 @@ $scriptsExtra = <<<'SCRIPTS'
     align-items: center;
     position: relative;
     transition: none;
-    min-height: 380px;
+    height: 320px;
 }
-@media (max-width: 768px) {
+@media (min-width: 768px) {
     .coverflow-track {
-        min-height: 320px;
+        height: 360px;
+    }
+}
+@media (min-width: 1024px) {
+    .coverflow-track {
+        height: 400px;
     }
 }
 .coverflow-slide {
@@ -204,6 +223,21 @@ $scriptsExtra = <<<'SCRIPTS'
     border-radius: 1rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(30, 41, 59, 0.8) 100%);
+    /* Fixed dimensions - normalized across all slides */
+    width: 280px;
+    height: 280px;
+}
+@media (min-width: 768px) {
+    .coverflow-slide-inner {
+        width: 400px;
+        height: 320px;
+    }
+}
+@media (min-width: 1024px) {
+    .coverflow-slide-inner {
+        width: 480px;
+        height: 360px;
+    }
 }
 .coverflow-slide img {
     width: 100%;
@@ -243,7 +277,7 @@ $scriptsExtra = <<<'SCRIPTS'
     margin-bottom: 0.75rem;
 }
 .coverflow-slide-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 700;
     color: white;
     line-height: 1.3;
@@ -291,39 +325,29 @@ $scriptsExtra = <<<'SCRIPTS'
     transform: scale(1);
 }
 
-/* Slide positions - center is largest, sides are smaller */
-.coverflow-slide.coverflow-far-left {
-    transform: translateX(-200%) scale(0.5) rotateY(45deg);
-    z-index: 1;
-    opacity: 0.3;
-    filter: brightness(0.5);
-}
-.coverflow-slide.coverflow-left {
-    transform: translateX(-85%) scale(0.75) rotateY(25deg);
-    z-index: 2;
-    opacity: 0.7;
-    filter: brightness(0.7);
-}
-.coverflow-slide.coverflow-center {
-    transform: translateX(0) scale(1) rotateY(0deg);
-    z-index: 3;
-}
-.coverflow-slide.coverflow-right {
-    transform: translateX(85%) scale(0.75) rotateY(-25deg);
-    z-index: 2;
-    opacity: 0.7;
-    filter: brightness(0.7);
-}
-.coverflow-slide.coverflow-far-right {
-    transform: translateX(200%) scale(0.5) rotateY(-45deg);
-    z-index: 1;
-    opacity: 0.3;
-    filter: brightness(0.5);
-}
+/* Slide positions - always show 3: center full, left/right at 50% scale below */
+.coverflow-slide.coverflow-far-left,
+.coverflow-slide.coverflow-far-right,
 .coverflow-slide.coverflow-hidden {
     opacity: 0;
     pointer-events: none;
     z-index: 0;
+}
+.coverflow-slide.coverflow-left {
+    transform: translateX(-70%) translateY(15%) scale(0.65);
+    z-index: 2;
+    opacity: 0.8;
+    filter: brightness(0.75);
+}
+.coverflow-slide.coverflow-center {
+    transform: translateX(0) translateY(0) scale(1);
+    z-index: 3;
+}
+.coverflow-slide.coverflow-right {
+    transform: translateX(70%) translateY(15%) scale(0.65);
+    z-index: 2;
+    opacity: 0.8;
+    filter: brightness(0.75);
 }
 
 /* Thumbnail Navigation */
@@ -363,6 +387,42 @@ $scriptsExtra = <<<'SCRIPTS'
     background: rgba(255,255,255,0.3);
     border-radius: 2px;
 }
+
+/* City Filter Buttons */
+.city-filter-btn {
+    border: 2px solid transparent;
+    background: #f1f5f9;
+    color: #64748b;
+}
+.city-filter-btn:hover {
+    background: #e2e8f0;
+    color: #334155;
+}
+.city-filter-btn.active {
+    background: var(--color-primary, #A51C30);
+    color: white;
+    border-color: var(--color-primary, #A51C30);
+}
+
+/* Promoted Badge */
+.promoted-badge {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    border-radius: 0.375rem;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
 </style>
 <script>
 // 3D Coverflow Hero Carousel Module
@@ -371,8 +431,6 @@ const HeroSlider = {
     currentIndex: 0,
     autoplayInterval: null,
     autoplayDelay: 5000, // 5 seconds
-    slideWidth: 450, // Center slide width (desktop)
-    slideHeight: 360, // Slide height (desktop)
 
     async init() {
         try {
@@ -380,7 +438,6 @@ const HeroSlider = {
             const response = await AmbiletAPI.get('/events/featured?type=homepage&limit=12');
             if (response.data && response.data.events && response.data.events.length > 0) {
                 this.events = response.data.events;
-                this.calculateSizes();
                 this.render();
                 this.renderThumbnails();
                 this.updateSlidePositions();
@@ -395,24 +452,11 @@ const HeroSlider = {
         }
     },
 
-    calculateSizes() {
-        if (window.innerWidth < 640) {
-            this.slideWidth = 280;
-            this.slideHeight = 280;
-        } else if (window.innerWidth < 1024) {
-            this.slideWidth = 360;
-            this.slideHeight = 320;
-        } else {
-            this.slideWidth = 450;
-            this.slideHeight = 360;
-        }
-    },
-
     render() {
         const slidesContainer = document.getElementById('heroSlides');
         if (!slidesContainer || this.events.length === 0) return;
 
-        // Create coverflow slides
+        // Create coverflow slides - dimensions handled by CSS
         slidesContainer.innerHTML = this.events.map((event, index) => {
             const image = event.homepage_featured_image || event.featured_image || event.image || '/assets/images/hero-default.jpg';
             const date = new Date(event.starts_at || event.start_date || event.event_date);
@@ -423,7 +467,7 @@ const HeroSlider = {
 
             return `
                 <div class="coverflow-slide" data-index="${index}">
-                    <a href="/bilete/${event.slug || ''}" class="coverflow-slide-inner" style="width: ${this.slideWidth}px; height: ${this.slideHeight}px;">
+                    <a href="/bilete/${event.slug || ''}" class="coverflow-slide-inner">
                         <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" loading="${index < 3 ? 'eager' : 'lazy'}">
                         <div class="coverflow-slide-overlay"></div>
                         ${priceFrom ? `<div class="coverflow-slide-price">${priceFrom}</div>` : ''}
@@ -486,10 +530,6 @@ const HeroSlider = {
                 slide.classList.add('coverflow-left');
             } else if (relativePos === 1) {
                 slide.classList.add('coverflow-right');
-            } else if (relativePos === -2) {
-                slide.classList.add('coverflow-far-left');
-            } else if (relativePos === 2) {
-                slide.classList.add('coverflow-far-right');
             } else {
                 slide.classList.add('coverflow-hidden');
             }
@@ -501,10 +541,16 @@ const HeroSlider = {
             thumb.classList.toggle('active', index === this.currentIndex);
         });
 
-        // Scroll active thumbnail into view
+        // Scroll active thumbnail into view WITHOUT scrolling the page
         const activeThumbnail = thumbnails[this.currentIndex];
-        if (activeThumbnail) {
-            activeThumbnail.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        const thumbnailsContainer = document.getElementById('heroThumbnails');
+        if (activeThumbnail && thumbnailsContainer) {
+            const containerRect = thumbnailsContainer.getBoundingClientRect();
+            const thumbRect = activeThumbnail.getBoundingClientRect();
+
+            // Calculate scroll position to center the thumbnail
+            const scrollLeft = activeThumbnail.offsetLeft - thumbnailsContainer.offsetWidth / 2 + activeThumbnail.offsetWidth / 2;
+            thumbnailsContainer.scrollTo({ left: scrollLeft, behavior: 'smooth' });
         }
     },
 
@@ -620,17 +666,238 @@ const HeroSlider = {
             }
         });
 
-        // Recalculate on resize
+        // Recalculate on resize - no need to recalc sizes, CSS handles it
         let resizeTimeout;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
-                this.calculateSizes();
-                this.render();
-                this.renderThumbnails();
                 this.updateSlidePositions();
             }, 200);
         });
+    },
+
+    escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>"']/g, m => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[m]));
+    }
+};
+
+// City Events Filter Module
+const CityEventsFilter = {
+    allEvents: [],
+    cities: [],
+    selectedCity: '',
+
+    async init() {
+        await Promise.all([
+            this.loadCities(),
+            this.loadEvents()
+        ]);
+    },
+
+    async loadCities() {
+        try {
+            const response = await AmbiletAPI.get('/locations/cities/featured?limit=10');
+            if (response.data && response.data.cities) {
+                this.cities = response.data.cities;
+                this.renderCityButtons();
+            }
+        } catch (error) {
+            console.warn('Failed to load cities:', error);
+        }
+    },
+
+    async loadEvents() {
+        try {
+            const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=20');
+            if (response.data) {
+                this.allEvents = Array.isArray(response.data) ? response.data : (response.data.events || response.data.data || []);
+                this.renderEvents();
+            }
+        } catch (error) {
+            console.warn('Failed to load events:', error);
+        }
+    },
+
+    renderCityButtons() {
+        const container = document.getElementById('cityFilterButtons');
+        if (!container || this.cities.length === 0) return;
+
+        // Keep "Toate" button, add city buttons
+        const cityButtons = this.cities.map(city => `
+            <button class="city-filter-btn px-4 py-2 text-sm font-semibold rounded-full transition-all" data-city="${city.slug || city.name}">
+                ${city.name}
+            </button>
+        `).join('');
+
+        container.innerHTML = `
+            <button class="city-filter-btn active px-4 py-2 text-sm font-semibold rounded-full transition-all bg-primary text-white" data-city="">
+                Toate
+            </button>
+            ${cityButtons}
+        `;
+
+        // Bind click events
+        container.querySelectorAll('.city-filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.filterByCity(btn.dataset.city));
+        });
+    },
+
+    filterByCity(citySlug) {
+        this.selectedCity = citySlug;
+
+        // Update active button
+        document.querySelectorAll('.city-filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.city === citySlug);
+        });
+
+        this.renderEvents();
+    },
+
+    renderEvents() {
+        const container = document.getElementById('cityEventsGrid');
+        if (!container) return;
+
+        // Filter events by city if selected
+        let events = this.allEvents;
+        if (this.selectedCity) {
+            events = this.allEvents.filter(event => {
+                const eventCity = (event.city || event.venue?.city || '').toLowerCase();
+                const eventCitySlug = (event.city_slug || '').toLowerCase();
+                return eventCity.includes(this.selectedCity.toLowerCase()) ||
+                       eventCitySlug === this.selectedCity.toLowerCase();
+            });
+        }
+
+        if (!events || events.length === 0) {
+            container.innerHTML = '<p class="text-muted col-span-full py-8 text-center">Nu sunt evenimente disponibile pentru acest oraș.</p>';
+            return;
+        }
+
+        // Use AmbiletEventCard component for rendering
+        if (typeof AmbiletEventCard !== 'undefined') {
+            container.innerHTML = AmbiletEventCard.renderMany(events.slice(0, 10), {
+                urlPrefix: '/bilete/',
+                showCategory: true,
+                showPrice: true,
+                showVenue: true
+            });
+        } else {
+            // Fallback rendering
+            container.innerHTML = events.slice(0, 10).map(event => this.renderEventCard(event)).join('');
+        }
+
+        // Trigger reveal animation
+        setTimeout(() => {
+            document.querySelectorAll('.reveal').forEach(el => el.classList.add('active'));
+        }, 100);
+    },
+
+    renderEventCard(event) {
+        const image = event.featured_image || event.image || '/assets/images/event-default.jpg';
+        const date = new Date(event.starts_at || event.start_date || event.event_date);
+        const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
+        const location = event.venue_name || event.venue?.name || event.city || '';
+        const priceFrom = event.price_from ? `de la ${event.price_from} Lei` : '';
+
+        return `
+            <a href="/bilete/${event.slug || ''}" class="overflow-hidden bg-white border rounded-2xl border-border hover:shadow-lg transition-shadow">
+                <div class="relative h-44">
+                    <img src="${image}" alt="${event.title || 'Event'}" class="object-cover w-full h-full" loading="lazy">
+                </div>
+                <div class="p-4">
+                    <p class="text-xs font-semibold text-primary mb-1">${formattedDate}</p>
+                    <h3 class="font-bold text-secondary line-clamp-2">${event.title || event.name || 'Eveniment'}</h3>
+                    ${location ? `<p class="text-sm text-muted mt-1">${location}</p>` : ''}
+                    ${priceFrom ? `<p class="text-sm font-semibold text-primary mt-2">${priceFrom}</p>` : ''}
+                </div>
+            </a>
+        `;
+    }
+};
+
+// Promoted Events Module
+const PromotedEvents = {
+    async init() {
+        try {
+            // Load promoted and recommended events
+            const [promotedRes, recommendedRes] = await Promise.all([
+                AmbiletAPI.get('/marketplace-events?promoted=1&limit=5').catch(() => ({ data: [] })),
+                AmbiletAPI.get('/marketplace-events?recommended=1&limit=10').catch(() => ({ data: [] }))
+            ]);
+
+            const promoted = this.extractEvents(promotedRes);
+            const recommended = this.extractEvents(recommendedRes);
+
+            // Mark promoted events
+            promoted.forEach(e => e._isPromoted = true);
+
+            // Combine and dedupe
+            const combined = [...promoted];
+            recommended.forEach(event => {
+                if (!combined.find(e => e.id === event.id)) {
+                    combined.push(event);
+                }
+            });
+
+            this.render(combined.slice(0, 10));
+        } catch (error) {
+            console.warn('Failed to load promoted events:', error);
+        }
+    },
+
+    extractEvents(response) {
+        if (!response || !response.data) return [];
+        if (Array.isArray(response.data)) return response.data;
+        return response.data.events || response.data.data || [];
+    },
+
+    render(events) {
+        const container = document.getElementById('promotedEventsGrid');
+        if (!container) return;
+
+        if (!events || events.length === 0) {
+            container.innerHTML = '<p class="text-muted col-span-full">Nu sunt evenimente disponibile.</p>';
+            return;
+        }
+
+        container.innerHTML = events.map(event => this.renderCard(event)).join('');
+
+        // Trigger reveal animation
+        setTimeout(() => {
+            document.querySelectorAll('.reveal').forEach(el => el.classList.add('active'));
+        }, 100);
+    },
+
+    renderCard(event) {
+        const image = event.featured_image || event.image || '/assets/images/event-default.jpg';
+        const date = new Date(event.starts_at || event.start_date || event.event_date);
+        const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
+        const location = event.venue_name || event.venue?.name || event.city || '';
+        const priceFrom = event.price_from ? `de la ${event.price_from} Lei` : '';
+        const promotedBadge = event._isPromoted ? `
+            <span class="promoted-badge">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                Promovat
+            </span>
+        ` : '';
+
+        return `
+            <a href="/bilete/${event.slug || ''}" class="relative overflow-hidden bg-white border rounded-2xl border-border hover:shadow-lg transition-shadow group">
+                <div class="relative h-44">
+                    ${promotedBadge}
+                    <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" loading="lazy">
+                </div>
+                <div class="p-4">
+                    <p class="text-xs font-semibold text-primary mb-1">${formattedDate}</p>
+                    <h3 class="font-bold text-secondary line-clamp-2">${this.escapeHtml(event.title || event.name || 'Eveniment')}</h3>
+                    ${location ? `<p class="text-sm text-muted mt-1">${this.escapeHtml(location)}</p>` : ''}
+                    ${priceFrom ? `<p class="text-sm font-semibold text-primary mt-2">${priceFrom}</p>` : ''}
+                </div>
+            </a>
+        `;
     },
 
     escapeHtml(str) {
@@ -647,8 +914,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     await Promise.all([
         HeroSlider.init(),
         loadCategories(),
-        loadCities(),
-        loadLatestEvents(),
+        CityEventsFilter.init(),
+        PromotedEvents.init(),
         FeaturedCarousel.init()
     ]);
 });
@@ -692,72 +959,6 @@ function renderCategories(categories) {
             <span class="text-sm font-semibold transition-colors md:text-base text-secondary group-hover:text-white">${cat.name}</span>
         </a>
     `).join('');
-}
-
-// Load cities
-async function loadCities() {
-    try {
-        const response = await AmbiletAPI.get('/locations/cities/featured?limit=6');
-        if (response.data && response.data.cities) {
-            renderCities(response.data.cities);
-        }
-    } catch (error) {
-        console.warn('Failed to load cities:', error);
-    }
-}
-
-function renderCities(cities) {
-    const container = document.getElementById('citiesGrid');
-
-    if (!cities || cities.length === 0) {
-        container.innerHTML = '<p class="text-muted col-span-full">Nu sunt orașe disponibile.</p>';
-        return;
-    }
-
-    container.innerHTML = cities.map(city => `
-        <a href="/${city.slug}" class="relative overflow-hidden city-card group h-36 md:h-44 mobile:w-auto mobile:h-auto rounded-2xl">
-            <img src="${city.image || '/assets/images/default-city.png'}" alt="${city.name}" class="absolute inset-0 object-cover w-full h-full city-image" loading="lazy">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
-            <div class="absolute bottom-3 left-3 right-3">
-                <h3 class="text-base font-bold text-white md:text-lg">${city.name}</h3>
-                <p class="text-xs text-white/70 md:text-sm">${city.events_count || 0} evenimente</p>
-            </div>
-        </a>
-    `).join('');
-}
-
-// Load latest events
-async function loadLatestEvents() {
-    try {
-        const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=20');
-        if (response.data) {
-            renderLatestEvents(response.data);
-        }
-    } catch (error) {
-        console.warn('Failed to load latest events:', error);
-    }
-}
-
-function renderLatestEvents(events) {
-    const container = document.getElementById('latestEventsGrid');
-
-    if (!events || events.length === 0) {
-        container.innerHTML = '<p class="text-muted col-span-full">Nu sunt evenimente disponibile.</p>';
-        return;
-    }
-
-    // Use AmbiletEventCard component for rendering
-    container.innerHTML = AmbiletEventCard.renderMany(events, {
-        urlPrefix: '/bilete/',
-        showCategory: true,
-        showPrice: true,
-        showVenue: true
-    });
-
-    // Trigger reveal animation
-    setTimeout(() => {
-        document.querySelectorAll('.reveal').forEach(el => el.classList.add('active'));
-    }, 100);
 }
 </script>
 SCRIPTS;
