@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facturi și Facturare - Dashboard Organizator - AmBilet.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; color: #1E293B; line-height: 1.6; }
+
+        .header {
+            background: linear-gradient(135deg, #1E293B, #0F172A);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .logo { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+        .logo-icon { width: 40px; height: 40px; }
+        .logo-text { font-size: 1.5rem; font-weight: 700; }
+        .logo-text .am { color: white; }
+        .logo-text .bilet { color: #f87171; }
+        .header-badge { padding: 0.25rem 0.75rem; background: rgba(165, 28, 48, 0.2); border: 1px solid rgba(248, 113, 113, 0.3); border-radius: 9999px; font-size: 0.75rem; font-weight: 600; color: #f87171; margin-left: 0.75rem; }
+
+        .dashboard-layout { display: flex; max-width: 1400px; margin: 0 auto; min-height: calc(100vh - 65px); }
+
+        .sidebar { width: 260px; background: white; border-right: 1px solid #E2E8F0; padding: 1.5rem 0; flex-shrink: 0; }
+        .sidebar-nav { list-style: none; }
+        .sidebar-nav a { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: #64748B; text-decoration: none; font-weight: 500; font-size: 0.9375rem; transition: all 0.2s; border-left: 3px solid transparent; }
+        .sidebar-nav a:hover { background: #F8FAFC; color: #1E293B; }
+        .sidebar-nav a.active { background: #FEF2F2; color: #A51C30; border-left-color: #A51C30; }
+        .sidebar-nav svg { width: 20px; height: 20px; }
+        .sidebar-section { padding: 0.5rem 1.5rem; margin-top: 1rem; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94A3B8; }
+
+        .main-content { flex: 1; padding: 2rem; }
+
+        .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+        .page-header h1 { font-size: 1.75rem; font-weight: 700; color: #1E293B; }
+        .page-header p { font-size: 0.875rem; color: #64748B; margin-top: 0.25rem; }
+
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.25rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; cursor: pointer; border: none; transition: all 0.2s; text-decoration: none; }
+        .btn-primary { background: linear-gradient(135deg, #A51C30, #C41E3A); color: white; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(165, 28, 48, 0.3); }
+        .btn-secondary { background: white; color: #64748B; border: 1px solid #E2E8F0; }
+        .btn-secondary:hover { background: #F8FAFC; color: #1E293B; }
+        .btn svg { width: 18px; height: 18px; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: white; border-radius: 1rem; border: 1px solid #E2E8F0; padding: 1.25rem; }
+        .stat-icon { width: 40px; height: 40px; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem; }
+        .stat-icon svg { width: 20px; height: 20px; }
+        .stat-icon.green { background: #D1FAE5; color: #059669; }
+        .stat-icon.blue { background: #DBEAFE; color: #2563EB; }
+        .stat-icon.yellow { background: #FEF3C7; color: #D97706; }
+        .stat-icon.red { background: #FEE2E2; color: #DC2626; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: #1E293B; }
+        .stat-label { font-size: 0.8125rem; color: #64748B; }
+
+        .billing-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+
+        .card { background: white; border-radius: 1rem; border: 1px solid #E2E8F0; overflow: hidden; }
+        .card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; }
+        .card-header h2 { font-size: 1.125rem; font-weight: 600; color: #1E293B; }
+
+        .filter-tabs { display: flex; gap: 0.5rem; }
+        .filter-tab { padding: 0.375rem 0.75rem; background: #F1F5F9; border: none; border-radius: 0.375rem; font-size: 0.8125rem; font-weight: 500; color: #64748B; cursor: pointer; transition: all 0.2s; }
+        .filter-tab:hover { background: #E2E8F0; }
+        .filter-tab.active { background: #A51C30; color: white; }
+
+        .invoices-table { width: 100%; border-collapse: collapse; }
+        .invoices-table th { padding: 0.875rem 1.5rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; }
+        .invoices-table td { padding: 1rem 1.5rem; border-bottom: 1px solid #F1F5F9; }
+        .invoices-table tr:last-child td { border-bottom: none; }
+        .invoices-table tr:hover { background: #FAFAFA; }
+
+        .invoice-id { font-family: monospace; font-weight: 600; color: #1E293B; }
+        .invoice-date { font-size: 0.875rem; color: #64748B; }
+        .invoice-amount { font-weight: 700; color: #1E293B; }
+
+        .status-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.625rem; border-radius: 9999px; font-size: 0.6875rem; font-weight: 600; }
+        .status-badge.paid { background: #D1FAE5; color: #065F46; }
+        .status-badge.pending { background: #FEF3C7; color: #92400E; }
+        .status-badge.overdue { background: #FEE2E2; color: #991B1B; }
+        .status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+        .status-badge.paid::before { background: #10B981; }
+        .status-badge.pending::before { background: #F59E0B; }
+        .status-badge.overdue::before { background: #EF4444; }
+
+        .action-btn { width: 32px; height: 32px; border-radius: 0.375rem; border: 1px solid #E2E8F0; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; color: #64748B; }
+        .action-btn:hover { border-color: #A51C30; color: #A51C30; }
+        .action-btn svg { width: 16px; height: 16px; }
+
+        .billing-info-card { margin-bottom: 1.5rem; }
+        .billing-info-card .card-body { padding: 1.5rem; }
+        .billing-detail { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid #F1F5F9; }
+        .billing-detail:last-child { border-bottom: none; }
+        .billing-label { font-size: 0.875rem; color: #64748B; }
+        .billing-value { font-size: 0.875rem; font-weight: 600; color: #1E293B; }
+
+        .payment-method { display: flex; align-items: center; gap: 0.75rem; padding: 1rem; background: #F8FAFC; border-radius: 0.5rem; margin-bottom: 1rem; }
+        .payment-icon { width: 48px; height: 32px; background: white; border-radius: 0.25rem; display: flex; align-items: center; justify-content: center; border: 1px solid #E2E8F0; }
+        .payment-details h4 { font-size: 0.875rem; font-weight: 600; color: #1E293B; }
+        .payment-details p { font-size: 0.75rem; color: #64748B; }
+        .payment-default { padding: 0.125rem 0.5rem; background: #D1FAE5; color: #065F46; border-radius: 0.25rem; font-size: 0.625rem; font-weight: 600; margin-left: auto; }
+
+        .add-payment { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem; border: 2px dashed #E2E8F0; border-radius: 0.5rem; color: #64748B; font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .add-payment:hover { border-color: #A51C30; color: #A51C30; }
+        .add-payment svg { width: 18px; height: 18px; }
+
+        .next-invoice { background: linear-gradient(135deg, #1E293B, #0F172A); border-radius: 0.75rem; padding: 1.25rem; color: white; margin-top: 1rem; }
+        .next-invoice h4 { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .next-invoice .amount { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .next-invoice .due-date { font-size: 0.8125rem; color: #94A3B8; }
+
+        .pagination { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-top: 1px solid #E2E8F0; }
+        .pagination-info { font-size: 0.8125rem; color: #64748B; }
+        .pagination-buttons { display: flex; gap: 0.25rem; }
+        .page-btn { width: 32px; height: 32px; border: 1px solid #E2E8F0; background: white; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8125rem; color: #64748B; transition: all 0.2s; }
+        .page-btn:hover { border-color: #A51C30; color: #A51C30; }
+        .page-btn.active { background: #A51C30; border-color: #A51C30; color: white; }
+        .page-btn svg { width: 16px; height: 16px; }
+
+        @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .billing-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1024px) { .sidebar { display: none; } }
+        @media (max-width: 768px) { .main-content { padding: 1rem; } .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; } .invoices-table { display: block; overflow-x: auto; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <a href="/organizer" class="logo">
+                <svg class="logo-icon" viewBox="0 0 48 48" fill="none">
+                    <rect x="4" y="12" width="40" height="24" rx="4" fill="url(#gradB)"/>
+                    <path d="M4 16C4 13.7909 5.79086 12 8 12H14V36H8C5.79086 36 4 34.2091 4 32V16Z" fill="#1E293B"/>
+                    <circle cx="14" cy="12" r="3" fill="#F8FAFC"/><circle cx="14" cy="36" r="3" fill="#F8FAFC"/>
+                    <defs><linearGradient id="gradB" x1="4" y1="12" x2="44" y2="36"><stop stop-color="#A51C30"/><stop offset="1" stop-color="#C41E3A"/></linearGradient></defs>
+                </svg>
+                <span class="logo-text"><span class="am">Am</span><span class="bilet">Bilet</span></span>
+                <span class="header-badge">Organizator</span>
+            </a>
+        </div>
+    </header>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <nav>
+                <ul class="sidebar-nav">
+                    <li><a href="/organizer"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>Dashboard</a></li>
+                    <li><a href="/organizer/events"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Evenimente</a></li>
+                    <li><a href="/organizer/orders"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Comenzi</a></li>
+                    <li class="sidebar-section">Setări</li>
+                    <li><a href="/organizer/team"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Echipa</a></li>
+                    <li><a href="/organizer/billing" class="active"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Facturare</a></li>
+                    <li><a href="/organizer/settings"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Setări</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <div>
+                    <h1>Facturi și Facturare</h1>
+                    <p>Gestionează facturile, plățile și detaliile de facturare</p>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button class="btn btn-secondary">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Exportă
+                    </button>
+                    <button class="btn btn-primary">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                        Solicită factură
+                    </button>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon green"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                    <div class="stat-value">124.580 RON</div>
+                    <div class="stat-label">Total încasat</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+                    <div class="stat-value">47</div>
+                    <div class="stat-label">Facturi emise</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon yellow"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                    <div class="stat-value">2.340 RON</div>
+                    <div class="stat-label">În așteptare</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                    <div class="stat-value">3,5%</div>
+                    <div class="stat-label">Comision mediu</div>
+                </div>
+            </div>
+
+            <div class="billing-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Istoric facturi</h2>
+                        <div class="filter-tabs">
+                            <button class="filter-tab active">Toate</button>
+                            <button class="filter-tab">Plătite</button>
+                            <button class="filter-tab">În așteptare</button>
+                        </div>
+                    </div>
+                    <table class="invoices-table">
+                        <thead>
+                            <tr>
+                                <th>Nr. Factură</th>
+                                <th>Dată</th>
+                                <th>Descriere</th>
+                                <th>Sumă</th>
+                                <th>Status</th>
+                                <th>Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="invoice-id">AMB-F-2024-0892</span></td>
+                                <td><span class="invoice-date">28 Dec 2024</span></td>
+                                <td>Comision vânzări - Coldplay Concert</td>
+                                <td><span class="invoice-amount">4.580,00 RON</span></td>
+                                <td><span class="status-badge paid">Plătită</span></td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button class="action-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                                        <button class="action-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="invoice-id">AMB-F-2024-0891</span></td>
+                                <td><span class="invoice-date">15 Dec 2024</span></td>
+                                <td>Comision vânzări - UNTOLD Festival</td>
+                                <td><span class="invoice-amount">12.340,00 RON</span></td>
+                                <td><span class="status-badge paid">Plătită</span></td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button class="action-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                                        <button class="action-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="invoice-id">AMB-F-2024-0890</span></td>
+                                <td><span class="invoice-date">1 Dec 2024</span></td>
+                                <td>Abonament Pro - Decembrie 2024</td>
+                                <td><span class="invoice-amount">299,00 RON</span></td>
+                                <td><span class="status-badge pending">În așteptare</span></td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button class="action-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                                        <button class="action-btn" style="background: #A51C30; color: white; border-color: #A51C30;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="invoice-id">AMB-F-2024-0885</span></td>
+                                <td><span class="invoice-date">15 Nov 2024</span></td>
+                                <td>Comision vânzări - Stand-up Comedy</td>
+                                <td><span class="invoice-amount">890,00 RON</span></td>
+                                <td><span class="status-badge paid">Plătită</span></td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button class="action-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                                        <button class="action-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination">
+                        <span class="pagination-info">Afișare 1-4 din 47 facturi</span>
+                        <div class="pagination-buttons">
+                            <button class="page-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                            <button class="page-btn active">1</button>
+                            <button class="page-btn">2</button>
+                            <button class="page-btn">3</button>
+                            <button class="page-btn">...</button>
+                            <button class="page-btn">12</button>
+                            <button class="page-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="card billing-info-card">
+                        <div class="card-header">
+                            <h2>Date facturare</h2>
+                            <button class="btn btn-secondary" style="padding: 0.5rem 0.75rem; font-size: 0.75rem;">Editează</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="billing-detail">
+                                <span class="billing-label">Nume companie</span>
+                                <span class="billing-value">Event Pro SRL</span>
+                            </div>
+                            <div class="billing-detail">
+                                <span class="billing-label">CUI</span>
+                                <span class="billing-value">RO12345678</span>
+                            </div>
+                            <div class="billing-detail">
+                                <span class="billing-label">Nr. Reg. Com.</span>
+                                <span class="billing-value">J40/1234/2020</span>
+                            </div>
+                            <div class="billing-detail">
+                                <span class="billing-label">Adresă</span>
+                                <span class="billing-value">Str. Victoriei 42, București</span>
+                            </div>
+                            <div class="billing-detail">
+                                <span class="billing-label">Email facturare</span>
+                                <span class="billing-value">facturi@eventpro.ro</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Metode de plată</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="payment-method">
+                                <div class="payment-icon">
+                                    <svg width="32" height="20" viewBox="0 0 32 20" fill="none">
+                                        <rect width="32" height="20" rx="2" fill="#1A1F71"/>
+                                        <text x="16" y="13" font-size="7" fill="white" text-anchor="middle" font-weight="bold">VISA</text>
+                                    </svg>
+                                </div>
+                                <div class="payment-details">
+                                    <h4>Visa •••• 4532</h4>
+                                    <p>Expiră 09/26</p>
+                                </div>
+                                <span class="payment-default">Default</span>
+                            </div>
+                            <div class="payment-method">
+                                <div class="payment-icon">
+                                    <svg width="32" height="20" viewBox="0 0 32 20" fill="none">
+                                        <rect width="32" height="20" rx="2" fill="#EB001B"/>
+                                        <circle cx="12" cy="10" r="6" fill="#EB001B"/>
+                                        <circle cx="20" cy="10" r="6" fill="#F79E1B"/>
+                                        <path d="M16 5.5a6 6 0 000 9" fill="#FF5F00"/>
+                                    </svg>
+                                </div>
+                                <div class="payment-details">
+                                    <h4>Mastercard •••• 8901</h4>
+                                    <p>Expiră 12/25</p>
+                                </div>
+                            </div>
+                            <div class="add-payment">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                                Adaugă metodă de plată
+                            </div>
+
+                            <div class="next-invoice">
+                                <h4>Următoarea factură</h4>
+                                <div class="amount">299,00 RON</div>
+                                <div class="due-date">Scadentă pe 1 Ianuarie 2025</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

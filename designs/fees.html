@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comisioane — AmBilet.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; color: #1E293B; }
+
+        .header { height: 72px; background: #fff; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; padding: 0 48px; position: sticky; top: 0; z-index: 100; }
+        .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .logo-icon { width: 40px; height: 40px; }
+        .logo-text { font-size: 22px; font-weight: 800; display: flex; }
+        .logo-text-am { color: #1E293B; }
+        .logo-text-bilet { color: #A51C30; }
+
+        .hero { background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); padding: 80px 48px; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; top: -200px; right: -200px; width: 600px; height: 600px; background: radial-gradient(circle, rgba(165, 28, 48, 0.15) 0%, transparent 70%); }
+        .hero-content { max-width: 800px; margin: 0 auto; text-align: center; position: relative; z-index: 1; }
+        .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(165, 28, 48, 0.2); border: 1px solid rgba(165, 28, 48, 0.3); border-radius: 100px; font-size: 13px; font-weight: 600; color: #f87171; margin-bottom: 24px; }
+        .hero h1 { font-size: 48px; font-weight: 800; color: white; margin-bottom: 16px; letter-spacing: -1px; }
+        .hero p { font-size: 18px; color: rgba(255,255,255,0.7); line-height: 1.6; }
+
+        .main { max-width: 1200px; margin: 0 auto; padding: 80px 48px; }
+        .section { margin-bottom: 80px; }
+        .section-label { display: inline-block; padding: 6px 14px; background: linear-gradient(135deg, #A51C30, #C41E3A); border-radius: 6px; font-size: 12px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 24px; }
+        .section-header { text-align: center; margin-bottom: 48px; }
+        .section-title { font-size: 36px; font-weight: 800; color: #1E293B; margin-bottom: 16px; }
+        .section-desc { font-size: 17px; color: #64748B; max-width: 600px; margin: 0 auto; line-height: 1.6; }
+
+        /* Pricing Cards */
+        .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+        .pricing-card { background: white; border-radius: 24px; padding: 40px; border: 2px solid #E2E8F0; position: relative; transition: all 0.3s; }
+        .pricing-card:hover { border-color: #CBD5E1; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
+        .pricing-card.featured { border-color: #A51C30; }
+        .pricing-card.featured::before { content: 'Popular'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); padding: 6px 16px; background: linear-gradient(135deg, #A51C30, #C41E3A); border-radius: 100px; font-size: 12px; font-weight: 700; color: white; }
+        .pricing-icon { width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
+        .pricing-icon.starter { background: linear-gradient(135deg, #E0F2FE, #BAE6FD); color: #0284C7; }
+        .pricing-icon.pro { background: linear-gradient(135deg, rgba(165, 28, 48, 0.15), rgba(165, 28, 48, 0.08)); color: #A51C30; }
+        .pricing-icon.enterprise { background: linear-gradient(135deg, #1E293B, #334155); color: white; }
+        .pricing-icon svg { width: 32px; height: 32px; }
+        .pricing-name { font-size: 24px; font-weight: 700; color: #1E293B; margin-bottom: 8px; }
+        .pricing-desc { font-size: 14px; color: #64748B; margin-bottom: 24px; line-height: 1.5; }
+        .pricing-rate { margin-bottom: 32px; padding-bottom: 32px; border-bottom: 1px solid #E2E8F0; }
+        .pricing-value { font-size: 48px; font-weight: 800; color: #1E293B; }
+        .pricing-value span { font-size: 18px; font-weight: 500; color: #64748B; }
+        .pricing-note { font-size: 13px; color: #94A3B8; margin-top: 8px; }
+        .pricing-features { list-style: none; margin-bottom: 32px; }
+        .pricing-features li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; font-size: 15px; color: #334155; }
+        .pricing-features li svg { width: 20px; height: 20px; color: #10B981; flex-shrink: 0; margin-top: 2px; }
+        .pricing-features li.disabled { color: #94A3B8; }
+        .pricing-features li.disabled svg { color: #CBD5E1; }
+        .pricing-btn { display: block; width: 100%; padding: 16px; text-align: center; border-radius: 12px; font-size: 15px; font-weight: 700; text-decoration: none; transition: all 0.3s; }
+        .pricing-btn.primary { background: linear-gradient(135deg, #A51C30, #C41E3A); color: white; }
+        .pricing-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(165, 28, 48, 0.3); }
+        .pricing-btn.secondary { background: #F1F5F9; color: #334155; }
+        .pricing-btn.secondary:hover { background: #E2E8F0; }
+
+        /* Comparison Table */
+        .comparison-table { background: white; border-radius: 24px; overflow: hidden; border: 1px solid #E2E8F0; }
+        .comparison-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; }
+        .comparison-header > div { padding: 20px 24px; font-size: 14px; font-weight: 700; color: #64748B; text-align: center; }
+        .comparison-header > div:first-child { text-align: left; }
+        .comparison-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; border-bottom: 1px solid #F1F5F9; }
+        .comparison-row:last-child { border-bottom: none; }
+        .comparison-row > div { padding: 20px 24px; font-size: 15px; color: #334155; display: flex; align-items: center; justify-content: center; }
+        .comparison-row > div:first-child { justify-content: flex-start; font-weight: 500; }
+        .comparison-row .check { color: #10B981; }
+        .comparison-row .cross { color: #CBD5E1; }
+        .comparison-row svg { width: 20px; height: 20px; }
+        .comparison-category { background: #F8FAFC; padding: 16px 24px; font-size: 13px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; grid-column: 1 / -1; }
+
+        /* Calculator */
+        .calculator { background: linear-gradient(135deg, #1E293B, #334155); border-radius: 24px; padding: 48px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+        .calculator-content h3 { font-size: 28px; font-weight: 700; color: white; margin-bottom: 16px; }
+        .calculator-content p { font-size: 16px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 24px; }
+        .calculator-form { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 32px; border: 1px solid rgba(255,255,255,0.1); }
+        .form-group { margin-bottom: 24px; }
+        .form-group:last-child { margin-bottom: 0; }
+        .form-label { display: block; font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 8px; }
+        .form-input { width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; font-size: 16px; color: white; font-family: inherit; }
+        .form-input::placeholder { color: rgba(255,255,255,0.4); }
+        .form-input:focus { outline: none; border-color: #A51C30; background: rgba(255,255,255,0.15); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .calculator-result { margin-top: 24px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .result-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
+        .result-label { font-size: 14px; color: rgba(255,255,255,0.6); }
+        .result-value { font-size: 16px; font-weight: 600; color: white; }
+        .result-row.total { padding-top: 16px; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .result-row.total .result-label { font-size: 16px; font-weight: 600; color: white; }
+        .result-row.total .result-value { font-size: 24px; font-weight: 800; color: #f87171; }
+
+        /* FAQ */
+        .faq-list { max-width: 800px; margin: 0 auto; }
+        .faq-item { background: white; border-radius: 16px; border: 1px solid #E2E8F0; margin-bottom: 16px; overflow: hidden; }
+        .faq-question { display: flex; align-items: center; justify-content: space-between; padding: 24px; cursor: pointer; transition: background 0.2s; }
+        .faq-question:hover { background: #F8FAFC; }
+        .faq-question h4 { font-size: 16px; font-weight: 600; color: #1E293B; }
+        .faq-question svg { width: 24px; height: 24px; color: #64748B; transition: transform 0.3s; }
+        .faq-item.active .faq-question svg { transform: rotate(180deg); }
+        .faq-answer { padding: 0 24px 24px; font-size: 15px; color: #64748B; line-height: 1.7; display: none; }
+        .faq-item.active .faq-answer { display: block; }
+
+        /* Info boxes */
+        .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
+        .info-box { background: white; border-radius: 16px; padding: 28px; border: 1px solid #E2E8F0; }
+        .info-box-icon { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, rgba(165, 28, 48, 0.1), rgba(165, 28, 48, 0.05)); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; color: #A51C30; }
+        .info-box-icon svg { width: 24px; height: 24px; }
+        .info-box h4 { font-size: 16px; font-weight: 700; color: #1E293B; margin-bottom: 8px; }
+        .info-box p { font-size: 14px; color: #64748B; line-height: 1.5; }
+
+        /* CTA */
+        .cta-section { background: white; border: 2px solid #E2E8F0; border-radius: 24px; padding: 60px; text-align: center; }
+        .cta-section h2 { font-size: 32px; font-weight: 800; color: #1E293B; margin-bottom: 16px; }
+        .cta-section p { font-size: 17px; color: #64748B; margin-bottom: 32px; }
+        .cta-btns { display: flex; gap: 16px; justify-content: center; }
+        .cta-btn { display: inline-flex; align-items: center; gap: 10px; padding: 16px 32px; border-radius: 12px; font-size: 15px; font-weight: 700; text-decoration: none; transition: all 0.3s; }
+        .cta-btn.primary { background: linear-gradient(135deg, #A51C30, #C41E3A); color: white; }
+        .cta-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(165, 28, 48, 0.3); }
+        .cta-btn.secondary { background: #F1F5F9; color: #334155; }
+        .cta-btn.secondary:hover { background: #E2E8F0; }
+        .cta-btn svg { width: 20px; height: 20px; }
+
+        .footer { padding: 32px 48px; border-top: 1px solid #E2E8F0; text-align: center; margin-top: 80px; }
+        .footer-text { font-size: 14px; color: #94A3B8; }
+
+        @media (max-width: 1024px) {
+            .pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin: 0 auto; }
+            .comparison-header, .comparison-row { grid-template-columns: 2fr 1fr 1fr 1fr; font-size: 13px; }
+            .calculator { grid-template-columns: 1fr; }
+            .info-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .header, .main { padding-left: 24px; padding-right: 24px; }
+            .hero { padding: 60px 24px; }
+            .hero h1 { font-size: 36px; }
+            .comparison-header, .comparison-row { display: none; }
+            .calculator { padding: 32px 24px; }
+            .cta-section { padding: 40px 24px; }
+            .cta-btns { flex-direction: column; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo">
+            <svg class="logo-icon" viewBox="0 0 48 48" fill="none"><defs><linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38"><stop stop-color="#A51C30"/><stop offset="1" stop-color="#C41E3A"/></linearGradient></defs><path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#logoGrad)"/><line x1="17" y1="15" x2="31" y2="15" stroke="white" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/><line x1="15" y1="19" x2="33" y2="19" stroke="white" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/><rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/></svg>
+            <div class="logo-text"><span class="logo-text-am">Am</span><span class="logo-text-bilet">Bilet</span></div>
+        </a>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Prețuri transparente</div>
+            <h1>Comisioane simple și corecte</h1>
+            <p>Fără costuri ascunse. Plătești doar pentru ce folosești. Primii 100 de bilete sunt întotdeauna gratuit.</p>
+        </div>
+    </section>
+
+    <main class="main">
+        <!-- Pricing Cards -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-label">Planuri</div>
+                <h2 class="section-title">Alege planul potrivit</h2>
+                <p class="section-desc">De la evenimente mici la festivaluri, avem soluția pentru tine.</p>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-icon starter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+                    <div class="pricing-name">Starter</div>
+                    <div class="pricing-desc">Pentru organizatori care încep și vor să testeze platforma.</div>
+                    <div class="pricing-rate">
+                        <div class="pricing-value">2% <span>+ 1 RON/bilet</span></div>
+                        <div class="pricing-note">Primele 100 bilete gratuit</div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Până la 500 bilete/eveniment</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Dashboard de bază</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Suport prin email</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Bilete PDF</li>
+                        <li class="disabled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Branding personalizat</li>
+                    </ul>
+                    <a href="#" class="pricing-btn secondary">Începe gratuit</a>
+                </div>
+
+                <div class="pricing-card featured">
+                    <div class="pricing-icon pro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+                    <div class="pricing-name">Pro</div>
+                    <div class="pricing-desc">Pentru organizatori activi cu evenimente regulate.</div>
+                    <div class="pricing-rate">
+                        <div class="pricing-value">1.5% <span>+ 0.5 RON/bilet</span></div>
+                        <div class="pricing-note">De la 10 evenimente/an</div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Bilete nelimitate</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Dashboard avansat + rapoarte</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Suport prioritar</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Branding personalizat</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Aplicație check-in</li>
+                    </ul>
+                    <a href="#" class="pricing-btn primary">Contactează-ne</a>
+                </div>
+
+                <div class="pricing-card">
+                    <div class="pricing-icon enterprise"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+                    <div class="pricing-name">Enterprise</div>
+                    <div class="pricing-desc">Pentru festivaluri mari și companii de producție.</div>
+                    <div class="pricing-rate">
+                        <div class="pricing-value">Custom</div>
+                        <div class="pricing-note">Comision negociabil</div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Totul din Pro</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Account manager dedicat</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>SLA garantat</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Integrare API completă</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>White-label disponibil</li>
+                    </ul>
+                    <a href="#" class="pricing-btn secondary">Contactează vânzări</a>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <div class="info-box-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+                    <h4>Procesare plăți incluse</h4>
+                    <p>Comisioanele includ procesarea plăților prin card. Nu există taxe suplimentare ascunse.</p>
+                </div>
+                <div class="info-box">
+                    <div class="info-box-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                    <h4>Plăți rapide</h4>
+                    <p>Primești banii în cont în maxim 3 zile lucrătoare după eveniment.</p>
+                </div>
+                <div class="info-box">
+                    <div class="info-box-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                    <h4>Garanție de satisfacție</h4>
+                    <p>Nu ești mulțumit? Primești banii înapoi pentru primul eveniment.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Calculator -->
+        <section class="section">
+            <div class="calculator">
+                <div class="calculator-content">
+                    <h3>Calculează costurile</h3>
+                    <p>Introdu detaliile evenimentului tău pentru a vedea exact cât vei plăti. Nicio surpriză, doar transparență.</p>
+                </div>
+                <div class="calculator-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Preț bilet (RON)</label>
+                            <input type="number" class="form-input" placeholder="ex: 100" value="100" id="ticketPrice">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Număr bilete</label>
+                            <input type="number" class="form-input" placeholder="ex: 500" value="500" id="ticketCount">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Plan</label>
+                        <select class="form-input" id="planSelect">
+                            <option value="starter">Starter (2% + 1 RON)</option>
+                            <option value="pro">Pro (1.5% + 0.5 RON)</option>
+                        </select>
+                    </div>
+                    <div class="calculator-result">
+                        <div class="result-row">
+                            <span class="result-label">Venituri totale</span>
+                            <span class="result-value" id="totalRevenue">50,000 RON</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Comision AmBilet</span>
+                            <span class="result-value" id="totalFee">1,500 RON</span>
+                        </div>
+                        <div class="result-row total">
+                            <span class="result-label">Primești în cont</span>
+                            <span class="result-value" id="netRevenue">48,500 RON</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison Table -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-label">Comparație</div>
+                <h2 class="section-title">Ce include fiecare plan</h2>
+            </div>
+            <div class="comparison-table">
+                <div class="comparison-header">
+                    <div>Funcționalitate</div>
+                    <div>Starter</div>
+                    <div>Pro</div>
+                    <div>Enterprise</div>
+                </div>
+                <div class="comparison-category">Bilete & Evenimente</div>
+                <div class="comparison-row">
+                    <div>Bilete per eveniment</div>
+                    <div>500</div>
+                    <div>Nelimitat</div>
+                    <div>Nelimitat</div>
+                </div>
+                <div class="comparison-row">
+                    <div>Evenimente simultane</div>
+                    <div>3</div>
+                    <div>Nelimitat</div>
+                    <div>Nelimitat</div>
+                </div>
+                <div class="comparison-row">
+                    <div>Tipuri de bilete multiple</div>
+                    <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+                </div>
+                <div class="comparison-category">Funcționalități</div>
+                <div class="comparison-row">
+                    <div>Dashboard analytics</div>
+                    <div>Basic</div>
+                    <div>Avansat</div>
+                    <div>Complet</div>
+                </div>
+                <div class="comparison-row">
+                    <div>Aplicație check-in</div>
+                    <div class="cross"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+                    <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+                </div>
+                <div class="comparison-row">
+                    <div>Branding personalizat</div>
+                    <div class="cross"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+                    <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+                </div>
+                <div class="comparison-row">
+                    <div>API access</div>
+                    <div class="cross"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+                    <div>Basic</div>
+                    <div>Complet</div>
+                </div>
+                <div class="comparison-category">Suport</div>
+                <div class="comparison-row">
+                    <div>Timp răspuns suport</div>
+                    <div>48h</div>
+                    <div>4h</div>
+                    <div>1h</div>
+                </div>
+                <div class="comparison-row">
+                    <div>Account manager</div>
+                    <div class="cross"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+                    <div class="cross"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+                    <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-label">Întrebări frecvente</div>
+                <h2 class="section-title">Ai întrebări despre prețuri?</h2>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item active">
+                    <div class="faq-question">
+                        <h4>Cine plătește comisionul - organizatorul sau cumpărătorul?</h4>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="faq-answer">Tu alegi! Poți absorbi comisionul în prețul biletului (cumpărătorul vede doar prețul final) sau îl poți adăuga separat (cumpărătorul vede prețul + taxă serviciu). Majoritatea organizatorilor aleg să includă comisionul în preț pentru o experiență mai bună.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h4>Există costuri pentru evenimentele gratuite?</h4>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="faq-answer">Nu! Evenimentele cu intrare gratuită sunt 100% gratuite pe AmBilet. Poți gestiona înregistrări și check-in fără niciun cost.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h4>Când primesc banii din vânzări?</h4>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="faq-answer">În mod standard, transferăm banii în maximum 3 zile lucrătoare după eveniment. Pentru clienții Enterprise, oferim opțiunea de plăți săptămânale sau în avans.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h4>Pot schimba planul ulterior?</h4>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="faq-answer">Da, poți face upgrade sau downgrade oricând. Modificarea se aplică începând cu următorul eveniment creat.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h4>Există taxe pentru procesarea plăților?</h4>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="faq-answer">Nu. Comisioanele noastre includ deja costurile de procesare a plăților prin card. Nu există taxe suplimentare ascunse.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <div class="cta-section">
+            <h2>Pregătit să începi?</h2>
+            <p>Creează contul gratuit și organizează primul tău eveniment în câteva minute.</p>
+            <div class="cta-btns">
+                <a href="#" class="cta-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>Creează cont gratuit</a>
+                <a href="#" class="cta-btn secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Vorbește cu vânzări</a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer"><p class="footer-text">© 2024 AmBilet.ro — Toate drepturile rezervate. Powered by TIXELLO</p></footer>
+
+    <script>
+        // FAQ Accordion
+        document.querySelectorAll('.faq-question').forEach(question => {
+            question.addEventListener('click', () => {
+                const item = question.parentElement;
+                item.classList.toggle('active');
+            });
+        });
+
+        // Calculator
+        function calculateFees() {
+            const price = parseFloat(document.getElementById('ticketPrice').value) || 0;
+            const count = parseInt(document.getElementById('ticketCount').value) || 0;
+            const plan = document.getElementById('planSelect').value;
+
+            const totalRevenue = price * count;
+            let fee;
+
+            if (plan === 'starter') {
+                fee = (totalRevenue * 0.02) + (count * 1);
+            } else {
+                fee = (totalRevenue * 0.015) + (count * 0.5);
+            }
+
+            const netRevenue = totalRevenue - fee;
+
+            document.getElementById('totalRevenue').textContent = totalRevenue.toLocaleString('ro-RO') + ' RON';
+            document.getElementById('totalFee').textContent = fee.toLocaleString('ro-RO') + ' RON';
+            document.getElementById('netRevenue').textContent = netRevenue.toLocaleString('ro-RO') + ' RON';
+        }
+
+        document.getElementById('ticketPrice').addEventListener('input', calculateFees);
+        document.getElementById('ticketCount').addEventListener('input', calculateFees);
+        document.getElementById('planSelect').addEventListener('change', calculateFees);
+
+        calculateFees();
+    </script>
+</body>
+</html>

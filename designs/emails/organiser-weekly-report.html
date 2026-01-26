@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ro" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="x-apple-disable-message-reformatting">
+    <title>Raport săptămânal — TIXELLO</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased;">
+    
+    <div style="display: none; max-height: 0; overflow: hidden;">Raportul tău săptămânal TIXELLO: {{tickets_sold}} bilete vândute, {{total_revenue}} lei venituri</div>
+    
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden;">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td align="center" bgcolor="#1E293B" style="background-color: #1E293B; padding: 40px 30px;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td align="center" style="padding-bottom: 12px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td style="background-color: rgba(255,255,255,0.1); border-radius: 10px; padding: 10px; vertical-align: middle;">
+                                                    <img src="https://via.placeholder.com/28x28/ffffff/A51C30?text=T" alt="T" width="28" height="28" style="display: block; border: 0;">
+                                                </td>
+                                                <td style="padding-left: 10px; vertical-align: middle;">
+                                                    <span style="color: #ffffff; font-size: 20px; font-weight: 800;">TIXELLO</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" style="padding-bottom: 12px;">
+                                        <span style="display: inline-block; background-color: rgba(165, 28, 48, 0.3); color: #F87171; font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 20px; text-transform: uppercase;">Raport Săptămânal</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center">
+                                        <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">📊 Săptămâna {{week_number}}, {{year}}</h1>
+                                        <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.7); font-size: 14px;">{{week_start_date}} - {{week_end_date}}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            
+                            <p style="margin: 0 0 8px 0; color: #64748B; font-size: 16px;">Salut, {{nume_companie}}!</p>
+                            <p style="margin: 0 0 24px 0; color: #64748B; font-size: 16px; line-height: 1.6;">Iată rezumatul activității tale din ultima săptămână pe TIXELLO:</p>
+                            
+                            <!-- Key Stats -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                    <td width="50%" style="padding-right: 8px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC; border-radius: 12px;">
+                                            <tr>
+                                                <td align="center" style="padding: 20px;">
+                                                    <p style="margin: 0; font-size: 28px; font-weight: 800; color: #10B981;">{{total_revenue}} lei</p>
+                                                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748B;">Venituri totale</p>
+                                                    <p style="margin: 8px 0 0 0; font-size: 12px; font-weight: 600; color: #10B981;">↑ {{revenue_change}}% vs. săpt. trecută</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td width="50%" style="padding-left: 8px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC; border-radius: 12px;">
+                                            <tr>
+                                                <td align="center" style="padding: 20px;">
+                                                    <p style="margin: 0; font-size: 28px; font-weight: 800; color: #1E293B;">{{tickets_sold}}</p>
+                                                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748B;">Bilete vândute</p>
+                                                    <p style="margin: 8px 0 0 0; font-size: 12px; font-weight: 600; color: #10B981;">↑ {{tickets_change}}% vs. săpt. trecută</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 16px;">
+                                <tr>
+                                    <td width="50%" style="padding-right: 8px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC; border-radius: 12px;">
+                                            <tr>
+                                                <td align="center" style="padding: 16px;">
+                                                    <p style="margin: 0; font-size: 24px; font-weight: 800; color: #1E293B;">{{orders_count}}</p>
+                                                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748B;">Comenzi</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td width="50%" style="padding-left: 8px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC; border-radius: 12px;">
+                                            <tr>
+                                                <td align="center" style="padding: 16px;">
+                                                    <p style="margin: 0; font-size: 24px; font-weight: 800; color: #1E293B;">{{avg_order_value}} lei</p>
+                                                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748B;">Valoare medie / comandă</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Divider -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr><td style="padding: 24px 0;"><div style="height: 1px; background-color: #E2E8F0;"></div></td></tr>
+                            </table>
+                            
+                            <h2 style="margin: 0 0 16px 0; color: #1E293B; font-size: 18px; font-weight: 700;">📈 Performanța evenimentelor</h2>
+                            
+                            <!-- Event Row (repeat for each event) -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-bottom: 1px solid #F1F5F9; padding-bottom: 16px; margin-bottom: 16px;">
+                                <tr>
+                                    <td style="padding: 16px 0;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="vertical-align: top;">
+                                                    <p style="margin: 0 0 4px 0; color: #1E293B; font-weight: 600; font-size: 15px;">{{event_name}}</p>
+                                                    <p style="margin: 0; color: #64748B; font-size: 13px;">{{event_date}} · {{venue_name}}</p>
+                                                </td>
+                                                <td style="text-align: right; white-space: nowrap; vertical-align: top;">
+                                                    <p style="margin: 0; color: #1E293B; font-weight: 700; font-size: 15px;">{{tickets_sold}}/{{tickets_total}}</p>
+                                                    <p style="margin: 0; color: #64748B; font-size: 13px;">bilete</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <!-- Progress Bar -->
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 12px;">
+                                            <tr>
+                                                <td>
+                                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #E2E8F0; border-radius: 10px; height: 8px;">
+                                                        <tr>
+                                                            <td style="width: {{sold_percentage}}%; background-color: #A51C30; border-radius: 10px;"></td>
+                                                            <td></td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding-top: 8px;">
+                                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                        <tr>
+                                                            <td style="color: #64748B; font-size: 12px;">{{sold_percentage}}% vândut</td>
+                                                            <td style="color: #10B981; font-size: 12px; text-align: right;">+{{revenue}} lei această săpt.</td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Divider -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr><td style="padding: 8px 0;"><div style="height: 1px; background-color: #E2E8F0;"></div></td></tr>
+                            </table>
+                            
+                            <h2 style="margin: 24px 0 16px 0; color: #1E293B; font-size: 18px; font-weight: 700;">📅 Cele mai bune zile</h2>
+                            
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC; border-radius: 12px;">
+                                <tr>
+                                    <td style="padding: 16px;">
+                                        <!-- Top Day 1 -->
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                        <tr>
+                                                            <td style="width: 40px; font-size: 20px;">🥇</td>
+                                                            <td>
+                                                                <p style="margin: 0; color: #1E293B; font-weight: 600; font-size: 14px;">{{top_day_1_name}}</p>
+                                                                <p style="margin: 0; color: #64748B; font-size: 12px;">{{top_day_1_date}}</p>
+                                                            </td>
+                                                            <td style="text-align: right;">
+                                                                <p style="margin: 0; color: #10B981; font-weight: 700; font-size: 14px;">{{top_day_1_revenue}} lei</p>
+                                                                <p style="margin: 0; color: #64748B; font-size: 12px;">{{top_day_1_tickets}} bilete</p>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                        <tr>
+                                                            <td style="width: 40px; font-size: 20px;">🥈</td>
+                                                            <td>
+                                                                <p style="margin: 0; color: #1E293B; font-weight: 600; font-size: 14px;">{{top_day_2_name}}</p>
+                                                                <p style="margin: 0; color: #64748B; font-size: 12px;">{{top_day_2_date}}</p>
+                                                            </td>
+                                                            <td style="text-align: right;">
+                                                                <p style="margin: 0; color: #10B981; font-weight: 700; font-size: 14px;">{{top_day_2_revenue}} lei</p>
+                                                                <p style="margin: 0; color: #64748B; font-size: 12px;">{{top_day_2_tickets}} bilete</p>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                        <tr>
+                                                            <td style="width: 40px; font-size: 20px;">🥉</td>
+                                                            <td>
+                                                                <p style="margin: 0; color: #1E293B; font-weight: 600; font-size: 14px;">{{top_day_3_name}}</p>
+                                                                <p style="margin: 0; color: #64748B; font-size: 12px;">{{top_day_3_date}}</p>
+                                                            </td>
+                                                            <td style="text-align: right;">
+                                                                <p style="margin: 0; color: #10B981; font-weight: 700; font-size: 14px;">{{top_day_3_revenue}} lei</p>
+                                                                <p style="margin: 0; color: #64748B; font-size: 12px;">{{top_day_3_tickets}} bilete</p>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Divider -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr><td style="padding: 24px 0;"><div style="height: 1px; background-color: #E2E8F0;"></div></td></tr>
+                            </table>
+                            
+                            <h2 style="margin: 0 0 16px 0; color: #1E293B; font-size: 18px; font-weight: 700;">⚡ Acțiuni rapide</h2>
+                            
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr><td style="padding: 8px 0;"><a href="https://tixello.ro/organiser/reports" style="color: #A51C30; text-decoration: none; font-weight: 500; font-size: 14px;">📊 Vezi raportul detaliat →</a></td></tr>
+                                <tr><td style="padding: 8px 0;"><a href="https://tixello.ro/organiser/events/new" style="color: #A51C30; text-decoration: none; font-weight: 500; font-size: 14px;">➕ Creează eveniment nou →</a></td></tr>
+                                <tr><td style="padding: 8px 0;"><a href="https://tixello.ro/organiser/promo" style="color: #A51C30; text-decoration: none; font-weight: 500; font-size: 14px;">🎁 Creează cod promoțional →</a></td></tr>
+                                <tr><td style="padding: 8px 0;"><a href="https://tixello.ro/organiser/email" style="color: #A51C30; text-decoration: none; font-weight: 500; font-size: 14px;">📧 Trimite email participanților →</a></td></tr>
+                            </table>
+                            
+                            <!-- CTA Button -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding: 32px 0 16px 0;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td align="center" bgcolor="#A51C30" style="background-color: #A51C30; border-radius: 12px;">
+                                                    <a href="https://tixello.ro/organiser/dashboard" target="_blank" style="display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px;">Accesează dashboard-ul</a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Upcoming Events Alert -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #FEF3C7; border-radius: 12px; margin-top: 16px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td style="vertical-align: top; padding-right: 12px; width: 32px; font-size: 24px;">📢</td>
+                                                <td style="vertical-align: top;">
+                                                    <p style="margin: 0 0 4px 0; color: #92400E; font-weight: 700; font-size: 14px;">Evenimente săptămâna viitoare</p>
+                                                    <p style="margin: 0; color: #A16207; font-size: 14px; line-height: 1.5;">Ai {{upcoming_events_count}} evenimente programate. Verifică listele de participanți și configurează scanarea QR!</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td bgcolor="#F8FAFC" style="background-color: #F8FAFC; padding: 30px; border-top: 1px solid #E2E8F0;">
+                            <p style="margin: 0 0 8px 0; color: #94A3B8; font-size: 13px; text-align: center;">Raport generat automat de TIXELLO</p>
+                            <p style="margin: 0 0 8px 0; color: #94A3B8; font-size: 13px; text-align: center;">© 2024 TIXELLO. Toate drepturile rezervate.</p>
+                            <p style="margin: 16px 0 0 0; color: #94A3B8; font-size: 13px; text-align: center;">
+                                <a href="{{email_settings_link}}" style="color: #94A3B8; text-decoration: underline;">Setări notificări</a> · 
+                                <a href="{{unsubscribe_link}}" style="color: #94A3B8; text-decoration: underline;">Dezabonare rapoarte</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+                
+            </td>
+        </tr>
+    </table>
+    
+</body>
+</html>
