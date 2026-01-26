@@ -51,6 +51,15 @@ const AmbiletEventCard = {
             statusBadge = '<span class="absolute px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg top-3 right-3 bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>';
         }
 
+        // Featured/promoted badge (shown top left, below date)
+        let featuredBadge = '';
+        if (event.isFeatured) {
+            featuredBadge = '<span class="absolute bottom-3 left-3 px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg bg-gradient-to-r from-primary to-primary-dark flex items-center gap-1">' +
+                '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' +
+                'Promovat' +
+            '</span>';
+        }
+
         // Date badge - show range for festivals, single date otherwise
         let dateBadgeHtml;
         if (event.isDateRange && event.dateRangeFormatted) {
@@ -69,6 +78,7 @@ const AmbiletEventCard = {
                 '<img src="' + (event.image || this.PLACEHOLDER) + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-2xl rounded-tr-2xl" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>' +
                 statusBadge +
+                featuredBadge +
             '</div>' +
             '<div class="px-3 py-2">' +
                 '<h3 class="mb-2 font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2 truncate">' + this.escapeHtml(event.title) + '</h3>' +
@@ -400,6 +410,7 @@ const AmbiletEventCard = {
             isCancelled: apiEvent.is_cancelled || false,
             isPostponed: apiEvent.is_postponed || false,
             postponedDate: apiEvent.postponed_date || null,
+            isFeatured: apiEvent.is_featured || apiEvent.featured || false,
             isDateRange: isDateRange,
             dateRangeFormatted: dateRangeFormatted,
             _raw: apiEvent

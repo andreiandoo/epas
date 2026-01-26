@@ -257,10 +257,12 @@ const AmbiletAPI = {
         // Organizer services (extra services - promotions, email marketing, ad tracking, campaigns)
         if (endpoint === '/organizer/services/stats') return 'organizer.services.stats';
         if (endpoint === '/organizer/services/types') return 'organizer.services.types';
+        if (endpoint === '/organizer/services/pricing') return 'organizer.services.pricing';
         if (endpoint === '/organizer/services/email-audiences' || endpoint.includes('/organizer/services/email-audiences?')) return 'organizer.services.email-audiences';
         if (endpoint.match(/\/organizer\/services\/orders\/[\w-]+\/pay$/)) return 'organizer.services.order.pay';
         if (endpoint.match(/\/organizer\/services\/orders\/[\w-]+\/send-email$/)) return 'organizer.services.order.send-email';
         if (endpoint.match(/\/organizer\/services\/orders\/[\w-]+\/cancel$/)) return 'organizer.services.order.cancel';
+        if (endpoint.match(/\/organizer\/services\/orders\/[\w-]+\/email-stats$/)) return 'organizer.services.order.email-stats';
         if (endpoint.match(/\/organizer\/services\/orders\/[\w-]+$/)) return 'organizer.services.order';
         if (endpoint === '/organizer/services/orders' || endpoint.includes('/organizer/services/orders?')) return 'organizer.services.orders';
         if (endpoint === '/organizer/services' || endpoint.includes('/organizer/services?')) return 'organizer.services';
@@ -404,7 +406,7 @@ const AmbiletAPI = {
         }
 
         // Organizer service order endpoints - extract order ID
-        const serviceOrderActionMatch = endpoint.match(/\/organizer\/services\/orders\/([\w-]+)\/(pay|send-email|cancel)$/);
+        const serviceOrderActionMatch = endpoint.match(/\/organizer\/services\/orders\/([\w-]+)\/(pay|send-email|cancel|email-stats)$/);
         if (serviceOrderActionMatch) {
             return `order_id=${encodeURIComponent(serviceOrderActionMatch[1])}`;
         }

@@ -1309,6 +1309,24 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.services.order.email-stats':
+        // GET - Get Brevo email campaign statistics for an order
+        $orderId = $_GET['order_id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order_id parameter']);
+            exit;
+        }
+        $endpoint = '/organizer/services/orders/' . urlencode($orderId) . '/email-stats';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.pricing':
+        // GET - Get dynamic service pricing
+        $endpoint = '/organizer/services/pricing';
+        $requiresAuth = true;
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);

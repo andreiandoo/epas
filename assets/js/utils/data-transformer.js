@@ -79,7 +79,9 @@ const AmbiletDataTransformer = {
         // Status flags
         const isSoldOut = apiEvent.is_sold_out || false;
         const isLowStock = apiEvent.is_low_stock || false;
-        const isFeatured = apiEvent.is_featured || apiEvent.is_homepage_featured || apiEvent.is_general_featured || false;
+        const isFeatured = apiEvent.is_featured || apiEvent.is_homepage_featured || apiEvent.is_general_featured || apiEvent.featured || false;
+        const isCancelled = apiEvent.is_cancelled || apiEvent.status === 'cancelled' || false;
+        const isPostponed = apiEvent.is_postponed || apiEvent.status === 'postponed' || false;
 
         return {
             id: apiEvent.id,
@@ -122,7 +124,10 @@ const AmbiletDataTransformer = {
             isSoldOut: isSoldOut,
             isLowStock: isLowStock,
             isFeatured: isFeatured,
-            hasAvailability: apiEvent.has_availability !== false && !isSoldOut,
+            isCancelled: isCancelled,
+            isPostponed: isPostponed,
+            postponedDate: apiEvent.postponed_date || apiEvent.new_date || null,
+            hasAvailability: apiEvent.has_availability !== false && !isSoldOut && !isCancelled,
 
             // Original data for anything else needed
             _raw: apiEvent

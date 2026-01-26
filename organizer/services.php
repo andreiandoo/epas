@@ -612,13 +612,26 @@ let currentStep = 1;
 let currentServiceType = '';
 let events = [];
 let activeServices = [];
+let servicePricing = {
+    featuring: { home: 99, category: 69, genre: 59, city: 49 },
+    email: { per_email: 0.05, minimum: 100 },
+    tracking: { per_platform_monthly: 49, discounts: { 1: 0, 3: 0.10, 6: 0.15, 12: 0.25 } },
+    campaign: { basic: 499, standard: 899, premium: 1499 }
+};
+let emailAudiences = {
+    all: { count: 250000, description: 'Toti utilizatorii activi' },
+    filtered: { count: 45000, description: 'Utilizatori din orasul/categoria evenimentului' },
+    own: { count: 0, description: 'Clientii tai de la evenimente anterioare' }
+};
 
 document.addEventListener('DOMContentLoaded', function() {
+    loadPricing();
     loadEvents();
     loadActiveServices();
     loadStats();
     setupPaymentMethodToggle();
     setupEmailCostCalculation();
+    setupDateValidation();
     checkUrlParams();
 });
 
@@ -655,6 +668,109 @@ function closeSuccessBanner() {
 
 function closeCancelledBanner() {
     document.getElementById('cancelled-banner').classList.add('hidden');
+}
+
+async function loadPricing() {
+    try {
+        const response = await AmbiletAPI.get('/organizer/services/pricing');
+        if (response.success && response.data) {
+            servicePricing = response.data;
+            updatePricingUI();
+        }
+    } catch (e) {
+        console.log('Using default pricing');
+        updatePricingUI();
+    }
+}
+
+function updatePricingUI() {
+    // Update featuring prices in the UI
+    const featuringPrices = document.querySelectorAll('#featuring-options .text-primary');
+    const priceMap = {
+        home: servicePricing.featuring.home,
+        category: servicePricing.featuring.category,
+        genre: servicePricing.featuring.genre,
+        city: servicePricing.featuring.city
+    };
+
+    document.querySelectorAll('#featuring-options input[name="featuring_locations[]"]').forEach(input => {
+        const priceEl = input.closest('label').querySelector('.text-primary');
+        if (priceEl && priceMap[input.value]) {
+            priceEl.textContent = priceMap[input.value] + ' RON / zi';
+        }
+    });
+
+    // Update tracking prices
+    document.querySelectorAll('#tracking-options input[name="tracking_platforms[]"]').forEach(input => {
+        const priceEl = input.closest('label').querySelector('.text-blue-600');
+        if (priceEl && servicePricing.tracking.per_platform_monthly) {
+            priceEl.textContent = servicePricing.tracking.per_platform_monthly + ' RON / luna';
+        }
+    });
+
+    // Update campaign prices
+    const campaignPrices = servicePricing.campaign;
+    document.querySelectorAll('#campaign-options input[name="campaign_type"]').forEach(input => {
+        const priceEl = input.closest('label').querySelector('.text-purple-600');
+        if (priceEl && campaignPrices[input.value]) {
+            priceEl.textContent = AmbiletUtils.formatCurrency(campaignPrices[input.value]);
+        }
+    });
+}
+
+async function loadEmailAudiences(eventId) {
+    try {
+        const params = eventId ? { event_id: eventId } : {};
+        const response = await AmbiletAPI.get('/organizer/services/email-audiences', params);
+        if (response.success && response.data.audiences) {
+            emailAudiences = response.data.audiences;
+            updateEmailAudienceUI();
+        }
+    } catch (e) {
+        console.log('Using default audiences');
+        updateEmailAudienceUI();
+    }
+}
+
+function updateEmailAudienceUI() {
+    document.getElementById('audience-all-count').textContent = '~' + AmbiletUtils.formatNumber(emailAudiences.all?.count || 250000);
+    document.getElementById('audience-filtered-count').textContent = '~' + AmbiletUtils.formatNumber(emailAudiences.filtered?.count || 45000);
+    document.getElementById('audience-own-count').textContent = AmbiletUtils.formatNumber(emailAudiences.own?.count || 0);
+
+    // Update cost estimate based on selected audience
+    const selectedAudience = document.querySelector('input[name="email_audience"]:checked')?.value || 'all';
+    const count = emailAudiences[selectedAudience]?.count || 0;
+    const cost = count * (servicePricing.email.per_email || 0.05);
+    document.getElementById('email-cost-estimate').textContent = AmbiletUtils.formatCurrency(cost);
+}
+
+function setupDateValidation() {
+    const startInput = document.getElementById('featuring-start');
+    const endInput = document.getElementById('featuring-end');
+
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    startInput.min = today;
+    endInput.min = today;
+
+    // When start date changes, update end date minimum
+    startInput.addEventListener('change', function() {
+        if (this.value) {
+            endInput.min = this.value;
+            // If end date is before start date, reset it
+            if (endInput.value && endInput.value < this.value) {
+                endInput.value = this.value;
+            }
+        }
+    });
+
+    // Validate end date is not before start date
+    endInput.addEventListener('change', function() {
+        if (startInput.value && this.value < startInput.value) {
+            AmbiletNotifications.error('Data de sfarsit trebuie sa fie dupa data de inceput');
+            this.value = startInput.value;
+        }
+    });
 }
 
 async function loadEvents() {
@@ -860,9 +976,30 @@ function validateStep2() {
                 AmbiletNotifications.error('Selecteaza cel putin o locatie');
                 return false;
             }
+            // Validate dates
+            const startDate = document.getElementById('featuring-start').value;
+            const endDate = document.getElementById('featuring-end').value;
+            if (!startDate || !endDate) {
+                AmbiletNotifications.error('Selecteaza perioada de promovare');
+                return false;
+            }
+            const today = new Date().toISOString().split('T')[0];
+            if (startDate < today) {
+                AmbiletNotifications.error('Data de inceput nu poate fi in trecut');
+                return false;
+            }
+            if (endDate < startDate) {
+                AmbiletNotifications.error('Data de sfarsit trebuie sa fie dupa data de inceput');
+                return false;
+            }
             break;
         case 'email':
-            // Email options are always valid (has default selection)
+            // Validate send date
+            const sendDate = document.getElementById('email-send-date').value;
+            if (!sendDate) {
+                AmbiletNotifications.error('Selecteaza data trimiterii');
+                return false;
+            }
             break;
         case 'tracking':
             const platforms = document.querySelectorAll('input[name="tracking_platforms[]"]:checked');
@@ -872,7 +1009,12 @@ function validateStep2() {
             }
             break;
         case 'campaign':
-            // Campaign options are always valid (has default selection)
+            // Validate budget
+            const budget = parseInt(document.getElementById('campaign-budget').value);
+            if (isNaN(budget) || budget < 500) {
+                AmbiletNotifications.error('Bugetul minim este 500 RON');
+                return false;
+            }
             break;
     }
     return true;
@@ -892,11 +1034,11 @@ function calculateOrderSummary() {
             const endDate = new Date(document.getElementById('featuring-end').value);
             const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
-            const prices = { home: 99, category: 69, genre: 59, city: 49 };
+            const prices = servicePricing.featuring;
             const labels = { home: 'Pagina Principala', category: 'Pagina Categorie', genre: 'Pagina Gen', city: 'Pagina Oras' };
 
             locations.forEach(loc => {
-                const price = prices[loc.value] * days;
+                const price = (prices[loc.value] || 49) * days;
                 items.push({ name: labels[loc.value] + ' (' + days + ' zile)', price });
                 total += price;
             });
@@ -904,10 +1046,9 @@ function calculateOrderSummary() {
 
         case 'email':
             const audience = document.querySelector('input[name="email_audience"]:checked').value;
-            const counts = { all: 250000, filtered: 45000, own: 0 };
             const audienceLabels = { all: 'Baza Completa', filtered: 'Audienta Filtrata', own: 'Clientii Tai' };
-            const emailCount = counts[audience];
-            const emailPrice = emailCount * 0.05;
+            const emailCount = emailAudiences[audience]?.count || 0;
+            const emailPrice = emailCount * (servicePricing.email.per_email || 0.05);
             items.push({ name: 'Campanie Email - ' + audienceLabels[audience] + ' (~' + AmbiletUtils.formatNumber(emailCount) + ' emailuri)', price: emailPrice });
             total = emailPrice;
             break;
@@ -915,12 +1056,12 @@ function calculateOrderSummary() {
         case 'tracking':
             const trackingPlatforms = document.querySelectorAll('input[name="tracking_platforms[]"]:checked');
             const duration = parseInt(document.getElementById('tracking-duration').value);
-            const discounts = { 1: 0, 3: 0.1, 6: 0.15, 12: 0.25 };
-            const platformPrice = 49;
+            const discounts = servicePricing.tracking.discounts || { 1: 0, 3: 0.1, 6: 0.15, 12: 0.25 };
+            const platformPrice = servicePricing.tracking.per_platform_monthly || 49;
 
             trackingPlatforms.forEach(p => {
                 const platformLabels = { facebook: 'Facebook Pixel', google: 'Google Ads', tiktok: 'TikTok Pixel' };
-                let price = platformPrice * duration * (1 - discounts[duration]);
+                let price = platformPrice * duration * (1 - (discounts[duration] || 0));
                 items.push({ name: platformLabels[p.value] + ' (' + duration + ' luni)', price });
                 total += price;
             });
@@ -928,10 +1069,10 @@ function calculateOrderSummary() {
 
         case 'campaign':
             const campaignType = document.querySelector('input[name="campaign_type"]:checked').value;
-            const campaignPrices = { basic: 499, standard: 899, premium: 1499 };
+            const campaignPrices = servicePricing.campaign;
             const campaignLabels = { basic: 'Campanie Basic', standard: 'Campanie Standard', premium: 'Campanie Premium' };
-            items.push({ name: campaignLabels[campaignType], price: campaignPrices[campaignType] });
-            total = campaignPrices[campaignType];
+            items.push({ name: campaignLabels[campaignType], price: campaignPrices[campaignType] || 499 });
+            total = campaignPrices[campaignType] || 499;
             break;
     }
 
@@ -963,8 +1104,8 @@ function setupPaymentMethodToggle() {
 function setupEmailCostCalculation() {
     document.querySelectorAll('input[name="email_audience"]').forEach(radio => {
         radio.addEventListener('change', function() {
-            const counts = { all: 250000, filtered: 45000, own: 0 };
-            const cost = counts[this.value] * 0.05;
+            const count = emailAudiences[this.value]?.count || 0;
+            const cost = count * (servicePricing.email.per_email || 0.05);
             document.getElementById('email-cost-estimate').textContent = AmbiletUtils.formatCurrency(cost);
         });
     });
@@ -978,6 +1119,8 @@ document.getElementById('service-event').addEventListener('change', function() {
         document.getElementById('event-title').textContent = event.title;
         document.getElementById('event-date').textContent = AmbiletUtils.formatDate(event.date);
         document.getElementById('event-venue').textContent = event.venue || '';
+        // Load email audiences for this event
+        loadEmailAudiences(this.value);
     } else {
         document.getElementById('event-preview').classList.add('hidden');
     }
