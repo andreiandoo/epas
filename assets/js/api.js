@@ -267,6 +267,11 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/services/orders' || endpoint.includes('/organizer/services/orders?')) return 'organizer.services.orders';
         if (endpoint === '/organizer/services' || endpoint.includes('/organizer/services?')) return 'organizer.services';
 
+        // Admin endpoints
+        if (endpoint === '/admin/services/pricing') return 'admin.services.pricing';
+        if (endpoint.match(/\/admin\/services\/orders\/[\w-]+$/)) return 'admin.services.order';
+        if (endpoint === '/admin/services/orders' || endpoint.includes('/admin/services/orders?')) return 'admin.services.orders';
+
         return null; // unknown endpoint - will cause error
     },
 
@@ -414,6 +419,12 @@ const AmbiletAPI = {
         const serviceOrderMatch = endpoint.match(/\/organizer\/services\/orders\/([\w-]+)$/);
         if (serviceOrderMatch) {
             return `order_id=${encodeURIComponent(serviceOrderMatch[1])}`;
+        }
+
+        // Admin service order endpoints - extract order ID
+        const adminServiceOrderMatch = endpoint.match(/\/admin\/services\/orders\/([\w-]+)$/);
+        if (adminServiceOrderMatch) {
+            return `order_id=${encodeURIComponent(adminServiceOrderMatch[1])}`;
         }
 
         // Pass through query params

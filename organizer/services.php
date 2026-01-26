@@ -344,45 +344,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                     <!-- Email Marketing Options -->
                     <div id="email-options" class="hidden space-y-4">
-                        <label class="label">Audienta Email</label>
+                        <label class="label">Selecteaza Audienta</label>
                         <div class="space-y-3">
                             <label class="cursor-pointer block">
-                                <input type="radio" name="email_audience" value="all" class="peer sr-only" checked>
+                                <input type="radio" name="email_audience" value="own" class="peer sr-only" checked>
                                 <div class="p-4 border-2 border-border rounded-xl peer-checked:border-accent peer-checked:bg-accent/5">
-                                    <div class="flex justify-between items-center">
-                                        <div>
-                                            <p class="font-medium text-secondary">Baza Completa</p>
-                                            <p class="text-sm text-muted">Trimite catre toti utilizatorii activi</p>
-                                        </div>
-                                        <div class="text-right">
-                                            <p class="text-lg font-bold text-accent" id="audience-all-count">~250,000</p>
-                                            <p class="text-xs text-muted">utilizatori</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </label>
-                            <label class="cursor-pointer block">
-                                <input type="radio" name="email_audience" value="filtered" class="peer sr-only">
-                                <div class="p-4 border-2 border-border rounded-xl peer-checked:border-accent peer-checked:bg-accent/5">
-                                    <div class="flex justify-between items-center">
-                                        <div>
-                                            <p class="font-medium text-secondary">Audienta Filtrata</p>
-                                            <p class="text-sm text-muted">Utilizatori din orasul/categoria evenimentului</p>
-                                        </div>
-                                        <div class="text-right">
-                                            <p class="text-lg font-bold text-accent" id="audience-filtered-count">~45,000</p>
-                                            <p class="text-xs text-muted">utilizatori</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </label>
-                            <label class="cursor-pointer block">
-                                <input type="radio" name="email_audience" value="own" class="peer sr-only">
-                                <div class="p-4 border-2 border-border rounded-xl peer-checked:border-accent peer-checked:bg-accent/5">
-                                    <div class="flex justify-between items-center">
-                                        <div>
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex-1">
                                             <p class="font-medium text-secondary">Clientii Tai</p>
-                                            <p class="text-sm text-muted">Doar participantii de la evenimentele tale anterioare</p>
+                                            <p class="text-sm text-muted">Participantii de la evenimentele tale anterioare</p>
+                                            <p class="text-xs text-accent font-semibold mt-1">0.40 RON / email</p>
                                         </div>
                                         <div class="text-right">
                                             <p class="text-lg font-bold text-accent" id="audience-own-count">0</p>
@@ -391,14 +362,130 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     </div>
                                 </div>
                             </label>
+                            <label class="cursor-pointer block">
+                                <input type="radio" name="email_audience" value="marketplace" class="peer sr-only">
+                                <div class="p-4 border-2 border-border rounded-xl peer-checked:border-accent peer-checked:bg-accent/5">
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex-1">
+                                            <p class="font-medium text-secondary">Baza de Date Marketplace</p>
+                                            <p class="text-sm text-muted">Toti utilizatorii activi din platforma</p>
+                                            <p class="text-xs text-accent font-semibold mt-1">0.50 RON / email</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-lg font-bold text-accent" id="audience-marketplace-count">~250,000</p>
+                                            <p class="text-xs text-muted">utilizatori</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </label>
                         </div>
+
+                        <!-- Audience Filters -->
+                        <div class="border border-border rounded-xl p-4 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <p class="font-medium text-secondary">Filtreaza Audienta</p>
+                                <button type="button" onclick="resetEmailFilters()" class="text-sm text-primary hover:underline">Reseteaza filtre</button>
+                            </div>
+
+                            <!-- Age Range -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="label text-xs">Varsta minima</label>
+                                    <select id="email-filter-age-min" class="input w-full text-sm" onchange="updateEmailAudienceCount()">
+                                        <option value="">Orice</option>
+                                        <option value="18">18+</option>
+                                        <option value="25">25+</option>
+                                        <option value="30">30+</option>
+                                        <option value="35">35+</option>
+                                        <option value="40">40+</option>
+                                        <option value="50">50+</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="label text-xs">Varsta maxima</label>
+                                    <select id="email-filter-age-max" class="input w-full text-sm" onchange="updateEmailAudienceCount()">
+                                        <option value="">Orice</option>
+                                        <option value="25">pana la 25</option>
+                                        <option value="30">pana la 30</option>
+                                        <option value="35">pana la 35</option>
+                                        <option value="40">pana la 40</option>
+                                        <option value="50">pana la 50</option>
+                                        <option value="65">pana la 65</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- City -->
+                            <div>
+                                <label class="label text-xs">Oras</label>
+                                <select id="email-filter-city" class="input w-full text-sm" onchange="updateEmailAudienceCount()">
+                                    <option value="">Toate orasele</option>
+                                </select>
+                            </div>
+
+                            <!-- Event Type (Category) -->
+                            <div>
+                                <label class="label text-xs">Tip Eveniment (Interese)</label>
+                                <select id="email-filter-category" class="input w-full text-sm" onchange="updateEmailAudienceCount()">
+                                    <option value="">Toate categoriile</option>
+                                </select>
+                            </div>
+
+                            <!-- Music Genre -->
+                            <div>
+                                <label class="label text-xs">Gen Muzical (Interese)</label>
+                                <select id="email-filter-genre" class="input w-full text-sm" onchange="updateEmailAudienceCount()">
+                                    <option value="">Toate genurile</option>
+                                </select>
+                            </div>
+
+                            <!-- Filtered Count -->
+                            <div class="bg-accent/10 rounded-lg p-3 flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-secondary font-medium">Audienta filtrata</p>
+                                    <p class="text-xs text-muted">Pe baza filtrelor selectate</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xl font-bold text-accent" id="audience-filtered-count">0</p>
+                                    <p class="text-xs text-muted">destinatari</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cost Summary -->
                         <div class="bg-surface rounded-xl p-4">
-                            <p class="text-sm text-muted mb-2">Cost per email: <span class="font-semibold text-secondary">0.05 RON</span></p>
-                            <p class="text-sm text-muted">Cost estimat: <span class="font-bold text-accent" id="email-cost-estimate">12,500 RON</span></p>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-muted">Tip audienta:</span>
+                                <span class="text-sm font-semibold text-secondary" id="email-audience-type-label">Clientii Tai</span>
+                            </div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-muted">Cost per email:</span>
+                                <span class="font-semibold text-secondary" id="email-price-per">0.40 RON</span>
+                            </div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-muted">Nr. destinatari:</span>
+                                <span class="font-semibold text-secondary" id="email-recipient-count">0</span>
+                            </div>
+                            <div class="border-t border-border pt-2 mt-2 flex justify-between items-center">
+                                <span class="text-sm font-medium text-secondary">Cost total estimat:</span>
+                                <span class="text-lg font-bold text-accent" id="email-cost-estimate">0 RON</span>
+                            </div>
                         </div>
+
+                        <div class="bg-blue-50 rounded-xl p-4">
+                            <div class="flex gap-3">
+                                <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <div>
+                                    <p class="text-sm text-blue-800 font-medium">Confidentialitate garantata</p>
+                                    <p class="text-xs text-blue-700 mt-1">Nu vei avea acces la datele personale ale utilizatorilor (nume, email, telefon). Emailurile sunt trimise direct prin platforma noastra.</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div>
-                            <label class="label">Data Trimitere *</label>
+                            <label class="label">Data si Ora Trimitere *</label>
                             <input type="datetime-local" id="email-send-date" class="input w-full" required>
+                            <p class="text-xs text-muted mt-1">Programeaza trimiterea pentru momentul optim</p>
                         </div>
                     </div>
 
@@ -614,14 +701,18 @@ let events = [];
 let activeServices = [];
 let servicePricing = {
     featuring: { home: 99, category: 69, genre: 59, city: 49 },
-    email: { per_email: 0.05, minimum: 100 },
+    email: { own_per_email: 0.40, marketplace_per_email: 0.50, minimum: 100 },
     tracking: { per_platform_monthly: 49, discounts: { 1: 0, 3: 0.10, 6: 0.15, 12: 0.25 } },
     campaign: { basic: 499, standard: 899, premium: 1499 }
 };
 let emailAudiences = {
-    all: { count: 250000, description: 'Toti utilizatorii activi' },
-    filtered: { count: 45000, description: 'Utilizatori din orasul/categoria evenimentului' },
-    own: { count: 0, description: 'Clientii tai de la evenimente anterioare' }
+    own: { count: 0, filtered_count: 0 },
+    marketplace: { count: 250000, filtered_count: 250000 }
+};
+let emailFilterOptions = {
+    cities: [],
+    categories: [],
+    genres: []
 };
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -629,8 +720,9 @@ document.addEventListener('DOMContentLoaded', function() {
     loadEvents();
     loadActiveServices();
     loadStats();
+    loadEmailFilterOptions();
     setupPaymentMethodToggle();
-    setupEmailCostCalculation();
+    setupEmailAudienceToggle();
     setupDateValidation();
     checkUrlParams();
 });
@@ -684,8 +776,17 @@ async function loadPricing() {
 }
 
 function updatePricingUI() {
+    // Update email prices in the UI
+    const ownPriceEl = document.querySelector('#email-options input[value="own"]')?.closest('label')?.querySelector('.text-accent.font-semibold');
+    if (ownPriceEl) {
+        ownPriceEl.textContent = AmbiletUtils.formatCurrency(servicePricing.email.own_per_email || 0.40) + ' / email';
+    }
+    const marketplacePriceEl = document.querySelector('#email-options input[value="marketplace"]')?.closest('label')?.querySelector('.text-accent.font-semibold');
+    if (marketplacePriceEl) {
+        marketplacePriceEl.textContent = AmbiletUtils.formatCurrency(servicePricing.email.marketplace_per_email || 0.50) + ' / email';
+    }
+
     // Update featuring prices in the UI
-    const featuringPrices = document.querySelectorAll('#featuring-options .text-primary');
     const priceMap = {
         home: servicePricing.featuring.home,
         category: servicePricing.featuring.category,
@@ -716,32 +817,9 @@ function updatePricingUI() {
             priceEl.textContent = AmbiletUtils.formatCurrency(campaignPrices[input.value]);
         }
     });
-}
 
-async function loadEmailAudiences(eventId) {
-    try {
-        const params = eventId ? { event_id: eventId } : {};
-        const response = await AmbiletAPI.get('/organizer/services/email-audiences', params);
-        if (response.success && response.data.audiences) {
-            emailAudiences = response.data.audiences;
-            updateEmailAudienceUI();
-        }
-    } catch (e) {
-        console.log('Using default audiences');
-        updateEmailAudienceUI();
-    }
-}
-
-function updateEmailAudienceUI() {
-    document.getElementById('audience-all-count').textContent = '~' + AmbiletUtils.formatNumber(emailAudiences.all?.count || 250000);
-    document.getElementById('audience-filtered-count').textContent = '~' + AmbiletUtils.formatNumber(emailAudiences.filtered?.count || 45000);
-    document.getElementById('audience-own-count').textContent = AmbiletUtils.formatNumber(emailAudiences.own?.count || 0);
-
-    // Update cost estimate based on selected audience
-    const selectedAudience = document.querySelector('input[name="email_audience"]:checked')?.value || 'all';
-    const count = emailAudiences[selectedAudience]?.count || 0;
-    const cost = count * (servicePricing.email.per_email || 0.05);
-    document.getElementById('email-cost-estimate').textContent = AmbiletUtils.formatCurrency(cost);
+    // Update the email price per label
+    updateEmailAudienceUI();
 }
 
 function setupDateValidation() {
@@ -994,6 +1072,13 @@ function validateStep2() {
             }
             break;
         case 'email':
+            // Validate recipient count
+            const emailAudienceTypeVal = document.querySelector('input[name="email_audience"]:checked').value;
+            const recipientCount = emailAudiences[emailAudienceTypeVal]?.filtered_count || 0;
+            if (recipientCount < 1) {
+                AmbiletNotifications.error('Nu exista destinatari pentru filtrele selectate');
+                return false;
+            }
             // Validate send date
             const sendDate = document.getElementById('email-send-date').value;
             if (!sendDate) {
@@ -1045,12 +1130,22 @@ function calculateOrderSummary() {
             break;
 
         case 'email':
-            const audience = document.querySelector('input[name="email_audience"]:checked').value;
-            const audienceLabels = { all: 'Baza Completa', filtered: 'Audienta Filtrata', own: 'Clientii Tai' };
-            const emailCount = emailAudiences[audience]?.count || 0;
-            const emailPrice = emailCount * (servicePricing.email.per_email || 0.05);
-            items.push({ name: 'Campanie Email - ' + audienceLabels[audience] + ' (~' + AmbiletUtils.formatNumber(emailCount) + ' emailuri)', price: emailPrice });
-            total = emailPrice;
+            const emailAudienceType = document.querySelector('input[name="email_audience"]:checked').value;
+            const emailAudienceLabels = { own: 'Clientii Tai', marketplace: 'Baza Marketplace' };
+            const emailCount = emailAudiences[emailAudienceType]?.filtered_count || 0;
+            const emailPricePerUnit = emailAudienceType === 'own'
+                ? (servicePricing.email.own_per_email || 0.40)
+                : (servicePricing.email.marketplace_per_email || 0.50);
+            const emailTotalPrice = emailCount * emailPricePerUnit;
+            items.push({
+                name: 'Campanie Email - ' + emailAudienceLabels[emailAudienceType],
+                price: null
+            });
+            items.push({
+                name: AmbiletUtils.formatNumber(emailCount) + ' destinatari x ' + AmbiletUtils.formatCurrency(emailPricePerUnit),
+                price: emailTotalPrice
+            });
+            total = emailTotalPrice;
             break;
 
         case 'tracking':
@@ -1101,14 +1196,137 @@ function setupPaymentMethodToggle() {
     });
 }
 
-function setupEmailCostCalculation() {
+async function loadEmailFilterOptions() {
+    try {
+        // Load cities
+        const citiesRes = await AmbiletAPI.get('/cities');
+        if (citiesRes.success && citiesRes.data.cities) {
+            emailFilterOptions.cities = citiesRes.data.cities;
+            const citySelect = document.getElementById('email-filter-city');
+            citiesRes.data.cities.forEach(city => {
+                const opt = document.createElement('option');
+                opt.value = city.slug || city.id;
+                opt.textContent = city.name;
+                citySelect.appendChild(opt);
+            });
+        }
+
+        // Load categories
+        const catRes = await AmbiletAPI.get('/event-categories');
+        if (catRes.success && catRes.data.categories) {
+            emailFilterOptions.categories = catRes.data.categories;
+            const catSelect = document.getElementById('email-filter-category');
+            catRes.data.categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.slug || cat.id;
+                opt.textContent = cat.name;
+                catSelect.appendChild(opt);
+            });
+        }
+
+        // Load genres
+        const genreRes = await AmbiletAPI.get('/event-genres');
+        if (genreRes.success && genreRes.data.genres) {
+            emailFilterOptions.genres = genreRes.data.genres;
+            const genreSelect = document.getElementById('email-filter-genre');
+            genreRes.data.genres.forEach(genre => {
+                const opt = document.createElement('option');
+                opt.value = genre.slug || genre.id;
+                opt.textContent = genre.name;
+                genreSelect.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.log('Email filter options will load when API is available');
+    }
+}
+
+function setupEmailAudienceToggle() {
     document.querySelectorAll('input[name="email_audience"]').forEach(radio => {
         radio.addEventListener('change', function() {
-            const count = emailAudiences[this.value]?.count || 0;
-            const cost = count * (servicePricing.email.per_email || 0.05);
-            document.getElementById('email-cost-estimate').textContent = AmbiletUtils.formatCurrency(cost);
+            updateEmailAudienceUI();
+            updateEmailAudienceCount();
         });
     });
+}
+
+function updateEmailAudienceUI() {
+    const audienceType = document.querySelector('input[name="email_audience"]:checked')?.value || 'own';
+    const isOwn = audienceType === 'own';
+
+    // Update labels
+    document.getElementById('email-audience-type-label').textContent = isOwn ? 'Clientii Tai' : 'Baza Marketplace';
+    document.getElementById('email-price-per').textContent = isOwn
+        ? AmbiletUtils.formatCurrency(servicePricing.email.own_per_email || 0.40)
+        : AmbiletUtils.formatCurrency(servicePricing.email.marketplace_per_email || 0.50);
+}
+
+async function updateEmailAudienceCount() {
+    const audienceType = document.querySelector('input[name="email_audience"]:checked')?.value || 'own';
+    const eventId = document.getElementById('service-event').value;
+
+    // Collect filters
+    const filters = {
+        audience_type: audienceType,
+        event_id: eventId,
+        age_min: document.getElementById('email-filter-age-min').value || null,
+        age_max: document.getElementById('email-filter-age-max').value || null,
+        city: document.getElementById('email-filter-city').value || null,
+        category: document.getElementById('email-filter-category').value || null,
+        genre: document.getElementById('email-filter-genre').value || null
+    };
+
+    // Remove null values
+    Object.keys(filters).forEach(k => filters[k] === null && delete filters[k]);
+
+    try {
+        const response = await AmbiletAPI.get('/organizer/services/email-audiences', filters);
+        if (response.success && response.data) {
+            const count = response.data.filtered_count || 0;
+            const baseCount = response.data.total_count || 0;
+
+            // Update UI counts
+            document.getElementById('audience-filtered-count').textContent = AmbiletUtils.formatNumber(count);
+            document.getElementById('email-recipient-count').textContent = AmbiletUtils.formatNumber(count);
+
+            if (audienceType === 'own') {
+                document.getElementById('audience-own-count').textContent = AmbiletUtils.formatNumber(baseCount);
+                emailAudiences.own.count = baseCount;
+                emailAudiences.own.filtered_count = count;
+            } else {
+                document.getElementById('audience-marketplace-count').textContent = '~' + AmbiletUtils.formatNumber(baseCount);
+                emailAudiences.marketplace.count = baseCount;
+                emailAudiences.marketplace.filtered_count = count;
+            }
+
+            // Calculate cost
+            const pricePerEmail = audienceType === 'own'
+                ? (servicePricing.email.own_per_email || 0.40)
+                : (servicePricing.email.marketplace_per_email || 0.50);
+            const totalCost = count * pricePerEmail;
+            document.getElementById('email-cost-estimate').textContent = AmbiletUtils.formatCurrency(totalCost);
+        }
+    } catch (e) {
+        console.log('Using default audience counts');
+        // Use cached values
+        const count = emailAudiences[audienceType]?.filtered_count || 0;
+        document.getElementById('audience-filtered-count').textContent = AmbiletUtils.formatNumber(count);
+        document.getElementById('email-recipient-count').textContent = AmbiletUtils.formatNumber(count);
+
+        const pricePerEmail = audienceType === 'own'
+            ? (servicePricing.email.own_per_email || 0.40)
+            : (servicePricing.email.marketplace_per_email || 0.50);
+        document.getElementById('email-cost-estimate').textContent = AmbiletUtils.formatCurrency(count * pricePerEmail);
+    }
+}
+
+function resetEmailFilters() {
+    document.getElementById('email-filter-age-min').value = '';
+    document.getElementById('email-filter-age-max').value = '';
+    document.getElementById('email-filter-city').value = '';
+    document.getElementById('email-filter-category').value = '';
+    document.getElementById('email-filter-genre').value = '';
+    updateEmailAudienceCount();
 }
 
 document.getElementById('service-event').addEventListener('change', function() {
@@ -1119,8 +1337,8 @@ document.getElementById('service-event').addEventListener('change', function() {
         document.getElementById('event-title').textContent = event.title;
         document.getElementById('event-date').textContent = AmbiletUtils.formatDate(event.date);
         document.getElementById('event-venue').textContent = event.venue || '';
-        // Load email audiences for this event
-        loadEmailAudiences(this.value);
+        // Update email audience counts for this event
+        updateEmailAudienceCount();
     } else {
         document.getElementById('event-preview').classList.add('hidden');
     }
@@ -1156,8 +1374,16 @@ document.getElementById('service-form').addEventListener('submit', async functio
             data.end_date = document.getElementById('featuring-end').value;
             break;
         case 'email':
-            data.audience = document.querySelector('input[name="email_audience"]:checked').value;
+            data.audience_type = document.querySelector('input[name="email_audience"]:checked').value;
             data.send_date = document.getElementById('email-send-date').value;
+            data.recipient_count = emailAudiences[data.audience_type]?.filtered_count || 0;
+            data.filters = {
+                age_min: document.getElementById('email-filter-age-min').value || null,
+                age_max: document.getElementById('email-filter-age-max').value || null,
+                city: document.getElementById('email-filter-city').value || null,
+                category: document.getElementById('email-filter-category').value || null,
+                genre: document.getElementById('email-filter-genre').value || null
+            };
             break;
         case 'tracking':
             data.platforms = Array.from(document.querySelectorAll('input[name="tracking_platforms[]"]:checked')).map(c => c.value);

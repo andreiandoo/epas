@@ -35,11 +35,20 @@ Schema::create('service_orders', function (Blueprint $table) {
 
     Email Marketing:
     {
-        "audience": "filtered", // "all", "filtered", "own"
-        "recipient_count": 45000,
+        "audience_type": "own", // "own" (organizer's customers) or "marketplace" (all users)
+        "filters": {
+            "age_min": 25,
+            "age_max": 45,
+            "city": "bucuresti",
+            "category": "concerte",
+            "genre": "rock"
+        },
+        "recipient_count": 12500,
+        "price_per_email": 0.40, // 0.40 for own, 0.50 for marketplace
         "send_date": "2024-02-01T10:00:00Z",
         "sent_at": null,
-        "sent_count": 0
+        "sent_count": 0,
+        "brevo_campaign_id": null // Set after campaign is created in Brevo
     }
 
     Ad Tracking:
@@ -124,7 +133,8 @@ Schema::create('service_types', function (Blueprint $table) {
             "city": {"daily_rate": 49}
         },
         "email": {
-            "per_email": 0.05,
+            "own_per_email": 0.40,        // Price when sending to organizer's own customers
+            "marketplace_per_email": 0.50, // Price when sending to full marketplace database
             "minimum": 100
         },
         "tracking": {
@@ -219,33 +229,40 @@ Get available service types with current pricing.
 
 ### GET /organizer/services/email-audiences
 
-Get available email audiences with recipient counts.
+Get available email audiences with recipient counts. Supports filtering to narrow down the audience.
 
 **Query Parameters:**
-- `event_id`: The event to get audience data for
+- `event_id` (required): The event to get audience data for
+- `audience_type` (required): "own" (organizer's customers) or "marketplace" (all platform users)
+- `age_min` (optional): Minimum age filter (e.g., 18, 25, 30)
+- `age_max` (optional): Maximum age filter (e.g., 25, 35, 50)
+- `city` (optional): City slug filter (e.g., "bucuresti")
+- `category` (optional): Event category slug filter (e.g., "concerte")
+- `genre` (optional): Music genre slug filter (e.g., "rock")
 
 **Response:**
 ```json
 {
     "success": true,
     "data": {
-        "audiences": {
-            "all": {
-                "count": 250000,
-                "description": "Toti utilizatorii activi"
-            },
-            "filtered": {
-                "count": 45000,
-                "description": "Utilizatori din Bucuresti interesati de Concerte"
-            },
-            "own": {
-                "count": 1250,
-                "description": "Clientii tai de la evenimente anterioare"
-            }
-        }
+        "audience_type": "own",
+        "total_count": 5000,      // Total before filters
+        "filtered_count": 1250,   // Count after applying filters
+        "filters_applied": {
+            "age_min": 25,
+            "age_max": 45,
+            "city": "bucuresti"
+        },
+        "price_per_email": 0.40   // Based on audience_type
     }
 }
 ```
+
+**Important Notes:**
+- Organizers NEVER see individual customer data (name, email, phone)
+- Only aggregate counts are returned
+- Filtering is done server-side to protect customer privacy
+- The email campaign is sent through the platform (Brevo), not exposed to the organizer
 
 ### POST /organizer/services/orders
 
@@ -382,6 +399,107 @@ Cancel a pending service order.
     "message": "Comanda a fost anulata"
 }
 ```
+
+## Admin API Endpoints
+
+### GET /admin/services/pricing
+
+Get current service pricing configuration.
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "email": {
+            "own_per_email": 0.40,
+            "marketplace_per_email": 0.50,
+            "minimum": 100
+        },
+        "featuring": {
+            "home": 99,
+            "category": 69,
+            "genre": 59,
+            "city": 49
+        },
+        "tracking": {
+            "per_platform_monthly": 49,
+            "discounts": {
+                "1": 0,
+                "3": 0.10,
+                "6": 0.15,
+                "12": 0.25
+            }
+        },
+        "campaign": {
+            "basic": 499,
+            "standard": 899,
+            "premium": 1499
+        }
+    }
+}
+```
+
+### POST /admin/services/pricing
+
+Update service pricing configuration.
+
+**Request Body:**
+```json
+{
+    "email": {
+        "own_per_email": 0.40,
+        "marketplace_per_email": 0.50,
+        "minimum": 100
+    },
+    "featuring": {
+        "home": 99,
+        "category": 69,
+        "genre": 59,
+        "city": 49
+    },
+    "tracking": {
+        "per_platform_monthly": 49,
+        "discounts": {
+            "1": 0,
+            "3": 0.10,
+            "6": 0.15,
+            "12": 0.25
+        }
+    },
+    "campaign": {
+        "basic": 499,
+        "standard": 899,
+        "premium": 1499
+    }
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Pricing updated successfully"
+}
+```
+
+### GET /admin/services/orders
+
+List all service orders (admin view).
+
+**Query Parameters:**
+- `status` (optional): Filter by order status
+- `type` (optional): Filter by service type
+- `organizer_id` (optional): Filter by organizer
+- `page`, `per_page`: Pagination
+
+### GET /admin/services/orders/{id}
+
+Get service order details (admin view).
+
+### PUT /admin/services/orders/{id}
+
+Update service order (admin actions like status change, notes, assignment).
 
 ## Admin Panel Integration
 

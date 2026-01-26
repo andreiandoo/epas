@@ -1301,10 +1301,15 @@ switch ($action) {
         break;
 
     case 'organizer.services.email-audiences':
-        // GET - Get available email audiences with counts
-        $eventId = $_GET['event_id'] ?? '';
+        // GET - Get available email audiences with counts (supports filters)
         $params = [];
-        if ($eventId) $params['event_id'] = $eventId;
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        if (isset($_GET['audience_type'])) $params['audience_type'] = $_GET['audience_type'];
+        if (isset($_GET['age_min'])) $params['age_min'] = $_GET['age_min'];
+        if (isset($_GET['age_max'])) $params['age_max'] = $_GET['age_max'];
+        if (isset($_GET['city'])) $params['city'] = $_GET['city'];
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        if (isset($_GET['genre'])) $params['genre'] = $_GET['genre'];
         $endpoint = '/organizer/services/email-audiences' . (!empty($params) ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;
@@ -1324,6 +1329,45 @@ switch ($action) {
     case 'organizer.services.pricing':
         // GET - Get dynamic service pricing
         $endpoint = '/organizer/services/pricing';
+        $requiresAuth = true;
+        break;
+
+    // Admin endpoints
+    case 'admin.services.pricing':
+        // GET/POST - Admin service pricing configuration
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $method = 'POST';
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/admin/services/pricing';
+        $requiresAuth = true;
+        break;
+
+    case 'admin.services.orders':
+        // GET - Admin list all service orders
+        $params = [];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['organizer_id'])) $params['organizer_id'] = $_GET['organizer_id'];
+        if (isset($_GET['page'])) $params['page'] = $_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = $_GET['per_page'];
+        $endpoint = '/admin/services/orders' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'admin.services.order':
+        // GET/PUT - Admin single service order
+        $orderId = $_GET['order_id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order_id parameter']);
+            exit;
+        }
+        if ($_SERVER['REQUEST_METHOD'] === 'PUT' || $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $method = 'PUT';
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/admin/services/orders/' . urlencode($orderId);
         $requiresAuth = true;
         break;
 
