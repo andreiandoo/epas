@@ -134,6 +134,16 @@ class MarketplaceOrganizer extends Authenticatable
         return $this->hasOne(MarketplaceOrganizerBankAccount::class)->where('is_primary', true);
     }
 
+    public function teamMembers(): HasMany
+    {
+        return $this->hasMany(MarketplaceOrganizerTeamMember::class);
+    }
+
+    public function activeTeamMembers(): HasMany
+    {
+        return $this->hasMany(MarketplaceOrganizerTeamMember::class)->where('status', 'active');
+    }
+
     // =========================================
     // Status Checks
     // =========================================

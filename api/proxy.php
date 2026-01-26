@@ -990,6 +990,48 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // ==================== ORGANIZER TEAM ====================
+
+    case 'organizer.team':
+        $method = 'GET';
+        $endpoint = '/organizer/team';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.invite':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/invite';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.update':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/update';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.remove':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/remove';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.resend-invite':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/resend-invite';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.resend-all-invites':
+        $method = 'POST';
+        $endpoint = '/organizer/team/resend-all-invites';
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER DASHBOARD ====================
 
     case 'organizer.dashboard':

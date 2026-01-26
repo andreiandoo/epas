@@ -1451,6 +1451,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\TaxReportController as 
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\InvitationsController as OrganizerInvitationsController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\RefundReportController as OrganizerRefundReportController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\ServiceOrderController as OrganizerServiceOrderController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\TeamController as OrganizerTeamController;
 
 Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no organizer auth)
@@ -1500,6 +1501,20 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.bank-accounts.delete');
         Route::post('/bank-accounts/{accountId}/primary', [OrganizerAuthController::class, 'setPrimaryBankAccount'])
             ->name('api.marketplace-client.organizer.bank-accounts.primary');
+
+        // Team
+        Route::get('/team', [OrganizerTeamController::class, 'index'])
+            ->name('api.marketplace-client.organizer.team');
+        Route::post('/team/invite', [OrganizerTeamController::class, 'invite'])
+            ->name('api.marketplace-client.organizer.team.invite');
+        Route::post('/team/update', [OrganizerTeamController::class, 'update'])
+            ->name('api.marketplace-client.organizer.team.update');
+        Route::post('/team/remove', [OrganizerTeamController::class, 'remove'])
+            ->name('api.marketplace-client.organizer.team.remove');
+        Route::post('/team/resend-invite', [OrganizerTeamController::class, 'resendInvite'])
+            ->name('api.marketplace-client.organizer.team.resend-invite');
+        Route::post('/team/resend-all-invites', [OrganizerTeamController::class, 'resendAllInvites'])
+            ->name('api.marketplace-client.organizer.team.resend-all-invites');
 
         // Dashboard
         Route::get('/dashboard', [OrganizerDashboardController::class, 'index'])
@@ -1654,6 +1669,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.services.types');
         Route::get('/services/stats', [OrganizerServiceOrderController::class, 'stats'])
             ->name('api.marketplace-client.organizer.services.stats');
+        Route::get('/services/email-audiences', [OrganizerServiceOrderController::class, 'emailAudiences'])
+            ->name('api.marketplace-client.organizer.services.email-audiences');
         Route::get('/services/orders', [OrganizerServiceOrderController::class, 'index'])
             ->name('api.marketplace-client.organizer.services.orders');
         Route::post('/services/orders', [OrganizerServiceOrderController::class, 'store'])

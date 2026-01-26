@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceOrganizer;
+use App\Models\Order;
 use App\Models\ServiceOrder;
 use App\Models\ServiceType;
 use Illuminate\Http\Request;
@@ -316,6 +318,130 @@ class ServiceOrderController extends BaseController
                 'venue' => $order->event->venue_display_name,
                 'image' => $order->event->image_url ?? null,
             ] : null,
+        ]);
+    }
+
+    /**
+     * Get email audience counts for email marketing campaigns
+     */
+    public function emailAudiences(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $audienceType = $request->get('audience_type', 'own');
+        $eventId = $request->get('event_id');
+
+        // Get filter parameters (support both single values and arrays)
+        $ageMin = $request->get('age_min');
+        $ageMax = $request->get('age_max');
+        $cities = $request->get('cities', []);
+        $categories = $request->get('categories', []);
+        $genres = $request->get('genres', []);
+
+        // Normalize to arrays
+        if (!is_array($cities)) $cities = $cities ? [$cities] : [];
+        if (!is_array($categories)) $categories = $categories ? [$categories] : [];
+        if (!is_array($genres)) $genres = $genres ? [$genres] : [];
+
+        if ($audienceType === 'own') {
+            // Own audience: customers who have ordered from this organizer
+            $baseQuery = MarketplaceCustomer::query()
+                ->where('marketplace_client_id', $organizer->marketplace_client_id)
+                ->whereHas('orders', function ($q) use ($organizer) {
+                    $q->where('marketplace_organizer_id', $organizer->id)
+                      ->where('status', 'completed');
+                });
+
+            $totalCount = (clone $baseQuery)->count();
+
+            // Apply filters
+            $filteredQuery = clone $baseQuery;
+
+            if ($ageMin) {
+                $minDate = now()->subYears((int) $ageMin);
+                $filteredQuery->where('birth_date', '<=', $minDate);
+            }
+
+            if ($ageMax) {
+                $maxDate = now()->subYears((int) $ageMax + 1)->addDay();
+                $filteredQuery->where('birth_date', '>=', $maxDate);
+            }
+
+            if (!empty($cities)) {
+                $filteredQuery->where(function ($q) use ($cities) {
+                    foreach ($cities as $city) {
+                        $q->orWhere('city', 'like', "%{$city}%");
+                    }
+                });
+            }
+
+            // Category and genre filtering through orders -> events
+            if (!empty($categories) || !empty($genres)) {
+                $filteredQuery->whereHas('orders', function ($q) use ($organizer, $categories, $genres) {
+                    $q->where('marketplace_organizer_id', $organizer->id)
+                      ->where('status', 'completed')
+                      ->whereHas('marketplaceEvent', function ($eq) use ($categories, $genres) {
+                          if (!empty($categories)) {
+                              $eq->whereIn('event_type_id', $categories);
+                          }
+                          if (!empty($genres)) {
+                              $eq->whereIn('music_genre_id', $genres);
+                          }
+                      });
+                });
+            }
+
+            $filteredCount = $filteredQuery->count();
+        } else {
+            // Marketplace audience: all customers who accepted marketing
+            $baseQuery = MarketplaceCustomer::query()
+                ->where('marketplace_client_id', $organizer->marketplace_client_id)
+                ->where('accepts_marketing', true);
+
+            $totalCount = (clone $baseQuery)->count();
+
+            // Apply filters
+            $filteredQuery = clone $baseQuery;
+
+            if ($ageMin) {
+                $minDate = now()->subYears((int) $ageMin);
+                $filteredQuery->where('birth_date', '<=', $minDate);
+            }
+
+            if ($ageMax) {
+                $maxDate = now()->subYears((int) $ageMax + 1)->addDay();
+                $filteredQuery->where('birth_date', '>=', $maxDate);
+            }
+
+            if (!empty($cities)) {
+                $filteredQuery->where(function ($q) use ($cities) {
+                    foreach ($cities as $city) {
+                        $q->orWhere('city', 'like', "%{$city}%");
+                    }
+                });
+            }
+
+            // Category and genre filtering through orders -> events
+            if (!empty($categories) || !empty($genres)) {
+                $filteredQuery->whereHas('orders', function ($q) use ($categories, $genres) {
+                    $q->where('status', 'completed')
+                      ->whereHas('marketplaceEvent', function ($eq) use ($categories, $genres) {
+                          if (!empty($categories)) {
+                              $eq->whereIn('event_type_id', $categories);
+                          }
+                          if (!empty($genres)) {
+                              $eq->whereIn('music_genre_id', $genres);
+                          }
+                      });
+                });
+            }
+
+            $filteredCount = $filteredQuery->count();
+        }
+
+        return $this->success([
+            'total_count' => $totalCount,
+            'filtered_count' => $filteredCount,
         ]);
     }
 
