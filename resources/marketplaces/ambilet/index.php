@@ -15,15 +15,15 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Slider Section - 3D Coverflow Style -->
-<section class="relative bg-secondary mt-28 mobile:mt-18 py-8 md:py-12 overflow-hidden" id="heroSlider">
+<section class="relative py-8 overflow-hidden bg-secondary mt-28 mobile:mt-18 md:py-12" id="heroSlider">
     <div class="px-4 mx-auto max-w-7xl">
         <!-- Main 3D Carousel -->
         <div class="relative" id="heroSection">
             <!-- Slider Navigation Arrows -->
-            <button id="heroPrev" class="absolute z-30 items-center justify-center flex w-10 h-10 md:w-12 md:h-12 text-white transition-all -translate-y-1/2 rounded-full left-2 md:left-4 top-1/2 bg-black/50 hover:bg-primary shadow-lg">
+            <button id="heroPrev" class="absolute z-30 flex items-center justify-center w-10 h-10 text-white transition-all -translate-y-1/2 rounded-full shadow-lg md:w-12 md:h-12 left-2 md:left-4 top-1/2 bg-black/50 hover:bg-primary">
                 <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
             </button>
-            <button id="heroNext" class="absolute z-30 items-center justify-center flex w-10 h-10 md:w-12 md:h-12 text-white transition-all -translate-y-1/2 rounded-full right-2 md:right-4 top-1/2 bg-black/50 hover:bg-primary shadow-lg">
+            <button id="heroNext" class="absolute z-30 flex items-center justify-center w-10 h-10 text-white transition-all -translate-y-1/2 rounded-full shadow-lg md:w-12 md:h-12 right-2 md:right-4 top-1/2 bg-black/50 hover:bg-primary">
                 <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
 
@@ -46,10 +46,10 @@ require_once __DIR__ . '/includes/header.php';
 
         <!-- Thumbnails Navigation -->
         <div class="mt-6 md:mt-8">
-            <div class="flex justify-center gap-2 md:gap-3 overflow-x-auto pb-2 px-4 thumbnails-scroll" id="heroThumbnails">
+            <div class="flex justify-center gap-2 px-4 pb-2 overflow-x-auto md:gap-3 thumbnails-scroll" id="heroThumbnails">
                 <!-- Thumbnails will be loaded dynamically -->
                 <?php for ($i = 0; $i < 6; $i++): ?>
-                <div class="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg skeleton"></div>
+                <div class="flex-shrink-0 w-16 h-16 rounded-lg md:w-20 md:h-20 skeleton"></div>
                 <?php endfor; ?>
             </div>
         </div>
@@ -62,7 +62,7 @@ require_once __DIR__ . '/includes/header.php';
 <section class="py-10 md:py-14 bg-surface">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="flex items-center justify-between mb-8">
-            <h2 class="text-xl font-bold md:text-2xl text-secondary">Ultimele evenimente adaugate</h2>
+            <h2 class="text-xl font-bold md:text-2xl text-secondary">Ultimele evenimente adăugate</h2>
             <a href="/evenimente" class="items-center hidden gap-2 font-semibold md:flex text-primary">
                 Vezi toate
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,7 +99,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Categories -->
 <section class="py-10 md:py-14 bg-surface">
     <div class="px-4 mx-auto max-w-7xl">
-        <h2 class="mb-8 text-xl font-bold md:text-2xl text-secondary">Exploreaza dupa categorie</h2>
+        <h2 class="mb-8 text-xl font-bold md:text-2xl text-secondary">Explorează dupa categorie</h2>
 
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 md:gap-4" id="categoriesGrid">
             <!-- Categories will be loaded dynamically -->
@@ -117,7 +117,7 @@ require_once __DIR__ . '/includes/header.php';
 <section class="py-10 bg-white md:py-14">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="flex items-center justify-between mb-8">
-            <h2 class="text-xl font-bold md:text-2xl text-secondary">Evenimente dupa oras</h2>
+            <h2 class="text-xl font-bold md:text-2xl text-secondary">Evenimente dupa oraș</h2>
             <a href="/orase" class="items-center hidden gap-2 font-semibold md:flex text-primary">
                 Toate orasele
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -437,11 +437,11 @@ const HeroSlider = {
                             <h3 class="coverflow-slide-title">${this.escapeHtml(event.title || event.name || 'Eveniment')}</h3>
                             <div class="coverflow-slide-meta">
                                 <span class="coverflow-slide-date">
-                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                     ${formattedDate}
                                 </span>
                                 <span class="coverflow-slide-location">
-                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                     ${this.escapeHtml(location)}
                                 </span>
                             </div>
@@ -460,7 +460,7 @@ const HeroSlider = {
             const image = event.homepage_featured_image || event.featured_image || event.image || '/assets/images/hero-default.jpg';
             return `
                 <div class="thumbnail-item ${index === 0 ? 'active' : ''}" data-index="${index}">
-                    <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" class="w-16 h-16 md:w-20 md:h-20 object-cover" loading="lazy">
+                    <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" class="object-cover w-16 h-16 md:w-20 md:h-20" loading="lazy">
                 </div>
             `;
         }).join('');

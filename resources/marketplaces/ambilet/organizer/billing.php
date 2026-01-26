@@ -257,7 +257,7 @@ const BillingManager = {
                 status: this.currentFilter !== 'all' ? this.currentFilter : ''
             });
 
-            const response = await window.api.fetch(`/organizer/invoices?${params}`);
+            const response = await AmbiletAPI.request(`/organizer/invoices?${params}`);
             if (response.success) {
                 this.invoices = response.data.invoices || [];
                 this.totalInvoices = response.data.total || 0;
@@ -278,7 +278,7 @@ const BillingManager = {
      */
     async loadBillingInfo() {
         try {
-            const response = await window.api.fetch('/organizer/billing-info');
+            const response = await AmbiletAPI.request('/organizer/billing-info');
             if (response.success) {
                 this.billingInfo = response.data;
                 this.renderBillingInfo();
@@ -293,7 +293,7 @@ const BillingManager = {
      */
     async loadPaymentMethods() {
         try {
-            const response = await window.api.fetch('/organizer/payment-methods');
+            const response = await AmbiletAPI.request('/organizer/payment-methods');
             if (response.success) {
                 this.paymentMethods = response.data.methods || [];
                 this.renderPaymentMethods();
@@ -544,7 +544,7 @@ const BillingManager = {
      */
     async viewInvoice(invoiceId) {
         try {
-            const response = await window.api.fetch(`/organizer/invoices/${invoiceId}`);
+            const response = await AmbiletAPI.request(`/organizer/invoices/${invoiceId}`);
             if (response.success) {
                 this.currentInvoice = response.data;
                 this.renderInvoiceModal(response.data);

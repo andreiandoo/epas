@@ -342,7 +342,7 @@ const TeamManager = {
      */
     async loadTeam() {
         try {
-            const response = await window.api.fetch('/organizer/team');
+            const response = await AmbiletAPI.request('/organizer/team');
             if (response.success) {
                 this.members = response.data.members || [];
                 this.currentOrganizer = response.data.organizer;
@@ -579,7 +579,7 @@ const TeamManager = {
         };
 
         try {
-            const response = await window.api.fetch('/organizer/team/invite', {
+            const response = await AmbiletAPI.request('/organizer/team/invite', {
                 method: 'POST',
                 body: JSON.stringify(data)
             });
@@ -653,7 +653,7 @@ const TeamManager = {
         };
 
         try {
-            const response = await window.api.fetch('/organizer/team/update', {
+            const response = await AmbiletAPI.request('/organizer/team/update', {
                 method: 'POST',
                 body: JSON.stringify(data)
             });
@@ -693,7 +693,7 @@ const TeamManager = {
         const memberId = document.getElementById('delete-member-id').value;
 
         try {
-            const response = await window.api.fetch('/organizer/team/remove', {
+            const response = await AmbiletAPI.request('/organizer/team/remove', {
                 method: 'POST',
                 body: JSON.stringify({ member_id: memberId })
             });
@@ -716,7 +716,7 @@ const TeamManager = {
      */
     async resendInvite(memberId) {
         try {
-            const response = await window.api.fetch('/organizer/team/resend-invite', {
+            const response = await AmbiletAPI.request('/organizer/team/resend-invite', {
                 method: 'POST',
                 body: JSON.stringify({ member_id: memberId })
             });
@@ -737,7 +737,7 @@ const TeamManager = {
      */
     async resendAllInvites() {
         try {
-            const response = await window.api.fetch('/organizer/team/resend-all-invites', {
+            const response = await AmbiletAPI.request('/organizer/team/resend-all-invites', {
                 method: 'POST'
             });
 

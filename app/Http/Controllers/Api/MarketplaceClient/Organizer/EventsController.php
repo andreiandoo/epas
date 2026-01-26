@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
-use App\Models\MarketplaceEvent;
+use App\Models\Event;
 use App\Models\MarketplaceOrganizer;
-use App\Models\MarketplaceTicketType;
+use App\Models\TicketType;
 use App\Models\MarketplaceTransaction;
 use App\Models\Order;
 use App\Notifications\MarketplaceOrderNotification;
@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class EventsController extends BaseController
 {
@@ -24,24 +25,35 @@ class EventsController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $query = MarketplaceEvent::where('marketplace_organizer_id', $organizer->id)
-            ->with('ticketTypes');
+        $query = Event::where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->with(['ticketTypes', 'venue', 'marketplaceCity']);
 
-        // Filters
+        // Filters - map 'status' to Event fields
         if ($request->has('status')) {
-            $query->where('status', $request->status);
+            $status = $request->status;
+            if ($status === 'draft') {
+                $query->where('is_published', false);
+            } elseif ($status === 'published' || $status === 'approved') {
+                $query->where('is_published', true);
+            } elseif ($status === 'cancelled') {
+                $query->where('is_cancelled', true);
+            }
         }
 
         if ($request->has('upcoming')) {
-            $query->where('starts_at', '>=', now());
+            $query->upcoming();
         }
 
         if ($request->has('past')) {
-            $query->where('starts_at', '<', now());
+            $query->past();
         }
 
-        // Sorting
-        $sortField = $request->get('sort', 'starts_at');
+        // Sorting - map starts_at to event_date
+        $sortField = $request->get('sort', 'event_date');
+        if ($sortField === 'starts_at') {
+            $sortField = 'event_date';
+        }
         $sortDir = $request->get('order', 'desc');
         $query->orderBy($sortField, $sortDir);
 
@@ -60,9 +72,10 @@ class EventsController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $event = MarketplaceEvent::with(['ticketTypes', 'venue'])
+        $event = Event::with(['ticketTypes', 'venue', 'marketplaceCity', 'marketplaceEventCategory'])
             ->where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
 
         if (!$event) {
@@ -127,55 +140,54 @@ class EventsController extends BaseController
             $baseSlug = Str::slug($validated['name']);
             $slug = $baseSlug;
             $counter = 1;
-            while (MarketplaceEvent::where('marketplace_client_id', $organizer->marketplace_client_id)
+            while (Event::where('marketplace_client_id', $organizer->marketplace_client_id)
                 ->where('slug', $slug)->exists()) {
                 $slug = $baseSlug . '-' . $counter;
                 $counter++;
             }
 
-            $event = MarketplaceEvent::create([
+            // Parse dates for Event model
+            $startsAt = $validated['starts_at'] ?? null;
+            $endsAt = $validated['ends_at'] ?? null;
+            $doorsAt = $validated['doors_open_at'] ?? null;
+
+            $eventDate = $startsAt ? Carbon::parse($startsAt)->toDateString() : null;
+            $startTime = $startsAt ? Carbon::parse($startsAt)->format('H:i') : null;
+            $endTime = $endsAt ? Carbon::parse($endsAt)->format('H:i') : null;
+            $doorTime = $doorsAt ? Carbon::parse($doorsAt)->format('H:i') : null;
+
+            $event = Event::create([
                 'marketplace_client_id' => $organizer->marketplace_client_id,
                 'marketplace_organizer_id' => $organizer->id,
-                'name' => $validated['name'],
+                'title' => ['ro' => $validated['name'], 'en' => $validated['name']],
                 'slug' => $slug,
-                'description' => $validated['description'] ?? null,
-                'ticket_terms' => $validated['ticket_terms'] ?? null,
-                'short_description' => $validated['short_description'] ?? null,
-                'starts_at' => $validated['starts_at'] ?? null,
-                'ends_at' => $validated['ends_at'] ?? null,
-                'doors_open_at' => $validated['doors_open_at'] ?? null,
+                'description' => ['ro' => $validated['description'] ?? '', 'en' => $validated['description'] ?? ''],
+                'ticket_terms' => ['ro' => $validated['ticket_terms'] ?? '', 'en' => $validated['ticket_terms'] ?? ''],
+                'short_description' => ['ro' => $validated['short_description'] ?? '', 'en' => $validated['short_description'] ?? ''],
+                'duration_mode' => 'single_day',
+                'event_date' => $eventDate,
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'door_time' => $doorTime,
                 'venue_id' => $validated['venue_id'] ?? null,
-                'venue_name' => $validated['venue_name'] ?? null,
-                'venue_address' => $validated['venue_address'] ?? null,
-                'venue_city' => $validated['venue_city'] ?? null,
+                'address' => $validated['venue_address'] ?? null,
                 'marketplace_event_category_id' => $validated['marketplace_event_category_id'] ?? null,
-                'genre_ids' => $validated['genre_ids'] ?? null,
-                'artist_ids' => $validated['artist_ids'] ?? null,
                 'website_url' => $validated['website_url'] ?? null,
                 'facebook_url' => $validated['facebook_url'] ?? null,
-                'category' => $validated['category'] ?? null,
-                'tags' => $validated['tags'] ?? null,
-                'capacity' => $validated['capacity'] ?? null,
-                'max_tickets_per_order' => $validated['max_tickets_per_order'] ?? 10,
-                'sales_start_at' => $validated['sales_start_at'] ?? null,
-                'sales_end_at' => $validated['sales_end_at'] ?? null,
-                'status' => 'draft',
+                'is_published' => false,
             ]);
 
-            // Create ticket types
+            // Create ticket types using TicketType model
             foreach ($validated['ticket_types'] ?? [] as $index => $ticketTypeData) {
-                MarketplaceTicketType::create([
-                    'marketplace_event_id' => $event->id,
+                TicketType::create([
+                    'event_id' => $event->id,
                     'name' => $ticketTypeData['name'],
                     'description' => $ticketTypeData['description'] ?? null,
-                    'price' => $ticketTypeData['price'],
+                    'price_cents' => (int) ($ticketTypeData['price'] * 100),
                     'currency' => 'RON',
-                    'quantity' => $ticketTypeData['quantity'] ?? null,
-                    'min_per_order' => $ticketTypeData['min_per_order'] ?? 1,
-                    'max_per_order' => $ticketTypeData['max_per_order'] ?? 10,
-                    'status' => 'on_sale',
-                    'is_visible' => true,
-                    'sort_order' => $index,
+                    'quota_total' => $ticketTypeData['quantity'] ?? 0,
+                    'quota_sold' => 0,
+                    'status' => 'active',
                 ]);
             }
 
@@ -198,8 +210,9 @@ class EventsController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $event = MarketplaceEvent::where('id', $eventId)
+        $event = Event::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
 
         if (!$event) {
@@ -208,7 +221,7 @@ class EventsController extends BaseController
 
         // Can only edit draft or rejected events fully
         // Published events have limited editing
-        $isPublished = $event->isPublished();
+        $isPublished = $event->is_published;
 
         $rules = [
             'name' => 'sometimes|string|max:255',
@@ -257,7 +270,55 @@ class EventsController extends BaseController
             $ticketTypesData = $validated['ticket_types'] ?? null;
             unset($validated['ticket_types']);
 
-            $event->update($validated);
+            // Map API fields to Event model fields
+            $updateData = [];
+            if (isset($validated['name'])) {
+                $updateData['title'] = ['ro' => $validated['name'], 'en' => $validated['name']];
+            }
+            if (array_key_exists('description', $validated)) {
+                $desc = $validated['description'] ?? '';
+                $updateData['description'] = ['ro' => $desc, 'en' => $desc];
+            }
+            if (array_key_exists('ticket_terms', $validated)) {
+                $terms = $validated['ticket_terms'] ?? '';
+                $updateData['ticket_terms'] = ['ro' => $terms, 'en' => $terms];
+            }
+            if (array_key_exists('short_description', $validated)) {
+                $short = $validated['short_description'] ?? '';
+                $updateData['short_description'] = ['ro' => $short, 'en' => $short];
+            }
+            if (isset($validated['starts_at'])) {
+                $startsAt = Carbon::parse($validated['starts_at']);
+                $updateData['event_date'] = $startsAt->toDateString();
+                $updateData['start_time'] = $startsAt->format('H:i');
+            }
+            if (isset($validated['ends_at'])) {
+                $endsAt = Carbon::parse($validated['ends_at']);
+                $updateData['end_time'] = $endsAt->format('H:i');
+            }
+            if (isset($validated['doors_open_at'])) {
+                $doorsAt = Carbon::parse($validated['doors_open_at']);
+                $updateData['door_time'] = $doorsAt->format('H:i');
+            }
+            if (isset($validated['venue_id'])) {
+                $updateData['venue_id'] = $validated['venue_id'];
+            }
+            if (isset($validated['venue_address'])) {
+                $updateData['address'] = $validated['venue_address'];
+            }
+            if (isset($validated['marketplace_event_category_id'])) {
+                $updateData['marketplace_event_category_id'] = $validated['marketplace_event_category_id'];
+            }
+            if (isset($validated['website_url'])) {
+                $updateData['website_url'] = $validated['website_url'];
+            }
+            if (isset($validated['facebook_url'])) {
+                $updateData['facebook_url'] = $validated['facebook_url'];
+            }
+
+            if (!empty($updateData)) {
+                $event->update($updateData);
+            }
 
             // Sync ticket types if provided
             if ($ticketTypesData !== null && !$isPublished) {
@@ -265,18 +326,15 @@ class EventsController extends BaseController
                 $event->ticketTypes()->delete();
 
                 foreach ($ticketTypesData as $index => $ticketTypeData) {
-                    MarketplaceTicketType::create([
-                        'marketplace_event_id' => $event->id,
+                    TicketType::create([
+                        'event_id' => $event->id,
                         'name' => $ticketTypeData['name'],
                         'description' => $ticketTypeData['description'] ?? null,
-                        'price' => $ticketTypeData['price'],
+                        'price_cents' => (int) ($ticketTypeData['price'] * 100),
                         'currency' => 'RON',
-                        'quantity' => $ticketTypeData['quantity'] ?? null,
-                        'min_per_order' => $ticketTypeData['min_per_order'] ?? 1,
-                        'max_per_order' => $ticketTypeData['max_per_order'] ?? 10,
-                        'status' => 'on_sale',
-                        'is_visible' => true,
-                        'sort_order' => $index,
+                        'quota_total' => $ticketTypeData['quantity'] ?? 0,
+                        'quota_sold' => 0,
+                        'status' => 'active',
                     ]);
                 }
             }
@@ -294,22 +352,23 @@ class EventsController extends BaseController
     }
 
     /**
-     * Submit event for review
+     * Submit event for review (publish event)
      */
     public function submit(Request $request, int $eventId): JsonResponse
     {
         $organizer = $this->requireOrganizer($request);
 
-        $event = MarketplaceEvent::where('id', $eventId)
+        $event = Event::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
 
         if (!$event) {
             return $this->error('Event not found', 404);
         }
 
-        if (!$event->isDraft()) {
-            return $this->error('Only draft events can be submitted for review', 400);
+        if ($event->is_published) {
+            return $this->error('Event is already published', 400);
         }
 
         // Validate event has required data
@@ -317,11 +376,11 @@ class EventsController extends BaseController
             return $this->error('Event must have at least one ticket type', 400);
         }
 
-        $event->submitForReview();
+        $event->update(['is_published' => true]);
 
         return $this->success([
             'event' => $this->formatEventDetailed($event->fresh()->load('ticketTypes')),
-        ], 'Event submitted for review');
+        ], 'Event published successfully');
     }
 
     /**
@@ -335,15 +394,16 @@ class EventsController extends BaseController
             'reason' => 'nullable|string|max:500',
         ]);
 
-        $event = MarketplaceEvent::where('id', $eventId)
+        $event = Event::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
 
         if (!$event) {
             return $this->error('Event not found', 404);
         }
 
-        if ($event->isCancelled()) {
+        if ($event->is_cancelled) {
             return $this->error('Event is already cancelled', 400);
         }
 
@@ -412,16 +472,15 @@ class EventsController extends BaseController
                     if ($item->ticket_type_id) {
                         $event->ticketTypes()
                             ->where('id', $item->ticket_type_id)
-                            ->increment('available_quantity', $item->quantity);
+                            ->increment('quota_total', $item->quantity);
                     }
                 }
             }
 
             // Cancel the event
             $event->update([
-                'status' => 'cancelled',
-                'cancelled_at' => now(),
-                'cancellation_reason' => $reason,
+                'is_cancelled' => true,
+                'cancel_reason' => $reason,
             ]);
 
             // Update organizer stats
@@ -442,23 +501,24 @@ class EventsController extends BaseController
     }
 
     /**
-     * Delete an event (only draft/rejected events without orders)
+     * Delete an event (only unpublished events without orders)
      */
     public function destroy(Request $request, int $eventId): JsonResponse
     {
         $organizer = $this->requireOrganizer($request);
 
-        $event = MarketplaceEvent::where('id', $eventId)
+        $event = Event::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
 
         if (!$event) {
             return $this->error('Event not found', 404);
         }
 
-        // Only allow deletion of draft or rejected events
-        if (!in_array($event->status, ['draft', 'rejected'])) {
-            return $this->error('Only draft or rejected events can be deleted', 400);
+        // Only allow deletion of unpublished events
+        if ($event->is_published) {
+            return $this->error('Only unpublished events can be deleted', 400);
         }
 
         // Check for any orders
@@ -495,8 +555,9 @@ class EventsController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $event = MarketplaceEvent::where('id', $eventId)
+        $event = Event::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
 
         if (!$event) {
@@ -504,10 +565,10 @@ class EventsController extends BaseController
         }
 
         $query = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
-                $q->where('marketplace_event_id', $event->id)
+                $q->where('event_id', $event->id)
                     ->where('status', 'completed');
             })
-            ->with(['order.marketplaceCustomer', 'marketplaceTicketType']);
+            ->with(['order.marketplaceCustomer', 'ticketType']);
 
         // Filters
         if ($request->has('status')) {
@@ -539,7 +600,7 @@ class EventsController extends BaseController
         }
 
         if ($request->has('ticket_type_id')) {
-            $query->where('marketplace_ticket_type_id', $request->ticket_type_id);
+            $query->where('ticket_type_id', $request->ticket_type_id);
         }
 
         $query->orderBy('created_at', 'desc');
@@ -549,22 +610,23 @@ class EventsController extends BaseController
 
         // Get stats
         $totalTickets = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
-            $q->where('marketplace_event_id', $event->id)->where('status', 'completed');
+            $q->where('event_id', $event->id)->where('status', 'completed');
         })->count();
 
         $checkedInCount = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
-            $q->where('marketplace_event_id', $event->id)->where('status', 'completed');
+            $q->where('event_id', $event->id)->where('status', 'completed');
         })->whereNotNull('checked_in_at')->count();
 
         return $this->paginated($tickets, function ($ticket) {
             $customer = $ticket->order->marketplaceCustomer;
+            $ticketType = $ticket->ticketType;
             return [
                 'id' => $ticket->id,
                 'barcode' => $ticket->barcode,
                 'qr_code' => $ticket->qr_code_url ?? null,
-                'ticket_type' => $ticket->marketplaceTicketType?->name,
-                'ticket_type_id' => $ticket->marketplace_ticket_type_id,
-                'price' => (float) ($ticket->marketplaceTicketType?->price ?? 0),
+                'ticket_type' => $ticketType?->name,
+                'ticket_type_id' => $ticket->ticket_type_id,
+                'price' => (float) ($ticketType?->display_price ?? 0),
                 'status' => $ticket->status,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
                 'checked_in_by' => $ticket->checked_in_by,
@@ -595,8 +657,9 @@ class EventsController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $event = MarketplaceEvent::where('id', $eventId)
+        $event = Event::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
 
         if (!$event) {
@@ -605,7 +668,7 @@ class EventsController extends BaseController
 
         $ticket = \App\Models\Ticket::where('barcode', $barcode)
             ->whereHas('order', function ($q) use ($event) {
-                $q->where('marketplace_event_id', $event->id)
+                $q->where('event_id', $event->id)
                     ->where('status', 'completed');
             })
             ->first();
@@ -633,7 +696,7 @@ class EventsController extends BaseController
             'ticket' => [
                 'id' => $ticket->id,
                 'barcode' => $ticket->barcode,
-                'ticket_type' => $ticket->marketplaceTicketType?->name,
+                'ticket_type' => $ticket->ticketType?->name,
                 'status' => $ticket->status,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
             ],
@@ -653,8 +716,9 @@ class EventsController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $event = MarketplaceEvent::where('id', $eventId)
+        $event = Event::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
 
         if (!$event) {
@@ -663,7 +727,7 @@ class EventsController extends BaseController
 
         $ticket = \App\Models\Ticket::where('barcode', $barcode)
             ->whereHas('order', function ($q) use ($event) {
-                $q->where('marketplace_event_id', $event->id)
+                $q->where('event_id', $event->id)
                     ->where('status', 'completed');
             })
             ->first();
@@ -691,8 +755,9 @@ class EventsController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $event = MarketplaceEvent::where('id', $eventId)
+        $event = Event::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
 
         if (!$event) {
@@ -700,10 +765,10 @@ class EventsController extends BaseController
         }
 
         $tickets = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
-                $q->where('marketplace_event_id', $event->id)
+                $q->where('event_id', $event->id)
                     ->where('status', 'completed');
             })
-            ->with(['order.marketplaceCustomer', 'marketplaceTicketType'])
+            ->with(['order.marketplaceCustomer', 'ticketType'])
             ->get();
 
         $filename = 'participants-' . $event->slug . '-' . now()->format('Y-m-d') . '.csv';
@@ -728,11 +793,12 @@ class EventsController extends BaseController
 
             foreach ($tickets as $ticket) {
                 $customer = $ticket->order->marketplaceCustomer;
+                $ticketType = $ticket->ticketType;
                 fputcsv($handle, [
                     $ticket->id,
                     $ticket->barcode,
-                    $ticket->marketplaceTicketType?->name ?? 'N/A',
-                    $ticket->marketplaceTicketType?->price ?? 0,
+                    $ticketType?->name ?? 'N/A',
+                    $ticketType?->display_price ?? 0,
                     $customer ? $customer->first_name . ' ' . $customer->last_name : $ticket->order->customer_name,
                     $customer?->email ?? $ticket->order->customer_email,
                     $customer?->phone ?? $ticket->order->customer_phone,
@@ -757,8 +823,9 @@ class EventsController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $event = MarketplaceEvent::where('id', $eventId)
+        $event = Event::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
 
         if (!$event) {
@@ -771,10 +838,10 @@ class EventsController extends BaseController
             $sold = $event->orders()
                 ->where('status', 'completed')
                 ->whereHas('tickets', function ($q) use ($tt) {
-                    $q->where('marketplace_ticket_type_id', $tt->id);
+                    $q->where('ticket_type_id', $tt->id);
                 })
                 ->withCount(['tickets' => function ($q) use ($tt) {
-                    $q->where('marketplace_ticket_type_id', $tt->id);
+                    $q->where('ticket_type_id', $tt->id);
                 }])
                 ->get()
                 ->sum('tickets_count');
@@ -782,25 +849,28 @@ class EventsController extends BaseController
             return [
                 'id' => $tt->id,
                 'name' => $tt->name,
-                'price' => $tt->price,
-                'quantity' => $tt->quantity,
+                'price' => $tt->display_price,
+                'quantity' => $tt->quota_total,
                 'sold' => $sold,
                 'available' => $tt->available_quantity,
-                'revenue' => $sold * $tt->price,
+                'revenue' => $sold * $tt->display_price,
             ];
         });
 
+        $eventName = $this->getLocalizedTitle($event);
+        $totalRevenue = (float) $event->total_revenue;
+
         return $this->success([
             'event_id' => $event->id,
-            'event_name' => $event->name,
+            'event_name' => $eventName,
             'summary' => [
                 'total_orders' => $completedOrders->count(),
-                'total_tickets_sold' => $event->tickets_sold,
-                'gross_revenue' => (float) $event->revenue,
+                'total_tickets_sold' => $event->total_tickets_sold,
+                'gross_revenue' => $totalRevenue,
                 'commission_rate' => $organizer->getEffectiveCommissionRate(),
-                'commission_amount' => round($event->revenue * $organizer->getEffectiveCommissionRate() / 100, 2),
-                'net_revenue' => round($event->revenue * (1 - $organizer->getEffectiveCommissionRate() / 100), 2),
-                'views' => $event->views,
+                'commission_amount' => round($totalRevenue * $organizer->getEffectiveCommissionRate() / 100, 2),
+                'net_revenue' => round($totalRevenue * (1 - $organizer->getEffectiveCommissionRate() / 100), 2),
+                'views' => $event->views_count ?? 0,
             ],
             'ticket_types' => $ticketStats,
             'sales_by_day' => $completedOrders
@@ -993,77 +1063,172 @@ class EventsController extends BaseController
     }
 
     /**
+     * Get localized title from Event model
+     */
+    protected function getLocalizedTitle(Event $event): string
+    {
+        $title = $event->title;
+        if (is_array($title)) {
+            return $title['ro'] ?? $title['en'] ?? array_values($title)[0] ?? '';
+        }
+        return $title ?? '';
+    }
+
+    /**
+     * Get localized field from Event model
+     */
+    protected function getLocalizedField(Event $event, string $field): string
+    {
+        $value = $event->$field;
+        if (is_array($value)) {
+            return $value['ro'] ?? $value['en'] ?? array_values($value)[0] ?? '';
+        }
+        return $value ?? '';
+    }
+
+    /**
+     * Get event status string for API response
+     */
+    protected function getEventStatus(Event $event): string
+    {
+        if ($event->is_cancelled) {
+            return 'cancelled';
+        }
+        if ($event->is_postponed) {
+            return 'postponed';
+        }
+        if (!$event->is_published) {
+            return 'draft';
+        }
+        return 'published';
+    }
+
+    /**
+     * Get starts_at datetime from Event model
+     */
+    protected function getStartsAt(Event $event): ?string
+    {
+        if ($event->event_date) {
+            $date = $event->event_date->format('Y-m-d');
+            $time = $event->start_time ?? '00:00';
+            return Carbon::parse("{$date} {$time}")->toIso8601String();
+        }
+        return null;
+    }
+
+    /**
+     * Get ends_at datetime from Event model
+     */
+    protected function getEndsAt(Event $event): ?string
+    {
+        if ($event->event_date && $event->end_time) {
+            $date = $event->event_date->format('Y-m-d');
+            return Carbon::parse("{$date} {$event->end_time}")->toIso8601String();
+        }
+        return null;
+    }
+
+    /**
+     * Get doors_open_at datetime from Event model
+     */
+    protected function getDoorsAt(Event $event): ?string
+    {
+        if ($event->event_date && $event->door_time) {
+            $date = $event->event_date->format('Y-m-d');
+            return Carbon::parse("{$date} {$event->door_time}")->toIso8601String();
+        }
+        return null;
+    }
+
+    /**
+     * Get price range string
+     */
+    protected function getPriceRange(Event $event): ?string
+    {
+        $prices = $event->ticketTypes->pluck('display_price')->filter()->values();
+        if ($prices->isEmpty()) {
+            return null;
+        }
+        $min = $prices->min();
+        $max = $prices->max();
+        if ($min === $max) {
+            return number_format($min, 2) . ' RON';
+        }
+        return number_format($min, 2) . ' - ' . number_format($max, 2) . ' RON';
+    }
+
+    /**
      * Format event for list
      */
-    protected function formatEvent(MarketplaceEvent $event): array
+    protected function formatEvent(Event $event): array
     {
         return [
             'id' => $event->id,
-            'name' => $event->name,
+            'name' => $this->getLocalizedTitle($event),
             'slug' => $event->slug,
-            'starts_at' => $event->starts_at?->toIso8601String(),
-            'venue_name' => $event->venue_display_name,
-            'venue_city' => $event->venue_display_city,
-            'category' => $event->category,
-            'status' => $event->status,
-            'image' => $event->image_url,
-            'tickets_sold' => $event->tickets_sold,
-            'revenue' => (float) $event->revenue,
-            'views' => $event->views,
-            'price_range' => $event->price_range,
+            'starts_at' => $this->getStartsAt($event),
+            'venue_name' => $event->venue?->name ?? null,
+            'venue_city' => $event->venue?->city ?? $event->marketplaceCity?->name ?? null,
+            'category' => $event->marketplaceEventCategory?->name ?? null,
+            'status' => $this->getEventStatus($event),
+            'image' => $event->poster_url,
+            'tickets_sold' => $event->total_tickets_sold,
+            'revenue' => (float) $event->total_revenue,
+            'views' => $event->views_count ?? 0,
+            'price_range' => $this->getPriceRange($event),
         ];
     }
 
     /**
      * Format event with details
      */
-    protected function formatEventDetailed(MarketplaceEvent $event): array
+    protected function formatEventDetailed(Event $event): array
     {
         return [
             'id' => $event->id,
-            'name' => $event->name,
+            'name' => $this->getLocalizedTitle($event),
             'slug' => $event->slug,
-            'description' => $event->description,
-            'ticket_terms' => $event->ticket_terms,
-            'short_description' => $event->short_description,
-            'starts_at' => $event->starts_at?->toIso8601String(),
-            'ends_at' => $event->ends_at?->toIso8601String(),
-            'doors_open_at' => $event->doors_open_at?->toIso8601String(),
+            'description' => $this->getLocalizedField($event, 'description'),
+            'ticket_terms' => $this->getLocalizedField($event, 'ticket_terms'),
+            'short_description' => $this->getLocalizedField($event, 'short_description'),
+            'starts_at' => $this->getStartsAt($event),
+            'ends_at' => $this->getEndsAt($event),
+            'doors_open_at' => $this->getDoorsAt($event),
             'venue_id' => $event->venue_id,
-            'venue_name' => $event->venue_name,
-            'venue_address' => $event->venue_address,
-            'venue_city' => $event->venue_city,
+            'venue_name' => $event->venue?->name ?? null,
+            'venue_address' => $event->venue?->address ?? $event->address,
+            'venue_city' => $event->venue?->city ?? $event->marketplaceCity?->name ?? null,
             'marketplace_event_category_id' => $event->marketplace_event_category_id,
-            'category' => $event->category,
-            'tags' => $event->tags,
-            'image' => $event->image_url,
-            'cover_image' => $event->cover_image_url,
-            'gallery' => $event->gallery,
-            'status' => $event->status,
-            'is_public' => $event->is_public,
+            'category' => $event->marketplaceEventCategory?->name ?? null,
+            'tags' => null,
+            'image' => $event->poster_url,
+            'cover_image' => $event->hero_image_url,
+            'gallery' => null,
+            'status' => $this->getEventStatus($event),
+            'is_public' => $event->is_published,
             'is_featured' => $event->is_featured,
-            'capacity' => $event->capacity,
-            'max_tickets_per_order' => $event->max_tickets_per_order,
-            'sales_start_at' => $event->sales_start_at?->toIso8601String(),
-            'sales_end_at' => $event->sales_end_at?->toIso8601String(),
-            'rejection_reason' => $event->rejection_reason,
-            'tickets_sold' => $event->tickets_sold,
-            'revenue' => (float) $event->revenue,
-            'views' => $event->views,
+            'capacity' => $event->total_capacity,
+            'max_tickets_per_order' => 10,
+            'sales_start_at' => null,
+            'sales_end_at' => null,
+            'rejection_reason' => null,
+            'tickets_sold' => $event->total_tickets_sold,
+            'revenue' => (float) $event->total_revenue,
+            'views' => $event->views_count ?? 0,
             'ticket_types' => $event->ticketTypes->map(function ($tt) {
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
                     'description' => $tt->description,
-                    'price' => (float) $tt->price,
-                    'currency' => $tt->currency,
-                    'quantity' => $tt->quantity,
-                    'quantity_sold' => $tt->quantity_sold,
+                    'price' => (float) $tt->display_price,
+                    'currency' => $tt->currency ?? 'RON',
+                    'quantity' => $tt->quota_total,
+                    'quantity_sold' => $tt->quota_sold,
                     'available' => $tt->available_quantity,
-                    'min_per_order' => $tt->min_per_order,
-                    'max_per_order' => $tt->max_per_order,
-                    'status' => $tt->status,
-                    'is_visible' => $tt->is_visible,
+                    'min_per_order' => 1,
+                    'max_per_order' => 10,
+                    'status' => $tt->status === 'active' ? 'on_sale' : $tt->status,
+                    'is_visible' => $tt->status === 'active',
                 ];
             }),
             'created_at' => $event->created_at?->toIso8601String(),

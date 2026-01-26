@@ -275,28 +275,32 @@ class EventResource extends Resource
                                         ->live(),
                                 ]),
 
-                                // Homepage Featured Image
+                                // Homepage Featured Image - always shown to avoid FilePond JS state issues
                                 Forms\Components\FileUpload::make('homepage_featured_image')
                                     ->label('Homepage Featured Image')
-                                    ->helperText('Special image for homepage featured section (recommended: 1920x600px)')
+                                    ->helperText(fn (SGet $get) => (bool) $get('is_homepage_featured')
+                                        ? 'Special image for homepage featured section (recommended: 1920x600px)'
+                                        : 'Enable "Homepage Featured" toggle above to use this image (recommended: 1920x600px)')
                                     ->image()
                                     ->directory('events/featured/homepage')
                                     ->disk('public')
                                     ->imageResizeMode('cover')
                                     ->imagePreviewHeight('150')
-                                    ->visible(fn (SGet $get) => (bool) $get('is_homepage_featured'))
+                                    ->disabled(fn (SGet $get) => !(bool) $get('is_homepage_featured'))
                                     ->columnSpanFull(),
 
-                                // General/Category Featured Image (shared)
+                                // General/Category Featured Image (shared) - always shown to avoid FilePond JS state issues
                                 Forms\Components\FileUpload::make('featured_image')
                                     ->label('Featured Image (General/Category)')
-                                    ->helperText('Image for general and category featured sections (recommended: 800x450px)')
+                                    ->helperText(fn (SGet $get) => ((bool) $get('is_general_featured') || (bool) $get('is_category_featured'))
+                                        ? 'Image for general and category featured sections (recommended: 800x450px)'
+                                        : 'Enable "General Featured" or "Category Featured" toggle above to use this image (recommended: 800x450px)')
                                     ->image()
                                     ->directory('events/featured')
                                     ->disk('public')
                                     ->imageResizeMode('cover')
                                     ->imagePreviewHeight('150')
-                                    ->visible(fn (SGet $get) => (bool) $get('is_general_featured') || (bool) $get('is_category_featured'))
+                                    ->disabled(fn (SGet $get) => !((bool) $get('is_general_featured') || (bool) $get('is_category_featured')))
                                     ->columnSpanFull(),
 
                                 // Custom Related Events
