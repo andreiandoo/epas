@@ -254,6 +254,17 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/promo-codes\/\d+$/)) return 'organizer.promo-code';
         if (endpoint === '/organizer/promo-codes' || endpoint.includes('/organizer/promo-codes?')) return 'organizer.promo-codes';
 
+        // Organizer services (extra services - promotions, email marketing, ad tracking, campaigns)
+        if (endpoint === '/organizer/services/stats') return 'organizer.services.stats';
+        if (endpoint === '/organizer/services/types') return 'organizer.services.types';
+        if (endpoint === '/organizer/services/email-audiences' || endpoint.includes('/organizer/services/email-audiences?')) return 'organizer.services.email-audiences';
+        if (endpoint.match(/\/organizer\/services\/orders\/[\w-]+\/pay$/)) return 'organizer.services.order.pay';
+        if (endpoint.match(/\/organizer\/services\/orders\/[\w-]+\/send-email$/)) return 'organizer.services.order.send-email';
+        if (endpoint.match(/\/organizer\/services\/orders\/[\w-]+\/cancel$/)) return 'organizer.services.order.cancel';
+        if (endpoint.match(/\/organizer\/services\/orders\/[\w-]+$/)) return 'organizer.services.order';
+        if (endpoint === '/organizer/services/orders' || endpoint.includes('/organizer/services/orders?')) return 'organizer.services.orders';
+        if (endpoint === '/organizer/services' || endpoint.includes('/organizer/services?')) return 'organizer.services';
+
         return null; // unknown endpoint - will cause error
     },
 
@@ -390,6 +401,17 @@ const AmbiletAPI = {
         const organizerPromoCodeMatch = endpoint.match(/\/organizer\/promo-codes\/(\d+)$/);
         if (organizerPromoCodeMatch) {
             return `code_id=${encodeURIComponent(organizerPromoCodeMatch[1])}`;
+        }
+
+        // Organizer service order endpoints - extract order ID
+        const serviceOrderActionMatch = endpoint.match(/\/organizer\/services\/orders\/([\w-]+)\/(pay|send-email|cancel)$/);
+        if (serviceOrderActionMatch) {
+            return `order_id=${encodeURIComponent(serviceOrderActionMatch[1])}`;
+        }
+
+        const serviceOrderMatch = endpoint.match(/\/organizer\/services\/orders\/([\w-]+)$/);
+        if (serviceOrderMatch) {
+            return `order_id=${encodeURIComponent(serviceOrderMatch[1])}`;
         }
 
         // Pass through query params

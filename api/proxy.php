@@ -1202,6 +1202,113 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // ==================== ORGANIZER SERVICES (Extra Services) ====================
+
+    case 'organizer.services':
+        // GET - List active services for organizer
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/organizer/services' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.stats':
+        // GET - Get service usage statistics
+        $endpoint = '/organizer/services/stats';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.types':
+        // GET - Get available service types with pricing
+        $endpoint = '/organizer/services/types';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.orders':
+        // POST - Create a new service order
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/services/orders';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.order':
+        // GET - Get single service order details
+        $orderId = $_GET['order_id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order_id parameter']);
+            exit;
+        }
+        $endpoint = '/organizer/services/orders/' . urlencode($orderId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.order.pay':
+        // POST - Initiate payment for service order
+        $orderId = $_GET['order_id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/services/orders/' . urlencode($orderId) . '/pay';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.order.send-email':
+        // POST - Send email marketing campaign
+        $orderId = $_GET['order_id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/services/orders/' . urlencode($orderId) . '/send-email';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.order.cancel':
+        // POST - Cancel a pending service order
+        $orderId = $_GET['order_id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/organizer/services/orders/' . urlencode($orderId) . '/cancel';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.orders.list':
+        // GET - List all service orders (for orders history page)
+        $params = [];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/organizer/services/orders' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.email-audiences':
+        // GET - Get available email audiences with counts
+        $eventId = $_GET['event_id'] ?? '';
+        $params = [];
+        if ($eventId) $params['event_id'] = $eventId;
+        $endpoint = '/organizer/services/email-audiences' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);
