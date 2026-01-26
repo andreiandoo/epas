@@ -1087,9 +1087,10 @@ function nextStep() {
         if (event) {
             document.getElementById('event-preview').classList.remove('hidden');
             document.getElementById('event-image').src = getStorageUrl(event.image);
-            document.getElementById('event-title').textContent = event.title;
-            document.getElementById('event-date').textContent = AmbiletUtils.formatDate(event.date);
-            document.getElementById('event-venue').textContent = event.venue || '';
+            document.getElementById('event-title').textContent = event.name || event.title || '';
+            const eventDate = event.starts_at || event.date;
+            document.getElementById('event-date').textContent = eventDate ? AmbiletUtils.formatDate(eventDate) : '';
+            document.getElementById('event-venue').textContent = event.venue_name || event.venue || '';
         }
     }
 
@@ -1238,11 +1239,20 @@ function calculateOrderSummary() {
             break;
     }
 
+    const eventName = event ? (event.name || event.title || '') : '';
+    const eventCategory = event?.category_name || event?.category || '';
+
     summary.innerHTML = `
         <div class="flex justify-between text-sm">
             <span class="text-muted">Eveniment:</span>
-            <span class="font-medium text-secondary">${event ? event.title : ''}</span>
+            <span class="font-medium text-secondary">${eventName}</span>
         </div>
+        ${eventCategory ? `
+        <div class="flex justify-between text-sm">
+            <span class="text-muted">Categorie:</span>
+            <span class="font-medium text-secondary">${eventCategory}</span>
+        </div>
+        ` : ''}
         ${items.map(item => `
             <div class="flex justify-between text-sm">
                 <span class="text-muted">${item.name}</span>
@@ -1401,9 +1411,10 @@ document.getElementById('service-event').addEventListener('change', function() {
     if (event) {
         document.getElementById('event-preview').classList.remove('hidden');
         document.getElementById('event-image').src = getStorageUrl(event.image);
-        document.getElementById('event-title').textContent = event.title;
-        document.getElementById('event-date').textContent = AmbiletUtils.formatDate(event.date);
-        document.getElementById('event-venue').textContent = event.venue || '';
+        document.getElementById('event-title').textContent = event.name || event.title || '';
+        const eventDate = event.starts_at || event.date;
+        document.getElementById('event-date').textContent = eventDate ? AmbiletUtils.formatDate(eventDate) : '';
+        document.getElementById('event-venue').textContent = event.venue_name || event.venue || '';
         // Update email audience counts for this event
         updateEmailAudienceCount();
     } else {
@@ -1563,27 +1574,31 @@ function showEmailPreview() {
     const audienceType = document.querySelector('input[name="email_audience"]:checked')?.value || 'own';
     const recipientCount = emailAudiences[audienceType]?.filtered_count || 0;
 
+    const eventName = event.name || event.title || '';
+    const eventDate = event.starts_at || event.date;
+    const eventVenue = event.venue_name || event.venue || 'TBA';
+
     // Update preview header
     document.getElementById('preview-recipients').textContent = AmbiletUtils.formatNumber(recipientCount) + ' destinatari';
-    document.getElementById('preview-subject').textContent = '🎵 ' + event.title + ' - Nu rata!';
+    document.getElementById('preview-subject').textContent = '🎵 ' + eventName + ' - Nu rata!';
 
     // Generate email preview content
     const previewHtml = `
         <div class="text-center mb-6">
-            <img src="${getStorageUrl(event.image)}" alt="${event.title}" class="w-full max-w-md mx-auto rounded-xl shadow-lg">
+            <img src="${getStorageUrl(event.image)}" alt="${eventName}" class="w-full max-w-md mx-auto rounded-xl shadow-lg">
         </div>
 
-        <h1 class="text-2xl font-bold text-secondary text-center mb-4">${event.title}</h1>
+        <h1 class="text-2xl font-bold text-secondary text-center mb-4">${eventName}</h1>
 
         <div class="bg-surface rounded-xl p-4 mb-6">
             <div class="grid grid-cols-2 gap-4 text-center">
                 <div>
                     <p class="text-xs text-muted uppercase tracking-wide">Data</p>
-                    <p class="font-semibold text-secondary">${AmbiletUtils.formatDate(event.date)}</p>
+                    <p class="font-semibold text-secondary">${eventDate ? AmbiletUtils.formatDate(eventDate) : 'TBA'}</p>
                 </div>
                 <div>
                     <p class="text-xs text-muted uppercase tracking-wide">Locatie</p>
-                    <p class="font-semibold text-secondary">${event.venue || 'TBA'}</p>
+                    <p class="font-semibold text-secondary">${eventVenue}</p>
                 </div>
             </div>
         </div>

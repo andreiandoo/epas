@@ -1525,7 +1525,13 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::get('/events/{event}/statistics', [OrganizerEventsController::class, 'statistics'])
             ->name('api.marketplace-client.organizer.events.statistics');
 
-        // Participants / Check-in
+        // Participants / Check-in (All participants across all events)
+        Route::get('/participants', [OrganizerEventsController::class, 'allParticipants'])
+            ->name('api.marketplace-client.organizer.participants');
+        Route::post('/participants/checkin', [OrganizerEventsController::class, 'checkInByCode'])
+            ->name('api.marketplace-client.organizer.participants.checkin');
+
+        // Participants / Check-in (Per event)
         Route::get('/events/{event}/participants', [OrganizerEventsController::class, 'participants'])
             ->name('api.marketplace-client.organizer.events.participants');
         Route::get('/events/{event}/participants/export', [OrganizerEventsController::class, 'exportParticipants'])

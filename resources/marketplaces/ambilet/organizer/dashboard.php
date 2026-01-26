@@ -227,7 +227,7 @@ const OrgDashboard = {
 
     async init() {
         AmbiletAuth.requireOrganizerAuth();
-        this.org = AmbiletAuth.getOrganizer();
+        this.org = AmbiletAuth.getOrganizerData();
         this.renderOrgInfo();
         await this.loadDashboard();
         this.initChart();

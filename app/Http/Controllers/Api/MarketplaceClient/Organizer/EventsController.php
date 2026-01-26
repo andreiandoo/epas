@@ -651,6 +651,156 @@ class EventsController extends BaseController
     }
 
     /**
+     * Get all participants across all organizer's events
+     */
+    public function allParticipants(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        // Get all events for this organizer
+        $eventIds = Event::where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->pluck('id');
+
+        $query = \App\Models\Ticket::whereHas('order', function ($q) use ($eventIds) {
+                $q->whereIn('event_id', $eventIds)
+                    ->where('status', 'completed');
+            })
+            ->with(['order.marketplaceCustomer', 'order.event', 'ticketType']);
+
+        // Filters
+        if ($request->has('event_id')) {
+            $query->whereHas('order', function ($q) use ($request) {
+                $q->where('event_id', $request->event_id);
+            });
+        }
+
+        if ($request->has('checked_in')) {
+            if ($request->checked_in === 'checked_in' || $request->checked_in === 'true' || $request->checked_in === '1') {
+                $query->whereNotNull('checked_in_at');
+            } elseif ($request->checked_in === 'not_checked' || $request->checked_in === 'false' || $request->checked_in === '0') {
+                $query->whereNull('checked_in_at');
+            }
+        }
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('barcode', 'like', "%{$search}%")
+                    ->orWhereHas('order', function ($oq) use ($search) {
+                        $oq->where('customer_email', 'like', "%{$search}%")
+                            ->orWhere('customer_name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('order.marketplaceCustomer', function ($cq) use ($search) {
+                        $cq->where('email', 'like', "%{$search}%")
+                            ->orWhere('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $query->orderBy('created_at', 'desc');
+
+        // Get all tickets for stats
+        $allTickets = \App\Models\Ticket::whereHas('order', function ($q) use ($eventIds) {
+            $q->whereIn('event_id', $eventIds)->where('status', 'completed');
+        });
+
+        $totalTickets = $allTickets->count();
+        $checkedInCount = (clone $allTickets)->whereNotNull('checked_in_at')->count();
+
+        $tickets = $query->take(200)->get();
+
+        $participants = $tickets->map(function ($ticket) {
+            $customer = $ticket->order->marketplaceCustomer;
+            $event = $ticket->order->event;
+            return [
+                'name' => $customer
+                    ? $customer->first_name . ' ' . $customer->last_name
+                    : $ticket->order->customer_name ?? 'Unknown',
+                'email' => $customer?->email ?? $ticket->order->customer_email ?? '',
+                'event' => $event?->name ?? $event?->title ?? 'Unknown Event',
+                'event_id' => $event?->id,
+                'ticket_type' => $ticket->ticketType?->name ?? 'Standard',
+                'ticket_code' => $ticket->barcode,
+                'checked_in' => $ticket->checked_in_at !== null,
+                'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
+            ];
+        });
+
+        return $this->success([
+            'participants' => $participants,
+            'stats' => [
+                'total' => $totalTickets,
+                'checked_in' => $checkedInCount,
+                'pending' => $totalTickets - $checkedInCount,
+                'rate' => $totalTickets > 0 ? round(($checkedInCount / $totalTickets) * 100, 1) : 0,
+            ],
+        ]);
+    }
+
+    /**
+     * Check in a ticket by barcode (across all organizer's events)
+     */
+    public function checkInByCode(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $request->validate([
+            'ticket_code' => 'required|string',
+        ]);
+
+        $barcode = $request->ticket_code;
+
+        // Get all events for this organizer
+        $eventIds = Event::where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->pluck('id');
+
+        $ticket = \App\Models\Ticket::where('barcode', $barcode)
+            ->whereHas('order', function ($q) use ($eventIds) {
+                $q->whereIn('event_id', $eventIds)
+                    ->where('status', 'completed');
+            })
+            ->first();
+
+        if (!$ticket) {
+            return $this->error('Ticket not found or invalid', 404);
+        }
+
+        if ($ticket->status === 'cancelled' || $ticket->status === 'refunded') {
+            return $this->error('This ticket has been ' . $ticket->status, 400);
+        }
+
+        if ($ticket->checked_in_at) {
+            return $this->error('Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'), 400);
+        }
+
+        $ticket->update([
+            'checked_in_at' => now(),
+            'checked_in_by' => $organizer->contact_name ?? $organizer->name,
+        ]);
+
+        $customer = $ticket->order->marketplaceCustomer;
+
+        return $this->success([
+            'ticket' => [
+                'id' => $ticket->id,
+                'barcode' => $ticket->barcode,
+                'ticket_type' => $ticket->ticketType?->name,
+                'status' => $ticket->status,
+                'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
+            ],
+            'customer' => [
+                'name' => $customer
+                    ? $customer->first_name . ' ' . $customer->last_name
+                    : $ticket->order->customer_name,
+                'email' => $customer?->email ?? $ticket->order->customer_email,
+            ],
+        ], 'Ticket checked in successfully');
+    }
+
+    /**
      * Check in a ticket
      */
     public function checkIn(Request $request, int $eventId, string $barcode): JsonResponse

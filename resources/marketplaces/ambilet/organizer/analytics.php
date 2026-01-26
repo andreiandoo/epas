@@ -340,19 +340,19 @@ function setupPeriodButtons() {
 async function loadAnalytics() {
     try {
         // Load dashboard data
-        const response = await window.api.fetch(`/organizer/events/${eventId}/analytics?period=${currentPeriod}`);
+        const response = await AmbiletAPI.get(`/organizer/events/${eventId}/analytics?period=${currentPeriod}`);
         if (response.success) {
             updateDashboard(response.data);
         }
 
         // Load milestones
-        const milestonesResponse = await window.api.fetch(`/organizer/events/${eventId}/milestones`);
+        const milestonesResponse = await AmbiletAPI.get(`/organizer/events/${eventId}/milestones`);
         if (milestonesResponse.success) {
             updateMilestones(milestonesResponse.data);
         }
 
         // Load goals
-        const goalsResponse = await window.api.fetch(`/organizer/events/${eventId}/goals`);
+        const goalsResponse = await AmbiletAPI.get(`/organizer/events/${eventId}/goals`);
         if (goalsResponse.success) {
             updateGoals(goalsResponse.data);
         }
@@ -751,10 +751,7 @@ async function saveGoal(e) {
     };
 
     try {
-        const response = await window.api.fetch(`/organizer/events/${eventId}/goals`, {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
+        const response = await AmbiletAPI.post(`/organizer/events/${eventId}/goals`, data);
 
         if (response.success) {
             closeGoalModal();
@@ -788,10 +785,7 @@ async function saveMilestone(e) {
     };
 
     try {
-        const response = await window.api.fetch(`/organizer/events/${eventId}/milestones`, {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
+        const response = await AmbiletAPI.post(`/organizer/events/${eventId}/milestones`, data);
 
         if (response.success) {
             closeMilestoneModal();
