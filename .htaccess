@@ -196,6 +196,36 @@ RewriteRule ^user/reviews/?$ /cont/recenzii [R=301,L]
 # ORGANIZER DASHBOARD ROUTES - /organizator/*
 # ============================================
 
+# Handle organizer services routes (must come before generic dashboard route)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/services/?$ organizer/services.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/services/orders/?$ organizer/services/orders.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/services/email-send/?$ organizer/services/email-send.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/services/email-preview/?$ organizer/services/email-preview.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/services/success/?$ organizer/services/success.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/services/campaign-confirmed/?$ organizer/services/campaign-confirmed.php [L,QSA]
+
+# Handle organizer service order detail page (must come after specific routes)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/services/([a-zA-Z0-9-]+)/?$ organizer/services/order.php?id=$1 [L,QSA]
+
 # Handle organizer dashboard routes - /organizator/dashboard, /organizator/events, etc.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
