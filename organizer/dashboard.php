@@ -390,7 +390,7 @@ const OrgDashboard = {
 
         container.innerHTML = `
             <div class="relative mb-4">
-                <img src="${event.image || '/assets/images/default-event.png'}" class="w-full h-32 object-cover rounded-xl" alt="">
+                <img src="${getStorageUrl(event.image)}" class="w-full h-32 object-cover rounded-xl" alt="">
                 <div class="absolute top-3 left-3 px-3 py-1 bg-primary text-white text-xs font-bold rounded-lg">In 3 zile</div>
             </div>
             <h3 class="font-bold text-secondary mb-1">${event.title}</h3>

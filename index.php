@@ -56,10 +56,10 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<?php require_once __DIR__ . '/includes/featured-carousel.php'; ?>
+<?php // require_once __DIR__ . '/includes/featured-carousel.php'; ?>
 
 <!-- Promoted & Recommended Events -->
-<section class="py-10 md:py-14 bg-white">
+<section class="py-10 bg-white md:py-14">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="flex items-center justify-between mb-8">
             <h2 class="text-xl font-bold md:text-2xl text-secondary">Evenimente recomandate</h2>
@@ -119,7 +119,7 @@ require_once __DIR__ . '/includes/header.php';
 
         <!-- City Filter Buttons -->
         <div class="flex flex-wrap gap-2 mb-8" id="cityFilterButtons">
-            <button class="city-filter-btn active px-4 py-2 text-sm font-semibold rounded-full transition-all bg-primary text-white" data-city="">
+            <button class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-full city-filter-btn active bg-primary" data-city="">
                 Toate
             </button>
             <!-- City buttons will be loaded dynamically -->
@@ -458,7 +458,7 @@ const HeroSlider = {
 
         // Create coverflow slides - dimensions handled by CSS
         slidesContainer.innerHTML = this.events.map((event, index) => {
-            const image = event.homepage_featured_image || event.featured_image || event.image || '/assets/images/hero-default.jpg';
+            const image = getStorageUrl(event.homepage_featured_image || event.featured_image || event.image);
             const date = new Date(event.starts_at || event.start_date || event.event_date);
             const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' });
             const location = event.venue_name || event.venue?.name || event.city || 'Romania';
@@ -499,7 +499,7 @@ const HeroSlider = {
         if (!thumbnailsContainer || this.events.length === 0) return;
 
         thumbnailsContainer.innerHTML = this.events.map((event, index) => {
-            const image = event.homepage_featured_image || event.featured_image || event.image || '/assets/images/hero-default.jpg';
+            const image = getStorageUrl(event.homepage_featured_image || event.featured_image || event.image);
             return `
                 <div class="thumbnail-item ${index === 0 ? 'active' : ''}" data-index="${index}">
                     <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" class="object-cover w-16 h-16 md:w-20 md:h-20" loading="lazy">
@@ -727,13 +727,13 @@ const CityEventsFilter = {
 
         // Keep "Toate" button, add city buttons
         const cityButtons = this.cities.map(city => `
-            <button class="city-filter-btn px-4 py-2 text-sm font-semibold rounded-full transition-all" data-city="${city.slug || city.name}">
+            <button class="px-4 py-2 text-sm font-semibold transition-all rounded-full city-filter-btn" data-city="${city.slug || city.name}">
                 ${city.name}
             </button>
         `).join('');
 
         container.innerHTML = `
-            <button class="city-filter-btn active px-4 py-2 text-sm font-semibold rounded-full transition-all bg-primary text-white" data-city="">
+            <button class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-full city-filter-btn active bg-primary" data-city="">
                 Toate
             </button>
             ${cityButtons}
@@ -772,7 +772,7 @@ const CityEventsFilter = {
         }
 
         if (!events || events.length === 0) {
-            container.innerHTML = '<p class="text-muted col-span-full py-8 text-center">Nu sunt evenimente disponibile pentru acest oraș.</p>';
+            container.innerHTML = '<p class="py-8 text-center text-muted col-span-full">Nu sunt evenimente disponibile pentru acest oraș.</p>';
             return;
         }
 
@@ -796,22 +796,22 @@ const CityEventsFilter = {
     },
 
     renderEventCard(event) {
-        const image = event.featured_image || event.image || '/assets/images/event-default.jpg';
+        const image = getStorageUrl(event.featured_image || event.image);
         const date = new Date(event.starts_at || event.start_date || event.event_date);
         const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
         const location = event.venue_name || event.venue?.name || event.city || '';
         const priceFrom = event.price_from ? `de la ${event.price_from} Lei` : '';
 
         return `
-            <a href="/bilete/${event.slug || ''}" class="overflow-hidden bg-white border rounded-2xl border-border hover:shadow-lg transition-shadow">
+            <a href="/bilete/${event.slug || ''}" class="overflow-hidden transition-shadow bg-white border rounded-2xl border-border hover:shadow-lg">
                 <div class="relative h-44">
                     <img src="${image}" alt="${event.title || 'Event'}" class="object-cover w-full h-full" loading="lazy">
                 </div>
                 <div class="p-4">
-                    <p class="text-xs font-semibold text-primary mb-1">${formattedDate}</p>
+                    <p class="mb-1 text-xs font-semibold text-primary">${formattedDate}</p>
                     <h3 class="font-bold text-secondary line-clamp-2">${event.title || event.name || 'Eveniment'}</h3>
-                    ${location ? `<p class="text-sm text-muted mt-1">${location}</p>` : ''}
-                    ${priceFrom ? `<p class="text-sm font-semibold text-primary mt-2">${priceFrom}</p>` : ''}
+                    ${location ? `<p class="mt-1 text-sm text-muted">${location}</p>` : ''}
+                    ${priceFrom ? `<p class="mt-2 text-sm font-semibold text-primary">${priceFrom}</p>` : ''}
                 </div>
             </a>
         `;
@@ -872,7 +872,7 @@ const PromotedEvents = {
     },
 
     renderCard(event) {
-        const image = event.featured_image || event.image || '/assets/images/event-default.jpg';
+        const image = getStorageUrl(event.featured_image || event.image);
         const date = new Date(event.starts_at || event.start_date || event.event_date);
         const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
         const location = event.venue_name || event.venue?.name || event.city || '';
@@ -885,16 +885,16 @@ const PromotedEvents = {
         ` : '';
 
         return `
-            <a href="/bilete/${event.slug || ''}" class="relative overflow-hidden bg-white border rounded-2xl border-border hover:shadow-lg transition-shadow group">
+            <a href="/bilete/${event.slug || ''}" class="relative overflow-hidden transition-shadow bg-white border rounded-2xl border-border hover:shadow-lg group">
                 <div class="relative h-44">
                     ${promotedBadge}
-                    <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" loading="lazy">
+                    <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">
                 </div>
                 <div class="p-4">
-                    <p class="text-xs font-semibold text-primary mb-1">${formattedDate}</p>
+                    <p class="mb-1 text-xs font-semibold text-primary">${formattedDate}</p>
                     <h3 class="font-bold text-secondary line-clamp-2">${this.escapeHtml(event.title || event.name || 'Eveniment')}</h3>
-                    ${location ? `<p class="text-sm text-muted mt-1">${this.escapeHtml(location)}</p>` : ''}
-                    ${priceFrom ? `<p class="text-sm font-semibold text-primary mt-2">${priceFrom}</p>` : ''}
+                    ${location ? `<p class="mt-1 text-sm text-muted">${this.escapeHtml(location)}</p>` : ''}
+                    ${priceFrom ? `<p class="mt-2 text-sm font-semibold text-primary">${priceFrom}</p>` : ''}
                 </div>
             </a>
         `;

@@ -412,7 +412,7 @@ const CartPage = {
     renderCartItem(item, index) {
         // Handle both AmbiletCart format and legacy format
         const itemKey = item.key || index;
-        const eventImage = item.event?.image || item.event_image || (typeof AMBILET_CONFIG !== 'undefined' ? AMBILET_CONFIG.PLACEHOLDER_EVENT : '/assets/images/default-event.png');
+        const eventImage = getStorageUrl(item.event?.image || item.event_image);
         const eventTitle = item.event?.title || item.event_title || 'Eveniment';
         const eventDate = item.event?.date || item.event_date || '';
         const venueName = item.event?.venue?.name || item.event?.venue || item.venue_name || '';

@@ -5,6 +5,7 @@
             apiUrl: '/api/proxy.php',
             siteName: '<?= SITE_NAME ?>',
             siteUrl: '<?= SITE_URL ?>',
+            storageUrl: '<?= STORAGE_URL ?>',
             locale: '<?= SITE_LOCALE ?>',
             currency: 'RON',
             currencySymbol: 'lei'

@@ -554,7 +554,7 @@ function renderEvents(events) {
     container.innerHTML = events.map(event => `
         <div class="p-6 transition-colors bg-white border rounded-2xl border-border hover:border-primary/30">
             <div class="flex flex-col gap-6 md:flex-row">
-                <img src="${event.image || AMBILET_CONFIG.PLACEHOLDER_EVENT}" alt="${event.name || event.title}" class="object-cover w-full md:w-40 h-28 rounded-xl">
+                <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full md:w-40 h-28 rounded-xl">
                 <div class="flex-1">
                     <div class="flex items-start justify-between gap-4">
                         <div>
