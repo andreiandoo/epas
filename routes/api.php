@@ -1450,6 +1450,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\PromoCodeController as 
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\TaxReportController as OrganizerTaxReportController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\InvitationsController as OrganizerInvitationsController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\RefundReportController as OrganizerRefundReportController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\ServiceOrderController as OrganizerServiceOrderController;
 
 Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no organizer auth)
@@ -1623,6 +1624,22 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.refunds.export');
         Route::get('/refunds/{refund}', [OrganizerRefundReportController::class, 'show'])
             ->name('api.marketplace-client.organizer.refunds.show');
+
+        // Services (Extra Services / Servicii Extra)
+        Route::get('/services/pricing', [OrganizerServiceOrderController::class, 'pricing'])
+            ->name('api.marketplace-client.organizer.services.pricing');
+        Route::get('/services/types', [OrganizerServiceOrderController::class, 'types'])
+            ->name('api.marketplace-client.organizer.services.types');
+        Route::get('/services/stats', [OrganizerServiceOrderController::class, 'stats'])
+            ->name('api.marketplace-client.organizer.services.stats');
+        Route::get('/services/orders', [OrganizerServiceOrderController::class, 'index'])
+            ->name('api.marketplace-client.organizer.services.orders');
+        Route::post('/services/orders', [OrganizerServiceOrderController::class, 'store'])
+            ->name('api.marketplace-client.organizer.services.orders.store');
+        Route::get('/services/orders/{uuid}', [OrganizerServiceOrderController::class, 'show'])
+            ->name('api.marketplace-client.organizer.services.orders.show');
+        Route::post('/services/orders/{uuid}/cancel', [OrganizerServiceOrderController::class, 'cancel'])
+            ->name('api.marketplace-client.organizer.services.orders.cancel');
     });
 });
 
