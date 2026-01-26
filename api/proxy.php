@@ -1202,6 +1202,113 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // ==================== ORGANIZER TEAM ====================
+
+    case 'organizer.team':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/team';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.member':
+        $memberId = $_GET['member_id'] ?? '';
+        if (!$memberId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing member_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/team/' . urlencode($memberId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.invite':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/invite';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.update':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/update';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.remove':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/remove';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.resend-invite':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/resend-invite';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.resend-all-invites':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/resend-all-invites';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER API KEY ====================
+
+    case 'organizer.api-key':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/api-key';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.api-key.regenerate':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/api-key/regenerate';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.webhook':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/webhook';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER PARTICIPANTS (ALL EVENTS) ====================
+
+    case 'organizer.participants':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 100);
+        $endpoint = '/organizer/participants' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.participants.checkin':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/participants/checkin';
+        $requiresAuth = true;
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);
