@@ -14,71 +14,50 @@ require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<!-- Hero Slider Section -->
-<section class="relative overflow-hidden bg-secondary mt-28 mobile:mt-18" id="heroSlider">
-    <div class="relative h-[480px] md:h-[560px]" id="heroSection">
-        <!-- Slides container -->
-        <div id="heroSlides" class="relative w-full h-full">
-            <!-- Default slide (will be replaced by JS) -->
-            <div class="hero-slide active">
-                <img src="/assets/images/hero-default.jpg" alt="Festival" class="absolute inset-0 object-cover w-full h-full">
-                <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/20"></div>
-                <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+<!-- Hero Slider Section - Card Carousel Style -->
+<section class="relative bg-secondary mt-28 mobile:mt-18 py-8 md:py-12" id="heroSlider">
+    <div class="px-4 mx-auto max-w-7xl">
+        <!-- Section Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2 class="text-xl font-bold text-white md:text-2xl">Evenimente Recomandate</h2>
+                <p class="text-sm text-white/60 mt-1">Descopera cele mai populare evenimente</p>
             </div>
+            <a href="/evenimente" class="hidden md:flex items-center gap-2 text-white/80 hover:text-white transition-colors font-medium">
+                Vezi toate
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </a>
         </div>
 
-        <!-- Content overlay -->
-        <div class="absolute inset-0 flex items-center">
-            <div class="w-full px-4 mx-auto max-w-7xl">
-                <div class="max-w-xl text-white fade-in">
-                    <span class="inline-flex items-center gap-2 px-4 py-2 mb-5 text-sm font-bold rounded-full bg-primary">
-                        <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                        <span id="heroLabel">Featured</span>
-                    </span>
-                    <h1 id="heroTitle" class="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 leading-[1.1]">
-                        Descopera evenimente
-                    </h1>
-                    <p id="heroMeta" class="flex flex-wrap items-center gap-3 mb-8 text-lg md:text-xl text-white/80">
-                        <span class="flex items-center gap-1.5">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                            <span id="heroDate">Eveniment nou</span>
-                        </span>
-                        <span class="w-1.5 h-1.5 bg-white/40 rounded-full"></span>
-                        <span class="flex items-center gap-1.5">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                            <span id="heroLocation">Romania</span>
-                        </span>
-                    </p>
-                    <div class="flex flex-wrap gap-4">
-                        <a href="/evenimente" id="heroCta" class="inline-flex items-center gap-2 px-8 py-4 font-bold text-white btn-primary rounded-xl">
-                            Cumpara Bilete
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                            </svg>
-                        </a>
-                        <a href="/evenimente" id="heroDetails" class="px-8 py-4 font-bold text-white transition-colors border bg-white/15 backdrop-blur-sm rounded-xl hover:bg-white/25 border-white/20">
-                            Vezi Detalii
-                        </a>
+        <!-- Carousel Container -->
+        <div class="relative" id="heroSection">
+            <!-- Slider Navigation Arrows -->
+            <button id="heroPrev" class="absolute z-20 items-center justify-center hidden md:flex w-12 h-12 text-white transition-all -translate-y-1/2 rounded-full left-0 -ml-4 top-1/2 bg-secondary/90 hover:bg-primary shadow-lg disabled:opacity-30 disabled:cursor-not-allowed">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <button id="heroNext" class="absolute z-20 items-center justify-center hidden md:flex w-12 h-12 text-white transition-all -translate-y-1/2 rounded-full right-0 -mr-4 top-1/2 bg-secondary/90 hover:bg-primary shadow-lg disabled:opacity-30 disabled:cursor-not-allowed">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+
+            <!-- Cards Track -->
+            <div class="overflow-hidden mx-2 md:mx-6">
+                <div id="heroSlides" class="flex transition-transform duration-500 ease-out gap-4 md:gap-6">
+                    <!-- Loading Skeleton Cards -->
+                    <?php for ($i = 0; $i < 4; $i++): ?>
+                    <div class="hero-card flex-shrink-0 w-[280px] md:w-[320px] lg:w-[340px]">
+                        <div class="relative overflow-hidden bg-white/10 rounded-2xl aspect-[3/4]">
+                            <div class="skeleton absolute inset-0"></div>
+                        </div>
                     </div>
+                    <?php endfor; ?>
                 </div>
             </div>
+
+            <!-- Slider Dots -->
+            <div id="heroDots" class="flex justify-center gap-2 mt-6"></div>
         </div>
-
-        <!-- Slider Navigation Arrows -->
-        <button id="heroPrev" class="absolute z-10 items-center justify-center hidden w-12 h-12 text-white transition-colors -translate-y-1/2 rounded-full md:flex left-4 top-1/2 bg-white/20 backdrop-blur-sm hover:bg-white/30">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        </button>
-        <button id="heroNext" class="absolute z-10 items-center justify-center hidden w-12 h-12 text-white transition-colors -translate-y-1/2 rounded-full md:flex right-4 top-1/2 bg-white/20 backdrop-blur-sm hover:bg-white/30">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        </button>
-
-        <!-- Slider Dots -->
-        <div id="heroDots" class="absolute z-10 flex gap-2 -translate-x-1/2 bottom-6 left-1/2"></div>
     </div>
 </section>
 
@@ -197,20 +176,92 @@ require_once __DIR__ . '/includes/header.php';
 <?php
 $scriptsExtra = <<<'SCRIPTS'
 <style>
-/* Hero Slider Styles */
-.hero-slide {
+/* Hero Card Carousel Styles */
+.hero-card {
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+.hero-card:hover {
+    transform: translateY(-4px);
+}
+.hero-card-inner {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    aspect-ratio: 3/4;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(30, 41, 59, 0.8) 100%);
+}
+.hero-card-image {
     position: absolute;
     inset: 0;
-    opacity: 0;
-    transition: opacity 0.8s ease-in-out;
-}
-.hero-slide.active {
-    opacity: 1;
-}
-.hero-slide img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.5s ease;
+}
+.hero-card:hover .hero-card-image {
+    transform: scale(1.05);
+}
+.hero-card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.1) 100%);
+}
+.hero-card-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1.25rem;
+}
+.hero-card-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    background: var(--color-primary, #A51C30);
+    color: white;
+    margin-bottom: 0.75rem;
+}
+.hero-card-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1.3;
+    margin-bottom: 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.hero-card-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    color: rgba(255,255,255,0.8);
+}
+.hero-card-date,
+.hero-card-location {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+.hero-card-price {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: white;
+    color: var(--color-primary, #A51C30);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
 }
 #heroDots button {
     width: 10px;
@@ -228,26 +279,58 @@ $scriptsExtra = <<<'SCRIPTS'
 }
 </style>
 <script>
-// Hero Slider Module
+// Hero Card Carousel Module
 const HeroSlider = {
     events: [],
-    currentIndex: 0,
+    currentPage: 0,
+    cardsPerPage: 4,
+    totalPages: 0,
     autoplayInterval: null,
-    autoplayDelay: 5000, // 5 seconds
+    autoplayDelay: 6000, // 6 seconds
+    track: null,
+    cardWidth: 340, // Default card width
+    gap: 24, // Gap between cards
 
     async init() {
         try {
-            // Load homepage featured events using type=homepage
-            const response = await AmbiletAPI.get('/events/featured?type=homepage&limit=10');
+            // Load homepage featured events
+            const response = await AmbiletAPI.get('/events/featured?type=homepage&limit=12');
             if (response.data && response.data.events && response.data.events.length > 0) {
                 this.events = response.data.events;
+                this.calculateLayout();
                 this.render();
                 this.bindEvents();
                 this.startAutoplay();
             }
         } catch (error) {
             console.warn('Failed to load hero slider events:', error);
+            // Hide section if no events
+            const section = document.getElementById('heroSlider');
+            if (section) section.style.display = 'none';
         }
+    },
+
+    calculateLayout() {
+        const container = document.querySelector('#heroSlides')?.parentElement;
+        if (!container) return;
+
+        const containerWidth = container.offsetWidth;
+
+        // Responsive card widths
+        if (window.innerWidth < 640) {
+            this.cardWidth = 260;
+            this.gap = 16;
+        } else if (window.innerWidth < 1024) {
+            this.cardWidth = 300;
+            this.gap = 20;
+        } else {
+            this.cardWidth = 340;
+            this.gap = 24;
+        }
+
+        // Calculate how many cards fit per view
+        this.cardsPerPage = Math.max(1, Math.floor((containerWidth + this.gap) / (this.cardWidth + this.gap)));
+        this.totalPages = Math.ceil(this.events.length / this.cardsPerPage);
     },
 
     render() {
@@ -256,73 +339,107 @@ const HeroSlider = {
 
         if (!slidesContainer || this.events.length === 0) return;
 
-        // Create slides
+        this.track = slidesContainer;
+
+        // Create event cards
         slidesContainer.innerHTML = this.events.map((event, index) => {
-            // Use homepage_featured_image if available, fallback to featured_image or image
             const image = event.homepage_featured_image || event.featured_image || event.image || '/assets/images/hero-default.jpg';
+            const date = new Date(event.starts_at || event.start_date || event.event_date);
+            const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
+            const location = event.venue_name || event.venue?.name || event.city || 'Romania';
+            const category = event.category?.name || event.type || 'Eveniment';
+            const priceFrom = event.price_from ? `de la ${event.price_from} Lei` : '';
+
             return `
-                <div class="hero-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
-                    <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" loading="${index === 0 ? 'eager' : 'lazy'}">
-                    <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/20"></div>
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-                </div>
+                <a href="/bilete/${event.slug || ''}" class="hero-card" style="width: ${this.cardWidth}px;" data-index="${index}">
+                    <div class="hero-card-inner">
+                        <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" class="hero-card-image" loading="${index < 4 ? 'eager' : 'lazy'}">
+                        <div class="hero-card-overlay"></div>
+                        ${priceFrom ? `<div class="hero-card-price">${priceFrom}</div>` : ''}
+                        <div class="hero-card-content">
+                            <span class="hero-card-badge">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                                ${this.escapeHtml(category)}
+                            </span>
+                            <h3 class="hero-card-title">${this.escapeHtml(event.title || event.name || 'Eveniment')}</h3>
+                            <div class="hero-card-meta">
+                                <span class="hero-card-date">
+                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    ${formattedDate}
+                                </span>
+                                <span class="hero-card-location">
+                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    ${this.escapeHtml(location)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
             `;
         }).join('');
 
-        // Create dots
-        dotsContainer.innerHTML = this.events.map((_, index) =>
-            `<button data-index="${index}" class="${index === 0 ? 'active' : ''}" aria-label="Go to slide ${index + 1}"></button>`
-        ).join('');
+        // Create pagination dots (one per page, not per card)
+        if (this.totalPages > 1) {
+            dotsContainer.innerHTML = Array.from({ length: this.totalPages }, (_, i) =>
+                `<button data-page="${i}" class="${i === 0 ? 'active' : ''}" aria-label="Go to page ${i + 1}"></button>`
+            ).join('');
+        } else {
+            dotsContainer.innerHTML = '';
+        }
 
-        // Update content for first slide
-        this.updateContent(0);
+        this.updateNavButtons();
     },
 
-    updateContent(index) {
-        const event = this.events[index];
-        if (!event) return;
+    goToPage(page) {
+        if (page < 0) page = this.totalPages - 1;
+        if (page >= this.totalPages) page = 0;
 
-        const date = new Date(event.starts_at || event.start_date || event.event_date);
-        const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+        this.currentPage = page;
 
-        document.getElementById('heroLabel').textContent = 'Featured';
-        document.getElementById('heroTitle').textContent = event.title || event.name || 'Eveniment';
-        document.getElementById('heroDate').textContent = formattedDate;
-        document.getElementById('heroLocation').textContent = event.venue_name || event.venue?.name || event.city?.name || 'Romania';
-        document.getElementById('heroCta').href = '/bilete/' + (event.slug || '');
-        document.getElementById('heroDetails').href = '/bilete/' + (event.slug || '');
-    },
+        // Calculate the translation
+        const offset = page * this.cardsPerPage * (this.cardWidth + this.gap);
+        if (this.track) {
+            this.track.style.transform = `translateX(-${offset}px)`;
+        }
 
-    goTo(index) {
-        if (index < 0) index = this.events.length - 1;
-        if (index >= this.events.length) index = 0;
-
-        const slides = document.querySelectorAll('.hero-slide');
+        // Update dots
         const dots = document.querySelectorAll('#heroDots button');
-
-        slides.forEach((slide, i) => {
-            slide.classList.toggle('active', i === index);
-        });
-
         dots.forEach((dot, i) => {
-            dot.classList.toggle('active', i === index);
+            dot.classList.toggle('active', i === page);
         });
 
-        this.currentIndex = index;
-        this.updateContent(index);
+        this.updateNavButtons();
+    },
+
+    updateNavButtons() {
+        const prevBtn = document.getElementById('heroPrev');
+        const nextBtn = document.getElementById('heroNext');
+
+        if (prevBtn) {
+            prevBtn.disabled = this.currentPage === 0;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = this.currentPage >= this.totalPages - 1;
+        }
     },
 
     next() {
-        this.goTo(this.currentIndex + 1);
+        if (this.currentPage < this.totalPages - 1) {
+            this.goToPage(this.currentPage + 1);
+        } else {
+            this.goToPage(0); // Loop back to start
+        }
     },
 
     prev() {
-        this.goTo(this.currentIndex - 1);
+        if (this.currentPage > 0) {
+            this.goToPage(this.currentPage - 1);
+        }
     },
 
     startAutoplay() {
         this.stopAutoplay();
-        if (this.events.length > 1) {
+        if (this.totalPages > 1) {
             this.autoplayInterval = setInterval(() => this.next(), this.autoplayDelay);
         }
     },
@@ -357,8 +474,8 @@ const HeroSlider = {
         if (dotsContainer) {
             dotsContainer.addEventListener('click', (e) => {
                 if (e.target.tagName === 'BUTTON') {
-                    const index = parseInt(e.target.dataset.index, 10);
-                    this.goTo(index);
+                    const page = parseInt(e.target.dataset.page, 10);
+                    this.goToPage(page);
                     this.startAutoplay();
                 }
             });
@@ -372,21 +489,34 @@ const HeroSlider = {
 
         // Touch/swipe support
         let touchStartX = 0;
-        if (heroSection) {
-            heroSection.addEventListener('touchstart', (e) => {
+        const track = document.getElementById('heroSlides');
+        if (track) {
+            track.addEventListener('touchstart', (e) => {
                 touchStartX = e.touches[0].clientX;
+                this.stopAutoplay();
             }, { passive: true });
 
-            heroSection.addEventListener('touchend', (e) => {
+            track.addEventListener('touchend', (e) => {
                 const touchEndX = e.changedTouches[0].clientX;
                 const diff = touchStartX - touchEndX;
                 if (Math.abs(diff) > 50) {
                     if (diff > 0) this.next();
                     else this.prev();
-                    this.startAutoplay();
                 }
+                this.startAutoplay();
             }, { passive: true });
         }
+
+        // Recalculate on resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                this.calculateLayout();
+                this.render();
+                this.goToPage(0);
+            }, 200);
+        });
     },
 
     escapeHtml(str) {
