@@ -13,6 +13,7 @@ if (!defined('AMBILET_ROOT')) {
 // API Configuration
 define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
 define('API_KEY', 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCISPFB'); // Replace with actual API key
+define('STORAGE_URL', 'https://core.tixello.com/storage'); // Core storage URL for images
 
 // Site Configuration
 define('SITE_NAME', 'AmBilet');

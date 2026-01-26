@@ -1485,6 +1485,12 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::get('/contract', [OrganizerAuthController::class, 'contract'])
             ->name('api.marketplace-client.organizer.contract');
 
+        // API Key
+        Route::get('/api-key', [OrganizerAuthController::class, 'getApiKey'])
+            ->name('api.marketplace-client.organizer.api-key');
+        Route::post('/api-key/regenerate', [OrganizerAuthController::class, 'regenerateApiKey'])
+            ->name('api.marketplace-client.organizer.api-key.regenerate');
+
         // Dashboard
         Route::get('/dashboard', [OrganizerDashboardController::class, 'index'])
             ->name('api.marketplace-client.organizer.dashboard');

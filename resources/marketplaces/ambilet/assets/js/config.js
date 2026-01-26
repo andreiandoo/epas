@@ -17,6 +17,7 @@ const AMBILET_CONFIG = {
     // Site Configuration (from PHP if available)
     SITE_NAME: PHP_CONFIG.siteName || 'Ambilet',
     SITE_URL: PHP_CONFIG.siteUrl || 'https://ambilet.ro',
+    STORAGE_URL: PHP_CONFIG.storageUrl || 'https://core.tixello.com/storage',
     SUPPORT_EMAIL: 'support@ambilet.ro',
 
     // Currency
@@ -62,6 +63,28 @@ const AMBILET_CONFIG = {
         ERROR: '#EF4444'
     }
 };
+
+/**
+ * Get the full URL for a storage image
+ * @param {string} path - The image path (can be relative or absolute)
+ * @returns {string} The full URL to the image
+ */
+function getStorageUrl(path) {
+    if (!path) return AMBILET_CONFIG.PLACEHOLDER_EVENT;
+
+    // If already a full URL, return as-is
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+
+    // Remove leading slash if present for consistent concatenation
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+
+    // If path starts with 'storage/', remove it since STORAGE_URL already includes it
+    const finalPath = cleanPath.startsWith('storage/') ? cleanPath.substring(8) : cleanPath;
+
+    return `${AMBILET_CONFIG.STORAGE_URL}/${finalPath}`;
+}
 
 // Freeze config to prevent modifications
 Object.freeze(AMBILET_CONFIG);

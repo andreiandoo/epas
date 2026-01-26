@@ -24,7 +24,7 @@ RewriteRule ^event/([a-z0-9-]+)/?$ /bilete/$1 [R=301,L]
 # Handle category pages - /concerte, /festivaluri, /teatru, etc.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(concerte|festivaluri|teatru|stand-up|evenimente-copii|festival-moto|sport|comedy|spectacole|alte-evenimente|muzica|dans|expozitii|conferinte|workshop)/?$ category.php?slug=$1 [L,QSA]
+RewriteRule ^(bilete-concerte|festivaluri|teatru|stand-up|evenimente-copii|festival-moto|sport|comedy|spectacole|alte-evenimente|muzica|dans|expozitii|conferinte|workshop)/?$ category.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /category/slug to /slug
 RewriteRule ^category/([a-z0-9-]+)/?$ /$1 [R=301,L]
@@ -235,6 +235,16 @@ RewriteRule ^user/reviews/?$ /cont/recenzii [R=301,L]
 # ============================================
 # ORGANIZER DASHBOARD ROUTES - /organizator/*
 # ============================================
+
+# Handle organizer event detail/edit - /organizator/event/{id}
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/event/([0-9]+)/?$ organizer/events.php?id=$1 [L,QSA]
+
+# Handle organizer analytics for specific event - /organizator/analytics/{id}
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/analytics/([0-9]+)/?$ organizer/analytics.php?event=$1 [L,QSA]
 
 # Handle organizer dashboard routes - /organizator/dashboard, /organizator/events, etc.
 RewriteCond %{REQUEST_FILENAME} !-f

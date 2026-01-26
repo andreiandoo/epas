@@ -203,7 +203,7 @@ const WatchlistPage = {
             const hasPrice = event.price && event.price > 0;
             return '<div class="event-card bg-white rounded-xl lg:rounded-2xl border border-border overflow-hidden ' + (isSoldOut ? 'opacity-75' : '') + '">' +
                 '<a href="' + eventUrl + '" class="block relative">' +
-                    '<img src="' + (event.image || '/assets/images/default-event.png') + '" class="w-full h-40 object-cover ' + (isSoldOut ? 'grayscale' : '') + '" alt="' + (event.title || '') + '">' +
+                    '<img src="' + getStorageUrl(event.image) + '" class="w-full h-40 object-cover ' + (isSoldOut ? 'grayscale' : '') + '" alt="' + (event.title || '') + '">' +
                     (isSoldOut ?
                         '<div class="absolute inset-0 flex items-center justify-center bg-black/50">' +
                             '<span class="px-4 py-2 text-sm font-bold text-white rounded-lg bg-error">SOLD OUT</span>' +

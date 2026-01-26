@@ -43,6 +43,7 @@ class MarketplaceOrganizer extends Authenticatable
         'gamification_enabled',
         'invitations_enabled',
         'tax_settings',
+        'api_key',
         'payout_details',
         'bank_name',
         'iban',
@@ -405,5 +406,59 @@ class MarketplaceOrganizer extends Authenticatable
         // Allow resend if token was created more than 1 minute ago
         $tokenCreatedAt = $this->email_verification_expires_at->subHours(24);
         return $tokenCreatedAt->diffInMinutes(now()) >= 1;
+    }
+
+    // =========================================
+    // API Key Management
+    // =========================================
+
+    /**
+     * Generate a new API key for this organizer
+     * Format: mpo_{random_string} (marketplace organizer)
+     */
+    public function generateApiKey(): string
+    {
+        $key = 'mpo_' . Str::random(48);
+
+        $this->update([
+            'api_key' => $key,
+        ]);
+
+        return $key;
+    }
+
+    /**
+     * Regenerate API key (invalidates the old one)
+     */
+    public function regenerateApiKey(): string
+    {
+        return $this->generateApiKey();
+    }
+
+    /**
+     * Check if organizer has an API key
+     */
+    public function hasApiKey(): bool
+    {
+        return !empty($this->api_key);
+    }
+
+    /**
+     * Get masked API key (shows only first and last 4 chars)
+     */
+    public function getMaskedApiKey(): ?string
+    {
+        if (!$this->api_key) {
+            return null;
+        }
+
+        $key = $this->api_key;
+        $length = strlen($key);
+
+        if ($length <= 12) {
+            return str_repeat('*', $length);
+        }
+
+        return substr($key, 0, 8) . str_repeat('*', $length - 12) . substr($key, -4);
     }
 }

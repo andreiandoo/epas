@@ -56,6 +56,9 @@ class AuthController extends BaseController
             'status' => 'pending', // Requires approval
         ]);
 
+        // Generate API key for the organizer
+        $organizer->generateApiKey();
+
         // Send verification email
         $verificationToken = $organizer->generateEmailVerificationToken();
         $organizer->notify(new MarketplaceEmailVerificationNotification(
@@ -446,6 +449,50 @@ class AuthController extends BaseController
     }
 
     /**
+     * Get organizer's API key
+     */
+    public function getApiKey(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        // Generate if not exists
+        if (!$organizer->hasApiKey()) {
+            $organizer->generateApiKey();
+            $organizer->refresh();
+        }
+
+        return $this->success([
+            'api_key' => $organizer->api_key,
+            'masked_key' => $organizer->getMaskedApiKey(),
+            'created_at' => $organizer->updated_at->toIso8601String(),
+        ], 'API key retrieved');
+    }
+
+    /**
+     * Regenerate organizer's API key
+     */
+    public function regenerateApiKey(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $newKey = $organizer->regenerateApiKey();
+
+        return $this->success([
+            'api_key' => $newKey,
+            'masked_key' => $organizer->getMaskedApiKey(),
+            'regenerated_at' => now()->toIso8601String(),
+        ], 'API key regenerated successfully. Please update your integrations with the new key.');
+    }
+
+    /**
      * Format organizer for response
      */
     protected function formatOrganizer(MarketplaceOrganizer $organizer): array
@@ -483,6 +530,8 @@ class AuthController extends BaseController
             'can_request_payout' => $organizer->hasMinimumPayoutBalance()
                 && !$organizer->hasPendingPayout()
                 && !empty($organizer->payout_details),
+            'has_api_key' => $organizer->hasApiKey(),
+            'api_key_masked' => $organizer->getMaskedApiKey(),
             'created_at' => $organizer->created_at->toIso8601String(),
         ];
     }

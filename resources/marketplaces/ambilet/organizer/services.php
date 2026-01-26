@@ -919,21 +919,23 @@ function setupDateValidation() {
 async function loadEvents() {
     try {
         const response = await AmbiletAPI.get('/organizer/events');
-        if (response.success && response.data.events) {
-            events = response.data.events;
+        // API returns paginated response with data array directly
+        if (response.success && response.data) {
+            events = Array.isArray(response.data) ? response.data : [];
             const select = document.getElementById('service-event');
             events.forEach(e => {
                 const opt = document.createElement('option');
                 opt.value = e.id;
-                opt.textContent = e.title;
+                // API returns 'name' not 'title', 'starts_at' not 'date', 'venue_name' not 'venue'
+                opt.textContent = e.name || e.title;
                 opt.dataset.image = e.image;
-                opt.dataset.date = e.date;
-                opt.dataset.venue = e.venue;
+                opt.dataset.date = e.starts_at || e.date;
+                opt.dataset.venue = e.venue_name || e.venue;
                 select.appendChild(opt);
             });
         }
     } catch (e) {
-        console.log('Events will load when API is available');
+        console.log('Events will load when API is available', e);
     }
 }
 
@@ -1084,7 +1086,7 @@ function nextStep() {
         const event = events.find(e => e.id == eventId);
         if (event) {
             document.getElementById('event-preview').classList.remove('hidden');
-            document.getElementById('event-image').src = event.image || '/assets/images/default-event.png';
+            document.getElementById('event-image').src = getStorageUrl(event.image);
             document.getElementById('event-title').textContent = event.title;
             document.getElementById('event-date').textContent = AmbiletUtils.formatDate(event.date);
             document.getElementById('event-venue').textContent = event.venue || '';
@@ -1398,7 +1400,7 @@ document.getElementById('service-event').addEventListener('change', function() {
     const event = events.find(e => e.id == this.value);
     if (event) {
         document.getElementById('event-preview').classList.remove('hidden');
-        document.getElementById('event-image').src = event.image || '/assets/images/default-event.png';
+        document.getElementById('event-image').src = getStorageUrl(event.image);
         document.getElementById('event-title').textContent = event.title;
         document.getElementById('event-date').textContent = AmbiletUtils.formatDate(event.date);
         document.getElementById('event-venue').textContent = event.venue || '';
@@ -1568,7 +1570,7 @@ function showEmailPreview() {
     // Generate email preview content
     const previewHtml = `
         <div class="text-center mb-6">
-            <img src="${event.image || '/assets/images/default-event.png'}" alt="${event.title}" class="w-full max-w-md mx-auto rounded-xl shadow-lg">
+            <img src="${getStorageUrl(event.image)}" alt="${event.title}" class="w-full max-w-md mx-auto rounded-xl shadow-lg">
         </div>
 
         <h1 class="text-2xl font-bold text-secondary text-center mb-4">${event.title}</h1>

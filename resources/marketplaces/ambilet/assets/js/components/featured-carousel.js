@@ -231,7 +231,7 @@ const FeaturedCarousel = {
         const day = date.getDate();
         const month = months[date.getMonth()];
 
-        const image = event.featured_image || event.image || '/assets/images/default-event.png';
+        const image = getStorageUrl(event.featured_image || event.image);
         const title = event.name || event.title || 'Eveniment';
         const venue = event.venue_name || (event.venue ? event.venue.name : '');
         const city = event.venue_city || (event.venue ? event.venue.city : '');
