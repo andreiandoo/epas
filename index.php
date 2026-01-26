@@ -14,49 +14,44 @@ require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<!-- Hero Slider Section - Card Carousel Style -->
-<section class="relative bg-secondary mt-28 mobile:mt-18 py-8 md:py-12" id="heroSlider">
+<!-- Hero Slider Section - 3D Coverflow Style -->
+<section class="relative bg-secondary mt-28 mobile:mt-18 py-8 md:py-12 overflow-hidden" id="heroSlider">
     <div class="px-4 mx-auto max-w-7xl">
-        <!-- Section Header -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h2 class="text-xl font-bold text-white md:text-2xl">Evenimente Recomandate</h2>
-                <p class="text-sm text-white/60 mt-1">Descopera cele mai populare evenimente</p>
-            </div>
-            <a href="/evenimente" class="hidden md:flex items-center gap-2 text-white/80 hover:text-white transition-colors font-medium">
-                Vezi toate
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
-            </a>
-        </div>
-
-        <!-- Carousel Container -->
+        <!-- Main 3D Carousel -->
         <div class="relative" id="heroSection">
             <!-- Slider Navigation Arrows -->
-            <button id="heroPrev" class="absolute z-20 items-center justify-center hidden md:flex w-12 h-12 text-white transition-all -translate-y-1/2 rounded-full left-0 -ml-4 top-1/2 bg-secondary/90 hover:bg-primary shadow-lg disabled:opacity-30 disabled:cursor-not-allowed">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            <button id="heroPrev" class="absolute z-30 items-center justify-center flex w-10 h-10 md:w-12 md:h-12 text-white transition-all -translate-y-1/2 rounded-full left-2 md:left-4 top-1/2 bg-black/50 hover:bg-primary shadow-lg">
+                <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
             </button>
-            <button id="heroNext" class="absolute z-20 items-center justify-center hidden md:flex w-12 h-12 text-white transition-all -translate-y-1/2 rounded-full right-0 -mr-4 top-1/2 bg-secondary/90 hover:bg-primary shadow-lg disabled:opacity-30 disabled:cursor-not-allowed">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <button id="heroNext" class="absolute z-30 items-center justify-center flex w-10 h-10 md:w-12 md:h-12 text-white transition-all -translate-y-1/2 rounded-full right-2 md:right-4 top-1/2 bg-black/50 hover:bg-primary shadow-lg">
+                <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
 
-            <!-- Cards Track -->
-            <div class="overflow-hidden mx-2 md:mx-6">
-                <div id="heroSlides" class="flex transition-transform duration-500 ease-out gap-4 md:gap-6">
-                    <!-- Loading Skeleton Cards -->
-                    <?php for ($i = 0; $i < 4; $i++): ?>
-                    <div class="hero-card flex-shrink-0 w-[280px] md:w-[320px] lg:w-[340px]">
-                        <div class="relative overflow-hidden bg-white/10 rounded-2xl aspect-[3/4]">
-                            <div class="skeleton absolute inset-0"></div>
-                        </div>
+            <!-- 3D Slides Container -->
+            <div class="coverflow-container" id="coverflowContainer">
+                <div id="heroSlides" class="coverflow-track">
+                    <!-- Loading Skeleton -->
+                    <div class="coverflow-slide coverflow-left">
+                        <div class="coverflow-slide-inner skeleton" style="width: 450px; height: 360px;"></div>
                     </div>
-                    <?php endfor; ?>
+                    <div class="coverflow-slide coverflow-center">
+                        <div class="coverflow-slide-inner skeleton" style="width: 450px; height: 360px;"></div>
+                    </div>
+                    <div class="coverflow-slide coverflow-right">
+                        <div class="coverflow-slide-inner skeleton" style="width: 450px; height: 360px;"></div>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Slider Dots -->
-            <div id="heroDots" class="flex justify-center gap-2 mt-6"></div>
+        <!-- Thumbnails Navigation -->
+        <div class="mt-6 md:mt-8">
+            <div class="flex justify-center gap-2 md:gap-3 overflow-x-auto pb-2 px-4 thumbnails-scroll" id="heroThumbnails">
+                <!-- Thumbnails will be loaded dynamically -->
+                <?php for ($i = 0; $i < 6; $i++): ?>
+                <div class="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg skeleton"></div>
+                <?php endfor; ?>
+            </div>
         </div>
     </div>
 </section>
@@ -176,46 +171,66 @@ require_once __DIR__ . '/includes/header.php';
 <?php
 $scriptsExtra = <<<'SCRIPTS'
 <style>
-/* Hero Card Carousel Styles */
-.hero-card {
-    flex-shrink: 0;
+/* 3D Coverflow Carousel Styles */
+.coverflow-container {
+    perspective: 1200px;
+    overflow: visible;
+    padding: 20px 0;
+    position: relative;
+}
+.coverflow-track {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    transition: none;
+    min-height: 380px;
+}
+@media (max-width: 768px) {
+    .coverflow-track {
+        min-height: 320px;
+    }
+}
+.coverflow-slide {
+    position: absolute;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
-    transition: transform 0.3s ease;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
 }
-.hero-card:hover {
-    transform: translateY(-4px);
-}
-.hero-card-inner {
+.coverflow-slide-inner {
     position: relative;
     overflow: hidden;
     border-radius: 1rem;
-    aspect-ratio: 3/4;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(30, 41, 59, 0.8) 100%);
 }
-.hero-card-image {
-    position: absolute;
-    inset: 0;
+.coverflow-slide img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.5s ease;
+    display: block;
 }
-.hero-card:hover .hero-card-image {
-    transform: scale(1.05);
-}
-.hero-card-overlay {
+.coverflow-slide-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.1) 100%);
+    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0) 100%);
 }
-.hero-card-content {
+.coverflow-slide-content {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 1.25rem;
+    padding: 1.5rem;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
 }
-.hero-card-badge {
+.coverflow-slide.coverflow-center .coverflow-slide-content {
+    opacity: 1;
+    transform: translateY(0);
+}
+.coverflow-slide-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
@@ -227,8 +242,8 @@ $scriptsExtra = <<<'SCRIPTS'
     color: white;
     margin-bottom: 0.75rem;
 }
-.hero-card-title {
-    font-size: 1.125rem;
+.coverflow-slide-title {
+    font-size: 1.25rem;
     font-weight: 700;
     color: white;
     line-height: 1.3;
@@ -238,58 +253,128 @@ $scriptsExtra = <<<'SCRIPTS'
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
-.hero-card-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    font-size: 0.875rem;
-    color: rgba(255,255,255,0.8);
+@media (min-width: 768px) {
+    .coverflow-slide-title {
+        font-size: 1.5rem;
+    }
 }
-.hero-card-date,
-.hero-card-location {
+.coverflow-slide-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    color: rgba(255,255,255,0.9);
+}
+.coverflow-slide-date,
+.coverflow-slide-location {
     display: flex;
     align-items: center;
     gap: 0.375rem;
 }
-.hero-card-price {
+.coverflow-slide-price {
     position: absolute;
     top: 1rem;
     right: 1rem;
     background: white;
     color: var(--color-primary, #A51C30);
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 1rem;
     border-radius: 0.5rem;
     font-size: 0.875rem;
     font-weight: 700;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.3s ease;
 }
-#heroDots button {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.4);
-    border: none;
+.coverflow-slide.coverflow-center .coverflow-slide-price {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Slide positions - center is largest, sides are smaller */
+.coverflow-slide.coverflow-far-left {
+    transform: translateX(-200%) scale(0.5) rotateY(45deg);
+    z-index: 1;
+    opacity: 0.3;
+    filter: brightness(0.5);
+}
+.coverflow-slide.coverflow-left {
+    transform: translateX(-85%) scale(0.75) rotateY(25deg);
+    z-index: 2;
+    opacity: 0.7;
+    filter: brightness(0.7);
+}
+.coverflow-slide.coverflow-center {
+    transform: translateX(0) scale(1) rotateY(0deg);
+    z-index: 3;
+}
+.coverflow-slide.coverflow-right {
+    transform: translateX(85%) scale(0.75) rotateY(-25deg);
+    z-index: 2;
+    opacity: 0.7;
+    filter: brightness(0.7);
+}
+.coverflow-slide.coverflow-far-right {
+    transform: translateX(200%) scale(0.5) rotateY(-45deg);
+    z-index: 1;
+    opacity: 0.3;
+    filter: brightness(0.5);
+}
+.coverflow-slide.coverflow-hidden {
+    opacity: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Thumbnail Navigation */
+.thumbnail-item {
+    flex-shrink: 0;
     cursor: pointer;
-    transition: all 0.3s;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    opacity: 0.6;
 }
-#heroDots button.active {
-    background: white;
-    width: 24px;
-    border-radius: 5px;
+.thumbnail-item:hover {
+    opacity: 0.9;
+    transform: scale(1.05);
+}
+.thumbnail-item.active {
+    border-color: var(--color-primary, #A51C30);
+    opacity: 1;
+    box-shadow: 0 0 0 2px rgba(165, 28, 48, 0.3);
+}
+.thumbnail-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.thumbnails-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.3) transparent;
+}
+.thumbnails-scroll::-webkit-scrollbar {
+    height: 4px;
+}
+.thumbnails-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.thumbnails-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
 }
 </style>
 <script>
-// Hero Card Carousel Module
+// 3D Coverflow Hero Carousel Module
 const HeroSlider = {
     events: [],
-    currentPage: 0,
-    cardsPerPage: 4,
-    totalPages: 0,
+    currentIndex: 0,
     autoplayInterval: null,
-    autoplayDelay: 6000, // 6 seconds
-    track: null,
-    cardWidth: 340, // Default card width
-    gap: 24, // Gap between cards
+    autoplayDelay: 5000, // 5 seconds
+    slideWidth: 450, // Center slide width (desktop)
+    slideHeight: 360, // Slide height (desktop)
 
     async init() {
         try {
@@ -297,8 +382,10 @@ const HeroSlider = {
             const response = await AmbiletAPI.get('/events/featured?type=homepage&limit=12');
             if (response.data && response.data.events && response.data.events.length > 0) {
                 this.events = response.data.events;
-                this.calculateLayout();
+                this.calculateSizes();
                 this.render();
+                this.renderThumbnails();
+                this.updateSlidePositions();
                 this.bindEvents();
                 this.startAutoplay();
             }
@@ -310,136 +397,137 @@ const HeroSlider = {
         }
     },
 
-    calculateLayout() {
-        const container = document.querySelector('#heroSlides')?.parentElement;
-        if (!container) return;
-
-        const containerWidth = container.offsetWidth;
-
-        // Responsive card widths
+    calculateSizes() {
         if (window.innerWidth < 640) {
-            this.cardWidth = 260;
-            this.gap = 16;
+            this.slideWidth = 280;
+            this.slideHeight = 280;
         } else if (window.innerWidth < 1024) {
-            this.cardWidth = 300;
-            this.gap = 20;
+            this.slideWidth = 360;
+            this.slideHeight = 320;
         } else {
-            this.cardWidth = 340;
-            this.gap = 24;
+            this.slideWidth = 450;
+            this.slideHeight = 360;
         }
-
-        // Calculate how many cards fit per view
-        this.cardsPerPage = Math.max(1, Math.floor((containerWidth + this.gap) / (this.cardWidth + this.gap)));
-        this.totalPages = Math.ceil(this.events.length / this.cardsPerPage);
     },
 
     render() {
         const slidesContainer = document.getElementById('heroSlides');
-        const dotsContainer = document.getElementById('heroDots');
-
         if (!slidesContainer || this.events.length === 0) return;
 
-        this.track = slidesContainer;
-
-        // Create event cards
+        // Create coverflow slides
         slidesContainer.innerHTML = this.events.map((event, index) => {
             const image = event.homepage_featured_image || event.featured_image || event.image || '/assets/images/hero-default.jpg';
             const date = new Date(event.starts_at || event.start_date || event.event_date);
-            const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
+            const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' });
             const location = event.venue_name || event.venue?.name || event.city || 'Romania';
             const category = event.category?.name || event.type || 'Eveniment';
             const priceFrom = event.price_from ? `de la ${event.price_from} Lei` : '';
 
             return `
-                <a href="/bilete/${event.slug || ''}" class="hero-card" style="width: ${this.cardWidth}px;" data-index="${index}">
-                    <div class="hero-card-inner">
-                        <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" class="hero-card-image" loading="${index < 4 ? 'eager' : 'lazy'}">
-                        <div class="hero-card-overlay"></div>
-                        ${priceFrom ? `<div class="hero-card-price">${priceFrom}</div>` : ''}
-                        <div class="hero-card-content">
-                            <span class="hero-card-badge">
+                <div class="coverflow-slide" data-index="${index}">
+                    <a href="/bilete/${event.slug || ''}" class="coverflow-slide-inner" style="width: ${this.slideWidth}px; height: ${this.slideHeight}px;">
+                        <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" loading="${index < 3 ? 'eager' : 'lazy'}">
+                        <div class="coverflow-slide-overlay"></div>
+                        ${priceFrom ? `<div class="coverflow-slide-price">${priceFrom}</div>` : ''}
+                        <div class="coverflow-slide-content">
+                            <span class="coverflow-slide-badge">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                                 ${this.escapeHtml(category)}
                             </span>
-                            <h3 class="hero-card-title">${this.escapeHtml(event.title || event.name || 'Eveniment')}</h3>
-                            <div class="hero-card-meta">
-                                <span class="hero-card-date">
+                            <h3 class="coverflow-slide-title">${this.escapeHtml(event.title || event.name || 'Eveniment')}</h3>
+                            <div class="coverflow-slide-meta">
+                                <span class="coverflow-slide-date">
                                     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                     ${formattedDate}
                                 </span>
-                                <span class="hero-card-location">
+                                <span class="coverflow-slide-location">
                                     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                     ${this.escapeHtml(location)}
                                 </span>
                             </div>
                         </div>
-                    </div>
-                </a>
+                    </a>
+                </div>
             `;
         }).join('');
-
-        // Create pagination dots (one per page, not per card)
-        if (this.totalPages > 1) {
-            dotsContainer.innerHTML = Array.from({ length: this.totalPages }, (_, i) =>
-                `<button data-page="${i}" class="${i === 0 ? 'active' : ''}" aria-label="Go to page ${i + 1}"></button>`
-            ).join('');
-        } else {
-            dotsContainer.innerHTML = '';
-        }
-
-        this.updateNavButtons();
     },
 
-    goToPage(page) {
-        if (page < 0) page = this.totalPages - 1;
-        if (page >= this.totalPages) page = 0;
+    renderThumbnails() {
+        const thumbnailsContainer = document.getElementById('heroThumbnails');
+        if (!thumbnailsContainer || this.events.length === 0) return;
 
-        this.currentPage = page;
+        thumbnailsContainer.innerHTML = this.events.map((event, index) => {
+            const image = event.homepage_featured_image || event.featured_image || event.image || '/assets/images/hero-default.jpg';
+            return `
+                <div class="thumbnail-item ${index === 0 ? 'active' : ''}" data-index="${index}">
+                    <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" class="w-16 h-16 md:w-20 md:h-20 object-cover" loading="lazy">
+                </div>
+            `;
+        }).join('');
+    },
 
-        // Calculate the translation
-        const offset = page * this.cardsPerPage * (this.cardWidth + this.gap);
-        if (this.track) {
-            this.track.style.transform = `translateX(-${offset}px)`;
-        }
+    updateSlidePositions() {
+        const slides = document.querySelectorAll('.coverflow-slide');
+        const total = this.events.length;
 
-        // Update dots
-        const dots = document.querySelectorAll('#heroDots button');
-        dots.forEach((dot, i) => {
-            dot.classList.toggle('active', i === page);
+        slides.forEach((slide, index) => {
+            // Remove all position classes
+            slide.classList.remove('coverflow-far-left', 'coverflow-left', 'coverflow-center', 'coverflow-right', 'coverflow-far-right', 'coverflow-hidden');
+
+            // Calculate relative position
+            let relativePos = index - this.currentIndex;
+
+            // Handle wrapping for circular navigation
+            if (relativePos > total / 2) relativePos -= total;
+            if (relativePos < -total / 2) relativePos += total;
+
+            // Assign position class based on relative position
+            if (relativePos === 0) {
+                slide.classList.add('coverflow-center');
+            } else if (relativePos === -1) {
+                slide.classList.add('coverflow-left');
+            } else if (relativePos === 1) {
+                slide.classList.add('coverflow-right');
+            } else if (relativePos === -2) {
+                slide.classList.add('coverflow-far-left');
+            } else if (relativePos === 2) {
+                slide.classList.add('coverflow-far-right');
+            } else {
+                slide.classList.add('coverflow-hidden');
+            }
         });
 
-        this.updateNavButtons();
+        // Update thumbnails
+        const thumbnails = document.querySelectorAll('.thumbnail-item');
+        thumbnails.forEach((thumb, index) => {
+            thumb.classList.toggle('active', index === this.currentIndex);
+        });
+
+        // Scroll active thumbnail into view
+        const activeThumbnail = thumbnails[this.currentIndex];
+        if (activeThumbnail) {
+            activeThumbnail.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
     },
 
-    updateNavButtons() {
-        const prevBtn = document.getElementById('heroPrev');
-        const nextBtn = document.getElementById('heroNext');
-
-        if (prevBtn) {
-            prevBtn.disabled = this.currentPage === 0;
-        }
-        if (nextBtn) {
-            nextBtn.disabled = this.currentPage >= this.totalPages - 1;
-        }
+    goToSlide(index) {
+        if (index < 0) index = this.events.length - 1;
+        if (index >= this.events.length) index = 0;
+        this.currentIndex = index;
+        this.updateSlidePositions();
     },
 
     next() {
-        if (this.currentPage < this.totalPages - 1) {
-            this.goToPage(this.currentPage + 1);
-        } else {
-            this.goToPage(0); // Loop back to start
-        }
+        this.goToSlide(this.currentIndex + 1);
     },
 
     prev() {
-        if (this.currentPage > 0) {
-            this.goToPage(this.currentPage - 1);
-        }
+        this.goToSlide(this.currentIndex - 1);
     },
 
     startAutoplay() {
         this.stopAutoplay();
-        if (this.totalPages > 1) {
+        if (this.events.length > 1) {
             this.autoplayInterval = setInterval(() => this.next(), this.autoplayDelay);
         }
     },
@@ -454,9 +542,11 @@ const HeroSlider = {
     bindEvents() {
         const prevBtn = document.getElementById('heroPrev');
         const nextBtn = document.getElementById('heroNext');
-        const dotsContainer = document.getElementById('heroDots');
         const heroSection = document.getElementById('heroSlider');
+        const thumbnailsContainer = document.getElementById('heroThumbnails');
+        const slidesContainer = document.getElementById('heroSlides');
 
+        // Navigation buttons
         if (prevBtn) {
             prevBtn.addEventListener('click', () => {
                 this.prev();
@@ -471,11 +561,26 @@ const HeroSlider = {
             });
         }
 
-        if (dotsContainer) {
-            dotsContainer.addEventListener('click', (e) => {
-                if (e.target.tagName === 'BUTTON') {
-                    const page = parseInt(e.target.dataset.page, 10);
-                    this.goToPage(page);
+        // Thumbnail clicks
+        if (thumbnailsContainer) {
+            thumbnailsContainer.addEventListener('click', (e) => {
+                const thumb = e.target.closest('.thumbnail-item');
+                if (thumb) {
+                    const index = parseInt(thumb.dataset.index, 10);
+                    this.goToSlide(index);
+                    this.startAutoplay();
+                }
+            });
+        }
+
+        // Side slide clicks
+        if (slidesContainer) {
+            slidesContainer.addEventListener('click', (e) => {
+                const slide = e.target.closest('.coverflow-slide');
+                if (slide && !slide.classList.contains('coverflow-center')) {
+                    e.preventDefault();
+                    const index = parseInt(slide.dataset.index, 10);
+                    this.goToSlide(index);
                     this.startAutoplay();
                 }
             });
@@ -489,14 +594,13 @@ const HeroSlider = {
 
         // Touch/swipe support
         let touchStartX = 0;
-        const track = document.getElementById('heroSlides');
-        if (track) {
-            track.addEventListener('touchstart', (e) => {
+        if (slidesContainer) {
+            slidesContainer.addEventListener('touchstart', (e) => {
                 touchStartX = e.touches[0].clientX;
                 this.stopAutoplay();
             }, { passive: true });
 
-            track.addEventListener('touchend', (e) => {
+            slidesContainer.addEventListener('touchend', (e) => {
                 const touchEndX = e.changedTouches[0].clientX;
                 const diff = touchStartX - touchEndX;
                 if (Math.abs(diff) > 50) {
@@ -507,14 +611,26 @@ const HeroSlider = {
             }, { passive: true });
         }
 
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                this.prev();
+                this.startAutoplay();
+            } else if (e.key === 'ArrowRight') {
+                this.next();
+                this.startAutoplay();
+            }
+        });
+
         // Recalculate on resize
         let resizeTimeout;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
-                this.calculateLayout();
+                this.calculateSizes();
                 this.render();
-                this.goToPage(0);
+                this.renderThumbnails();
+                this.updateSlidePositions();
             }, 200);
         });
     },
