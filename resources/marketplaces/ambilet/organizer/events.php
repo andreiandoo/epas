@@ -549,6 +549,11 @@ async function loadEvents() {
     try {
         const response = await AmbiletAPI.organizer.getEvents();
         const events = response.data || response || [];
+        // Update sidebar events count
+        const activeEvents = events.filter(e => e.status === 'published' || e.status === 'active').length;
+        const navCount = document.getElementById('nav-events-count');
+        if (navCount) navCount.textContent = activeEvents || events.length;
+
         if (events.length === 0) { document.getElementById('events-list').classList.add('hidden'); document.getElementById('no-events').classList.remove('hidden'); }
         else { renderEvents(events); }
     } catch (error) { document.getElementById('events-list').classList.add('hidden'); document.getElementById('no-events').classList.remove('hidden'); }
@@ -629,6 +634,9 @@ function showCreateForm() {
 async function loadEventForEdit(eventId) {
     // Show the form first
     showCreateForm();
+
+    // Fix URL for edit mode (showCreateForm sets it to action=create)
+    history.replaceState({}, '', `/organizator/event/${eventId}?action=edit`);
 
     // Update page title for edit mode
     const titleEl = document.querySelector('#create-event-view h1');
