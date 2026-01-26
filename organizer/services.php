@@ -142,7 +142,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <span class="px-2 py-1 bg-accent/10 text-accent text-xs rounded-full">Audienta Filtrata</span>
                                     <span class="px-2 py-1 bg-accent/10 text-accent text-xs rounded-full">Clientii Tai</span>
                                 </div>
-                                <p class="text-sm font-semibold text-secondary">De la <span class="text-accent">0.05 RON</span> / email</p>
+                                <p class="text-sm font-semibold text-secondary">De la <span class="text-accent" id="card-email-price">0.40 RON</span> / email</p>
                             </div>
                         </div>
                     </div>
@@ -487,6 +487,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <input type="datetime-local" id="email-send-date" class="input w-full" required>
                             <p class="text-xs text-muted mt-1">Programeaza trimiterea pentru momentul optim</p>
                         </div>
+
+                        <!-- Email Preview Button -->
+                        <div class="border-t border-border pt-4 mt-4">
+                            <button type="button" onclick="showEmailPreview()" class="btn btn-secondary w-full">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                Previzualizeaza Emailul
+                            </button>
+                            <p class="text-xs text-muted mt-1 text-center">Vezi cum va arata emailul inainte de a-l trimite</p>
+                        </div>
                     </div>
 
                     <!-- Ad Tracking Options -->
@@ -690,6 +699,52 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </div>
     </div>
 
+    <!-- Email Preview Modal -->
+    <div id="email-preview-modal" class="fixed inset-0 bg-black/50 z-[60] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white p-6 border-b border-border flex items-center justify-between z-10">
+                <h3 class="text-xl font-bold text-secondary">Previzualizare Email</h3>
+                <button onclick="closeEmailPreview()" class="p-2 hover:bg-surface rounded-lg">
+                    <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="bg-gray-100 rounded-xl p-4 mb-4">
+                    <p class="text-sm text-muted">Aceasta este o previzualizare a emailului care va fi trimis. Continutul final poate varia usor in functie de datele evenimentului.</p>
+                </div>
+
+                <!-- Email Preview Container -->
+                <div class="border border-border rounded-xl overflow-hidden">
+                    <!-- Email Header -->
+                    <div class="bg-surface p-4 border-b border-border">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                                <span class="text-white font-bold text-sm">A</span>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-secondary text-sm" id="preview-sender-name">Ambilet</p>
+                                <p class="text-xs text-muted" id="preview-sender-email">noreply@ambilet.ro</p>
+                            </div>
+                        </div>
+                        <p class="text-sm"><span class="text-muted">Catre:</span> <span class="text-secondary" id="preview-recipients">1,250 destinatari</span></p>
+                        <p class="text-sm mt-1"><span class="text-muted">Subiect:</span> <span class="font-medium text-secondary" id="preview-subject">🎵 Nu rata evenimentul!</span></p>
+                    </div>
+
+                    <!-- Email Body -->
+                    <div class="p-6 bg-white">
+                        <div id="email-preview-content" class="space-y-4">
+                            <!-- Preview will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button onclick="closeEmailPreview()" class="btn btn-secondary flex-1">Inchide</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <?php
 $scriptsExtra = <<<'JS'
 <script>
@@ -776,6 +831,16 @@ async function loadPricing() {
 }
 
 function updatePricingUI() {
+    // Update email card price
+    const cardEmailPrice = document.getElementById('card-email-price');
+    if (cardEmailPrice) {
+        const lowestEmailPrice = Math.min(
+            servicePricing.email.own_per_email || 0.40,
+            servicePricing.email.marketplace_per_email || 0.50
+        );
+        cardEmailPrice.textContent = AmbiletUtils.formatCurrency(lowestEmailPrice);
+    }
+
     // Update email prices in the UI
     const ownPriceEl = document.querySelector('#email-options input[value="own"]')?.closest('label')?.querySelector('.text-accent.font-semibold');
     if (ownPriceEl) {
@@ -1483,6 +1548,73 @@ document.getElementById('service-filter').addEventListener('change', function() 
     renderActiveServices();
     activeServices = temp;
 });
+
+// Email Preview Functions
+function showEmailPreview() {
+    const eventId = document.getElementById('service-event').value;
+    const event = events.find(e => e.id == eventId);
+    if (!event) {
+        AmbiletNotifications.error('Selecteaza un eveniment pentru a vedea previzualizarea');
+        return;
+    }
+
+    const audienceType = document.querySelector('input[name="email_audience"]:checked')?.value || 'own';
+    const recipientCount = emailAudiences[audienceType]?.filtered_count || 0;
+
+    // Update preview header
+    document.getElementById('preview-recipients').textContent = AmbiletUtils.formatNumber(recipientCount) + ' destinatari';
+    document.getElementById('preview-subject').textContent = '🎵 ' + event.title + ' - Nu rata!';
+
+    // Generate email preview content
+    const previewHtml = `
+        <div class="text-center mb-6">
+            <img src="${event.image || '/assets/images/default-event.png'}" alt="${event.title}" class="w-full max-w-md mx-auto rounded-xl shadow-lg">
+        </div>
+
+        <h1 class="text-2xl font-bold text-secondary text-center mb-4">${event.title}</h1>
+
+        <div class="bg-surface rounded-xl p-4 mb-6">
+            <div class="grid grid-cols-2 gap-4 text-center">
+                <div>
+                    <p class="text-xs text-muted uppercase tracking-wide">Data</p>
+                    <p class="font-semibold text-secondary">${AmbiletUtils.formatDate(event.date)}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-muted uppercase tracking-wide">Locatie</p>
+                    <p class="font-semibold text-secondary">${event.venue || 'TBA'}</p>
+                </div>
+            </div>
+        </div>
+
+        <p class="text-muted text-center mb-6">
+            Evenimentul pe care il asteptai este aproape! Asigura-te ca ai bilete pentru a nu rata aceasta experienta unica.
+        </p>
+
+        <div class="text-center mb-6">
+            <a href="#" class="inline-block bg-primary text-white px-8 py-3 rounded-xl font-semibold hover:bg-primary-dark transition-colors">
+                Cumpara Bilete Acum
+            </a>
+        </div>
+
+        <hr class="border-border my-6">
+
+        <p class="text-xs text-muted text-center">
+            Ai primit acest email pentru ca esti abonat la newsletter-ul Ambilet.<br>
+            <a href="#" class="text-primary hover:underline">Dezabonare</a>
+        </p>
+    `;
+
+    document.getElementById('email-preview-content').innerHTML = previewHtml;
+
+    // Show modal
+    document.getElementById('email-preview-modal').classList.remove('hidden');
+    document.getElementById('email-preview-modal').classList.add('flex');
+}
+
+function closeEmailPreview() {
+    document.getElementById('email-preview-modal').classList.add('hidden');
+    document.getElementById('email-preview-modal').classList.remove('flex');
+}
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';

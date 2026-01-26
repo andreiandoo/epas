@@ -227,6 +227,46 @@ Get available service types with current pricing.
 }
 ```
 
+### GET /organizer/services/pricing
+
+Get current service pricing for the marketplace. Used by frontend to display accurate prices.
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "email": {
+            "own_per_email": 0.40,
+            "marketplace_per_email": 0.50,
+            "minimum": 100
+        },
+        "featuring": {
+            "home": 99,
+            "category": 69,
+            "genre": 59,
+            "city": 49
+        },
+        "tracking": {
+            "per_platform_monthly": 49,
+            "discounts": {
+                "1": 0,
+                "3": 0.10,
+                "6": 0.15,
+                "12": 0.25
+            }
+        },
+        "campaign": {
+            "basic": 499,
+            "standard": 899,
+            "premium": 1499
+        }
+    }
+}
+```
+
+**Note:** This endpoint returns the same pricing data as `/admin/services/pricing` but is publicly accessible to authenticated organizers. The frontend should fetch this on page load and use it for price calculations.
+
 ### GET /organizer/services/email-audiences
 
 Get available email audiences with recipient counts. Supports filtering to narrow down the audience.
@@ -500,6 +540,90 @@ Get service order details (admin view).
 ### PUT /admin/services/orders/{id}
 
 Update service order (admin actions like status change, notes, assignment).
+
+## Tixello Core Admin Panel Requirements
+
+The following pages need to be implemented in the core Tixello admin panel (https://core.tixello.com/marketplace/).
+
+### 1. Services Pricing Configuration Page
+
+**Location:** Marketplace Admin → Settings → Service Pricing (or similar)
+
+**Purpose:** Allow marketplace administrators to configure pricing for all organizer services.
+
+**UI Requirements:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ CONFIGURARE PRETURI SERVICII                                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│ ┌─ EMAIL MARKETING ──────────────────────────────────────────────────┐ │
+│ │                                                                     │ │
+│ │ Pret per email (clienti proprii):     [____0.40____] RON           │ │
+│ │ Pret per email (baza marketplace):    [____0.50____] RON           │ │
+│ │ Numar minim de email-uri:             [____100_____]               │ │
+│ │                                                                     │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│ ┌─ PROMOVARE EVENIMENT (FEATURING) ──────────────────────────────────┐ │
+│ │                                                                     │ │
+│ │ Pagina principala (per zi):           [____99______] RON           │ │
+│ │ Pagina categorie (per zi):            [____69______] RON           │ │
+│ │ Pagina gen muzical (per zi):          [____59______] RON           │ │
+│ │ Pagina oras (per zi):                 [____49______] RON           │ │
+│ │                                                                     │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│ ┌─ AD TRACKING ──────────────────────────────────────────────────────┐ │
+│ │                                                                     │ │
+│ │ Pret per platforma (lunar):           [____49______] RON           │ │
+│ │                                                                     │ │
+│ │ Discounturi durata:                                                 │ │
+│ │   3 luni:  [__10__] %    6 luni:  [__15__] %    12 luni: [__25__] %│ │
+│ │                                                                     │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│ ┌─ CREARE CAMPANII ──────────────────────────────────────────────────┐ │
+│ │                                                                     │ │
+│ │ Pachet Basic:                         [____499_____] RON           │ │
+│ │ Pachet Standard:                      [____899_____] RON           │ │
+│ │ Pachet Premium:                       [____1499____] RON           │ │
+│ │                                                                     │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│                                           [ Salveaza Modificarile ]     │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Validation Rules:**
+- All prices must be positive numbers
+- Email minimum must be at least 1
+- Discount percentages must be between 0 and 100
+- Changes should be logged for audit
+
+**Storage:** Can be stored in:
+- A dedicated `marketplace_settings` table with JSON column
+- Or individual rows in a key-value settings table
+- Must be scoped to marketplace_id for multi-tenant support
+
+### 2. Service Orders Management Page
+
+**Location:** Marketplace Admin → Orders → Service Orders
+
+(See "Admin Panel Integration" section below for detailed requirements)
+
+### 3. Email Campaign Management
+
+**Purpose:** Review and approve email campaigns before sending.
+
+**Features:**
+- Preview email content before approval
+- View audience details (aggregate only, no PII)
+- Approve/reject campaigns
+- Schedule send time
+- View Brevo campaign stats after sending
 
 ## Admin Panel Integration
 
