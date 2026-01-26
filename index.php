@@ -346,8 +346,6 @@ $scriptsExtra = <<<'SCRIPTS'
     box-shadow: 0 0 0 2px rgba(165, 28, 48, 0.3);
 }
 .thumbnail-item img {
-    width: 100%;
-    height: 100%;
     object-fit: cover;
     display: block;
 }
