@@ -551,7 +551,7 @@ const ApiDocs = {
      */
     async loadApiKey() {
         try {
-            const response = await window.api.fetch('/organizer/api-key');
+            const response = await AmbiletAPI.request('/organizer/api-key');
             if (response.success) {
                 this.apiKey = response.data.api_key;
                 document.getElementById('api-key-display').textContent = this.apiKey || 'Nu există cheie API';
@@ -586,7 +586,7 @@ const ApiDocs = {
         }
 
         try {
-            const response = await window.api.fetch('/organizer/api-key/regenerate', {
+            const response = await AmbiletAPI.request('/organizer/api-key/regenerate', {
                 method: 'POST'
             });
 
@@ -639,7 +639,7 @@ const ApiDocs = {
         }
 
         try {
-            const response = await window.api.fetch('/organizer/webhook', {
+            const response = await AmbiletAPI.request('/organizer/webhook', {
                 method: 'POST',
                 body: JSON.stringify({ url })
             });

@@ -254,6 +254,25 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/promo-codes\/\d+$/)) return 'organizer.promo-code';
         if (endpoint === '/organizer/promo-codes' || endpoint.includes('/organizer/promo-codes?')) return 'organizer.promo-codes';
 
+        // Organizer team
+        if (endpoint === '/organizer/team') return 'organizer.team';
+        if (endpoint === '/organizer/team/invite') return 'organizer.team.invite';
+        if (endpoint === '/organizer/team/update') return 'organizer.team.update';
+        if (endpoint === '/organizer/team/remove') return 'organizer.team.remove';
+        if (endpoint === '/organizer/team/resend-invite') return 'organizer.team.resend-invite';
+        if (endpoint === '/organizer/team/resend-all-invites') return 'organizer.team.resend-all-invites';
+
+        // Organizer billing/invoices
+        if (endpoint.match(/\/organizer\/invoices\/\d+$/)) return 'organizer.invoice';
+        if (endpoint === '/organizer/invoices' || endpoint.includes('/organizer/invoices?')) return 'organizer.invoices';
+        if (endpoint === '/organizer/billing-info') return 'organizer.billing-info';
+        if (endpoint === '/organizer/payment-methods') return 'organizer.payment-methods';
+
+        // Organizer API settings
+        if (endpoint === '/organizer/api-key') return 'organizer.api-key';
+        if (endpoint === '/organizer/api-key/regenerate') return 'organizer.api-key.regenerate';
+        if (endpoint === '/organizer/webhook') return 'organizer.webhook';
+
         return null; // unknown endpoint - will cause error
     },
 
@@ -390,6 +409,12 @@ const AmbiletAPI = {
         const organizerPromoCodeMatch = endpoint.match(/\/organizer\/promo-codes\/(\d+)$/);
         if (organizerPromoCodeMatch) {
             return `code_id=${encodeURIComponent(organizerPromoCodeMatch[1])}`;
+        }
+
+        // Organizer invoice endpoint - extract invoice ID
+        const organizerInvoiceMatch = endpoint.match(/\/organizer\/invoices\/(\d+)$/);
+        if (organizerInvoiceMatch) {
+            return `invoice_id=${encodeURIComponent(organizerInvoiceMatch[1])}`;
         }
 
         // Pass through query params

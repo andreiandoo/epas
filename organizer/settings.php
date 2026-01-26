@@ -120,6 +120,71 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 </div>
                             </div>
                         </div>
+
+                        <div class="border-t border-border pt-6">
+                            <h3 class="font-semibold text-secondary mb-4">Documente Necesare</h3>
+                            <p class="text-sm text-muted mb-4">Pentru activarea contului și procesarea plăților, avem nevoie de următoarele documente:</p>
+
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <!-- ID Card Upload -->
+                                <div>
+                                    <label class="block text-sm font-medium text-secondary mb-2">
+                                        Copie BI/CI (reprezentant legal) *
+                                    </label>
+                                    <div id="id-card-dropzone" class="dropzone border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                                         ondragover="handleDragOver(event, 'id-card')"
+                                         ondragleave="handleDragLeave(event, 'id-card')"
+                                         ondrop="handleDrop(event, 'id_card')"
+                                         onclick="document.getElementById('id-card-input').click()">
+                                        <input type="file" id="id-card-input" class="hidden" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(event, 'id_card')">
+                                        <div id="id-card-preview" class="hidden">
+                                            <div class="flex items-center justify-center gap-3">
+                                                <svg class="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                <div class="text-left">
+                                                    <p id="id-card-filename" class="text-sm font-medium text-secondary"></p>
+                                                    <p class="text-xs text-muted">Click pentru a schimba</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="id-card-placeholder">
+                                            <svg class="w-10 h-10 text-muted mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                            <p class="text-sm text-muted">Trage fișierul aici sau click pentru a selecta</p>
+                                            <p class="text-xs text-muted mt-1">PDF, JPG sau PNG (max 5MB)</p>
+                                        </div>
+                                    </div>
+                                    <p id="id-card-status" class="mt-2 text-xs hidden"></p>
+                                </div>
+
+                                <!-- Company Registration Upload -->
+                                <div>
+                                    <label class="block text-sm font-medium text-secondary mb-2">
+                                        Copie CUI / Certificat Înregistrare *
+                                    </label>
+                                    <div id="cui-dropzone" class="dropzone border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                                         ondragover="handleDragOver(event, 'cui')"
+                                         ondragleave="handleDragLeave(event, 'cui')"
+                                         ondrop="handleDrop(event, 'cui_document')"
+                                         onclick="document.getElementById('cui-input').click()">
+                                        <input type="file" id="cui-input" class="hidden" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(event, 'cui_document')">
+                                        <div id="cui-preview" class="hidden">
+                                            <div class="flex items-center justify-center gap-3">
+                                                <svg class="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                <div class="text-left">
+                                                    <p id="cui-filename" class="text-sm font-medium text-secondary"></p>
+                                                    <p class="text-xs text-muted">Click pentru a schimba</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="cui-placeholder">
+                                            <svg class="w-10 h-10 text-muted mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                            <p class="text-sm text-muted">Trage fișierul aici sau click pentru a selecta</p>
+                                            <p class="text-xs text-muted mt-1">PDF, JPG sau PNG (max 5MB)</p>
+                                        </div>
+                                    </div>
+                                    <p id="cui-status" class="mt-2 text-xs hidden"></p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -155,7 +220,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="flex items-center justify-between mb-6"><h3 class="text-xl font-bold text-secondary">Adauga Cont Bancar</h3><button onclick="closeBankModal()"><svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
             <form onsubmit="addBankAccount(event)" class="space-y-4">
                 <div><label class="label">Nume Banca *</label><input type="text" id="bank-name" class="input w-full" required></div>
-                <div><label class="label">IBAN *</label><input type="text" id="bank-iban" class="input w-full" required></div>
+                <div>
+                    <label class="label">IBAN *</label>
+                    <input type="text" id="bank-iban" class="input w-full" required maxlength="24" oninput="validateIBAN(this)" placeholder="RO49AAAA1B31007593840000">
+                    <div id="iban-validation" class="mt-1 text-xs hidden"></div>
+                </div>
                 <div><label class="label">Titular Cont *</label><input type="text" id="bank-holder" class="input w-full" required></div>
                 <div class="flex gap-3"><button type="button" onclick="closeBankModal()" class="btn btn-secondary flex-1">Anuleaza</button><button type="submit" class="btn btn-primary flex-1">Adauga</button></div>
             </form>
@@ -251,7 +320,116 @@ async function verifyCUI() {
         } else { AmbiletNotifications.error(response.message || 'CUI invalid'); }
     } catch (error) { AmbiletNotifications.error('Eroare la verificare'); }
 }
-function openBankModal() { document.getElementById('bank-modal').classList.remove('hidden'); document.getElementById('bank-modal').classList.add('flex'); }
+// Romanian IBAN validation
+function validateIBAN(input) {
+    const value = input.value.toUpperCase().replace(/\s/g, '');
+    input.value = value;
+    const validation = document.getElementById('iban-validation');
+
+    if (!value) {
+        validation.classList.add('hidden');
+        input.classList.remove('border-green-500', 'border-red-500');
+        return;
+    }
+
+    validation.classList.remove('hidden');
+
+    // Romanian IBAN: RO + 2 check digits + 4 bank code + 16 account
+    if (value.length < 2) {
+        validation.textContent = 'IBAN-ul trebuie să înceapă cu RO';
+        validation.className = 'mt-1 text-xs text-red-600';
+        input.classList.add('border-red-500');
+        input.classList.remove('border-green-500');
+        return;
+    }
+
+    if (!value.startsWith('RO')) {
+        validation.textContent = 'IBAN-ul românesc trebuie să înceapă cu RO';
+        validation.className = 'mt-1 text-xs text-red-600';
+        input.classList.add('border-red-500');
+        input.classList.remove('border-green-500');
+        return;
+    }
+
+    if (value.length < 24) {
+        const remaining = 24 - value.length;
+        validation.textContent = `Mai sunt necesare ${remaining} caractere (total: 24)`;
+        validation.className = 'mt-1 text-xs text-yellow-600';
+        input.classList.remove('border-red-500', 'border-green-500');
+        return;
+    }
+
+    if (value.length > 24) {
+        validation.textContent = 'IBAN-ul are prea multe caractere (max 24)';
+        validation.className = 'mt-1 text-xs text-red-600';
+        input.classList.add('border-red-500');
+        input.classList.remove('border-green-500');
+        return;
+    }
+
+    // Validate structure: RO + 2 digits + 4 alphanumeric (bank) + 16 alphanumeric (account)
+    const ibanRegex = /^RO[0-9]{2}[A-Z]{4}[A-Z0-9]{16}$/;
+    if (!ibanRegex.test(value)) {
+        validation.textContent = 'Format invalid. Structură: RO + 2 cifre control + 4 litere bancă + 16 caractere cont';
+        validation.className = 'mt-1 text-xs text-red-600';
+        input.classList.add('border-red-500');
+        input.classList.remove('border-green-500');
+        return;
+    }
+
+    // IBAN checksum validation (MOD 97-10)
+    if (!validateIBANChecksum(value)) {
+        validation.textContent = 'Cifrele de control sunt invalide';
+        validation.className = 'mt-1 text-xs text-red-600';
+        input.classList.add('border-red-500');
+        input.classList.remove('border-green-500');
+        return;
+    }
+
+    // Extract and display bank code
+    const bankCode = value.substring(4, 8);
+    const bankNames = {
+        'BTRL': 'Banca Transilvania',
+        'BRDE': 'BRD',
+        'BACX': 'Unicredit',
+        'RNCB': 'BCR',
+        'INGB': 'ING Bank',
+        'RZBR': 'Raiffeisen',
+        'PIRB': 'First Bank',
+        'UGBI': 'Garanti BBVA',
+        'CECE': 'CEC Bank',
+        'NBOR': 'BNR',
+        'PORL': 'Banca Românească'
+    };
+    const bankName = bankNames[bankCode] || bankCode;
+
+    validation.textContent = `✓ IBAN valid - ${bankName}`;
+    validation.className = 'mt-1 text-xs text-green-600';
+    input.classList.add('border-green-500');
+    input.classList.remove('border-red-500');
+}
+
+function validateIBANChecksum(iban) {
+    // Move first 4 chars to end, replace letters with numbers (A=10, B=11, etc.)
+    const rearranged = iban.substring(4) + iban.substring(0, 4);
+    let numericStr = '';
+    for (const char of rearranged) {
+        if (char >= 'A' && char <= 'Z') {
+            numericStr += (char.charCodeAt(0) - 55).toString();
+        } else {
+            numericStr += char;
+        }
+    }
+    // MOD 97 check - use BigInt for large numbers
+    let remainder = 0n;
+    for (let i = 0; i < numericStr.length; i += 7) {
+        const chunk = numericStr.substring(i, Math.min(i + 7, numericStr.length));
+        remainder = BigInt(remainder.toString() + chunk) % 97n;
+    }
+    return remainder === 1n;
+}
+
+function openBankModal() { document.getElementById('bank-modal').classList.remove('hidden'); document.getElementById('bank-modal').classList.add('flex'); document.getElementById('bank-iban').value = ''; document.getElementById('iban-validation').classList.add('hidden'); document.getElementById('bank-iban').classList.remove('border-green-500', 'border-red-500'); }
 function closeBankModal() { document.getElementById('bank-modal').classList.add('hidden'); document.getElementById('bank-modal').classList.remove('flex'); }
 async function addBankAccount(e) {
     e.preventDefault();
@@ -329,6 +507,137 @@ async function downloadContract() {
         }
     } catch (error) { AmbiletNotifications.error('Eroare la descarcare contract'); }
 }
+
+// Document upload functions
+function handleDragOver(e, type) {
+    e.preventDefault();
+    e.stopPropagation();
+    const dropzone = document.getElementById(type + '-dropzone');
+    dropzone.classList.add('border-primary', 'bg-primary/10');
+}
+
+function handleDragLeave(e, type) {
+    e.preventDefault();
+    e.stopPropagation();
+    const dropzone = document.getElementById(type + '-dropzone');
+    dropzone.classList.remove('border-primary', 'bg-primary/10');
+}
+
+function handleDrop(e, docType) {
+    e.preventDefault();
+    e.stopPropagation();
+    const type = docType === 'id_card' ? 'id-card' : 'cui';
+    const dropzone = document.getElementById(type + '-dropzone');
+    dropzone.classList.remove('border-primary', 'bg-primary/10');
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        processFile(files[0], docType);
+    }
+}
+
+function handleFileSelect(e, docType) {
+    const files = e.target.files;
+    if (files.length > 0) {
+        processFile(files[0], docType);
+    }
+}
+
+function processFile(file, docType) {
+    const type = docType === 'id_card' ? 'id-card' : 'cui';
+    const status = document.getElementById(type + '-status');
+    const preview = document.getElementById(type + '-preview');
+    const placeholder = document.getElementById(type + '-placeholder');
+    const filename = document.getElementById(type + '-filename');
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+        status.textContent = 'Tip de fișier invalid. Acceptăm doar PDF, JPG sau PNG.';
+        status.className = 'mt-2 text-xs text-red-600';
+        status.classList.remove('hidden');
+        return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        status.textContent = 'Fișierul este prea mare. Dimensiunea maximă este 5MB.';
+        status.className = 'mt-2 text-xs text-red-600';
+        status.classList.remove('hidden');
+        return;
+    }
+
+    // Show uploading state
+    status.textContent = 'Se încarcă...';
+    status.className = 'mt-2 text-xs text-blue-600';
+    status.classList.remove('hidden');
+
+    // Upload file
+    uploadDocument(file, docType).then(response => {
+        if (response.success) {
+            filename.textContent = file.name;
+            preview.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            status.textContent = 'Documentul a fost încărcat cu succes!';
+            status.className = 'mt-2 text-xs text-green-600';
+        } else {
+            status.textContent = response.message || 'Eroare la încărcare';
+            status.className = 'mt-2 text-xs text-red-600';
+        }
+    }).catch(error => {
+        console.error('Upload error:', error);
+        status.textContent = 'Eroare la încărcarea fișierului';
+        status.className = 'mt-2 text-xs text-red-600';
+    });
+}
+
+async function uploadDocument(file, docType) {
+    const formData = new FormData();
+    formData.append('document', file);
+    formData.append('type', docType);
+
+    try {
+        const token = AmbiletAuth.getToken();
+        const response = await fetch('/api/proxy.php?action=organizer.document.upload', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        return await response.json();
+    } catch (error) {
+        return { success: false, message: 'Eroare de rețea' };
+    }
+}
+
+// Load existing documents on page load
+async function loadContractDocuments() {
+    try {
+        const response = await AmbiletAPI.get('/organizer/contract/documents');
+        if (response.success && response.data) {
+            if (response.data.id_card) {
+                const preview = document.getElementById('id-card-preview');
+                const placeholder = document.getElementById('id-card-placeholder');
+                const filename = document.getElementById('id-card-filename');
+                filename.textContent = response.data.id_card.name || 'Document încărcat';
+                preview.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            }
+            if (response.data.cui_document) {
+                const preview = document.getElementById('cui-preview');
+                const placeholder = document.getElementById('cui-placeholder');
+                const filename = document.getElementById('cui-filename');
+                filename.textContent = response.data.cui_document.name || 'Document încărcat';
+                preview.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            }
+        }
+    } catch (error) { /* Documents not loaded yet */ }
+}
+
+// Add to DOMContentLoaded
+document.addEventListener('DOMContentLoaded', loadContractDocuments);
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';
