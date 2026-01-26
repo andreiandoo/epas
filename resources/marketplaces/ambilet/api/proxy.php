@@ -1281,6 +1281,41 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // ==================== ORGANIZER BANK ACCOUNTS ====================
+
+    case 'organizer.bank-accounts':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/bank-accounts';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.bank-account.delete':
+        $accountId = $_GET['account_id'] ?? '';
+        if (!$accountId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing account_id parameter']);
+            exit;
+        }
+        $method = 'DELETE';
+        $endpoint = '/organizer/bank-accounts/' . urlencode($accountId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.bank-account.primary':
+        $accountId = $_GET['account_id'] ?? '';
+        if (!$accountId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing account_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/organizer/bank-accounts/' . urlencode($accountId) . '/primary';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.webhook':
         $method = 'POST';
         $body = file_get_contents('php://input');

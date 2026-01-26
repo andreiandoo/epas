@@ -148,7 +148,6 @@ class OrganizerResource extends Resource
 
                             Forms\Components\Repeater::make('bankAccounts')
                                 ->relationship('bankAccounts')
-                                ->label('Add/Edit Bank Accounts')
                                 ->schema([
                                     Forms\Components\TextInput::make('bank_name')
                                         ->label('Bank Name')
