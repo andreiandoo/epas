@@ -93,16 +93,34 @@ class VenuesController extends BaseController
 
     /**
      * Get featured venues
+     * Returns venues marked as featured, or falls back to venues with most upcoming events
      */
     public function featured(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
+        $limit = $request->input('limit', 6);
 
+        // First try to get explicitly featured venues
         $venues = Venue::query()
             ->where('marketplace_client_id', $client->id)
             ->where('is_featured', true)
-            ->limit($request->input('limit', 6))
+            ->limit($limit)
             ->get();
+
+        // If no featured venues, get venues with most upcoming events
+        if ($venues->isEmpty()) {
+            $venues = Venue::query()
+                ->where('marketplace_client_id', $client->id)
+                ->get()
+                ->map(function ($venue) {
+                    $venue->upcoming_events_count = $this->countVenueEvents($venue);
+                    return $venue;
+                })
+                ->filter(fn ($v) => $v->upcoming_events_count > 0)
+                ->sortByDesc('upcoming_events_count')
+                ->take($limit)
+                ->values();
+        }
 
         $language = $client->language ?? 'ro';
 

@@ -561,7 +561,9 @@ const EventPage = {
 
         // Hide social stats (interested, views, share)
         const socialStats = document.getElementById('social-stats');
+        const venueShortDisplay = document.getElementById('venue-short-display');
         if (socialStats) socialStats.style.display = 'none';
+        if (venueShortDisplay) venueShortDisplay.classList.remove('mb-6');
 
         // Insert ended banner before #event-content
         this.renderEndedBanner();
@@ -908,7 +910,7 @@ const EventPage = {
      * Format description (handle HTML vs plain text)
      */
     formatDescription(desc) {
-        if (!desc) return '<p class="text-muted">Descriere indisponibila</p>';
+        if (!desc) return '<p class="text-muted">Descriere indisponibilă</p>';
 
         var hasHtml = /<[a-z][\s\S]*>/i.test(desc);
 
@@ -1009,7 +1011,7 @@ const EventPage = {
                         '<a href="' + artistLink + '" class="text-2xl font-bold text-secondary hover:text-primary">' + artist.name + '</a>' +
                         (artist.verified ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary">Verified</span>' : '') +
                     '</div>' +
-                    (artistDescription ? '<p class="mb-4 leading-relaxed text-muted">' + artistDescription + '</p>' : '<p class="mb-4 leading-relaxed text-muted">Detalii despre artist vor fi disponibile in curand.</p>') +
+                    (artistDescription ? '<p class="mb-4 leading-relaxed text-muted">' + artistDescription + '</p>' : '<p class="mb-4 leading-relaxed text-muted">Detalii despre artist vor fi disponibile în curând.</p>') +
                     socialLinksHtml +
                     '<a href="' + artistLink + '" class="inline-flex mobile:flex items-center gap-2 font-semibold text-primary border border-primary rounded-md py-2 px-6 mobile:justify-center hover:bg-primary hover:text-white transition-all ease-in-out duration-200">' +
                         'Vezi profilul artistului' +

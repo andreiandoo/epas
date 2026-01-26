@@ -599,7 +599,13 @@ function loadFeaturedVenuesCache(): array {
 
     $data = json_decode($content, true);
 
-    if (!$data) {
+    // Only fall back to defaults if JSON parsing failed (null), not for empty arrays
+    if ($data === null) {
+        return getDefaultFeaturedVenues();
+    }
+
+    // If empty array, return defaults (no venues in database)
+    if (empty($data)) {
         return getDefaultFeaturedVenues();
     }
 

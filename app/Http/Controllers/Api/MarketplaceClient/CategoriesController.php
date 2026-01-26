@@ -31,7 +31,10 @@ class CategoriesController extends BaseController
 
         $language = $client->language ?? 'ro';
 
-        $data = $categories->map(function ($category) use ($language) {
+        $data = $categories->map(function ($category) use ($language, $client) {
+            // Calculate dynamic event count for upcoming published events
+            $eventCount = $this->countUpcomingEventsForCategory($category);
+
             return [
                 'id' => $category->id,
                 'name' => $category->getTranslation('name', $language),
@@ -41,7 +44,7 @@ class CategoriesController extends BaseController
                 'icon_emoji' => $category->icon_emoji,
                 'image' => $category->image_full_url,
                 'color' => $category->color,
-                'event_count' => $category->event_count ?? 0,
+                'event_count' => $eventCount,
                 'is_featured' => $category->is_featured,
                 'sort_order' => $category->sort_order ?? 0,
                 'children' => $category->children()
@@ -56,7 +59,7 @@ class CategoriesController extends BaseController
                             'description' => $child->getTranslation('description', $language),
                             'icon' => $child->icon,
                             'icon_emoji' => $child->icon_emoji,
-                            'event_count' => $child->event_count ?? 0,
+                            'event_count' => $this->countUpcomingEventsForCategory($child),
                             'sort_order' => $child->sort_order ?? 0,
                         ];
                     }),
@@ -99,7 +102,7 @@ class CategoriesController extends BaseController
                 'color' => $category->color,
                 'meta_title' => $category->getTranslation('meta_title', $language),
                 'meta_description' => $category->getTranslation('meta_description', $language),
-                'event_count' => $category->event_count ?? 0,
+                'event_count' => $this->countUpcomingEventsForCategory($category),
                 'is_featured' => $category->is_featured,
                 'parent' => $category->parent ? [
                     'id' => $category->parent->id,
@@ -115,10 +118,35 @@ class CategoriesController extends BaseController
                             'id' => $child->id,
                             'name' => $child->getTranslation('name', $language),
                             'slug' => $child->slug,
-                            'event_count' => $child->event_count ?? 0,
+                            'event_count' => $this->countUpcomingEventsForCategory($child),
                         ];
                     }),
             ],
         ]);
+    }
+
+    /**
+     * Count upcoming published events for a category (including child categories)
+     */
+    protected function countUpcomingEventsForCategory(MarketplaceEventCategory $category): int
+    {
+        // Count events directly in this category
+        $count = \App\Models\MarketplaceEvent::query()
+            ->where('marketplace_event_category_id', $category->id)
+            ->where('status', 'published')
+            ->where('starts_at', '>=', now())
+            ->count();
+
+        // Include events from child categories
+        $childIds = $category->children()->pluck('id');
+        if ($childIds->isNotEmpty()) {
+            $count += \App\Models\MarketplaceEvent::query()
+                ->whereIn('marketplace_event_category_id', $childIds)
+                ->where('status', 'published')
+                ->where('starts_at', '>=', now())
+                ->count();
+        }
+
+        return $count;
     }
 }
