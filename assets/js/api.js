@@ -239,6 +239,7 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/dashboard/timeline') return 'organizer.dashboard.timeline';
 
         // Organizer events
+        if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';
         if (endpoint.match(/\/organizer\/events\/\d+\/participants\/export$/)) return 'organizer.event.participants.export';
         if (endpoint.match(/\/organizer\/events\/\d+\/participants$/)) return 'organizer.event.participants';
         if (endpoint.match(/\/organizer\/events\/\d+\/check-in\//)) return 'organizer.event.checkin';
@@ -382,6 +383,17 @@ const AmbiletAPI = {
         const regionMatch = endpoint.match(/\/locations\/regions\/([a-z0-9-]+)$/i);
         if (regionMatch) {
             return `slug=${encodeURIComponent(regionMatch[1])}`;
+        }
+
+        // Organizer event analytics - extract event ID and query params
+        const organizerEventAnalyticsMatch = endpoint.match(/\/organizer\/events\/(\d+)\/analytics/);
+        if (organizerEventAnalyticsMatch) {
+            const eventId = organizerEventAnalyticsMatch[1];
+            const queryStart = endpoint.indexOf('?');
+            if (queryStart !== -1) {
+                return `event_id=${encodeURIComponent(eventId)}&${endpoint.substring(queryStart + 1)}`;
+            }
+            return `event_id=${encodeURIComponent(eventId)}`;
         }
 
         // Organizer event endpoints - extract event ID
