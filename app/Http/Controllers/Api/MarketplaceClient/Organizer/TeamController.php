@@ -324,7 +324,7 @@ class TeamController extends BaseController
                 ->from(new Address($fromEmail, $fromName))
                 ->to(new Address($member->email, $member->name))
                 ->subject('Invitatie in echipa ' . $organizer->name)
-                ->html($this->getInviteEmailHtml($member, $organizer, $inviteUrl));
+                ->html($this->getInviteEmailHtml($member, $organizer, $client, $inviteUrl));
 
             // Send via marketplace transport
             $transport->send($email);
@@ -342,7 +342,7 @@ class TeamController extends BaseController
     /**
      * Get HTML for invite email
      */
-    protected function getInviteEmailHtml(MarketplaceOrganizerTeamMember $member, MarketplaceOrganizer $organizer, string $inviteUrl): string
+    protected function getInviteEmailHtml(MarketplaceOrganizerTeamMember $member, MarketplaceOrganizer $organizer, $marketplace, string $inviteUrl): string
     {
         $roleLabel = match ($member->role) {
             'admin' => 'Administrator',
@@ -350,6 +350,7 @@ class TeamController extends BaseController
             'staff' => 'Staff',
             default => ucfirst($member->role),
         };
+        $marketplaceName = $marketplace->name ?? $marketplace->domain;
 
         return <<<HTML
 <!DOCTYPE html>
@@ -367,7 +368,7 @@ class TeamController extends BaseController
     <div class="container">
         <h2>Bună {$member->name},</h2>
 
-        <p>Ai fost invitat să te alături echipei <strong>{$organizer->name}</strong> ca <strong>{$roleLabel}</strong>.</p>
+        <p>Ai fost invitat în echipa <strong>{$organizer->name}</strong> ca <strong>{$roleLabel}</strong> pe platforma <strong>{$marketplaceName}</strong>.</p>
 
         <p>Apasă pe butonul de mai jos pentru a accepta invitația și a-ți crea contul:</p>
 
