@@ -299,7 +299,8 @@ class TeamController extends BaseController
     protected function sendInviteEmail(MarketplaceOrganizerTeamMember $member, MarketplaceOrganizer $organizer, string $token): void
     {
         $client = $organizer->marketplaceClient;
-        $inviteUrl = 'https://' . $client->domain . '/organizator/accept-invite?token=' . $token . '&email=' . urlencode($member->email);
+        $domain = preg_replace('#^https?://#', '', $client->domain);
+        $inviteUrl = 'https://' . $domain . '/organizator/accept-invite?token=' . $token . '&email=' . urlencode($member->email);
 
         try {
             // Get marketplace mail transport
