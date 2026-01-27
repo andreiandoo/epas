@@ -1549,6 +1549,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.events.destroy');
         Route::get('/events/{event}/statistics', [OrganizerEventsController::class, 'statistics'])
             ->name('api.marketplace-client.organizer.events.statistics');
+        Route::get('/events/{event}/analytics', [OrganizerEventsController::class, 'analytics'])
+            ->name('api.marketplace-client.organizer.events.analytics');
 
         // Participants / Check-in (All participants across all events)
         Route::get('/participants', [OrganizerEventsController::class, 'allParticipants'])

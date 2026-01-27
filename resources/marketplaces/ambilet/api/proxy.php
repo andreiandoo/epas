@@ -1065,6 +1065,22 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.analytics':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['period'])) $params['period'] = $_GET['period'];
+        if (isset($_GET['start_date'])) $params['start_date'] = $_GET['start_date'];
+        if (isset($_GET['end_date'])) $params['end_date'] = $_GET['end_date'];
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/analytics' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.participants':
         $eventId = $_GET['event_id'] ?? '';
         if (!$eventId) {
