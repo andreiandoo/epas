@@ -7,7 +7,8 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceOrganizerTeamMember;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Mail;
+use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\Address;
 
 class TeamController extends BaseController
 {
@@ -293,24 +294,45 @@ class TeamController extends BaseController
     }
 
     /**
-     * Send invite email to team member
+     * Send invite email to team member using marketplace mail settings
      */
     protected function sendInviteEmail(MarketplaceOrganizerTeamMember $member, MarketplaceOrganizer $organizer, string $token): void
     {
         $client = $organizer->marketplaceClient;
         $inviteUrl = 'https://' . $client->domain . '/organizator/accept-invite?token=' . $token . '&email=' . urlencode($member->email);
 
-        // Simple email for now - can be replaced with a proper notification later
         try {
-            Mail::send([], [], function ($message) use ($member, $organizer, $inviteUrl) {
-                $message->to($member->email, $member->name)
-                    ->subject('Invitatie in echipa ' . $organizer->name)
-                    ->html($this->getInviteEmailHtml($member, $organizer, $inviteUrl));
-            });
+            // Get marketplace mail transport
+            $transport = $client->getMailTransport();
+
+            if (!$transport) {
+                \Log::warning('No mail transport configured for marketplace', [
+                    'marketplace_id' => $client->id,
+                    'member_id' => $member->id,
+                ]);
+                return;
+            }
+
+            // Get sender details from marketplace settings
+            $mailSettings = $client->getMailSettings();
+            $fromEmail = $mailSettings['from_address'] ?? $client->contact_email ?? 'noreply@' . $client->domain;
+            $fromName = $mailSettings['from_name'] ?? $client->name ?? $client->domain;
+
+            // Build email using Symfony Mime
+            $email = (new Email())
+                ->from(new Address($fromEmail, $fromName))
+                ->to(new Address($member->email, $member->name))
+                ->subject('Invitatie in echipa ' . $organizer->name)
+                ->html($this->getInviteEmailHtml($member, $organizer, $inviteUrl));
+
+            // Send via marketplace transport
+            $transport->send($email);
+
         } catch (\Exception $e) {
             // Log error but don't fail the request
             \Log::error('Failed to send team invite email', [
                 'member_id' => $member->id,
+                'marketplace_id' => $client->id,
                 'error' => $e->getMessage(),
             ]);
         }

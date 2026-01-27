@@ -366,38 +366,83 @@ class MarketplaceClient extends Model
     }
 
     /**
-     * Check if SMTP is configured
+     * Get mail settings from settings JSON or legacy columns
      */
-    public function hasSmtpConfigured(): bool
+    public function getMailSettings(): array
     {
+        // First check new settings['mail'] structure
+        $mailSettings = $this->settings['mail'] ?? [];
+
+        if (!empty($mailSettings['driver'])) {
+            return $mailSettings;
+        }
+
+        // Fallback to legacy smtp_settings column
         $smtp = $this->smtp_settings ?? [];
-        return !empty($smtp['host']) && !empty($smtp['username']) && !empty($smtp['password']);
+        if (!empty($smtp['host'])) {
+            return array_merge(['driver' => 'smtp'], $smtp);
+        }
+
+        return [];
     }
 
     /**
-     * Get SMTP transport for sending emails
+     * Check if mail is configured
      */
-    public function getSmtpTransport(): ?\Symfony\Component\Mailer\Transport\TransportInterface
+    public function hasMailConfigured(): bool
     {
-        if (!$this->hasSmtpConfigured()) {
+        $mail = $this->getMailSettings();
+        $driver = $mail['driver'] ?? '';
+
+        return match ($driver) {
+            'smtp' => !empty($mail['host']) && !empty($mail['username']) && !empty($mail['password']),
+            'brevo' => !empty($mail['api_key']),
+            'postmark' => !empty($mail['api_key']),
+            'mailgun' => !empty($mail['api_key']) && !empty($mail['domain']),
+            'sendgrid' => !empty($mail['api_key']),
+            'ses' => !empty($mail['api_key']) && !empty($mail['api_secret']) && !empty($mail['region']),
+            default => false,
+        };
+    }
+
+    /**
+     * Check if SMTP is configured (legacy method for backwards compatibility)
+     */
+    public function hasSmtpConfigured(): bool
+    {
+        return $this->hasMailConfigured();
+    }
+
+    /**
+     * Get mail transport for sending emails
+     */
+    public function getMailTransport(): ?\Symfony\Component\Mailer\Transport\TransportInterface
+    {
+        if (!$this->hasMailConfigured()) {
             return null;
         }
 
-        $smtp = $this->smtp_settings;
+        $mail = $this->getMailSettings();
+        $driver = $mail['driver'] ?? 'smtp';
 
         try {
-            $factory = new EsmtpTransportFactory();
-            $dsn = new Dsn(
-                $smtp['encryption'] === 'ssl' ? 'smtps' : 'smtp',
-                $smtp['host'],
-                $smtp['username'],
-                $smtp['password'],
-                $smtp['port'] ?? 587
-            );
+            // Decrypt encrypted values if needed
+            $apiKey = isset($mail['api_key']) ? $this->decryptIfNeeded($mail['api_key']) : null;
+            $apiSecret = isset($mail['api_secret']) ? $this->decryptIfNeeded($mail['api_secret']) : null;
+            $password = isset($mail['password']) ? $this->decryptIfNeeded($mail['password']) : null;
 
-            return $factory->create($dsn);
+            $factory = new EsmtpTransportFactory();
+
+            return match ($driver) {
+                'brevo' => $this->createBrevoTransport($apiKey),
+                'smtp' => $this->createSmtpTransport($mail, $password),
+                'postmark' => $this->createPostmarkTransport($apiKey),
+                'sendgrid' => $this->createSendgridTransport($apiKey),
+                default => $this->createSmtpTransport($mail, $password),
+            };
         } catch (\Exception $e) {
-            \Log::error('Failed to create SMTP transport for marketplace ' . $this->id, [
+            \Log::error('Failed to create mail transport for marketplace ' . $this->id, [
+                'driver' => $driver,
                 'error' => $e->getMessage(),
             ]);
             return null;
@@ -405,10 +450,120 @@ class MarketplaceClient extends Model
     }
 
     /**
+     * Get SMTP transport (legacy method for backwards compatibility)
+     */
+    public function getSmtpTransport(): ?\Symfony\Component\Mailer\Transport\TransportInterface
+    {
+        return $this->getMailTransport();
+    }
+
+    /**
+     * Create Brevo SMTP transport
+     */
+    protected function createBrevoTransport(string $apiKey): \Symfony\Component\Mailer\Transport\TransportInterface
+    {
+        $mail = $this->getMailSettings();
+        $username = $mail['username'] ?? $mail['from_address'] ?? $this->contact_email;
+
+        $factory = new EsmtpTransportFactory();
+        $dsn = new Dsn(
+            'smtp',
+            'smtp-relay.brevo.com',
+            $username,
+            $apiKey,
+            587
+        );
+
+        return $factory->create($dsn);
+    }
+
+    /**
+     * Create SMTP transport
+     */
+    protected function createSmtpTransport(array $mail, ?string $password): \Symfony\Component\Mailer\Transport\TransportInterface
+    {
+        $factory = new EsmtpTransportFactory();
+        $encryption = $mail['encryption'] ?? 'tls';
+        $dsn = new Dsn(
+            $encryption === 'ssl' ? 'smtps' : 'smtp',
+            $mail['host'],
+            $mail['username'],
+            $password ?? $mail['password'] ?? '',
+            $mail['port'] ?? 587
+        );
+
+        return $factory->create($dsn);
+    }
+
+    /**
+     * Create Postmark transport
+     */
+    protected function createPostmarkTransport(string $apiKey): \Symfony\Component\Mailer\Transport\TransportInterface
+    {
+        // Postmark uses SMTP with specific settings
+        $factory = new EsmtpTransportFactory();
+        $dsn = new Dsn(
+            'smtp',
+            'smtp.postmarkapp.com',
+            $apiKey,
+            $apiKey,
+            587
+        );
+
+        return $factory->create($dsn);
+    }
+
+    /**
+     * Create SendGrid transport
+     */
+    protected function createSendgridTransport(string $apiKey): \Symfony\Component\Mailer\Transport\TransportInterface
+    {
+        // SendGrid uses SMTP with apikey as username and API key as password
+        $factory = new EsmtpTransportFactory();
+        $dsn = new Dsn(
+            'smtp',
+            'smtp.sendgrid.net',
+            'apikey',
+            $apiKey,
+            587
+        );
+
+        return $factory->create($dsn);
+    }
+
+    /**
+     * Decrypt a value if it appears to be encrypted
+     */
+    protected function decryptIfNeeded(?string $value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        try {
+            // Check if it looks like an encrypted value (Laravel encryption has a specific format)
+            if (str_starts_with($value, 'eyJ') || strlen($value) > 100) {
+                return decrypt($value);
+            }
+        } catch (\Exception $e) {
+            // Not encrypted or decryption failed, return as-is
+        }
+
+        return $value;
+    }
+
+    /**
      * Get email from address
      */
     public function getEmailFromAddress(): string
     {
+        // Check new settings first
+        $mail = $this->getMailSettings();
+        if (!empty($mail['from_address'])) {
+            return $mail['from_address'];
+        }
+
+        // Fallback to legacy email_settings
         return $this->email_settings['from_email'] ?? $this->contact_email;
     }
 
@@ -417,7 +572,44 @@ class MarketplaceClient extends Model
      */
     public function getEmailFromName(): string
     {
+        // Check new settings first
+        $mail = $this->getMailSettings();
+        if (!empty($mail['from_name'])) {
+            return $mail['from_name'];
+        }
+
+        // Fallback to legacy email_settings
         return $this->email_settings['from_name'] ?? $this->name;
+    }
+
+    /**
+     * Send a test email to verify mail configuration
+     */
+    public function sendTestEmail(string $toEmail): array
+    {
+        if (!$this->hasMailConfigured()) {
+            return ['success' => false, 'error' => 'Mail is not configured'];
+        }
+
+        try {
+            $transport = $this->getMailTransport();
+
+            if (!$transport) {
+                return ['success' => false, 'error' => 'Could not create mail transport'];
+            }
+
+            $email = (new \Symfony\Component\Mime\Email())
+                ->from(new \Symfony\Component\Mime\Address($this->getEmailFromAddress(), $this->getEmailFromName()))
+                ->to($toEmail)
+                ->subject('Test Email from ' . $this->name)
+                ->html('<h1>Test Email</h1><p>This is a test email from your marketplace <strong>' . $this->name . '</strong>.</p><p>If you received this email, your mail configuration is working correctly!</p><p>Sent at: ' . now()->format('Y-m-d H:i:s') . '</p>');
+
+            $transport->send($email);
+
+            return ['success' => true, 'message' => 'Test email sent successfully to ' . $toEmail];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
     }
 
     /**

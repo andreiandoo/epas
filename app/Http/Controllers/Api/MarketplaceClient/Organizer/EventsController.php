@@ -72,7 +72,7 @@ class EventsController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $event = Event::with(['ticketTypes', 'venue', 'marketplaceCity', 'marketplaceEventCategory'])
+        $event = Event::with(['ticketTypes', 'venue', 'marketplaceCity', 'marketplaceEventCategory', 'eventGenres', 'artists'])
             ->where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
@@ -191,10 +191,20 @@ class EventsController extends BaseController
                 ]);
             }
 
+            // Sync genres if provided
+            if (!empty($validated['genre_ids'])) {
+                $event->eventGenres()->sync($validated['genre_ids']);
+            }
+
+            // Sync artists if provided
+            if (!empty($validated['artist_ids'])) {
+                $event->artists()->sync($validated['artist_ids']);
+            }
+
             DB::commit();
 
             return $this->success([
-                'event' => $this->formatEventDetailed($event->load('ticketTypes')),
+                'event' => $this->formatEventDetailed($event->load(['ticketTypes', 'eventGenres', 'artists'])),
             ], 'Event created successfully', 201);
 
         } catch (\Exception $e) {
@@ -339,10 +349,20 @@ class EventsController extends BaseController
                 }
             }
 
+            // Sync genres if provided
+            if (isset($validated['genre_ids'])) {
+                $event->eventGenres()->sync($validated['genre_ids']);
+            }
+
+            // Sync artists if provided
+            if (isset($validated['artist_ids'])) {
+                $event->artists()->sync($validated['artist_ids']);
+            }
+
             DB::commit();
 
             return $this->success([
-                'event' => $this->formatEventDetailed($event->fresh()->load('ticketTypes')),
+                'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'eventGenres', 'artists'])),
             ], 'Event updated');
 
         } catch (\Exception $e) {
@@ -1501,6 +1521,36 @@ class EventsController extends BaseController
      */
     protected function formatEventDetailed(Event $event): array
     {
+        // Format genres if loaded
+        $genres = [];
+        $genreIds = [];
+        if ($event->relationLoaded('eventGenres')) {
+            $genres = $event->eventGenres->map(function ($genre) {
+                $name = is_array($genre->name) ? ($genre->name['ro'] ?? $genre->name['en'] ?? array_values($genre->name)[0] ?? '') : $genre->name;
+                return [
+                    'id' => $genre->id,
+                    'name' => $name,
+                    'slug' => $genre->slug,
+                ];
+            })->toArray();
+            $genreIds = $event->eventGenres->pluck('id')->toArray();
+        }
+
+        // Format artists if loaded
+        $artists = [];
+        $artistIds = [];
+        if ($event->relationLoaded('artists')) {
+            $artists = $event->artists->map(function ($artist) {
+                return [
+                    'id' => $artist->id,
+                    'name' => $artist->name,
+                    'slug' => $artist->slug,
+                    'image' => $artist->main_image_url,
+                ];
+            })->toArray();
+            $artistIds = $event->artists->pluck('id')->toArray();
+        }
+
         return [
             'id' => $event->id,
             'name' => $this->getLocalizedTitle($event),
@@ -1517,6 +1567,10 @@ class EventsController extends BaseController
             'venue_city' => $event->venue?->city ?? $event->marketplaceCity?->name ?? null,
             'marketplace_event_category_id' => $event->marketplace_event_category_id,
             'category' => $event->marketplaceEventCategory?->name ?? null,
+            'genre_ids' => $genreIds,
+            'genres' => $genres,
+            'artist_ids' => $artistIds,
+            'artists' => $artists,
             'tags' => null,
             'image' => $event->poster_url,
             'cover_image' => $event->hero_image_url,

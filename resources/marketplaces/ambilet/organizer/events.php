@@ -629,6 +629,42 @@ function showCreateForm() {
     initGenreSearch();
     initDragDrop();
     initShortDescWordCount();
+
+    // Reset form state for new event
+    resetFormState();
+}
+
+function resetFormState() {
+    // Reset genres and artists
+    selectedGenres = [];
+    selectedArtists = [];
+    renderGenreTags();
+    renderArtistTags();
+
+    // Reset image previews
+    const posterPreview = document.getElementById('poster-preview');
+    const posterUploadArea = document.getElementById('poster-upload-area');
+    const coverPreview = document.getElementById('cover-preview');
+    const coverUploadArea = document.getElementById('cover-upload-area');
+
+    if (posterPreview) posterPreview.classList.add('hidden');
+    if (posterUploadArea) posterUploadArea.classList.remove('hidden');
+    if (coverPreview) coverPreview.classList.add('hidden');
+    if (coverUploadArea) coverUploadArea.classList.remove('hidden');
+
+    // Clear file inputs
+    const posterInput = document.querySelector('[name="poster"]');
+    const coverInput = document.querySelector('[name="cover_image"]');
+    if (posterInput) posterInput.value = '';
+    if (coverInput) coverInput.value = '';
+
+    // Reset form
+    const form = document.getElementById('create-event-form');
+    if (form) form.reset();
+
+    // Reset saved event ID
+    const savedIdEl = document.getElementById('saved-event-id');
+    if (savedIdEl) savedIdEl.value = '';
 }
 
 async function loadEventForEdit(eventId) {
@@ -809,6 +845,47 @@ async function loadEventForEdit(eventId) {
         if (event.sales_end_at) {
             const dt = new Date(event.sales_end_at);
             form.querySelector('[name="sales_end_at"]').value = dt.toISOString().slice(0, 16);
+        }
+
+        // Genres - populate after category is loaded
+        if (event.genres && event.genres.length > 0) {
+            setTimeout(() => {
+                selectedGenres = event.genres.map(g => ({ id: g.id, name: g.name }));
+                renderGenreTags();
+                // Show genres container if hidden
+                const genresContainer = document.getElementById('genres-container');
+                if (genresContainer) genresContainer.classList.remove('hidden');
+            }, 600); // Wait for category change to complete
+        }
+
+        // Artists - populate selected artists
+        if (event.artists && event.artists.length > 0) {
+            selectedArtists = event.artists.map(a => ({ id: a.id, name: a.name }));
+            renderArtistTags();
+        }
+
+        // Poster image - show preview if exists
+        if (event.image) {
+            const posterPreview = document.getElementById('poster-preview');
+            const posterImg = document.getElementById('poster-img');
+            const posterUploadArea = document.getElementById('poster-upload-area');
+            if (posterPreview && posterImg) {
+                posterImg.src = event.image;
+                posterPreview.classList.remove('hidden');
+                if (posterUploadArea) posterUploadArea.classList.add('hidden');
+            }
+        }
+
+        // Cover image - show preview if exists
+        if (event.cover_image) {
+            const coverPreview = document.getElementById('cover-preview');
+            const coverImg = document.getElementById('cover-img');
+            const coverUploadArea = document.getElementById('cover-upload-area');
+            if (coverPreview && coverImg) {
+                coverImg.src = event.cover_image;
+                coverPreview.classList.remove('hidden');
+                if (coverUploadArea) coverUploadArea.classList.add('hidden');
+            }
         }
 
         // Update summaries

@@ -448,13 +448,50 @@ class Settings extends Page
                                                 ->label('Test Email Connection')
                                                 ->icon('heroicon-o-paper-airplane')
                                                 ->color('gray')
-                                                ->action(function () {
-                                                    // TODO: Implement test email
-                                                    \Filament\Notifications\Notification::make()
-                                                        ->info()
-                                                        ->title('Test email feature')
-                                                        ->body('Test email functionality coming soon.')
-                                                        ->send();
+                                                ->requiresConfirmation()
+                                                ->modalHeading('Test Email Connection')
+                                                ->modalDescription('A test email will be sent to verify your mail configuration is working correctly.')
+                                                ->modalSubmitActionLabel('Send Test Email')
+                                                ->form([
+                                                    Forms\Components\TextInput::make('test_email')
+                                                        ->label('Send test email to')
+                                                        ->email()
+                                                        ->required()
+                                                        ->default(fn () => auth()->user()?->email)
+                                                        ->helperText('Enter the email address where you want to receive the test email'),
+                                                ])
+                                                ->action(function (array $data) {
+                                                    // First save current form state to the marketplace
+                                                    $this->save();
+
+                                                    // Now send test email
+                                                    $marketplace = static::getMarketplaceClient();
+
+                                                    if (!$marketplace) {
+                                                        Notification::make()
+                                                            ->danger()
+                                                            ->title('Error')
+                                                            ->body('Could not find marketplace configuration.')
+                                                            ->send();
+                                                        return;
+                                                    }
+
+                                                    $result = $marketplace->sendTestEmail($data['test_email']);
+
+                                                    if ($result['success']) {
+                                                        Notification::make()
+                                                            ->success()
+                                                            ->title('Test email sent!')
+                                                            ->body($result['message'])
+                                                            ->send();
+                                                    } else {
+                                                        Notification::make()
+                                                            ->danger()
+                                                            ->title('Failed to send test email')
+                                                            ->body($result['error'] ?? 'Unknown error occurred')
+                                                            ->duration(10000)
+                                                            ->send();
+                                                    }
                                                 }),
                                         ])
                                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => filled($get('mail_driver')))
@@ -676,16 +713,23 @@ class Settings extends Page
     {
         return [
             SC\Grid::make(2)->schema([
+                Forms\Components\TextInput::make('mail_username')
+                    ->label('SMTP Login (Account Email)')
+                    ->email()
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('your-brevo-account@email.com')
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Brevo account email used for SMTP login'),
+
                 Forms\Components\TextInput::make('mail_api_key')
-                    ->label('API Key')
+                    ->label('SMTP Key')
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
-                    ->placeholder('xkeysib-...')
+                    ->placeholder('xsmtpsib-...')
                     ->required()
-                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Brevo API key (v3)')
-                    ->dehydrated(fn ($state) => filled($state))
-                    ->columnSpanFull(),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'SMTP Key from Brevo Settings > SMTP & API (different from API Key)')
+                    ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make('mail_from_address')
                     ->label('From Email')
@@ -693,7 +737,7 @@ class Settings extends Page
                     ->maxLength(255)
                     ->required()
                     ->placeholder('noreply@yourdomain.com')
-                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be verified in Brevo'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be a verified sender in Brevo'),
 
                 Forms\Components\TextInput::make('mail_from_name')
                     ->label('From Name')
