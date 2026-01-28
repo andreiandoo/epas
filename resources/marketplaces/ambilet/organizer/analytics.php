@@ -5,6 +5,8 @@ $bodyClass = 'min-h-screen flex bg-slate-100';
 $currentPage = 'events';
 $headExtra = '
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
     .stat-card { background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%); backdrop-filter: blur(10px); }
     .forecast-card { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); }
@@ -12,6 +14,14 @@ $headExtra = '
     @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
     .milestone-card { transition: all 0.2s ease; }
     .milestone-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+    .leaflet-container { background: #1e293b !important; font-size: 14px; }
+    .leaflet-pane { z-index: 1 !important; }
+    .leaflet-tile-pane { z-index: 1 !important; }
+    .leaflet-overlay-pane { z-index: 2 !important; }
+    .leaflet-marker-pane { z-index: 3 !important; }
+    .leaflet-popup-pane { z-index: 4 !important; }
+    .live-marker-pulse { animation: marker-pulse 2s ease-in-out infinite; }
+    @keyframes marker-pulse { 0%, 100% { opacity: 0.8; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } }
 </style>
 ';
 require_once dirname(__DIR__) . '/includes/head.php';
@@ -423,15 +433,6 @@ $eventId = $_GET['event'] ?? null;
                         <label class="block mb-1 text-sm font-medium text-secondary">ID Campanie platformă</label>
                         <input type="text" name="platform_campaign_id" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="ex: 120215478965421">
                     </div>
-                    <div>
-                        <label class="block mb-1 text-sm font-medium text-secondary">Fereastră atribuire (zile)</label>
-                        <select name="attribution_window_days" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                            <option value="7">7 zile</option>
-                            <option value="14">14 zile</option>
-                            <option value="28" selected>28 zile</option>
-                            <option value="30">30 zile</option>
-                        </select>
-                    </div>
                     <div class="p-4 border rounded-xl border-border bg-gray-50">
                         <h4 class="mb-3 text-sm font-medium text-secondary">Parametri UTM</h4>
                         <div class="grid grid-cols-2 gap-3">
@@ -532,7 +533,7 @@ $eventId = $_GET['event'] ?? null;
 
                 <!-- Map Container -->
                 <div class="relative h-80 bg-slate-800 rounded-xl overflow-hidden mb-6">
-                    <div id="globe-map" class="w-full h-full"></div>
+                    <div id="globeMapContainer" class="w-full h-full"></div>
                     <div id="globe-map-overlay" class="absolute inset-0 flex items-center justify-center bg-slate-800/80">
                         <div class="text-center">
                             <svg class="w-12 h-12 mx-auto mb-3 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -559,6 +560,8 @@ let currentPeriod = '30d';
 let mainChart = null;
 let chartMetrics = { revenue: true, tickets: true, views: true };
 let eventData = null;
+let milestonesData = [];
+let globeMap = null;
 
 // Helper to fix image URLs (convert core.tixello.com to bilete.online paths)
 function fixImageUrl(url) {
@@ -612,7 +615,12 @@ async function loadAnalytics() {
         try {
             const milestonesResponse = await AmbiletAPI.get(`/organizer/events/${eventId}/milestones`);
             if (milestonesResponse.success) {
+                milestonesData = milestonesResponse.data.milestones || milestonesResponse.data || [];
                 updateCampaigns(milestonesResponse.data);
+                // Re-render chart with milestone annotations
+                if (eventData?.chart) {
+                    updateMainChart(eventData.chart);
+                }
             }
         } catch (e) { console.log('No milestones endpoint'); }
 
@@ -776,6 +784,24 @@ function updateDashboard(data) {
     }
 }
 
+// Get milestone type-specific color
+function getMilestoneColor(type) {
+    const colors = {
+        'campaign_fb': '#1877f2',
+        'campaign_google': '#ea4335',
+        'campaign_tiktok': '#000000',
+        'campaign_instagram': '#e4405f',
+        'campaign_other': '#6b7280',
+        'email': '#f59e0b',
+        'price': '#10b981',
+        'announcement': '#8b5cf6',
+        'press': '#3b82f6',
+        'lineup': '#ec4899',
+        'custom': '#6b7280',
+    };
+    return colors[type] || '#6b7280';
+}
+
 function updateMainChart(chartData) {
     const colors = [];
     const series = [];
@@ -811,6 +837,42 @@ function updateMainChart(chartData) {
         });
     }
 
+    // Build milestone annotations for the chart
+    const rawDates = chartData.raw_dates || [];
+    const labels = chartData.labels || [];
+    const milestoneAnnotations = (milestonesData || [])
+        .filter(m => m.start_date)
+        .map(m => {
+            const milestoneDate = m.start_date.split('T')[0]; // "2026-01-14"
+            const dateIndex = rawDates.findIndex(d => d === milestoneDate);
+            if (dateIndex === -1) return null;
+
+            const color = getMilestoneColor(m.type);
+
+            return {
+                x: labels[dateIndex],
+                borderColor: color,
+                borderWidth: 2,
+                strokeDashArray: 0,
+                label: {
+                    borderColor: color,
+                    borderWidth: 0,
+                    borderRadius: 6,
+                    style: {
+                        color: '#fff',
+                        background: color,
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        padding: { left: 8, right: 8, top: 4, bottom: 4 }
+                    },
+                    text: (m.title?.substring(0, 18) || '') + (m.title?.length > 18 ? '...' : ''),
+                    position: 'top',
+                    offsetY: -8
+                }
+            };
+        })
+        .filter(Boolean);
+
     const options = {
         series: series,
         chart: {
@@ -822,6 +884,9 @@ function updateMainChart(chartData) {
         dataLabels: { enabled: false },
         stroke: { curve: 'smooth', width: 2 },
         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
+        annotations: {
+            xaxis: milestoneAnnotations
+        },
         xaxis: {
             categories: chartData.labels || [],
             labels: { style: { colors: '#94a3b8', fontSize: '11px' } }
@@ -1166,13 +1231,18 @@ function renderEventsList(events) {
     const html = events.map(e => {
         const isActive = String(e.id) === String(eventId);
 
-        // Format date
+        // Format date - API returns starts_at
         let dateStr = '';
-        const dateSource = e.starts_at || e.start_date || e.date_start || e.date;
+        const dateSource = e.starts_at || e.start_date || e.date;
         if (dateSource) {
             const d = new Date(dateSource);
             if (!isNaN(d.getTime())) {
-                dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+                const day = String(d.getDate()).padStart(2,'0');
+                const month = String(d.getMonth()+1).padStart(2,'0');
+                const year = d.getFullYear();
+                const hours = String(d.getHours()).padStart(2,'0');
+                const minutes = String(d.getMinutes()).padStart(2,'0');
+                dateStr = `${day}.${month}.${year} | ${hours}:${minutes}`;
             } else if (typeof dateSource === 'string') {
                 const match = dateSource.match(/(\d{4})-(\d{2})-(\d{2})/);
                 if (match) {
@@ -1183,32 +1253,24 @@ function renderEventsList(events) {
             }
         }
 
-        // Get venue name and city
-        let venueName = '';
-        let cityName = '';
-        if (e.venue) {
-            if (typeof e.venue === 'object') {
-                venueName = e.venue.name || e.venue.title || '';
-                cityName = e.venue.city || '';
-            } else {
-                venueName = e.venue;
-            }
-        }
-        if (!cityName && e.city) {
-            cityName = e.city;
-        }
+        // Get venue name and city - API returns venue_name and venue_city directly
+        const venueName = e.venue_name || (typeof e.venue === 'object' ? e.venue?.name : e.venue) || '';
+        const cityName = e.venue_city || (typeof e.venue === 'object' ? e.venue?.city : '') || e.city || '';
         let locationStr = venueName;
         if (cityName && cityName !== venueName) {
             locationStr = venueName ? `${venueName}, ${cityName}` : cityName;
         }
 
+        // Get event name - API returns 'name' not 'title'
+        const eventName = e.name || e.title || 'Eveniment';
+
         return `
             <a href="/organizator/analytics/${e.id}" class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 ${isActive ? 'bg-primary/5 border-l-2 border-primary' : ''}">
                 <div class="flex-shrink-0 w-10 h-10 overflow-hidden bg-gray-200 rounded-lg">
-                    ${e.image ? `<img src="${fixImageUrl(e.image)}" class="object-cover w-full h-full">` : ''}
+                    ${e.image ? `<img src="${fixImageUrl(e.image)}" class="object-cover w-full h-full">` : '<div class="w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-xs">📅</div>'}
                 </div>
                 <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium text-gray-800 truncate">${e.title || 'Eveniment'}</div>
+                    <div class="text-sm font-medium text-gray-800 truncate">${eventName}</div>
                     <div class="text-[11px] text-gray-500 truncate">${dateStr}${locationStr ? ' • ' + locationStr : ''}</div>
                 </div>
                 ${isActive ? '<svg class="flex-shrink-0 w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : ''}
@@ -1227,9 +1289,41 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Globe modal functions
+// Globe modal functions with Leaflet map
 let globeModalOpen = false;
 let liveVisitorsData = null;
+
+// Romanian cities with lat/lng coordinates
+const cityCoordinates = {
+    'București': { lat: 44.4268, lng: 26.1025 },
+    'Bucharest': { lat: 44.4268, lng: 26.1025 },
+    'Cluj-Napoca': { lat: 46.7712, lng: 23.6236 },
+    'Cluj': { lat: 46.7712, lng: 23.6236 },
+    'Timișoara': { lat: 45.7489, lng: 21.2087 },
+    'Timisoara': { lat: 45.7489, lng: 21.2087 },
+    'Iași': { lat: 47.1585, lng: 27.6014 },
+    'Iasi': { lat: 47.1585, lng: 27.6014 },
+    'Constanța': { lat: 44.1598, lng: 28.6348 },
+    'Constanta': { lat: 44.1598, lng: 28.6348 },
+    'Brașov': { lat: 45.6427, lng: 25.5887 },
+    'Brasov': { lat: 45.6427, lng: 25.5887 },
+    'Sibiu': { lat: 45.7983, lng: 24.1256 },
+    'Oradea': { lat: 47.0465, lng: 21.9189 },
+    'Craiova': { lat: 44.3302, lng: 23.7949 },
+    'Galați': { lat: 45.4353, lng: 28.0080 },
+    'Galati': { lat: 45.4353, lng: 28.0080 },
+    'Ploiești': { lat: 44.9364, lng: 26.0134 },
+    'Ploiesti': { lat: 44.9364, lng: 26.0134 },
+    'Arad': { lat: 46.1866, lng: 21.3123 },
+    'Pitești': { lat: 44.8565, lng: 24.8691 },
+    'Pitesti': { lat: 44.8565, lng: 24.8691 },
+    'Bacău': { lat: 46.5670, lng: 26.9146 },
+    'Bacau': { lat: 46.5670, lng: 26.9146 },
+    'Târgu Mureș': { lat: 46.5386, lng: 24.5575 },
+    'Targu Mures': { lat: 46.5386, lng: 24.5575 },
+    'Baia Mare': { lat: 47.6567, lng: 23.5850 },
+    'Suceava': { lat: 47.6517, lng: 26.2556 },
+};
 
 function openGlobeModal() {
     document.getElementById('globe-modal').classList.remove('hidden');
@@ -1240,6 +1334,13 @@ function openGlobeModal() {
 function closeGlobeModal() {
     document.getElementById('globe-modal').classList.add('hidden');
     globeModalOpen = false;
+    // Clean up map when closing
+    if (globeMap) {
+        try {
+            globeMap.remove();
+        } catch (e) {}
+        globeMap = null;
+    }
 }
 
 async function loadLiveVisitors() {
@@ -1247,10 +1348,8 @@ async function loadLiveVisitors() {
 
     try {
         // Try to get live visitors data from analytics
-        // For now we'll simulate with top locations data
         if (eventData?.top_locations) {
-            const locations = eventData.top_locations;
-            renderGlobeData(locations);
+            renderGlobeData(eventData.top_locations);
         } else {
             // Fallback to showing the analytics data
             const response = await AmbiletAPI.get(`/organizer/events/${eventId}/analytics?period=1d`);
@@ -1266,10 +1365,11 @@ async function loadLiveVisitors() {
 
 function renderGlobeData(locations) {
     const overlay = document.getElementById('globe-map-overlay');
-    const mapContainer = document.getElementById('globe-map');
+    const mapContainer = document.getElementById('globeMapContainer');
     const visitorsList = document.getElementById('globe-visitors-list');
 
     if (!locations || locations.length === 0) {
+        overlay.classList.remove('hidden');
         overlay.innerHTML = `
             <div class="text-center">
                 <svg class="w-12 h-12 mx-auto mb-3 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -1288,9 +1388,9 @@ function renderGlobeData(locations) {
     document.getElementById('globe-countries').textContent = uniqueCountries;
     document.getElementById('globe-cities').textContent = uniqueCities;
 
-    // Render simple map visualization
+    // Hide overlay and initialize Leaflet map
     overlay.classList.add('hidden');
-    mapContainer.innerHTML = renderSimpleMap(locations);
+    initLeafletMap(locations);
 
     // Render visitors list
     const html = locations.slice(0, 10).map(l => {
@@ -1314,66 +1414,82 @@ function renderGlobeData(locations) {
     visitorsList.innerHTML = html || '<div class="text-sm text-white/40 text-center py-4">Niciun vizitator activ</div>';
 }
 
-function renderSimpleMap(locations) {
-    // Simple visual representation with dots on a stylized map background
-    const maxVisitors = Math.max(...locations.map(l => l.visitors || l.count || 0));
+function initLeafletMap(locations) {
+    const container = document.getElementById('globeMapContainer');
 
-    // Romanian cities approximate positions (normalized 0-100)
-    const cityPositions = {
-        'București': { x: 65, y: 55 },
-        'Bucharest': { x: 65, y: 55 },
-        'Cluj-Napoca': { x: 45, y: 30 },
-        'Cluj': { x: 45, y: 30 },
-        'Timișoara': { x: 25, y: 45 },
-        'Timisoara': { x: 25, y: 45 },
-        'Iași': { x: 80, y: 25 },
-        'Iasi': { x: 80, y: 25 },
-        'Constanța': { x: 85, y: 55 },
-        'Constanta': { x: 85, y: 55 },
-        'Brașov': { x: 55, y: 45 },
-        'Brasov': { x: 55, y: 45 },
-        'Sibiu': { x: 45, y: 45 },
-        'Oradea': { x: 25, y: 25 },
-        'Craiova': { x: 40, y: 60 },
-        'Galați': { x: 80, y: 45 },
-        'Galati': { x: 80, y: 45 },
-        'Ploiești': { x: 60, y: 50 },
-        'Ploiesti': { x: 60, y: 50 },
-        'Arad': { x: 22, y: 35 },
-        'Pitești': { x: 50, y: 55 },
-        'Pitesti': { x: 50, y: 55 },
-    };
+    // Check if Leaflet is loaded
+    if (typeof L === 'undefined') {
+        console.warn('Leaflet not loaded');
+        return;
+    }
 
-    const dots = locations.map((l, i) => {
-        const city = l.city || '';
-        const count = l.visitors || l.count || 0;
-        const size = Math.max(8, Math.min(24, (count / maxVisitors) * 24));
+    // Remove existing map if any
+    if (globeMap) {
+        try {
+            globeMap.remove();
+        } catch (e) {}
+        globeMap = null;
+    }
 
-        // Get position or generate random position
-        let pos = cityPositions[city];
-        if (!pos) {
-            // Random position for unknown cities
-            pos = { x: 20 + Math.random() * 60, y: 20 + Math.random() * 60 };
-        }
+    try {
+        // Initialize Leaflet map centered on Romania
+        const map = L.map(container, {
+            center: [46, 25],
+            zoom: 6,
+            zoomControl: true,
+            attributionControl: false
+        });
 
-        return `
-            <div class="absolute animate-pulse" style="left: ${pos.x}%; top: ${pos.y}%; transform: translate(-50%, -50%);">
-                <div class="relative">
-                    <div class="absolute inset-0 bg-emerald-400 rounded-full opacity-30 animate-ping" style="width: ${size * 2}px; height: ${size * 2}px; margin: -${size/2}px;"></div>
-                    <div class="bg-emerald-500 rounded-full shadow-lg shadow-emerald-500/50" style="width: ${size}px; height: ${size}px;"></div>
-                </div>
-                <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 whitespace-nowrap text-[10px] text-white/80 font-medium">${city || 'Loc. ' + (i+1)}</div>
-            </div>
-        `;
-    }).join('');
+        // Add CartoDB dark tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
 
-    return `
-        <div class="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900 opacity-50"></div>
-        <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"none\" stroke=\"%23ffffff10\" stroke-width=\"0.5\" d=\"M10,20 Q30,10 50,20 T90,25 M5,50 Q25,40 50,50 T95,55 M10,80 Q30,70 50,80 T90,75\"/></svg>'); background-size: cover;"></div>
-        <div class="absolute inset-4">
-            ${dots}
-        </div>
-    `;
+        globeMap = map;
+
+        // Prepare locations with coordinates
+        const mappedLocations = locations.map(l => {
+            const city = l.city || '';
+            const coords = cityCoordinates[city] || l;
+            return {
+                lat: coords.lat || null,
+                lng: coords.lng || null,
+                city: city,
+                visitors: l.visitors || l.count || 0,
+                isLive: l.isLive || false
+            };
+        }).filter(l => l.lat && l.lng);
+
+        // Add markers
+        mappedLocations.forEach(loc => {
+            const marker = L.circleMarker([loc.lat, loc.lng], {
+                radius: loc.isLive ? 12 : Math.max(8, Math.min(25, (loc.visitors || 1) / 2)),
+                fillColor: loc.isLive ? '#10b981' : '#10b981',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8,
+                className: loc.isLive ? 'live-marker-pulse' : ''
+            }).addTo(map);
+
+            const popupContent = `<b>${loc.city}</b><br>${loc.visitors} vizite`;
+            marker.bindPopup(popupContent);
+        });
+
+        // Force map to recalculate size after container is visible
+        setTimeout(() => {
+            map.invalidateSize();
+            // Fit bounds to markers if we have locations
+            if (mappedLocations.length > 0) {
+                const bounds = L.latLngBounds(mappedLocations.map(l => [l.lat, l.lng]));
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }, 200);
+
+    } catch (e) {
+        console.error('Error initializing Leaflet map:', e);
+    }
 }
 
 // Goal modal functions
@@ -1383,11 +1499,26 @@ function closeGoalModal() { document.getElementById('goal-modal').classList.add(
 async function saveGoal(e) {
     e.preventDefault();
     const form = e.target;
+
+    // Validate deadline doesn't exceed event date
+    const deadlineValue = form.deadline.value;
+    if (deadlineValue && eventData?.event) {
+        const eventDate = eventData.event.ends_at || eventData.event.starts_at || eventData.event.date;
+        if (eventDate) {
+            const deadline = new Date(deadlineValue);
+            const eventEndDate = new Date(eventDate.split('T')[0]);
+            if (deadline > eventEndDate) {
+                alert('Data deadline nu poate depăși data evenimentului (' + eventEndDate.toLocaleDateString('ro-RO') + ')');
+                return;
+            }
+        }
+    }
+
     const data = {
         type: form.type.value,
         name: form.name.value,
         target_value: parseFloat(form.target_value.value),
-        deadline: form.deadline.value || null
+        deadline: deadlineValue || null
     };
     try {
         const response = await AmbiletAPI.post(`/organizer/events/${eventId}/goals`, data);
@@ -1449,6 +1580,34 @@ async function saveMilestone(e) {
     e.preventDefault();
     const form = e.target;
 
+    // Validate milestone dates against event dates
+    const startDateValue = form.start_date.value;
+    const endDateValue = form.end_date.value;
+
+    if (eventData?.event) {
+        // Validate start_date >= event created_at
+        const eventCreatedAt = eventData.event.created_at;
+        if (startDateValue && eventCreatedAt) {
+            const startDate = new Date(startDateValue);
+            const createdDate = new Date(eventCreatedAt.split('T')[0]);
+            if (startDate < createdDate) {
+                alert('Data start nu poate fi mai devreme de data adăugării evenimentului (' + createdDate.toLocaleDateString('ro-RO') + ')');
+                return;
+            }
+        }
+
+        // Validate end_date <= event ends_at
+        const eventEndDate = eventData.event.ends_at || eventData.event.starts_at || eventData.event.date;
+        if (endDateValue && eventEndDate) {
+            const endDate = new Date(endDateValue);
+            const eventEnd = new Date(eventEndDate.split('T')[0]);
+            if (endDate > eventEnd) {
+                alert('Data sfârșit nu poate fi mai mare de data de sfârșit a evenimentului (' + eventEnd.toLocaleDateString('ro-RO') + ')');
+                return;
+            }
+        }
+    }
+
     // Map form type values to API type values
     const typeMap = {
         'facebook_ads': 'campaign_fb',
@@ -1470,15 +1629,14 @@ async function saveMilestone(e) {
     const data = {
         title: form.name.value,
         type: typeMap[formType] || formType,
-        start_date: form.start_date.value,
-        end_date: form.end_date.value || null
+        start_date: startDateValue,
+        end_date: endDateValue || null
     };
 
     if (isAdCampaign) {
         // Ad campaign specific fields
         data.budget = form.budget.value ? parseFloat(form.budget.value) : null;
         data.platform_campaign_id = form.platform_campaign_id.value || null;
-        data.attribution_window_days = parseInt(form.attribution_window_days.value) || 28;
         data.utm_source = form.utm_source.value || null;
         data.utm_medium = form.utm_medium.value || null;
         data.utm_campaign = form.utm_campaign.value || null;

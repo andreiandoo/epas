@@ -1114,10 +1114,12 @@ class EventsController extends BaseController
         $revenueChange = $prevRevenue > 0 ? round((($totalRevenue - $prevRevenue) / $prevRevenue) * 100, 1) : 0;
         $ticketsChange = $prevTickets > 0 ? round((($ticketsSold - $prevTickets) / $prevTickets) * 100, 1) : 0;
 
-        // Chart data - daily revenue and tickets
+        // Chart data - daily revenue, tickets, and views
         $chartLabels = [];
         $chartRevenue = [];
         $chartTickets = [];
+        $chartViews = [];
+        $chartRawDates = [];
 
         $currentDate = $rangeStart->copy();
         while ($currentDate <= $rangeEnd) {
@@ -1129,8 +1131,11 @@ class EventsController extends BaseController
                 ->whereBetween('created_at', [$dayStart, $dayEnd]);
 
             $chartLabels[] = $currentDate->format('M d');
+            $chartRawDates[] = $currentDate->format('Y-m-d');
             $chartRevenue[] = (float) $dayOrders->sum('total');
             $chartTickets[] = (int) $dayOrders->withCount('tickets')->get()->sum('tickets_count');
+            // Views per day - simplified distribution based on total views
+            $chartViews[] = max(0, intval($pageViews / max(1, $rangeStart->diffInDays($rangeEnd))));
 
             $currentDate->addDay();
         }
@@ -1190,14 +1195,28 @@ class EventsController extends BaseController
 
         $eventName = $this->getLocalizedTitle($event);
 
+        // Calculate days until event
+        $eventDate = $this->getStartsAt($event);
+        $daysUntil = null;
+        if ($eventDate) {
+            $eventDateTime = Carbon::parse($eventDate);
+            $daysUntil = (int) now()->startOfDay()->diffInDays($eventDateTime->startOfDay(), false);
+        }
+
         return $this->success([
             'event' => [
                 'id' => $event->id,
                 'title' => $eventName,
+                'starts_at' => $this->getStartsAt($event),
                 'date' => $this->getStartsAt($event),
                 'venue' => $event->venue?->name ?? null,
+                'venue_city' => $event->venue?->city ?? $event->marketplaceCity?->name ?? null,
+                'image' => $event->poster_url,
                 'is_cancelled' => $event->is_cancelled,
                 'is_sold_out' => $event->is_sold_out ?? false,
+                'days_until' => $daysUntil,
+                'created_at' => $event->created_at?->toIso8601String(),
+                'ends_at' => $event->event_end_date ? Carbon::parse($event->event_end_date)->toIso8601String() : null,
             ],
             'overview' => [
                 'total_revenue' => $totalRevenue,
@@ -1207,11 +1226,14 @@ class EventsController extends BaseController
                 'revenue_change' => $revenueChange,
                 'tickets_change' => $ticketsChange,
                 'views_change' => 0,
+                'days_until' => $daysUntil,
             ],
             'chart' => [
                 'labels' => $chartLabels,
+                'raw_dates' => $chartRawDates,
                 'revenue' => $chartRevenue,
                 'tickets' => $chartTickets,
+                'views' => $chartViews,
             ],
             'traffic_sources' => $trafficSources,
             'ticket_performance' => $ticketPerformance,
