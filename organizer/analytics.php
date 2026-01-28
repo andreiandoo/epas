@@ -206,6 +206,22 @@ $eventId = $_GET['event'] ?? null;
                     </div>
                 </div>
                 <div id="mainChart" class="h-[300px]"></div>
+                <!-- Milestone Tooltip -->
+                <div id="milestone-tooltip" class="fixed z-50 hidden max-w-xs p-4 bg-white border border-gray-200 shadow-xl rounded-xl">
+                    <div class="flex items-start gap-3">
+                        <div id="milestone-tooltip-icon" class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-lg"></div>
+                        <div class="flex-1 min-w-0">
+                            <div id="milestone-tooltip-type" class="text-xs font-medium text-gray-500 uppercase tracking-wide"></div>
+                            <div id="milestone-tooltip-title" class="text-sm font-semibold text-gray-900 truncate"></div>
+                        </div>
+                    </div>
+                    <div id="milestone-tooltip-details" class="mt-3 space-y-2 text-sm">
+                        <!-- Dynamic content -->
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-gray-100">
+                        <div id="milestone-tooltip-dates" class="text-xs text-gray-500"></div>
+                    </div>
+                </div>
             </div>
 
             <!-- Forecast / Summary -->
@@ -367,7 +383,8 @@ $eventId = $_GET['event'] ?? null;
                 </div>
                 <div>
                     <label class="block mb-1 text-sm font-medium text-secondary">Deadline (opțional)</label>
-                    <input type="date" name="deadline" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                    <input type="date" name="deadline" id="goal-deadline-input" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                    <p id="goal-deadline-hint" class="mt-1 text-xs text-muted"></p>
                 </div>
                 <div class="flex justify-end gap-3 pt-4">
                     <button type="button" onclick="closeGoalModal()" class="px-4 py-2 text-sm font-medium transition-colors text-muted hover:bg-surface rounded-xl">Anulează</button>
@@ -415,13 +432,14 @@ $eventId = $_GET['event'] ?? null;
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block mb-1 text-sm font-medium text-secondary">Data start</label>
-                        <input type="date" name="start_date" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" required>
+                        <input type="date" name="start_date" id="milestone-start-date" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" required>
                     </div>
                     <div>
                         <label class="block mb-1 text-sm font-medium text-secondary">Data sfârșit</label>
-                        <input type="date" name="end_date" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                        <input type="date" name="end_date" id="milestone-end-date" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary">
                     </div>
                 </div>
+                <p id="milestone-date-hint" class="text-xs text-muted"></p>
 
                 <!-- Ad Campaign Fields (shown for ad types) -->
                 <div id="milestone-ad-fields" class="space-y-4">
@@ -493,62 +511,69 @@ $eventId = $_GET['event'] ?? null;
     </div>
 </div>
 
-<!-- Globe/Map Modal -->
-<div id="globe-modal" class="fixed inset-0 z-50 hidden">
-    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" onclick="closeGlobeModal()"></div>
-    <div class="fixed inset-0 flex items-center justify-center p-4">
-        <div class="w-full max-w-4xl bg-gradient-to-br from-slate-900 to-slate-800 shadow-2xl rounded-2xl overflow-hidden" onclick="event.stopPropagation()">
-            <div class="p-5 border-b border-white/10">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/20">
-                            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </div>
-                        <div>
-                            <h2 class="text-lg font-bold text-white">Vizitatori Live</h2>
-                            <p class="text-xs text-white/60">Persoane care vizualizează evenimentul acum</p>
-                        </div>
+<!-- Globe/Map Modal - Full screen like core.tixello.com -->
+<div id="globe-modal" class="fixed inset-0 hidden" style="z-index: 99999;">
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" onclick="closeGlobeModal()"></div>
+    <div class="fixed top-4 left-4 right-4 bottom-4 bg-slate-50 rounded-3xl overflow-hidden shadow-2xl" style="z-index: 100000;">
+        <!-- Full-screen Map Container -->
+        <div id="globeMapContainer" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; min-height: 400px; background: #f8fafc;"></div>
+
+        <!-- Header Overlay -->
+        <div class="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-slate-50 via-slate-50/80 to-transparent pointer-events-none" style="z-index: 1000;">
+            <div class="flex items-center justify-between pointer-events-auto">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418"></path>
+                        </svg>
                     </div>
-                    <button onclick="closeGlobeModal()" class="p-2 transition-colors text-white/60 hover:text-white rounded-lg hover:bg-white/10">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Live Visitors</h2>
+                        <p class="text-sm text-slate-500">Real-time global activity</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3 px-4 py-2 bg-white rounded-xl shadow-sm border border-slate-200">
+                        <span class="relative flex h-3 w-3">
+                            <span class="pulse-ring absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        </span>
+                        <span id="globe-live-count" class="text-lg font-bold text-slate-800">0</span>
+                        <span class="text-sm text-slate-500">online now</span>
+                    </div>
+                    <button onclick="closeGlobeModal()" class="p-3 bg-white hover:bg-slate-100 rounded-xl shadow-sm border border-slate-200 transition-colors">
+                        <svg class="w-5 h-5 text-slate-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"></path>
+                        </svg>
                     </button>
                 </div>
             </div>
-            <div class="p-6">
-                <!-- Stats -->
-                <div class="grid grid-cols-3 gap-4 mb-6">
-                    <div class="p-4 bg-white/5 rounded-xl">
-                        <div id="globe-total-visitors" class="text-2xl font-bold text-white">0</div>
-                        <div class="text-xs text-white/60">Total online</div>
-                    </div>
-                    <div class="p-4 bg-white/5 rounded-xl">
-                        <div id="globe-countries" class="text-2xl font-bold text-white">0</div>
-                        <div class="text-xs text-white/60">Țări</div>
-                    </div>
-                    <div class="p-4 bg-white/5 rounded-xl">
-                        <div id="globe-cities" class="text-2xl font-bold text-white">0</div>
-                        <div class="text-xs text-white/60">Orașe</div>
-                    </div>
-                </div>
+        </div>
 
-                <!-- Map Container -->
-                <div class="relative h-80 bg-slate-800 rounded-xl overflow-hidden mb-6">
-                    <div id="globeMapContainer" class="w-full h-full"></div>
-                    <div id="globe-map-overlay" class="absolute inset-0 flex items-center justify-center bg-slate-800/80">
-                        <div class="text-center">
-                            <svg class="w-12 h-12 mx-auto mb-3 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <div class="text-white/40 text-sm">Se încarcă vizitatorii...</div>
-                        </div>
+        <!-- Live Activity Panel (Bottom Left) -->
+        <div class="absolute bottom-6 left-6 w-80 bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200 overflow-hidden" style="z-index: 1000;">
+            <div class="p-4 border-b border-slate-200">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-semibold text-slate-800">Live Activity</span>
+                    <span class="text-xs text-slate-400">Last 5 minutes</span>
+                </div>
+            </div>
+            <div id="globe-live-activity" class="p-2 max-h-64 overflow-y-auto">
+                <div class="flex items-center gap-3 p-2 rounded-lg">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-lg">🇷🇴</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm text-slate-800 truncate">No live visitors</div>
+                        <div class="text-xs text-slate-400">-</div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Visitors List -->
-                <div>
-                    <h3 class="text-sm font-semibold text-white mb-3">Locații active</h3>
-                    <div id="globe-visitors-list" class="space-y-2 max-h-40 overflow-y-auto">
-                        <div class="text-sm text-white/40 text-center py-4">Niciun vizitator activ</div>
-                    </div>
-                </div>
+        <!-- Top Locations Panel (Bottom Right) -->
+        <div class="absolute bottom-6 right-6 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200 p-4" style="z-index: 1000;">
+            <div class="text-sm font-semibold text-slate-800 mb-3">Top Locations</div>
+            <div id="globe-top-locations" class="space-y-2">
+                <!-- Will be populated by JS -->
             </div>
         </div>
     </div>
@@ -563,18 +588,18 @@ let eventData = null;
 let milestonesData = [];
 let globeMap = null;
 
-// Helper to fix image URLs (convert core.tixello.com to bilete.online paths)
+// Helper to fix image URLs - use core.tixello.com URLs directly
 function fixImageUrl(url) {
     if (!url) return '';
-    // Replace core.tixello.com URLs with local path
-    if (url.includes('core.tixello.com')) {
-        // Extract the path after the domain
-        const match = url.match(/core\.tixello\.com\/(.+)/);
-        if (match) {
-            return '/analytics/' + match[1];
-        }
+    // If it's a relative path (like /storage/...), prepend the core domain
+    if (url.startsWith('/storage/') || url.startsWith('storage/')) {
+        return 'https://core.tixello.com' + (url.startsWith('/') ? '' : '/') + url;
     }
-    // If it's already a relative path or on the correct domain, return as-is
+    // If it's events/posters path, it's from core storage
+    if (url.includes('events/posters/') && !url.includes('://')) {
+        return 'https://core.tixello.com/storage/' + url;
+    }
+    // Already a full URL, return as-is
     return url;
 }
 
@@ -873,13 +898,32 @@ function updateMainChart(chartData) {
         })
         .filter(Boolean);
 
+    // Store milestone data indexed by label text for tooltip lookup
+    const milestoneLabelMap = {};
+    (milestonesData || []).forEach(m => {
+        if (m.start_date) {
+            const shortTitle = (m.title?.substring(0, 18) || '') + (m.title?.length > 18 ? '...' : '');
+            milestoneLabelMap[shortTitle] = m;
+        }
+    });
+    window.milestoneLabelMap = milestoneLabelMap;
+
     const options = {
         series: series,
         chart: {
             type: 'area',
             height: 300,
             toolbar: { show: false },
-            zoom: { enabled: false }
+            zoom: { enabled: false },
+            events: {
+                mounted: function() {
+                    // Add click listeners to annotation labels after chart renders
+                    setupMilestoneAnnotationListeners();
+                },
+                updated: function() {
+                    setupMilestoneAnnotationListeners();
+                }
+            }
         },
         dataLabels: { enabled: false },
         stroke: { curve: 'smooth', width: 2 },
@@ -913,6 +957,165 @@ function updateMainChart(chartData) {
     }
     mainChart = new ApexCharts(document.getElementById('mainChart'), options);
     mainChart.render();
+}
+
+// Setup click/hover listeners for milestone annotations in the chart
+function setupMilestoneAnnotationListeners() {
+    setTimeout(() => {
+        const chartEl = document.getElementById('mainChart');
+        if (!chartEl) return;
+
+        // Find all annotation label elements (they are in <g> elements with class 'apexcharts-xaxis-annotations')
+        const annotationLabels = chartEl.querySelectorAll('.apexcharts-xaxis-annotations text, .apexcharts-xaxis-annotations rect');
+
+        annotationLabels.forEach(el => {
+            // Get the label text from nearby text element
+            let labelText = '';
+            if (el.tagName === 'text') {
+                labelText = el.textContent;
+            } else if (el.tagName === 'rect') {
+                // Find sibling text element
+                const parent = el.parentElement;
+                const textEl = parent?.querySelector('text');
+                labelText = textEl?.textContent || '';
+            }
+
+            // Add hover and click events
+            el.style.cursor = 'pointer';
+            el.addEventListener('mouseenter', (e) => showMilestoneTooltip(e, labelText));
+            el.addEventListener('mouseleave', hideMilestoneTooltip);
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showMilestoneTooltip(e, labelText, true);
+            });
+        });
+    }, 100);
+}
+
+// Show milestone tooltip
+function showMilestoneTooltip(event, labelText, sticky = false) {
+    const milestone = window.milestoneLabelMap?.[labelText];
+    if (!milestone) return;
+
+    const tooltip = document.getElementById('milestone-tooltip');
+    if (!tooltip) return;
+
+    // Populate tooltip content
+    const typeLabels = {
+        'campaign_fb': 'Facebook Ads',
+        'campaign_google': 'Google Ads',
+        'campaign_tiktok': 'TikTok Ads',
+        'campaign_instagram': 'Instagram Ads',
+        'campaign_other': 'Alte Ads',
+        'email': 'Email Marketing',
+        'price': 'Schimbare Preț',
+        'announcement': 'Anunț',
+        'press': 'Comunicat Presă',
+        'lineup': 'Anunț Lineup',
+        'custom': 'Personalizat'
+    };
+
+    const typeIcons = {
+        'campaign_fb': '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
+        'campaign_google': '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>',
+        'email': '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>',
+        'price': '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+        'announcement': '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>'
+    };
+
+    const color = getMilestoneColor(milestone.type);
+
+    document.getElementById('milestone-tooltip-type').textContent = typeLabels[milestone.type] || milestone.type;
+    document.getElementById('milestone-tooltip-title').textContent = milestone.title || '';
+    document.getElementById('milestone-tooltip-icon').innerHTML = typeIcons[milestone.type] || typeIcons['announcement'];
+    document.getElementById('milestone-tooltip-icon').style.background = color + '20';
+    document.getElementById('milestone-tooltip-icon').style.color = color;
+
+    // Build details
+    let detailsHtml = '';
+    if (milestone.budget && milestone.budget > 0) {
+        detailsHtml += `<div class="flex justify-between"><span class="text-gray-500">Buget:</span><span class="font-medium">${formatCurrency(milestone.budget)}</span></div>`;
+    }
+    if (milestone.impressions) {
+        detailsHtml += `<div class="flex justify-between"><span class="text-gray-500">Impresii:</span><span class="font-medium">${formatNumber(milestone.impressions)}</span></div>`;
+    }
+    if (milestone.clicks) {
+        detailsHtml += `<div class="flex justify-between"><span class="text-gray-500">Click-uri:</span><span class="font-medium">${formatNumber(milestone.clicks)}</span></div>`;
+    }
+    if (milestone.conversions) {
+        detailsHtml += `<div class="flex justify-between"><span class="text-gray-500">Conversii:</span><span class="font-medium">${formatNumber(milestone.conversions)}</span></div>`;
+    }
+    if (milestone.attributed_revenue && milestone.attributed_revenue > 0) {
+        detailsHtml += `<div class="flex justify-between"><span class="text-gray-500">Venituri atribuite:</span><span class="font-medium text-emerald-600">${formatCurrency(milestone.attributed_revenue)}</span></div>`;
+    }
+    if (milestone.roas && milestone.roas > 0) {
+        detailsHtml += `<div class="flex justify-between"><span class="text-gray-500">ROAS:</span><span class="font-medium">${milestone.roas.toFixed(2)}x</span></div>`;
+    }
+    if (milestone.description) {
+        detailsHtml += `<div class="mt-2 text-xs text-gray-600">${milestone.description}</div>`;
+    }
+    document.getElementById('milestone-tooltip-details').innerHTML = detailsHtml || '<div class="text-gray-400 text-xs">Fără detalii suplimentare</div>';
+
+    // Dates
+    let datesText = '';
+    if (milestone.start_date) {
+        const startDate = new Date(milestone.start_date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' });
+        datesText = startDate;
+        if (milestone.end_date && milestone.end_date !== milestone.start_date) {
+            const endDate = new Date(milestone.end_date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' });
+            datesText += ' - ' + endDate;
+        }
+    }
+    document.getElementById('milestone-tooltip-dates').textContent = datesText;
+
+    // Position tooltip near the mouse
+    const rect = event.target.getBoundingClientRect();
+    const tooltipEl = tooltip;
+    tooltipEl.classList.remove('hidden');
+
+    // Position above the annotation
+    let left = rect.left + window.scrollX;
+    let top = rect.top + window.scrollY - tooltipEl.offsetHeight - 10;
+
+    // Ensure tooltip stays within viewport
+    if (top < 50) {
+        top = rect.bottom + window.scrollY + 10;
+    }
+    if (left + tooltipEl.offsetWidth > window.innerWidth - 20) {
+        left = window.innerWidth - tooltipEl.offsetWidth - 20;
+    }
+    if (left < 10) {
+        left = 10;
+    }
+
+    tooltipEl.style.left = left + 'px';
+    tooltipEl.style.top = top + 'px';
+
+    // If sticky (clicked), add a close-on-click-outside listener
+    if (sticky) {
+        tooltipEl.dataset.sticky = 'true';
+        setTimeout(() => {
+            document.addEventListener('click', hideMilestoneTooltipOnOutsideClick);
+        }, 10);
+    }
+}
+
+// Hide milestone tooltip
+function hideMilestoneTooltip() {
+    const tooltip = document.getElementById('milestone-tooltip');
+    if (tooltip && tooltip.dataset.sticky !== 'true') {
+        tooltip.classList.add('hidden');
+    }
+}
+
+// Hide tooltip on outside click (for sticky mode)
+function hideMilestoneTooltipOnOutsideClick(e) {
+    const tooltip = document.getElementById('milestone-tooltip');
+    if (tooltip && !tooltip.contains(e.target)) {
+        tooltip.classList.add('hidden');
+        tooltip.dataset.sticky = '';
+        document.removeEventListener('click', hideMilestoneTooltipOnOutsideClick);
+    }
 }
 
 function toggleChartMetric(metric) {
@@ -1328,7 +1531,8 @@ const cityCoordinates = {
 function openGlobeModal() {
     document.getElementById('globe-modal').classList.remove('hidden');
     globeModalOpen = true;
-    loadLiveVisitors();
+    // Small delay to ensure modal is visible before initializing map
+    setTimeout(() => loadLiveVisitors(), 100);
 }
 
 function closeGlobeModal() {
@@ -1344,8 +1548,6 @@ function closeGlobeModal() {
 }
 
 async function loadLiveVisitors() {
-    const overlay = document.getElementById('globe-map-overlay');
-
     try {
         // Try to get live visitors data from analytics
         if (eventData?.top_locations) {
@@ -1359,59 +1561,96 @@ async function loadLiveVisitors() {
         }
     } catch (error) {
         console.error('Error loading live visitors:', error);
-        overlay.innerHTML = '<div class="text-red-400 text-sm">Eroare la încărcare</div>';
     }
 }
 
+// Country flags
+const countryFlags = {
+    'RO': '🇷🇴', 'Romania': '🇷🇴',
+    'DE': '🇩🇪', 'Germany': '🇩🇪',
+    'GB': '🇬🇧', 'UK': '🇬🇧', 'United Kingdom': '🇬🇧',
+    'US': '🇺🇸', 'USA': '🇺🇸', 'United States': '🇺🇸',
+    'FR': '🇫🇷', 'France': '🇫🇷',
+    'IT': '🇮🇹', 'Italy': '🇮🇹',
+    'ES': '🇪🇸', 'Spain': '🇪🇸',
+    'MD': '🇲🇩', 'Moldova': '🇲🇩',
+    'HU': '🇭🇺', 'Hungary': '🇭🇺',
+    'BG': '🇧🇬', 'Bulgaria': '🇧🇬',
+};
+
+function getFlag(country) {
+    return countryFlags[country] || '🌍';
+}
+
 function renderGlobeData(locations) {
-    const overlay = document.getElementById('globe-map-overlay');
-    const mapContainer = document.getElementById('globeMapContainer');
-    const visitorsList = document.getElementById('globe-visitors-list');
+    const liveCountEl = document.getElementById('globe-live-count');
+    const activityEl = document.getElementById('globe-live-activity');
+    const topLocationsEl = document.getElementById('globe-top-locations');
 
     if (!locations || locations.length === 0) {
-        overlay.classList.remove('hidden');
-        overlay.innerHTML = `
-            <div class="text-center">
-                <svg class="w-12 h-12 mx-auto mb-3 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                <div class="text-white/40 text-sm">Niciun vizitator activ în acest moment</div>
+        liveCountEl.textContent = '0';
+        activityEl.innerHTML = `
+            <div class="flex items-center gap-3 p-2 rounded-lg">
+                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-lg">🌍</div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm text-slate-800 truncate">No live visitors</div>
+                    <div class="text-xs text-slate-400">-</div>
+                </div>
             </div>
         `;
+        topLocationsEl.innerHTML = '<div class="text-sm text-slate-400 text-center py-2">No data</div>';
+        initLeafletMap([]);
         return;
     }
 
     // Calculate totals
     const totalVisitors = locations.reduce((sum, l) => sum + (l.visitors || l.count || 0), 0);
-    const uniqueCountries = [...new Set(locations.map(l => l.country || 'RO'))].length;
-    const uniqueCities = locations.length;
+    liveCountEl.textContent = formatNumber(totalVisitors);
 
-    document.getElementById('globe-total-visitors').textContent = formatNumber(totalVisitors);
-    document.getElementById('globe-countries').textContent = uniqueCountries;
-    document.getElementById('globe-cities').textContent = uniqueCities;
-
-    // Hide overlay and initialize Leaflet map
-    overlay.classList.add('hidden');
+    // Initialize Leaflet map
     initLeafletMap(locations);
 
-    // Render visitors list
-    const html = locations.slice(0, 10).map(l => {
-        const count = l.visitors || l.count || 0;
-        const percent = totalVisitors > 0 ? Math.round((count / totalVisitors) * 100) : 0;
+    // Render live activity list
+    const activityHtml = locations.slice(0, 8).map(l => {
+        const flag = getFlag(l.country || 'RO');
+        const action = `Viewed event page`;
+        const city = l.city || 'Unknown';
+        const country = l.country || 'RO';
         return `
-            <div class="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+            <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-lg">${flag}</div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm text-slate-800 truncate">${action}</div>
+                    <div class="text-xs text-slate-400">${city}, ${country}</div>
+                </div>
+                <div class="text-xs text-slate-300">now</div>
+            </div>
+        `;
+    }).join('');
+    activityEl.innerHTML = activityHtml || '<div class="text-sm text-slate-400 text-center py-2">No activity</div>';
+
+    // Render top locations
+    const maxCount = Math.max(...locations.map(l => l.visitors || l.count || 0));
+    const topHtml = locations.slice(0, 5).map(l => {
+        const count = l.visitors || l.count || 0;
+        const percent = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0;
+        const flag = getFlag(l.country || 'RO');
+        return `
+            <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                    <span class="text-sm text-white">${l.city || l.country || 'Necunoscut'}</span>
+                    <span>${flag}</span>
+                    <span class="text-sm text-slate-600">${l.city || 'Unknown'}</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <div class="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div class="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                         <div class="h-full bg-emerald-500 rounded-full" style="width: ${percent}%"></div>
                     </div>
-                    <span class="text-xs text-white/60 w-8 text-right">${count}</span>
+                    <span class="text-xs text-slate-400 w-8 text-right">${count}</span>
                 </div>
             </div>
         `;
     }).join('');
-    visitorsList.innerHTML = html || '<div class="text-sm text-white/40 text-center py-4">Niciun vizitator activ</div>';
+    topLocationsEl.innerHTML = topHtml || '<div class="text-sm text-slate-400 text-center py-2">No data</div>';
 }
 
 function initLeafletMap(locations) {
@@ -1440,8 +1679,8 @@ function initLeafletMap(locations) {
             attributionControl: false
         });
 
-        // Add CartoDB dark tile layer
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        // Add CartoDB voyager (light) tile layer - matching core.tixello.com
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             subdomains: 'abcd',
             maxZoom: 19
         }).addTo(map);
@@ -1449,7 +1688,7 @@ function initLeafletMap(locations) {
         globeMap = map;
 
         // Prepare locations with coordinates
-        const mappedLocations = locations.map(l => {
+        const mappedLocations = (locations || []).map(l => {
             const city = l.city || '';
             const coords = cityCoordinates[city] || l;
             return {
@@ -1465,15 +1704,17 @@ function initLeafletMap(locations) {
         mappedLocations.forEach(loc => {
             const marker = L.circleMarker([loc.lat, loc.lng], {
                 radius: loc.isLive ? 12 : Math.max(8, Math.min(25, (loc.visitors || 1) / 2)),
-                fillColor: loc.isLive ? '#10b981' : '#10b981',
+                fillColor: loc.isLive ? '#10b981' : '#6366f1',
                 color: '#fff',
                 weight: 2,
                 opacity: 1,
-                fillOpacity: 0.8,
+                fillOpacity: loc.isLive ? 0.8 : 0.6,
                 className: loc.isLive ? 'live-marker-pulse' : ''
             }).addTo(map);
 
-            const popupContent = `<b>${loc.city}</b><br>${loc.visitors} vizite`;
+            const popupContent = loc.isLive
+                ? `<b>${loc.city}</b><br><span style="color:#10b981">Online now</span>`
+                : `<b>${loc.city}</b><br>${loc.visitors} tickets sold`;
             marker.bindPopup(popupContent);
         });
 
@@ -1493,32 +1734,32 @@ function initLeafletMap(locations) {
 }
 
 // Goal modal functions
-function showAddGoalModal() { document.getElementById('goal-modal').classList.remove('hidden'); }
+function showAddGoalModal() {
+    document.getElementById('goal-modal').classList.remove('hidden');
+    // Set max date for deadline based on event date
+    const deadlineInput = document.getElementById('goal-deadline-input');
+    const deadlineHint = document.getElementById('goal-deadline-hint');
+    if (deadlineInput && eventData?.event) {
+        const eventDate = eventData.event.ends_at || eventData.event.starts_at || eventData.event.date;
+        if (eventDate) {
+            const maxDate = eventDate.split('T')[0];
+            deadlineInput.max = maxDate;
+            deadlineHint.textContent = `Max: ${new Date(maxDate).toLocaleDateString('ro-RO')}`;
+        }
+    }
+}
 function closeGoalModal() { document.getElementById('goal-modal').classList.add('hidden'); document.getElementById('goal-form').reset(); }
 
 async function saveGoal(e) {
     e.preventDefault();
     const form = e.target;
 
-    // Validate deadline doesn't exceed event date
-    const deadlineValue = form.deadline.value;
-    if (deadlineValue && eventData?.event) {
-        const eventDate = eventData.event.ends_at || eventData.event.starts_at || eventData.event.date;
-        if (eventDate) {
-            const deadline = new Date(deadlineValue);
-            const eventEndDate = new Date(eventDate.split('T')[0]);
-            if (deadline > eventEndDate) {
-                alert('Data deadline nu poate depăși data evenimentului (' + eventEndDate.toLocaleDateString('ro-RO') + ')');
-                return;
-            }
-        }
-    }
-
+    // Date validation is handled by HTML5 max attribute on the input
     const data = {
         type: form.type.value,
         name: form.name.value,
         target_value: parseFloat(form.target_value.value),
-        deadline: deadlineValue || null
+        deadline: form.deadline.value || null
     };
     try {
         const response = await AmbiletAPI.post(`/organizer/events/${eventId}/goals`, data);
@@ -1532,6 +1773,25 @@ const AD_CAMPAIGN_TYPES = ['facebook_ads', 'google_ads', 'instagram_ads', 'tikto
 function showAddMilestoneModal() {
     document.getElementById('milestone-modal').classList.remove('hidden');
     updateMilestoneFields('facebook_ads'); // Default to ad fields
+    // Set date restrictions based on event dates
+    const startInput = document.getElementById('milestone-start-date');
+    const endInput = document.getElementById('milestone-end-date');
+    const dateHint = document.getElementById('milestone-date-hint');
+    if (startInput && endInput && eventData?.event) {
+        const createdAt = eventData.event.created_at;
+        const eventEndDate = eventData.event.ends_at || eventData.event.starts_at || eventData.event.date;
+        if (createdAt) {
+            const minDate = createdAt.split('T')[0];
+            startInput.min = minDate;
+        }
+        if (eventEndDate) {
+            const maxDate = eventEndDate.split('T')[0];
+            endInput.max = maxDate;
+            const minStr = createdAt ? new Date(createdAt.split('T')[0]).toLocaleDateString('ro-RO') : '-';
+            const maxStr = new Date(maxDate).toLocaleDateString('ro-RO');
+            dateHint.textContent = `Interval permis: ${minStr} - ${maxStr}`;
+        }
+    }
 }
 
 function closeMilestoneModal() {
@@ -1580,34 +1840,7 @@ async function saveMilestone(e) {
     e.preventDefault();
     const form = e.target;
 
-    // Validate milestone dates against event dates
-    const startDateValue = form.start_date.value;
-    const endDateValue = form.end_date.value;
-
-    if (eventData?.event) {
-        // Validate start_date >= event created_at
-        const eventCreatedAt = eventData.event.created_at;
-        if (startDateValue && eventCreatedAt) {
-            const startDate = new Date(startDateValue);
-            const createdDate = new Date(eventCreatedAt.split('T')[0]);
-            if (startDate < createdDate) {
-                alert('Data start nu poate fi mai devreme de data adăugării evenimentului (' + createdDate.toLocaleDateString('ro-RO') + ')');
-                return;
-            }
-        }
-
-        // Validate end_date <= event ends_at
-        const eventEndDate = eventData.event.ends_at || eventData.event.starts_at || eventData.event.date;
-        if (endDateValue && eventEndDate) {
-            const endDate = new Date(endDateValue);
-            const eventEnd = new Date(eventEndDate.split('T')[0]);
-            if (endDate > eventEnd) {
-                alert('Data sfârșit nu poate fi mai mare de data de sfârșit a evenimentului (' + eventEnd.toLocaleDateString('ro-RO') + ')');
-                return;
-            }
-        }
-    }
-
+    // Date validation is handled by HTML5 min/max attributes on the inputs
     // Map form type values to API type values
     const typeMap = {
         'facebook_ads': 'campaign_fb',
