@@ -81,8 +81,20 @@ function setupDiscountType() { document.querySelectorAll('input[name="discount_t
 async function loadEvents() {
     try {
         const res = await AmbiletAPI.get('/organizer/events');
-        if (res.success && res.data.events) { const sel = document.getElementById('promo-event'); res.data.events.forEach(e => { const opt = document.createElement('option'); opt.value = e.id; opt.textContent = e.title; sel.appendChild(opt); }); }
-    } catch (e) { /* Events will load when API is available */ }
+        if (res.success && res.data) {
+            // Handle both res.data.events and res.data (paginated response)
+            const events = res.data.events || res.data.data || res.data;
+            if (Array.isArray(events)) {
+                const sel = document.getElementById('promo-event');
+                events.forEach(e => {
+                    const opt = document.createElement('option');
+                    opt.value = e.id;
+                    opt.textContent = e.title || e.name;
+                    sel.appendChild(opt);
+                });
+            }
+        }
+    } catch (e) { console.error('Failed to load events:', e); }
 }
 
 async function loadPromoCodes() {
@@ -102,21 +114,45 @@ async function loadPromoCodes() {
 function renderPromoCodes() {
     const container = document.getElementById('promo-codes-list');
     if (!promoCodes.length) { container.innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-muted">Nu ai coduri promotionale</td></tr>'; return; }
-    container.innerHTML = promoCodes.map(c => `
+    container.innerHTML = promoCodes.map(c => {
+        const discountType = c.type || c.discount_type;
+        const discountValue = c.value || c.discount_value;
+        const eventName = c.event?.name || c.event || 'Toate';
+        const startDate = c.starts_at || c.start_date;
+        const endDate = c.expires_at || c.end_date;
+        return `
         <tr class="hover:bg-surface/50"><td class="px-6 py-4"><div class="flex items-center gap-2"><code class="px-3 py-1 bg-primary/10 text-primary font-mono font-semibold rounded-lg">${c.code}</code><button onclick="copyCode('${c.code}')" class="p-1 text-muted hover:text-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button></div></td>
-        <td class="px-6 py-4 font-semibold text-secondary">${c.discount_type === 'percentage' ? c.discount_value + '%' : AmbiletUtils.formatCurrency(c.discount_value)}</td>
-        <td class="px-6 py-4">${c.event || 'Toate'}</td>
-        <td class="px-6 py-4">${c.usage_count}${c.usage_limit ? ' / ' + c.usage_limit : ''}</td>
-        <td class="px-6 py-4"><span class="text-sm text-muted">${AmbiletUtils.formatDate(c.start_date)} - ${AmbiletUtils.formatDate(c.end_date)}</span></td>
+        <td class="px-6 py-4 font-semibold text-secondary">${discountType === 'percentage' ? discountValue + '%' : AmbiletUtils.formatCurrency(discountValue)}</td>
+        <td class="px-6 py-4">${eventName}</td>
+        <td class="px-6 py-4">${c.usage_count || 0}${c.usage_limit ? ' / ' + c.usage_limit : ''}</td>
+        <td class="px-6 py-4"><span class="text-sm text-muted">${startDate ? AmbiletUtils.formatDate(startDate) : '-'} - ${endDate ? AmbiletUtils.formatDate(endDate) : '-'}</span></td>
         <td class="px-6 py-4"><span class="px-3 py-1 bg-${c.status === 'active' ? 'success' : c.status === 'expired' ? 'muted' : 'error'}/10 text-${c.status === 'active' ? 'success' : c.status === 'expired' ? 'muted' : 'error'} text-sm rounded-full">${c.status === 'active' ? 'Activ' : c.status === 'expired' ? 'Expirat' : 'Dezactivat'}</span></td>
-        <td class="px-6 py-4 text-right"><button onclick="editCode(${c.id})" class="p-2 text-muted hover:text-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="deleteCode(${c.id})" class="p-2 text-muted hover:text-error"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></td></tr>
-    `).join('');
+        <td class="px-6 py-4 text-right"><button onclick="editCode(${c.id})" class="p-2 text-muted hover:text-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="deleteCode(${c.id})" class="p-2 text-muted hover:text-error"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></td></tr>`;
+    }).join('');
 }
 
 function openCreateModal() { document.getElementById('modal-title').textContent = 'Creeaza Cod Promotional'; document.getElementById('promo-id').value = ''; document.getElementById('promo-code').value = ''; document.getElementById('discount-value').value = ''; document.getElementById('promo-event').value = ''; document.getElementById('usage-limit').value = ''; document.querySelector('input[name="discount_type"][value="percentage"]').checked = true; document.getElementById('start-date').value = new Date().toISOString().split('T')[0]; document.getElementById('end-date').value = ''; document.getElementById('promo-modal').classList.remove('hidden'); document.getElementById('promo-modal').classList.add('flex'); }
 function closePromoModal() { document.getElementById('promo-modal').classList.add('hidden'); document.getElementById('promo-modal').classList.remove('flex'); }
 
-function editCode(id) { const code = promoCodes.find(c => c.id === id); if (!code) return; document.getElementById('modal-title').textContent = 'Editeaza Cod'; document.getElementById('promo-id').value = code.id; document.getElementById('promo-code').value = code.code; document.getElementById('discount-value').value = code.discount_value; document.getElementById('promo-event').value = code.event_id || ''; document.getElementById('usage-limit').value = code.usage_limit || ''; document.getElementById('start-date').value = code.start_date; document.getElementById('end-date').value = code.end_date; document.querySelector(`input[name="discount_type"][value="${code.discount_type}"]`).checked = true; document.getElementById('promo-modal').classList.remove('hidden'); document.getElementById('promo-modal').classList.add('flex'); }
+function editCode(id) {
+    const code = promoCodes.find(c => c.id === id);
+    if (!code) return;
+    document.getElementById('modal-title').textContent = 'Editeaza Cod';
+    document.getElementById('promo-id').value = code.id;
+    document.getElementById('promo-code').value = code.code;
+    document.getElementById('discount-value').value = code.value || code.discount_value;
+    document.getElementById('promo-event').value = code.event?.id || code.event_id || '';
+    document.getElementById('usage-limit').value = code.usage_limit || '';
+    // Handle both date formats (ISO string and date string)
+    const startDate = code.starts_at || code.start_date;
+    const endDate = code.expires_at || code.end_date;
+    document.getElementById('start-date').value = startDate ? startDate.split('T')[0] : '';
+    document.getElementById('end-date').value = endDate ? endDate.split('T')[0] : '';
+    const discountType = code.type || code.discount_type || 'percentage';
+    document.querySelector(`input[name="discount_type"][value="${discountType}"]`).checked = true;
+    document.getElementById('promo-modal').classList.remove('hidden');
+    document.getElementById('promo-modal').classList.add('flex');
+}
 function generateCode() { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let code = ''; for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length)); document.getElementById('promo-code').value = code; }
 function copyCode(code) { navigator.clipboard.writeText(code); AmbiletNotifications.success('Codul a fost copiat'); }
 async function deleteCode(id) {
@@ -129,21 +165,23 @@ async function deleteCode(id) {
 }
 async function savePromoCode(e) {
     e.preventDefault();
+    const eventId = document.getElementById('promo-event').value;
     const data = {
         code: document.getElementById('promo-code').value,
-        discount_type: document.querySelector('input[name="discount_type"]:checked').value,
-        discount_value: document.getElementById('discount-value').value,
-        event_id: document.getElementById('promo-event').value || null,
-        usage_limit: document.getElementById('usage-limit').value || null,
-        start_date: document.getElementById('start-date').value,
-        end_date: document.getElementById('end-date').value
+        type: document.querySelector('input[name="discount_type"]:checked').value,
+        value: parseFloat(document.getElementById('discount-value').value),
+        applies_to: eventId ? 'specific_event' : 'all_events',
+        event_id: eventId ? parseInt(eventId) : null,
+        usage_limit: document.getElementById('usage-limit').value ? parseInt(document.getElementById('usage-limit').value) : null,
+        starts_at: document.getElementById('start-date').value || null,
+        expires_at: document.getElementById('end-date').value || null
     };
     const id = document.getElementById('promo-id').value;
     try {
         const response = id ? await AmbiletAPI.put('/organizer/promo-codes/' + id, data) : await AmbiletAPI.post('/organizer/promo-codes', data);
         if (response.success) { AmbiletNotifications.success('Codul a fost salvat'); closePromoModal(); loadPromoCodes(); }
         else { AmbiletNotifications.error(response.message || 'Eroare la salvare'); }
-    } catch (error) { AmbiletNotifications.error('Eroare la salvare'); }
+    } catch (error) { AmbiletNotifications.error(error.message || 'Eroare la salvare'); }
 }
 
 document.getElementById('search-codes').addEventListener('input', AmbiletUtils.debounce(function() { const q = this.value.toLowerCase(); const status = document.getElementById('status-filter').value; const filtered = promoCodes.filter(c => (!q || c.code.toLowerCase().includes(q)) && (!status || c.status === status)); const temp = promoCodes; promoCodes = filtered; renderPromoCodes(); promoCodes = temp; }, 300));

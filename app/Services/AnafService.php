@@ -119,7 +119,10 @@ class AnafService
 
     /**
      * Parse Romanian address string
-     * ANAF format: "JUDET City, STRADA Name NR. 123"
+     * ANAF formats vary:
+     * - "JUD. ILFOV, MUN. BUCURESTI SECTOR 1, STR. VICTORIEI, NR. 10"
+     * - "JUDET ILFOV, BUCURESTI, STRADA VICTORIEI NR. 10"
+     * - "SECTOR 1, STR. VICTORIEI, NR. 10, BUCURESTI"
      */
     private function parseAddress(string $address): array
     {
@@ -133,21 +136,42 @@ class AnafService
             return $result;
         }
 
-        // Try to extract county (JUDET)
-        if (preg_match('/JUDET\s+([^,]+)/i', $address, $matches)) {
-            $result['county'] = trim($matches[1]);
+        // Try to extract county with various formats
+        // Format: "JUD. NAME" or "JUDET NAME" or "JUDETUL NAME"
+        if (preg_match('/(?:JUD\.|JUDET|JUDETUL)\s*([A-Z\-\s]+?)(?:,|$)/i', $address, $matches)) {
+            $county = trim($matches[1]);
+            // Clean up - remove trailing spaces and common suffixes
+            $county = preg_replace('/\s+(MUN|ORS|COM|SAT)\.?\s*$/i', '', $county);
+            $result['county'] = trim($county);
         }
 
-        // Try to extract city - usually after county and before comma or STRADA
-        if (preg_match('/JUDET\s+[^,]+,\s*([^,]+?)(?:,|\s+STRADA)/i', $address, $matches)) {
+        // Try to extract city
+        // Format: "MUN. NAME" or "ORAS NAME" or "ORS. NAME" or "MUNICIPIUL NAME"
+        if (preg_match('/(?:MUN\.|MUNICIPIUL|ORS\.|ORAS|ORASUL)\s*([A-Z\-\s]+?)(?:,|SECTOR|\s+STR|\s+STRADA|$)/i', $address, $matches)) {
             $result['city'] = trim($matches[1]);
-        } elseif (preg_match('/^([^,]+),/i', $address, $matches)) {
-            // If no JUDET, try first part before comma
+        }
+        // Also check for sector (Bucharest)
+        elseif (preg_match('/SECTOR\s*(\d)/i', $address, $matches)) {
+            $result['city'] = 'Bucuresti Sector ' . $matches[1];
+            if (!$result['county']) {
+                $result['county'] = 'Bucuresti';
+            }
+        }
+        // Try city after county
+        elseif (preg_match('/(?:JUD\.|JUDET|JUDETUL)\s*[^,]+,\s*([A-Z\-\s]+?)(?:,|\s+STR|\s+STRADA|$)/i', $address, $matches)) {
             $result['city'] = trim($matches[1]);
+        }
+        // Fallback: first part before comma if no other match
+        elseif (!$result['city'] && preg_match('/^([A-Z\-\s]+?)(?:,|$)/i', $address, $matches)) {
+            $city = trim($matches[1]);
+            // Don't use if it looks like county or street
+            if (!preg_match('/^(JUD|JUDET|STR|STRADA)/i', $city)) {
+                $result['city'] = $city;
+            }
         }
 
         // Try to extract street
-        if (preg_match('/STRADA\s+(.+?)(?:NR\.|$)/i', $address, $matches)) {
+        if (preg_match('/(?:STR\.|STRADA)\s*(.+?)(?:,?\s*NR\.|,?\s*BL\.|$)/i', $address, $matches)) {
             $result['street'] = trim($matches[1]);
         }
 

@@ -25,10 +25,33 @@ class DashboardController extends BaseController
         // Events stats
         $totalEvents = $organizer->events()->count();
         $publishedEvents = $organizer->events()->where('status', 'published')->count();
-        $upcomingEvents = $organizer->events()
+        $upcomingEventsQuery = $organizer->events()
             ->where('status', 'published')
-            ->where('starts_at', '>=', now())
-            ->count();
+            ->where('starts_at', '>=', now());
+        $upcomingEvents = (clone $upcomingEventsQuery)->count();
+
+        // Get list of upcoming events with details
+        $eventsList = (clone $upcomingEventsQuery)
+            ->orderBy('starts_at')
+            ->limit(10)
+            ->withCount('tickets as tickets_sold')
+            ->get()
+            ->map(function ($event) {
+                return [
+                    'id' => $event->id,
+                    'title' => $event->name,
+                    'name' => $event->name,
+                    'slug' => $event->slug,
+                    'image' => $event->poster_url ?? $event->cover_image_url,
+                    'start_date' => $event->starts_at?->toDateString(),
+                    'starts_at' => $event->starts_at?->toIso8601String(),
+                    'venue' => $event->venue_name,
+                    'venue_city' => $event->venue_city,
+                    'tickets_sold' => $event->tickets_sold ?? 0,
+                    'tickets_total' => $event->ticketTypes()->sum('quantity') ?: 100,
+                    'status' => $event->status,
+                ];
+            });
 
         // Orders in period
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
@@ -41,11 +64,14 @@ class DashboardController extends BaseController
         $commissionAmount = round($grossRevenue * $commissionRate / 100, 2);
         $netRevenue = $grossRevenue - $commissionAmount;
 
+        $ticketsSold = $completedOrders->withCount('tickets')->get()->sum('tickets_count');
+
         return $this->success([
             'period' => [
                 'from' => $fromDate,
                 'to' => $toDate,
             ],
+            // Structured data
             'events' => [
                 'total' => $totalEvents,
                 'published' => $publishedEvents,
@@ -55,7 +81,7 @@ class DashboardController extends BaseController
             'sales' => [
                 'total_orders' => $orders->count(),
                 'completed_orders' => $completedOrders->count(),
-                'tickets_sold' => $completedOrders->withCount('tickets')->get()->sum('tickets_count'),
+                'tickets_sold' => $ticketsSold,
                 'gross_revenue' => $grossRevenue,
                 'commission_rate' => $commissionRate,
                 'commission_amount' => $commissionAmount,
@@ -74,6 +100,11 @@ class DashboardController extends BaseController
                     && !$organizer->hasPendingPayout()
                     && !empty($organizer->payout_details),
             ],
+            // Flattened fields for frontend compatibility
+            'active_events' => $upcomingEvents,
+            'tickets_sold' => $ticketsSold,
+            'revenue_month' => $grossRevenue,
+            'events_list' => $eventsList,
         ]);
     }
 

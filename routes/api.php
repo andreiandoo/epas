@@ -1452,6 +1452,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\InvitationsController a
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\RefundReportController as OrganizerRefundReportController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\ServiceOrderController as OrganizerServiceOrderController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\TeamController as OrganizerTeamController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\BillingController as OrganizerBillingController;
 
 Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no organizer auth)
@@ -1681,6 +1682,16 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.services.orders.show');
         Route::post('/services/orders/{uuid}/cancel', [OrganizerServiceOrderController::class, 'cancel'])
             ->name('api.marketplace-client.organizer.services.orders.cancel');
+
+        // Billing & Invoices
+        Route::get('/invoices', [OrganizerBillingController::class, 'invoices'])
+            ->name('api.marketplace-client.organizer.invoices');
+        Route::get('/invoices/{invoice}', [OrganizerBillingController::class, 'showInvoice'])
+            ->name('api.marketplace-client.organizer.invoices.show');
+        Route::get('/billing-info', [OrganizerBillingController::class, 'billingInfo'])
+            ->name('api.marketplace-client.organizer.billing-info');
+        Route::get('/payment-methods', [OrganizerBillingController::class, 'paymentMethods'])
+            ->name('api.marketplace-client.organizer.payment-methods');
     });
 });
 

@@ -55,7 +55,7 @@ class EditEvent extends EditRecord
             ->label('Analytics Dashboard')
             ->icon('heroicon-o-presentation-chart-line')
             ->color('success')
-            ->url(fn () => route('filament.marketplace.pages.organizer-event-analytics', ['event' => $this->record->id]));
+            ->url(fn () => EventResource::getUrl('analytics', ['record' => $this->record]));
 
         // Activity Log button - always visible
         $actions[] = Actions\Action::make('activity_log')
