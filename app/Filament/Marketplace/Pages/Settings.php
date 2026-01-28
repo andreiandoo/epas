@@ -89,9 +89,9 @@ class Settings extends Page
                 'mail_host' => $settings['mail']['host'] ?? '',
                 'mail_port' => $settings['mail']['port'] ?? '',
                 'mail_username' => $settings['mail']['username'] ?? '',
-                'mail_password' => '', // Never load password from DB for security
-                'mail_api_key' => '', // Never load API key from DB for security
-                'mail_api_secret' => '', // Never load secret from DB for security
+                'mail_password' => $this->decryptSetting($settings['mail']['password'] ?? ''),
+                'mail_api_key' => $this->decryptSetting($settings['mail']['api_key'] ?? ''),
+                'mail_api_secret' => $this->decryptSetting($settings['mail']['api_secret'] ?? ''),
                 'mail_encryption' => $settings['mail']['encryption'] ?? '',
                 'mail_from_address' => $settings['mail']['from_address'] ?? '',
                 'mail_from_name' => $settings['mail']['from_name'] ?? '',
@@ -639,6 +639,23 @@ class Settings extends Page
     public function getTitle(): string
     {
         return 'Settings';
+    }
+
+    /**
+     * Decrypt a setting value safely
+     */
+    private function decryptSetting(?string $value): string
+    {
+        if (empty($value)) {
+            return '';
+        }
+
+        try {
+            return decrypt($value);
+        } catch (\Exception $e) {
+            // If decryption fails, return empty (value might not be encrypted)
+            return '';
+        }
     }
 
     /**

@@ -758,7 +758,7 @@ class DesignerSeatingLayout extends Page
                     SC\Section::make('Row Settings')
                         ->description('Configure individual row settings (numbering start and alignment)')
                         ->schema([
-                            Forms\Components\Grid::make(3)
+                            SC\Grid::make(3)
                                 ->schema([
                                     Forms\Components\TextInput::make('row_renumber_start')
                                         ->label('Renumber rows from')

@@ -2724,6 +2724,80 @@ class EventResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('Status')
+                    ->options([
+                        'active' => 'Activ',
+                        'ended' => 'Încheiat',
+                    ])
+                    ->query(function ($query, array $data) {
+                        if (empty($data['value'])) {
+                            return $query;
+                        }
+
+                        $now = now();
+
+                        if ($data['value'] === 'active') {
+                            // Active: end date is in the future (or today)
+                            return $query->where(function ($q) use ($now) {
+                                // Range mode: use range_end_date or range_start_date
+                                $q->where(function ($qq) use ($now) {
+                                    $qq->where('duration_mode', 'range')
+                                        ->where(function ($qqq) use ($now) {
+                                            $qqq->whereDate('range_end_date', '>=', $now)
+                                                ->orWhere(function ($qqqq) use ($now) {
+                                                    $qqqq->whereNull('range_end_date')
+                                                        ->whereDate('range_start_date', '>=', $now);
+                                                });
+                                        });
+                                })
+                                // Single day mode: use event_date
+                                ->orWhere(function ($qq) use ($now) {
+                                    $qq->where('duration_mode', 'single_day')
+                                        ->whereDate('event_date', '>=', $now);
+                                })
+                                // Multi-day mode: check if any slot is in the future
+                                ->orWhere(function ($qq) use ($now) {
+                                    $qq->where('duration_mode', 'multi_day')
+                                        ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(multi_slots, '$[*].date')) >= ?", [$now->format('Y-m-d')]);
+                                })
+                                // Fallback for null duration_mode: use event_date
+                                ->orWhere(function ($qq) use ($now) {
+                                    $qq->whereNull('duration_mode')
+                                        ->whereDate('event_date', '>=', $now);
+                                });
+                            });
+                        }
+
+                        if ($data['value'] === 'ended') {
+                            // Ended: end date is in the past
+                            return $query->where(function ($q) use ($now) {
+                                // Range mode: use range_end_date or range_start_date
+                                $q->where(function ($qq) use ($now) {
+                                    $qq->where('duration_mode', 'range')
+                                        ->where(function ($qqq) use ($now) {
+                                            $qqq->whereDate('range_end_date', '<', $now)
+                                                ->orWhere(function ($qqqq) use ($now) {
+                                                    $qqqq->whereNull('range_end_date')
+                                                        ->whereDate('range_start_date', '<', $now);
+                                                });
+                                        });
+                                })
+                                // Single day mode: use event_date
+                                ->orWhere(function ($qq) use ($now) {
+                                    $qq->where('duration_mode', 'single_day')
+                                        ->whereDate('event_date', '<', $now);
+                                })
+                                // Fallback for null duration_mode: use event_date
+                                ->orWhere(function ($qq) use ($now) {
+                                    $qq->whereNull('duration_mode')
+                                        ->whereDate('event_date', '<', $now);
+                                });
+                            });
+                        }
+
+                        return $query;
+                    }),
                 Tables\Filters\TernaryFilter::make('is_published')
                     ->label('Publicat'),
                 Tables\Filters\TernaryFilter::make('is_cancelled'),
