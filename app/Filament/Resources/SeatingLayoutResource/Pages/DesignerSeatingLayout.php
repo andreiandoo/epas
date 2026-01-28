@@ -1016,7 +1016,16 @@ class DesignerSeatingLayout extends Page
                                 ->numeric()
                                 ->minValue(1)
                                 ->maxValue(200)
-                                ->helperText('Seats will be regenerated with new count (existing seat positions will be recalculated)')
+                                ->helperText('Seats will be regenerated with new count')
+                                ->columnSpan(1),
+
+                            Forms\Components\TextInput::make('seat_config_start_number')
+                                ->label('Start Number')
+                                ->numeric()
+                                ->minValue(1)
+                                ->maxValue(999)
+                                ->default(1)
+                                ->helperText('Seat numbering starts from this number')
                                 ->columnSpan(1),
 
                             Forms\Components\Select::make('seat_config_numbering')
@@ -1028,7 +1037,7 @@ class DesignerSeatingLayout extends Page
                                 ->default('ltr')
                                 ->columnSpan(1),
                         ])
-                        ->columns(2),
+                        ->columns(3),
                 ])
                 ->action(function (array $data): void {
                     $section = SeatingSection::find($data['section_id']);
@@ -1172,6 +1181,7 @@ class DesignerSeatingLayout extends Page
                         $row = SeatingRow::find($data['seat_config_row_id']);
                         if ($row && $row->section_id === $section->id) {
                             $newCount = (int) $data['seat_config_new_count'];
+                            $startNumber = (int) ($data['seat_config_start_number'] ?? 1);
                             $seatSpacing = (int) ($metadata['seat_spacing'] ?? 18);
                             $numbering = $data['seat_config_numbering'] ?? 'ltr';
 
@@ -1180,16 +1190,22 @@ class DesignerSeatingLayout extends Page
 
                             // Create new seats
                             for ($s = 1; $s <= $newCount; $s++) {
-                                $seatIndex = $numbering === 'rtl' ? ($newCount - $s + 1) : $s;
+                                // Calculate seat label based on start number and direction
+                                if ($numbering === 'rtl') {
+                                    $seatLabel = $startNumber + $newCount - $s;
+                                } else {
+                                    $seatLabel = $startNumber + $s - 1;
+                                }
+
                                 SeatingSeat::create([
                                     'row_id' => $row->id,
-                                    'label' => (string) $seatIndex,
-                                    'display_name' => $section->generateSeatDisplayName($row->label, (string) $seatIndex),
+                                    'label' => (string) $seatLabel,
+                                    'display_name' => $section->generateSeatDisplayName($row->label, (string) $seatLabel),
                                     'x' => ($s - 1) * $seatSpacing,
                                     'y' => $row->y,
                                     'angle' => 0,
                                     'shape' => $metadata['seat_shape'] ?? 'circle',
-                                    'seat_uid' => $section->generateSeatUid($row->label, (string) $seatIndex),
+                                    'seat_uid' => $section->generateSeatUid($row->label, (string) $seatLabel),
                                 ]);
                             }
 

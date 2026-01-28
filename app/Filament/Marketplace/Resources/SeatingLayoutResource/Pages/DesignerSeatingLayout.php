@@ -631,6 +631,7 @@ class DesignerSeatingLayout extends Page
                                 'seat_spacing' => $metadata['seat_spacing'] ?? 18,
                                 'row_spacing' => $metadata['row_spacing'] ?? 25,
                                 'seat_shape' => $metadata['seat_shape'] ?? 'circle',
+                                'numbering_mode' => $metadata['numbering_mode'] ?? 'normal',
                                 'rows' => $rows,
                                 'curve_amount' => $metadata['curve_amount'] ?? 0,
                             ];
@@ -662,6 +663,7 @@ class DesignerSeatingLayout extends Page
                                     $set('seat_spacing', $metadata['seat_spacing'] ?? 18);
                                     $set('row_spacing', $metadata['row_spacing'] ?? 25);
                                     $set('seat_shape', $metadata['seat_shape'] ?? 'circle');
+                                    $set('numbering_mode', $metadata['numbering_mode'] ?? 'normal');
                                     $set('curve_amount', $metadata['curve_amount'] ?? 0);
 
                                     // Load rows for this section
@@ -735,6 +737,17 @@ class DesignerSeatingLayout extends Page
                                     'rect' => 'Square',
                                 ])
                                 ->columnSpan(1),
+
+                            Forms\Components\Select::make('numbering_mode')
+                                ->label('Seat Numbering Mode')
+                                ->options([
+                                    'normal' => 'Normal (per row: 1-10, 1-10, 1-10...)',
+                                    'section' => 'Section (continuous: 1-10, 11-20, 21-30...)',
+                                    'snake' => 'Snake (alternating: 1-10→, ←11-20, 21-30→...)',
+                                ])
+                                ->default('normal')
+                                ->helperText('How seats are numbered across rows')
+                                ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('seat_spacing')
                                 ->label('Seat Spacing (px)')
@@ -820,6 +833,184 @@ class DesignerSeatingLayout extends Page
                         ->collapsed()
                         ->collapsible(),
 
+                    SC\Section::make('Row Configuration')
+                        ->description('Manage rows: rename, add, or delete rows')
+                        ->collapsible()
+                        ->collapsed()
+                        ->schema([
+                            Forms\Components\Placeholder::make('rows_overview')
+                                ->label('Current Rows')
+                                ->content(function ($get) {
+                                    $sectionId = $get('section_id');
+                                    if (!$sectionId) return 'Select a section first';
+
+                                    $section = SeatingSection::with('rows.seats')->find($sectionId);
+                                    if (!$section) return 'Section not found';
+
+                                    if ($section->rows->isEmpty()) {
+                                        return 'No rows in this section';
+                                    }
+
+                                    $rows = $section->rows->sortBy('y')->map(function ($row) {
+                                        return "Row {$row->label}: {$row->seats->count()} seats";
+                                    })->join(' | ');
+
+                                    return $rows;
+                                })
+                                ->columnSpanFull(),
+
+                            Forms\Components\Select::make('row_action')
+                                ->label('Row Action')
+                                ->options([
+                                    '' => '— No action —',
+                                    'rename' => 'Rename a row',
+                                    'add' => 'Add a new row',
+                                    'delete' => 'Delete a row',
+                                    'renumber' => 'Renumber all rows',
+                                ])
+                                ->default('')
+                                ->reactive()
+                                ->columnSpanFull(),
+
+                            // Rename row fields
+                            Forms\Components\Select::make('rename_row_id')
+                                ->label('Row to Rename')
+                                ->options(function ($get) {
+                                    $sectionId = $get('section_id');
+                                    if (!$sectionId) return [];
+                                    return SeatingRow::where('section_id', $sectionId)
+                                        ->orderBy('y')
+                                        ->pluck('label', 'id');
+                                })
+                                ->visible(fn ($get) => $get('row_action') === 'rename')
+                                ->columnSpan(1),
+
+                            Forms\Components\TextInput::make('rename_row_new_label')
+                                ->label('New Row Label')
+                                ->visible(fn ($get) => $get('row_action') === 'rename')
+                                ->columnSpan(1),
+
+                            // Add row fields
+                            Forms\Components\TextInput::make('add_row_label')
+                                ->label('New Row Label')
+                                ->visible(fn ($get) => $get('row_action') === 'add')
+                                ->columnSpan(1),
+
+                            Forms\Components\TextInput::make('add_row_seats')
+                                ->label('Number of Seats')
+                                ->numeric()
+                                ->default(10)
+                                ->minValue(1)
+                                ->maxValue(100)
+                                ->visible(fn ($get) => $get('row_action') === 'add')
+                                ->columnSpan(1),
+
+                            // Delete row fields
+                            Forms\Components\Select::make('delete_row_id')
+                                ->label('Row to Delete')
+                                ->options(function ($get) {
+                                    $sectionId = $get('section_id');
+                                    if (!$sectionId) return [];
+                                    return SeatingRow::where('section_id', $sectionId)
+                                        ->orderBy('y')
+                                        ->get()
+                                        ->mapWithKeys(fn ($row) => [$row->id => "Row {$row->label} ({$row->seats()->count()} seats)"]);
+                                })
+                                ->visible(fn ($get) => $get('row_action') === 'delete')
+                                ->helperText('Warning: This will delete the row and all its seats')
+                                ->columnSpanFull(),
+
+                            // Renumber rows fields
+                            Forms\Components\TextInput::make('renumber_start')
+                                ->label('Start from')
+                                ->placeholder('e.g. 5 or A')
+                                ->helperText('Renumber all row labels starting from this value')
+                                ->visible(fn ($get) => $get('row_action') === 'renumber')
+                                ->columnSpan(1),
+
+                            Forms\Components\Select::make('renumber_type')
+                                ->label('Label type')
+                                ->options([
+                                    'numeric' => 'Numeric (1, 2, 3...)',
+                                    'alpha_upper' => 'Letters A, B, C...',
+                                    'alpha_lower' => 'Letters a, b, c...',
+                                ])
+                                ->default('numeric')
+                                ->visible(fn ($get) => $get('row_action') === 'renumber')
+                                ->columnSpan(1),
+
+                            Forms\Components\Select::make('renumber_direction')
+                                ->label('Direction')
+                                ->options([
+                                    'top_to_bottom' => 'Top to bottom',
+                                    'bottom_to_top' => 'Bottom to top',
+                                ])
+                                ->default('top_to_bottom')
+                                ->visible(fn ($get) => $get('row_action') === 'renumber')
+                                ->columnSpanFull(),
+                        ])
+                        ->columns(2),
+
+                    SC\Section::make('Seat Configuration')
+                        ->description('Change the number of seats in a row')
+                        ->collapsible()
+                        ->collapsed()
+                        ->schema([
+                            Forms\Components\Select::make('seat_config_row_id')
+                                ->label('Row')
+                                ->options(function ($get) {
+                                    $sectionId = $get('section_id');
+                                    if (!$sectionId) return [];
+                                    return SeatingRow::where('section_id', $sectionId)
+                                        ->orderBy('y')
+                                        ->get()
+                                        ->mapWithKeys(fn ($row) => [$row->id => "Row {$row->label} ({$row->seats()->count()} seats)"]);
+                                })
+                                ->reactive()
+                                ->columnSpanFull(),
+
+                            Forms\Components\Placeholder::make('seat_config_current')
+                                ->label('Current Seats')
+                                ->content(function ($get) {
+                                    $rowId = $get('seat_config_row_id');
+                                    if (!$rowId) return 'Select a row';
+
+                                    $row = SeatingRow::with('seats')->find($rowId);
+                                    if (!$row) return 'Row not found';
+
+                                    $seatLabels = $row->seats->sortBy('x')->pluck('label')->join(', ');
+                                    return "Seats ({$row->seats->count()}): {$seatLabels}";
+                                })
+                                ->columnSpanFull(),
+
+                            Forms\Components\TextInput::make('seat_config_new_count')
+                                ->label('New Seat Count')
+                                ->numeric()
+                                ->minValue(1)
+                                ->maxValue(200)
+                                ->helperText('Seats will be regenerated with new count')
+                                ->columnSpan(1),
+
+                            Forms\Components\TextInput::make('seat_config_start_number')
+                                ->label('Start Number')
+                                ->numeric()
+                                ->minValue(1)
+                                ->maxValue(999)
+                                ->default(1)
+                                ->helperText('Seat numbering starts from this number')
+                                ->columnSpan(1),
+
+                            Forms\Components\Select::make('seat_config_numbering')
+                                ->label('Numbering Direction')
+                                ->options([
+                                    'ltr' => 'Left to Right (1, 2, 3...)',
+                                    'rtl' => 'Right to Left (...3, 2, 1)',
+                                ])
+                                ->default('ltr')
+                                ->columnSpan(1),
+                        ])
+                        ->columns(3),
+
                     SC\Section::make('Curve Settings')
                         ->description('Curve/bulge the section and its rows')
                         ->schema([
@@ -872,6 +1063,7 @@ class DesignerSeatingLayout extends Page
                     $metadata['seat_spacing'] = $newSeatSpacing;
                     $metadata['row_spacing'] = $newRowSpacing;
                     $metadata['seat_shape'] = $data['seat_shape'] ?? 'circle';
+                    $metadata['numbering_mode'] = $data['numbering_mode'] ?? 'normal';
 
                     // Save curve amount to metadata
                     $metadata['curve_amount'] = (int) ($data['curve_amount'] ?? 0);
@@ -911,6 +1103,143 @@ class DesignerSeatingLayout extends Page
                                     ]);
                                 }
                             }
+                        }
+                    }
+
+                    // Handle Row Configuration actions
+                    $rowAction = $data['row_action'] ?? '';
+                    if ($rowAction) {
+                        switch ($rowAction) {
+                            case 'rename':
+                                if (!empty($data['rename_row_id']) && !empty($data['rename_row_new_label'])) {
+                                    $row = SeatingRow::find($data['rename_row_id']);
+                                    if ($row && $row->section_id === $section->id) {
+                                        $oldLabel = $row->label;
+                                        $newLabel = $data['rename_row_new_label'];
+                                        $row->update(['label' => $newLabel]);
+
+                                        // Update seat display names and UIDs
+                                        foreach ($row->seats as $seat) {
+                                            $seat->update([
+                                                'display_name' => $section->generateSeatDisplayName($newLabel, $seat->label),
+                                                'seat_uid' => $section->generateSeatUid($newLabel, $seat->label),
+                                            ]);
+                                        }
+                                    }
+                                }
+                                break;
+
+                            case 'add':
+                                if (!empty($data['add_row_label'])) {
+                                    $seatCount = (int) ($data['add_row_seats'] ?? 10);
+                                    $seatSpacing = (int) ($metadata['seat_spacing'] ?? 18);
+
+                                    // Get the Y position for the new row (after existing rows)
+                                    $lastRow = $section->rows()->orderBy('y', 'desc')->first();
+                                    $newRowY = $lastRow ? $lastRow->y + ($metadata['row_spacing'] ?? 25) : 0;
+
+                                    $newRow = SeatingRow::create([
+                                        'section_id' => $section->id,
+                                        'label' => $data['add_row_label'],
+                                        'y' => $newRowY,
+                                        'seat_count' => $seatCount,
+                                    ]);
+
+                                    // Create seats for the new row
+                                    for ($s = 1; $s <= $seatCount; $s++) {
+                                        SeatingSeat::create([
+                                            'row_id' => $newRow->id,
+                                            'label' => (string) $s,
+                                            'display_name' => $section->generateSeatDisplayName($newRow->label, (string) $s),
+                                            'x' => ($s - 1) * $seatSpacing,
+                                            'y' => $newRowY,
+                                            'angle' => 0,
+                                            'shape' => $metadata['seat_shape'] ?? 'circle',
+                                            'seat_uid' => $section->generateSeatUid($newRow->label, (string) $s),
+                                        ]);
+                                    }
+                                }
+                                break;
+
+                            case 'delete':
+                                if (!empty($data['delete_row_id'])) {
+                                    $row = SeatingRow::find($data['delete_row_id']);
+                                    if ($row && $row->section_id === $section->id) {
+                                        // Delete all seats first
+                                        $row->seats()->delete();
+                                        // Then delete the row
+                                        $row->delete();
+                                    }
+                                }
+                                break;
+
+                            case 'renumber':
+                                if (!empty($data['renumber_start'])) {
+                                    $startValue = $data['renumber_start'];
+                                    $type = $data['renumber_type'] ?? 'numeric';
+                                    $direction = $data['renumber_direction'] ?? 'top_to_bottom';
+                                    $orderDir = $direction === 'bottom_to_top' ? 'desc' : 'asc';
+                                    $rows = $section->rows()->orderBy('y', $orderDir)->get();
+
+                                    foreach ($rows as $index => $row) {
+                                        $newLabel = match ($type) {
+                                            'alpha_upper' => $this->numberToAlpha($startValue, $index, true),
+                                            'alpha_lower' => $this->numberToAlpha($startValue, $index, false),
+                                            default => (string) ((int) $startValue + $index),
+                                        };
+
+                                        $oldLabel = $row->label;
+                                        $row->update(['label' => $newLabel]);
+
+                                        // Update seat display names and UIDs
+                                        if ($oldLabel !== $newLabel) {
+                                            foreach ($row->seats as $seat) {
+                                                $seat->update([
+                                                    'display_name' => $section->generateSeatDisplayName($newLabel, $seat->label),
+                                                    'seat_uid' => $section->generateSeatUid($newLabel, $seat->label),
+                                                ]);
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+                        }
+                    }
+
+                    // Handle Seat Configuration
+                    if (!empty($data['seat_config_row_id']) && !empty($data['seat_config_new_count'])) {
+                        $row = SeatingRow::find($data['seat_config_row_id']);
+                        if ($row && $row->section_id === $section->id) {
+                            $newCount = (int) $data['seat_config_new_count'];
+                            $startNumber = (int) ($data['seat_config_start_number'] ?? 1);
+                            $seatSpacing = (int) ($metadata['seat_spacing'] ?? 18);
+                            $numbering = $data['seat_config_numbering'] ?? 'ltr';
+
+                            // Delete existing seats
+                            $row->seats()->delete();
+
+                            // Create new seats
+                            for ($s = 1; $s <= $newCount; $s++) {
+                                // Calculate seat label based on start number and direction
+                                if ($numbering === 'rtl') {
+                                    $seatLabel = $startNumber + $newCount - $s;
+                                } else {
+                                    $seatLabel = $startNumber + $s - 1;
+                                }
+
+                                SeatingSeat::create([
+                                    'row_id' => $row->id,
+                                    'label' => (string) $seatLabel,
+                                    'display_name' => $section->generateSeatDisplayName($row->label, (string) $seatLabel),
+                                    'x' => ($s - 1) * $seatSpacing,
+                                    'y' => $row->y,
+                                    'angle' => 0,
+                                    'shape' => $metadata['seat_shape'] ?? 'circle',
+                                    'seat_uid' => $section->generateSeatUid($row->label, (string) $seatLabel),
+                                ]);
+                            }
+
+                            $row->update(['seat_count' => $newCount]);
                         }
                     }
 
