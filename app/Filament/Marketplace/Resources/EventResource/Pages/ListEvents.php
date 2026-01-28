@@ -5,6 +5,8 @@ namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 use App\Filament\Marketplace\Resources\EventResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Tabs\Tab;
+use Illuminate\Database\Eloquent\Builder;
 
 class ListEvents extends ListRecords
 {
@@ -25,6 +27,128 @@ class ListEvents extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+        ];
+    }
+
+    public function getTabs(): array
+    {
+        $now = now();
+
+        return [
+            'all' => Tab::make('Toate'),
+            'active' => Tab::make('Active')
+                ->modifyQueryUsing(function (Builder $query) use ($now) {
+                    return $query->where(function ($q) use ($now) {
+                        // Range mode: end date in future
+                        $q->where(function ($qq) use ($now) {
+                            $qq->where('duration_mode', 'range')
+                                ->where(function ($qqq) use ($now) {
+                                    $qqq->whereDate('range_end_date', '>=', $now)
+                                        ->orWhere(function ($qqqq) use ($now) {
+                                            $qqqq->whereNull('range_end_date')
+                                                ->whereDate('range_start_date', '>=', $now);
+                                        });
+                                });
+                        })
+                        // Single day mode
+                        ->orWhere(function ($qq) use ($now) {
+                            $qq->where('duration_mode', 'single_day')
+                                ->whereDate('event_date', '>=', $now);
+                        })
+                        // Multi-day mode
+                        ->orWhere(function ($qq) use ($now) {
+                            $qq->where('duration_mode', 'multi_day')
+                                ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(multi_slots, '$[*].date')) >= ?", [$now->format('Y-m-d')]);
+                        })
+                        // Fallback for null duration_mode
+                        ->orWhere(function ($qq) use ($now) {
+                            $qq->whereNull('duration_mode')
+                                ->whereDate('event_date', '>=', $now);
+                        });
+                    });
+                })
+                ->badge(function () {
+                    $now = now();
+                    return $this->getResource()::getEloquentQuery()
+                        ->where(function ($q) use ($now) {
+                            $q->where(function ($qq) use ($now) {
+                                $qq->where('duration_mode', 'range')
+                                    ->where(function ($qqq) use ($now) {
+                                        $qqq->whereDate('range_end_date', '>=', $now)
+                                            ->orWhere(function ($qqqq) use ($now) {
+                                                $qqqq->whereNull('range_end_date')
+                                                    ->whereDate('range_start_date', '>=', $now);
+                                            });
+                                    });
+                            })
+                            ->orWhere(function ($qq) use ($now) {
+                                $qq->where('duration_mode', 'single_day')
+                                    ->whereDate('event_date', '>=', $now);
+                            })
+                            ->orWhere(function ($qq) use ($now) {
+                                $qq->where('duration_mode', 'multi_day')
+                                    ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(multi_slots, '$[*].date')) >= ?", [$now->format('Y-m-d')]);
+                            })
+                            ->orWhere(function ($qq) use ($now) {
+                                $qq->whereNull('duration_mode')
+                                    ->whereDate('event_date', '>=', $now);
+                            });
+                        })
+                        ->count();
+                })
+                ->badgeColor('success'),
+            'ended' => Tab::make('Încheiate')
+                ->modifyQueryUsing(function (Builder $query) use ($now) {
+                    return $query->where(function ($q) use ($now) {
+                        // Range mode: end date in past
+                        $q->where(function ($qq) use ($now) {
+                            $qq->where('duration_mode', 'range')
+                                ->where(function ($qqq) use ($now) {
+                                    $qqq->whereDate('range_end_date', '<', $now)
+                                        ->orWhere(function ($qqqq) use ($now) {
+                                            $qqqq->whereNull('range_end_date')
+                                                ->whereDate('range_start_date', '<', $now);
+                                        });
+                                });
+                        })
+                        // Single day mode
+                        ->orWhere(function ($qq) use ($now) {
+                            $qq->where('duration_mode', 'single_day')
+                                ->whereDate('event_date', '<', $now);
+                        })
+                        // Fallback for null duration_mode
+                        ->orWhere(function ($qq) use ($now) {
+                            $qq->whereNull('duration_mode')
+                                ->whereDate('event_date', '<', $now);
+                        });
+                    });
+                })
+                ->badge(function () {
+                    $now = now();
+                    return $this->getResource()::getEloquentQuery()
+                        ->where(function ($q) use ($now) {
+                            $q->where(function ($qq) use ($now) {
+                                $qq->where('duration_mode', 'range')
+                                    ->where(function ($qqq) use ($now) {
+                                        $qqq->whereDate('range_end_date', '<', $now)
+                                            ->orWhere(function ($qqqq) use ($now) {
+                                                $qqqq->whereNull('range_end_date')
+                                                    ->whereDate('range_start_date', '<', $now);
+                                            });
+                                    });
+                            })
+                            ->orWhere(function ($qq) use ($now) {
+                                $qq->where('duration_mode', 'single_day')
+                                    ->whereDate('event_date', '<', $now);
+                            })
+                            ->orWhere(function ($qq) use ($now) {
+                                $qq->whereNull('duration_mode')
+                                    ->whereDate('event_date', '<', $now);
+                            });
+                        })
+                        ->count();
+                })
+                ->badgeColor('gray'),
         ];
     }
 }

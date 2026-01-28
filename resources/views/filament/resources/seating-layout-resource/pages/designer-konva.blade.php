@@ -287,10 +287,11 @@
                                     </button>
                                     @endif
                                     @if($section['section_type'] === 'icon')
-                                        {{-- Icon display --}}
+                                        {{-- Icon display - use a simple marker since icons are full SVG strings --}}
                                         <div class="flex items-center justify-center w-6 h-6 rounded" style="background-color: {{ $section['background_color'] ?? '#3B82F6' }}">
                                             <svg class="w-4 h-4" fill="{{ $section['metadata']['icon_color'] ?? '#FFFFFF' }}" viewBox="0 0 24 24">
-                                                <path d="{{ $iconDefinitions[$section['metadata']['icon_key'] ?? 'info_point']['svg'] ?? '' }}"/>
+                                                {{-- Generic map pin icon for sidebar display --}}
+                                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                                             </svg>
                                         </div>
                                     @else
