@@ -246,6 +246,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/analytics/([0-9]+)/?$ organizer/analytics.php?event=$1 [L,QSA]
 
+# Handle organizer report for specific event - /organizator/report/{id}
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/report/([0-9]+)/?$ organizer/report.php?event=$1 [L,QSA]
+
 # Handle organizer dashboard routes - /organizator/dashboard, /organizator/events, etc.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

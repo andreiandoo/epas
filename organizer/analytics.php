@@ -37,15 +37,23 @@ $eventId = $_GET['event'] ?? null;
                     </a>
 
                     <!-- Event Dropdown -->
-                    <div class="relative">
-                        <button id="event-selector" class="flex items-center gap-3 px-4 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-all min-w-[280px]">
+                    <div class="relative" id="event-dropdown-container">
+                        <button id="event-selector" onclick="toggleEventDropdown()" class="flex items-center gap-3 px-4 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-all min-w-[280px]">
                             <div id="event-selector-image" class="flex-shrink-0 w-10 h-10 overflow-hidden rounded-lg shadow-sm bg-gray-200"></div>
                             <div class="flex-1 text-left">
                                 <div id="event-selector-name" class="text-sm font-semibold text-gray-800">Se încarcă...</div>
                                 <div id="event-selector-info" class="text-[11px] text-gray-500"></div>
                             </div>
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <svg id="event-dropdown-arrow" class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
+                        <!-- Dropdown Menu -->
+                        <div id="event-dropdown-menu" class="absolute left-0 z-50 hidden w-full mt-2 overflow-hidden bg-white border border-gray-200 shadow-lg rounded-xl top-full max-h-80 overflow-y-auto">
+                            <div id="event-dropdown-loading" class="py-4 text-sm text-center text-gray-400">
+                                <svg class="w-5 h-5 mx-auto mb-2 animate-spin text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                Se încarcă...
+                            </div>
+                            <div id="event-dropdown-list" class="hidden"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -58,13 +66,16 @@ $eventId = $_GET['event'] ?? null;
                         <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all period-btn text-gray-500" data-period="all">Tot</button>
                     </div>
 
-                    <!-- Live Indicator -->
+                    <!-- Live Indicator with Globe Button -->
                     <div id="live-indicator" class="items-center hidden gap-2 px-3 py-2 border border-emerald-200 bg-emerald-50 rounded-xl">
                         <span class="relative flex h-2.5 w-2.5">
                             <span class="absolute inline-flex w-full h-full rounded-full opacity-75 pulse-ring bg-emerald-400"></span>
                             <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                         </span>
                         <span id="live-count" class="text-sm font-medium text-emerald-700">0 online</span>
+                        <button onclick="openGlobeModal()" class="p-1.5 ml-1 transition-colors rounded-lg hover:bg-emerald-100" title="Vezi vizitatori pe hartă">
+                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </button>
                     </div>
 
                     <!-- Export -->
@@ -174,6 +185,10 @@ $eventId = $_GET['event'] ?? null;
                         <button onclick="toggleChartMetric('tickets')" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all chart-metric-btn active border-blue-200 bg-blue-50" data-metric="tickets">
                             <div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
                             <span class="text-xs font-medium text-blue-600">Bilete</span>
+                        </button>
+                        <button onclick="toggleChartMetric('views')" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all chart-metric-btn border-gray-200" data-metric="views">
+                            <div class="w-2.5 h-2.5 rounded-full bg-cyan-500"></div>
+                            <span class="text-xs font-medium text-cyan-600">Vizualizări</span>
                         </button>
                     </div>
                 </div>
@@ -330,6 +345,10 @@ $eventId = $_GET['event'] ?? null;
                     </select>
                 </div>
                 <div>
+                    <label class="block mb-1 text-sm font-medium text-secondary">Nume obiectiv</label>
+                    <input type="text" name="name" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" required placeholder="ex: Obiectiv vânzări luna Ianuarie">
+                </div>
+                <div>
                     <label class="block mb-1 text-sm font-medium text-secondary">Valoare țintă</label>
                     <input type="number" name="target_value" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" required min="0" step="any">
                 </div>
@@ -399,11 +418,72 @@ $eventId = $_GET['event'] ?? null;
     </div>
 </div>
 
+<!-- Globe/Map Modal -->
+<div id="globe-modal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" onclick="closeGlobeModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="w-full max-w-4xl bg-gradient-to-br from-slate-900 to-slate-800 shadow-2xl rounded-2xl overflow-hidden" onclick="event.stopPropagation()">
+            <div class="p-5 border-b border-white/10">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/20">
+                            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-white">Vizitatori Live</h2>
+                            <p class="text-xs text-white/60">Persoane care vizualizează evenimentul acum</p>
+                        </div>
+                    </div>
+                    <button onclick="closeGlobeModal()" class="p-2 transition-colors text-white/60 hover:text-white rounded-lg hover:bg-white/10">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6">
+                <!-- Stats -->
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="p-4 bg-white/5 rounded-xl">
+                        <div id="globe-total-visitors" class="text-2xl font-bold text-white">0</div>
+                        <div class="text-xs text-white/60">Total online</div>
+                    </div>
+                    <div class="p-4 bg-white/5 rounded-xl">
+                        <div id="globe-countries" class="text-2xl font-bold text-white">0</div>
+                        <div class="text-xs text-white/60">Țări</div>
+                    </div>
+                    <div class="p-4 bg-white/5 rounded-xl">
+                        <div id="globe-cities" class="text-2xl font-bold text-white">0</div>
+                        <div class="text-xs text-white/60">Orașe</div>
+                    </div>
+                </div>
+
+                <!-- Map Container -->
+                <div class="relative h-80 bg-slate-800 rounded-xl overflow-hidden mb-6">
+                    <div id="globe-map" class="w-full h-full"></div>
+                    <div id="globe-map-overlay" class="absolute inset-0 flex items-center justify-center bg-slate-800/80">
+                        <div class="text-center">
+                            <svg class="w-12 h-12 mx-auto mb-3 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <div class="text-white/40 text-sm">Se încarcă vizitatorii...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visitors List -->
+                <div>
+                    <h3 class="text-sm font-semibold text-white mb-3">Locații active</h3>
+                    <div id="globe-visitors-list" class="space-y-2 max-h-40 overflow-y-auto">
+                        <div class="text-sm text-white/40 text-center py-4">Niciun vizitator activ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 const eventId = <?= json_encode($eventId) ?>;
 let currentPeriod = '30d';
 let mainChart = null;
-let chartMetrics = { revenue: true, tickets: true };
+let chartMetrics = { revenue: true, tickets: true, views: false };
 let eventData = null;
 
 // Initialize
@@ -463,7 +543,32 @@ function updateDashboard(data) {
     // Event selector
     if (data.event) {
         document.getElementById('event-selector-name').textContent = data.event.title || 'Eveniment';
-        document.getElementById('event-selector-info').textContent = `${data.event.date || ''} • ${data.event.venue || ''}`;
+
+        // Format date properly (from ISO to DD.MM.YYYY | HH:MM)
+        let dateStr = '';
+        if (data.event.starts_at) {
+            const d = new Date(data.event.starts_at);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            dateStr = `${day}.${month}.${year} | ${hours}:${minutes}`;
+        } else if (data.event.date) {
+            dateStr = data.event.date;
+        }
+
+        // Format venue properly (handle object or string)
+        let venueStr = '';
+        if (data.event.venue) {
+            if (typeof data.event.venue === 'object') {
+                venueStr = data.event.venue.name || data.event.venue.title || '';
+            } else {
+                venueStr = data.event.venue;
+            }
+        }
+
+        document.getElementById('event-selector-info').textContent = `${dateStr}${venueStr ? ' • ' + venueStr : ''}`;
         if (data.event.image) {
             document.getElementById('event-selector-image').innerHTML = `<img src="${data.event.image}" class="object-cover w-full h-full">`;
         }
@@ -552,8 +657,42 @@ function updateDashboard(data) {
 }
 
 function updateMainChart(chartData) {
+    const colors = [];
+    const series = [];
+    const yaxisConfigs = [];
+
+    if (chartMetrics.revenue) {
+        series.push({ name: 'Venituri', data: chartData.revenue || [] });
+        colors.push('#10b981');
+        yaxisConfigs.push({
+            seriesName: 'Venituri',
+            title: { text: 'Venituri (RON)' },
+            labels: { formatter: v => formatNumber(v) }
+        });
+    }
+    if (chartMetrics.tickets) {
+        series.push({ name: 'Bilete', data: chartData.tickets || [] });
+        colors.push('#3b82f6');
+        yaxisConfigs.push({
+            seriesName: 'Bilete',
+            opposite: yaxisConfigs.length > 0,
+            title: { text: 'Bilete' },
+            labels: { formatter: v => formatNumber(v) }
+        });
+    }
+    if (chartMetrics.views) {
+        series.push({ name: 'Vizualizări', data: chartData.views || chartData.page_views || [] });
+        colors.push('#06b6d4');
+        yaxisConfigs.push({
+            seriesName: 'Vizualizări',
+            opposite: yaxisConfigs.length > 0,
+            title: { text: 'Vizualizări' },
+            labels: { formatter: v => formatNumber(v) }
+        });
+    }
+
     const options = {
-        series: [],
+        series: series,
         chart: {
             type: 'area',
             height: 300,
@@ -567,27 +706,22 @@ function updateMainChart(chartData) {
             categories: chartData.labels || [],
             labels: { style: { colors: '#94a3b8', fontSize: '11px' } }
         },
-        yaxis: [],
+        yaxis: yaxisConfigs.length > 0 ? yaxisConfigs : [{}],
         tooltip: {
             shared: true,
-            y: { formatter: (val, { seriesIndex }) => seriesIndex === 0 ? formatCurrency(val) : formatNumber(val) + ' bilete' }
+            y: {
+                formatter: (val, { seriesIndex }) => {
+                    const name = series[seriesIndex]?.name || '';
+                    if (name === 'Venituri') return formatCurrency(val);
+                    if (name === 'Bilete') return formatNumber(val) + ' bilete';
+                    if (name === 'Vizualizări') return formatNumber(val) + ' vizualizări';
+                    return formatNumber(val);
+                }
+            }
         },
-        colors: ['#10b981', '#3b82f6'],
+        colors: colors,
         legend: { position: 'bottom', horizontalAlign: 'center' }
     };
-
-    if (chartMetrics.revenue) {
-        options.series.push({ name: 'Venituri', data: chartData.revenue || [] });
-        options.yaxis.push({ title: { text: 'Venituri (RON)' }, labels: { formatter: v => formatNumber(v) } });
-    }
-    if (chartMetrics.tickets) {
-        options.series.push({ name: 'Bilete', data: chartData.tickets || [] });
-        options.yaxis.push({
-            opposite: chartMetrics.revenue,
-            title: { text: 'Bilete' },
-            labels: { formatter: v => formatNumber(v) }
-        });
-    }
 
     if (mainChart) {
         mainChart.destroy();
@@ -599,11 +733,22 @@ function updateMainChart(chartData) {
 function toggleChartMetric(metric) {
     chartMetrics[metric] = !chartMetrics[metric];
     const btn = document.querySelector(`.chart-metric-btn[data-metric="${metric}"]`);
+
+    // Get appropriate colors for each metric
+    const activeStyles = {
+        revenue: { border: 'border-emerald-200', bg: 'bg-emerald-50' },
+        tickets: { border: 'border-blue-200', bg: 'bg-blue-50' },
+        views: { border: 'border-cyan-200', bg: 'bg-cyan-50' }
+    };
+    const style = activeStyles[metric] || { border: 'border-gray-200', bg: '' };
+
     if (chartMetrics[metric]) {
-        btn.classList.add('active');
+        btn.classList.add('active', style.border, style.bg);
+        btn.classList.remove('border-gray-200');
         btn.style.opacity = '1';
     } else {
-        btn.classList.remove('active');
+        btn.classList.remove('active', style.border, style.bg);
+        btn.classList.add('border-gray-200');
         btn.style.opacity = '0.5';
     }
     if (eventData?.chart) {
@@ -724,17 +869,14 @@ function updateLocations(locations) {
     container.innerHTML = html;
 }
 
-function updateCampaigns(campaigns) {
+function updateCampaigns(data) {
     const container = document.getElementById('campaigns-list');
+    const campaigns = data.milestones || data;
+
     if (!campaigns || campaigns.length === 0) {
         container.innerHTML = '<div class="py-6 text-sm text-center text-gray-400">Nu ai campanii active</div>';
         return;
     }
-
-    const typeIcons = {
-        'facebook_ads': '📘', 'google_ads': '🔍', 'instagram_ads': '📷',
-        'tiktok_ads': '🎵', 'email_campaign': '📧', 'influencer': '⭐', 'other': '📌'
-    };
 
     const html = campaigns.map(c => {
         const roi = c.budget > 0 ? Math.round(((c.attributed_revenue || 0) - c.budget) / c.budget * 100) : 0;
@@ -742,8 +884,8 @@ function updateCampaigns(campaigns) {
         <div class="p-3 transition-colors border border-gray-100 rounded-xl hover:border-violet-200 milestone-card">
             <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center gap-2">
-                    <span>${typeIcons[c.type] || '📌'}</span>
-                    <span class="text-sm font-medium text-gray-800">${c.name}</span>
+                    <span>${c.type_icon || '📌'}</span>
+                    <span class="text-sm font-medium text-gray-800">${c.title || c.name || 'Campanie'}</span>
                 </div>
                 <span class="text-[10px] px-1.5 py-0.5 rounded-full ${c.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}">
                     ${c.is_active ? 'Activ' : 'Încheiat'}
@@ -752,7 +894,7 @@ function updateCampaigns(campaigns) {
             <div class="grid grid-cols-2 gap-2 text-xs">
                 <div><span class="text-gray-500">Buget:</span> <span class="font-medium">${formatCurrency(c.budget || 0)}</span></div>
                 <div><span class="text-gray-500">Venituri:</span> <span class="font-medium text-emerald-600">${formatCurrency(c.attributed_revenue || 0)}</span></div>
-                <div><span class="text-gray-500">Bilete:</span> <span class="font-medium">${c.tickets_sold || 0}</span></div>
+                <div><span class="text-gray-500">Conv.:</span> <span class="font-medium">${c.conversions || 0}</span></div>
                 <div><span class="text-gray-500">ROI:</span> <span class="font-semibold ${roi >= 0 ? 'text-emerald-600' : 'text-red-600'}">${roi >= 0 ? '+' : ''}${roi}%</span></div>
             </div>
         </div>
@@ -788,8 +930,10 @@ function updateRecentSales(sales) {
     container.innerHTML = html;
 }
 
-function updateGoals(goals) {
+function updateGoals(data) {
     const container = document.getElementById('goals-list');
+    const goals = data.goals || data;
+
     if (!goals || goals.length === 0) {
         container.innerHTML = `
             <div class="py-6 text-sm text-center text-gray-400">
@@ -852,6 +996,245 @@ function exportReport() {
     window.open(`/api/marketplace-client/organizer/events/${eventId}/analytics/export?period=${currentPeriod}`, '_blank');
 }
 
+// Event dropdown functions
+let eventDropdownOpen = false;
+let eventsListLoaded = false;
+
+function toggleEventDropdown() {
+    const menu = document.getElementById('event-dropdown-menu');
+    const arrow = document.getElementById('event-dropdown-arrow');
+    eventDropdownOpen = !eventDropdownOpen;
+
+    if (eventDropdownOpen) {
+        menu.classList.remove('hidden');
+        arrow.classList.add('rotate-180');
+        if (!eventsListLoaded) {
+            loadEventsList();
+        }
+    } else {
+        menu.classList.add('hidden');
+        arrow.classList.remove('rotate-180');
+    }
+}
+
+async function loadEventsList() {
+    try {
+        const response = await AmbiletAPI.get('/organizer/events?per_page=50');
+        if (response.success) {
+            const events = response.data?.events || response.data || [];
+            renderEventsList(events);
+            eventsListLoaded = true;
+        }
+    } catch (error) {
+        console.error('Error loading events:', error);
+        document.getElementById('event-dropdown-loading').innerHTML = '<div class="py-4 text-sm text-center text-red-500">Eroare la încărcare</div>';
+    }
+}
+
+function renderEventsList(events) {
+    const loadingEl = document.getElementById('event-dropdown-loading');
+    const listEl = document.getElementById('event-dropdown-list');
+
+    loadingEl.classList.add('hidden');
+    listEl.classList.remove('hidden');
+
+    if (!events || events.length === 0) {
+        listEl.innerHTML = '<div class="py-4 text-sm text-center text-gray-400">Nu ai evenimente</div>';
+        return;
+    }
+
+    const html = events.map(e => {
+        const isActive = String(e.id) === String(eventId);
+
+        // Format date
+        let dateStr = '';
+        if (e.starts_at) {
+            const d = new Date(e.starts_at);
+            dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+        } else if (e.date) {
+            dateStr = e.date;
+        }
+
+        // Get venue name
+        let venueName = '';
+        if (e.venue) {
+            venueName = typeof e.venue === 'object' ? (e.venue.name || '') : e.venue;
+        }
+
+        return `
+            <a href="/organizator/analytics/${e.id}" class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 ${isActive ? 'bg-primary/5 border-l-2 border-primary' : ''}">
+                <div class="flex-shrink-0 w-10 h-10 overflow-hidden bg-gray-200 rounded-lg">
+                    ${e.image ? `<img src="${e.image}" class="object-cover w-full h-full">` : ''}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-gray-800 truncate">${e.title || 'Eveniment'}</div>
+                    <div class="text-[11px] text-gray-500 truncate">${dateStr}${venueName ? ' • ' + venueName : ''}</div>
+                </div>
+                ${isActive ? '<svg class="flex-shrink-0 w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : ''}
+            </a>
+        `;
+    }).join('');
+
+    listEl.innerHTML = html;
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const container = document.getElementById('event-dropdown-container');
+    if (container && !container.contains(e.target) && eventDropdownOpen) {
+        toggleEventDropdown();
+    }
+});
+
+// Globe modal functions
+let globeModalOpen = false;
+let liveVisitorsData = null;
+
+function openGlobeModal() {
+    document.getElementById('globe-modal').classList.remove('hidden');
+    globeModalOpen = true;
+    loadLiveVisitors();
+}
+
+function closeGlobeModal() {
+    document.getElementById('globe-modal').classList.add('hidden');
+    globeModalOpen = false;
+}
+
+async function loadLiveVisitors() {
+    const overlay = document.getElementById('globe-map-overlay');
+
+    try {
+        // Try to get live visitors data from analytics
+        // For now we'll simulate with top locations data
+        if (eventData?.top_locations) {
+            const locations = eventData.top_locations;
+            renderGlobeData(locations);
+        } else {
+            // Fallback to showing the analytics data
+            const response = await AmbiletAPI.get(`/organizer/events/${eventId}/analytics?period=1d`);
+            if (response.success && response.data?.top_locations) {
+                renderGlobeData(response.data.top_locations);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading live visitors:', error);
+        overlay.innerHTML = '<div class="text-red-400 text-sm">Eroare la încărcare</div>';
+    }
+}
+
+function renderGlobeData(locations) {
+    const overlay = document.getElementById('globe-map-overlay');
+    const mapContainer = document.getElementById('globe-map');
+    const visitorsList = document.getElementById('globe-visitors-list');
+
+    if (!locations || locations.length === 0) {
+        overlay.innerHTML = `
+            <div class="text-center">
+                <svg class="w-12 h-12 mx-auto mb-3 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <div class="text-white/40 text-sm">Niciun vizitator activ în acest moment</div>
+            </div>
+        `;
+        return;
+    }
+
+    // Calculate totals
+    const totalVisitors = locations.reduce((sum, l) => sum + (l.visitors || l.count || 0), 0);
+    const uniqueCountries = [...new Set(locations.map(l => l.country || 'RO'))].length;
+    const uniqueCities = locations.length;
+
+    document.getElementById('globe-total-visitors').textContent = formatNumber(totalVisitors);
+    document.getElementById('globe-countries').textContent = uniqueCountries;
+    document.getElementById('globe-cities').textContent = uniqueCities;
+
+    // Render simple map visualization
+    overlay.classList.add('hidden');
+    mapContainer.innerHTML = renderSimpleMap(locations);
+
+    // Render visitors list
+    const html = locations.slice(0, 10).map(l => {
+        const count = l.visitors || l.count || 0;
+        const percent = totalVisitors > 0 ? Math.round((count / totalVisitors) * 100) : 0;
+        return `
+            <div class="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span class="text-sm text-white">${l.city || l.country || 'Necunoscut'}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div class="h-full bg-emerald-500 rounded-full" style="width: ${percent}%"></div>
+                    </div>
+                    <span class="text-xs text-white/60 w-8 text-right">${count}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+    visitorsList.innerHTML = html || '<div class="text-sm text-white/40 text-center py-4">Niciun vizitator activ</div>';
+}
+
+function renderSimpleMap(locations) {
+    // Simple visual representation with dots on a stylized map background
+    const maxVisitors = Math.max(...locations.map(l => l.visitors || l.count || 0));
+
+    // Romanian cities approximate positions (normalized 0-100)
+    const cityPositions = {
+        'București': { x: 65, y: 55 },
+        'Bucharest': { x: 65, y: 55 },
+        'Cluj-Napoca': { x: 45, y: 30 },
+        'Cluj': { x: 45, y: 30 },
+        'Timișoara': { x: 25, y: 45 },
+        'Timisoara': { x: 25, y: 45 },
+        'Iași': { x: 80, y: 25 },
+        'Iasi': { x: 80, y: 25 },
+        'Constanța': { x: 85, y: 55 },
+        'Constanta': { x: 85, y: 55 },
+        'Brașov': { x: 55, y: 45 },
+        'Brasov': { x: 55, y: 45 },
+        'Sibiu': { x: 45, y: 45 },
+        'Oradea': { x: 25, y: 25 },
+        'Craiova': { x: 40, y: 60 },
+        'Galați': { x: 80, y: 45 },
+        'Galati': { x: 80, y: 45 },
+        'Ploiești': { x: 60, y: 50 },
+        'Ploiesti': { x: 60, y: 50 },
+        'Arad': { x: 22, y: 35 },
+        'Pitești': { x: 50, y: 55 },
+        'Pitesti': { x: 50, y: 55 },
+    };
+
+    const dots = locations.map((l, i) => {
+        const city = l.city || '';
+        const count = l.visitors || l.count || 0;
+        const size = Math.max(8, Math.min(24, (count / maxVisitors) * 24));
+
+        // Get position or generate random position
+        let pos = cityPositions[city];
+        if (!pos) {
+            // Random position for unknown cities
+            pos = { x: 20 + Math.random() * 60, y: 20 + Math.random() * 60 };
+        }
+
+        return `
+            <div class="absolute animate-pulse" style="left: ${pos.x}%; top: ${pos.y}%; transform: translate(-50%, -50%);">
+                <div class="relative">
+                    <div class="absolute inset-0 bg-emerald-400 rounded-full opacity-30 animate-ping" style="width: ${size * 2}px; height: ${size * 2}px; margin: -${size/2}px;"></div>
+                    <div class="bg-emerald-500 rounded-full shadow-lg shadow-emerald-500/50" style="width: ${size}px; height: ${size}px;"></div>
+                </div>
+                <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 whitespace-nowrap text-[10px] text-white/80 font-medium">${city || 'Loc. ' + (i+1)}</div>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900 opacity-50"></div>
+        <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path fill=\"none\" stroke=\"%23ffffff10\" stroke-width=\"0.5\" d=\"M10,20 Q30,10 50,20 T90,25 M5,50 Q25,40 50,50 T95,55 M10,80 Q30,70 50,80 T90,75\"/></svg>'); background-size: cover;"></div>
+        <div class="absolute inset-4">
+            ${dots}
+        </div>
+    `;
+}
+
 // Goal modal functions
 function showAddGoalModal() { document.getElementById('goal-modal').classList.remove('hidden'); }
 function closeGoalModal() { document.getElementById('goal-modal').classList.add('hidden'); document.getElementById('goal-form').reset(); }
@@ -861,13 +1244,14 @@ async function saveGoal(e) {
     const form = e.target;
     const data = {
         type: form.type.value,
+        name: form.name.value,
         target_value: parseFloat(form.target_value.value),
         deadline: form.deadline.value || null
     };
     try {
         const response = await AmbiletAPI.post(`/organizer/events/${eventId}/goals`, data);
         if (response.success) { closeGoalModal(); loadAnalytics(); }
-    } catch (error) { console.error('Error saving goal:', error); }
+    } catch (error) { console.error('Error saving goal:', error); alert('Eroare la salvarea obiectivului'); }
 }
 
 // Milestone modal functions
@@ -877,9 +1261,21 @@ function closeMilestoneModal() { document.getElementById('milestone-modal').clas
 async function saveMilestone(e) {
     e.preventDefault();
     const form = e.target;
+
+    // Map form type values to API type values
+    const typeMap = {
+        'facebook_ads': 'campaign_fb',
+        'google_ads': 'campaign_google',
+        'instagram_ads': 'campaign_instagram',
+        'tiktok_ads': 'campaign_tiktok',
+        'email_campaign': 'email',
+        'influencer': 'campaign_other',
+        'other': 'custom'
+    };
+
     const data = {
-        name: form.name.value,
-        type: form.type.value,
+        title: form.name.value,
+        type: typeMap[form.type.value] || form.type.value,
         start_date: form.start_date.value,
         end_date: form.end_date.value || null,
         budget: form.budget.value ? parseFloat(form.budget.value) : null
@@ -887,7 +1283,7 @@ async function saveMilestone(e) {
     try {
         const response = await AmbiletAPI.post(`/organizer/events/${eventId}/milestones`, data);
         if (response.success) { closeMilestoneModal(); loadAnalytics(); }
-    } catch (error) { console.error('Error saving milestone:', error); }
+    } catch (error) { console.error('Error saving milestone:', error); alert('Eroare la salvarea campaniei'); }
 }
 </script>
 
