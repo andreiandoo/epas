@@ -1,4 +1,7 @@
 <x-filament-panels::page>
+    {{-- Render action modals outside wire:ignore to ensure proper Livewire DOM updates --}}
+    <x-filament-actions::modals />
+
     <div class="space-y-6"
          wire:ignore.self
          x-data="konvaDesigner()"
@@ -546,12 +549,13 @@
                     }
                 },
 
-                mountLivewireAction(actionName) {
+                async mountLivewireAction(actionName) {
                     // Sync selectedSection to server before mounting action (for Edit Section modal)
+                    // Must await set() to ensure server has the value before mounting the action
                     if (this.selectedSection) {
-                        @this.set('selectedSection', this.selectedSection);
+                        await @this.set('selectedSection', this.selectedSection);
                     }
-                    @this.mountAction(actionName);
+                    await @this.mountAction(actionName);
                 },
 
                 // Keyboard shortcuts handler
@@ -1529,12 +1533,11 @@
                     this.contextMenuSectionId = null;
                 },
 
-                openEditSectionModal() {
+                async openEditSectionModal() {
                     if (this.contextMenuSectionId) {
-                        // Update Alpine variable so mountLivewireAction can sync it to server
+                        // Update Alpine variable - mountLivewireAction will sync to server
                         this.selectedSection = this.contextMenuSectionId;
-                        this.setLivewireSelectedSection(this.contextMenuSectionId);
-                        this.mountLivewireAction('editSection');
+                        await this.mountLivewireAction('editSection');
                     }
                     this.hideContextMenu();
                 },
