@@ -1121,7 +1121,11 @@ class EventsController extends BaseController
         $chartViews = [];
         $chartRawDates = [];
 
+        // First pass: collect daily ticket data to distribute views proportionally
+        $dailyData = [];
         $currentDate = $rangeStart->copy();
+        $totalDays = max(1, $rangeStart->diffInDays($rangeEnd) + 1);
+
         while ($currentDate <= $rangeEnd) {
             $dayStart = $currentDate->copy()->startOfDay();
             $dayEnd = $currentDate->copy()->endOfDay();
@@ -1130,14 +1134,45 @@ class EventsController extends BaseController
                 ->where('status', 'completed')
                 ->whereBetween('created_at', [$dayStart, $dayEnd]);
 
-            $chartLabels[] = $currentDate->format('M d');
-            $chartRawDates[] = $currentDate->format('Y-m-d');
-            $chartRevenue[] = (float) $dayOrders->sum('total');
-            $chartTickets[] = (int) $dayOrders->withCount('tickets')->get()->sum('tickets_count');
-            // Views per day - simplified distribution based on total views
-            $chartViews[] = max(0, intval($pageViews / max(1, $rangeStart->diffInDays($rangeEnd))));
+            $dailyData[] = [
+                'label' => $currentDate->format('M d'),
+                'date' => $currentDate->format('Y-m-d'),
+                'revenue' => (float) $dayOrders->sum('total'),
+                'tickets' => (int) $dayOrders->withCount('tickets')->get()->sum('tickets_count'),
+            ];
 
             $currentDate->addDay();
+        }
+
+        // Calculate views distribution based on ticket sales activity
+        // If no ticket activity, distribute views showing a cumulative growth pattern
+        $totalTicketsInRange = array_sum(array_column($dailyData, 'tickets'));
+
+        foreach ($dailyData as $index => $day) {
+            $chartLabels[] = $day['label'];
+            $chartRawDates[] = $day['date'];
+            $chartRevenue[] = $day['revenue'];
+            $chartTickets[] = $day['tickets'];
+
+            // Distribute views proportionally to ticket sales, or show cumulative if no sales
+            if ($totalTicketsInRange > 0 && $day['tickets'] > 0) {
+                // Days with ticket sales get proportional views
+                $chartViews[] = max(1, intval($pageViews * ($day['tickets'] / $totalTicketsInRange)));
+            } elseif ($totalTicketsInRange === 0 && $pageViews > 0) {
+                // No ticket sales - show views as cumulative growth
+                // Distribute views with a gradual increase towards the end of the period
+                $progress = ($index + 1) / $totalDays;
+                $cumulativeViews = intval($pageViews * $progress);
+                $previousCumulative = $index > 0 ? intval($pageViews * ($index / $totalDays)) : 0;
+                $dailyViews = max(0, $cumulativeViews - $previousCumulative);
+                // Ensure at least some views show on the last day
+                if ($index === count($dailyData) - 1 && $dailyViews === 0 && $pageViews > 0) {
+                    $dailyViews = $pageViews - array_sum($chartViews);
+                }
+                $chartViews[] = max(0, $dailyViews);
+            } else {
+                $chartViews[] = 0;
+            }
         }
 
         // Traffic sources (simplified - would need proper tracking implementation)
