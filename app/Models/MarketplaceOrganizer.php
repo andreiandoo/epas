@@ -27,6 +27,8 @@ class MarketplaceOrganizer extends Authenticatable
         'company_tax_id',
         'company_registration',
         'company_address',
+        'city',
+        'state',
         'logo',
         'description',
         'ticket_terms',
