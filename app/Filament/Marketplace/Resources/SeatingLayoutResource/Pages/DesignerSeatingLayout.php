@@ -757,33 +757,30 @@ class DesignerSeatingLayout extends Page
                     SC\Section::make('Row Settings')
                         ->description('Configure individual row settings (numbering start and alignment)')
                         ->schema([
-                            SC\Grid::make(3)
-                                ->schema([
-                                    Forms\Components\TextInput::make('row_renumber_start')
-                                        ->label('Renumber rows from')
-                                        ->placeholder('e.g. 5')
-                                        ->helperText('Renumber all row labels starting from this number')
-                                        ->columnSpan(1),
+                            Forms\Components\TextInput::make('row_renumber_start')
+                                ->label('Renumber rows from')
+                                ->placeholder('e.g. 5')
+                                ->helperText('Renumber all row labels starting from this number')
+                                ->columnSpan(1),
 
-                                    Forms\Components\Select::make('row_renumber_type')
-                                        ->label('Label type')
-                                        ->options([
-                                            'numeric' => 'Numeric (1, 2, 3...)',
-                                            'alpha_upper' => 'Letters A, B, C...',
-                                            'alpha_lower' => 'Letters a, b, c...',
-                                        ])
-                                        ->default('numeric')
-                                        ->columnSpan(1),
+                            Forms\Components\Select::make('row_renumber_type')
+                                ->label('Label type')
+                                ->options([
+                                    'numeric' => 'Numeric (1, 2, 3...)',
+                                    'alpha_upper' => 'Letters A, B, C...',
+                                    'alpha_lower' => 'Letters a, b, c...',
+                                ])
+                                ->default('numeric')
+                                ->columnSpan(1),
 
-                                    Forms\Components\Select::make('row_renumber_direction')
-                                        ->label('Direction')
-                                        ->options([
-                                            'top_to_bottom' => 'Top to bottom',
-                                            'bottom_to_top' => 'Bottom to top',
-                                        ])
-                                        ->default('top_to_bottom')
-                                        ->columnSpan(1),
-                                ]),
+                            Forms\Components\Select::make('row_renumber_direction')
+                                ->label('Direction')
+                                ->options([
+                                    'top_to_bottom' => 'Top to bottom',
+                                    'bottom_to_top' => 'Bottom to top',
+                                ])
+                                ->default('top_to_bottom')
+                                ->columnSpan(1),
 
                             Forms\Components\Repeater::make('rows')
                                 ->schema([
@@ -819,6 +816,7 @@ class DesignerSeatingLayout extends Page
                                 ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
                                 ->columnSpanFull(),
                         ])
+                        ->columns(3)
                         ->collapsed()
                         ->collapsible(),
 
