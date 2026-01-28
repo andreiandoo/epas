@@ -1081,6 +1081,68 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.goals':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/goals';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.goal':
+        $eventId = $_GET['event_id'] ?? '';
+        $goalId = $_GET['goal_id'] ?? '';
+        if (!$eventId || !$goalId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id or goal_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/goals/' . urlencode($goalId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.milestones':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/milestones';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.milestone':
+        $eventId = $_GET['event_id'] ?? '';
+        $milestoneId = $_GET['milestone_id'] ?? '';
+        if (!$eventId || !$milestoneId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id or milestone_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/milestones/' . urlencode($milestoneId);
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.participants':
         $eventId = $_GET['event_id'] ?? '';
         if (!$eventId) {

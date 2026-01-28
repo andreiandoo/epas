@@ -66,17 +66,20 @@ $eventId = $_GET['event'] ?? null;
                         <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all period-btn text-gray-500" data-period="all">Tot</button>
                     </div>
 
-                    <!-- Live Indicator with Globe Button -->
+                    <!-- Live Indicator -->
                     <div id="live-indicator" class="items-center hidden gap-2 px-3 py-2 border border-emerald-200 bg-emerald-50 rounded-xl">
                         <span class="relative flex h-2.5 w-2.5">
                             <span class="absolute inline-flex w-full h-full rounded-full opacity-75 pulse-ring bg-emerald-400"></span>
                             <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                         </span>
                         <span id="live-count" class="text-sm font-medium text-emerald-700">0 online</span>
-                        <button onclick="openGlobeModal()" class="p-1.5 ml-1 transition-colors rounded-lg hover:bg-emerald-100" title="Vezi vizitatori pe hartă">
-                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </button>
                     </div>
+
+                    <!-- Globe Button (always visible) -->
+                    <button onclick="openGlobeModal()" class="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors" title="Vezi trafic live pe hartă">
+                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span class="hidden sm:inline">Hartă</span>
+                    </button>
 
                     <!-- Export -->
                     <button onclick="exportReport()" class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white transition-all rounded-xl bg-primary hover:bg-primary-dark">
@@ -186,7 +189,7 @@ $eventId = $_GET['event'] ?? null;
                             <div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
                             <span class="text-xs font-medium text-blue-600">Bilete</span>
                         </button>
-                        <button onclick="toggleChartMetric('views')" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all chart-metric-btn border-gray-200" data-metric="views">
+                        <button onclick="toggleChartMetric('views')" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all chart-metric-btn active border-cyan-200 bg-cyan-50" data-metric="views">
                             <div class="w-2.5 h-2.5 rounded-full bg-cyan-500"></div>
                             <span class="text-xs font-medium text-cyan-600">Vizualizări</span>
                         </button>
@@ -368,8 +371,8 @@ $eventId = $_GET['event'] ?? null;
 <!-- Add Milestone Modal -->
 <div id="milestone-modal" class="fixed inset-0 z-50 hidden">
     <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeMilestoneModal()"></div>
-    <div class="fixed inset-0 flex items-center justify-center p-4">
-        <div class="w-full max-w-md bg-white shadow-2xl rounded-2xl" onclick="event.stopPropagation()">
+    <div class="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="w-full max-w-lg bg-white shadow-2xl rounded-2xl my-8" onclick="event.stopPropagation()">
             <div class="p-6 border-b border-border">
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-bold text-secondary">Adaugă campanie</h2>
@@ -378,19 +381,23 @@ $eventId = $_GET['event'] ?? null;
                     </button>
                 </div>
             </div>
-            <form id="milestone-form" onsubmit="saveMilestone(event)" class="p-6 space-y-4">
+            <form id="milestone-form" onsubmit="saveMilestone(event)" class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                 <div>
                     <label class="block mb-1 text-sm font-medium text-secondary">Nume campanie</label>
                     <input type="text" name="name" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" required placeholder="ex: Campanie Facebook Ads">
                 </div>
                 <div>
                     <label class="block mb-1 text-sm font-medium text-secondary">Tip</label>
-                    <select name="type" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" required>
+                    <select name="type" onchange="updateMilestoneFields(this.value)" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" required>
                         <option value="facebook_ads">Facebook Ads</option>
                         <option value="google_ads">Google Ads</option>
                         <option value="instagram_ads">Instagram Ads</option>
                         <option value="tiktok_ads">TikTok Ads</option>
                         <option value="email_campaign">Email Campaign</option>
+                        <option value="price_change">Schimbare Preț</option>
+                        <option value="announcement">Anunț</option>
+                        <option value="press">Comunicat de Presă</option>
+                        <option value="lineup">Update Lineup</option>
                         <option value="influencer">Influencer</option>
                         <option value="other">Altele</option>
                     </select>
@@ -405,11 +412,78 @@ $eventId = $_GET['event'] ?? null;
                         <input type="date" name="end_date" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary">
                     </div>
                 </div>
-                <div>
-                    <label class="block mb-1 text-sm font-medium text-secondary">Buget (RON)</label>
-                    <input type="number" name="budget" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" min="0" step="0.01">
+
+                <!-- Ad Campaign Fields (shown for ad types) -->
+                <div id="milestone-ad-fields" class="space-y-4">
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-secondary">Buget (RON)</label>
+                        <input type="number" name="budget" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-secondary">ID Campanie platformă</label>
+                        <input type="text" name="platform_campaign_id" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="ex: 120215478965421">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-secondary">Fereastră atribuire (zile)</label>
+                        <select name="attribution_window_days" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                            <option value="7">7 zile</option>
+                            <option value="14">14 zile</option>
+                            <option value="28" selected>28 zile</option>
+                            <option value="30">30 zile</option>
+                        </select>
+                    </div>
+                    <div class="p-4 border rounded-xl border-border bg-gray-50">
+                        <h4 class="mb-3 text-sm font-medium text-secondary">Parametri UTM</h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block mb-1 text-xs text-muted">UTM Source</label>
+                                <input type="text" name="utm_source" class="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="facebook">
+                            </div>
+                            <div>
+                                <label class="block mb-1 text-xs text-muted">UTM Medium</label>
+                                <input type="text" name="utm_medium" class="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="cpc">
+                            </div>
+                            <div>
+                                <label class="block mb-1 text-xs text-muted">UTM Campaign</label>
+                                <input type="text" name="utm_campaign" class="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="summer-sale">
+                            </div>
+                            <div>
+                                <label class="block mb-1 text-xs text-muted">UTM Content</label>
+                                <input type="text" name="utm_content" class="w-full px-3 py-1.5 text-sm border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="banner-1">
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex justify-end gap-3 pt-4">
+
+                <!-- Non-Ad Campaign Fields (shown for email, price, announcement, etc.) -->
+                <div id="milestone-other-fields" class="hidden space-y-4">
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-secondary">Descriere</label>
+                        <textarea name="description" rows="3" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Descrieți campania sau acțiunea..."></textarea>
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-secondary">Metrică de impact</label>
+                        <select name="impact_metric" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                            <option value="">Selectează metrica</option>
+                            <option value="tickets_sold">Bilete vândute</option>
+                            <option value="page_views">Vizualizări pagină</option>
+                            <option value="revenue">Venituri</option>
+                            <option value="conversion_rate">Rata conversie</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block mb-1 text-sm font-medium text-secondary">Valoare inițială</label>
+                            <input type="number" name="baseline_value" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" min="0" step="0.01" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-sm font-medium text-secondary">Valoare după</label>
+                            <input type="number" name="post_value" class="w-full px-4 py-2 text-sm border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" min="0" step="0.01" placeholder="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-border">
                     <button type="button" onclick="closeMilestoneModal()" class="px-4 py-2 text-sm font-medium transition-colors text-muted hover:bg-surface rounded-xl">Anulează</button>
                     <button type="submit" class="px-4 py-2 text-sm font-medium text-white transition-colors bg-primary hover:bg-primary-dark rounded-xl">Salvează</button>
                 </div>
@@ -483,8 +557,23 @@ $eventId = $_GET['event'] ?? null;
 const eventId = <?= json_encode($eventId) ?>;
 let currentPeriod = '30d';
 let mainChart = null;
-let chartMetrics = { revenue: true, tickets: true, views: false };
+let chartMetrics = { revenue: true, tickets: true, views: true };
 let eventData = null;
+
+// Helper to fix image URLs (convert core.tixello.com to bilete.online paths)
+function fixImageUrl(url) {
+    if (!url) return '';
+    // Replace core.tixello.com URLs with local path
+    if (url.includes('core.tixello.com')) {
+        // Extract the path after the domain
+        const match = url.match(/core\.tixello\.com\/(.+)/);
+        if (match) {
+            return '/analytics/' + match[1];
+        }
+    }
+    // If it's already a relative path or on the correct domain, return as-is
+    return url;
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -546,37 +635,68 @@ function updateDashboard(data) {
 
         // Format date properly (from ISO to DD.MM.YYYY | HH:MM)
         let dateStr = '';
-        if (data.event.starts_at) {
-            const d = new Date(data.event.starts_at);
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear();
-            const hours = String(d.getHours()).padStart(2, '0');
-            const minutes = String(d.getMinutes()).padStart(2, '0');
-            dateStr = `${day}.${month}.${year} | ${hours}:${minutes}`;
-        } else if (data.event.date) {
-            dateStr = data.event.date;
+        const dateSource = data.event.starts_at || data.event.start_date || data.event.date_start || data.event.date;
+        if (dateSource) {
+            const d = new Date(dateSource);
+            if (!isNaN(d.getTime())) {
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                const hours = String(d.getHours()).padStart(2, '0');
+                const minutes = String(d.getMinutes()).padStart(2, '0');
+                dateStr = `${day}.${month}.${year} | ${hours}:${minutes}`;
+            } else if (typeof dateSource === 'string') {
+                // Try to parse date string like "2025-01-30"
+                const match = dateSource.match(/(\d{4})-(\d{2})-(\d{2})/);
+                if (match) {
+                    dateStr = `${match[3]}.${match[2]}.${match[1]}`;
+                } else {
+                    dateStr = dateSource;
+                }
+            }
         }
 
         // Format venue properly (handle object or string)
         let venueStr = '';
+        let cityStr = '';
         if (data.event.venue) {
             if (typeof data.event.venue === 'object') {
                 venueStr = data.event.venue.name || data.event.venue.title || '';
+                cityStr = data.event.venue.city || '';
             } else {
                 venueStr = data.event.venue;
             }
         }
+        // Also check for city at event level
+        if (!cityStr && data.event.city) {
+            cityStr = data.event.city;
+        }
+        // Build location string
+        let locationStr = venueStr;
+        if (cityStr && cityStr !== venueStr) {
+            locationStr = venueStr ? `${venueStr}, ${cityStr}` : cityStr;
+        }
 
-        document.getElementById('event-selector-info').textContent = `${dateStr}${venueStr ? ' • ' + venueStr : ''}`;
+        document.getElementById('event-selector-info').textContent = `${dateStr}${locationStr ? ' • ' + locationStr : ''}`;
         if (data.event.image) {
-            document.getElementById('event-selector-image').innerHTML = `<img src="${data.event.image}" class="object-cover w-full h-full">`;
+            document.getElementById('event-selector-image').innerHTML = `<img src="${fixImageUrl(data.event.image)}" class="object-cover w-full h-full">`;
         }
 
         // Days until event
-        const daysUntil = data.event.days_until ?? data.overview?.days_until ?? '-';
-        document.getElementById('stat-days').textContent = daysUntil;
-        document.getElementById('stat-event-date').textContent = data.event.date || '';
+        let daysUntil = data.event.days_until ?? data.overview?.days_until;
+        // Calculate days until if not provided
+        if (daysUntil === undefined || daysUntil === null) {
+            const eventDateSource = data.event.starts_at || data.event.start_date || data.event.date_start || data.event.date;
+            if (eventDateSource) {
+                const eventDate = new Date(eventDateSource);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                eventDate.setHours(0, 0, 0, 0);
+                daysUntil = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+            }
+        }
+        document.getElementById('stat-days').textContent = daysUntil !== undefined && daysUntil !== null ? daysUntil : '-';
+        document.getElementById('stat-event-date').textContent = dateStr || data.event.date || '';
 
         // Status
         let statusText = 'Activ';
@@ -1048,27 +1168,48 @@ function renderEventsList(events) {
 
         // Format date
         let dateStr = '';
-        if (e.starts_at) {
-            const d = new Date(e.starts_at);
-            dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
-        } else if (e.date) {
-            dateStr = e.date;
+        const dateSource = e.starts_at || e.start_date || e.date_start || e.date;
+        if (dateSource) {
+            const d = new Date(dateSource);
+            if (!isNaN(d.getTime())) {
+                dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+            } else if (typeof dateSource === 'string') {
+                const match = dateSource.match(/(\d{4})-(\d{2})-(\d{2})/);
+                if (match) {
+                    dateStr = `${match[3]}.${match[2]}.${match[1]}`;
+                } else {
+                    dateStr = dateSource;
+                }
+            }
         }
 
-        // Get venue name
+        // Get venue name and city
         let venueName = '';
+        let cityName = '';
         if (e.venue) {
-            venueName = typeof e.venue === 'object' ? (e.venue.name || '') : e.venue;
+            if (typeof e.venue === 'object') {
+                venueName = e.venue.name || e.venue.title || '';
+                cityName = e.venue.city || '';
+            } else {
+                venueName = e.venue;
+            }
+        }
+        if (!cityName && e.city) {
+            cityName = e.city;
+        }
+        let locationStr = venueName;
+        if (cityName && cityName !== venueName) {
+            locationStr = venueName ? `${venueName}, ${cityName}` : cityName;
         }
 
         return `
             <a href="/organizator/analytics/${e.id}" class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 ${isActive ? 'bg-primary/5 border-l-2 border-primary' : ''}">
                 <div class="flex-shrink-0 w-10 h-10 overflow-hidden bg-gray-200 rounded-lg">
-                    ${e.image ? `<img src="${e.image}" class="object-cover w-full h-full">` : ''}
+                    ${e.image ? `<img src="${fixImageUrl(e.image)}" class="object-cover w-full h-full">` : ''}
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="text-sm font-medium text-gray-800 truncate">${e.title || 'Eveniment'}</div>
-                    <div class="text-[11px] text-gray-500 truncate">${dateStr}${venueName ? ' • ' + venueName : ''}</div>
+                    <div class="text-[11px] text-gray-500 truncate">${dateStr}${locationStr ? ' • ' + locationStr : ''}</div>
                 </div>
                 ${isActive ? '<svg class="flex-shrink-0 w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : ''}
             </a>
@@ -1255,8 +1396,54 @@ async function saveGoal(e) {
 }
 
 // Milestone modal functions
-function showAddMilestoneModal() { document.getElementById('milestone-modal').classList.remove('hidden'); }
-function closeMilestoneModal() { document.getElementById('milestone-modal').classList.add('hidden'); document.getElementById('milestone-form').reset(); }
+const AD_CAMPAIGN_TYPES = ['facebook_ads', 'google_ads', 'instagram_ads', 'tiktok_ads', 'influencer'];
+
+function showAddMilestoneModal() {
+    document.getElementById('milestone-modal').classList.remove('hidden');
+    updateMilestoneFields('facebook_ads'); // Default to ad fields
+}
+
+function closeMilestoneModal() {
+    document.getElementById('milestone-modal').classList.add('hidden');
+    document.getElementById('milestone-form').reset();
+    updateMilestoneFields('facebook_ads');
+}
+
+function updateMilestoneFields(type) {
+    const adFields = document.getElementById('milestone-ad-fields');
+    const otherFields = document.getElementById('milestone-other-fields');
+
+    if (AD_CAMPAIGN_TYPES.includes(type)) {
+        adFields.classList.remove('hidden');
+        otherFields.classList.add('hidden');
+        // Pre-fill UTM source based on type
+        const utmSourceInput = document.querySelector('input[name="utm_source"]');
+        const utmMediumInput = document.querySelector('input[name="utm_medium"]');
+        if (utmSourceInput) {
+            switch(type) {
+                case 'facebook_ads':
+                case 'instagram_ads':
+                    utmSourceInput.placeholder = 'facebook';
+                    utmMediumInput.placeholder = 'cpc';
+                    break;
+                case 'google_ads':
+                    utmSourceInput.placeholder = 'google';
+                    utmMediumInput.placeholder = 'cpc';
+                    break;
+                case 'tiktok_ads':
+                    utmSourceInput.placeholder = 'tiktok';
+                    utmMediumInput.placeholder = 'cpc';
+                    break;
+                default:
+                    utmSourceInput.placeholder = 'organic';
+                    utmMediumInput.placeholder = 'referral';
+            }
+        }
+    } else {
+        adFields.classList.add('hidden');
+        otherFields.classList.remove('hidden');
+    }
+}
 
 async function saveMilestone(e) {
     e.preventDefault();
@@ -1269,17 +1456,41 @@ async function saveMilestone(e) {
         'instagram_ads': 'campaign_instagram',
         'tiktok_ads': 'campaign_tiktok',
         'email_campaign': 'email',
+        'price_change': 'price',
+        'announcement': 'announcement',
+        'press': 'press',
+        'lineup': 'lineup',
         'influencer': 'campaign_other',
         'other': 'custom'
     };
 
+    const formType = form.type.value;
+    const isAdCampaign = AD_CAMPAIGN_TYPES.includes(formType);
+
     const data = {
         title: form.name.value,
-        type: typeMap[form.type.value] || form.type.value,
+        type: typeMap[formType] || formType,
         start_date: form.start_date.value,
-        end_date: form.end_date.value || null,
-        budget: form.budget.value ? parseFloat(form.budget.value) : null
+        end_date: form.end_date.value || null
     };
+
+    if (isAdCampaign) {
+        // Ad campaign specific fields
+        data.budget = form.budget.value ? parseFloat(form.budget.value) : null;
+        data.platform_campaign_id = form.platform_campaign_id.value || null;
+        data.attribution_window_days = parseInt(form.attribution_window_days.value) || 28;
+        data.utm_source = form.utm_source.value || null;
+        data.utm_medium = form.utm_medium.value || null;
+        data.utm_campaign = form.utm_campaign.value || null;
+        data.utm_content = form.utm_content.value || null;
+    } else {
+        // Non-ad campaign fields
+        data.description = form.description.value || null;
+        data.impact_metric = form.impact_metric.value || null;
+        data.baseline_value = form.baseline_value.value ? parseFloat(form.baseline_value.value) : null;
+        data.post_value = form.post_value.value ? parseFloat(form.post_value.value) : null;
+    }
+
     try {
         const response = await AmbiletAPI.post(`/organizer/events/${eventId}/milestones`, data);
         if (response.success) { closeMilestoneModal(); loadAnalytics(); }

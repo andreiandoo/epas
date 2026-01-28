@@ -240,6 +240,10 @@ const AmbiletAPI = {
 
         // Organizer events
         if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';
+        if (endpoint.match(/\/organizer\/events\/\d+\/goals\/\d+$/)) return 'organizer.event.goal';
+        if (endpoint.match(/\/organizer\/events\/\d+\/goals$/)) return 'organizer.event.goals';
+        if (endpoint.match(/\/organizer\/events\/\d+\/milestones\/\d+$/)) return 'organizer.event.milestone';
+        if (endpoint.match(/\/organizer\/events\/\d+\/milestones$/)) return 'organizer.event.milestones';
         if (endpoint.match(/\/organizer\/events\/\d+\/participants\/export$/)) return 'organizer.event.participants.export';
         if (endpoint.match(/\/organizer\/events\/\d+\/participants$/)) return 'organizer.event.participants';
         if (endpoint.match(/\/organizer\/events\/\d+\/check-in\//)) return 'organizer.event.checkin';
@@ -394,6 +398,26 @@ const AmbiletAPI = {
                 return `event_id=${encodeURIComponent(eventId)}&${endpoint.substring(queryStart + 1)}`;
             }
             return `event_id=${encodeURIComponent(eventId)}`;
+        }
+
+        // Organizer event goals - extract event ID and optional goal ID
+        const organizerEventGoalMatch = endpoint.match(/\/organizer\/events\/(\d+)\/goals\/(\d+)$/);
+        if (organizerEventGoalMatch) {
+            return `event_id=${encodeURIComponent(organizerEventGoalMatch[1])}&goal_id=${encodeURIComponent(organizerEventGoalMatch[2])}`;
+        }
+        const organizerEventGoalsMatch = endpoint.match(/\/organizer\/events\/(\d+)\/goals$/);
+        if (organizerEventGoalsMatch) {
+            return `event_id=${encodeURIComponent(organizerEventGoalsMatch[1])}`;
+        }
+
+        // Organizer event milestones - extract event ID and optional milestone ID
+        const organizerEventMilestoneMatch = endpoint.match(/\/organizer\/events\/(\d+)\/milestones\/(\d+)$/);
+        if (organizerEventMilestoneMatch) {
+            return `event_id=${encodeURIComponent(organizerEventMilestoneMatch[1])}&milestone_id=${encodeURIComponent(organizerEventMilestoneMatch[2])}`;
+        }
+        const organizerEventMilestonesMatch = endpoint.match(/\/organizer\/events\/(\d+)\/milestones$/);
+        if (organizerEventMilestonesMatch) {
+            return `event_id=${encodeURIComponent(organizerEventMilestonesMatch[1])}`;
         }
 
         // Organizer event endpoints - extract event ID
