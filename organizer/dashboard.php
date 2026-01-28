@@ -297,25 +297,34 @@ const OrgDashboard = {
     render() {
         const d = this.data;
 
-        // Stats
-        document.getElementById('stat-revenue').textContent = this.formatCurrency(d.revenue_month);
-        document.getElementById('stat-revenue-change').textContent = `+${d.revenue_change}%`;
-        document.getElementById('stat-tickets').textContent = d.tickets_sold;
-        document.getElementById('stat-tickets-change').textContent = `+${d.tickets_change}%`;
-        document.getElementById('stat-events').textContent = d.active_events;
-        document.getElementById('nav-events-count').textContent = d.active_events;
-        document.getElementById('stat-conversion').textContent = `${d.conversion_rate}%`;
-        document.getElementById('stat-conv-change').textContent = `+${d.conversion_change}%`;
+        // Stats (handle both new API format and fallback demo data)
+        const revenueMonth = d.revenue_month ?? d.sales?.gross_revenue ?? 0;
+        const ticketsSold = d.tickets_sold ?? d.sales?.tickets_sold ?? 0;
+        const activeEvents = d.active_events ?? d.events?.upcoming ?? 0;
+        const conversionRate = d.conversion_rate ?? 0;
+        const revenueChange = d.revenue_change ?? 0;
+        const ticketsChange = d.tickets_change ?? 0;
+        const convChange = d.conversion_change ?? 0;
+
+        document.getElementById('stat-revenue').textContent = this.formatCurrency(revenueMonth);
+        document.getElementById('stat-revenue-change').textContent = `+${revenueChange}%`;
+        document.getElementById('stat-tickets').textContent = ticketsSold;
+        document.getElementById('stat-tickets-change').textContent = `+${ticketsChange}%`;
+        document.getElementById('stat-events').textContent = activeEvents;
+        document.getElementById('nav-events-count').textContent = activeEvents;
+        document.getElementById('stat-conversion').textContent = `${conversionRate}%`;
+        document.getElementById('stat-conv-change').textContent = `+${convChange}%`;
 
         // Welcome stat
-        document.getElementById('welcome-stat').textContent = `Ai vandut ${d.weekly_sales || d.tickets_sold} bilete in ultima saptamana. Continua tot asa!`;
+        document.getElementById('welcome-stat').textContent = `Ai vandut ${d.weekly_sales || ticketsSold} bilete in ultima saptamana. Continua tot asa!`;
 
-        // Events table
-        this.renderEvents(d.events);
+        // Events table - use events_list from API or events from demo data
+        const eventsList = d.events_list ?? d.events ?? [];
+        this.renderEvents(eventsList);
 
         // Upcoming event
-        if (d.events?.length) {
-            this.renderUpcomingEvent(d.events[0]);
+        if (eventsList?.length) {
+            this.renderUpcomingEvent(eventsList[0]);
         }
 
         // Activity
