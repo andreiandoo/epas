@@ -599,7 +599,7 @@ class DesignerSeatingLayout extends Page
             Actions\Action::make('editSection')
                 ->label('Edit Section')
                 ->color('warning')
-                ->hidden()
+                ->extraAttributes(['class' => '!hidden'])
                 ->modalHeading('Edit Section')
                 ->modalWidth('2xl')
                 ->fillForm(function () {
