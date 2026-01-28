@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\Event;
+use App\Models\EventGoal;
+use App\Models\EventMilestone;
 use App\Models\MarketplaceOrganizer;
 use App\Models\TicketType;
 use App\Models\MarketplaceTransaction;
@@ -1383,6 +1385,418 @@ class EventsController extends BaseController
                 'image' => null,
             ],
         ], 'Artist created', 201);
+    }
+
+    /**
+     * Get goals for an event
+     */
+    public function goals(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $goals = EventGoal::forEvent($eventId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($goal) {
+                // Update progress before returning
+                $goal->updateProgress();
+
+                return [
+                    'id' => $goal->id,
+                    'type' => $goal->type,
+                    'type_label' => $goal->type_label,
+                    'type_icon' => $goal->type_icon,
+                    'type_color' => $goal->type_color,
+                    'name' => $goal->name,
+                    'target_value' => $goal->target_value,
+                    'current_value' => $goal->current_value,
+                    'formatted_target' => $goal->formatted_target,
+                    'formatted_current' => $goal->formatted_current,
+                    'progress_percent' => (float) $goal->progress_percent,
+                    'progress_status' => $goal->progress_status,
+                    'deadline' => $goal->deadline?->toDateString(),
+                    'days_remaining' => $goal->days_remaining,
+                    'remaining' => $goal->remaining,
+                    'status' => $goal->status,
+                    'is_achieved' => $goal->isAchieved(),
+                    'is_overdue' => $goal->isOverdue(),
+                    'achieved_at' => $goal->achieved_at?->toIso8601String(),
+                    'notes' => $goal->notes,
+                    'created_at' => $goal->created_at->toIso8601String(),
+                ];
+            });
+
+        return $this->success([
+            'goals' => $goals,
+            'types' => EventGoal::TYPE_CONFIG,
+        ]);
+    }
+
+    /**
+     * Create a new goal for an event
+     */
+    public function storeGoal(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validated = $request->validate([
+            'type' => 'required|string|in:revenue,tickets,visitors,conversion_rate',
+            'name' => 'required|string|max:255',
+            'target_value' => 'required|numeric|min:1',
+            'deadline' => 'nullable|date',
+            'notes' => 'nullable|string|max:1000',
+            'email_alerts' => 'nullable|boolean',
+            'in_app_alerts' => 'nullable|boolean',
+            'alert_email' => 'nullable|email',
+        ]);
+
+        // Convert target value to appropriate format (cents for revenue, percentage * 100 for conversion)
+        $targetValue = match ($validated['type']) {
+            'revenue' => (int) ($validated['target_value'] * 100), // Convert to cents
+            'conversion_rate' => (int) ($validated['target_value'] * 100), // Convert percentage to integer
+            default => (int) $validated['target_value'],
+        };
+
+        $goal = EventGoal::create([
+            'event_id' => $eventId,
+            'type' => $validated['type'],
+            'name' => $validated['name'],
+            'target_value' => $targetValue,
+            'current_value' => 0,
+            'progress_percent' => 0,
+            'deadline' => $validated['deadline'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+            'email_alerts' => $validated['email_alerts'] ?? false,
+            'in_app_alerts' => $validated['in_app_alerts'] ?? true,
+            'alert_email' => $validated['alert_email'] ?? $organizer->email,
+            'alert_thresholds' => EventGoal::DEFAULT_THRESHOLDS,
+            'status' => EventGoal::STATUS_ACTIVE,
+        ]);
+
+        // Update progress immediately
+        $goal->updateProgress();
+
+        return $this->success([
+            'goal' => [
+                'id' => $goal->id,
+                'type' => $goal->type,
+                'type_label' => $goal->type_label,
+                'name' => $goal->name,
+                'target_value' => $goal->target_value,
+                'current_value' => $goal->current_value,
+                'formatted_target' => $goal->formatted_target,
+                'formatted_current' => $goal->formatted_current,
+                'progress_percent' => (float) $goal->progress_percent,
+                'deadline' => $goal->deadline?->toDateString(),
+                'status' => $goal->status,
+            ],
+        ], 'Goal created', 201);
+    }
+
+    /**
+     * Update a goal
+     */
+    public function updateGoal(Request $request, int $eventId, int $goalId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $goal = EventGoal::where('id', $goalId)
+            ->where('event_id', $eventId)
+            ->first();
+
+        if (!$goal) {
+            return $this->error('Goal not found', 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'target_value' => 'sometimes|numeric|min:1',
+            'deadline' => 'nullable|date',
+            'notes' => 'nullable|string|max:1000',
+            'email_alerts' => 'nullable|boolean',
+            'in_app_alerts' => 'nullable|boolean',
+            'status' => 'sometimes|string|in:active,achieved,missed,cancelled',
+        ]);
+
+        if (isset($validated['target_value'])) {
+            $validated['target_value'] = match ($goal->type) {
+                'revenue' => (int) ($validated['target_value'] * 100),
+                'conversion_rate' => (int) ($validated['target_value'] * 100),
+                default => (int) $validated['target_value'],
+            };
+        }
+
+        $goal->update($validated);
+        $goal->updateProgress();
+
+        return $this->success([
+            'goal' => [
+                'id' => $goal->id,
+                'type' => $goal->type,
+                'name' => $goal->name,
+                'target_value' => $goal->target_value,
+                'progress_percent' => (float) $goal->progress_percent,
+                'status' => $goal->status,
+            ],
+        ], 'Goal updated');
+    }
+
+    /**
+     * Delete a goal
+     */
+    public function deleteGoal(Request $request, int $eventId, int $goalId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $goal = EventGoal::where('id', $goalId)
+            ->where('event_id', $eventId)
+            ->first();
+
+        if (!$goal) {
+            return $this->error('Goal not found', 404);
+        }
+
+        $goal->delete();
+
+        return $this->success(null, 'Goal deleted');
+    }
+
+    /**
+     * Get milestones/campaigns for an event
+     */
+    public function milestones(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $milestones = EventMilestone::forEvent($eventId)
+            ->orderByDesc('start_date')
+            ->get()
+            ->map(function ($milestone) {
+                return [
+                    'id' => $milestone->id,
+                    'type' => $milestone->type,
+                    'type_label' => $milestone->getTypeLabel(),
+                    'type_icon' => $milestone->getTypeIcon(),
+                    'type_color' => $milestone->getTypeColor(),
+                    'title' => $milestone->title,
+                    'description' => $milestone->description,
+                    'start_date' => $milestone->start_date?->toDateString(),
+                    'end_date' => $milestone->end_date?->toDateString(),
+                    'budget' => (float) $milestone->budget,
+                    'currency' => $milestone->currency ?? 'RON',
+                    'is_ad_campaign' => $milestone->isAdCampaign(),
+                    'has_budget' => $milestone->hasBudget(),
+                    'impressions' => $milestone->impressions,
+                    'clicks' => $milestone->clicks,
+                    'conversions' => $milestone->conversions,
+                    'attributed_revenue' => (float) $milestone->attributed_revenue,
+                    'roi' => (float) $milestone->roi,
+                    'roas' => (float) $milestone->roas,
+                    'cac' => (float) $milestone->cac,
+                    'utm_source' => $milestone->utm_source,
+                    'utm_medium' => $milestone->utm_medium,
+                    'utm_campaign' => $milestone->utm_campaign,
+                    'is_active' => $milestone->is_active,
+                    'created_at' => $milestone->created_at->toIso8601String(),
+                ];
+            });
+
+        return $this->success([
+            'milestones' => $milestones,
+            'types' => EventMilestone::TYPE_LABELS,
+        ]);
+    }
+
+    /**
+     * Create a new milestone/campaign for an event
+     */
+    public function storeMilestone(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validated = $request->validate([
+            'type' => 'required|string|in:campaign_fb,campaign_google,campaign_tiktok,campaign_instagram,campaign_other,email,price,announcement,press,lineup,custom',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string|max:2000',
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'budget' => 'nullable|numeric|min:0',
+            'currency' => 'nullable|string|max:3',
+            'utm_source' => 'nullable|string|max:100',
+            'utm_medium' => 'nullable|string|max:100',
+            'utm_campaign' => 'nullable|string|max:100',
+            'utm_content' => 'nullable|string|max:100',
+            'utm_term' => 'nullable|string|max:100',
+        ]);
+
+        $milestone = EventMilestone::create([
+            'event_id' => $eventId,
+            'marketplace_client_id' => $organizer->marketplace_client_id,
+            'type' => $validated['type'],
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'] ?? null,
+            'budget' => $validated['budget'] ?? null,
+            'currency' => $validated['currency'] ?? 'RON',
+            'utm_source' => $validated['utm_source'] ?? null,
+            'utm_medium' => $validated['utm_medium'] ?? null,
+            'utm_campaign' => $validated['utm_campaign'] ?? null,
+            'utm_content' => $validated['utm_content'] ?? null,
+            'utm_term' => $validated['utm_term'] ?? null,
+            'attribution_window_days' => 7,
+            'is_active' => true,
+        ]);
+
+        // Auto-generate UTM parameters if not provided
+        if (!$milestone->utm_campaign) {
+            $milestone->autoGenerateUtmParameters();
+            $milestone->save();
+        }
+
+        return $this->success([
+            'milestone' => [
+                'id' => $milestone->id,
+                'type' => $milestone->type,
+                'type_label' => $milestone->getTypeLabel(),
+                'title' => $milestone->title,
+                'start_date' => $milestone->start_date?->toDateString(),
+                'end_date' => $milestone->end_date?->toDateString(),
+                'budget' => (float) $milestone->budget,
+                'utm_campaign' => $milestone->utm_campaign,
+            ],
+        ], 'Milestone created', 201);
+    }
+
+    /**
+     * Update a milestone
+     */
+    public function updateMilestone(Request $request, int $eventId, int $milestoneId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $milestone = EventMilestone::where('id', $milestoneId)
+            ->where('event_id', $eventId)
+            ->first();
+
+        if (!$milestone) {
+            return $this->error('Milestone not found', 404);
+        }
+
+        $validated = $request->validate([
+            'title' => 'sometimes|string|max:255',
+            'description' => 'nullable|string|max:2000',
+            'start_date' => 'sometimes|date',
+            'end_date' => 'nullable|date',
+            'budget' => 'nullable|numeric|min:0',
+            'impressions' => 'nullable|integer|min:0',
+            'clicks' => 'nullable|integer|min:0',
+            'conversions' => 'nullable|integer|min:0',
+            'attributed_revenue' => 'nullable|numeric|min:0',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        $milestone->update($validated);
+
+        // Recalculate metrics if budget or revenue changed
+        if (isset($validated['budget']) || isset($validated['attributed_revenue']) || isset($validated['conversions'])) {
+            $milestone->updateCalculatedMetrics();
+        }
+
+        return $this->success([
+            'milestone' => [
+                'id' => $milestone->id,
+                'type' => $milestone->type,
+                'title' => $milestone->title,
+                'budget' => (float) $milestone->budget,
+                'roi' => (float) $milestone->roi,
+                'roas' => (float) $milestone->roas,
+            ],
+        ], 'Milestone updated');
+    }
+
+    /**
+     * Delete a milestone
+     */
+    public function deleteMilestone(Request $request, int $eventId, int $milestoneId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $milestone = EventMilestone::where('id', $milestoneId)
+            ->where('event_id', $eventId)
+            ->first();
+
+        if (!$milestone) {
+            return $this->error('Milestone not found', 404);
+        }
+
+        $milestone->delete();
+
+        return $this->success(null, 'Milestone deleted');
     }
 
     /**

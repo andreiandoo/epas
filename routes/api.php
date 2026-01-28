@@ -1553,6 +1553,26 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::get('/events/{event}/analytics', [OrganizerEventsController::class, 'analytics'])
             ->name('api.marketplace-client.organizer.events.analytics');
 
+        // Goals
+        Route::get('/events/{event}/goals', [OrganizerEventsController::class, 'goals'])
+            ->name('api.marketplace-client.organizer.events.goals');
+        Route::post('/events/{event}/goals', [OrganizerEventsController::class, 'storeGoal'])
+            ->name('api.marketplace-client.organizer.events.goals.store');
+        Route::put('/events/{event}/goals/{goal}', [OrganizerEventsController::class, 'updateGoal'])
+            ->name('api.marketplace-client.organizer.events.goals.update');
+        Route::delete('/events/{event}/goals/{goal}', [OrganizerEventsController::class, 'deleteGoal'])
+            ->name('api.marketplace-client.organizer.events.goals.delete');
+
+        // Milestones / Campaigns
+        Route::get('/events/{event}/milestones', [OrganizerEventsController::class, 'milestones'])
+            ->name('api.marketplace-client.organizer.events.milestones');
+        Route::post('/events/{event}/milestones', [OrganizerEventsController::class, 'storeMilestone'])
+            ->name('api.marketplace-client.organizer.events.milestones.store');
+        Route::put('/events/{event}/milestones/{milestone}', [OrganizerEventsController::class, 'updateMilestone'])
+            ->name('api.marketplace-client.organizer.events.milestones.update');
+        Route::delete('/events/{event}/milestones/{milestone}', [OrganizerEventsController::class, 'deleteMilestone'])
+            ->name('api.marketplace-client.organizer.events.milestones.delete');
+
         // Participants / Check-in (All participants across all events)
         Route::get('/participants', [OrganizerEventsController::class, 'allParticipants'])
             ->name('api.marketplace-client.organizer.participants');

@@ -561,9 +561,26 @@ async function loadEvents() {
 
 function renderEvents(events) {
     const container = document.getElementById('events-list');
-    const statusColors = { published: 'success', draft: 'warning', ended: 'muted', pending_review: 'info' };
-    const statusLabels = { published: 'Publicat', draft: 'Ciorna', ended: 'Incheiat', pending_review: 'In asteptare' };
-    container.innerHTML = events.map(event => `
+    const statusColors = { published: 'success', draft: 'warning', ended: 'muted', pending_review: 'info', cancelled: 'error', postponed: 'warning' };
+    const statusLabels = { published: 'Publicat', draft: 'Ciornă', ended: 'Încheiat', pending_review: 'În așteptare', cancelled: 'Anulat', postponed: 'Amânat' };
+
+    container.innerHTML = events.map(event => {
+        // Determine if event has ended
+        const isEnded = event.status === 'ended' || event.is_past || event.is_ended ||
+            (event.starts_at && new Date(event.starts_at) < new Date());
+
+        // Determine display status
+        let displayStatus = event.status;
+        if (event.is_cancelled || event.status === 'cancelled') displayStatus = 'cancelled';
+        else if (event.is_postponed || event.status === 'postponed') displayStatus = 'postponed';
+        else if (isEnded) displayStatus = 'ended';
+
+        // Generate Analytics/Report button
+        const analyticsButton = isEnded
+            ? `<a href="/organizator/report/${event.id}" class="btn btn-sm btn-secondary" title="Raport"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Raport</a>`
+            : `<a href="/organizator/analytics/${event.id}" class="btn btn-sm btn-secondary" title="Analytics"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></a>`;
+
+        return `
         <div class="transition-colors bg-white border rounded-2xl border-border hover:border-primary/30">
             <div class="flex flex-col gap-6 md:items-center md:flex-row">
                 <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full h-40 rounded-tr-none rounded-br-none md:w-40 rounded-xl">
@@ -576,22 +593,22 @@ function renderEvents(events) {
                                 <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>${[event.venue_name || event.venue?.name, event.venue_city || event.venue?.city || event.city].filter(Boolean).join(', ') || ''}</span>
                             </div>
                         </div>
-                        <span class="badge badge-${statusColors[event.status] || 'secondary'}">${statusLabels[event.status] || event.status}</span>
+                        <span class="badge badge-${statusColors[displayStatus] || 'secondary'}">${statusLabels[displayStatus] || displayStatus}</span>
                     </div>
                     <div class="grid grid-cols-3 gap-4 pt-4 mt-4 border-t border-border">
-                        <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vandute</p></div>
-                        <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Vanzari</p></div>
+                        <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
+                        <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Vânzări</p></div>
                         <div class="flex items-center justify-end gap-2 pr-4">
-                            <a href="/organizator/event/${event.id}?action=edit" class="btn btn-sm btn-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>Editeaza</a>
-                            <a href="/organizator/analytics/${event.id}" class="btn btn-sm btn-secondary" title="Analytics"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></a>
+                            <a href="/organizator/event/${event.id}?action=edit" class="btn btn-sm btn-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>Editează</a>
+                            ${analyticsButton}
                             <a href="/event.php?slug=${event.slug}" target="_blank" class="btn btn-sm btn-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg></a>
-                            ${['draft', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Sterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
+                            ${['draft', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Șterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    `).join('');
+    `}).join('');
 }
 
 async function deleteEvent(eventId, eventName) {
