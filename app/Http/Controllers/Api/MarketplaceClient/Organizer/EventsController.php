@@ -1670,11 +1670,16 @@ class EventsController extends BaseController
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'budget' => 'nullable|numeric|min:0',
             'currency' => 'nullable|string|max:3',
+            'platform_campaign_id' => 'nullable|string|max:100',
+            'attribution_window_days' => 'nullable|integer|min:1|max:90',
             'utm_source' => 'nullable|string|max:100',
             'utm_medium' => 'nullable|string|max:100',
             'utm_campaign' => 'nullable|string|max:100',
             'utm_content' => 'nullable|string|max:100',
             'utm_term' => 'nullable|string|max:100',
+            'impact_metric' => 'nullable|string|max:50',
+            'baseline_value' => 'nullable|numeric',
+            'post_value' => 'nullable|numeric',
         ]);
 
         $milestone = EventMilestone::create([
@@ -1687,12 +1692,16 @@ class EventsController extends BaseController
             'end_date' => $validated['end_date'] ?? null,
             'budget' => $validated['budget'] ?? null,
             'currency' => $validated['currency'] ?? 'RON',
+            'platform_campaign_id' => $validated['platform_campaign_id'] ?? null,
+            'attribution_window_days' => $validated['attribution_window_days'] ?? 7,
             'utm_source' => $validated['utm_source'] ?? null,
             'utm_medium' => $validated['utm_medium'] ?? null,
             'utm_campaign' => $validated['utm_campaign'] ?? null,
             'utm_content' => $validated['utm_content'] ?? null,
             'utm_term' => $validated['utm_term'] ?? null,
-            'attribution_window_days' => 7,
+            'impact_metric' => $validated['impact_metric'] ?? null,
+            'baseline_value' => $validated['baseline_value'] ?? null,
+            'post_value' => $validated['post_value'] ?? null,
             'is_active' => true,
         ]);
 
