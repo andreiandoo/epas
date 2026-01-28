@@ -31,6 +31,7 @@ use Filament\Schemas\Components\Utilities\Get as SGet;
 use Filament\Schemas\Components\Utilities\Set as SSet;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\BulkActionGroup;
@@ -2806,6 +2807,7 @@ class EventResource extends Resource
                     ->label('Organizer')
                     ->relationship('marketplaceOrganizer', 'name'),
             ])
+            ->filtersLayout(FiltersLayout::AboveContentCollapsible)
             ->actions([
                 Action::make('view_on_site')
                     ->label('')

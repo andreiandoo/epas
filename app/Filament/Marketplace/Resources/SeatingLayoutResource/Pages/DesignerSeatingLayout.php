@@ -598,7 +598,6 @@ class DesignerSeatingLayout extends Page
 
             Actions\Action::make('editSection')
                 ->label('Edit Section')
-                ->icon('heroicon-o-pencil-square')
                 ->color('warning')
                 ->hidden()
                 ->modalHeading('Edit Section')
