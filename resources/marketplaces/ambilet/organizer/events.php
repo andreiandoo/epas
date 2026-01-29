@@ -679,11 +679,16 @@ function renderEvents(events) {
 
         // Promote button (only for ongoing events)
         const promoteButton = isOngoing
-            ? `<a href="/organizator/services?event=${event.id}" class="btn btn-sm btn-primary" title="Promovează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>Promovează</a>`
+            ? `<a href="/organizator/servicii?event=${event.id}" class="btn btn-sm btn-primary" title="Promovează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>Promovează</a>`
             : '';
 
         // Documents button
-        const documentsButton = `<a href="/organizator/documents?event=${event.id}" class="btn btn-sm btn-secondary" title="Documente"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>`;
+        const documentsButton = `<a href="/organizator/documente?event=${event.id}" class="btn btn-sm btn-secondary" title="Documente"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>`;
+
+        // View/Preview button - use /bilete/{slug} for published, add ?preview=1 for drafts
+        const isPublishedEvent = event.status === 'published' || event.is_public;
+        const viewUrl = isPublishedEvent ? `/bilete/${event.slug}` : `/bilete/${event.slug}?preview=1`;
+        const viewButton = `<a href="${viewUrl}" target="_blank" class="btn btn-sm btn-secondary" title="${isPublishedEvent ? 'Vizualizează' : 'Previzualizare'}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg></a>`;
 
         return `
         <div class="transition-colors bg-white border rounded-2xl border-border hover:border-primary/30">
@@ -713,7 +718,7 @@ function renderEvents(events) {
                             ${documentsButton}
                             ${analyticsButton}
                             ${promoteButton}
-                            <a href="/event.php?slug=${event.slug}" target="_blank" class="btn btn-sm btn-secondary" title="Vizualizează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg></a>
+                            ${viewButton}
                             ${['draft', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Șterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
                         </div>
                     </div>
@@ -828,9 +833,36 @@ async function loadEventForEdit(eventId) {
             is_sold_out: event.is_sold_out || false,
             door_sales_only: event.door_sales_only || false,
             is_postponed: event.is_postponed || false,
-            is_cancelled: event.is_cancelled || false
+            is_cancelled: event.is_cancelled || false,
+            is_published: event.is_public || event.status === 'published',
+            slug: event.slug
         };
         updateStatusIndicators();
+
+        // Handle published event - hide draft buttons, update submit button
+        const isPublished = currentEventStatus.is_published;
+        const saveDraftBtn = document.getElementById('save-draft-btn');
+        const bottomDraftBtns = document.querySelectorAll('button[onclick="saveEventDraft()"]');
+        const submitReviewBtn = document.getElementById('submit-review-btn');
+
+        if (isPublished) {
+            // Hide "Salveaza ciorna" buttons for published events
+            if (saveDraftBtn) saveDraftBtn.style.display = 'none';
+            bottomDraftBtns.forEach(btn => {
+                if (btn !== saveDraftBtn) btn.style.display = 'none';
+            });
+            // Change submit button text to "Salvează modificările"
+            if (submitReviewBtn) {
+                submitReviewBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Salvează modificările';
+            }
+        } else {
+            // Show buttons for draft events
+            if (saveDraftBtn) saveDraftBtn.style.display = '';
+            bottomDraftBtns.forEach(btn => btn.style.display = '');
+            if (submitReviewBtn) {
+                submitReviewBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Salveaza si trimite spre aprobare';
+            }
+        }
 
         const form = document.getElementById('create-event-form');
 
