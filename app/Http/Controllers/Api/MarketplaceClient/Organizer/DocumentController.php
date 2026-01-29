@@ -299,9 +299,9 @@ class DocumentController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        // Get all events for organizer
+        // Get all events for organizer (all statuses except cancelled)
         $events = MarketplaceEvent::where('marketplace_organizer_id', $organizer->id)
-            ->whereIn('status', ['published', 'pending_review', 'ended'])
+            ->where('status', '!=', 'cancelled')
             ->orderBy('starts_at', 'desc')
             ->get(['id', 'name', 'starts_at', 'venue_name', 'venue_city', 'status']);
 
