@@ -1480,6 +1480,18 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.documents.regenerate':
+        $method = 'POST';
+        $documentId = $_GET['document_id'] ?? '';
+        if (!$documentId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing document_id parameter']);
+            exit;
+        }
+        $endpoint = '/organizer/documents/' . $documentId . '/regenerate';
+        $requiresAuth = true;
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);
