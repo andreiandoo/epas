@@ -1669,6 +1669,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.documents.download');
         Route::get('/documents/{documentId}/view', [OrganizerDocumentController::class, 'view'])
             ->name('api.marketplace-client.organizer.documents.view');
+        Route::post('/documents/{documentId}/regenerate', [OrganizerDocumentController::class, 'regenerate'])
+            ->name('api.marketplace-client.organizer.documents.regenerate');
 
         // Invitations
         Route::get('/invitations', [OrganizerInvitationsController::class, 'index'])

@@ -332,10 +332,11 @@ class DocumentController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        // Get all events for organizer (all statuses)
-        $events = MarketplaceEvent::where('marketplace_organizer_id', $organizer->id)
+        // Get all events for organizer (all statuses, including soft deleted for debug)
+        $events = MarketplaceEvent::withTrashed()
+            ->where('marketplace_organizer_id', $organizer->id)
             ->orderBy('starts_at', 'desc')
-            ->get(['id', 'name', 'starts_at', 'venue_name', 'venue_city', 'status']);
+            ->get(['id', 'name', 'starts_at', 'venue_name', 'venue_city', 'status', 'deleted_at']);
 
         // Get all documents for these events
         $documents = OrganizerDocument::where('marketplace_organizer_id', $organizer->id)
@@ -343,7 +344,11 @@ class DocumentController extends BaseController
             ->get()
             ->groupBy('event_id');
 
-        $eventsWithDocs = $events->map(function ($event) use ($documents) {
+        // Filter out soft deleted events for the response but count them
+        $deletedCount = $events->whereNotNull('deleted_at')->count();
+        $activeEvents = $events->whereNull('deleted_at');
+
+        $eventsWithDocs = $activeEvents->map(function ($event) use ($documents) {
             $eventDocs = $documents->get($event->id, collect());
             $cerereAvizare = $eventDocs->firstWhere('document_type', 'cerere_avizare');
             $declaratieImpozite = $eventDocs->firstWhere('document_type', 'declaratie_impozite');
@@ -369,10 +374,160 @@ class DocumentController extends BaseController
                     'download_url' => $declaratieImpozite->download_url,
                 ] : null,
             ];
-        });
+        })->values();
 
         return $this->success([
             'events' => $eventsWithDocs,
+            'debug' => [
+                'organizer_id' => $organizer->id,
+                'total_events' => $events->count(),
+                'active_events' => $activeEvents->count(),
+                'deleted_events' => $deletedCount,
+            ],
+        ]);
+    }
+
+    /**
+     * Regenerate an existing document
+     */
+    public function regenerate(Request $request, int $documentId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        // Find existing document
+        $existingDoc = OrganizerDocument::where('id', $documentId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$existingDoc) {
+            return $this->error('Documentul nu a fost gasit', 404);
+        }
+
+        // Get the event
+        $event = MarketplaceEvent::where('id', $existingDoc->event_id)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->with(['ticketTypes', 'venue'])
+            ->first();
+
+        if (!$event) {
+            return $this->error('Evenimentul nu a fost gasit', 404);
+        }
+
+        // Get template
+        $template = MarketplaceTaxTemplate::where('marketplace_client_id', $marketplace->id)
+            ->where('type', $existingDoc->document_type)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$template) {
+            return $this->error('Nu exista template pentru acest tip de document.', 404);
+        }
+
+        // Get tax registry
+        $taxRegistry = MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace->id)
+            ->where('is_active', true)
+            ->first();
+
+        // Get template variables
+        $variables = MarketplaceTaxTemplate::getVariablesForContext(
+            $taxRegistry,
+            $marketplace,
+            $organizer,
+            $event
+        );
+
+        // Process template
+        $htmlContent = $template->processTemplate($variables);
+
+        // Ensure proper UTF-8 encoding
+        if (stripos($htmlContent, '<html') === false) {
+            $htmlContent = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <style>
+        body { font-family: DejaVu Sans, sans-serif; }
+    </style>
+</head>
+<body>' . $htmlContent . '</body>
+</html>';
+        } else {
+            if (stripos($htmlContent, 'charset') === false) {
+                $htmlContent = preg_replace(
+                    '/<head>/i',
+                    '<head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>',
+                    $htmlContent
+                );
+            }
+            if (stripos($htmlContent, 'font-family') === false) {
+                $htmlContent = preg_replace(
+                    '/<\/head>/i',
+                    '<style>body { font-family: DejaVu Sans, sans-serif; }</style></head>',
+                    $htmlContent
+                );
+            }
+        }
+
+        // Generate PDF
+        $pdf = Pdf::loadHTML($htmlContent);
+        if ($template->page_orientation === 'landscape') {
+            $pdf->setPaper('A4', 'landscape');
+        } else {
+            $pdf->setPaper('A4', 'portrait');
+        }
+        $pdfContent = $pdf->output();
+
+        // Delete old file if exists
+        if ($existingDoc->file_path && Storage::disk('public')->exists($existingDoc->file_path)) {
+            Storage::disk('public')->delete($existingDoc->file_path);
+        }
+
+        // Generate new filename
+        $fileName = sprintf(
+            '%s_%s_%s_%s.pdf',
+            $existingDoc->document_type,
+            $organizer->id,
+            $event->id,
+            now()->format('YmdHis')
+        );
+        $filePath = sprintf(
+            'organizer-documents/%d/%s',
+            $organizer->id,
+            $fileName
+        );
+
+        // Save to storage
+        Storage::disk('public')->put($filePath, $pdfContent);
+
+        // Update document record
+        $existingDoc->update([
+            'file_path' => $filePath,
+            'file_name' => $fileName,
+            'file_size' => strlen($pdfContent),
+            'html_content' => $htmlContent,
+            'tax_template_id' => $template->id,
+            'title' => $template->name,
+            'document_data' => [
+                'event_name' => $event->name,
+                'event_date' => $event->starts_at?->format('Y-m-d H:i'),
+                'organizer_name' => $organizer->company_name ?? $organizer->name,
+                'template_name' => $template->name,
+                'variables' => $variables,
+            ],
+            'issued_at' => now(),
+        ]);
+
+        return $this->success([
+            'document' => [
+                'id' => $existingDoc->id,
+                'title' => $existingDoc->title,
+                'type' => $existingDoc->document_type,
+                'download_url' => $existingDoc->download_url,
+                'issued_at' => $existingDoc->issued_at->format('Y-m-d H:i'),
+            ],
+            'message' => 'Documentul a fost regenerat cu succes',
         ]);
     }
 
@@ -382,7 +537,7 @@ class DocumentController extends BaseController
     protected function getStatusLabel(string $status): string
     {
         return match ($status) {
-            'published' => 'Publicat',
+            'published' => 'Live',
             'pending_review' => 'In asteptare',
             'ended' => 'Incheiat',
             'draft' => 'Ciorna',
