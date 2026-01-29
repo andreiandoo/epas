@@ -159,32 +159,28 @@ require_once __DIR__ . '/includes/head.php';
                                     <span id="event-day" class="block text-xl font-bold leading-none">--</span>
                                     <span id="event-month" class="block text-[10px] uppercase tracking-wide mt-0.5">---</span>
                                 </div>
-                                <div>
-                                    <p id="event-weekday" class="font-semibold text-secondary"></p>
-                                    <p id="event-date-full" class="text-sm text-muted"></p>
+                                <div class="flex flex-col">
+                                    <div class="flex items-center gap-2">
+                                        <p id="event-weekday" class="font-semibold text-secondary"></p>
+                                        <p id="event-date-full" class="text-sm text-muted"></p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <p id="event-time" class="font-semibold text-secondary"></p>
+                                        <p id="event-doors" class="text-sm text-muted"></p>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex items-start gap-3 p-4 bg-surface rounded-xl mobile:rounded-none mobile:p-0 mobile:bg-transparent">
-                                <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl">
-                                    <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                </div>
-                                <div>
-                                    <p id="event-time" class="font-semibold text-secondary"></p>
-                                    <p id="event-doors" class="text-sm text-muted"></p>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Location -->
-                        <div id="venue-short-display" class="flex items-center gap-3 p-4 mb-6 bg-surface rounded-xl mobile:rounded-none mobile:p-0 mobile:bg-transparent">
-                            <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl">
-                                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <!-- Location -->
+                            <div id="venue-short-display" class="flex items-center gap-3 p-4 mb-6 bg-surface rounded-xl mobile:rounded-none mobile:p-0 mobile:bg-transparent">
+                                <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl">
+                                    <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p id="venue-name" class="font-semibold text-secondary"></p>
+                                    <p id="venue-address" class="text-sm text-muted"></p>
+                                </div>
                             </div>
-                            <div class="flex-1">
-                                <p id="venue-name" class="font-semibold text-secondary"></p>
-                                <p id="venue-address" class="text-sm text-muted"></p>
-                            </div>
-                            <a id="venue-link" href="#venue" class="text-sm font-semibold text-primary">Vezi locația &rarr;</a>
                         </div>
 
                         <!-- Social Stats -->
