@@ -657,9 +657,12 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        $query = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
+        // Include orders with paid/confirmed/completed status (all represent valid tickets)
+        $validOrderStatuses = ['paid', 'confirmed', 'completed'];
+
+        $query = \App\Models\Ticket::whereHas('order', function ($q) use ($event, $validOrderStatuses) {
                 $q->where('event_id', $event->id)
-                    ->where('status', 'completed');
+                    ->whereIn('status', $validOrderStatuses);
             })
             ->with(['order.marketplaceCustomer', 'ticketType']);
 
@@ -702,12 +705,12 @@ class EventsController extends BaseController
         $tickets = $query->paginate($perPage);
 
         // Get stats
-        $totalTickets = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
-            $q->where('event_id', $event->id)->where('status', 'completed');
+        $totalTickets = \App\Models\Ticket::whereHas('order', function ($q) use ($event, $validOrderStatuses) {
+            $q->where('event_id', $event->id)->whereIn('status', $validOrderStatuses);
         })->count();
 
-        $checkedInCount = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
-            $q->where('event_id', $event->id)->where('status', 'completed');
+        $checkedInCount = \App\Models\Ticket::whereHas('order', function ($q) use ($event, $validOrderStatuses) {
+            $q->where('event_id', $event->id)->whereIn('status', $validOrderStatuses);
         })->whereNotNull('checked_in_at')->count();
 
         return $this->paginated($tickets, function ($ticket) {
@@ -755,9 +758,12 @@ class EventsController extends BaseController
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->pluck('id');
 
-        $query = \App\Models\Ticket::whereHas('order', function ($q) use ($eventIds) {
+        // Include orders with paid/confirmed/completed status (all represent valid tickets)
+        $validOrderStatuses = ['paid', 'confirmed', 'completed'];
+
+        $query = \App\Models\Ticket::whereHas('order', function ($q) use ($eventIds, $validOrderStatuses) {
                 $q->whereIn('event_id', $eventIds)
-                    ->where('status', 'completed');
+                    ->whereIn('status', $validOrderStatuses);
             })
             ->with(['order.marketplaceCustomer', 'order.event', 'ticketType']);
 
@@ -795,8 +801,8 @@ class EventsController extends BaseController
         $query->orderBy('created_at', 'desc');
 
         // Get all tickets for stats
-        $allTickets = \App\Models\Ticket::whereHas('order', function ($q) use ($eventIds) {
-            $q->whereIn('event_id', $eventIds)->where('status', 'completed');
+        $allTickets = \App\Models\Ticket::whereHas('order', function ($q) use ($eventIds, $validOrderStatuses) {
+            $q->whereIn('event_id', $eventIds)->whereIn('status', $validOrderStatuses);
         });
 
         $totalTickets = $allTickets->count();
@@ -850,10 +856,13 @@ class EventsController extends BaseController
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->pluck('id');
 
+        // Include orders with paid/confirmed/completed status (all represent valid tickets)
+        $validOrderStatuses = ['paid', 'confirmed', 'completed'];
+
         $ticket = \App\Models\Ticket::where('barcode', $barcode)
-            ->whereHas('order', function ($q) use ($eventIds) {
+            ->whereHas('order', function ($q) use ($eventIds, $validOrderStatuses) {
                 $q->whereIn('event_id', $eventIds)
-                    ->where('status', 'completed');
+                    ->whereIn('status', $validOrderStatuses);
             })
             ->first();
 
@@ -909,10 +918,13 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
+        // Include orders with paid/confirmed/completed status (all represent valid tickets)
+        $validOrderStatuses = ['paid', 'confirmed', 'completed'];
+
         $ticket = \App\Models\Ticket::where('barcode', $barcode)
-            ->whereHas('order', function ($q) use ($event) {
+            ->whereHas('order', function ($q) use ($event, $validOrderStatuses) {
                 $q->where('event_id', $event->id)
-                    ->where('status', 'completed');
+                    ->whereIn('status', $validOrderStatuses);
             })
             ->first();
 

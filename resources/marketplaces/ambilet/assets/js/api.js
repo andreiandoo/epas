@@ -290,6 +290,14 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/api-key/regenerate') return 'organizer.api-key.regenerate';
         if (endpoint === '/organizer/webhook') return 'organizer.webhook';
 
+        // Organizer documents (Cerere avizare, Declaratie impozite)
+        if (endpoint === '/organizer/documents/events') return 'organizer.documents.events';
+        if (endpoint === '/organizer/documents/generate') return 'organizer.documents.generate';
+        if (endpoint.match(/\/organizer\/documents\/event\/\d+$/)) return 'organizer.documents.for-event';
+        if (endpoint.match(/\/organizer\/documents\/\d+\/download$/)) return 'organizer.documents.download';
+        if (endpoint.match(/\/organizer\/documents\/\d+\/view$/)) return 'organizer.documents.view';
+        if (endpoint === '/organizer/documents' || endpoint.includes('/organizer/documents?')) return 'organizer.documents';
+
         return null; // unknown endpoint - will cause error
     },
 
@@ -473,6 +481,20 @@ const AmbiletAPI = {
         const organizerInvoiceMatch = endpoint.match(/\/organizer\/invoices\/(\d+)$/);
         if (organizerInvoiceMatch) {
             return `invoice_id=${encodeURIComponent(organizerInvoiceMatch[1])}`;
+        }
+
+        // Organizer documents endpoint - extract event ID or document ID
+        const organizerDocumentForEventMatch = endpoint.match(/\/organizer\/documents\/event\/(\d+)$/);
+        if (organizerDocumentForEventMatch) {
+            return `event_id=${encodeURIComponent(organizerDocumentForEventMatch[1])}`;
+        }
+        const organizerDocumentDownloadMatch = endpoint.match(/\/organizer\/documents\/(\d+)\/download$/);
+        if (organizerDocumentDownloadMatch) {
+            return `document_id=${encodeURIComponent(organizerDocumentDownloadMatch[1])}`;
+        }
+        const organizerDocumentViewMatch = endpoint.match(/\/organizer\/documents\/(\d+)\/view$/);
+        if (organizerDocumentViewMatch) {
+            return `document_id=${encodeURIComponent(organizerDocumentViewMatch[1])}`;
         }
 
         // Pass through query params

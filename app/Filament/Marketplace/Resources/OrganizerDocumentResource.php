@@ -201,6 +201,7 @@ class OrganizerDocumentResource extends Resource
                 Tables\Filters\SelectFilter::make('marketplace_organizer_id')
                     ->label('Organizer')
                     ->relationship('organizer', 'company_name')
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->company_name ?? $record->name ?? 'Unknown')
                     ->searchable()
                     ->preload(),
             ])

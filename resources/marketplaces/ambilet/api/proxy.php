@@ -1420,7 +1420,7 @@ switch ($action) {
         $method = 'GET';
         $params = [];
         if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
-        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['checked_in'])) $params['checked_in'] = $_GET['checked_in'];
         if (isset($_GET['search'])) $params['search'] = $_GET['search'];
         if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 100);
@@ -1432,6 +1432,51 @@ switch ($action) {
         $method = 'POST';
         $body = file_get_contents('php://input');
         $endpoint = '/organizer/participants/checkin';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER DOCUMENTS ====================
+
+    case 'organizer.documents':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        $endpoint = '/organizer/documents' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.events':
+        $method = 'GET';
+        $endpoint = '/organizer/documents/events';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.for-event':
+        $method = 'GET';
+        $eventId = $_GET['event_id'] ?? '';
+        $endpoint = '/organizer/documents/event/' . $eventId;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.generate':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/documents/generate';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.download':
+        $method = 'GET';
+        $documentId = $_GET['document_id'] ?? '';
+        $endpoint = '/organizer/documents/' . $documentId . '/download';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.view':
+        $method = 'GET';
+        $documentId = $_GET['document_id'] ?? '';
+        $endpoint = '/organizer/documents/' . $documentId . '/view';
         $requiresAuth = true;
         break;
 
