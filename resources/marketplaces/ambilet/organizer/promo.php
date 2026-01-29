@@ -83,16 +83,22 @@ async function loadEvents() {
         const res = await AmbiletAPI.get('/organizer/events');
         if (res.success && res.data) {
             // Handle both res.data.events and res.data (paginated response)
-            const events = res.data.events || res.data.data || res.data;
-            if (Array.isArray(events)) {
-                const sel = document.getElementById('promo-event');
-                events.forEach(e => {
-                    const opt = document.createElement('option');
-                    opt.value = e.id;
-                    opt.textContent = e.title || e.name;
-                    sel.appendChild(opt);
-                });
+            let events = [];
+            if (Array.isArray(res.data.events)) {
+                events = res.data.events;
+            } else if (Array.isArray(res.data.data)) {
+                events = res.data.data;
+            } else if (Array.isArray(res.data)) {
+                events = res.data;
             }
+            const sel = document.getElementById('promo-event');
+            events.forEach(e => {
+                const opt = document.createElement('option');
+                // Ensure we use the correct ID - check for id or event_id
+                opt.value = e.id || e.event_id || '';
+                opt.textContent = e.name || e.title || 'Eveniment';
+                sel.appendChild(opt);
+            });
         }
     } catch (e) { console.error('Failed to load events:', e); }
 }
@@ -117,7 +123,17 @@ function renderPromoCodes() {
     container.innerHTML = promoCodes.map(c => {
         const discountType = c.type || c.discount_type;
         const discountValue = c.value || c.discount_value;
-        const eventName = c.event?.name || c.event || 'Toate';
+        // Handle event - can be string, object with name, or null
+        let eventName = 'Toate';
+        if (c.event) {
+            if (typeof c.event === 'string') {
+                eventName = c.event;
+            } else if (typeof c.event === 'object') {
+                eventName = c.event.name || c.event.title || 'Toate';
+            }
+        } else if (c.event_name) {
+            eventName = c.event_name;
+        }
         const startDate = c.starts_at || c.start_date;
         const endDate = c.expires_at || c.end_date;
         return `
@@ -165,17 +181,27 @@ async function deleteCode(id) {
 }
 async function savePromoCode(e) {
     e.preventDefault();
-    const eventId = document.getElementById('promo-event').value;
+    const eventIdRaw = document.getElementById('promo-event').value;
+    // Only include event_id if it's a valid non-empty value
+    const eventId = eventIdRaw && eventIdRaw.trim() !== '' ? parseInt(eventIdRaw, 10) : null;
+    // Validate that parseInt didn't return NaN
+    const validEventId = eventId !== null && !isNaN(eventId) ? eventId : null;
+
     const data = {
-        code: document.getElementById('promo-code').value,
+        code: document.getElementById('promo-code').value.trim().toUpperCase(),
         type: document.querySelector('input[name="discount_type"]:checked').value,
-        value: parseFloat(document.getElementById('discount-value').value),
-        applies_to: eventId ? 'specific_event' : 'all_events',
-        event_id: eventId ? parseInt(eventId) : null,
-        usage_limit: document.getElementById('usage-limit').value ? parseInt(document.getElementById('usage-limit').value) : null,
+        value: parseFloat(document.getElementById('discount-value').value) || 0,
+        applies_to: validEventId ? 'specific_event' : 'all_events',
+        usage_limit: document.getElementById('usage-limit').value ? parseInt(document.getElementById('usage-limit').value, 10) : null,
         starts_at: document.getElementById('start-date').value || null,
         expires_at: document.getElementById('end-date').value || null
     };
+
+    // Only add event_id if it's valid to avoid "The selected event id is invalid" error
+    if (validEventId) {
+        data.event_id = validEventId;
+    }
+
     const id = document.getElementById('promo-id').value;
     try {
         const response = id ? await AmbiletAPI.put('/organizer/promo-codes/' + id, data) : await AmbiletAPI.post('/organizer/promo-codes', data);

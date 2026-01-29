@@ -123,7 +123,20 @@ function renderEvents(events) {
         cancelled: 'error'
     };
 
-    container.innerHTML = events.map(event => `
+    // Store events data for click handlers
+    window._eventsData = {};
+    events.forEach(e => {
+        window._eventsData[e.id] = e;
+    });
+
+    container.innerHTML = events.map(event => {
+        const statusColor = statusColors[event.status] || 'secondary';
+        const eventName = escapeHtml(event.name || '');
+        const venueName = escapeHtml(event.venue_name || '');
+        const venueCity = event.venue_city ? ', ' + escapeHtml(event.venue_city) : '';
+        const statusLabel = escapeHtml(event.status_label || event.status || '');
+
+        return `
         <tr class="hover:bg-surface/50">
             <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
@@ -131,18 +144,18 @@ function renderEvents(events) {
                         <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     </div>
                     <div>
-                        <p class="font-medium text-secondary">${event.name}</p>
-                        <p class="text-xs text-muted">${event.venue_name || ''} ${event.venue_city ? ', ' + event.venue_city : ''}</p>
+                        <p class="font-medium text-secondary">${eventName}</p>
+                        <p class="text-xs text-muted">${venueName}${venueCity}</p>
                     </div>
                 </div>
             </td>
             <td class="px-6 py-4 text-sm text-secondary">${event.starts_at ? formatDate(event.starts_at) : '-'}</td>
             <td class="px-6 py-4">
-                <span class="px-2.5 py-1 bg-${statusColors[event.status] || 'secondary'}/10 text-${statusColors[event.status] || 'secondary'} text-xs font-medium rounded-lg">${event.status_label}</span>
+                <span class="px-2.5 py-1 bg-${statusColor}/10 text-${statusColor} text-xs font-medium rounded-lg">${statusLabel}</span>
             </td>
             <td class="px-6 py-4 text-center">
                 ${event.cerere_avizare
-                    ? `<button onclick="downloadDocument(${event.cerere_avizare.id}, '${event.cerere_avizare.download_url}')" class="btn btn-sm bg-success/10 text-success hover:bg-success/20 gap-2">
+                    ? `<button onclick="downloadEventDoc(${event.id}, 'cerere_avizare')" class="btn btn-sm bg-success/10 text-success hover:bg-success/20 gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                         Descarca Aviz
                        </button>`
@@ -154,7 +167,7 @@ function renderEvents(events) {
             </td>
             <td class="px-6 py-4 text-center">
                 ${event.declaratie_impozite
-                    ? `<button onclick="downloadDocument(${event.declaratie_impozite.id}, '${event.declaratie_impozite.download_url}')" class="btn btn-sm bg-success/10 text-success hover:bg-success/20 gap-2">
+                    ? `<button onclick="downloadEventDoc(${event.id}, 'declaratie_impozite')" class="btn btn-sm bg-success/10 text-success hover:bg-success/20 gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                         Descarca Impozite
                        </button>`
@@ -167,7 +180,23 @@ function renderEvents(events) {
                 }
             </td>
         </tr>
-    `).join('');
+    `}).join('');
+}
+
+function downloadEventDoc(eventId, docType) {
+    const event = window._eventsData[eventId];
+    if (event && event[docType] && event[docType].download_url) {
+        window.open(event[docType].download_url, '_blank');
+    } else {
+        AmbiletNotifications.error('Documentul nu este disponibil');
+    }
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 function renderDocuments(documents) {

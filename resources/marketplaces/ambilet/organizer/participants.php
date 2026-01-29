@@ -51,7 +51,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <div id="manual-checkin-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-md w-full p-6">
             <div class="flex items-center justify-between mb-6"><h3 class="text-xl font-bold text-secondary">Check-in Manual</h3><button onclick="closeManualCheckin()" class="text-muted hover:text-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-            <form onsubmit="processManualCheckin(event)"><div class="mb-4"><label class="label">Cod Bilet</label><input type="text" id="manual-ticket-code" placeholder="Ex: TKT-ABC123" class="input w-full" required></div><button type="submit" class="btn btn-primary w-full">Verifica si Check-in</button></form>
+            <form onsubmit="processManualCheckin(event)"><div class="mb-4"><label class="label">Cod Control</label><input type="text" id="manual-ticket-code" placeholder="Ex: X1SG7TLS" class="input w-full" required><p class="text-xs text-muted mt-1">Introdu codul de control afisat sub codul QR al biletului</p></div><button type="submit" class="btn btn-primary w-full">Verifica si Check-in</button></form>
         </div>
     </div>
 <?php
@@ -102,16 +102,30 @@ async function loadParticipants() {
 function renderParticipants(participants) {
     const container = document.getElementById('participants-list');
     if (!participants.length) { container.innerHTML = '<tr><td colspan="6" class="px-6 py-12 text-center text-muted">Nu exista participanti momentan</td></tr>'; return; }
-    container.innerHTML = participants.map(p => `
+    container.innerHTML = participants.map(p => {
+        // Handle event - can be string, object with name, or null
+        let eventName = '';
+        if (p.event) {
+            if (typeof p.event === 'string') {
+                eventName = p.event;
+            } else if (typeof p.event === 'object') {
+                eventName = p.event.name || p.event.title || '';
+            }
+        } else if (p.event_name) {
+            eventName = p.event_name;
+        }
+        // Get initials safely
+        const initials = (p.name || '').split(' ').map(n => n[0] || '').join('').substring(0, 2);
+        return `
         <tr class="hover:bg-surface/50">
-            <td class="px-6 py-4"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center"><span class="text-sm font-semibold text-primary">${p.name.split(' ').map(n => n[0]).join('')}</span></div><div><p class="font-medium text-secondary">${p.name}</p><p class="text-sm text-muted">${p.email}</p></div></div></td>
-            <td class="px-6 py-4 text-secondary">${p.event}</td>
-            <td class="px-6 py-4"><span class="px-2 py-1 bg-primary/10 text-primary text-sm font-medium rounded-lg">${p.ticket_type}</span></td>
-            <td class="px-6 py-4"><code class="text-sm text-muted bg-surface px-2 py-1 rounded">${p.ticket_code}</code></td>
+            <td class="px-6 py-4"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center"><span class="text-sm font-semibold text-primary">${initials}</span></div><div><p class="font-medium text-secondary">${p.name || '-'}</p><p class="text-sm text-muted">${p.email || '-'}</p></div></div></td>
+            <td class="px-6 py-4 text-secondary">${eventName || '-'}</td>
+            <td class="px-6 py-4"><span class="px-2 py-1 bg-primary/10 text-primary text-sm font-medium rounded-lg">${p.ticket_type || '-'}</span></td>
+            <td class="px-6 py-4"><div><code class="text-sm font-semibold text-secondary bg-surface px-2 py-1 rounded">${p.control_code || '-'}</code></div><div class="text-xs text-muted mt-1">${p.ticket_code || ''}</div></td>
             <td class="px-6 py-4">${p.checked_in ? '<span class="px-3 py-1 bg-success/10 text-success text-sm rounded-full">Confirmat</span>' : '<span class="px-3 py-1 bg-warning/10 text-warning text-sm rounded-full">Asteptare</span>'}</td>
-            <td class="px-6 py-4 text-right">${!p.checked_in ? `<button onclick="doCheckin('${p.ticket_code}')" class="text-success hover:text-green-700 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>` : ''}</td>
+            <td class="px-6 py-4 text-right">${!p.checked_in ? `<button onclick="doCheckin('${p.control_code || p.ticket_code}')" class="text-success hover:text-green-700 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>` : ''}</td>
         </tr>
-    `).join('');
+    `}).join('');
 }
 
 function updateStats(stats) { if (!stats) return; document.getElementById('total-participants').textContent = stats.total || 0; document.getElementById('checked-in').textContent = stats.checked_in || 0; document.getElementById('pending-checkin').textContent = stats.pending || 0; document.getElementById('checkin-rate').textContent = (stats.rate || 0) + '%'; }

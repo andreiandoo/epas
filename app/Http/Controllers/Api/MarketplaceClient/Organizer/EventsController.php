@@ -786,6 +786,7 @@ class EventsController extends BaseController
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('barcode', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
                     ->orWhereHas('order', function ($oq) use ($search) {
                         $oq->where('customer_email', 'like', "%{$search}%")
                             ->orWhere('customer_name', 'like', "%{$search}%");
@@ -822,6 +823,7 @@ class EventsController extends BaseController
                 'event_id' => $event?->id,
                 'ticket_type' => $ticket->ticketType?->name ?? 'Standard',
                 'ticket_code' => $ticket->barcode,
+                'control_code' => $ticket->code,
                 'checked_in' => $ticket->checked_in_at !== null,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
             ];
@@ -859,7 +861,11 @@ class EventsController extends BaseController
         // Include orders with paid/confirmed/completed status (all represent valid tickets)
         $validOrderStatuses = ['paid', 'confirmed', 'completed'];
 
-        $ticket = \App\Models\Ticket::where('barcode', $barcode)
+        // Search by barcode (full code) or code (control code)
+        $ticket = \App\Models\Ticket::where(function ($q) use ($barcode) {
+                $q->where('barcode', $barcode)
+                    ->orWhere('code', $barcode);
+            })
             ->whereHas('order', function ($q) use ($eventIds, $validOrderStatuses) {
                 $q->whereIn('event_id', $eventIds)
                     ->whereIn('status', $validOrderStatuses);
