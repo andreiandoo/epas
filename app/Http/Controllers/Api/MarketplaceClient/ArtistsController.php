@@ -214,13 +214,34 @@ class ArtistsController extends BaseController
     {
         $client = $this->requireClient($request);
 
+        // First, try to find marketplace artist
         $artist = Artist::query()
             ->where('marketplace_client_id', $client->id)
             ->where('slug', $slug)
             ->where('is_active', true)
             ->first();
 
+        // If not found in marketplace, check Core DB (artists without marketplace_client_id)
         if (!$artist) {
+            $coreArtist = Artist::query()
+                ->whereNull('marketplace_client_id')
+                ->where('slug', $slug)
+                ->where('is_active', true)
+                ->first();
+
+            if ($coreArtist) {
+                // Return minimal data with "coming soon" flag
+                return $this->success([
+                    'id' => $coreArtist->id,
+                    'name' => $coreArtist->name,
+                    'slug' => $coreArtist->slug,
+                    'image' => $coreArtist->main_image_full_url,
+                    'portrait' => $coreArtist->portrait_full_url,
+                    'logo' => $coreArtist->logo_full_url,
+                    'is_coming_soon' => true,
+                ]);
+            }
+
             return $this->error('Artist not found', 404);
         }
 

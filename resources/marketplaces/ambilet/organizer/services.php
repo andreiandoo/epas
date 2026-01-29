@@ -56,51 +56,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </a>
             </div>
 
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div class="bg-white rounded-2xl border border-border p-6">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-                        </div>
-                        <span class="text-sm text-muted">Servicii Active</span>
-                    </div>
-                    <p class="text-2xl font-bold text-secondary" id="active-services">0</p>
-                </div>
-                <div class="bg-white rounded-2xl border border-border p-6">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                        </div>
-                        <span class="text-sm text-muted">Vizualizari Totale</span>
-                    </div>
-                    <p class="text-2xl font-bold text-secondary" id="total-views">0</p>
-                </div>
-                <div class="bg-white rounded-2xl border border-border p-6">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                        </div>
-                        <span class="text-sm text-muted">Emailuri Trimise</span>
-                    </div>
-                    <p class="text-2xl font-bold text-secondary" id="emails-sent">0</p>
-                </div>
-                <div class="bg-white rounded-2xl border border-border p-6">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </div>
-                        <span class="text-sm text-muted">Investit Total</span>
-                    </div>
-                    <p class="text-2xl font-bold text-secondary" id="total-spent">0 RON</p>
-                </div>
-            </div>
-
             <!-- Services Grid -->
-            <h2 class="text-lg font-bold text-secondary mb-4">Servicii Disponibile</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <!-- Event Featuring -->
-                <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                <div class="bg-white flex flex-col justify-between rounded-2xl border border-border overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-start gap-4">
                             <div class="w-12 h-12 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center flex-shrink-0">
@@ -128,7 +87,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
 
                 <!-- Email Marketing -->
-                <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                <div class="bg-white flex flex-col justify-between rounded-2xl border border-border overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-start gap-4">
                             <div class="w-12 h-12 bg-gradient-to-br from-accent to-orange-600 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -155,7 +114,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
 
                 <!-- Ad Tracking -->
-                <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                <div class="bg-white flex flex-col justify-between rounded-2xl border border-border overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-start gap-4">
                             <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -182,7 +141,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
 
                 <!-- Ad Campaign Creation -->
-                <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                <div class="bg-white flex flex-col justify-between rounded-2xl border border-border overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-start gap-4">
                             <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center flex-shrink-0">

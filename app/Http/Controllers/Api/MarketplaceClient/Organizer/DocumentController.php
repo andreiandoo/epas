@@ -301,6 +301,7 @@ class DocumentController extends BaseController
 
         // Get all events for organizer (all statuses except cancelled)
         $events = MarketplaceEvent::where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->where('status', '!=', 'cancelled')
             ->orderBy('starts_at', 'desc')
             ->get(['id', 'name', 'starts_at', 'venue_name', 'venue_city', 'status']);

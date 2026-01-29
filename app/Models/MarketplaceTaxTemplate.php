@@ -209,10 +209,15 @@ class MarketplaceTaxTemplate extends Model
         $content = $this->html_content;
 
         foreach ($variables as $key => $value) {
+            // Skip array values - they can't be used in string replacement
+            if (is_array($value)) {
+                continue;
+            }
+
             // Handle both {{variable}} and {{ variable }} formats
             $content = preg_replace(
                 '/\{\{\s*' . preg_quote($key, '/') . '\s*\}\}/',
-                $value ?? '',
+                (string) ($value ?? ''),
                 $content
             );
         }
