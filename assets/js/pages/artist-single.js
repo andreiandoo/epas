@@ -66,6 +66,11 @@ const ArtistPage = {
         try {
             var response = await AmbiletAPI.get('/artists/' + this.artistSlug);
             if (response.success && response.data) {
+                // Check if this is a Core-only artist (coming soon)
+                if (response.data.is_coming_soon) {
+                    this.showComingSoon(response.data);
+                    return;
+                }
                 this.artistData = response.data;
                 this.render(this.transformApiData(response.data));
             } else {
@@ -108,6 +113,42 @@ const ArtistPage = {
 
         // Update page title
         document.title = 'Artist negăsit - ' + (window.AMBILET_CONFIG?.SITE_NAME || 'Ambilet');
+    },
+
+    /**
+     * Show coming soon page for Core-only artists
+     */
+    showComingSoon(data) {
+        var heroSection = document.getElementById(this.elements.artistHero);
+        if (heroSection) {
+            var imageHtml = data.image || data.portrait || data.logo
+                ? '<img src="' + this.escapeHtml(data.image || data.portrait || data.logo) + '" alt="' + this.escapeHtml(data.name) + '" class="object-cover w-32 h-32 mb-6 rounded-full shadow-lg">'
+                : '<svg class="w-32 h-32 mb-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                      '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>' +
+                  '</svg>';
+
+            heroSection.innerHTML =
+                '<div class="flex flex-col items-center justify-center h-full bg-gradient-to-br from-primary/5 to-primary/10">' +
+                    imageHtml +
+                    '<h1 class="mb-3 text-3xl font-bold text-gray-800">' + this.escapeHtml(data.name) + '</h1>' +
+                    '<p class="mb-8 text-gray-600">Detalii despre artist vor fi disponibile în curând.</p>' +
+                    '<a href="/artisti" class="inline-flex items-center gap-2 px-6 py-3 font-semibold text-white transition-all rounded-xl bg-primary hover:bg-primary-dark hover:shadow-lg">' +
+                        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>' +
+                        '</svg>' +
+                        'Înapoi la artiști' +
+                    '</a>' +
+                '</div>';
+        }
+
+        // Hide profile section
+        var profileSection = document.getElementById('profile-section');
+        if (profileSection) {
+            profileSection.style.display = 'none';
+        }
+
+        // Update page title
+        document.title = data.name + ' - ' + (window.AMBILET_CONFIG?.SITE_NAME || 'Ambilet');
     },
 
     /**
