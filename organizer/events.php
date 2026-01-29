@@ -703,8 +703,9 @@ function renderEvents(events) {
                             ${saleStatus ? `<span class="badge ${saleStatus === 'În vânzare' ? 'badge-success' : (saleStatus === 'Sold Out' ? 'badge-info' : 'badge-warning')}">${saleStatus}</span>` : ''}
                         </div>
                     </div>
-                    <div class="grid grid-cols-4 gap-4 pt-4 mt-4 border-t border-border">
+                    <div class="grid grid-cols-5 gap-4 pt-4 mt-4 border-t border-border">
                         <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
+                        <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări</p></div>
                         <div><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
                         <div><p class="text-2xl font-bold text-secondary">${daysText || '-'}</p><p class="text-xs text-muted">${isEnded ? 'Încheiat' : 'Până la event'}</p></div>
                         <div class="flex flex-wrap items-center justify-end gap-2 pr-4">
@@ -1013,7 +1014,7 @@ async function loadEventForEdit(eventId) {
             const posterImg = document.getElementById('poster-img');
             const posterUploadArea = document.getElementById('poster-upload-area');
             if (posterPreview && posterImg) {
-                posterImg.src = event.image;
+                posterImg.src = getStorageUrl(event.image);
                 posterPreview.classList.remove('hidden');
                 if (posterUploadArea) posterUploadArea.classList.add('hidden');
             }
@@ -1025,7 +1026,7 @@ async function loadEventForEdit(eventId) {
             const coverImg = document.getElementById('cover-img');
             const coverUploadArea = document.getElementById('cover-upload-area');
             if (coverPreview && coverImg) {
-                coverImg.src = event.cover_image;
+                coverImg.src = getStorageUrl(event.cover_image);
                 coverPreview.classList.remove('hidden');
                 if (coverUploadArea) coverUploadArea.classList.add('hidden');
             }
