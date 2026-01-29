@@ -2101,8 +2101,18 @@ class EventsController extends BaseController
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             return $path;
         }
-        // Convert storage path to URL
-        return Storage::url($path);
+
+        // Get the core storage base URL
+        // Uses APP_URL/storage as the base, which should be the core server URL
+        $baseUrl = rtrim(config('app.url'), '/') . '/storage';
+
+        // Clean the path - remove leading slashes and 'storage/' prefix if present
+        $cleanPath = ltrim($path, '/');
+        if (str_starts_with($cleanPath, 'storage/')) {
+            $cleanPath = substr($cleanPath, 8);
+        }
+
+        return $baseUrl . '/' . $cleanPath;
     }
 
     /**

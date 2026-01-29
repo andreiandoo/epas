@@ -103,4 +103,43 @@ function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('-translate-x-full');
     document.getElementById('sidebarOverlay').classList.toggle('active');
 }
+
+// Load sidebar data (events count, org info) on all organizer pages
+document.addEventListener('DOMContentLoaded', async function() {
+    // Wait a tick for AmbiletAPI to be available
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    if (typeof AmbiletAPI === 'undefined') return;
+
+    try {
+        // Load events count
+        const eventsResponse = await AmbiletAPI.get('/organizer/events');
+        if (eventsResponse.success && eventsResponse.data?.events) {
+            const events = eventsResponse.data.events;
+            const activeEvents = events.filter(e => e.status === 'published' || e.status === 'active').length;
+            const navCount = document.getElementById('nav-events-count');
+            if (navCount) navCount.textContent = activeEvents || events.length;
+        }
+
+        // Load organizer info for sidebar
+        const orgData = AmbiletAuth.getOrganizerData?.() || JSON.parse(localStorage.getItem('organizer_data') || '{}');
+        if (orgData) {
+            const orgName = document.getElementById('sidebar-org-name');
+            const orgInitials = document.getElementById('sidebar-org-initials');
+            const orgPlan = document.getElementById('sidebar-org-plan');
+
+            if (orgName && orgData.public_name) {
+                orgName.textContent = orgData.public_name;
+            }
+            if (orgInitials && orgData.public_name) {
+                orgInitials.textContent = orgData.public_name.substring(0, 2).toUpperCase();
+            }
+            if (orgPlan && orgData.plan_name) {
+                orgPlan.textContent = orgData.plan_name;
+            }
+        }
+    } catch (error) {
+        console.error('Sidebar init error:', error);
+    }
+});
 </script>

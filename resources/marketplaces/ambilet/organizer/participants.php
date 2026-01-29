@@ -58,11 +58,40 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 $scriptsExtra = <<<'JS'
 <script>
 AmbiletAuth.requireOrganizerAuth();
+loadEvents();
 loadParticipants();
+
+async function loadEvents() {
+    try {
+        const response = await AmbiletAPI.get('/organizer/events');
+        if (response.success && response.data?.events) {
+            const select = document.getElementById('event-filter');
+            response.data.events.forEach(event => {
+                const option = document.createElement('option');
+                option.value = event.id;
+                option.textContent = event.name || event.title;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Failed to load events:', error);
+    }
+}
 
 async function loadParticipants() {
     try {
-        const response = await AmbiletAPI.get('/organizer/participants');
+        const eventId = document.getElementById('event-filter').value;
+        const checkinStatus = document.getElementById('checkin-filter').value;
+        const search = document.getElementById('search-participants').value;
+
+        let url = '/organizer/participants';
+        const params = new URLSearchParams();
+        if (eventId) params.append('event_id', eventId);
+        if (checkinStatus) params.append('checked_in', checkinStatus === 'checked_in' ? '1' : '0');
+        if (search) params.append('search', search);
+        if (params.toString()) url += '?' + params.toString();
+
+        const response = await AmbiletAPI.get(url);
         if (response.success) { renderParticipants(response.data.participants || []); updateStats(response.data.stats); }
         else { renderParticipants([]); }
     } catch (error) { renderParticipants([]); }
