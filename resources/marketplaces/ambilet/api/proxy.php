@@ -1492,6 +1492,92 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // =============================================
+    // Organizer Services (Extra Services)
+    // =============================================
+
+    case 'organizer.services.pricing':
+        $endpoint = '/organizer/services/pricing';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.types':
+        $endpoint = '/organizer/services/types';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.stats':
+        $endpoint = '/organizer/services/stats';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.email-audiences':
+        $params = [];
+        if (isset($_GET['audience_type'])) $params['audience_type'] = $_GET['audience_type'];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        if (isset($_GET['age_min'])) $params['age_min'] = $_GET['age_min'];
+        if (isset($_GET['age_max'])) $params['age_max'] = $_GET['age_max'];
+        if (isset($_GET['cities'])) $params['cities'] = $_GET['cities'];
+        if (isset($_GET['categories'])) $params['categories'] = $_GET['categories'];
+        if (isset($_GET['genres'])) $params['genres'] = $_GET['genres'];
+        $endpoint = '/organizer/services/email-audiences' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services':
+        $params = [];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        if (isset($_GET['per_page'])) $params['per_page'] = $_GET['per_page'];
+        if (isset($_GET['page'])) $params['page'] = $_GET['page'];
+        $endpoint = '/organizer/services/orders' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.order':
+        $uuid = $_GET['uuid'] ?? '';
+        if (!$uuid) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing uuid parameter']);
+            exit;
+        }
+        $endpoint = '/organizer/services/orders/' . $uuid;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.create':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/services/orders';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.cancel':
+        $method = 'POST';
+        $uuid = $_GET['uuid'] ?? '';
+        if (!$uuid) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing uuid parameter']);
+            exit;
+        }
+        $endpoint = '/organizer/services/orders/' . $uuid . '/cancel';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.pay':
+        $method = 'POST';
+        $uuid = $_GET['uuid'] ?? '';
+        if (!$uuid) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing uuid parameter']);
+            exit;
+        }
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/services/orders/' . $uuid . '/pay';
+        $requiresAuth = true;
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);
