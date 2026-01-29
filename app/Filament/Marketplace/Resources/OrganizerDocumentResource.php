@@ -11,10 +11,7 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Actions\ViewAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\Action;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 
@@ -208,18 +205,18 @@ class OrganizerDocumentResource extends Resource
                     ->preload(),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\Action::make('download')
-                    ->label('Download')
+                Action::make('view')
+                    ->label('')
+                    ->icon('heroicon-o-eye')
+                    ->color('gray')
+                    ->url(fn ($record) => static::getUrl('view', ['record' => $record])),
+                Action::make('download')
+                    ->label('')
                     ->icon('heroicon-o-arrow-down-tray')
+                    ->color('primary')
                     ->url(fn ($record) => $record->download_url)
                     ->openUrlInNewTab()
                     ->visible(fn ($record) => $record->file_path),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
             ]);
     }
 
