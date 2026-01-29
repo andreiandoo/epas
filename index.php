@@ -16,7 +16,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Slider Section - 3D Coverflow Style -->
-<section class="relative py-8 overflow-hidden bg-secondary mt-18 pt-32 mobile:pt-12 md:py-12" id="heroSlider">
+<section class="relative py-8 overflow-hidden bg-secondary mt-18 pt-32 mobile:pt-12" id="heroSlider">
     <div class="px-4 mx-auto max-w-7xl">
         <!-- Main 3D Carousel -->
         <div class="relative" id="heroSection">
