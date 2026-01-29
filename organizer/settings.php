@@ -267,11 +267,12 @@ async function loadSettings() {
             document.getElementById('company-name').value = data.company_name || '';
             document.getElementById('company-cui').value = data.company_tax_id || '';
             document.getElementById('company-reg').value = data.company_registration || '';
-            document.getElementById('company-vat').value = '0';
+            document.getElementById('company-vat').value = data.company_vat_payer ? '1' : '0';
             document.getElementById('company-address').value = data.company_address || '';
-            document.getElementById('company-city').value = data.city || '';
-            document.getElementById('company-county').value = data.county || '';
-            document.getElementById('company-zip').value = data.zip || '';
+            // Support both field naming conventions (company_city vs city)
+            document.getElementById('company-city').value = data.company_city || data.city || '';
+            document.getElementById('company-county').value = data.company_county || data.county || '';
+            document.getElementById('company-zip').value = data.company_zip || data.zip || '';
         }
     } catch (error) { /* Fields remain empty */ }
 }
@@ -306,7 +307,15 @@ async function saveProfile(e) {
 async function saveCompany(e) {
     e.preventDefault();
     try {
-        const data = { company_name: document.getElementById('company-name').value, company_tax_id: document.getElementById('company-cui').value, company_registration: document.getElementById('company-reg').value, company_address: [document.getElementById('company-address').value, document.getElementById('company-city').value, document.getElementById('company-county').value, document.getElementById('company-zip').value].filter(Boolean).join(', ') };
+        const data = {
+            company_name: document.getElementById('company-name').value,
+            company_tax_id: document.getElementById('company-cui').value,
+            company_registration: document.getElementById('company-reg').value,
+            company_address: document.getElementById('company-address').value,
+            company_city: document.getElementById('company-city').value,
+            company_county: document.getElementById('company-county').value,
+            company_zip: document.getElementById('company-zip').value
+        };
         const response = await AmbiletAPI.put('/organizer/settings/company', data);
         if (response.success) { AmbiletNotifications.success('Datele companiei au fost salvate'); }
         else { AmbiletNotifications.error(response.message || 'Eroare la salvare'); }
