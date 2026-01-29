@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
@@ -206,7 +207,7 @@ class EventsController extends BaseController
             DB::commit();
 
             return $this->success([
-                'event' => $this->formatEventDetailed($event->load(['ticketTypes', 'eventGenres', 'artists'])),
+                'event' => $this->formatEventDetailed($event->load(['ticketTypes', 'eventGenres', 'artists', 'venue'])),
             ], 'Event created successfully', 201);
 
         } catch (\Exception $e) {
@@ -364,7 +365,7 @@ class EventsController extends BaseController
             DB::commit();
 
             return $this->success([
-                'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'eventGenres', 'artists'])),
+                'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'eventGenres', 'artists', 'venue'])),
             ], 'Event updated');
 
         } catch (\Exception $e) {
@@ -401,7 +402,7 @@ class EventsController extends BaseController
         $event->update(['is_published' => true]);
 
         return $this->success([
-            'event' => $this->formatEventDetailed($event->fresh()->load('ticketTypes')),
+            'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'venue'])),
         ], 'Event published successfully');
     }
 
@@ -519,6 +520,76 @@ class EventsController extends BaseController
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->error('Failed to cancel event: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Update event status (sold out, door sales, postponed)
+     */
+    public function updateStatus(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validated = $request->validate([
+            'is_sold_out' => 'sometimes|boolean',
+            'door_sales_only' => 'sometimes|boolean',
+            'is_postponed' => 'sometimes|boolean',
+            'postponed_date' => 'nullable|date',
+            'postponed_start_time' => 'nullable|string|max:10',
+            'postponed_door_time' => 'nullable|string|max:10',
+            'postponed_end_time' => 'nullable|string|max:10',
+            'postponed_reason' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $updateData = [];
+
+            if (array_key_exists('is_sold_out', $validated)) {
+                $updateData['is_sold_out'] = $validated['is_sold_out'];
+            }
+
+            if (array_key_exists('door_sales_only', $validated)) {
+                $updateData['door_sales_only'] = $validated['door_sales_only'];
+            }
+
+            if (array_key_exists('is_postponed', $validated)) {
+                $updateData['is_postponed'] = $validated['is_postponed'];
+                if ($validated['is_postponed']) {
+                    // Set postponed data
+                    $updateData['postponed_date'] = $validated['postponed_date'] ?? null;
+                    $updateData['postponed_start_time'] = $validated['postponed_start_time'] ?? null;
+                    $updateData['postponed_door_time'] = $validated['postponed_door_time'] ?? null;
+                    $updateData['postponed_end_time'] = $validated['postponed_end_time'] ?? null;
+                    $updateData['postponed_reason'] = $validated['postponed_reason'] ?? null;
+                } else {
+                    // Clear postponed data
+                    $updateData['postponed_date'] = null;
+                    $updateData['postponed_start_time'] = null;
+                    $updateData['postponed_door_time'] = null;
+                    $updateData['postponed_end_time'] = null;
+                    $updateData['postponed_reason'] = null;
+                }
+            }
+
+            if (!empty($updateData)) {
+                $event->update($updateData);
+            }
+
+            return $this->success([
+                'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'eventGenres', 'artists', 'venue'])),
+            ], 'Event status updated');
+
+        } catch (\Exception $e) {
+            return $this->error('Failed to update event status: ' . $e->getMessage(), 500);
         }
     }
 
@@ -1075,6 +1146,8 @@ class EventsController extends BaseController
 
         // Determine date range
         $now = now();
+        $eventCreatedAt = $event->created_at->startOfDay();
+
         if ($startDate && $endDate) {
             $rangeStart = Carbon::parse($startDate)->startOfDay();
             $rangeEnd = Carbon::parse($endDate)->endOfDay();
@@ -1084,9 +1157,14 @@ class EventsController extends BaseController
                 '7d' => $now->copy()->subDays(7)->startOfDay(),
                 '30d' => $now->copy()->subDays(30)->startOfDay(),
                 '90d' => $now->copy()->subDays(90)->startOfDay(),
-                'all' => $event->created_at->startOfDay(),
+                'all' => $eventCreatedAt,
                 default => $now->copy()->subDays(30)->startOfDay(),
             };
+        }
+
+        // Limit rangeStart to not be earlier than event creation date
+        if ($rangeStart < $eventCreatedAt) {
+            $rangeStart = $eventCreatedAt;
         }
 
         // Base query for orders in the range
@@ -1201,14 +1279,9 @@ class EventsController extends BaseController
             ];
         });
 
-        // Top locations (simplified)
-        $topLocations = [
-            ['city' => 'București', 'country' => 'RO', 'count' => max(1, intval($ticketsSold * 0.4))],
-            ['city' => 'Cluj-Napoca', 'country' => 'RO', 'count' => intval($ticketsSold * 0.2)],
-            ['city' => 'Timișoara', 'country' => 'RO', 'count' => intval($ticketsSold * 0.15)],
-            ['city' => 'Iași', 'country' => 'RO', 'count' => intval($ticketsSold * 0.1)],
-            ['city' => 'Constanța', 'country' => 'RO', 'count' => intval($ticketsSold * 0.08)],
-        ];
+        // Top locations - empty until real location tracking is implemented
+        // Real data would come from a visitor_logs or analytics table with geolocation
+        $topLocations = [];
 
         // Recent sales
         $recentSales = $event->orders()
@@ -1246,7 +1319,7 @@ class EventsController extends BaseController
                 'date' => $this->getStartsAt($event),
                 'venue' => $event->venue?->name ?? null,
                 'venue_city' => $event->venue?->city ?? $event->marketplaceCity?->name ?? null,
-                'image' => $event->poster_url,
+                'image' => $this->getStorageUrl($event->poster_url),
                 'is_cancelled' => $event->is_cancelled,
                 'is_sold_out' => $event->is_sold_out ?? false,
                 'days_until' => $daysUntil,
@@ -1979,21 +2052,57 @@ class EventsController extends BaseController
      */
     protected function formatEvent(Event $event): array
     {
+        // Get localized venue name (venue.name is a translatable JSON field)
+        $venueName = null;
+        if ($event->venue) {
+            $venueName = $event->venue->getTranslation('name') ?? null;
+        }
+
+        // Calculate days until event
+        $daysUntil = null;
+        $eventDate = $this->getStartsAt($event);
+        if ($eventDate) {
+            $eventDateTime = Carbon::parse($eventDate);
+            $daysUntil = (int) now()->startOfDay()->diffInDays($eventDateTime->startOfDay(), false);
+        }
+
         return [
             'id' => $event->id,
             'name' => $this->getLocalizedTitle($event),
             'slug' => $event->slug,
             'starts_at' => $this->getStartsAt($event),
-            'venue_name' => $event->venue?->name ?? null,
+            'ends_at' => $this->getEndsAt($event),
+            'venue_name' => $venueName,
             'venue_city' => $event->venue?->city ?? $event->marketplaceCity?->name ?? null,
             'category' => $event->marketplaceEventCategory?->name ?? null,
             'status' => $this->getEventStatus($event),
-            'image' => $event->poster_url,
+            'image' => $this->getStorageUrl($event->poster_url),
             'tickets_sold' => $event->total_tickets_sold,
             'revenue' => (float) $event->total_revenue,
             'views' => $event->views_count ?? 0,
+            'days_until' => $daysUntil,
             'price_range' => $this->getPriceRange($event),
+            'is_cancelled' => (bool) $event->is_cancelled,
+            'is_postponed' => (bool) $event->is_postponed,
+            'is_sold_out' => (bool) ($event->is_sold_out ?? false),
+            'is_door_sales_only' => (bool) ($event->is_door_sales_only ?? false),
         ];
+    }
+
+    /**
+     * Convert storage path to full URL
+     */
+    protected function getStorageUrl(?string $path): ?string
+    {
+        if (empty($path)) {
+            return null;
+        }
+        // If it's already a full URL, return as-is
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        // Convert storage path to URL
+        return Storage::url($path);
     }
 
     /**
@@ -2031,6 +2140,12 @@ class EventsController extends BaseController
             $artistIds = $event->artists->pluck('id')->toArray();
         }
 
+        // Get localized venue name (venue.name is a translatable JSON field)
+        $venueName = null;
+        if ($event->venue) {
+            $venueName = $event->venue->getTranslation('name') ?? null;
+        }
+
         return [
             'id' => $event->id,
             'name' => $this->getLocalizedTitle($event),
@@ -2042,7 +2157,7 @@ class EventsController extends BaseController
             'ends_at' => $this->getEndsAt($event),
             'doors_open_at' => $this->getDoorsAt($event),
             'venue_id' => $event->venue_id,
-            'venue_name' => $event->venue?->name ?? null,
+            'venue_name' => $venueName,
             'venue_address' => $event->venue?->address ?? $event->address,
             'venue_city' => $event->venue?->city ?? $event->marketplaceCity?->name ?? null,
             'marketplace_event_category_id' => $event->marketplace_event_category_id,
@@ -2052,12 +2167,22 @@ class EventsController extends BaseController
             'artist_ids' => $artistIds,
             'artists' => $artists,
             'tags' => null,
-            'image' => $event->poster_url,
-            'cover_image' => $event->hero_image_url,
+            'image' => $this->getStorageUrl($event->poster_url),
+            'cover_image' => $this->getStorageUrl($event->hero_image_url),
             'gallery' => null,
             'status' => $this->getEventStatus($event),
             'is_public' => $event->is_published,
             'is_featured' => $event->is_featured,
+            'is_sold_out' => (bool) ($event->is_sold_out ?? false),
+            'door_sales_only' => (bool) ($event->door_sales_only ?? false),
+            'is_cancelled' => (bool) ($event->is_cancelled ?? false),
+            'cancel_reason' => $event->cancel_reason,
+            'is_postponed' => (bool) ($event->is_postponed ?? false),
+            'postponed_date' => $event->postponed_date?->format('Y-m-d'),
+            'postponed_start_time' => $event->postponed_start_time,
+            'postponed_door_time' => $event->postponed_door_time,
+            'postponed_end_time' => $event->postponed_end_time,
+            'postponed_reason' => $event->postponed_reason,
             'capacity' => $event->total_capacity,
             'max_tickets_per_order' => 10,
             'sales_start_at' => null,

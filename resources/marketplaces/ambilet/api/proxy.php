@@ -1029,6 +1029,19 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.status':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'PATCH';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/status';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event-categories':
         $method = 'GET';
         $endpoint = '/organizer/event-categories';
