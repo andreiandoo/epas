@@ -625,19 +625,63 @@ if (urlParams.get('action') === 'create') {
 
 // ==================== EVENTS LIST ====================
 
+let allEventsCache = []; // Cache for instant search
+
 async function loadEvents() {
     try {
         const response = await AmbiletAPI.organizer.getEvents();
         const events = response.data || response || [];
+        allEventsCache = events; // Cache for instant filtering
+
         // Update sidebar events count
         const activeEvents = events.filter(e => e.status === 'published' || e.status === 'active').length;
         const navCount = document.getElementById('nav-events-count');
         if (navCount) navCount.textContent = activeEvents || events.length;
 
-        if (events.length === 0) { document.getElementById('events-list').classList.add('hidden'); document.getElementById('no-events').classList.remove('hidden'); }
-        else { renderEvents(events); }
-    } catch (error) { document.getElementById('events-list').classList.add('hidden'); document.getElementById('no-events').classList.remove('hidden'); }
+        // Apply current search filter if any
+        const searchQuery = document.getElementById('search-input')?.value?.toLowerCase() || '';
+        const filteredEvents = filterEvents(events, searchQuery);
+
+        if (filteredEvents.length === 0) {
+            document.getElementById('events-list').classList.add('hidden');
+            document.getElementById('no-events').classList.remove('hidden');
+        } else {
+            document.getElementById('events-list').classList.remove('hidden');
+            document.getElementById('no-events').classList.add('hidden');
+            renderEvents(filteredEvents);
+        }
+    } catch (error) {
+        document.getElementById('events-list').classList.add('hidden');
+        document.getElementById('no-events').classList.remove('hidden');
+    }
 }
+
+function filterEvents(events, query) {
+    if (!query) return events;
+    return events.filter(event => {
+        const name = (event.name || event.title || '').toLowerCase();
+        const venue = (event.venue_name || '').toLowerCase();
+        const city = (event.venue_city || '').toLowerCase();
+        return name.includes(query) || venue.includes(query) || city.includes(query);
+    });
+}
+
+function instantSearchEvents() {
+    const query = document.getElementById('search-input')?.value?.toLowerCase() || '';
+    const filteredEvents = filterEvents(allEventsCache, query);
+
+    if (filteredEvents.length === 0) {
+        document.getElementById('events-list').classList.add('hidden');
+        document.getElementById('no-events').classList.remove('hidden');
+    } else {
+        document.getElementById('events-list').classList.remove('hidden');
+        document.getElementById('no-events').classList.add('hidden');
+        renderEvents(filteredEvents);
+    }
+}
+
+// Initialize instant search
+document.getElementById('search-input')?.addEventListener('input', AmbiletUtils.debounce(instantSearchEvents, 150));
 
 function renderEvents(events) {
     const container = document.getElementById('events-list');
