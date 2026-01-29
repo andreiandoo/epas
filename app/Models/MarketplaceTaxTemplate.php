@@ -55,6 +55,8 @@ class MarketplaceTaxTemplate extends Model
         'fiscal_receipt' => 'Fiscal Receipt',
         'proforma' => 'Proforma Invoice',
         'credit_note' => 'Credit Note',
+        'cerere_avizare' => 'Cerere avizare',
+        'declaratie_impozite' => 'Declaratie impozite',
         'other' => 'Other',
     ];
 

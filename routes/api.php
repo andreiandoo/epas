@@ -1453,6 +1453,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\RefundReportController 
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\ServiceOrderController as OrganizerServiceOrderController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\TeamController as OrganizerTeamController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\BillingController as OrganizerBillingController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\DocumentController as OrganizerDocumentController;
 
 Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no organizer auth)
@@ -1654,6 +1655,20 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.tax.quarterly');
         Route::get('/tax/document', [OrganizerTaxReportController::class, 'taxDocument'])
             ->name('api.marketplace-client.organizer.tax.document');
+
+        // Organizer Documents (Cerere avizare, Declaratie impozite)
+        Route::get('/documents', [OrganizerDocumentController::class, 'index'])
+            ->name('api.marketplace-client.organizer.documents');
+        Route::get('/documents/events', [OrganizerDocumentController::class, 'eventsWithDocuments'])
+            ->name('api.marketplace-client.organizer.documents.events');
+        Route::get('/documents/event/{eventId}', [OrganizerDocumentController::class, 'forEvent'])
+            ->name('api.marketplace-client.organizer.documents.for-event');
+        Route::post('/documents/generate', [OrganizerDocumentController::class, 'generate'])
+            ->name('api.marketplace-client.organizer.documents.generate');
+        Route::get('/documents/{documentId}/download', [OrganizerDocumentController::class, 'download'])
+            ->name('api.marketplace-client.organizer.documents.download');
+        Route::get('/documents/{documentId}/view', [OrganizerDocumentController::class, 'view'])
+            ->name('api.marketplace-client.organizer.documents.view');
 
         // Invitations
         Route::get('/invitations', [OrganizerInvitationsController::class, 'index'])
