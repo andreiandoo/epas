@@ -69,7 +69,7 @@ class PromoCodeController extends BaseController
             'type' => 'required|in:fixed,percentage',
             'value' => 'required|numeric|min:0',
             'applies_to' => 'required|in:all_events,specific_event,ticket_type',
-            'event_id' => 'nullable|integer|exists:marketplace_events,id',
+            'event_id' => 'nullable|integer|exists:events,id',
             'ticket_type_id' => 'nullable|integer|exists:marketplace_ticket_types,id',
             'min_purchase_amount' => 'nullable|numeric|min:0',
             'max_discount_amount' => 'nullable|numeric|min:0',
@@ -92,8 +92,9 @@ class PromoCodeController extends BaseController
                 return $this->error('Event ID is required when applying to specific event', 422);
             }
 
-            $eventBelongsToOrganizer = $organizer->events()
-                ->where('id', $validated['event_id'])
+            $eventBelongsToOrganizer = \App\Models\Event::where('id', $validated['event_id'])
+                ->where('marketplace_organizer_id', $organizer->id)
+                ->where('marketplace_client_id', $organizer->marketplace_client_id)
                 ->exists();
 
             if (!$eventBelongsToOrganizer) {
@@ -107,7 +108,8 @@ class PromoCodeController extends BaseController
                 return $this->error('Ticket type ID is required', 422);
             }
 
-            $ticketTypeBelongsToOrganizer = $organizer->events()
+            $ticketTypeBelongsToOrganizer = \App\Models\Event::where('marketplace_organizer_id', $organizer->id)
+                ->where('marketplace_client_id', $organizer->marketplace_client_id)
                 ->whereHas('ticketTypes', function ($q) use ($validated) {
                     $q->where('id', $validated['ticket_type_id']);
                 })
@@ -398,7 +400,7 @@ class PromoCodeController extends BaseController
             'type' => 'required|in:fixed,percentage',
             'value' => 'required|numeric|min:0',
             'applies_to' => 'required|in:all_events,specific_event',
-            'event_id' => 'nullable|integer|exists:marketplace_events,id',
+            'event_id' => 'nullable|integer|exists:events,id',
             'usage_limit' => 'nullable|integer|min:1',
             'usage_limit_per_customer' => 'nullable|integer|min:1',
             'starts_at' => 'nullable|date',
@@ -411,8 +413,9 @@ class PromoCodeController extends BaseController
 
         // Validate event ownership
         if ($validated['applies_to'] === 'specific_event' && !empty($validated['event_id'])) {
-            $eventBelongsToOrganizer = $organizer->events()
-                ->where('id', $validated['event_id'])
+            $eventBelongsToOrganizer = \App\Models\Event::where('id', $validated['event_id'])
+                ->where('marketplace_organizer_id', $organizer->id)
+                ->where('marketplace_client_id', $organizer->marketplace_client_id)
                 ->exists();
 
             if (!$eventBelongsToOrganizer) {

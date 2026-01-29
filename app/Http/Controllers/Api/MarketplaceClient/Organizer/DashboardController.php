@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\Event;
 use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceOrganizer;
 use App\Models\Order;
@@ -22,17 +23,20 @@ class DashboardController extends BaseController
         $fromDate = $request->input('from_date', now()->subDays(30)->toDateString());
         $toDate = $request->input('to_date', now()->toDateString());
 
-        // Events stats
-        $totalEvents = $organizer->events()->count();
-        $publishedEvents = $organizer->events()->where('status', 'published')->count();
-        $upcomingEventsQuery = $organizer->events()
-            ->where('status', 'published')
-            ->where('starts_at', '>=', now());
+        // Events stats - use Event model directly
+        $eventsBaseQuery = Event::where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id);
+
+        $totalEvents = (clone $eventsBaseQuery)->count();
+        $publishedEvents = (clone $eventsBaseQuery)->where('is_published', true)->count();
+        $upcomingEventsQuery = (clone $eventsBaseQuery)
+            ->where('is_published', true)
+            ->where('event_date', '>=', now());
         $upcomingEvents = (clone $upcomingEventsQuery)->count();
 
         // Get list of upcoming events with details
         $eventsList = (clone $upcomingEventsQuery)
-            ->orderBy('starts_at')
+            ->orderBy('event_date')
             ->limit(10)
             ->withCount('tickets as tickets_sold')
             ->get()
@@ -43,13 +47,13 @@ class DashboardController extends BaseController
                     'name' => $event->name,
                     'slug' => $event->slug,
                     'image' => $event->poster_url ?? $event->cover_image_url,
-                    'start_date' => $event->starts_at?->toDateString(),
-                    'starts_at' => $event->starts_at?->toIso8601String(),
+                    'start_date' => $event->event_date?->toDateString(),
+                    'starts_at' => $event->event_date?->toIso8601String(),
                     'venue' => $event->venue_name,
                     'venue_city' => $event->venue_city,
                     'tickets_sold' => $event->tickets_sold ?? 0,
                     'tickets_total' => $event->ticketTypes()->sum('quantity') ?: 100,
-                    'status' => $event->status,
+                    'status' => $event->is_published ? 'published' : 'draft',
                 ];
             });
 
@@ -76,7 +80,7 @@ class DashboardController extends BaseController
                 'total' => $totalEvents,
                 'published' => $publishedEvents,
                 'upcoming' => $upcomingEvents,
-                'pending_review' => $organizer->events()->where('status', 'pending_review')->count(),
+                'pending_review' => (clone $eventsBaseQuery)->where('is_published', false)->where('is_cancelled', false)->count(),
             ],
             'sales' => [
                 'total_orders' => $orders->count(),

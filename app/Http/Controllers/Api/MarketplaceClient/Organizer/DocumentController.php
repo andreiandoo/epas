@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceEvent;
+use App\Models\Event;
 use App\Models\MarketplaceTaxTemplate;
 use App\Models\MarketplaceTaxRegistry;
 use App\Models\OrganizerDocument;
@@ -76,9 +77,10 @@ class DocumentController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        // Verify event belongs to organizer
-        $event = MarketplaceEvent::where('id', $eventId)
+        // Verify event belongs to organizer (check Event model)
+        $event = Event::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
 
         if (!$event) {
@@ -90,14 +92,18 @@ class DocumentController extends BaseController
             ->get()
             ->keyBy('document_type');
 
+        // Map Event model status
+        $status = $event->is_cancelled ? 'cancelled' :
+            ($event->is_published ? 'published' : 'draft');
+
         return $this->success([
             'event' => [
                 'id' => $event->id,
                 'name' => $event->name,
-                'starts_at' => $event->starts_at?->format('Y-m-d H:i'),
+                'starts_at' => $event->event_date?->format('Y-m-d H:i'),
                 'venue_name' => $event->venue_name,
                 'venue_city' => $event->venue_city,
-                'status' => $event->status,
+                'status' => $status,
             ],
             'documents' => [
                 'cerere_avizare' => $documents->get('cerere_avizare') ? [
@@ -129,9 +135,10 @@ class DocumentController extends BaseController
             'document_type' => 'required|in:cerere_avizare,declaratie_impozite',
         ]);
 
-        // Verify event belongs to organizer
-        $event = MarketplaceEvent::where('id', $validated['event_id'])
+        // Verify event belongs to organizer (check Event model)
+        $event = Event::where('id', $validated['event_id'])
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->with(['ticketTypes', 'venue'])
             ->first();
 
@@ -332,11 +339,11 @@ class DocumentController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        // Get all events for organizer (all statuses, including soft deleted for debug)
-        $events = MarketplaceEvent::withTrashed()
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->orderBy('starts_at', 'desc')
-            ->get(['id', 'name', 'starts_at', 'venue_name', 'venue_city', 'status', 'deleted_at']);
+        // Get all events for organizer from events table (Event model)
+        $events = Event::where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->orderBy('event_date', 'desc')
+            ->get();
 
         // Get all documents for these events
         $documents = OrganizerDocument::where('marketplace_organizer_id', $organizer->id)
@@ -344,23 +351,23 @@ class DocumentController extends BaseController
             ->get()
             ->groupBy('event_id');
 
-        // Filter out soft deleted events for the response but count them
-        $deletedCount = $events->whereNotNull('deleted_at')->count();
-        $activeEvents = $events->whereNull('deleted_at');
-
-        $eventsWithDocs = $activeEvents->map(function ($event) use ($documents) {
+        $eventsWithDocs = $events->map(function ($event) use ($documents) {
             $eventDocs = $documents->get($event->id, collect());
             $cerereAvizare = $eventDocs->firstWhere('document_type', 'cerere_avizare');
             $declaratieImpozite = $eventDocs->firstWhere('document_type', 'declaratie_impozite');
 
+            // Map Event model status to document status labels
+            $status = $event->is_cancelled ? 'cancelled' :
+                ($event->is_published ? 'published' : 'draft');
+
             return [
                 'id' => $event->id,
                 'name' => $event->name,
-                'starts_at' => $event->starts_at?->format('Y-m-d H:i'),
+                'starts_at' => $event->event_date?->format('Y-m-d H:i'),
                 'venue_name' => $event->venue_name,
                 'venue_city' => $event->venue_city,
-                'status' => $event->status,
-                'status_label' => $this->getStatusLabel($event->status),
+                'status' => $status,
+                'status_label' => $this->getStatusLabel($status),
                 'cerere_avizare' => $cerereAvizare ? [
                     'id' => $cerereAvizare->id,
                     'title' => $cerereAvizare->title,
@@ -380,9 +387,8 @@ class DocumentController extends BaseController
             'events' => $eventsWithDocs,
             'debug' => [
                 'organizer_id' => $organizer->id,
+                'marketplace_client_id' => $organizer->marketplace_client_id,
                 'total_events' => $events->count(),
-                'active_events' => $activeEvents->count(),
-                'deleted_events' => $deletedCount,
             ],
         ]);
     }
@@ -404,9 +410,10 @@ class DocumentController extends BaseController
             return $this->error('Documentul nu a fost gasit', 404);
         }
 
-        // Get the event
-        $event = MarketplaceEvent::where('id', $existingDoc->event_id)
+        // Get the event (check Event model)
+        $event = Event::where('id', $existingDoc->event_id)
             ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->with(['ticketTypes', 'venue'])
             ->first();
 
