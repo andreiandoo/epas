@@ -249,6 +249,7 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/check-in\//)) return 'organizer.event.checkin';
         if (endpoint.match(/\/organizer\/events\/\d+\/submit$/)) return 'organizer.event.submit';
         if (endpoint.match(/\/organizer\/events\/\d+\/cancel$/)) return 'organizer.event.cancel';
+        if (endpoint.match(/\/organizer\/events\/\d+\/status$/)) return 'organizer.event.status';
         if (endpoint.match(/\/organizer\/events\/\d+$/)) return 'organizer.event';
         if (endpoint === '/organizer/events' || endpoint.includes('/organizer/events?')) return 'organizer.events';
 
@@ -436,7 +437,7 @@ const AmbiletAPI = {
             return `event_id=${encodeURIComponent(organizerEventCheckinMatch[1])}&barcode=${encodeURIComponent(organizerEventCheckinMatch[2])}`;
         }
 
-        const organizerEventActionMatch = endpoint.match(/\/organizer\/events\/(\d+)\/(submit|cancel)$/);
+        const organizerEventActionMatch = endpoint.match(/\/organizer\/events\/(\d+)\/(submit|cancel|status)$/);
         if (organizerEventActionMatch) {
             return `event_id=${encodeURIComponent(organizerEventActionMatch[1])}`;
         }
