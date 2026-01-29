@@ -105,24 +105,33 @@ function toggleSidebar() {
 }
 
 // Load sidebar data (events count, org info) on all organizer pages
-document.addEventListener('DOMContentLoaded', async function() {
-    // Wait a tick for AmbiletAPI to be available
-    await new Promise(resolve => setTimeout(resolve, 50));
+// Use window load event to ensure all scripts are loaded
+window.addEventListener('load', async function() {
+    // Wait for AmbiletAPI to be available (retry a few times)
+    let retries = 0;
+    while (typeof AmbiletAPI === 'undefined' && retries < 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+    }
 
-    if (typeof AmbiletAPI === 'undefined') return;
+    if (typeof AmbiletAPI === 'undefined') {
+        console.error('AmbiletAPI not available');
+        return;
+    }
 
     try {
         // Load events count
         const eventsResponse = await AmbiletAPI.get('/organizer/events');
-        if (eventsResponse.success && eventsResponse.data?.events) {
-            const events = eventsResponse.data.events;
+        // API returns {success: true, data: [...events...]} - events array is directly in data
+        const events = eventsResponse.data || [];
+        if (eventsResponse.success && events.length > 0) {
             const activeEvents = events.filter(e => e.status === 'published' || e.status === 'active').length;
             const navCount = document.getElementById('nav-events-count');
             if (navCount) navCount.textContent = activeEvents || events.length;
         }
 
         // Load organizer info for sidebar
-        const orgData = AmbiletAuth.getOrganizerData?.() || JSON.parse(localStorage.getItem('organizer_data') || '{}');
+        const orgData = AmbiletAuth.getOrganizerData?.() || JSON.parse(localStorage.getItem('ambilet_organizer_data') || '{}');
         if (orgData) {
             const orgName = document.getElementById('sidebar-org-name');
             const orgInitials = document.getElementById('sidebar-org-initials');

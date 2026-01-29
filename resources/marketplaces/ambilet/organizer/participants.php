@@ -64,9 +64,11 @@ loadParticipants();
 async function loadEvents() {
     try {
         const response = await AmbiletAPI.get('/organizer/events');
-        if (response.success && response.data?.events) {
+        // API returns {success: true, data: [...events...]} - events array is directly in data
+        const events = response.data || [];
+        if (response.success && events.length > 0) {
             const select = document.getElementById('event-filter');
-            response.data.events.forEach(event => {
+            events.forEach(event => {
                 const option = document.createElement('option');
                 option.value = event.id;
                 option.textContent = event.name || event.title;

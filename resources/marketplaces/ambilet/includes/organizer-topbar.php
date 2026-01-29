@@ -17,10 +17,12 @@ $skipJsComponents = true;
 
         <!-- Search -->
         <div class="hidden md:flex items-center flex-1 max-w-md">
-            <div class="relative w-full">
+            <div class="relative w-full" id="header-search-container">
                 <svg class="w-5 h-5 text-muted absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input type="text" placeholder="Cauta evenimente, bilete, participanti..."
-                    class="w-full pl-10 pr-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+                <input type="text" id="header-search-input" placeholder="Cauta evenimente, bilete, participanti..."
+                    class="w-full pl-10 pr-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    autocomplete="off">
+                <div id="header-search-results" class="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-border overflow-hidden hidden z-50 max-h-80 overflow-y-auto"></div>
             </div>
         </div>
 
@@ -110,5 +112,96 @@ $skipJsComponents = true;
             }
         }
     } catch (e) {}
+})();
+
+// Header instant search functionality
+(function() {
+    let headerSearchCache = null;
+    let searchDebounceTimer = null;
+
+    window.addEventListener('load', function() {
+        const searchInput = document.getElementById('header-search-input');
+        const searchResults = document.getElementById('header-search-results');
+        if (!searchInput || !searchResults) return;
+
+        // Load events for search
+        async function loadSearchData() {
+            if (headerSearchCache) return headerSearchCache;
+            try {
+                if (typeof AmbiletAPI === 'undefined') return [];
+                const response = await AmbiletAPI.get('/organizer/events');
+                headerSearchCache = response.data || [];
+                return headerSearchCache;
+            } catch (e) {
+                console.error('Failed to load search data:', e);
+                return [];
+            }
+        }
+
+        // Search and render results
+        async function performSearch(query) {
+            if (query.length < 3) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+
+            const events = await loadSearchData();
+            const q = query.toLowerCase();
+
+            const results = events.filter(event => {
+                const name = (event.name || event.title || '').toLowerCase();
+                const venue = (event.venue_name || '').toLowerCase();
+                const city = (event.venue_city || '').toLowerCase();
+                return name.includes(q) || venue.includes(q) || city.includes(q);
+            }).slice(0, 8); // Limit to 8 results
+
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="p-4 text-sm text-muted text-center">Niciun rezultat gasit</div>';
+                searchResults.classList.remove('hidden');
+                return;
+            }
+
+            searchResults.innerHTML = results.map(event => {
+                const statusColors = { published: 'success', draft: 'warning', ended: 'muted', pending_review: 'info', cancelled: 'error' };
+                const statusLabels = { published: 'Publicat', draft: 'Ciornă', ended: 'Încheiat', pending_review: 'În așteptare', cancelled: 'Anulat' };
+                const status = event.status || 'draft';
+                return `
+                    <a href="/organizator/event/${event.id}?action=edit" class="flex items-center gap-3 p-3 hover:bg-surface border-b border-border last:border-0 transition-colors">
+                        <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium text-secondary truncate">${event.name || event.title}</p>
+                            <p class="text-xs text-muted truncate">${[event.venue_name, event.venue_city].filter(Boolean).join(', ')}</p>
+                        </div>
+                        <span class="badge badge-${statusColors[status] || 'secondary'} text-xs">${statusLabels[status] || status}</span>
+                    </a>
+                `;
+            }).join('');
+
+            searchResults.classList.remove('hidden');
+        }
+
+        // Debounced search
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchDebounceTimer);
+            const query = this.value.trim();
+            searchDebounceTimer = setTimeout(() => performSearch(query), 200);
+        });
+
+        // Close results on click outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#header-search-container')) {
+                searchResults.classList.add('hidden');
+            }
+        });
+
+        // Show results again on focus if there's a query
+        searchInput.addEventListener('focus', function() {
+            if (this.value.trim().length >= 3) {
+                performSearch(this.value.trim());
+            }
+        });
+    });
 })();
 </script>
