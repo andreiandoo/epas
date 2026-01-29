@@ -101,11 +101,16 @@ class OrganizerDocumentResource extends Resource
                                 $event = $record->event;
                                 $venue = $event->venue;
 
-                                $venueName = $venue ? ($venue->name ?? '-') : ($event->venue_name ?? '-');
+                                $venueName = $venue ? ($venue->getTranslation('name', 'ro') ?? '-') : ($event->venue_name ?? '-');
                                 $venueAddress = $venue?->address ?? $event->venue_address ?? '-';
                                 $venueCity = $venue?->city ?? $event->venue_city ?? '-';
 
                                 $eventName = $event->name ?? '-';
+                                // Escape HTML to prevent XSS
+                                $venueName = htmlspecialchars((string) $venueName);
+                                $venueAddress = htmlspecialchars((string) $venueAddress);
+                                $venueCity = htmlspecialchars((string) $venueCity);
+                                $eventName = htmlspecialchars((string) $eventName);
                                 $eventDate = $event->starts_at ? $event->starts_at->format('d.m.Y H:i') : '-';
 
                                 return new HtmlString("

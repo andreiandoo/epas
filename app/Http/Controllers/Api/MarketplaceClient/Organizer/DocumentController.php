@@ -182,6 +182,39 @@ class DocumentController extends BaseController
         // Process template
         $htmlContent = $template->processTemplate($variables);
 
+        // Ensure proper UTF-8 encoding for diacritics
+        // Wrap content if it doesn't have a proper HTML structure
+        if (stripos($htmlContent, '<html') === false) {
+            $htmlContent = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <style>
+        body { font-family: DejaVu Sans, sans-serif; }
+    </style>
+</head>
+<body>' . $htmlContent . '</body>
+</html>';
+        } else {
+            // If HTML exists but missing charset, add it after <head>
+            if (stripos($htmlContent, 'charset') === false) {
+                $htmlContent = preg_replace(
+                    '/<head>/i',
+                    '<head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>',
+                    $htmlContent
+                );
+            }
+            // Add DejaVu Sans font if no font-family specified
+            if (stripos($htmlContent, 'font-family') === false) {
+                $htmlContent = preg_replace(
+                    '/<\/head>/i',
+                    '<style>body { font-family: DejaVu Sans, sans-serif; }</style></head>',
+                    $htmlContent
+                );
+            }
+        }
+
         // Generate PDF
         $pdf = Pdf::loadHTML($htmlContent);
 
@@ -299,10 +332,8 @@ class DocumentController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        // Get all events for organizer (all statuses except cancelled)
+        // Get all events for organizer (all statuses)
         $events = MarketplaceEvent::where('marketplace_organizer_id', $organizer->id)
-            ->where('marketplace_client_id', $organizer->marketplace_client_id)
-            ->where('status', '!=', 'cancelled')
             ->orderBy('starts_at', 'desc')
             ->get(['id', 'name', 'starts_at', 'venue_name', 'venue_city', 'status']);
 
