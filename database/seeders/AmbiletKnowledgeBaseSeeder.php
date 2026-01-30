@@ -763,9 +763,11 @@ class AmbiletKnowledgeBaseSeeder extends Seeder
 
             if ($articleData['type'] === 'article') {
                 $insertData['title'] = json_encode($articleData['title']);
+                $insertData['question'] = json_encode([]);
                 $insertData['content'] = json_encode($articleData['content']);
             } else {
-                // FAQ type
+                // FAQ type - title is required by DB, set empty
+                $insertData['title'] = json_encode([]);
                 $insertData['question'] = json_encode($articleData['question']);
                 $insertData['content'] = json_encode($articleData['content']);
             }
