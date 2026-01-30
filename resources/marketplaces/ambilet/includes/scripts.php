@@ -24,6 +24,7 @@
     <!-- Components -->
     <?php if (empty($skipJsComponents)): ?>
     <script src="<?= asset('assets/js/components/header.js') ?>"></script>
+    <script src="<?= asset('assets/js/components/search.js') ?>"></script>
     <?php endif; ?>
     <script src="<?= asset('assets/js/components/notifications.js') ?>"></script>
     <script src="<?= asset('assets/js/components/notification-sound.js') ?>"></script>

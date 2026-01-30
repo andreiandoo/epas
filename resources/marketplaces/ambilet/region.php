@@ -262,7 +262,6 @@ const RegionPage = {
         const totalEvents = this.cities.reduce((sum, c) => sum + (c.events_count || 0), 0);
 
         // Update hero
-        document.getElementById('breadcrumbRegion').textContent = name;
         document.getElementById('heroRegionName').textContent = name;
         document.getElementById('heroDescription').textContent = desc;
 

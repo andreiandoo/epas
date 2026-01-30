@@ -23,29 +23,39 @@ class LocationsController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        // Count active cities (with events)
-        $activeCities = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('starts_at', '>=', now())
-            ->whereNotNull('venue_city')
-            ->distinct('venue_city')
-            ->count('venue_city');
-
-        // Total live events
-        $liveEvents = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('starts_at', '>=', now())
+        // Count active cities (with events) - using Event model like getCityEventCounts
+        $activeCities = Event::where('marketplace_client_id', $client->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where('event_date', '>=', now()->toDateString())
+            ->whereHas('venue', function ($q) {
+                $q->whereNotNull('city');
+            })
+            ->with('venue:id,city')
+            ->get()
+            ->pluck('venue.city')
+            ->filter()
+            ->unique()
             ->count();
 
-        // Count unique venues
-        $venues = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->whereNotNull('venue_name')
-            ->distinct('venue_name')
-            ->count('venue_name');
+        // Total live events - using Event model
+        $liveEvents = Event::where('marketplace_client_id', $client->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where('event_date', '>=', now()->toDateString())
+            ->count();
+
+        // Count unique venues - using Event model
+        $venues = Event::where('marketplace_client_id', $client->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where('event_date', '>=', now()->toDateString())
+            ->whereNotNull('venue_id')
+            ->distinct('venue_id')
+            ->count('venue_id');
 
         // Total regions
         $regionsCount = MarketplaceRegion::where('marketplace_client_id', $client->id)
