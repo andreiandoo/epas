@@ -986,46 +986,61 @@ switch ($action) {
             exit;
         }
 
-        // Prepare ANAF API request
+        // Prepare ANAF API request using cURL for better reliability
         $anafUrl = 'https://webservicesp.anaf.ro/PlatitorTvaRest/api/v8/ws/tva';
         $anafBody = json_encode([
             ['cui' => (int)$cui, 'data' => date('Y-m-d')]
         ]);
 
-        $anafContext = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: application/json\r\n",
-                'content' => $anafBody,
-                'timeout' => 15,
-                'ignore_errors' => true
+        $ch = curl_init($anafUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $anafBody,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Accept: application/json'
             ],
-            'ssl' => [
-                'verify_peer' => false,
-                'verify_peer_name' => false
-            ]
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_FOLLOWLOCATION => true
         ]);
 
-        $anafResponse = @file_get_contents($anafUrl, false, $anafContext);
+        $anafResponse = curl_exec($ch);
+        $curlError = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
 
-        if ($anafResponse === false) {
+        if ($anafResponse === false || !empty($curlError)) {
             http_response_code(503);
-            echo json_encode(['error' => 'ANAF service unavailable. Please try again later.']);
+            echo json_encode(['error' => 'ANAF service unavailable: ' . $curlError]);
             exit;
         }
 
         $anafData = json_decode($anafResponse, true);
 
         // Check for ANAF API errors
-        if (!$anafData || !isset($anafData['found']) || empty($anafData['found'])) {
+        if (!$anafData) {
+            http_response_code(502);
+            echo json_encode(['error' => 'Invalid response from ANAF API', 'debug' => substr($anafResponse, 0, 500)]);
+            exit;
+        }
+
+        // ANAF returns 'found' array for found companies and 'notFound' for not found
+        if (!isset($anafData['found']) || empty($anafData['found'])) {
             // Check if it's in notFound
             if (isset($anafData['notFound']) && !empty($anafData['notFound'])) {
                 http_response_code(404);
-                echo json_encode(['error' => 'Company not found in ANAF database']);
+                echo json_encode(['error' => 'Compania nu a fost gasita in baza de date ANAF. Verifica CUI-ul.']);
                 exit;
             }
+            // Return more info about what went wrong
             http_response_code(404);
-            echo json_encode(['error' => 'Company not found or invalid CUI']);
+            echo json_encode([
+                'error' => 'Compania nu a fost gasita sau CUI invalid',
+                'anaf_response' => $anafData
+            ]);
             exit;
         }
 
