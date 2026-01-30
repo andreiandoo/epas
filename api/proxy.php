@@ -969,7 +969,7 @@ switch ($action) {
         $method = 'POST';
         $body = file_get_contents('php://input');
         $endpoint = '/organizer/verify-cui';
-        $requiresAuth = true;
+        // No auth required - this is a public ANAF lookup used during registration
         break;
 
     case 'organizer.contract':

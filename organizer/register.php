@@ -18,15 +18,15 @@ require_once dirname(__DIR__) . '/includes/head.php';
         <!-- Step Indicators -->
         <div class="flex items-center justify-center mb-12 overflow-x-auto pb-2" id="step-indicators">
             <div class="flex items-center"><div id="step1-indicator" class="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white font-bold text-sm">1</div><span class="ml-2 text-sm font-medium text-secondary hidden sm:block">Cont</span></div>
-            <div class="w-8 sm:w-12 h-0.5 bg-border mx-2" id="step1-line"></div>
+            <div class="w-8 sm:w-12 h-0.5 bg-border ml-2" id="step1-line"></div>
             <div class="flex items-center"><div id="step2-indicator" class="flex items-center justify-center w-10 h-10 rounded-full bg-border text-muted font-bold text-sm">2</div><span class="ml-2 text-sm text-muted hidden sm:block">Tip</span></div>
-            <div class="w-8 sm:w-12 h-0.5 bg-border mx-2" id="step2-line"></div>
+            <div class="w-8 sm:w-12 h-0.5 bg-border ml-2" id="step2-line"></div>
             <div class="flex items-center" id="step3-container"><div id="step3-indicator" class="flex items-center justify-center w-10 h-10 rounded-full bg-border text-muted font-bold text-sm">3</div><span class="ml-2 text-sm text-muted hidden sm:block">Companie</span></div>
-            <div class="w-8 sm:w-12 h-0.5 bg-border mx-2" id="step3-line"></div>
+            <div class="w-8 sm:w-12 h-0.5 bg-border ml-2" id="step3-line"></div>
             <div class="flex items-center"><div id="step4-indicator" class="flex items-center justify-center w-10 h-10 rounded-full bg-border text-muted font-bold text-sm">4</div><span class="ml-2 text-sm text-muted hidden sm:block">Garant</span></div>
-            <div class="w-8 sm:w-12 h-0.5 bg-border mx-2" id="step4-line"></div>
+            <div class="w-8 sm:w-12 h-0.5 bg-border ml-2" id="step4-line"></div>
             <div class="flex items-center"><div id="step5-indicator" class="flex items-center justify-center w-10 h-10 rounded-full bg-border text-muted font-bold text-sm">5</div><span class="ml-2 text-sm text-muted hidden sm:block">Plata</span></div>
-            <div class="w-8 sm:w-12 h-0.5 bg-border mx-2" id="step5-line"></div>
+            <div class="w-8 sm:w-12 h-0.5 bg-border ml-2" id="step5-line"></div>
             <div class="flex items-center"><div id="step6-indicator" class="flex items-center justify-center w-10 h-10 rounded-full bg-border text-muted font-bold text-sm">6</div><span class="ml-2 text-sm text-muted hidden sm:block">Final</span></div>
         </div>
 
@@ -44,7 +44,31 @@ require_once dirname(__DIR__) . '/includes/head.php';
                             <div><label class="label">Nume *</label><input type="text" name="last_name" required class="input" placeholder="Popescu"></div>
                         </div>
                         <div><label class="label">Email *</label><input type="email" name="email" required class="input" placeholder="organizator@email.com"></div>
-                        <div><label class="label">Telefon *</label><input type="tel" name="phone" required class="input" placeholder="+40 7XX XXX XXX"></div>
+                        <div>
+                            <label class="label">Telefon *</label>
+                            <div class="flex gap-2">
+                                <select id="phone-country" class="input w-auto min-w-[140px]" onchange="updatePhonePrefix()">
+                                    <option value="RO" data-prefix="+40" selected>🇷🇴 Romania (+40)</option>
+                                    <option value="MD" data-prefix="+373">🇲🇩 Moldova (+373)</option>
+                                    <option value="HU" data-prefix="+36">🇭🇺 Ungaria (+36)</option>
+                                    <option value="BG" data-prefix="+359">🇧🇬 Bulgaria (+359)</option>
+                                    <option value="UA" data-prefix="+380">🇺🇦 Ucraina (+380)</option>
+                                    <option value="RS" data-prefix="+381">🇷🇸 Serbia (+381)</option>
+                                    <option value="DE" data-prefix="+49">🇩🇪 Germania (+49)</option>
+                                    <option value="AT" data-prefix="+43">🇦🇹 Austria (+43)</option>
+                                    <option value="IT" data-prefix="+39">🇮🇹 Italia (+39)</option>
+                                    <option value="ES" data-prefix="+34">🇪🇸 Spania (+34)</option>
+                                    <option value="FR" data-prefix="+33">🇫🇷 Franta (+33)</option>
+                                    <option value="GB" data-prefix="+44">🇬🇧 Marea Britanie (+44)</option>
+                                    <option value="US" data-prefix="+1">🇺🇸 SUA (+1)</option>
+                                </select>
+                                <div class="flex-1 relative">
+                                    <span id="phone-prefix" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted font-medium">+40</span>
+                                    <input type="tel" name="phone" id="phone-input" required class="input pl-12" placeholder="7XX XXX XXX">
+                                </div>
+                            </div>
+                            <input type="hidden" name="phone_country" id="phone-country-code" value="RO">
+                        </div>
                         <div><label class="label">Parola *</label><input type="password" name="password" required class="input" placeholder="Minim 8 caractere" minlength="8"></div>
                         <div><label class="label">Confirma parola *</label><input type="password" name="password_confirmation" required class="input" placeholder="Repeta parola"></div>
                         <button type="submit" class="btn btn-primary w-full mt-6">Continua <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
@@ -65,7 +89,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
                                 <label class="relative flex items-center p-4 border-2 border-border rounded-xl cursor-pointer hover:border-primary/50 transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                                     <input type="radio" name="person_type" value="pj" class="sr-only" required>
                                     <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <div class="w-10 h-10 rounded-lg bg-primary/10 has-[:checked]:bg-primary flex items-center justify-center">
                                             <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                                         </div>
                                         <div>
@@ -560,6 +584,37 @@ function goToPreviousStep() {
     }
 }
 
+// Phone country/prefix handling
+function updatePhonePrefix() {
+    const select = document.getElementById('phone-country');
+    const prefixSpan = document.getElementById('phone-prefix');
+    const countryInput = document.getElementById('phone-country-code');
+    const phoneInput = document.getElementById('phone-input');
+
+    const selectedOption = select.options[select.selectedIndex];
+    const prefix = selectedOption.getAttribute('data-prefix');
+    const countryCode = select.value;
+
+    prefixSpan.textContent = prefix;
+    countryInput.value = countryCode;
+
+    // Adjust padding based on prefix length
+    const prefixLength = prefix.length;
+    if (prefixLength <= 3) {
+        phoneInput.style.paddingLeft = '2.5rem'; // +40
+    } else if (prefixLength <= 4) {
+        phoneInput.style.paddingLeft = '3rem'; // +373
+    } else {
+        phoneInput.style.paddingLeft = '3.5rem'; // +380 etc
+    }
+}
+
+function getFullPhoneNumber() {
+    const prefix = document.getElementById('phone-prefix').textContent;
+    const phone = document.getElementById('phone-input').value.replace(/\s/g, '');
+    return prefix + ' ' + phone;
+}
+
 // Step 1: Account Form
 document.getElementById('step1-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -579,7 +634,8 @@ document.getElementById('step1-form').addEventListener('submit', (e) => {
     formData.first_name = form.first_name.value;
     formData.last_name = form.last_name.value;
     formData.email = form.email.value;
-    formData.phone = form.phone.value;
+    formData.phone = getFullPhoneNumber();
+    formData.phone_country = document.getElementById('phone-country-code').value;
     formData.password = form.password.value;
     formData.password_confirmation = form.password_confirmation.value;
     goToStep(2);
@@ -987,6 +1043,7 @@ async function submitRegistration() {
             last_name: formData.last_name,
             email: formData.email,
             phone: formData.phone,
+            phone_country: formData.phone_country,
             password: formData.password,
             password_confirmation: formData.password_confirmation,
 
@@ -1079,14 +1136,23 @@ document.querySelectorAll('input[type="radio"]').forEach(radio => {
         document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
             const label = r.closest('label');
             const checkIcon = label.querySelector('.absolute svg');
+            const circleDiv = label.querySelector('.absolute.rounded-full');
             if (r.checked) {
                 label.classList.add('border-primary', 'bg-primary/5');
                 label.classList.remove('border-border');
                 if (checkIcon) checkIcon.classList.remove('hidden');
+                if (circleDiv) {
+                    circleDiv.classList.add('border-primary', 'bg-primary');
+                    circleDiv.classList.remove('border-border');
+                }
             } else {
                 label.classList.remove('border-primary', 'bg-primary/5');
                 label.classList.add('border-border');
                 if (checkIcon) checkIcon.classList.add('hidden');
+                if (circleDiv) {
+                    circleDiv.classList.remove('border-primary', 'bg-primary');
+                    circleDiv.classList.add('border-border');
+                }
             }
         });
     });
