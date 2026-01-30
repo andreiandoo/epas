@@ -28,6 +28,12 @@ foreach ($popularArticles as $article) {
 $featuredResponse = api_get('/kb/articles/featured?limit=5');
 $recentArticles = $featuredResponse['data']['articles'] ?? [];
 
+// Fetch contact info from marketplace settings
+$contactInfo = get_contact_info();
+$contactEmail = $contactInfo['email'] ?? SUPPORT_EMAIL;
+$contactPhone = $contactInfo['phone'] ?? SUPPORT_PHONE;
+$operatingHours = $contactInfo['operating_hours'] ?? 'L-V 9:00-18:00';
+
 // Fallback to static data if API fails
 if (empty($categories)) {
     $categories = [
@@ -90,7 +96,7 @@ function getColorClasses($color) {
     <?php include 'includes/header.php'; ?>
 
     <!-- Hero Section -->
-    <section class="relative px-6 py-16 pb-20 overflow-hidden text-center bg-gradient-to-br from-slate-800 to-slate-900">
+    <section class="relative px-6 pt-32 pb-8 overflow-hidden text-center bg-gradient-to-br from-slate-800 to-slate-900">
         <div class="absolute rounded-full -top-24 -right-24 w-96 h-96 bg-primary/30 blur-3xl"></div>
         <div class="relative z-10 max-w-2xl mx-auto">
             <h1 class="mb-4 text-4xl font-extrabold text-white md:text-5xl">Cum te putem ajuta?</h1>
@@ -210,7 +216,7 @@ function getColorClasses($color) {
                     </svg>
                     Începe conversația
                 </a>
-                <p class="mt-3 text-xs text-gray-400">Disponibil: L-V 9:00-18:00</p>
+                <p class="mt-3 text-xs text-gray-400">Disponibil: <?= htmlspecialchars($operatingHours) ?></p>
             </div>
 
             <!-- Email -->
@@ -223,12 +229,12 @@ function getColorClasses($color) {
                 </div>
                 <h3 class="mb-2 text-lg font-bold text-secondary">Email</h3>
                 <p class="mb-4 text-sm text-gray-500">Trimite-ne un email și răspundem în maxim 24 de ore.</p>
-                <a href="mailto:suport@ambilet.ro" class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-gray-600 transition-all bg-gray-100 rounded-xl hover:bg-primary hover:text-white">
+                <a href="mailto:<?= htmlspecialchars($contactEmail) ?>" class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-gray-600 transition-all bg-gray-100 rounded-xl hover:bg-primary hover:text-white">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                         <polyline points="22,6 12,13 2,6"/>
                     </svg>
-                    suport@ambilet.ro
+                    <?= htmlspecialchars($contactEmail) ?>
                 </a>
                 <p class="mt-3 text-xs text-gray-400">Răspuns în 24h</p>
             </div>
@@ -242,13 +248,13 @@ function getColorClasses($color) {
                 </div>
                 <h3 class="mb-2 text-lg font-bold text-secondary">Telefon</h3>
                 <p class="mb-4 text-sm text-gray-500">Sună-ne pentru probleme urgente sau întrebări complexe.</p>
-                <a href="tel:+40312345678" class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-gray-600 transition-all bg-gray-100 rounded-xl hover:bg-primary hover:text-white">
+                <a href="tel:<?= htmlspecialchars(preg_replace('/[^0-9+]/', '', $contactPhone)) ?>" class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-gray-600 transition-all bg-gray-100 rounded-xl hover:bg-primary hover:text-white">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
                     </svg>
-                    +40 31 234 5678
+                    <?= htmlspecialchars($contactPhone) ?>
                 </a>
-                <p class="mt-3 text-xs text-gray-400">L-V 9:00-18:00, S 10:00-14:00</p>
+                <p class="mt-3 text-xs text-gray-400"><?= htmlspecialchars($operatingHours) ?></p>
             </div>
         </div>
 
