@@ -987,7 +987,8 @@ switch ($action) {
         }
 
         // Prepare ANAF API request using cURL for better reliability
-        $anafUrl = 'https://webservicesp.anaf.ro/PlatitorTvaRest/api/v8/ws/tva';
+        // ANAF API endpoint (updated - old PlatitorTvaRest path no longer works)
+        $anafUrl = 'https://webservicesp.anaf.ro/api/v8/ws/tva';
         $anafBody = json_encode([
             ['cui' => (int)$cui, 'data' => date('Y-m-d')]
         ]);
