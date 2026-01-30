@@ -815,6 +815,8 @@ class EventsController extends BaseController
             }
 
             return [
+                'id' => $ticket->id,
+                'ticket_id' => $ticket->id,
                 'name' => $this->maskName($rawName),
                 'email' => $this->maskEmail($rawEmail),
                 'event' => $eventTitle,
@@ -824,6 +826,8 @@ class EventsController extends BaseController
                 'control_code' => $ticket->code,
                 'checked_in' => $ticket->checked_in_at !== null,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
+                'order_id' => $ticket->order->id,
+                'order_date' => $ticket->order->created_at?->toIso8601String(),
             ];
         });
 

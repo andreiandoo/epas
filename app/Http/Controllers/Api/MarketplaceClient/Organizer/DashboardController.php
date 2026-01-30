@@ -39,8 +39,12 @@ class DashboardController extends BaseController
             ->orderBy('event_date')
             ->limit(10)
             ->withCount('tickets as tickets_sold')
+            ->with(['marketplaceCity', 'venue'])
             ->get()
             ->map(function ($event) {
+                // Get city from marketplaceCity (translatable) or venue
+                $venueCity = $event->marketplaceCity?->getLocalizedName('ro') ?? $event->venue?->city ?? null;
+
                 return [
                     'id' => $event->id,
                     'title' => $event->name,
@@ -50,9 +54,9 @@ class DashboardController extends BaseController
                     'start_date' => $event->event_date?->toDateString(),
                     'starts_at' => $event->event_date?->toIso8601String(),
                     'venue' => $event->venue_name,
-                    'venue_city' => $event->venue_city,
+                    'venue_city' => $venueCity,
                     'tickets_sold' => $event->tickets_sold ?? 0,
-                    'tickets_total' => $event->ticketTypes()->sum('quantity') ?: 100,
+                    'tickets_total' => $event->ticketTypes()->sum('quota_total') ?: 100,
                     'status' => $event->is_published ? 'published' : 'draft',
                 ];
             });

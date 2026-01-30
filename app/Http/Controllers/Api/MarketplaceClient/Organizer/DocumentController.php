@@ -90,6 +90,7 @@ class DocumentController extends BaseController
         $event = Event::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->with(['marketplaceCity', 'venue'])
             ->first();
 
         if (!$event) {
@@ -105,13 +106,16 @@ class DocumentController extends BaseController
         $status = $event->is_cancelled ? 'cancelled' :
             ($event->is_published ? 'published' : 'draft');
 
+        // Get city from marketplaceCity or venue
+        $venueCity = $event->marketplaceCity?->getLocalizedName('ro') ?? $event->venue?->city ?? null;
+
         return $this->success([
             'event' => [
                 'id' => $event->id,
                 'name' => $event->name,
                 'starts_at' => $event->event_date?->format('Y-m-d H:i'),
                 'venue_name' => $event->venue_name,
-                'venue_city' => $event->venue_city,
+                'venue_city' => $venueCity,
                 'status' => $status,
             ],
             'documents' => [
@@ -384,8 +388,8 @@ class DocumentController extends BaseController
                     ?? $event->venue->name ?? null;
             }
 
-            // Get city from marketplaceCity or venue
-            $venueCity = $event->marketplaceCity?->name ?? $event->venue?->city ?? null;
+            // Get city from marketplaceCity or venue (marketplaceCity->name is a translatable array, use getLocalizedName)
+            $venueCity = $event->marketplaceCity?->getLocalizedName('ro') ?? $event->venue?->city ?? null;
 
             return [
                 'id' => $event->id,
