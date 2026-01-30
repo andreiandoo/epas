@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
+use Filament\Panel;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\Event;
 use App\Services\Tax\TaxReportService;
@@ -42,7 +43,7 @@ class EventTaxReport extends Page
         return 'event-tax-report/{event}';
     }
 
-    public static function getRouteName(): string
+    public static function getRouteName(?Panel $panel = null): string
     {
         return 'filament.marketplace.pages.event-tax-report';
     }
