@@ -186,9 +186,14 @@ const AmbiletSearch = {
     async performSearch(query) {
         try {
             const response = await fetch(`/api/proxy.php?action=search&q=${encodeURIComponent(query)}&limit=5`);
-            const data = await response.json();
+            const result = await response.json();
 
-            this.renderResults(query, data);
+            // API returns { success: true, data: { events, artists, locations } }
+            if (result.success && result.data) {
+                this.renderResults(query, result.data);
+            } else {
+                this.showNoResults();
+            }
         } catch (error) {
             console.error('Search error:', error);
             this.showNoResults();
