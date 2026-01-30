@@ -278,6 +278,8 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>">
 
     <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://core.tixello.com">
+    <link rel="dns-prefetch" href="https://core.tixello.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdn.tailwindcss.com">

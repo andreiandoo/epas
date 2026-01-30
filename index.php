@@ -10,6 +10,7 @@ $pageTitle = 'Bilete Evenimente Romania';
 $pageDescription = 'Cumpara bilete online pentru concerte, festivaluri, teatru, sport si multe altele. Platforma de ticketing pentru evenimente din Romania.';
 $currentPage = 'home';
 $transparentHeader = true;
+$headExtra = '<link rel="stylesheet" href="' . asset('assets/css/homepage.css') . '">';
 
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
@@ -79,7 +80,7 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <!-- Categories -->
-<section class="py-10 md:py-14 bg-surface">
+<section class="py-10 md:py-14 bg-surface lazy-section" id="categoriesSection" data-lazy-load="categories">
     <div class="px-4 mx-auto max-w-7xl">
         <h2 class="mb-8 text-xl font-bold md:text-2xl text-secondary">Explorează dupa categorie</h2>
 
@@ -96,7 +97,7 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <!-- Events by City (Combined with Latest Events) -->
-<section class="py-10 bg-white md:py-14">
+<section class="py-10 bg-white md:py-14 lazy-section" id="cityEventsSection" data-lazy-load="cityEvents">
     <div class="px-4 mx-auto max-w-7xl">
         <!-- City Filter Buttons -->
         <div class="flex flex-wrap gap-2 mb-8" id="cityFilterButtons">
@@ -133,7 +134,7 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <!-- Organizers CTA -->
-<section class="py-12 bg-white md:py-16">
+<section class="py-12 bg-white md:py-16 lazy-section" id="organizersCta" data-lazy-load="static">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="flex flex-col items-center gap-8 p-6 bg-surface rounded-3xl md:p-10 md:flex-row">
             <div class="flex-1">
@@ -164,247 +165,6 @@ require_once __DIR__ . '/includes/header.php';
 
 <?php
 $scriptsExtra = <<<'SCRIPTS'
-<style>
-/* 3D Coverflow Carousel Styles - Fixed dimensions */
-.coverflow-container {
-    perspective: 1200px;
-    overflow: hidden;
-    padding: 20px 0;
-    position: relative;
-    width: 100%;
-}
-.coverflow-track {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    transition: none;
-    height: 320px;
-}
-@media (min-width: 768px) {
-    .coverflow-track {
-        height: 360px;
-    }
-}
-@media (min-width: 1024px) {
-    .coverflow-track {
-        height: 400px;
-    }
-}
-.coverflow-slide {
-    position: absolute;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-    transform-style: preserve-3d;
-    backface-visibility: hidden;
-}
-.coverflow-slide-inner {
-    position: relative;
-    overflow: hidden;
-    border-radius: 1rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(30, 41, 59, 0.8) 100%);
-    /* Fixed dimensions - normalized across all slides */
-    width: 280px;
-    height: 280px;
-}
-@media (min-width: 768px) {
-    .coverflow-slide-inner {
-        width: 400px;
-        height: 320px;
-    }
-}
-@media (min-width: 1024px) {
-    .coverflow-slide-inner {
-        width: 480px;
-        height: 360px;
-    }
-}
-.coverflow-slide img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-.coverflow-slide-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0) 100%);
-}
-.coverflow-slide-content {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 1.5rem;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all 0.3s ease;
-}
-.coverflow-slide.coverflow-center .coverflow-slide-content {
-    opacity: 1;
-    transform: translateY(0);
-}
-.coverflow-slide-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border-radius: 9999px;
-    background: var(--color-primary, #A51C30);
-    color: white;
-    margin-bottom: 0.75rem;
-}
-.coverflow-slide-title {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: white;
-    line-height: 1.3;
-    margin-bottom: 0.5rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-@media (min-width: 768px) {
-    .coverflow-slide-title {
-        font-size: 1.5rem;
-    }
-}
-.coverflow-slide-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    font-size: 0.875rem;
-    color: rgba(255,255,255,0.9);
-}
-.coverflow-slide-date,
-.coverflow-slide-location {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-}
-.coverflow-slide-price {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: white;
-    color: var(--color-primary, #A51C30);
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 700;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    opacity: 0;
-    transform: scale(0.9);
-    transition: all 0.3s ease;
-}
-.coverflow-slide.coverflow-center .coverflow-slide-price {
-    opacity: 1;
-    transform: scale(1);
-}
-
-/* Slide positions - always show 3: center full, left/right at 50% scale below */
-.coverflow-slide.coverflow-far-left,
-.coverflow-slide.coverflow-far-right,
-.coverflow-slide.coverflow-hidden {
-    opacity: 0;
-    pointer-events: none;
-    z-index: 0;
-}
-.coverflow-slide.coverflow-left {
-    transform: translateX(-70%) translateY(15%) scale(0.65);
-    z-index: 2;
-    opacity: 0.8;
-    filter: brightness(0.75);
-}
-.coverflow-slide.coverflow-center {
-    transform: translateX(0) translateY(0) scale(1);
-    z-index: 3;
-}
-.coverflow-slide.coverflow-right {
-    transform: translateX(70%) translateY(15%) scale(0.65);
-    z-index: 2;
-    opacity: 0.8;
-    filter: brightness(0.75);
-}
-
-/* Thumbnail Navigation */
-.thumbnail-item {
-    flex-shrink: 0;
-    cursor: pointer;
-    border-radius: 0.5rem;
-    overflow: hidden;
-    border: 2px solid transparent;
-    transition: all 0.3s ease;
-    opacity: 0.6;
-}
-.thumbnail-item:hover {
-    opacity: 0.9;
-    transform: scale(1.05);
-}
-.thumbnail-item.active {
-    border-color: var(--color-primary, #A51C30);
-    opacity: 1;
-    box-shadow: 0 0 0 2px rgba(165, 28, 48, 0.3);
-}
-.thumbnail-item img {
-    object-fit: cover;
-    display: block;
-}
-.thumbnails-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.3) transparent;
-}
-.thumbnails-scroll::-webkit-scrollbar {
-    height: 4px;
-}
-.thumbnails-scroll::-webkit-scrollbar-track {
-    background: transparent;
-}
-.thumbnails-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.3);
-    border-radius: 2px;
-}
-
-/* City Filter Buttons */
-.city-filter-btn {
-    border: 2px solid transparent;
-    background: #f1f5f9;
-    color: #64748b;
-}
-.city-filter-btn:hover {
-    background: #e2e8f0;
-    color: #334155;
-}
-.city-filter-btn.active {
-    background: var(--color-primary, #A51C30);
-    color: white;
-    border-color: var(--color-primary, #A51C30);
-}
-
-/* Promoted Badge */
-.promoted-badge {
-    position: absolute;
-    top: 0.75rem;
-    left: 0.75rem;
-    z-index: 10;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.625rem;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-    border-radius: 0.375rem;
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    color: white;
-    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
-}
-</style>
 <script>
 // 3D Coverflow Hero Carousel Module
 const HeroSlider = {
@@ -858,16 +618,74 @@ const PromotedEvents = {
     }
 };
 
+// Lazy Loading Module using Intersection Observer
+const LazyLoader = {
+    observer: null,
+    loadedSections: new Set(),
+
+    init() {
+        // Create observer with rootMargin for early loading
+        this.observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const section = entry.target;
+                    const loadType = section.dataset.lazyLoad;
+
+                    if (!this.loadedSections.has(loadType)) {
+                        this.loadedSections.add(loadType);
+                        this.loadSection(loadType, section);
+                    }
+                }
+            });
+        }, {
+            rootMargin: '100px 0px', // Start loading 100px before visible
+            threshold: 0.01
+        });
+
+        // Observe all lazy sections
+        document.querySelectorAll('[data-lazy-load]').forEach(section => {
+            this.observer.observe(section);
+        });
+    },
+
+    async loadSection(type, section) {
+        try {
+            switch (type) {
+                case 'categories':
+                    await loadCategories();
+                    break;
+                case 'cityEvents':
+                    await CityEventsFilter.init();
+                    break;
+                case 'static':
+                    // Static sections just need the animation
+                    break;
+            }
+        } catch (error) {
+            console.warn(`Failed to load section: ${type}`, error);
+        }
+
+        // Add loaded class for CSS animation
+        section.classList.add('loaded');
+
+        // Stop observing this section
+        this.observer.unobserve(section);
+    }
+};
+
 // Homepage initialization
 document.addEventListener('DOMContentLoaded', async function() {
-    // Load homepage data
+    // Initialize lazy loading first
+    LazyLoader.init();
+
+    // Load above-the-fold content immediately (hero + promoted)
     await Promise.all([
         HeroSlider.init(),
-        loadCategories(),
-        CityEventsFilter.init(),
         PromotedEvents.init(),
         FeaturedCarousel.init()
     ]);
+
+    // Below-fold content is loaded by LazyLoader when visible
 });
 
 // Load categories
