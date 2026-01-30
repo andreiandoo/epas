@@ -139,7 +139,6 @@ async function doCheckin(ticketCode) {
 function exportParticipants() { AmbiletNotifications.success('Lista participantilor a fost exportata'); }
 document.getElementById('event-filter').addEventListener('change', loadParticipants);
 document.getElementById('checkin-filter').addEventListener('change', loadParticipants);
-document.getElementById('search-participants').addEventListener('input', AmbiletUtils.debounce(loadParticipants, 300));
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';
