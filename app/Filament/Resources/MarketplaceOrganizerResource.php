@@ -140,6 +140,10 @@ class MarketplaceOrganizerResource extends Resource
                             ->label('County')
                             ->maxLength(100),
 
+                        Forms\Components\TextInput::make('company_zip')
+                            ->label('Postal Code')
+                            ->maxLength(20),
+
                         Forms\Components\TextInput::make('representative_first_name')
                             ->label('Representative First Name')
                             ->maxLength(100)
@@ -200,6 +204,31 @@ class MarketplaceOrganizerResource extends Resource
                         Forms\Components\DatePicker::make('guarantor_id_issued_date')
                             ->label('Issue Date')
                             ->native(false),
+                    ])
+                    ->columns(2),
+
+                Section::make('Uploaded Documents')
+                    ->description('Identity and company documents for verification')
+                    ->schema([
+                        Forms\Components\FileUpload::make('id_card_document')
+                            ->label('CI / ID Card Copy')
+                            ->disk('public')
+                            ->directory('organizer-documents')
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxSize(5120)
+                            ->helperText('Personal ID card for the guarantor/representative')
+                            ->downloadable()
+                            ->openable(),
+
+                        Forms\Components\FileUpload::make('cui_document')
+                            ->label('CUI / Company Registration Copy')
+                            ->disk('public')
+                            ->directory('organizer-documents')
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxSize(5120)
+                            ->helperText('Company registration certificate (CUI)')
+                            ->downloadable()
+                            ->openable(),
                     ])
                     ->columns(2),
 

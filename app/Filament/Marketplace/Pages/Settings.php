@@ -53,6 +53,7 @@ class Settings extends Page
                 'postal_code' => $marketplace->postal_code ?? '',
                 'contact_email' => $marketplace->contact_email,
                 'contact_phone' => $marketplace->contact_phone,
+                'operating_hours' => $marketplace->operating_hours ?? '',
                 'website' => $marketplace->website ?? '',
                 'bank_name' => $marketplace->bank_name,
                 'bank_account' => $marketplace->bank_account,
@@ -208,10 +209,16 @@ class Settings extends Page
                                             ->tel()
                                             ->maxLength(50),
 
+                                        Forms\Components\TextInput::make('operating_hours')
+                                            ->label('Program de funcționare')
+                                            ->placeholder('Luni - Vineri: 09:00 - 18:00')
+                                            ->maxLength(255)
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Programul de lucru afișat pe site și în materialele de contact'),
+
                                         Forms\Components\TextInput::make('website')
                                             ->url()
                                             ->maxLength(255),
-                                    ])->columns(3),
+                                    ])->columns(2),
                             ]),
 
                         SC\Tabs\Tab::make('Personalization')
@@ -546,6 +553,7 @@ class Settings extends Page
             'postal_code' => $data['postal_code'],
             'contact_email' => $data['contact_email'],
             'contact_phone' => $data['contact_phone'],
+            'operating_hours' => $data['operating_hours'] ?? null,
             'website' => $data['website'],
             'bank_name' => $data['bank_name'],
             'bank_account' => $data['bank_account'],

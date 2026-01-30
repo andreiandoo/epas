@@ -22,6 +22,7 @@ class MarketplaceClient extends Model
         'api_secret',
         'contact_email',
         'contact_phone',
+        'operating_hours',
         'company_name',
         'cui',
         'reg_com',

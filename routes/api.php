@@ -2237,6 +2237,30 @@ Route::prefix('marketplace-client/artists')->middleware(['throttle:120,1', 'mark
         ->name('api.marketplace-client.artists.events');
 });
 
+// Knowledge Base
+use App\Http\Controllers\Api\MarketplaceClient\KnowledgeBaseController as MarketplaceKnowledgeBaseController;
+
+Route::prefix('marketplace-client/kb')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    Route::get('/categories', [MarketplaceKnowledgeBaseController::class, 'categories'])
+        ->name('api.marketplace-client.kb.categories');
+    Route::get('/categories/{slug}', [MarketplaceKnowledgeBaseController::class, 'category'])
+        ->name('api.marketplace-client.kb.categories.show');
+    Route::get('/articles', [MarketplaceKnowledgeBaseController::class, 'articles'])
+        ->name('api.marketplace-client.kb.articles');
+    Route::get('/articles/search', [MarketplaceKnowledgeBaseController::class, 'search'])
+        ->name('api.marketplace-client.kb.articles.search');
+    Route::get('/articles/featured', [MarketplaceKnowledgeBaseController::class, 'featured'])
+        ->name('api.marketplace-client.kb.articles.featured');
+    Route::get('/articles/popular', [MarketplaceKnowledgeBaseController::class, 'popular'])
+        ->name('api.marketplace-client.kb.articles.popular');
+    Route::get('/articles/{slug}', [MarketplaceKnowledgeBaseController::class, 'article'])
+        ->name('api.marketplace-client.kb.articles.show');
+    Route::post('/articles/{id}/vote', [MarketplaceKnowledgeBaseController::class, 'vote'])
+        ->name('api.marketplace-client.kb.articles.vote');
+    Route::get('/faqs', [MarketplaceKnowledgeBaseController::class, 'faqs'])
+        ->name('api.marketplace-client.kb.faqs');
+});
+
 /*
 |--------------------------------------------------------------------------
 | Platform Analytics API Routes
