@@ -338,22 +338,22 @@ class MediaLibraryResource extends Resource
                     ->width(60)
                     ->height(60)
                     ->square()
-                    ->defaultImageUrl(fn (MediaLibrary $record) => match (true) {
+                    ->defaultImageUrl(fn (?MediaLibrary $record) => $record ? match (true) {
                         str_contains($record->mime_type ?? '', 'pdf') => 'https://ui-avatars.com/api/?name=PDF&color=ef4444&background=1e293b',
                         str_contains($record->mime_type ?? '', 'video') => 'https://ui-avatars.com/api/?name=VID&color=8b5cf6&background=1e293b',
                         str_contains($record->mime_type ?? '', 'word') => 'https://ui-avatars.com/api/?name=DOC&color=3b82f6&background=1e293b',
                         str_contains($record->mime_type ?? '', 'excel') || str_contains($record->mime_type ?? '', 'spreadsheet') => 'https://ui-avatars.com/api/?name=XLS&color=22c55e&background=1e293b',
                         default => 'https://ui-avatars.com/api/?name=FILE&color=64748b&background=1e293b',
-                    })
-                    ->visible(fn (MediaLibrary $record) => $record->is_image),
+                    } : null)
+                    ->visible(fn (?MediaLibrary $record) => $record?->is_image ?? true),
 
                 Tables\Columns\TextColumn::make('filename')
                     ->label('Filename')
                     ->searchable()
                     ->sortable()
                     ->limit(40)
-                    ->tooltip(fn (MediaLibrary $record) => $record->filename)
-                    ->description(fn (MediaLibrary $record) => $record->directory),
+                    ->tooltip(fn (?MediaLibrary $record) => $record?->filename)
+                    ->description(fn (?MediaLibrary $record) => $record?->directory),
 
                 Tables\Columns\TextColumn::make('collection')
                     ->label('Collection')
@@ -390,7 +390,7 @@ class MediaLibraryResource extends Resource
 
                 Tables\Columns\IconColumn::make('is_compressed')
                     ->label('Compressed')
-                    ->getStateUsing(fn (MediaLibrary $record) => isset($record->metadata['compressed_at']))
+                    ->getStateUsing(fn (?MediaLibrary $record) => $record ? isset($record->metadata['compressed_at']) : false)
                     ->boolean()
                     ->trueIcon('heroicon-o-check-circle')
                     ->falseIcon('heroicon-o-x-circle')
@@ -400,7 +400,7 @@ class MediaLibraryResource extends Resource
 
                 Tables\Columns\TextColumn::make('dimensions')
                     ->label('Dimensions')
-                    ->getStateUsing(fn (MediaLibrary $record) => $record->width && $record->height
+                    ->getStateUsing(fn (?MediaLibrary $record) => $record && $record->width && $record->height
                         ? "{$record->width}×{$record->height}"
                         : '-')
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -413,7 +413,7 @@ class MediaLibraryResource extends Resource
 
                 Tables\Columns\TextColumn::make('created_at_month')
                     ->label('Month')
-                    ->getStateUsing(fn (MediaLibrary $record) => $record->created_at?->format('F Y'))
+                    ->getStateUsing(fn (?MediaLibrary $record) => $record?->created_at?->format('F Y'))
                     ->sortable(query: fn (Builder $query, string $direction) => $query->orderBy('created_at', $direction))
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -528,11 +528,12 @@ class MediaLibraryResource extends Resource
                     ->iconButton()
                     ->color('warning')
                     ->tooltip('Compress image')
-                    ->visible(fn (MediaLibrary $record) => $record->is_image && !isset($record->metadata['compressed_at']))
+                    ->visible(fn (?MediaLibrary $record) => $record && $record->is_image && !isset($record->metadata['compressed_at']))
                     ->requiresConfirmation()
                     ->modalHeading('Compress Image')
                     ->modalDescription('This will compress the image to reduce file size.')
-                    ->action(function (MediaLibrary $record) {
+                    ->action(function (?MediaLibrary $record) {
+                        if (!$record) return;
                         $service = new ImageCompressionService();
                         $service->quality(80);
 
@@ -562,7 +563,7 @@ class MediaLibraryResource extends Resource
                     ->icon('heroicon-o-arrow-down-tray')
                     ->iconButton()
                     ->color('gray')
-                    ->url(fn (MediaLibrary $record) => $record->url)
+                    ->url(fn (?MediaLibrary $record) => $record?->url)
                     ->openUrlInNewTab(),
                 DeleteAction::make()
                     ->iconButton(),
