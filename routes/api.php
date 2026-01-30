@@ -1454,6 +1454,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\ServiceOrderController 
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\TeamController as OrganizerTeamController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\BillingController as OrganizerBillingController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\DocumentController as OrganizerDocumentController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\NotificationController as OrganizerNotificationController;
 
 Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no organizer auth)
@@ -1725,6 +1726,24 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.services.orders.show');
         Route::post('/services/orders/{uuid}/cancel', [OrganizerServiceOrderController::class, 'cancel'])
             ->name('api.marketplace-client.organizer.services.orders.cancel');
+
+        // Notifications
+        Route::get('/notifications', [OrganizerNotificationController::class, 'index'])
+            ->name('api.marketplace-client.organizer.notifications');
+        Route::get('/notifications/unread-count', [OrganizerNotificationController::class, 'unreadCount'])
+            ->name('api.marketplace-client.organizer.notifications.unread-count');
+        Route::get('/notifications/recent', [OrganizerNotificationController::class, 'recent'])
+            ->name('api.marketplace-client.organizer.notifications.recent');
+        Route::get('/notifications/types', [OrganizerNotificationController::class, 'types'])
+            ->name('api.marketplace-client.organizer.notifications.types');
+        Route::post('/notifications/{id}/read', [OrganizerNotificationController::class, 'markRead'])
+            ->name('api.marketplace-client.organizer.notifications.mark-read');
+        Route::post('/notifications/read-all', [OrganizerNotificationController::class, 'markAllRead'])
+            ->name('api.marketplace-client.organizer.notifications.mark-all-read');
+        Route::delete('/notifications/{id}', [OrganizerNotificationController::class, 'destroy'])
+            ->name('api.marketplace-client.organizer.notifications.destroy');
+        Route::delete('/notifications/clear-read', [OrganizerNotificationController::class, 'clearRead'])
+            ->name('api.marketplace-client.organizer.notifications.clear-read');
 
         // Billing & Invoices
         Route::get('/invoices', [OrganizerBillingController::class, 'invoices'])

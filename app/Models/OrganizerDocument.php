@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Services\OrganizerNotificationService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 
 class OrganizerDocument extends Model
 {
@@ -29,6 +31,25 @@ class OrganizerDocument extends Model
         'issued_at' => 'datetime',
         'file_size' => 'integer',
     ];
+
+    /**
+     * Boot the model
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::created(function ($document) {
+            try {
+                OrganizerNotificationService::notifyDocumentGenerated($document);
+            } catch (\Exception $e) {
+                Log::warning('Failed to send document notification', [
+                    'document_id' => $document->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        });
+    }
 
     /**
      * Document types

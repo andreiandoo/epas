@@ -7,6 +7,7 @@ use App\Models\Platform\CoreCustomer;
 use App\Services\Platform\PlatformTrackingService;
 use App\Services\Analytics\MilestoneAttributionService;
 use App\Services\Analytics\RealTimeAnalyticsService;
+use App\Services\OrganizerNotificationService;
 use Illuminate\Support\Facades\Log;
 
 class OrderObserver
@@ -79,6 +80,18 @@ class OrderObserver
 
             // Track for organizer analytics (milestone attribution + real-time)
             $this->trackOrganizerAnalytics($order, $coreCustomer);
+
+            // Send notification to organizer for marketplace orders
+            if ($order->marketplace_organizer_id) {
+                try {
+                    OrganizerNotificationService::notifySale($order);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to send sale notification', [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
         } catch (\Exception $e) {
             Log::error('Failed to track order conversion', [

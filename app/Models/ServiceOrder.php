@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Services\OrganizerNotificationService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ServiceOrder extends Model
@@ -195,6 +197,16 @@ class ServiceOrder extends Model
             'status' => self::STATUS_ACTIVE,
         ]);
 
+        // Notify organizer that service has started
+        try {
+            OrganizerNotificationService::notifyServiceOrderStatus($this, 'started');
+        } catch (\Exception $e) {
+            Log::warning('Failed to send service started notification', [
+                'service_order_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return $this;
     }
 
@@ -206,6 +218,52 @@ class ServiceOrder extends Model
         $this->update([
             'status' => self::STATUS_COMPLETED,
         ]);
+
+        // Notify organizer that service is completed
+        try {
+            OrganizerNotificationService::notifyServiceOrderStatus($this, 'completed');
+        } catch (\Exception $e) {
+            Log::warning('Failed to send service completed notification', [
+                'service_order_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Mark that results are available
+     */
+    public function markResultsAvailable(): self
+    {
+        // Notify organizer that results are ready
+        try {
+            OrganizerNotificationService::notifyServiceOrderStatus($this, 'results');
+        } catch (\Exception $e) {
+            Log::warning('Failed to send service results notification', [
+                'service_order_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Notify about invoice generation
+     */
+    public function notifyInvoiceGenerated(): self
+    {
+        // Notify organizer about invoice
+        try {
+            OrganizerNotificationService::notifyServiceOrderStatus($this, 'invoice');
+        } catch (\Exception $e) {
+            Log::warning('Failed to send service invoice notification', [
+                'service_order_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this;
     }
@@ -253,6 +311,11 @@ class ServiceOrder extends Model
     }
 
     public function organizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
+    }
+
+    public function marketplaceOrganizer(): BelongsTo
     {
         return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
     }

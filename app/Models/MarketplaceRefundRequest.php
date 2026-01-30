@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Services\OrganizerNotificationService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Log;
 
 class MarketplaceRefundRequest extends Model
 {
@@ -102,6 +104,17 @@ class MarketplaceRefundRequest extends Model
         static::creating(function ($model) {
             if (empty($model->reference)) {
                 $model->reference = static::generateReference($model->marketplace_client_id);
+            }
+        });
+
+        static::created(function ($refund) {
+            try {
+                OrganizerNotificationService::notifyRefundRequest($refund);
+            } catch (\Exception $e) {
+                Log::warning('Failed to send refund notification', [
+                    'refund_id' => $refund->id,
+                    'error' => $e->getMessage(),
+                ]);
             }
         });
     }

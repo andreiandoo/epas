@@ -13,6 +13,7 @@ class MarketplaceNotification extends Model
 
     protected $fillable = [
         'marketplace_client_id',
+        'marketplace_organizer_id',
         'type',
         'title',
         'message',
@@ -47,6 +48,12 @@ class MarketplaceNotification extends Model
     public const TYPE_VENUE_CREATED = 'venue_created';
     public const TYPE_SEATING_LAYOUT_CREATED = 'seating_layout_created';
 
+    // Service order notification types
+    public const TYPE_SERVICE_ORDER_COMPLETED = 'service_order_completed';
+    public const TYPE_SERVICE_ORDER_INVOICE = 'service_order_invoice';
+    public const TYPE_SERVICE_ORDER_RESULTS = 'service_order_results';
+    public const TYPE_SERVICE_ORDER_STARTED = 'service_order_started';
+
     /**
      * Type labels for display
      */
@@ -66,6 +73,10 @@ class MarketplaceNotification extends Model
             self::TYPE_ARTIST_CREATED => 'Artist Nou',
             self::TYPE_VENUE_CREATED => 'Locație Nouă',
             self::TYPE_SEATING_LAYOUT_CREATED => 'Hartă Locuri Nouă',
+            self::TYPE_SERVICE_ORDER_COMPLETED => 'Serviciu Finalizat',
+            self::TYPE_SERVICE_ORDER_INVOICE => 'Factură Servicii',
+            self::TYPE_SERVICE_ORDER_RESULTS => 'Rezultate Serviciu',
+            self::TYPE_SERVICE_ORDER_STARTED => 'Serviciu Pornit',
         ];
     }
 
@@ -88,6 +99,10 @@ class MarketplaceNotification extends Model
             self::TYPE_ARTIST_CREATED => 'heroicon-o-musical-note',
             self::TYPE_VENUE_CREATED => 'heroicon-o-map-pin',
             self::TYPE_SEATING_LAYOUT_CREATED => 'heroicon-o-squares-2x2',
+            self::TYPE_SERVICE_ORDER_COMPLETED => 'heroicon-o-check-circle',
+            self::TYPE_SERVICE_ORDER_INVOICE => 'heroicon-o-document-currency-euro',
+            self::TYPE_SERVICE_ORDER_RESULTS => 'heroicon-o-chart-bar',
+            self::TYPE_SERVICE_ORDER_STARTED => 'heroicon-o-play',
         ];
     }
 
@@ -110,6 +125,10 @@ class MarketplaceNotification extends Model
             self::TYPE_ARTIST_CREATED => 'primary',
             self::TYPE_VENUE_CREATED => 'primary',
             self::TYPE_SEATING_LAYOUT_CREATED => 'primary',
+            self::TYPE_SERVICE_ORDER_COMPLETED => 'success',
+            self::TYPE_SERVICE_ORDER_INVOICE => 'info',
+            self::TYPE_SERVICE_ORDER_RESULTS => 'success',
+            self::TYPE_SERVICE_ORDER_STARTED => 'info',
         ];
     }
 
@@ -122,11 +141,27 @@ class MarketplaceNotification extends Model
     }
 
     /**
+     * Marketplace organizer relationship
+     */
+    public function organizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
+    }
+
+    /**
      * Polymorphic relationship to the related model
      */
     public function actionable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /**
+     * Scope for organizer notifications
+     */
+    public function scopeForOrganizer($query, int $organizerId)
+    {
+        return $query->where('marketplace_organizer_id', $organizerId);
     }
 
     /**
