@@ -10,39 +10,68 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <!-- Main Content -->
     <div class="flex-1 flex flex-col min-h-screen lg:ml-0">
         <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
-                <!-- Page Content -->
+        <!-- Page Content -->
         <main class="flex-1 p-4 lg:p-8">
             <!-- Page Header -->
-            <div class="flex items-center justify-between mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                     <h1 class="text-2xl font-bold text-secondary">Coduri Promotionale</h1>
                     <p class="text-sm text-muted">Creeaza si gestioneaza coduri de reducere</p>
                 </div>
-                <button onclick="openCreateModal()" class="btn btn-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Cod Nou</button>
+                <div class="flex items-center gap-3">
+                    <input type="text" id="search-codes" placeholder="Cauta cod..." class="input w-48">
+                    <select id="status-filter" class="input">
+                        <option value="">Toate</option>
+                        <option value="active">Active</option>
+                        <option value="expired">Expirate</option>
+                        <option value="disabled">Dezactivate</option>
+                    </select>
+                </div>
             </div>
 
-
+            <!-- Stats Cards -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div class="bg-white rounded-2xl border border-border p-6"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center"><svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg></div><span class="text-sm text-muted">Coduri Active</span></div><p class="text-2xl font-bold text-secondary" id="active-codes">0</p></div>
-                <div class="bg-white rounded-2xl border border-border p-6"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center"><svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><span class="text-sm text-muted">Utilizari</span></div><p class="text-2xl font-bold text-secondary" id="total-uses">0</p></div>
-                <div class="bg-white rounded-2xl border border-border p-6"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center"><svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><span class="text-sm text-muted">Reduceri Acordate</span></div><p class="text-2xl font-bold text-secondary" id="total-discounts">0 RON</p></div>
-                <div class="bg-white rounded-2xl border border-border p-6"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div><span class="text-sm text-muted">Venituri Generate</span></div><p class="text-2xl font-bold text-secondary" id="revenue-codes">0 RON</p></div>
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                        </div>
+                        <span class="text-sm text-muted">Coduri Active</span>
+                    </div>
+                    <p class="text-2xl font-bold text-secondary" id="active-codes">0</p>
+                </div>
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <span class="text-sm text-muted">Utilizari</span>
+                    </div>
+                    <p class="text-2xl font-bold text-secondary" id="total-uses">0</p>
+                </div>
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <span class="text-sm text-muted">Reduceri Acordate</span>
+                    </div>
+                    <p class="text-2xl font-bold text-secondary" id="total-discounts">0 RON</p>
+                </div>
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                        </div>
+                        <span class="text-sm text-muted">Venituri Generate</span>
+                    </div>
+                    <p class="text-2xl font-bold text-secondary" id="revenue-codes">0 RON</p>
+                </div>
             </div>
 
-            <div class="bg-white rounded-2xl border border-border overflow-hidden">
-                <div class="p-6 border-b border-border flex items-center justify-between">
-                    <h2 class="text-lg font-bold text-secondary">Toate Codurile</h2>
-                    <div class="flex items-center gap-3">
-                        <input type="text" id="search-codes" placeholder="Cauta cod..." class="input w-48">
-                        <select id="status-filter" class="input"><option value="">Toate</option><option value="active">Active</option><option value="expired">Expirate</option><option value="disabled">Dezactivate</option></select>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-surface"><tr><th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Cod</th><th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Reducere</th><th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Eveniment</th><th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Utilizari</th><th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Valabilitate</th><th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Status</th><th class="px-6 py-4 text-right text-sm font-semibold text-secondary">Actiuni</th></tr></thead>
-                        <tbody id="promo-codes-list" class="divide-y divide-border"></tbody>
-                    </table>
-                </div>
+            <!-- Promo Codes Grid -->
+            <div id="promo-codes-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                <!-- Cards will be inserted here by JS -->
             </div>
         </main>
     </div>
@@ -73,6 +102,7 @@ $scriptsExtra = <<<'JS'
 <script>
 AmbiletAuth.requireOrganizerAuth();
 let promoCodes = [];
+let allPromoCodes = [];
 
 document.addEventListener('DOMContentLoaded', function() { loadPromoCodes(); loadEvents(); setupDiscountType(); document.getElementById('start-date').value = new Date().toISOString().split('T')[0]; });
 
@@ -82,7 +112,6 @@ async function loadEvents() {
     try {
         const res = await AmbiletAPI.get('/organizer/events');
         if (res.success && res.data) {
-            // Handle both res.data.events and res.data (paginated response)
             let events = [];
             if (Array.isArray(res.data.events)) {
                 events = res.data.events;
@@ -94,7 +123,6 @@ async function loadEvents() {
             const sel = document.getElementById('promo-event');
             events.forEach(e => {
                 const opt = document.createElement('option');
-                // Ensure we use the correct ID - check for id or event_id
                 opt.value = e.id || e.event_id || '';
                 opt.textContent = e.name || e.title || 'Eveniment';
                 sel.appendChild(opt);
@@ -107,44 +135,155 @@ async function loadPromoCodes() {
     try {
         const response = await AmbiletAPI.get('/organizer/promo-codes');
         if (response.success) {
-            promoCodes = response.data.promo_codes || [];
+            allPromoCodes = response.data.promo_codes || [];
+            promoCodes = [...allPromoCodes];
             renderPromoCodes();
-            document.getElementById('active-codes').textContent = promoCodes.filter(c => c.status === 'active').length;
-            document.getElementById('total-uses').textContent = promoCodes.reduce((s, c) => s + (c.usage_count || 0), 0);
+            document.getElementById('active-codes').textContent = allPromoCodes.filter(c => c.status === 'active').length;
+            document.getElementById('total-uses').textContent = allPromoCodes.reduce((s, c) => s + (c.usage_count || 0), 0);
             document.getElementById('total-discounts').textContent = AmbiletUtils.formatCurrency(response.data.total_discounts || 0);
             document.getElementById('revenue-codes').textContent = AmbiletUtils.formatCurrency(response.data.revenue_generated || 0);
-        } else { promoCodes = []; renderPromoCodes(); }
-    } catch (error) { promoCodes = []; renderPromoCodes(); }
+        } else { allPromoCodes = []; promoCodes = []; renderPromoCodes(); }
+    } catch (error) { allPromoCodes = []; promoCodes = []; renderPromoCodes(); }
+}
+
+function getCardColor(code) {
+    // Return different colors based on status and discount type
+    if (code.status !== 'active') return 'muted';
+    const type = code.type || code.discount_type;
+    const value = code.value || code.discount_value || 0;
+    if (type === 'percentage' && value >= 20) return 'accent';
+    if (type === 'fixed' && value >= 50) return 'success';
+    return 'primary';
 }
 
 function renderPromoCodes() {
-    const container = document.getElementById('promo-codes-list');
-    if (!promoCodes.length) { container.innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-muted">Nu ai coduri promotionale</td></tr>'; return; }
-    container.innerHTML = promoCodes.map(c => {
+    const container = document.getElementById('promo-codes-grid');
+
+    // Generate cards HTML
+    let cardsHtml = promoCodes.map(c => {
         const discountType = c.type || c.discount_type;
-        const discountValue = c.value || c.discount_value;
-        // Handle event - can be string, object with name, or null
-        let eventName = 'Toate';
+        const discountValue = c.value || c.discount_value || 0;
+        const color = getCardColor(c);
+        const isExpired = c.status === 'expired' || c.status === 'disabled';
+
+        // Handle event name
+        let eventName = 'Toate evenimentele';
         if (c.event) {
             if (typeof c.event === 'string') {
                 eventName = c.event;
             } else if (typeof c.event === 'object') {
-                eventName = c.event.name || c.event.title || 'Toate';
+                eventName = c.event.name || c.event.title || 'Toate evenimentele';
             }
         } else if (c.event_name) {
             eventName = c.event_name;
         }
-        const startDate = c.starts_at || c.start_date;
+
         const endDate = c.expires_at || c.end_date;
+        const usageCount = c.usage_count || 0;
+        const usageLimit = c.usage_limit || 0;
+        const usagePercent = usageLimit > 0 ? Math.min((usageCount / usageLimit) * 100, 100) : 0;
+
+        // Discount display
+        const discountDisplay = discountType === 'percentage'
+            ? discountValue + '% reducere'
+            : AmbiletUtils.formatCurrency(discountValue) + ' reducere';
+
+        // Status badge
+        let statusBadge = '';
+        if (c.status === 'active') {
+            statusBadge = '<span class="px-2 py-1 bg-success/10 text-success text-xs font-semibold rounded-full">Activ</span>';
+        } else if (c.status === 'expired') {
+            statusBadge = '<span class="px-2 py-1 bg-muted/10 text-muted text-xs font-semibold rounded-full">Expirat</span>';
+        } else {
+            statusBadge = '<span class="px-2 py-1 bg-error/10 text-error text-xs font-semibold rounded-full">Dezactivat</span>';
+        }
+
         return `
-        <tr class="hover:bg-surface/50"><td class="px-6 py-4"><div class="flex items-center gap-2"><code class="px-3 py-1 bg-primary/10 text-primary font-mono font-semibold rounded-lg">${c.code}</code><button onclick="copyCode('${c.code}')" class="p-1 text-muted hover:text-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button></div></td>
-        <td class="px-6 py-4 font-semibold text-secondary">${discountType === 'percentage' ? discountValue + '%' : AmbiletUtils.formatCurrency(discountValue)}</td>
-        <td class="px-6 py-4">${eventName}</td>
-        <td class="px-6 py-4">${c.usage_count || 0}${c.usage_limit ? ' / ' + c.usage_limit : ''}</td>
-        <td class="px-6 py-4"><span class="text-sm text-muted">${startDate ? AmbiletUtils.formatDate(startDate) : '-'} - ${endDate ? AmbiletUtils.formatDate(endDate) : '-'}</span></td>
-        <td class="px-6 py-4"><span class="px-3 py-1 bg-${c.status === 'active' ? 'success' : c.status === 'expired' ? 'muted' : 'error'}/10 text-${c.status === 'active' ? 'success' : c.status === 'expired' ? 'muted' : 'error'} text-sm rounded-full">${c.status === 'active' ? 'Activ' : c.status === 'expired' ? 'Expirat' : 'Dezactivat'}</span></td>
-        <td class="px-6 py-4 text-right"><button onclick="editCode(${c.id})" class="p-2 text-muted hover:text-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="deleteCode(${c.id})" class="p-2 text-muted hover:text-error"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></td></tr>`;
+        <div class="promo-card bg-white rounded-xl lg:rounded-2xl border border-border overflow-hidden ${isExpired ? 'opacity-60' : ''}">
+            <div class="p-4 lg:p-5">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-${color}/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-${color}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                        </div>
+                        <div>
+                            ${statusBadge}
+                        </div>
+                    </div>
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" class="p-2 hover:bg-surface rounded-lg">
+                            <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-cloak class="absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-border z-10">
+                            <button onclick="editCode(${c.id})" class="w-full px-4 py-2 text-left text-sm text-secondary hover:bg-surface flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                Editeaza
+                            </button>
+                            <button onclick="deleteCode(${c.id})" class="w-full px-4 py-2 text-left text-sm text-error hover:bg-surface flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                Sterge
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 mb-3">
+                    <code class="text-lg font-bold text-secondary bg-surface px-3 py-1.5 rounded-lg">${c.code}</code>
+                    ${!isExpired ? `
+                    <button onclick="copyCode('${c.code}')" class="copy-btn p-2 rounded-lg hover:bg-surface transition-colors">
+                        <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    </button>
+                    ` : ''}
+                </div>
+
+                <p class="text-2xl font-bold text-${isExpired ? 'muted' : 'primary'} mb-1">${discountDisplay}</p>
+                <p class="text-sm text-muted mb-4">${eventName}</p>
+
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                        <p class="text-xs text-muted">Utilizari</p>
+                        <p class="font-semibold text-${isExpired ? 'muted' : 'secondary'}">${usageCount}${usageLimit ? ' / ' + usageLimit : ''}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-muted">${isExpired ? 'Expirat la' : 'Expira'}</p>
+                        <p class="font-semibold text-${isExpired ? 'muted' : 'secondary'}">${endDate ? AmbiletUtils.formatDate(endDate) : 'Nelimitat'}</p>
+                    </div>
+                </div>
+            </div>
+            ${usageLimit > 0 ? `
+            <div class="h-1.5 bg-surface">
+                <div class="h-full bg-${color} rounded-r-full" style="width: ${usagePercent}%"></div>
+            </div>
+            ` : ''}
+        </div>`;
     }).join('');
+
+    // Add "Create New" card at the end
+    cardsHtml += `
+    <div onclick="openCreateModal()" class="border-2 border-dashed border-border rounded-xl lg:rounded-2xl flex items-center justify-center min-h-[240px] hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group">
+        <div class="text-center p-6">
+            <div class="w-12 h-12 bg-surface group-hover:bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3 transition-colors">
+                <svg class="w-6 h-6 text-muted group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            </div>
+            <p class="font-semibold text-secondary">Creeaza cod nou</p>
+            <p class="text-sm text-muted">Adauga un nou cod de reducere</p>
+        </div>
+    </div>`;
+
+    container.innerHTML = cardsHtml;
+}
+
+function filterPromoCodes() {
+    const searchQuery = document.getElementById('search-codes').value.toLowerCase().trim();
+    const statusFilter = document.getElementById('status-filter').value;
+
+    promoCodes = allPromoCodes.filter(c => {
+        const matchesSearch = !searchQuery || c.code.toLowerCase().includes(searchQuery);
+        const matchesStatus = !statusFilter || c.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
+    renderPromoCodes();
 }
 
 function openCreateModal() { document.getElementById('modal-title').textContent = 'Creeaza Cod Promotional'; document.getElementById('promo-id').value = ''; document.getElementById('promo-code').value = ''; document.getElementById('discount-value').value = ''; document.getElementById('promo-event').value = ''; document.getElementById('usage-limit').value = ''; document.querySelector('input[name="discount_type"][value="percentage"]').checked = true; document.getElementById('start-date').value = new Date().toISOString().split('T')[0]; document.getElementById('end-date').value = ''; document.getElementById('promo-modal').classList.remove('hidden'); document.getElementById('promo-modal').classList.add('flex'); }
@@ -210,8 +349,8 @@ async function savePromoCode(e) {
     } catch (error) { AmbiletNotifications.error(error.message || 'Eroare la salvare'); }
 }
 
-document.getElementById('search-codes').addEventListener('input', AmbiletUtils.debounce(function() { const q = this.value.toLowerCase(); const status = document.getElementById('status-filter').value; const filtered = promoCodes.filter(c => (!q || c.code.toLowerCase().includes(q)) && (!status || c.status === status)); const temp = promoCodes; promoCodes = filtered; renderPromoCodes(); promoCodes = temp; }, 300));
-document.getElementById('status-filter').addEventListener('change', function() { const q = document.getElementById('search-codes').value.toLowerCase(); const status = this.value; const filtered = promoCodes.filter(c => (!q || c.code.toLowerCase().includes(q)) && (!status || c.status === status)); const temp = promoCodes; promoCodes = filtered; renderPromoCodes(); promoCodes = temp; });
+document.getElementById('search-codes').addEventListener('input', AmbiletUtils.debounce(filterPromoCodes, 300));
+document.getElementById('status-filter').addEventListener('change', filterPromoCodes);
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';
