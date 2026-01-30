@@ -805,10 +805,19 @@ class EventsController extends BaseController
                 : $ticket->order->customer_name ?? 'Unknown';
             $rawEmail = $customer?->email ?? $ticket->order->customer_email ?? '';
 
+            // Get localized event title
+            $eventTitle = 'Unknown Event';
+            if ($event) {
+                $eventTitle = $event->getTranslation('title', 'ro')
+                    ?: $event->getTranslation('title', 'en')
+                    ?: $event->getTranslation('title')
+                    ?: 'Unknown Event';
+            }
+
             return [
                 'name' => $this->maskName($rawName),
                 'email' => $this->maskEmail($rawEmail),
-                'event' => $event?->name ?? $event?->title ?? 'Unknown Event',
+                'event' => $eventTitle,
                 'event_id' => $event?->id,
                 'ticket_type' => $ticket->ticketType?->name ?? 'Standard',
                 'ticket_code' => $ticket->barcode,

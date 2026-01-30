@@ -294,6 +294,17 @@ class OrganizerResource extends Resource
                                     ->icon('heroicon-o-plus')
                                     ->color('gray')
                                     ->url(fn ($record) => EventResource::getUrl('create', ['organizer' => $record->id])),
+                                Action::make('view_contract')
+                                    ->label('Vezi Contract')
+                                    ->icon('heroicon-o-document-text')
+                                    ->color('primary')
+                                    ->visible(fn ($record) => \App\Models\OrganizerDocument::where('marketplace_organizer_id', $record->id)
+                                        ->where('document_type', 'organizer_contract')
+                                        ->exists())
+                                    ->url(fn ($record) => \App\Models\OrganizerDocument::where('marketplace_organizer_id', $record->id)
+                                        ->where('document_type', 'organizer_contract')
+                                        ->latest('issued_at')
+                                        ->first()?->download_url, shouldOpenInNewTab: true),
                                 Action::make('view_balance')
                                     ->label('View Balance')
                                     ->icon('heroicon-o-wallet')

@@ -434,9 +434,9 @@ Schedule::call(function () {
 |--------------------------------------------------------------------------
 */
 
-// Fetch daily exchange rates (daily at 10 AM - after ECB publishes)
+// Fetch daily exchange rates (daily at 7 AM)
 Schedule::command('exchange-rates:fetch')
-    ->dailyAt('10:00')
+    ->dailyAt('07:00')
     ->timezone('Europe/Bucharest')
     ->onSuccess(function () {
         \Log::info('Exchange rates fetched successfully');

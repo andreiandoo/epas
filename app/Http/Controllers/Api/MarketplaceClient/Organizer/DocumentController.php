@@ -24,7 +24,7 @@ class DocumentController extends BaseController
         $organizer = $this->requireOrganizer($request);
 
         $query = OrganizerDocument::where('marketplace_organizer_id', $organizer->id)
-            ->with(['event:id,name,starts_at,venue_name,venue_city']);
+            ->with(['event']);
 
         // Filter by event
         if ($request->has('event_id')) {
@@ -54,13 +54,22 @@ class DocumentController extends BaseController
 
         return $this->success([
             'documents' => $documents->map(function ($doc) {
+                // Get localized event title
+                $eventTitle = '-';
+                if ($doc->event) {
+                    $eventTitle = $doc->event->getTranslation('title', 'ro')
+                        ?: $doc->event->getTranslation('title', 'en')
+                        ?: $doc->event->getTranslation('title')
+                        ?: '-';
+                }
+
                 return [
                     'id' => $doc->id,
                     'title' => $doc->title,
                     'type' => $doc->document_type,
                     'type_label' => $doc->document_type_label,
                     'event_id' => $doc->event_id,
-                    'event_name' => $doc->event?->name ?? '-',
+                    'event_name' => $eventTitle,
                     'issued_at' => $doc->issued_at?->format('Y-m-d H:i'),
                     'file_size' => $doc->formatted_file_size,
                     'download_url' => $doc->download_url,
@@ -342,6 +351,7 @@ class DocumentController extends BaseController
         // Get all events for organizer from events table (Event model)
         $events = Event::where('marketplace_organizer_id', $organizer->id)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->with(['venue', 'marketplaceCity'])
             ->orderBy('event_date', 'desc')
             ->get();
 
@@ -360,12 +370,29 @@ class DocumentController extends BaseController
             $status = $event->is_cancelled ? 'cancelled' :
                 ($event->is_published ? 'published' : 'draft');
 
+            // Get localized event title
+            $eventTitle = $event->getTranslation('title', 'ro')
+                ?: $event->getTranslation('title', 'en')
+                ?: $event->getTranslation('title')
+                ?: 'Eveniment';
+
+            // Get venue name (may be translatable)
+            $venueName = null;
+            if ($event->venue) {
+                $venueName = $event->venue->getTranslation('name', 'ro')
+                    ?? $event->venue->getTranslation('name')
+                    ?? $event->venue->name ?? null;
+            }
+
+            // Get city from marketplaceCity or venue
+            $venueCity = $event->marketplaceCity?->name ?? $event->venue?->city ?? null;
+
             return [
                 'id' => $event->id,
-                'name' => $event->name,
+                'name' => $eventTitle,
                 'starts_at' => $event->event_date?->format('Y-m-d H:i'),
-                'venue_name' => $event->venue_name,
-                'venue_city' => $event->venue_city,
+                'venue_name' => $venueName,
+                'venue_city' => $venueCity,
                 'status' => $status,
                 'status_label' => $this->getStatusLabel($status),
                 'cerere_avizare' => $cerereAvizare ? [

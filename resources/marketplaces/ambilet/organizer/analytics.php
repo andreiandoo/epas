@@ -942,6 +942,7 @@ function updateMainChart(chartData) {
         yaxis: yaxisConfigs.length > 0 ? yaxisConfigs : [{}],
         tooltip: {
             shared: true,
+            intersect: false,
             y: {
                 formatter: (val, { seriesIndex }) => {
                     const name = series[seriesIndex]?.name || '';
