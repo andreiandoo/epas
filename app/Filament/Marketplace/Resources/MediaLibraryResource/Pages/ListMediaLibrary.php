@@ -243,13 +243,14 @@ class ListMediaLibrary extends ListRecords
         }
 
         $added = 0;
+        $claimed = 0;
         $skipped = 0;
 
-        // Get all existing paths in a single query for efficiency
-        $existingPaths = MediaLibrary::where('disk', 'public')
-            ->pluck('path')
-            ->flip()
-            ->toArray();
+        // Get existing paths with their marketplace_client_id
+        $existingMedia = MediaLibrary::where('disk', 'public')
+            ->select('id', 'path', 'marketplace_client_id')
+            ->get()
+            ->keyBy('path');
 
         foreach ($files as $filePath) {
             // Skip hidden files and system files
@@ -257,9 +258,17 @@ class ListMediaLibrary extends ListRecords
                 continue;
             }
 
-            // Skip if already in library (regardless of marketplace)
-            if (isset($existingPaths[$filePath])) {
-                $skipped++;
+            // Check if file already exists in library
+            if (isset($existingMedia[$filePath])) {
+                $existing = $existingMedia[$filePath];
+
+                // If file has no marketplace_client_id, claim it for this marketplace
+                if ($existing->marketplace_client_id === null && $marketplaceId !== null) {
+                    $existing->update(['marketplace_client_id' => $marketplaceId]);
+                    $claimed++;
+                } else {
+                    $skipped++;
+                }
                 continue;
             }
 
@@ -300,9 +309,15 @@ class ListMediaLibrary extends ListRecords
             }
         }
 
+        $message = "S-au adăugat {$added} fișier(e) noi.";
+        if ($claimed > 0) {
+            $message .= " S-au revendicat {$claimed} fișier(e) orfane.";
+        }
+        $message .= " S-au ignorat {$skipped} fișier(e) existente.";
+
         Notification::make()
             ->title('Scanare Completă')
-            ->body("S-au adăugat {$added} fișier(e) noi. S-au ignorat {$skipped} fișier(e) existente.")
+            ->body($message)
             ->success()
             ->send();
     }
