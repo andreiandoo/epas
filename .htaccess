@@ -346,7 +346,26 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^pentru-organizatori/?$ organizer/landing.php [L]
 
-# /ajutor -> help-center.php
+# ============================================
+# HELP CENTER / KNOWLEDGE BASE ROUTES - /ajutor/*
+# ============================================
+
+# /ajutor/cautare -> ajutor-cautare.php (search page)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ajutor/cautare/?$ ajutor-cautare.php [L,QSA]
+
+# /ajutor/articol/{slug} -> ajutor-articol.php (single article)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ajutor/articol/([a-z0-9-]+)/?$ ajutor-articol.php?slug=$1 [L,QSA]
+
+# /ajutor/{category-slug} -> ajutor-categorie.php (category page)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ajutor/([a-z0-9-]+)/?$ ajutor-categorie.php?slug=$1 [L,QSA]
+
+# /ajutor -> help-center.php (main help center)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ajutor/?$ help-center.php [L]
