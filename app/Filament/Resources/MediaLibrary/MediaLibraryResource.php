@@ -13,6 +13,9 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\BulkAction;
@@ -518,9 +521,9 @@ class MediaLibraryResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->actions([
-                Tables\Actions\ViewAction::make()
+                ViewAction::make()
                     ->iconButton(),
-                Tables\Actions\Action::make('compress')
+                Action::make('compress')
                     ->icon('heroicon-o-arrow-down-on-square-stack')
                     ->iconButton()
                     ->color('warning')
@@ -555,13 +558,13 @@ class MediaLibraryResource extends Resource
                                 ->send();
                         }
                     }),
-                Tables\Actions\Action::make('download')
+                Action::make('download')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->iconButton()
                     ->color('gray')
                     ->url(fn (MediaLibrary $record) => $record->url)
                     ->openUrlInNewTab(),
-                Tables\Actions\DeleteAction::make()
+                DeleteAction::make()
                     ->iconButton(),
             ])
             ->bulkActions([
