@@ -38,7 +38,7 @@ class EventTaxReport extends Page
         return 'Tax Report: ' . ($this->event?->getTranslation('title', 'ro') ?: $this->event?->getTranslation('title', 'en') ?: 'Event');
     }
 
-    public static function getSlug(): string
+    public static function getSlug(?Panel $panel = null): string
     {
         return 'event-tax-report/{event}';
     }
