@@ -39,9 +39,14 @@ const AmbiletHeader = {
      */
     updatePHPHeaderAuth() {
         const isLoggedIn = typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isLoggedIn();
+        const isOrganizer = typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isOrganizer();
         const loginLink = document.querySelector('a[href="/login"]');
         const userMenu = document.getElementById('headerUserMenu');
         const loginBtn = document.getElementById('loginBtn');
+
+        // Toggle customer/organizer links
+        const customerLinks = document.getElementById('headerCustomerLinks');
+        const organizerLinks = document.getElementById('headerOrganizerLinks');
 
         if (isLoggedIn && userMenu) {
             const user = AmbiletAuth.getCurrentUser();
@@ -64,9 +69,21 @@ const AmbiletHeader = {
             if (emailEl && user) {
                 emailEl.textContent = user.email || '';
             }
+
+            // Show appropriate links based on user type
+            if (isOrganizer) {
+                if (customerLinks) customerLinks.style.display = 'none';
+                if (organizerLinks) organizerLinks.style.display = '';
+            } else {
+                if (customerLinks) customerLinks.style.display = '';
+                if (organizerLinks) organizerLinks.style.display = 'none';
+            }
         } else if (userMenu) {
             userMenu.style.display = 'none';
             loginLink?.closest('.hidden')?.classList.remove('!hidden');
+            // Reset links visibility when logged out
+            if (customerLinks) customerLinks.style.display = '';
+            if (organizerLinks) organizerLinks.style.display = 'none';
         }
     },
 
@@ -194,7 +211,7 @@ const AmbiletHeader = {
 
                     <div class="p-4 border-t border-border">
                         ${isLoggedIn
-                            ? `<a href="${isOrganizer ? '/organizator/dashboard' : '/user/dashboard'}" class="btn btn-primary w-full">Contul meu</a>`
+                            ? `<a href="${isOrganizer ? '/organizator/panou' : '/cont/dashboard'}" class="btn btn-primary w-full">${isOrganizer ? 'Panoul meu' : 'Contul meu'}</a>`
                             : `<a href="/login" class="btn btn-primary w-full">Autentificare</a>`
                         }
                     </div>
@@ -233,14 +250,15 @@ const AmbiletHeader = {
                         <p class="text-xs text-muted">${user?.email || ''}</p>
                     </div>
                     ${isOrganizer
-                        ? `<a href="/organizator/dashboard" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Dashboard</a>
+                        ? `<a href="/organizator/panou" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Panoul meu</a>
                            <a href="/organizator/events" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Evenimentele mele</a>
-                           <a href="/organizator/finance" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Finanțe</a>`
-                        : `<a href="/user/dashboard" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Contul meu</a>
-                           <a href="/user/tickets" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Biletele mele</a>
-                           <a href="/user/orders" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Comenzile mele</a>`
+                           <a href="/organizator/sold" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Sold & Plăți</a>
+                           <a href="/organizator/setari" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Setări</a>`
+                        : `<a href="/cont/dashboard" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Contul meu</a>
+                           <a href="/cont/bilete" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Biletele mele</a>
+                           <a href="/cont/comenzi" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Comenzile mele</a>
+                           <a href="/cont/setari" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Setări</a>`
                     }
-                    <a href="/user/settings" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Setări</a>
                     <div class="border-t border-border mt-2 pt-2">
                         <button id="logout-btn" class="block w-full text-left px-4 py-2 text-sm text-error hover:bg-red-50 transition-colors">Deconectare</button>
                     </div>

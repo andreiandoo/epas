@@ -41,7 +41,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
 
             <div id="profile-section" class="settings-section">
-                <div class="bg-white rounded-2xl border border-border p-6">
+                <div class="bg-white rounded-2xl border border-border p-6 mb-6">
                     <h2 class="text-lg font-bold text-secondary mb-6">Profil Organizator</h2>
                     <form onsubmit="saveProfile(event)" class="space-y-4">
                         <div class="grid lg:grid-cols-2 gap-4"><div><label class="label">Nume Organizator *</label><input type="text" id="org-name" class="input w-full" required></div><div><label class="label">Email Contact *</label><input type="email" id="org-email" class="input w-full" required></div></div>
@@ -49,6 +49,30 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <div><label class="label">Descriere</label><textarea id="org-description" rows="4" class="input w-full"></textarea></div>
                         <div class="pt-4 flex justify-end"><button type="submit" class="btn btn-primary">Salveaza</button></div>
                     </form>
+                </div>
+
+                <!-- Personal / Guarantor Information (read-only) -->
+                <div class="bg-white rounded-2xl border border-border p-6" id="personal-info-section">
+                    <h2 class="text-lg font-bold text-secondary mb-2">Date Personale / Garant</h2>
+                    <p class="text-sm text-muted mb-6">Informatii capturate la inregistrare. Contacteaza suportul pentru modificari.</p>
+                    <div class="space-y-4">
+                        <div class="grid lg:grid-cols-2 gap-4">
+                            <div><label class="label">Prenume</label><input type="text" id="guarantor-first-name" class="input w-full bg-gray-50" readonly></div>
+                            <div><label class="label">Nume</label><input type="text" id="guarantor-last-name" class="input w-full bg-gray-50" readonly></div>
+                        </div>
+                        <div class="grid lg:grid-cols-2 gap-4">
+                            <div><label class="label">CNP</label><input type="text" id="guarantor-cnp" class="input w-full bg-gray-50" readonly></div>
+                            <div><label class="label">Localitate</label><input type="text" id="guarantor-city" class="input w-full bg-gray-50" readonly></div>
+                        </div>
+                        <div><label class="label">Adresa domiciliu</label><input type="text" id="guarantor-address" class="input w-full bg-gray-50" readonly></div>
+                        <div class="grid lg:grid-cols-4 gap-4">
+                            <div><label class="label">Tip act</label><input type="text" id="guarantor-id-type" class="input w-full bg-gray-50" readonly></div>
+                            <div><label class="label">Serie</label><input type="text" id="guarantor-id-series" class="input w-full bg-gray-50" readonly></div>
+                            <div><label class="label">Numar</label><input type="text" id="guarantor-id-number" class="input w-full bg-gray-50" readonly></div>
+                            <div><label class="label">Data eliberarii</label><input type="text" id="guarantor-id-issued-date" class="input w-full bg-gray-50" readonly></div>
+                        </div>
+                        <div><label class="label">Eliberat de</label><input type="text" id="guarantor-id-issued-by" class="input w-full bg-gray-50" readonly></div>
+                    </div>
                 </div>
             </div>
 
@@ -90,14 +114,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <div class="space-y-6">
-                        <div class="grid md:grid-cols-2 gap-6">
+                        <div class="grid md:grid-cols-3 gap-6">
                             <div class="bg-surface rounded-xl p-5">
                                 <h3 class="font-semibold text-secondary mb-3 flex items-center gap-2">
                                     <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                                     Comision
                                 </h3>
                                 <p class="text-3xl font-bold text-primary mb-1" id="contract-commission">-</p>
-                                <p class="text-sm text-muted">din valoarea fiecarui bilet vandut</p>
+                                <p class="text-sm text-muted" id="contract-commission-note">maxim 6% (minim 2.50 lei/bilet)</p>
+                            </div>
+                            <div class="bg-surface rounded-xl p-5">
+                                <h3 class="font-semibold text-secondary mb-3 flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                    Mod de Lucru
+                                </h3>
+                                <p class="text-lg font-semibold text-secondary" id="contract-work-mode">-</p>
+                                <p class="text-sm text-muted mt-1" id="contract-work-mode-desc">-</p>
                             </div>
                             <div class="bg-surface rounded-xl p-5">
                                 <h3 class="font-semibold text-secondary mb-3 flex items-center gap-2">
@@ -281,11 +313,13 @@ async function loadSettings() {
         const response = await AmbiletAPI.get('/organizer/settings');
         if (response.success) {
             const data = response.data?.organizer || response.data || {};
+            // Profile/Organizer info
             document.getElementById('org-name').value = data.name || '';
             document.getElementById('org-email').value = data.email || '';
             document.getElementById('org-phone').value = data.phone || '';
             document.getElementById('org-website').value = data.website || '';
             document.getElementById('org-description').value = data.description || '';
+            // Company info
             document.getElementById('company-name').value = data.company_name || '';
             document.getElementById('company-cui').value = data.company_tax_id || '';
             document.getElementById('company-reg').value = data.company_registration || '';
@@ -295,6 +329,21 @@ async function loadSettings() {
             document.getElementById('company-city').value = data.company_city || data.city || '';
             document.getElementById('company-county').value = data.company_county || data.county || '';
             document.getElementById('company-zip').value = data.company_zip || data.zip || '';
+            // Guarantor/Personal info (read-only)
+            document.getElementById('guarantor-first-name').value = data.guarantor_first_name || '';
+            document.getElementById('guarantor-last-name').value = data.guarantor_last_name || '';
+            document.getElementById('guarantor-cnp').value = data.guarantor_cnp || '';
+            document.getElementById('guarantor-city').value = data.guarantor_city || '';
+            document.getElementById('guarantor-address').value = data.guarantor_address || '';
+            const idTypeLabels = { 'ci': 'Carte de Identitate', 'passport': 'Pasaport' };
+            document.getElementById('guarantor-id-type').value = idTypeLabels[data.guarantor_id_type] || data.guarantor_id_type || '';
+            document.getElementById('guarantor-id-series').value = data.guarantor_id_series || '';
+            document.getElementById('guarantor-id-number').value = data.guarantor_id_number || '';
+            document.getElementById('guarantor-id-issued-date').value = data.guarantor_id_issued_date || '';
+            document.getElementById('guarantor-id-issued-by').value = data.guarantor_id_issued_by || '';
+            // Hide personal info section if no guarantor data
+            const hasGuarantorData = data.guarantor_first_name || data.guarantor_last_name || data.guarantor_cnp;
+            document.getElementById('personal-info-section').style.display = hasGuarantorData ? '' : 'none';
         }
     } catch (error) { /* Fields remain empty */ }
 }
@@ -521,10 +570,19 @@ async function loadContract() {
         if (response.success) {
             const data = response.data;
             document.getElementById('contract-commission').textContent = (data.commission_rate || 0) + '%';
+            // Commission mode (included vs on_top)
             const modeLabels = { 'included': 'Inclus in pretul biletului', 'on_top': 'Adaugat peste pretul biletului' };
             const modeDescs = { 'included': 'Comisionul este inclus in pretul afisat al biletului', 'on_top': 'Comisionul se adauga separat la pretul biletului' };
             document.getElementById('contract-mode').textContent = modeLabels[data.commission_mode] || data.commission_mode || '-';
             document.getElementById('contract-mode-desc').textContent = modeDescs[data.commission_mode] || '';
+            // Work mode (exclusive vs non_exclusive)
+            const workModeLabels = { 'exclusive': 'Exclusiv', 'non_exclusive': 'Non-exclusiv' };
+            const workModeDescs = {
+                'exclusive': 'Vinzi bilete doar pe aceasta platforma',
+                'non_exclusive': 'Vinzi bilete si pe alte platforme'
+            };
+            document.getElementById('contract-work-mode').textContent = workModeLabels[data.work_mode] || data.work_mode || '-';
+            document.getElementById('contract-work-mode-desc').textContent = workModeDescs[data.work_mode] || '';
             if (data.terms && data.terms.length) {
                 document.getElementById('contract-terms').innerHTML = data.terms.map(t => `
                     <div class="flex items-start gap-3 text-sm text-muted">
