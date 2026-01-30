@@ -11,6 +11,18 @@ use Illuminate\Http\JsonResponse;
 class SearchController extends BaseController
 {
     /**
+     * Diacritics mapping for Romanian characters
+     */
+    private const DIACRITICS_MAP = [
+        'ă' => 'a', 'Ă' => 'A',
+        'â' => 'a', 'Â' => 'A',
+        'î' => 'i', 'Î' => 'I',
+        'ș' => 's', 'Ș' => 'S', 'ş' => 's', 'Ş' => 'S',
+        'ț' => 't', 'Ț' => 'T', 'ţ' => 't', 'Ţ' => 'T',
+        'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ț' => 't', // UTF-8 variants
+    ];
+
+    /**
      * Global search across events, artists, and locations
      */
     public function search(Request $request): JsonResponse
@@ -45,10 +57,40 @@ class SearchController extends BaseController
     }
 
     /**
+     * Normalize search query - lowercase and remove diacritics
+     */
+    protected function normalizeSearch(string $query): string
+    {
+        $normalized = strtr($query, self::DIACRITICS_MAP);
+        return mb_strtolower($normalized, 'UTF-8');
+    }
+
+    /**
+     * Build SQL expression to normalize a column for search (lowercase + remove diacritics)
+     */
+    protected function normalizeColumnSql(string $column): string
+    {
+        // Chain of REPLACE calls to remove diacritics, then LOWER for case-insensitivity
+        return "LOWER(
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+            REPLACE({$column},
+            'ă', 'a'), 'Ă', 'a'), 'â', 'a'), 'Â', 'a'),
+            'î', 'i'), 'Î', 'i'),
+            'ș', 's'), 'Ș', 's'), 'ş', 's'), 'Ş', 's'),
+            'ț', 't'), 'Ț', 't'), 'ţ', 't'), 'Ţ', 't'),
+            'ă', 'a'), 'â', 'a')
+        )";
+    }
+
+    /**
      * Search events
      */
     protected function searchEvents($client, string $query, int $limit, string $language): array
     {
+        $normalizedQuery = $this->normalizeSearch($query);
+
         $events = Event::query()
             ->with(['venue:id,name,city', 'ticketTypes' => function ($q) {
                 $q->where('status', 'active')
@@ -75,13 +117,18 @@ class SearchController extends BaseController
                     $q->orWhereIn('tenant_id', $allowedTenants);
                 }
             })
-            // Search in title (JSON column)
-            ->where(function ($q) use ($query) {
-                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro')) LIKE ?", ["%{$query}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.en')) LIKE ?", ["%{$query}%"])
-                    ->orWhereHas('venue', function ($vq) use ($query) {
-                        $vq->where('name', 'like', "%{$query}%")
-                            ->orWhere('city', 'like', "%{$query}%");
+            // Search in title (JSON column) - case and diacritic insensitive
+            ->where(function ($q) use ($normalizedQuery) {
+                $titleRo = $this->normalizeColumnSql("JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))");
+                $titleEn = $this->normalizeColumnSql("JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))");
+
+                $q->whereRaw("{$titleRo} LIKE ?", ["%{$normalizedQuery}%"])
+                    ->orWhereRaw("{$titleEn} LIKE ?", ["%{$normalizedQuery}%"])
+                    ->orWhereHas('venue', function ($vq) use ($normalizedQuery) {
+                        $nameNorm = $this->normalizeColumnSql('name');
+                        $cityNorm = $this->normalizeColumnSql('city');
+                        $vq->whereRaw("{$nameNorm} LIKE ?", ["%{$normalizedQuery}%"])
+                            ->orWhereRaw("{$cityNorm} LIKE ?", ["%{$normalizedQuery}%"]);
                     });
             })
             ->orderByRaw('COALESCE(event_date, DATE(starts_at)) ASC')
@@ -136,13 +183,17 @@ class SearchController extends BaseController
      */
     protected function searchArtists($client, string $query, int $limit, string $language): array
     {
+        $normalizedQuery = $this->normalizeSearch($query);
+
         $artists = Artist::query()
             ->with(['artistGenres', 'artistTypes'])
             ->where('marketplace_client_id', $client->id)
             ->where('is_active', true)
-            ->where(function ($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%")
-                  ->orWhere('city', 'LIKE', "%{$query}%");
+            ->where(function ($q) use ($normalizedQuery) {
+                $nameNorm = $this->normalizeColumnSql('name');
+                $cityNorm = $this->normalizeColumnSql('city');
+                $q->whereRaw("{$nameNorm} LIKE ?", ["%{$normalizedQuery}%"])
+                  ->orWhereRaw("{$cityNorm} LIKE ?", ["%{$normalizedQuery}%"]);
             })
             ->limit($limit)
             ->get();
@@ -171,12 +222,17 @@ class SearchController extends BaseController
      */
     protected function searchLocations($client, string $query, int $limit, string $language): array
     {
+        $normalizedQuery = $this->normalizeSearch($query);
+
         $venues = Venue::query()
             ->where('marketplace_client_id', $client->id)
-            ->where(function ($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%")
-                  ->orWhere('city', 'LIKE', "%{$query}%")
-                  ->orWhere('address', 'LIKE', "%{$query}%");
+            ->where(function ($q) use ($normalizedQuery) {
+                $nameNorm = $this->normalizeColumnSql('name');
+                $cityNorm = $this->normalizeColumnSql('city');
+                $addressNorm = $this->normalizeColumnSql('address');
+                $q->whereRaw("{$nameNorm} LIKE ?", ["%{$normalizedQuery}%"])
+                  ->orWhereRaw("{$cityNorm} LIKE ?", ["%{$normalizedQuery}%"])
+                  ->orWhereRaw("{$addressNorm} LIKE ?", ["%{$normalizedQuery}%"]);
             })
             ->limit($limit)
             ->get();
