@@ -220,12 +220,26 @@ class ListMediaLibrary extends ListRecords
     {
         $disk = Storage::disk('public');
 
-        // Scan marketplace-specific directory
-        $baseDir = 'marketplace/' . ($marketplaceId ?? 'default');
-        $files = [];
+        // Directories to scan - includes marketplace-specific and common directories
+        $dirsToScan = [
+            'marketplace/' . ($marketplaceId ?? 'default'),
+            'events',
+            'artists',
+            'venues',
+            'products',
+            'blog',
+            'gallery',
+            'documents',
+            'uploads',
+            'images',
+            'media',
+        ];
 
-        if ($disk->exists($baseDir)) {
-            $files = $disk->allFiles($baseDir);
+        $files = [];
+        foreach ($dirsToScan as $dir) {
+            if ($disk->exists($dir)) {
+                $files = array_merge($files, $disk->allFiles($dir));
+            }
         }
 
         $added = 0;
@@ -233,7 +247,6 @@ class ListMediaLibrary extends ListRecords
 
         // Get all existing paths in a single query for efficiency
         $existingPaths = MediaLibrary::where('disk', 'public')
-            ->where('marketplace_client_id', $marketplaceId)
             ->pluck('path')
             ->flip()
             ->toArray();
@@ -244,7 +257,7 @@ class ListMediaLibrary extends ListRecords
                 continue;
             }
 
-            // Skip if already in library
+            // Skip if already in library (regardless of marketplace)
             if (isset($existingPaths[$filePath])) {
                 $skipped++;
                 continue;
@@ -271,9 +284,13 @@ class ListMediaLibrary extends ListRecords
                     continue;
                 }
 
+                // Detect collection from path
+                $collection = $this->detectCollectionFromPath($filePath);
+
                 MediaLibrary::createFromPath(
                     path: $filePath,
                     disk: 'public',
+                    collection: $collection,
                     marketplaceClientId: $marketplaceId
                 );
                 $added++;
@@ -288,6 +305,38 @@ class ListMediaLibrary extends ListRecords
             ->body("S-au adăugat {$added} fișier(e) noi. S-au ignorat {$skipped} fișier(e) existente.")
             ->success()
             ->send();
+    }
+
+    /**
+     * Detect collection name from file path
+     */
+    protected function detectCollectionFromPath(string $path): ?string
+    {
+        $pathLower = strtolower($path);
+
+        if (str_contains($pathLower, '/events/') || str_starts_with($pathLower, 'events/')) {
+            return 'events';
+        }
+        if (str_contains($pathLower, '/artists/') || str_starts_with($pathLower, 'artists/')) {
+            return 'artists';
+        }
+        if (str_contains($pathLower, '/venues/') || str_starts_with($pathLower, 'venues/')) {
+            return 'venues';
+        }
+        if (str_contains($pathLower, '/products/') || str_starts_with($pathLower, 'products/')) {
+            return 'products';
+        }
+        if (str_contains($pathLower, '/blog/') || str_starts_with($pathLower, 'blog/')) {
+            return 'blog';
+        }
+        if (str_contains($pathLower, '/gallery/') || str_starts_with($pathLower, 'gallery/')) {
+            return 'gallery';
+        }
+        if (str_contains($pathLower, '/documents/') || str_starts_with($pathLower, 'documents/')) {
+            return 'documents';
+        }
+
+        return 'uploads';
     }
 
     protected function getHeaderWidgets(): array
