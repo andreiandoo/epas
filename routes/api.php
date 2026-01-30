@@ -1314,6 +1314,7 @@ use App\Http\Controllers\Api\MarketplaceClient\StatisticsController as Marketpla
 use App\Http\Controllers\Api\MarketplaceClient\NewsletterTrackingController;
 use App\Http\Controllers\Api\MarketplaceClient\PromoCodeController as MarketplacePromoCodeController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\FavoritesController as CustomerFavoritesController;
+use App\Http\Controllers\Api\MarketplaceClient\SearchController as MarketplaceSearchController;
 
 Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Handle OPTIONS preflight requests
@@ -1338,6 +1339,10 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.config');
     Route::get('/tenants', [MarketplaceConfigController::class, 'tenants'])
         ->name('api.marketplace-client.tenants');
+
+    // Global Search
+    Route::get('/search', [MarketplaceSearchController::class, 'search'])
+        ->name('api.marketplace-client.search');
 
     // Events
     Route::get('/events', [MarketplaceEventsController::class, 'index'])
