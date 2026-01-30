@@ -41,6 +41,139 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Load config (contains API_KEY and API_BASE_URL)
 require_once dirname(__DIR__) . '/includes/config.php';
 
+// ==================== FILE-BASED CACHE SYSTEM ====================
+class ApiCache {
+    private static $cacheDir;
+    private static $enabled = true;
+
+    // Cache TTL in seconds by action pattern
+    private static $ttlMap = [
+        // Long cache (1 hour) - static/rarely changing content
+        'categories' => 3600,
+        'event-categories' => 3600,
+        'event-genres' => 3600,
+        'venue-categories' => 3600,
+        'artists.genre-counts' => 3600,
+        'artists.alphabet' => 3600,
+        'locations.stats' => 3600,
+        'locations.regions' => 3600,
+        'locations.cities.alphabet' => 3600,
+
+        // Medium cache (10 minutes) - content that changes occasionally
+        'events.featured' => 600,
+        'events.cities' => 600,
+        'venues.featured' => 600,
+        'artists.featured' => 600,
+        'artists.trending' => 600,
+        'locations.cities.featured' => 600,
+        'cities' => 600,
+
+        // Short cache (3 minutes) - frequently changing but still cacheable
+        'events' => 180,
+        'venues' => 180,
+        'artists' => 180,
+        'event' => 180,
+        'venue' => 180,
+        'artist' => 180,
+        'organizers' => 180,
+        'organizer' => 180,
+
+        // Very short cache (1 minute) - search results
+        'search' => 60,
+    ];
+
+    public static function init() {
+        self::$cacheDir = dirname(__DIR__) . '/cache/api';
+        if (!is_dir(self::$cacheDir)) {
+            @mkdir(self::$cacheDir, 0755, true);
+        }
+        // Disable cache if directory not writable
+        if (!is_writable(self::$cacheDir)) {
+            self::$enabled = false;
+        }
+    }
+
+    public static function getCacheKey($action, $params) {
+        // Create unique cache key from action and all GET params
+        $key = $action . '_' . md5(serialize($params));
+        return preg_replace('/[^a-zA-Z0-9_-]/', '_', $key);
+    }
+
+    public static function getTtl($action) {
+        // Check for exact match first
+        if (isset(self::$ttlMap[$action])) {
+            return self::$ttlMap[$action];
+        }
+        // Check for prefix match (e.g., 'events' matches 'events.featured')
+        foreach (self::$ttlMap as $pattern => $ttl) {
+            if (strpos($action, $pattern) === 0) {
+                return $ttl;
+            }
+        }
+        return 0; // No caching for unknown actions
+    }
+
+    public static function get($action, $params) {
+        if (!self::$enabled) return null;
+
+        $ttl = self::getTtl($action);
+        if ($ttl === 0) return null;
+
+        $cacheKey = self::getCacheKey($action, $params);
+        $cacheFile = self::$cacheDir . '/' . $cacheKey . '.json';
+
+        if (!file_exists($cacheFile)) return null;
+
+        $mtime = filemtime($cacheFile);
+        if (time() - $mtime > $ttl) {
+            @unlink($cacheFile); // Expired
+            return null;
+        }
+
+        $data = @file_get_contents($cacheFile);
+        if ($data === false) return null;
+
+        $cached = json_decode($data, true);
+        if (!$cached || !isset($cached['response'])) return null;
+
+        return $cached;
+    }
+
+    public static function set($action, $params, $response, $statusCode) {
+        if (!self::$enabled) return;
+
+        $ttl = self::getTtl($action);
+        if ($ttl === 0) return;
+
+        // Only cache successful responses
+        if ($statusCode < 200 || $statusCode >= 300) return;
+
+        $cacheKey = self::getCacheKey($action, $params);
+        $cacheFile = self::$cacheDir . '/' . $cacheKey . '.json';
+
+        $data = json_encode([
+            'response' => $response,
+            'statusCode' => $statusCode,
+            'cached_at' => time()
+        ]);
+
+        @file_put_contents($cacheFile, $data, LOCK_EX);
+    }
+
+    public static function isCacheable($action, $method, $requiresAuth) {
+        // Only cache GET requests
+        if ($method !== 'GET') return false;
+
+        // Don't cache authenticated requests
+        if ($requiresAuth) return false;
+
+        // Check if we have a TTL for this action
+        return self::getTtl($action) > 0;
+    }
+}
+
+ApiCache::init();
+
 // Rate limiting (simple IP-based)
 session_start();
 $ip = $_SERVER['REMOTE_ADDR'];
@@ -1769,6 +1902,19 @@ switch ($action) {
         exit;
 }
 
+// Check cache for GET requests (before making API call)
+$useCache = ApiCache::isCacheable($action, $method, $requiresAuth);
+if ($useCache) {
+    $cached = ApiCache::get($action, $_GET);
+    if ($cached) {
+        // Return cached response
+        http_response_code($cached['statusCode']);
+        header('X-Cache: HIT');
+        echo $cached['response'];
+        exit;
+    }
+}
+
 // Make the actual API request
 $url = API_BASE_URL . $endpoint;
 
@@ -1812,6 +1958,12 @@ if (isset($http_response_header)) {
             $statusCode = (int)$matches[1];
         }
     }
+}
+
+// Store in cache if cacheable
+if ($useCache && $response !== false) {
+    ApiCache::set($action, $_GET, $response, $statusCode);
+    header('X-Cache: MISS');
 }
 
 http_response_code($statusCode);
