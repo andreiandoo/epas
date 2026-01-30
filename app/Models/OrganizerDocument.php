@@ -36,6 +36,7 @@ class OrganizerDocument extends Model
     public const TYPES = [
         'cerere_avizare' => 'Cerere avizare',
         'declaratie_impozite' => 'Declaratie impozite',
+        'organizer_contract' => 'Contract organizator',
     ];
 
     // =========================================

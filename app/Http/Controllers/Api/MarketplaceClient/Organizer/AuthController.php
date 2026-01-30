@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceOrganizerBankAccount;
+use App\Models\OrganizerDocument;
+use Illuminate\Support\Facades\Storage;
 use App\Notifications\MarketplacePasswordResetNotification;
 use App\Notifications\MarketplaceEmailVerificationNotification;
 use Illuminate\Http\Request;
@@ -440,6 +442,12 @@ class AuthController extends BaseController
             return $this->error('Unauthorized', 401);
         }
 
+        // Check if an organizer contract exists
+        $contract = OrganizerDocument::where('marketplace_organizer_id', $organizer->id)
+            ->where('document_type', 'organizer_contract')
+            ->latest('issued_at')
+            ->first();
+
         return $this->success([
             'commission_rate' => $organizer->getEffectiveCommissionRate(),
             'commission_mode' => $organizer->getEffectiveCommissionMode(),
@@ -449,7 +457,86 @@ class AuthController extends BaseController
                 'Nu exista costuri fixe sau abonamente lunare',
                 'Decontarea se face in maxim 7 zile lucratoare dupa eveniment',
             ],
+            'has_contract' => $contract !== null,
+            'contract' => $contract ? [
+                'id' => $contract->id,
+                'title' => $contract->title,
+                'issued_at' => $contract->issued_at?->toIso8601String(),
+            ] : null,
+            'documents' => [
+                'id_card' => $organizer->id_card_document ? url('storage/' . $organizer->id_card_document) : null,
+                'cui' => $organizer->cui_document ? url('storage/' . $organizer->cui_document) : null,
+            ],
         ]);
+    }
+
+    /**
+     * Download organizer contract
+     */
+    public function downloadContract(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $contract = OrganizerDocument::where('marketplace_organizer_id', $organizer->id)
+            ->where('document_type', 'organizer_contract')
+            ->latest('issued_at')
+            ->first();
+
+        if (!$contract || !$contract->file_path) {
+            return $this->error('Contract not found', 404);
+        }
+
+        return $this->success([
+            'url' => $contract->download_url,
+            'filename' => $contract->file_name,
+        ]);
+    }
+
+    /**
+     * Upload organizer document (ID card or CUI)
+     */
+    public function uploadDocument(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $validated = $request->validate([
+            'type' => 'required|in:id_card,cui_document',
+            'file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120', // 5MB max
+        ]);
+
+        $file = $request->file('file');
+        $type = $validated['type'];
+
+        // Store the file
+        $path = $file->store(
+            "organizer-documents/{$organizer->id}",
+            'public'
+        );
+
+        // Update organizer with document path
+        $fieldName = $type === 'id_card' ? 'id_card_document' : 'cui_document';
+
+        // Delete old file if exists
+        $oldPath = $organizer->{$fieldName};
+        if ($oldPath && Storage::disk('public')->exists($oldPath)) {
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $organizer->update([$fieldName => $path]);
+
+        return $this->success([
+            'path' => $path,
+            'url' => url('storage/' . $path),
+            'type' => $type,
+        ], 'Document uploaded successfully');
     }
 
     /**

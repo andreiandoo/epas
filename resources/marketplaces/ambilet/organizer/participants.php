@@ -26,7 +26,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="flex flex-col lg:flex-row gap-4">
                     <div class="flex-1"><label class="label">Eveniment</label><select id="event-filter" class="input w-full"><option value="">Toate evenimentele</option></select></div>
                     <div class="w-full lg:w-48"><label class="label">Status</label><select id="checkin-filter" class="input w-full"><option value="">Toti</option><option value="checked_in">Check-in facut</option><option value="not_checked">Neconfirmati</option></select></div>
-                    <div class="w-full lg:w-64"><label class="label">Cauta</label><input type="text" id="search-participants" placeholder="Nume, email sau cod..." class="input w-full"></div>
                 </div>
             </div>
 
@@ -84,13 +83,11 @@ async function loadParticipants() {
     try {
         const eventId = document.getElementById('event-filter').value;
         const checkinStatus = document.getElementById('checkin-filter').value;
-        const search = document.getElementById('search-participants').value;
 
         let url = '/organizer/participants';
         const params = new URLSearchParams();
         if (eventId) params.append('event_id', eventId);
         if (checkinStatus) params.append('checked_in', checkinStatus === 'checked_in' ? '1' : '0');
-        if (search) params.append('search', search);
         if (params.toString()) url += '?' + params.toString();
 
         const response = await AmbiletAPI.get(url);

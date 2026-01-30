@@ -955,6 +955,19 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.contract.download':
+        $method = 'GET';
+        $endpoint = '/organizer/contract/download';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.upload':
+        $method = 'POST';
+        $endpoint = '/organizer/documents/upload';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
     // ==================== ORGANIZER DASHBOARD ====================
 
     case 'organizer.dashboard':

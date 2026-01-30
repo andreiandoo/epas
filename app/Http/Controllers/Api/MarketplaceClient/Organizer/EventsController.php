@@ -782,22 +782,7 @@ class EventsController extends BaseController
             }
         }
 
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('barcode', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%")
-                    ->orWhereHas('order', function ($oq) use ($search) {
-                        $oq->where('customer_email', 'like', "%{$search}%")
-                            ->orWhere('customer_name', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('order.marketplaceCustomer', function ($cq) use ($search) {
-                        $cq->where('email', 'like', "%{$search}%")
-                            ->orWhere('first_name', 'like', "%{$search}%")
-                            ->orWhere('last_name', 'like', "%{$search}%");
-                    });
-            });
-        }
+        // Search functionality disabled for privacy
 
         $query->orderBy('created_at', 'desc');
 
@@ -814,11 +799,15 @@ class EventsController extends BaseController
         $participants = $tickets->map(function ($ticket) {
             $customer = $ticket->order->marketplaceCustomer;
             $event = $ticket->order->event;
+
+            $rawName = $customer
+                ? $customer->first_name . ' ' . $customer->last_name
+                : $ticket->order->customer_name ?? 'Unknown';
+            $rawEmail = $customer?->email ?? $ticket->order->customer_email ?? '';
+
             return [
-                'name' => $customer
-                    ? $customer->first_name . ' ' . $customer->last_name
-                    : $ticket->order->customer_name ?? 'Unknown',
-                'email' => $customer?->email ?? $ticket->order->customer_email ?? '',
+                'name' => $this->maskName($rawName),
+                'email' => $this->maskEmail($rawEmail),
                 'event' => $event?->name ?? $event?->title ?? 'Unknown Event',
                 'event_id' => $event?->id,
                 'ticket_type' => $ticket->ticketType?->name ?? 'Standard',
@@ -2237,5 +2226,75 @@ class EventsController extends BaseController
             }),
             'created_at' => $event->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Mask a name for privacy - show only first and last letter of each word
+     * Example: "John Doe" -> "J**n D*e"
+     */
+    private function maskName(string $name): string
+    {
+        if (empty($name) || $name === 'Unknown') {
+            return $name;
+        }
+
+        $words = explode(' ', $name);
+        $maskedWords = [];
+
+        foreach ($words as $word) {
+            $length = mb_strlen($word);
+            if ($length <= 2) {
+                $maskedWords[] = str_repeat('*', $length);
+            } elseif ($length === 3) {
+                $maskedWords[] = mb_substr($word, 0, 1) . '*' . mb_substr($word, -1);
+            } else {
+                $maskedWords[] = mb_substr($word, 0, 1) . str_repeat('*', $length - 2) . mb_substr($word, -1);
+            }
+        }
+
+        return implode(' ', $maskedWords);
+    }
+
+    /**
+     * Mask an email for privacy - blur local part and domain
+     * Example: "john@example.com" -> "j***@e*****.com"
+     */
+    private function maskEmail(string $email): string
+    {
+        if (empty($email) || !str_contains($email, '@')) {
+            return $email ? str_repeat('*', mb_strlen($email)) : '';
+        }
+
+        $parts = explode('@', $email);
+        $local = $parts[0];
+        $domain = $parts[1];
+
+        // Mask local part
+        $localLength = mb_strlen($local);
+        if ($localLength <= 1) {
+            $maskedLocal = '*';
+        } elseif ($localLength <= 3) {
+            $maskedLocal = mb_substr($local, 0, 1) . str_repeat('*', $localLength - 1);
+        } else {
+            $maskedLocal = mb_substr($local, 0, 1) . str_repeat('*', 3);
+        }
+
+        // Mask domain (before TLD)
+        $domainParts = explode('.', $domain);
+        if (count($domainParts) >= 2) {
+            $domainName = $domainParts[0];
+            $tld = implode('.', array_slice($domainParts, 1));
+            $domainNameLength = mb_strlen($domainName);
+            if ($domainNameLength <= 1) {
+                $maskedDomain = '*';
+            } else {
+                $maskedDomain = mb_substr($domainName, 0, 1) . str_repeat('*', min(5, $domainNameLength - 1));
+            }
+            $maskedDomainFull = $maskedDomain . '.' . $tld;
+        } else {
+            $maskedDomainFull = str_repeat('*', mb_strlen($domain));
+        }
+
+        return $maskedLocal . '@' . $maskedDomainFull;
     }
 }

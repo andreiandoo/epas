@@ -911,7 +911,7 @@ function updateMainChart(chartData) {
     const options = {
         series: series,
         chart: {
-            type: 'area',
+            type: 'bar',
             height: 300,
             toolbar: { show: false },
             zoom: { enabled: false },
@@ -926,8 +926,12 @@ function updateMainChart(chartData) {
             }
         },
         dataLabels: { enabled: false },
-        stroke: { curve: 'smooth', width: 2 },
-        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
+        plotOptions: {
+            bar: {
+                columnWidth: '60%',
+                borderRadius: 4
+            }
+        },
         annotations: {
             xaxis: milestoneAnnotations
         },

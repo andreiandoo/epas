@@ -1487,6 +1487,10 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.verify-cui');
         Route::get('/contract', [OrganizerAuthController::class, 'contract'])
             ->name('api.marketplace-client.organizer.contract');
+        Route::get('/contract/download', [OrganizerAuthController::class, 'downloadContract'])
+            ->name('api.marketplace-client.organizer.contract.download');
+        Route::post('/documents/upload', [OrganizerAuthController::class, 'uploadDocument'])
+            ->name('api.marketplace-client.organizer.documents.upload');
 
         // API Key
         Route::get('/api-key', [OrganizerAuthController::class, 'getApiKey'])
