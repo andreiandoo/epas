@@ -19,7 +19,7 @@ class Notifications extends Page implements HasTable
 {
     use InteractsWithTable;
 
-    protected static ?string $navigationIcon = 'heroicon-o-bell';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-bell';
     protected static ?string $navigationLabel = 'Notificari';
     protected static ?string $title = 'Notificari';
     protected static ?string $slug = 'notifications';
