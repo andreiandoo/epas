@@ -26,6 +26,24 @@ if (!$articleResponse['success'] || empty($articleResponse['data']['article'])) 
 $article = $articleResponse['data']['article'];
 $category = $article['category'] ?? null;
 
+// Record article view (fire-and-forget)
+if (!empty($article['id'])) {
+    record_article_view($article['id']);
+}
+
+// Fetch related articles from same category
+$relatedArticles = [];
+if ($category && !empty($category['slug'])) {
+    $categoryResponse = api_get('/kb/categories/' . urlencode($category['slug']));
+    if ($categoryResponse['success'] && !empty($categoryResponse['data']['articles'])) {
+        // Filter out current article and limit to 5
+        $relatedArticles = array_filter($categoryResponse['data']['articles'], function($a) use ($article) {
+            return $a['id'] !== $article['id'];
+        });
+        $relatedArticles = array_slice($relatedArticles, 0, 5);
+    }
+}
+
 // Determine title/question based on type
 $isFaq = $article['type'] === 'faq';
 $articleTitle = $isFaq ? ($article['question'] ?? 'FAQ') : ($article['title'] ?? 'Articol');
@@ -191,6 +209,47 @@ function getColorClasses($color) {
             </div>
             <div id="vote-result" class="hidden mt-4 text-sm text-gray-500"></div>
         </div>
+
+        <?php if (!empty($relatedArticles)): ?>
+        <!-- Related Articles from Same Category -->
+        <div class="p-8 mb-8 bg-white border border-gray-200 rounded-2xl">
+            <h3 class="flex items-center gap-2 mb-5 text-lg font-semibold text-secondary">
+                <svg class="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Alte articole din <?= htmlspecialchars($category['name']) ?>
+            </h3>
+            <div class="space-y-3">
+                <?php foreach ($relatedArticles as $related): ?>
+                <?php
+                    $relatedIsFaq = ($related['type'] ?? '') === 'faq';
+                    $relatedTitle = $relatedIsFaq ? ($related['question'] ?? '') : ($related['title'] ?? '');
+                ?>
+                <a href="/ajutor/articol/<?= htmlspecialchars($related['slug']) ?>" class="flex items-center gap-3 p-3 -mx-3 transition-colors rounded-xl hover:bg-gray-50 group">
+                    <div class="flex items-center justify-center flex-shrink-0 w-9 h-9 rounded-lg <?= $relatedIsFaq ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-500' ?>">
+                        <?= getIconSvg($related['icon'] ?? ($relatedIsFaq ? 'heroicon-o-question-mark-circle' : 'heroicon-o-document-text'), 'w-4 h-4') ?>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <span class="text-sm font-medium text-secondary group-hover:text-primary transition-colors line-clamp-1"><?= htmlspecialchars($relatedTitle) ?></span>
+                        <?php if ($relatedIsFaq): ?>
+                        <span class="ml-2 px-1.5 py-0.5 text-xs bg-purple-100 text-purple-600 rounded font-medium">FAQ</span>
+                        <?php endif; ?>
+                    </div>
+                    <svg class="w-4 h-4 text-gray-300 transition-transform group-hover:translate-x-1 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <a href="/ajutor/<?= htmlspecialchars($category['slug']) ?>" class="inline-flex items-center gap-2 mt-4 text-sm font-medium text-primary hover:text-primary-dark transition-colors">
+                Vezi toate articolele din aceasta categorie
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+            </a>
+        </div>
+        <?php endif; ?>
 
         <!-- Navigation -->
         <div class="flex flex-wrap items-center justify-between gap-4">
