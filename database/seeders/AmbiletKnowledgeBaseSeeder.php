@@ -82,22 +82,31 @@ class AmbiletKnowledgeBaseSeeder extends Seeder
         $categories = [];
 
         foreach ($categoriesData as $data) {
-            $id = DB::table('kb_categories')->insertGetId([
-                'marketplace_client_id' => $this->marketplaceClientId,
-                'name' => json_encode($data['name']),
-                'slug' => $data['slug'],
-                'description' => json_encode($data['description']),
-                'icon' => $data['icon'],
-                'color' => $data['color'],
-                'sort_order' => $data['sort_order'],
-                'is_visible' => true,
-                'article_count' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            // Use updateOrInsert to handle existing categories
+            DB::table('kb_categories')->updateOrInsert(
+                [
+                    'marketplace_client_id' => $this->marketplaceClientId,
+                    'slug' => $data['slug'],
+                ],
+                [
+                    'name' => json_encode($data['name']),
+                    'description' => json_encode($data['description']),
+                    'icon' => $data['icon'],
+                    'color' => $data['color'],
+                    'sort_order' => $data['sort_order'],
+                    'is_visible' => true,
+                    'updated_at' => now(),
+                ]
+            );
 
-            $categories[$data['slug']] = $id;
-            $this->command->info("  Created category: {$data['name']['ro']}");
+            // Get the ID (either existing or newly created)
+            $category = DB::table('kb_categories')
+                ->where('marketplace_client_id', $this->marketplaceClientId)
+                ->where('slug', $data['slug'])
+                ->first();
+
+            $categories[$data['slug']] = $category->id;
+            $this->command->info("  ✓ Category: {$data['name']['ro']}");
         }
 
         return $categories;
@@ -761,12 +770,19 @@ class AmbiletKnowledgeBaseSeeder extends Seeder
                 $insertData['content'] = json_encode($articleData['content']);
             }
 
-            DB::table('kb_articles')->insert($insertData);
+            // Use updateOrInsert to handle existing articles
+            DB::table('kb_articles')->updateOrInsert(
+                [
+                    'marketplace_client_id' => $this->marketplaceClientId,
+                    'slug' => $articleData['slug'],
+                ],
+                $insertData
+            );
 
             $title = $articleData['type'] === 'article'
                 ? ($articleData['title']['ro'] ?? 'Article')
                 : ($articleData['question']['ro'] ?? 'FAQ');
-            $this->command->info("  Created {$articleData['type']}: " . Str::limit($title, 50));
+            $this->command->info("  ✓ {$articleData['type']}: " . Str::limit($title, 50));
         }
 
         // Update article counts
