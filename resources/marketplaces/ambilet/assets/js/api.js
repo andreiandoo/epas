@@ -236,9 +236,16 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/bank-accounts\/\d+$/)) return 'organizer.bank-account.delete';
         if (endpoint.match(/\/organizer\/bank-accounts\/\d+\/primary$/)) return 'organizer.bank-account.primary';
 
+        // Organizer notifications
+        if (endpoint.includes('/organizer/notifications/unread-count')) return 'organizer.notifications.unread-count';
+        if (endpoint.includes('/organizer/notifications/mark-read')) return 'organizer.notifications.mark-read';
+        if (endpoint.includes('/organizer/notifications/mark-all-read')) return 'organizer.notifications.mark-all-read';
+        if (endpoint === '/organizer/notifications' || endpoint.includes('/organizer/notifications?')) return 'organizer.notifications';
+
         // Organizer dashboard
         if (endpoint === '/organizer/dashboard') return 'organizer.dashboard';
         if (endpoint === '/organizer/dashboard/timeline') return 'organizer.dashboard.timeline';
+        if (endpoint.includes('/organizer/dashboard/sales-timeline')) return 'organizer.dashboard.sales-timeline';
 
         // Organizer events
         if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';

@@ -991,6 +991,38 @@ switch ($action) {
         $isMultipart = true;
         break;
 
+    // ==================== ORGANIZER NOTIFICATIONS ====================
+
+    case 'organizer.notifications':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        if (isset($_GET['read'])) $params['read'] = $_GET['read'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        $endpoint = '/organizer/notifications' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.unread-count':
+        $method = 'GET';
+        $endpoint = '/organizer/notifications/unread-count';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.mark-read':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/notifications/mark-read';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.mark-all-read':
+        $method = 'POST';
+        $endpoint = '/organizer/notifications/mark-all-read';
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER DASHBOARD ====================
 
     case 'organizer.dashboard':
@@ -1006,6 +1038,17 @@ switch ($action) {
         if (isset($_GET['start_date'])) $params['start_date'] = $_GET['start_date'];
         if (isset($_GET['end_date'])) $params['end_date'] = $_GET['end_date'];
         $endpoint = '/organizer/dashboard/timeline' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.dashboard.sales-timeline':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['from_date'])) $params['from_date'] = $_GET['from_date'];
+        if (isset($_GET['to_date'])) $params['to_date'] = $_GET['to_date'];
+        if (isset($_GET['group_by'])) $params['group_by'] = $_GET['group_by'];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        $endpoint = '/organizer/dashboard/sales-timeline' . ($params ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;
 

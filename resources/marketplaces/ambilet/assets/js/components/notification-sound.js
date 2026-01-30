@@ -29,15 +29,15 @@ const AmbiletNotificationSound = (function() {
     }
 
     // Generate a pleasant notification sound using Web Audio API
-    function playSound(type = 'default') {
-        if (!isEnabled) return;
+    async function playSound(type = 'default', forcePlay = false) {
+        if (!isEnabled && !forcePlay) return;
 
         try {
             const ctx = getAudioContext();
 
             // Resume audio context if suspended (required for autoplay policies)
             if (ctx.state === 'suspended') {
-                ctx.resume();
+                await ctx.resume();
             }
 
             const now = ctx.currentTime;
@@ -104,8 +104,8 @@ const AmbiletNotificationSound = (function() {
     }
 
     // Play notification sound (public method)
-    function play(type) {
-        playSound(type);
+    function play(type, forcePlay = false) {
+        return playSound(type, forcePlay);
     }
 
     // Enable or disable sounds

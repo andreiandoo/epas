@@ -76,7 +76,7 @@ class OrganizerDocument extends Model
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(MarketplaceEvent::class, 'event_id');
+        return $this->belongsTo(Event::class, 'event_id');
     }
 
     public function taxTemplate(): BelongsTo
