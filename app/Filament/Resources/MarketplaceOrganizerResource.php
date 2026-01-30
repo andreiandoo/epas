@@ -11,6 +11,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Actions\ViewAction;
 use Filament\Actions\EditAction;
+use App\Filament\Resources\MarketplaceOrganizerResource\RelationManagers\BankAccountsRelationManager;
 use BackedEnum;
 use UnitEnum;
 
@@ -341,6 +342,13 @@ class MarketplaceOrganizerResource extends Resource
             ])
             ->toolbarActions([])
             ->defaultSort('created_at', 'desc');
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            BankAccountsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

@@ -26,15 +26,52 @@ class AuthController extends BaseController
         $client = $this->requireClient($request);
 
         $validated = $request->validate([
+            // Account info
             'email' => 'required|email|max:255',
             'password' => ['required', 'confirmed', PasswordRules::min(8)],
             'name' => 'required|string|max:255',
+            'first_name' => 'nullable|string|max:100',
+            'last_name' => 'nullable|string|max:100',
             'contact_name' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:50',
-            'company_name' => 'nullable|string|max:255',
-            'company_tax_id' => 'nullable|string|max:50',
+            'phone_country' => 'nullable|string|max:5',
             'description' => 'nullable|string|max:2000',
             'website' => 'nullable|url|max:255',
+
+            // Organizer type
+            'person_type' => 'nullable|in:pj,pf',
+            'work_mode' => 'nullable|in:exclusive,non_exclusive',
+            'organizer_type' => 'nullable|in:agency,promoter,venue,artist,ngo,other',
+
+            // Company info (for PJ)
+            'company_name' => 'nullable|string|max:255',
+            'cui' => 'nullable|string|max:20',
+            'company_tax_id' => 'nullable|string|max:50',
+            'reg_com' => 'nullable|string|max:100',
+            'company_address' => 'nullable|string|max:500',
+            'company_city' => 'nullable|string|max:100',
+            'company_county' => 'nullable|string|max:100',
+            'company_zip' => 'nullable|string|max:20',
+            'vat_payer' => 'nullable|boolean',
+            'representative_first_name' => 'nullable|string|max:100',
+            'representative_last_name' => 'nullable|string|max:100',
+
+            // Guarantor / Personal details
+            'guarantor_first_name' => 'nullable|string|max:100',
+            'guarantor_last_name' => 'nullable|string|max:100',
+            'guarantor_cnp' => 'nullable|string|max:13',
+            'guarantor_address' => 'nullable|string|max:255',
+            'guarantor_city' => 'nullable|string|max:100',
+            'guarantor_id_type' => 'nullable|in:ci,bi',
+            'guarantor_id_series' => 'nullable|string|max:2',
+            'guarantor_id_number' => 'nullable|string|max:6',
+            'guarantor_id_issued_by' => 'nullable|string|max:100',
+            'guarantor_id_issued_date' => 'nullable|date',
+
+            // Bank info
+            'iban' => 'nullable|string|max:34',
+            'bank_name' => 'nullable|string|max:100',
+            'account_holder' => 'nullable|string|max:255',
         ]);
 
         // Check if email already exists for this marketplace
@@ -44,23 +81,71 @@ class AuthController extends BaseController
             return $this->error('An account with this email already exists', 422);
         }
 
+        // Build contact name from first_name + last_name if not provided
+        $contactName = $validated['contact_name']
+            ?? (isset($validated['first_name']) && isset($validated['last_name'])
+                ? trim($validated['first_name'] . ' ' . $validated['last_name'])
+                : null);
+
+        // Use CUI from either 'cui' or 'company_tax_id' field
+        $companyTaxId = $validated['cui'] ?? $validated['company_tax_id'] ?? null;
+
         $organizer = MarketplaceOrganizer::create([
             'marketplace_client_id' => $client->id,
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'name' => $validated['name'],
             'slug' => Str::slug($validated['name']),
-            'contact_name' => $validated['contact_name'] ?? null,
+            'contact_name' => $contactName,
             'phone' => $validated['phone'] ?? null,
-            'company_name' => $validated['company_name'] ?? null,
-            'company_tax_id' => $validated['company_tax_id'] ?? null,
             'description' => $validated['description'] ?? null,
             'website' => $validated['website'] ?? null,
+
+            // Organizer type
+            'person_type' => $validated['person_type'] ?? null,
+            'work_mode' => $validated['work_mode'] ?? null,
+            'organizer_type' => $validated['organizer_type'] ?? null,
+
+            // Company info
+            'company_name' => $validated['company_name'] ?? null,
+            'company_tax_id' => $companyTaxId,
+            'company_registration' => $validated['reg_com'] ?? null,
+            'company_address' => $validated['company_address'] ?? null,
+            'company_city' => $validated['company_city'] ?? null,
+            'company_county' => $validated['company_county'] ?? null,
+            'company_zip' => $validated['company_zip'] ?? null,
+            'vat_payer' => $validated['vat_payer'] ?? false,
+            'representative_first_name' => $validated['representative_first_name'] ?? null,
+            'representative_last_name' => $validated['representative_last_name'] ?? null,
+
+            // Guarantor info
+            'guarantor_first_name' => $validated['guarantor_first_name'] ?? null,
+            'guarantor_last_name' => $validated['guarantor_last_name'] ?? null,
+            'guarantor_cnp' => $validated['guarantor_cnp'] ?? null,
+            'guarantor_address' => $validated['guarantor_address'] ?? null,
+            'guarantor_city' => $validated['guarantor_city'] ?? null,
+            'guarantor_id_type' => $validated['guarantor_id_type'] ?? null,
+            'guarantor_id_series' => isset($validated['guarantor_id_series']) ? strtoupper($validated['guarantor_id_series']) : null,
+            'guarantor_id_number' => $validated['guarantor_id_number'] ?? null,
+            'guarantor_id_issued_by' => $validated['guarantor_id_issued_by'] ?? null,
+            'guarantor_id_issued_date' => $validated['guarantor_id_issued_date'] ?? null,
+
             'status' => 'pending', // Requires approval
         ]);
 
         // Generate API key for the organizer
         $organizer->generateApiKey();
+
+        // Create bank account if IBAN provided
+        if (!empty($validated['iban'])) {
+            MarketplaceOrganizerBankAccount::create([
+                'marketplace_organizer_id' => $organizer->id,
+                'bank_name' => $validated['bank_name'] ?? 'Unknown',
+                'iban' => strtoupper($validated['iban']),
+                'account_holder' => $validated['account_holder'] ?? $validated['name'],
+                'is_primary' => true,
+            ]);
+        }
 
         // Send verification email
         $verificationToken = $organizer->generateEmailVerificationToken();
@@ -451,6 +536,7 @@ class AuthController extends BaseController
         return $this->success([
             'commission_rate' => $organizer->getEffectiveCommissionRate(),
             'commission_mode' => $organizer->getEffectiveCommissionMode(),
+            'work_mode' => $organizer->work_mode,
             'terms' => [
                 'Comisionul se aplica doar biletelor vandute',
                 'Plata comisionului se face automat la procesarea platilor',
@@ -726,6 +812,17 @@ class AuthController extends BaseController
             'slug' => $organizer->slug,
             'contact_name' => $organizer->contact_name,
             'phone' => $organizer->phone,
+            'logo' => $organizer->logo_url,
+            'description' => $organizer->description,
+            'website' => $organizer->website,
+            'social_links' => $organizer->social_links,
+
+            // Organizer type
+            'person_type' => $organizer->person_type,
+            'work_mode' => $organizer->work_mode,
+            'organizer_type' => $organizer->organizer_type,
+
+            // Company info
             'company_name' => $organizer->company_name,
             'company_tax_id' => $organizer->company_tax_id,
             'company_registration' => $organizer->company_registration,
@@ -733,10 +830,22 @@ class AuthController extends BaseController
             'company_city' => $organizer->company_city,
             'company_county' => $organizer->company_county,
             'company_zip' => $organizer->company_zip,
-            'logo' => $organizer->logo_url,
-            'description' => $organizer->description,
-            'website' => $organizer->website,
-            'social_links' => $organizer->social_links,
+            'vat_payer' => (bool) $organizer->vat_payer,
+            'representative_first_name' => $organizer->representative_first_name,
+            'representative_last_name' => $organizer->representative_last_name,
+
+            // Guarantor info
+            'guarantor_first_name' => $organizer->guarantor_first_name,
+            'guarantor_last_name' => $organizer->guarantor_last_name,
+            'guarantor_cnp' => $organizer->guarantor_cnp,
+            'guarantor_address' => $organizer->guarantor_address,
+            'guarantor_city' => $organizer->guarantor_city,
+            'guarantor_id_type' => $organizer->guarantor_id_type,
+            'guarantor_id_series' => $organizer->guarantor_id_series,
+            'guarantor_id_number' => $organizer->guarantor_id_number,
+            'guarantor_id_issued_by' => $organizer->guarantor_id_issued_by,
+            'guarantor_id_issued_date' => $organizer->guarantor_id_issued_date?->format('Y-m-d'),
+
             'status' => $organizer->status,
             'is_verified' => $organizer->isVerified(),
             'commission_rate' => $organizer->getEffectiveCommissionRate(),
