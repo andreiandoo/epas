@@ -1038,6 +1038,11 @@ async function submitRegistration() {
     try {
         // Prepare registration data
         const registrationData = {
+            // Organizer name (required by API)
+            name: formData.person_type === 'pj'
+                ? formData.company_name
+                : `${formData.first_name} ${formData.last_name}`.trim(),
+
             // Account info
             first_name: formData.first_name,
             last_name: formData.last_name,
