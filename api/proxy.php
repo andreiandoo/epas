@@ -966,11 +966,101 @@ switch ($action) {
         break;
 
     case 'organizer.verify-cui':
-        $method = 'POST';
-        $body = file_get_contents('php://input');
-        $endpoint = '/organizer/verify-cui';
-        // No auth required - this is a public ANAF lookup used during registration
-        break;
+        // Call ANAF public API directly (no auth required)
+        $inputBody = file_get_contents('php://input');
+        $inputData = json_decode($inputBody, true);
+
+        $cui = $inputData['cui'] ?? '';
+        if (!$cui) {
+            http_response_code(400);
+            echo json_encode(['error' => 'CUI is required']);
+            exit;
+        }
+
+        // Clean CUI - remove 'RO' prefix if present and any non-numeric characters
+        $cui = preg_replace('/[^0-9]/', '', preg_replace('/^RO/i', '', $cui));
+
+        if (empty($cui)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid CUI format']);
+            exit;
+        }
+
+        // Prepare ANAF API request
+        $anafUrl = 'https://webservicesp.anaf.ro/PlatitorTvaRest/api/v8/ws/tva';
+        $anafBody = json_encode([
+            ['cui' => (int)$cui, 'data' => date('Y-m-d')]
+        ]);
+
+        $anafContext = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => "Content-Type: application/json\r\n",
+                'content' => $anafBody,
+                'timeout' => 15,
+                'ignore_errors' => true
+            ],
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false
+            ]
+        ]);
+
+        $anafResponse = @file_get_contents($anafUrl, false, $anafContext);
+
+        if ($anafResponse === false) {
+            http_response_code(503);
+            echo json_encode(['error' => 'ANAF service unavailable. Please try again later.']);
+            exit;
+        }
+
+        $anafData = json_decode($anafResponse, true);
+
+        // Check for ANAF API errors
+        if (!$anafData || !isset($anafData['found']) || empty($anafData['found'])) {
+            // Check if it's in notFound
+            if (isset($anafData['notFound']) && !empty($anafData['notFound'])) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Company not found in ANAF database']);
+                exit;
+            }
+            http_response_code(404);
+            echo json_encode(['error' => 'Company not found or invalid CUI']);
+            exit;
+        }
+
+        // Extract company data from ANAF response
+        $company = $anafData['found'][0];
+        $dateGen = $company['date_generale'] ?? [];
+        $adresa = $company['adresa_sediu_social'] ?? [];
+        $tva = $company['inregistrare_scop_Tva'] ?? [];
+
+        // Build normalized response (matching frontend expected format)
+        $result = [
+            'success' => true,
+            'data' => [
+                'cui' => $dateGen['cui'] ?? $cui,
+                'company_name' => $dateGen['denumire'] ?? '',
+                'address' => trim(sprintf(
+                    '%s %s %s',
+                    $adresa['sdenumire_Strada'] ?? '',
+                    $adresa['snumar_Strada'] ?? '',
+                    $adresa['sdetalii_Adresa'] ?? ''
+                )),
+                'city' => $adresa['sdenumire_Localitate'] ?? '',
+                'county' => $adresa['sdenumire_Judet'] ?? '',
+                'zip' => $adresa['scod_Postal'] ?? '',
+                'reg_com' => $dateGen['nrRegCom'] ?? '',
+                'vat_payer' => !empty($tva['scpTVA']),
+                'status' => $dateGen['stare_inregistrare'] ?? '',
+                'phone' => $dateGen['telefon'] ?? '',
+                'fax' => $dateGen['fax'] ?? ''
+            ]
+        ];
+
+        http_response_code(200);
+        echo json_encode($result);
+        exit;
 
     case 'organizer.contract':
         $method = 'GET';
