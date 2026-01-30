@@ -76,10 +76,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="bg-white rounded-2xl border border-border p-6 mb-6">
                     <div class="flex items-center justify-between mb-6">
                         <h2 class="text-lg font-bold text-secondary">Contract Marketplace</h2>
-                        <button onclick="downloadContract()" class="btn btn-primary">
+                        <button id="download-contract-btn" onclick="downloadContract()" class="btn btn-primary hidden">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                             Descarca Contract
                         </button>
+                        <span id="no-contract-msg" class="text-sm text-muted hidden">Contract negenearat</span>
                     </div>
                     <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
                         <div class="flex items-start gap-3">
@@ -511,8 +512,38 @@ async function loadContract() {
                     </div>
                 `).join('');
             }
+            // Show/hide download contract button based on contract existence
+            const downloadBtn = document.getElementById('download-contract-btn');
+            const noContractMsg = document.getElementById('no-contract-msg');
+            if (data.has_contract) {
+                downloadBtn.classList.remove('hidden');
+                noContractMsg.classList.add('hidden');
+            } else {
+                downloadBtn.classList.add('hidden');
+                noContractMsg.classList.remove('hidden');
+            }
+            // Show existing documents status
+            if (data.documents) {
+                if (data.documents.id_card) {
+                    showUploadedDocument('id-card', 'Document incarcat');
+                }
+                if (data.documents.cui) {
+                    showUploadedDocument('cui', 'Document incarcat');
+                }
+            }
         }
     } catch (error) { /* Contract info will show defaults */ }
+}
+
+function showUploadedDocument(type, filename) {
+    const preview = document.getElementById(type + '-preview');
+    const placeholder = document.getElementById(type + '-placeholder');
+    const filenameEl = document.getElementById(type + '-filename');
+    if (preview && placeholder && filenameEl) {
+        filenameEl.textContent = filename;
+        preview.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+    }
 }
 
 async function downloadContract() {
@@ -611,12 +642,12 @@ function processFile(file, docType) {
 
 async function uploadDocument(file, docType) {
     const formData = new FormData();
-    formData.append('document', file);
+    formData.append('file', file);
     formData.append('type', docType);
 
     try {
         const token = AmbiletAuth.getToken();
-        const response = await fetch('/api/proxy.php?action=organizer.document.upload', {
+        const response = await fetch('/api/proxy.php?action=organizer.documents.upload', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -628,34 +659,6 @@ async function uploadDocument(file, docType) {
         return { success: false, message: 'Eroare de rețea' };
     }
 }
-
-// Load existing documents on page load
-async function loadContractDocuments() {
-    try {
-        const response = await AmbiletAPI.get('/organizer/contract/documents');
-        if (response.success && response.data) {
-            if (response.data.id_card) {
-                const preview = document.getElementById('id-card-preview');
-                const placeholder = document.getElementById('id-card-placeholder');
-                const filename = document.getElementById('id-card-filename');
-                filename.textContent = response.data.id_card.name || 'Document încărcat';
-                preview.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-            }
-            if (response.data.cui_document) {
-                const preview = document.getElementById('cui-preview');
-                const placeholder = document.getElementById('cui-placeholder');
-                const filename = document.getElementById('cui-filename');
-                filename.textContent = response.data.cui_document.name || 'Document încărcat';
-                preview.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-            }
-        }
-    } catch (error) { /* Documents not loaded yet */ }
-}
-
-// Add to DOMContentLoaded
-document.addEventListener('DOMContentLoaded', loadContractDocuments);
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';
