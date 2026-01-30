@@ -16,14 +16,9 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Banner -->
-<section class="relative h-[320px] md:h-[380px] overflow-hidden bg-gradient-to-br from-primary via-primary-dark to-secondary pt-32">
+<section class="relative h-[320px] md:h-[380px] overflow-hidden bg-gradient-to-br from-primary via-primary-dark to-secondary">
     <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] opacity-30"></div>
-    <div class="relative flex flex-col justify-end h-full px-4 pb-10 mx-auto max-w-7xl">
-        <nav class="flex items-center gap-2 mb-4 text-sm text-white/60">
-            <a href="/" class="transition-colors hover:text-white">Acasă</a>
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            <span class="text-white">Căutare</span>
-        </nav>
+    <div class="relative flex flex-col justify-end h-full px-4 pb-10 mx-auto max-w-7xl pt-32">
         <h1 class="mb-3 text-3xl font-extrabold text-white md:text-4xl">
             <svg class="inline-block w-8 h-8 mr-2 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             <span id="pageTitle"><?= $searchQuery ? 'Rezultate pentru "' . htmlspecialchars($searchQuery) . '"' : 'Căutare' ?></span>
