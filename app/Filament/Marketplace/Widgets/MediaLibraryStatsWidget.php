@@ -11,7 +11,7 @@ class MediaLibraryStatsWidget extends StatsOverviewWidget
 {
     use HasMarketplaceContext;
 
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     protected function getStats(): array
     {
