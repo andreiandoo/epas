@@ -75,10 +75,9 @@ class SearchController extends BaseController
                     $q->orWhereIn('tenant_id', $allowedTenants);
                 }
             })
-            // Search in title/name
+            // Search in title (JSON column)
             ->where(function ($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%")
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro')) LIKE ?", ["%{$query}%"])
+                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro')) LIKE ?", ["%{$query}%"])
                     ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.en')) LIKE ?", ["%{$query}%"])
                     ->orWhereHas('venue', function ($vq) use ($query) {
                         $vq->where('name', 'like', "%{$query}%")

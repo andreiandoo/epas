@@ -125,8 +125,14 @@ class TaxTemplateResource extends Resource
                             ->default('portrait')
                             ->required(),
 
+                        Forms\Components\Toggle::make('page1_source_mode')
+                            ->label('Edit HTML Source Code')
+                            ->default(false)
+                            ->live()
+                            ->helperText('Switch to edit raw HTML code directly'),
+
                         Forms\Components\RichEditor::make('html_content')
-                            ->label('Page 1 HTML Template')
+                            ->label('Page 1 HTML Template (WYSIWYG)')
                             ->required()
                             ->columnSpanFull()
                             ->fileAttachmentsDisk('public')
@@ -148,7 +154,17 @@ class TaxTemplateResource extends Resource
                                 'underline',
                                 'undo',
                             ])
-                            ->helperText('Use the variables above in your HTML. Example: {{marketplace_legal_name}}. You can also upload images using the attach button.'),
+                            ->helperText('Use the variables above in your HTML. You can also upload images using the attach button.')
+                            ->visible(fn ($get) => !$get('page1_source_mode')),
+
+                        Forms\Components\Textarea::make('html_content')
+                            ->label('Page 1 HTML Template (Source Code)')
+                            ->required()
+                            ->rows(25)
+                            ->columnSpanFull()
+                            ->extraAttributes(['class' => 'font-mono text-sm'])
+                            ->helperText('Edit raw HTML code. Use variables like {{marketplace_legal_name}}')
+                            ->visible(fn ($get) => $get('page1_source_mode')),
                     ]),
 
                 Section::make('Page 2 - HTML Content (Optional)')
@@ -160,8 +176,14 @@ class TaxTemplateResource extends Resource
                             ->options(MarketplaceTaxTemplate::ORIENTATIONS)
                             ->placeholder('Select orientation for page 2'),
 
+                        Forms\Components\Toggle::make('page2_source_mode')
+                            ->label('Edit HTML Source Code')
+                            ->default(false)
+                            ->live()
+                            ->helperText('Switch to edit raw HTML code directly'),
+
                         Forms\Components\RichEditor::make('html_content_page_2')
-                            ->label('Page 2 HTML Template')
+                            ->label('Page 2 HTML Template (WYSIWYG)')
                             ->columnSpanFull()
                             ->fileAttachmentsDisk('public')
                             ->fileAttachmentsDirectory('tax-templates')
@@ -182,7 +204,16 @@ class TaxTemplateResource extends Resource
                                 'underline',
                                 'undo',
                             ])
-                            ->helperText('Leave empty if you only need one page. You can also upload images using the attach button.'),
+                            ->helperText('Leave empty if you only need one page. You can also upload images using the attach button.')
+                            ->visible(fn ($get) => !$get('page2_source_mode')),
+
+                        Forms\Components\Textarea::make('html_content_page_2')
+                            ->label('Page 2 HTML Template (Source Code)')
+                            ->rows(25)
+                            ->columnSpanFull()
+                            ->extraAttributes(['class' => 'font-mono text-sm'])
+                            ->helperText('Edit raw HTML code. Use variables like {{marketplace_legal_name}}')
+                            ->visible(fn ($get) => $get('page2_source_mode')),
                     ])
                     ->collapsible()
                     ->collapsed(),
