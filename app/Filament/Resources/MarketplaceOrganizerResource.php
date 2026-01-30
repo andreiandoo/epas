@@ -74,22 +74,131 @@ class MarketplaceOrganizerResource extends Resource
                     ])
                     ->columns(2),
 
+                Section::make('Organizer Type')
+                    ->description('Classification and work mode settings')
+                    ->schema([
+                        Forms\Components\Select::make('person_type')
+                            ->label('Person Type')
+                            ->options([
+                                'pj' => 'Persoana Juridica (Legal Entity)',
+                                'pf' => 'Persoana Fizica (Individual)',
+                            ])
+                            ->native(false),
+
+                        Forms\Components\Select::make('work_mode')
+                            ->label('Work Mode')
+                            ->options([
+                                'exclusive' => 'Exclusive (sells only through this platform)',
+                                'non_exclusive' => 'Non-Exclusive (sells through multiple channels)',
+                            ])
+                            ->native(false),
+
+                        Forms\Components\Select::make('organizer_type')
+                            ->label('Organizer Type')
+                            ->options([
+                                'agency' => 'Event Agency',
+                                'promoter' => 'Independent Promoter',
+                                'venue' => 'Venue / Hall',
+                                'artist' => 'Artist / Manager',
+                                'ngo' => 'NGO / Foundation',
+                                'other' => 'Other',
+                            ])
+                            ->native(false),
+                    ])
+                    ->columns(3),
+
                 Section::make('Company Information')
+                    ->description('Legal entity details (for Persoana Juridica)')
                     ->schema([
                         Forms\Components\TextInput::make('company_name')
+                            ->label('Company Name')
                             ->maxLength(255),
 
                         Forms\Components\TextInput::make('company_tax_id')
-                            ->label('Tax ID / VAT')
+                            ->label('CUI / Tax ID')
                             ->maxLength(50),
 
                         Forms\Components\TextInput::make('company_registration')
-                            ->label('Registration Number')
+                            ->label('Reg. Com. Number')
                             ->maxLength(100),
 
+                        Forms\Components\Toggle::make('vat_payer')
+                            ->label('VAT Payer')
+                            ->helperText('Is the company a VAT payer?'),
+
                         Forms\Components\Textarea::make('company_address')
+                            ->label('Company Address')
                             ->rows(2)
                             ->columnSpanFull(),
+
+                        Forms\Components\TextInput::make('company_city')
+                            ->label('City')
+                            ->maxLength(100),
+
+                        Forms\Components\TextInput::make('company_county')
+                            ->label('County')
+                            ->maxLength(100),
+
+                        Forms\Components\TextInput::make('representative_first_name')
+                            ->label('Representative First Name')
+                            ->maxLength(100)
+                            ->helperText('Legal representative'),
+
+                        Forms\Components\TextInput::make('representative_last_name')
+                            ->label('Representative Last Name')
+                            ->maxLength(100),
+                    ])
+                    ->columns(2),
+
+                Section::make('Guarantor / Personal Details')
+                    ->description('Personal identification for contract purposes')
+                    ->schema([
+                        Forms\Components\TextInput::make('guarantor_first_name')
+                            ->label('First Name')
+                            ->maxLength(100),
+
+                        Forms\Components\TextInput::make('guarantor_last_name')
+                            ->label('Last Name')
+                            ->maxLength(100),
+
+                        Forms\Components\TextInput::make('guarantor_cnp')
+                            ->label('CNP (Personal ID Number)')
+                            ->maxLength(13)
+                            ->helperText('13 digit Romanian CNP'),
+
+                        Forms\Components\TextInput::make('guarantor_address')
+                            ->label('Home Address')
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('guarantor_city')
+                            ->label('City')
+                            ->maxLength(100),
+
+                        Forms\Components\Select::make('guarantor_id_type')
+                            ->label('ID Document Type')
+                            ->options([
+                                'ci' => 'Carte de Identitate (CI)',
+                                'bi' => 'Buletin de Identitate (BI)',
+                            ])
+                            ->native(false),
+
+                        Forms\Components\TextInput::make('guarantor_id_series')
+                            ->label('ID Series')
+                            ->maxLength(2)
+                            ->extraInputAttributes(['style' => 'text-transform: uppercase']),
+
+                        Forms\Components\TextInput::make('guarantor_id_number')
+                            ->label('ID Number')
+                            ->maxLength(6),
+
+                        Forms\Components\TextInput::make('guarantor_id_issued_by')
+                            ->label('Issued By')
+                            ->maxLength(100)
+                            ->helperText('e.g., SPCLEP Sector 1'),
+
+                        Forms\Components\DatePicker::make('guarantor_id_issued_date')
+                            ->label('Issue Date')
+                            ->native(false),
                     ])
                     ->columns(2),
 
@@ -132,6 +241,36 @@ class MarketplaceOrganizerResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(),
 
+                Tables\Columns\TextColumn::make('person_type')
+                    ->label('Person')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'pj' => 'PJ',
+                        'pf' => 'PF',
+                        default => '-',
+                    })
+                    ->color(fn ($state) => match ($state) {
+                        'pj' => 'info',
+                        'pf' => 'success',
+                        default => 'gray',
+                    })
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('work_mode')
+                    ->label('Work Mode')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'exclusive' => 'Exclusive',
+                        'non_exclusive' => 'Non-Excl.',
+                        default => '-',
+                    })
+                    ->color(fn ($state) => match ($state) {
+                        'exclusive' => 'success',
+                        'non_exclusive' => 'warning',
+                        default => 'gray',
+                    })
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('company_name')
                     ->label('Company')
                     ->searchable()
@@ -169,6 +308,31 @@ class MarketplaceOrganizerResource extends Resource
                         'active' => 'Active',
                         'suspended' => 'Suspended',
                         'rejected' => 'Rejected',
+                    ]),
+
+                Tables\Filters\SelectFilter::make('person_type')
+                    ->label('Person Type')
+                    ->options([
+                        'pj' => 'Persoana Juridica (PJ)',
+                        'pf' => 'Persoana Fizica (PF)',
+                    ]),
+
+                Tables\Filters\SelectFilter::make('work_mode')
+                    ->label('Work Mode')
+                    ->options([
+                        'exclusive' => 'Exclusive',
+                        'non_exclusive' => 'Non-Exclusive',
+                    ]),
+
+                Tables\Filters\SelectFilter::make('organizer_type')
+                    ->label('Organizer Type')
+                    ->options([
+                        'agency' => 'Event Agency',
+                        'promoter' => 'Independent Promoter',
+                        'venue' => 'Venue / Hall',
+                        'artist' => 'Artist / Manager',
+                        'ngo' => 'NGO / Foundation',
+                        'other' => 'Other',
                     ]),
             ])
             ->recordActions([

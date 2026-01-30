@@ -23,13 +23,36 @@ class MarketplaceOrganizer extends Authenticatable
         'slug',
         'contact_name',
         'phone',
+
+        // Organizer Type Fields
+        'person_type',
+        'work_mode',
+        'organizer_type',
+
+        // Company details
         'company_name',
         'company_tax_id',
         'company_registration',
+        'vat_payer',
         'company_address',
         'company_city',
         'company_county',
         'company_zip',
+        'representative_first_name',
+        'representative_last_name',
+
+        // Guarantor / Personal Details
+        'guarantor_first_name',
+        'guarantor_last_name',
+        'guarantor_cnp',
+        'guarantor_address',
+        'guarantor_city',
+        'guarantor_id_type',
+        'guarantor_id_series',
+        'guarantor_id_number',
+        'guarantor_id_issued_by',
+        'guarantor_id_issued_date',
+
         'city',
         'state',
         'logo',
@@ -77,6 +100,7 @@ class MarketplaceOrganizer extends Authenticatable
         'settings' => 'array',
         'gamification_enabled' => 'boolean',
         'invitations_enabled' => 'boolean',
+        'vat_payer' => 'boolean',
         'tax_settings' => 'array',
         'payout_details' => 'encrypted:array',
         'commission_rate' => 'decimal:2',
@@ -84,6 +108,7 @@ class MarketplaceOrganizer extends Authenticatable
         'available_balance' => 'decimal:2',
         'pending_balance' => 'decimal:2',
         'total_paid_out' => 'decimal:2',
+        'guarantor_id_issued_date' => 'date',
     ];
 
     protected static function boot()
