@@ -56,6 +56,23 @@ class KbArticleResource extends Resource
         $marketplace = static::getMarketplaceClient();
         $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
+        // Define toolbar buttons for reuse
+        $toolbarButtons = [
+            'blockquote',
+            'bold',
+            'bulletList',
+            'codeBlock',
+            'h2',
+            'h3',
+            'italic',
+            'link',
+            'orderedList',
+            'redo',
+            'strike',
+            'underline',
+            'undo',
+        ];
+
         return $schema
             ->schema([
                 Forms\Components\Hidden::make('marketplace_client_id')
@@ -81,109 +98,138 @@ class KbArticleResource extends Resource
                                             ->required()
                                             ->live()
                                             ->inline(),
-                                    ]),
 
-                                // Article Content Section (for type = article)
+                                        Forms\Components\TextInput::make('slug')
+                                            ->label('Slug')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->rule('alpha_dash')
+                                            ->helperText('URL-friendly identifier'),
+                                    ])->columns(2),
+
+                                // Article Content Section with Language Tabs (for type = article)
                                 SC\Section::make('Article Content')
                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('type') === 'article')
                                     ->schema([
-                                        Forms\Components\TextInput::make("title.{$marketplaceLanguage}")
-                                            ->label('Title')
-                                            ->required()
-                                            ->maxLength(255)
-                                            ->live(onBlur: true)
-                                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) use ($marketplaceLanguage) {
-                                                if ($state) {
-                                                    $set('slug', Str::slug($state));
-                                                    if (!$get("meta_title.{$marketplaceLanguage}")) {
-                                                        $set("meta_title.{$marketplaceLanguage}", Str::limit($state, 60));
-                                                    }
-                                                }
-                                            }),
+                                        SC\Tabs::make('Article Languages')
+                                            ->tabs([
+                                                SC\Tabs\Tab::make('Română (RO)')
+                                                    ->icon('heroicon-o-flag')
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('title.ro')
+                                                            ->label('Title (RO)')
+                                                            ->required()
+                                                            ->maxLength(255)
+                                                            ->live(onBlur: true)
+                                                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
+                                                                if ($state && !$get('slug')) {
+                                                                    $set('slug', Str::slug($state));
+                                                                }
+                                                                if ($state && !$get('meta_title.ro')) {
+                                                                    $set('meta_title.ro', Str::limit($state, 60));
+                                                                }
+                                                            }),
 
-                                        Forms\Components\TextInput::make('slug')
-                                            ->label('Slug')
-                                            ->required()
-                                            ->maxLength(255)
-                                            ->rule('alpha_dash'),
+                                                        Forms\Components\RichEditor::make('content.ro')
+                                                            ->label('Content (RO)')
+                                                            ->required()
+                                                            ->toolbarButtons($toolbarButtons),
+                                                    ]),
 
-                                        Forms\Components\RichEditor::make("content.{$marketplaceLanguage}")
-                                            ->label('Content')
-                                            ->required()
-                                            ->toolbarButtons([
-                                                'blockquote',
-                                                'bold',
-                                                'bulletList',
-                                                'codeBlock',
-                                                'h2',
-                                                'h3',
-                                                'italic',
-                                                'link',
-                                                'orderedList',
-                                                'redo',
-                                                'strike',
-                                                'underline',
-                                                'undo',
+                                                SC\Tabs\Tab::make('English (EN)')
+                                                    ->icon('heroicon-o-globe-alt')
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('title.en')
+                                                            ->label('Title (EN)')
+                                                            ->maxLength(255)
+                                                            ->live(onBlur: true)
+                                                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
+                                                                if ($state && !$get('meta_title.en')) {
+                                                                    $set('meta_title.en', Str::limit($state, 60));
+                                                                }
+                                                            }),
+
+                                                        Forms\Components\RichEditor::make('content.en')
+                                                            ->label('Content (EN)')
+                                                            ->toolbarButtons($toolbarButtons),
+                                                    ]),
                                             ])
                                             ->columnSpanFull(),
-                                    ])->columns(2),
+                                    ]),
 
-                                // FAQ Content Section (for type = faq)
+                                // FAQ Content Section with Language Tabs (for type = faq)
                                 SC\Section::make('FAQ Content')
                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('type') === 'faq')
                                     ->schema([
-                                        Forms\Components\TextInput::make("question.{$marketplaceLanguage}")
-                                            ->label('Question')
-                                            ->required()
-                                            ->maxLength(500)
-                                            ->live(onBlur: true)
-                                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
-                                                if ($state) {
-                                                    $set('slug', Str::slug(Str::limit($state, 50)));
-                                                }
-                                            })
-                                            ->columnSpanFull(),
+                                        SC\Tabs::make('FAQ Languages')
+                                            ->tabs([
+                                                SC\Tabs\Tab::make('Română (RO)')
+                                                    ->icon('heroicon-o-flag')
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('question.ro')
+                                                            ->label('Question (RO)')
+                                                            ->required()
+                                                            ->maxLength(500)
+                                                            ->live(onBlur: true)
+                                                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
+                                                                if ($state && !$get('slug')) {
+                                                                    $set('slug', Str::slug(Str::limit($state, 50)));
+                                                                }
+                                                            }),
 
-                                        Forms\Components\TextInput::make('slug')
-                                            ->label('Slug')
-                                            ->required()
-                                            ->maxLength(255)
-                                            ->rule('alpha_dash'),
+                                                        Forms\Components\RichEditor::make('content.ro')
+                                                            ->label('Answer (RO)')
+                                                            ->required()
+                                                            ->toolbarButtons($toolbarButtons),
+                                                    ]),
 
-                                        Forms\Components\RichEditor::make("content.{$marketplaceLanguage}")
-                                            ->label('Answer')
-                                            ->required()
-                                            ->toolbarButtons([
-                                                'blockquote',
-                                                'bold',
-                                                'bulletList',
-                                                'codeBlock',
-                                                'h2',
-                                                'h3',
-                                                'italic',
-                                                'link',
-                                                'orderedList',
-                                                'redo',
-                                                'strike',
-                                                'underline',
-                                                'undo',
+                                                SC\Tabs\Tab::make('English (EN)')
+                                                    ->icon('heroicon-o-globe-alt')
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('question.en')
+                                                            ->label('Question (EN)')
+                                                            ->maxLength(500),
+
+                                                        Forms\Components\RichEditor::make('content.en')
+                                                            ->label('Answer (EN)')
+                                                            ->toolbarButtons($toolbarButtons),
+                                                    ]),
                                             ])
                                             ->columnSpanFull(),
-                                    ])->columns(2),
+                                    ]),
 
-                                // SEO Section
+                                // SEO Section with Language Tabs
                                 SC\Section::make('SEO')
                                     ->collapsed()
                                     ->schema([
-                                        Forms\Components\TextInput::make("meta_title.{$marketplaceLanguage}")
-                                            ->label('Meta Title')
-                                            ->maxLength(70),
+                                        SC\Tabs::make('SEO Languages')
+                                            ->tabs([
+                                                SC\Tabs\Tab::make('Română (RO)')
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('meta_title.ro')
+                                                            ->label('Meta Title (RO)')
+                                                            ->maxLength(70),
 
-                                        Forms\Components\Textarea::make("meta_description.{$marketplaceLanguage}")
-                                            ->label('Meta Description')
-                                            ->rows(2)
-                                            ->maxLength(160),
-                                    ])->columns(1),
+                                                        Forms\Components\Textarea::make('meta_description.ro')
+                                                            ->label('Meta Description (RO)')
+                                                            ->rows(2)
+                                                            ->maxLength(160),
+                                                    ]),
+
+                                                SC\Tabs\Tab::make('English (EN)')
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('meta_title.en')
+                                                            ->label('Meta Title (EN)')
+                                                            ->maxLength(70),
+
+                                                        Forms\Components\Textarea::make('meta_description.en')
+                                                            ->label('Meta Description (EN)')
+                                                            ->rows(2)
+                                                            ->maxLength(160),
+                                                    ]),
+                                            ])
+                                            ->columnSpanFull(),
+                                    ]),
                             ]),
 
                         // RIGHT COLUMN (1/3 width)
@@ -294,16 +340,28 @@ class KbArticleResource extends Resource
                     })
                     ->formatStateUsing(fn (string $state): string => strtoupper($state)),
 
-                Tables\Columns\TextColumn::make("title.{$marketplaceLanguage}")
+                Tables\Columns\TextColumn::make('display_title')
                     ->label('Title/Question')
-                    ->searchable()
-                    ->sortable()
+                    ->searchable(query: function (Builder $query, string $search) use ($marketplaceLanguage): Builder {
+                        return $query->where(function ($q) use ($search, $marketplaceLanguage) {
+                            $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.{$marketplaceLanguage}')) LIKE ?", ["%{$search}%"])
+                              ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(question, '$.{$marketplaceLanguage}')) LIKE ?", ["%{$search}%"]);
+                        });
+                    })
                     ->limit(50)
-                    ->formatStateUsing(function ($state, $record) use ($marketplaceLanguage) {
+                    ->getStateUsing(function ($record) use ($marketplaceLanguage) {
                         if ($record->type === 'faq') {
-                            return $record->question[$marketplaceLanguage] ?? $record->question['en'] ?? '-';
+                            $question = $record->question;
+                            if (is_array($question)) {
+                                return $question[$marketplaceLanguage] ?? $question['en'] ?? '-';
+                            }
+                            return '-';
                         }
-                        return $state ?? '-';
+                        $title = $record->title;
+                        if (is_array($title)) {
+                            return $title[$marketplaceLanguage] ?? $title['en'] ?? '-';
+                        }
+                        return '-';
                     }),
 
                 Tables\Columns\TextColumn::make('category.name')
