@@ -186,8 +186,12 @@ class ImageCompressionService
                     'height' => $result->newHeight ?? $originalHeight,
                     'metadata' => array_merge($media->metadata ?? [], [
                         'compressed_at' => now()->toIso8601String(),
-                        'original_size' => $media->size,
+                        'original_size' => $result->originalSize,
+                        'saved_bytes' => $result->savedBytes,
+                        'saved_percentage' => $result->savedPercentage,
                         'compression_quality' => $this->defaultQuality,
+                        'was_resized' => $result->wasResized,
+                        'was_converted' => $result->wasConverted,
                     ]),
                 ]);
 
