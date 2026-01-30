@@ -416,6 +416,12 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^blog/?$ blog.php [L]
 
 # ============================================
+# API PASSTHROUGH - Exclude API folder from rewrites
+# ============================================
+RewriteCond %{REQUEST_URI} ^/api/ [NC]
+RewriteRule ^ - [L]
+
+# ============================================
 # DYNAMIC CITY PAGES - Catch-all for city slugs
 # Must come after all other explicit routes
 # ============================================
