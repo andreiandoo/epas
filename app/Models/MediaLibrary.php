@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Observers\MediaLibraryObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\Storage;
 
+#[ObservedBy([MediaLibraryObserver::class])]
 class MediaLibrary extends Model
 {
     use HasFactory;
