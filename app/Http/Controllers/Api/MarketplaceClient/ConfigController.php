@@ -23,6 +23,11 @@ class ConfigController extends BaseController
                 'slug' => $client->slug,
                 'domain' => $client->domain,
             ],
+            'contact' => [
+                'email' => $client->contact_email,
+                'phone' => $client->contact_phone,
+                'operating_hours' => $client->operating_hours,
+            ],
             'platform' => [
                 'name' => $settings->company_name ?? 'Tixello',
                 'url' => config('app.url'),

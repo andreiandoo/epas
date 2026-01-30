@@ -264,3 +264,31 @@ function vote_article_helpful(int $articleId, bool $helpful): bool
     ]);
     return $response['success'];
 }
+
+/**
+ * Get marketplace configuration including contact info
+ *
+ * @return array Marketplace config with contact info
+ */
+function get_marketplace_config(): array
+{
+    return api_cached('marketplace_config', function () {
+        $response = api_get('/config');
+        return $response['data'] ?? [];
+    }, 300); // 5 minute cache
+}
+
+/**
+ * Get marketplace contact info
+ *
+ * @return array Contact info (email, phone, operating_hours)
+ */
+function get_contact_info(): array
+{
+    $config = get_marketplace_config();
+    return $config['contact'] ?? [
+        'email' => null,
+        'phone' => null,
+        'operating_hours' => null,
+    ];
+}
