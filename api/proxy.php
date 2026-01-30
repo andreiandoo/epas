@@ -358,6 +358,29 @@ switch ($action) {
         $endpoint = '/marketplace-events/cities' . ($params ? '?' . http_build_query($params) : '');
         break;
 
+    // ==================== ORGANIZERS (PUBLIC) ====================
+
+    case 'organizers':
+        $params = [];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['verified'])) $params['verified'] = $_GET['verified'];
+        if (isset($_GET['with_events'])) $params['with_events'] = $_GET['with_events'];
+        if (isset($_GET['sort'])) $params['sort'] = $_GET['sort'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/marketplace-events/organizers' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'organizer':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing organizer slug']);
+            exit;
+        }
+        $endpoint = '/marketplace-events/organizers/' . urlencode($slug);
+        break;
+
     // ==================== LOCATIONS ====================
 
     case 'locations.stats':

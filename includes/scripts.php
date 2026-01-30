@@ -26,6 +26,8 @@
     <script src="<?= asset('assets/js/components/header.js') ?>"></script>
     <?php endif; ?>
     <script src="<?= asset('assets/js/components/notifications.js') ?>"></script>
+    <script src="<?= asset('assets/js/components/notification-sound.js') ?>"></script>
+    <script src="<?= asset('assets/js/components/notification-poller.js') ?>"></script>
     <script src="<?= asset('assets/js/components/event-card.js') ?>"></script>
     <script src="<?= asset('assets/js/components/pagination.js') ?>"></script>
     <script src="<?= asset('assets/js/components/empty-state.js') ?>"></script>

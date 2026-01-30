@@ -206,6 +206,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <div class="flex items-center justify-between py-4 border-b border-border"><div><p class="font-medium text-secondary">Notificari Vanzari</p><p class="text-sm text-muted">Email la fiecare vanzare</p></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="notif-sales" class="sr-only peer" checked><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div></label></div>
                         <div class="flex items-center justify-between py-4 border-b border-border"><div><p class="font-medium text-secondary">Rapoarte Zilnice</p><p class="text-sm text-muted">Sumar zilnic al vanzarilor</p></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="notif-daily" class="sr-only peer" checked><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div></label></div>
                         <div class="flex items-center justify-between py-4 border-b border-border"><div><p class="font-medium text-secondary">Alerte Stoc</p><p class="text-sm text-muted">Notificare stoc sub 10%</p></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="notif-stock" class="sr-only peer" checked><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div></label></div>
+                        <div class="flex items-center justify-between py-4 border-b border-border"><div><p class="font-medium text-secondary">Sunet Notificari</p><p class="text-sm text-muted">Reda sunet la primirea notificarilor</p></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="notif-sound" class="sr-only peer" checked onchange="toggleNotificationSound(this.checked)"><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div></label></div>
                         <div class="pt-4 flex justify-end"><button type="submit" class="btn btn-primary">Salveaza</button></div>
                     </form>
                 </div>
@@ -244,7 +245,27 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 $scriptsExtra = <<<'JS'
 <script>
 AmbiletAuth.requireOrganizerAuth();
-document.addEventListener('DOMContentLoaded', function() { loadSettings(); loadBankAccounts(); loadContract(); const hash = window.location.hash.replace('#', ''); if (hash) showSection(hash); });
+document.addEventListener('DOMContentLoaded', function() { loadSettings(); loadBankAccounts(); loadContract(); initNotificationSoundToggle(); const hash = window.location.hash.replace('#', ''); if (hash) showSection(hash); });
+
+// Initialize notification sound toggle from saved preference
+function initNotificationSoundToggle() {
+    const checkbox = document.getElementById('notif-sound');
+    if (checkbox && typeof AmbiletNotificationSound !== 'undefined') {
+        checkbox.checked = AmbiletNotificationSound.isEnabled();
+    }
+}
+
+// Toggle notification sound on/off
+function toggleNotificationSound(enabled) {
+    if (typeof AmbiletNotificationSound !== 'undefined') {
+        AmbiletNotificationSound.setEnabled(enabled);
+        // Play a test sound when enabling
+        if (enabled) {
+            AmbiletNotificationSound.play('default');
+        }
+        AmbiletNotifications.success(enabled ? 'Sunetul de notificari a fost activat' : 'Sunetul de notificari a fost dezactivat');
+    }
+}
 
 function showSection(section) {
     document.querySelectorAll('.settings-tab').forEach(t => { t.classList.remove('active', 'bg-primary', 'text-white'); t.classList.add('text-muted', 'hover:bg-surface'); });
