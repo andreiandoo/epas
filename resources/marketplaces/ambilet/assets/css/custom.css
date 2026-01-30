@@ -1537,6 +1537,9 @@ select.pr-10 {
 #ended-related-events a.border {
     border-width: 0;
 }
+.pt-32 {
+    padding-top: 8rem;
+}
 
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 1100px) {
@@ -1624,6 +1627,9 @@ select.pr-10 {
 
     .mobile-dropdown-grid {
         grid-template-columns: 1fr;
+    }
+    .mobile\:pt-12 {
+        padding-top: 3rem;
     }
 }
 

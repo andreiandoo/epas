@@ -6,12 +6,41 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceTaxTemplate;
 use App\Models\MarketplaceTaxRegistry;
 use App\Models\OrganizerDocument;
+use App\Services\MarketplaceNotificationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
 class MarketplaceOrganizerObserver
 {
+    public function __construct(
+        protected MarketplaceNotificationService $notificationService
+    ) {}
+
+    /**
+     * Handle the MarketplaceOrganizer "created" event.
+     */
+    public function created(MarketplaceOrganizer $organizer): void
+    {
+        // Notify about new organizer registration
+        if ($organizer->marketplace_client_id) {
+            try {
+                $this->notificationService->notifyOrganizerRegistration(
+                    $organizer->marketplace_client_id,
+                    $organizer->name ?? $organizer->email,
+                    $organizer->company_name,
+                    $organizer,
+                    route('filament.marketplace.resources.organizers.edit', ['record' => $organizer->id])
+                );
+            } catch (\Exception $e) {
+                Log::warning('Failed to create organizer registration notification', [
+                    'organizer_id' => $organizer->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
     /**
      * Handle the MarketplaceOrganizer "updated" event.
      */
@@ -159,6 +188,19 @@ class MarketplaceOrganizerObserver
                 'organizer_id' => $organizer->id,
                 'document_path' => $filePath,
             ]);
+
+            // Send notification about document generation
+            try {
+                $this->notificationService->notifyDocumentGenerated(
+                    $marketplace->id,
+                    'organizer_contract',
+                    $organizer->company_name ?? $organizer->name,
+                    null,
+                    route('filament.marketplace.resources.organizers.edit', ['record' => $organizer->id])
+                );
+            } catch (\Exception $e) {
+                Log::warning('Failed to create document notification', ['error' => $e->getMessage()]);
+            }
 
         } catch (\Exception $e) {
             Log::error('MarketplaceOrganizerObserver: Failed to generate organizer contract', [

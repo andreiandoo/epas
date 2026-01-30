@@ -160,6 +160,11 @@
                 </div>
             @endif
 
+            {{-- Notifications Dropdown (Marketplace only) --}}
+            @if($isMarketplacePanel)
+                @livewire('marketplace.notification-dropdown')
+            @endif
+
             {{-- Language Selector with Flags --}}
             <div x-data="{ open: false }" class="relative">
                 <button

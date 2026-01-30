@@ -4,15 +4,47 @@ namespace App\Observers;
 
 use App\Models\MarketplaceContactList;
 use App\Models\MarketplaceCustomer;
+use App\Services\MarketplaceNotificationService;
+use Illuminate\Support\Facades\Log;
 
 class MarketplaceCustomerObserver
 {
+    public function __construct(
+        protected MarketplaceNotificationService $notificationService
+    ) {}
+
     /**
      * Handle the MarketplaceCustomer "created" event.
      */
     public function created(MarketplaceCustomer $customer): void
     {
         $this->syncDynamicLists($customer);
+        $this->sendRegistrationNotification($customer);
+    }
+
+    /**
+     * Send notification about new customer registration
+     */
+    protected function sendRegistrationNotification(MarketplaceCustomer $customer): void
+    {
+        if (!$customer->marketplace_client_id) {
+            return;
+        }
+
+        try {
+            $this->notificationService->notifyCustomerRegistration(
+                $customer->marketplace_client_id,
+                $customer->name ?? ($customer->first_name . ' ' . $customer->last_name) ?? 'Client nou',
+                $customer->email ?? '',
+                $customer,
+                route('filament.marketplace.resources.customers.edit', ['record' => $customer->id])
+            );
+        } catch (\Exception $e) {
+            Log::warning('Failed to create customer registration notification', [
+                'customer_id' => $customer->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

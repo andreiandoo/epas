@@ -16,7 +16,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Slider Section - 3D Coverflow Style -->
-<section class="relative py-8 overflow-hidden bg-secondary mt-28 mobile:mt-18 md:py-12" id="heroSlider">
+<section class="relative py-8 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 mt-18 pt-32 mobile:pt-12" id="heroSlider">
     <div class="px-4 mx-auto max-w-7xl">
         <!-- Main 3D Carousel -->
         <div class="relative" id="heroSection">
@@ -62,16 +62,6 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Promoted & Recommended Events -->
 <section class="py-10 bg-white md:py-14">
     <div class="px-4 mx-auto max-w-7xl">
-        <div class="flex items-center justify-between mb-8">
-            <h2 class="text-xl font-bold md:text-2xl text-secondary">Evenimente recomandate</h2>
-            <a href="/evenimente" class="items-center hidden gap-2 font-semibold md:flex text-primary">
-                Vezi toate
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
-            </a>
-        </div>
-
         <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="promotedEventsGrid">
             <!-- Promoted events will be loaded dynamically -->
             <?php for ($i = 0; $i < 10; $i++): ?>
