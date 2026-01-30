@@ -105,35 +105,163 @@ class OrganizerResource extends Resource
                         ])
                         ->columns(2),
 
+                    Section::make('Organizer Type')
+                        ->icon('heroicon-o-tag')
+                        ->description('Classification and work mode settings')
+                        ->schema([
+                            Forms\Components\Select::make('person_type')
+                                ->label('Person Type')
+                                ->options([
+                                    'pj' => 'Persoana Juridica (Legal Entity)',
+                                    'pf' => 'Persoana Fizica (Individual)',
+                                ])
+                                ->native(false),
+
+                            Forms\Components\Select::make('work_mode')
+                                ->label('Work Mode')
+                                ->options([
+                                    'exclusive' => 'Exclusive (sells only through this platform)',
+                                    'non_exclusive' => 'Non-Exclusive (sells through multiple channels)',
+                                ])
+                                ->native(false),
+
+                            Forms\Components\Select::make('organizer_type')
+                                ->label('Organizer Type')
+                                ->options([
+                                    'agency' => 'Event Agency',
+                                    'promoter' => 'Independent Promoter',
+                                    'venue' => 'Venue / Hall',
+                                    'artist' => 'Artist / Manager',
+                                    'ngo' => 'NGO / Foundation',
+                                    'other' => 'Other',
+                                ])
+                                ->native(false),
+                        ])
+                        ->columns(3),
+
                     Section::make('Company Information')
                         ->icon('heroicon-o-building-office')
+                        ->description('Legal entity details (for Persoana Juridica)')
                         ->schema([
                             Forms\Components\TextInput::make('company_name')
                                 ->maxLength(255),
 
                             Forms\Components\TextInput::make('company_tax_id')
-                                ->label('Tax ID / VAT')
+                                ->label('CUI / Tax ID')
                                 ->maxLength(50),
 
                             Forms\Components\TextInput::make('company_registration')
-                                ->label('Registration Number')
+                                ->label('Reg. Com. Number')
                                 ->maxLength(100),
 
+                            Forms\Components\Toggle::make('vat_payer')
+                                ->label('VAT Payer')
+                                ->helperText('Is the company a VAT payer?'),
+
                             Forms\Components\Textarea::make('company_address')
+                                ->label('Company Address')
                                 ->rows(2)
                                 ->columnSpanFull(),
 
-                            Forms\Components\TextInput::make('bank_name')
-                                ->label('Bank Name (Legacy)')
-                                ->maxLength(255)
-                                ->placeholder('e.g., ING Bank, BRD, BCR')
-                                ->helperText('Deprecated - use Bank Accounts section below'),
+                            Forms\Components\TextInput::make('company_city')
+                                ->label('City')
+                                ->maxLength(100),
 
-                            Forms\Components\TextInput::make('iban')
-                                ->label('IBAN (Legacy)')
-                                ->maxLength(34)
-                                ->placeholder('e.g., RO49AAAA1B31007593840000')
-                                ->helperText('Deprecated - use Bank Accounts section below'),
+                            Forms\Components\TextInput::make('company_county')
+                                ->label('County')
+                                ->maxLength(100),
+
+                            Forms\Components\TextInput::make('company_zip')
+                                ->label('Postal Code')
+                                ->maxLength(20),
+
+                            Forms\Components\TextInput::make('representative_first_name')
+                                ->label('Representative First Name')
+                                ->maxLength(100)
+                                ->helperText('Legal representative'),
+
+                            Forms\Components\TextInput::make('representative_last_name')
+                                ->label('Representative Last Name')
+                                ->maxLength(100),
+                        ])
+                        ->columns(2),
+
+                    Section::make('Guarantor / Personal Details')
+                        ->icon('heroicon-o-identification')
+                        ->description('Personal identification for contract purposes')
+                        ->schema([
+                            Forms\Components\TextInput::make('guarantor_first_name')
+                                ->label('First Name')
+                                ->maxLength(100),
+
+                            Forms\Components\TextInput::make('guarantor_last_name')
+                                ->label('Last Name')
+                                ->maxLength(100),
+
+                            Forms\Components\TextInput::make('guarantor_cnp')
+                                ->label('CNP (Personal ID Number)')
+                                ->maxLength(13)
+                                ->helperText('13 digit Romanian CNP'),
+
+                            Forms\Components\TextInput::make('guarantor_address')
+                                ->label('Home Address')
+                                ->maxLength(255),
+
+                            Forms\Components\TextInput::make('guarantor_city')
+                                ->label('City')
+                                ->maxLength(100),
+
+                            Forms\Components\Select::make('guarantor_id_type')
+                                ->label('ID Document Type')
+                                ->options([
+                                    'ci' => 'Carte de Identitate (CI)',
+                                    'bi' => 'Buletin de Identitate (BI)',
+                                ])
+                                ->native(false),
+
+                            Forms\Components\TextInput::make('guarantor_id_series')
+                                ->label('ID Series')
+                                ->maxLength(2)
+                                ->extraInputAttributes(['style' => 'text-transform: uppercase']),
+
+                            Forms\Components\TextInput::make('guarantor_id_number')
+                                ->label('ID Number')
+                                ->maxLength(6),
+
+                            Forms\Components\TextInput::make('guarantor_id_issued_by')
+                                ->label('Issued By')
+                                ->maxLength(100)
+                                ->helperText('e.g., SPCLEP Sector 1'),
+
+                            Forms\Components\DatePicker::make('guarantor_id_issued_date')
+                                ->label('Issue Date')
+                                ->native(false),
+                        ])
+                        ->columns(2),
+
+                    Section::make('Uploaded Documents')
+                        ->icon('heroicon-o-document-arrow-up')
+                        ->description('Identity and company documents for verification')
+                        ->schema([
+                            Forms\Components\FileUpload::make('id_card_document')
+                                ->label('CI / ID Card Copy')
+                                ->disk('public')
+                                ->directory('organizer-documents')
+                                ->acceptedFileTypes(['image/*', 'application/pdf'])
+                                ->maxSize(5120)
+                                ->helperText('Personal ID card for the guarantor/representative')
+                                ->downloadable()
+                                ->openable(),
+
+                            Forms\Components\FileUpload::make('cui_document')
+                                ->label('CUI / Company Registration Copy')
+                                ->disk('public')
+                                ->directory('organizer-documents')
+                                ->acceptedFileTypes(['image/*', 'application/pdf'])
+                                ->maxSize(5120)
+                                ->helperText('Company registration certificate (CUI)')
+                                ->downloadable()
+                                ->openable(),
                         ])
                         ->columns(2),
 
