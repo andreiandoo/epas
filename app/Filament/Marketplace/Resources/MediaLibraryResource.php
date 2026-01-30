@@ -607,11 +607,17 @@ class MediaLibraryResource extends Resource
                         $service->quality(80);
                         $result = $service->compress($record);
 
-                        if ($result->success) {
+                        if ($result->success && !$result->skipped) {
                             Notification::make()
                                 ->title('Imagine Comprimată')
-                                ->body("Salvat {$result->savedPercentage}% ({$result->savedHuman})")
+                                ->body("Salvat {$result->getSavedHuman()} ({$result->savedPercentage}% reducere)")
                                 ->success()
+                                ->send();
+                        } elseif ($result->skipped) {
+                            Notification::make()
+                                ->title('Compresie Omisă')
+                                ->body($result->skipReason)
+                                ->info()
                                 ->send();
                         } else {
                             Notification::make()
