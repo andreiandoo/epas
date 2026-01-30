@@ -14,7 +14,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
         </div>
     </header>
 
-    <main class="max-w-2xl mx-auto px-4 py-12">
+    <main class="max-w-4xl mx-auto px-4 py-12">
         <!-- Step Indicators -->
         <div class="flex items-center justify-center mb-12 overflow-x-auto pb-2" id="step-indicators">
             <div class="flex items-center"><div id="step1-indicator" class="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white font-bold text-sm">1</div><span class="ml-2 text-sm font-medium text-secondary hidden sm:block">Cont</span></div>
@@ -32,168 +32,213 @@ require_once dirname(__DIR__) . '/includes/head.php';
 
         <div id="error-message" class="hidden mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-error"></div>
 
-        <!-- Step 1: Account Info -->
-        <div id="step1" class="step-content">
-            <div class="bg-white rounded-2xl border border-border p-8">
-                <h2 class="text-2xl font-bold text-secondary mb-2">Creeaza contul tau</h2>
-                <p class="text-muted mb-6">Informatii pentru autentificare in platforma</p>
-                <form id="step1-form" class="space-y-4">
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div><label class="label">Prenume *</label><input type="text" name="first_name" required class="input" placeholder="Ion"></div>
-                        <div><label class="label">Nume *</label><input type="text" name="last_name" required class="input" placeholder="Popescu"></div>
-                    </div>
-                    <div><label class="label">Email *</label><input type="email" name="email" required class="input" placeholder="organizator@email.com"></div>
-                    <div><label class="label">Telefon *</label><input type="tel" name="phone" required class="input" placeholder="+40 7XX XXX XXX"></div>
-                    <div><label class="label">Parola *</label><input type="password" name="password" required class="input" placeholder="Minim 8 caractere" minlength="8"></div>
-                    <div><label class="label">Confirma parola *</label><input type="password" name="password_confirmation" required class="input" placeholder="Repeta parola"></div>
-                    <button type="submit" class="btn btn-primary w-full mt-6">Continua <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Step 2: Organizer Type -->
-        <div id="step2" class="step-content hidden">
-            <div class="bg-white rounded-2xl border border-border p-8">
-                <h2 class="text-2xl font-bold text-secondary mb-2">Tip Organizator</h2>
-                <p class="text-muted mb-6">Selecteaza tipul de organizator si modul de lucru</p>
-                <form id="step2-form" class="space-y-6">
-                    <!-- Person Type Selection -->
-                    <div>
-                        <label class="label mb-3">Tip persoana *</label>
+        <div class="max-w-2xl mx-auto">
+            <!-- Step 1: Account Info -->
+            <div id="step1" class="step-content">
+                <div class="bg-white rounded-2xl border border-border p-8">
+                    <h2 class="text-2xl font-bold text-secondary mb-2">Creeaza contul tau</h2>
+                    <p class="text-muted mb-6">Informatii pentru autentificare in platforma</p>
+                    <form id="step1-form" class="space-y-4">
                         <div class="grid md:grid-cols-2 gap-4">
-                            <label class="relative flex items-center p-4 border-2 border-border rounded-xl cursor-pointer hover:border-primary/50 transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                                <input type="radio" name="person_type" value="pj" class="sr-only" required>
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                                    </div>
-                                    <div>
-                                        <p class="font-semibold text-secondary">Persoana Juridica</p>
-                                        <p class="text-sm text-muted">SRL, SA, PFA, II, etc.</p>
-                                    </div>
-                                </div>
-                                <div class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-border has-[:checked]:border-primary has-[:checked]:bg-primary flex items-center justify-center">
-                                    <svg class="w-3 h-3 text-white hidden" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                                </div>
-                            </label>
-                            <label class="relative flex items-center p-4 border-2 border-border rounded-xl cursor-pointer hover:border-primary/50 transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                                <input type="radio" name="person_type" value="pf" class="sr-only">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                                    </div>
-                                    <div>
-                                        <p class="font-semibold text-secondary">Persoana Fizica</p>
-                                        <p class="text-sm text-muted">Fara forma juridica</p>
-                                    </div>
-                                </div>
-                                <div class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-border flex items-center justify-center"></div>
-                            </label>
+                            <div><label class="label">Prenume *</label><input type="text" name="first_name" required class="input" placeholder="Ion"></div>
+                            <div><label class="label">Nume *</label><input type="text" name="last_name" required class="input" placeholder="Popescu"></div>
                         </div>
-                    </div>
-
-                    <!-- Work Mode Selection -->
-                    <div>
-                        <label class="label mb-3">Mod de lucru *</label>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <label class="relative flex items-start p-4 border-2 border-border rounded-xl cursor-pointer hover:border-primary/50 transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                                <input type="radio" name="work_mode" value="exclusive" class="sr-only" required>
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <p class="font-semibold text-secondary">Lucru Exclusiv</p>
-                                        <span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">Recomandat</span>
-                                    </div>
-                                    <p class="text-sm text-muted">Vinzi bilete doar prin <?= SITE_NAME ?>. Beneficiezi de comision redus si invitatii gratuite.</p>
-                                </div>
-                                <div class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-border flex items-center justify-center"></div>
-                            </label>
-                            <label class="relative flex items-start p-4 border-2 border-border rounded-xl cursor-pointer hover:border-primary/50 transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                                <input type="radio" name="work_mode" value="non_exclusive" class="sr-only">
-                                <div class="flex-1">
-                                    <p class="font-semibold text-secondary">Lucru Neexclusiv</p>
-                                    <p class="text-sm text-muted">Vinzi bilete si prin alte platforme sau canale proprii.</p>
-                                </div>
-                                <div class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-border flex items-center justify-center"></div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-4 mt-6">
-                        <button type="button" onclick="goToStep(1)" class="btn btn-secondary flex-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Inapoi</button>
-                        <button type="submit" class="btn btn-primary flex-1">Continua <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
-                    </div>
-                </form>
+                        <div><label class="label">Email *</label><input type="email" name="email" required class="input" placeholder="organizator@email.com"></div>
+                        <div><label class="label">Telefon *</label><input type="tel" name="phone" required class="input" placeholder="+40 7XX XXX XXX"></div>
+                        <div><label class="label">Parola *</label><input type="password" name="password" required class="input" placeholder="Minim 8 caractere" minlength="8"></div>
+                        <div><label class="label">Confirma parola *</label><input type="password" name="password_confirmation" required class="input" placeholder="Repeta parola"></div>
+                        <button type="submit" class="btn btn-primary w-full mt-6">Continua <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
+                    </form>
+                </div>
             </div>
-        </div>
 
-        <!-- Step 3: Company Details (only for PJ) -->
-        <div id="step3" class="step-content hidden">
-            <div class="bg-white rounded-2xl border border-border p-8">
-                <h2 class="text-2xl font-bold text-secondary mb-2">Detalii Companie</h2>
-                <p class="text-muted mb-6">Verifica datele companiei tale la ANAF</p>
-                <form id="step3-form" class="space-y-6">
-                    <!-- CUI Verification -->
-                    <div>
-                        <label class="label">CUI / CIF *</label>
-                        <div class="flex gap-2">
-                            <input type="text" name="cui" id="cui-input" class="input flex-1" placeholder="12345678 sau RO12345678" required>
-                            <button type="button" onclick="verifyCUI()" class="btn btn-secondary whitespace-nowrap" id="verify-cui-btn">
-                                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                                Verificare ANAF
-                            </button>
-                        </div>
-                        <p class="text-xs text-muted mt-1">Introdu CUI-ul si apasa verificare pentru a prelua datele automat</p>
-                    </div>
-
-                    <!-- Company Details (hidden until ANAF verification) -->
-                    <div id="company-details" class="hidden space-y-4">
-                        <div class="p-4 bg-green-50 border border-green-200 rounded-xl">
-                            <div class="flex items-center gap-2 text-green-700 mb-2">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                <span class="font-medium">Date verificate la ANAF</span>
-                            </div>
-                        </div>
-
+            <!-- Step 2: Organizer Type -->
+            <div id="step2" class="step-content hidden">
+                <div class="bg-white rounded-2xl border border-border p-8">
+                    <h2 class="text-2xl font-bold text-secondary mb-2">Tip Organizator</h2>
+                    <p class="text-muted mb-6">Selecteaza tipul de organizator si modul de lucru</p>
+                    <form id="step2-form" class="space-y-6">
+                        <!-- Person Type Selection -->
                         <div>
-                            <label class="label">Denumire companie</label>
-                            <input type="text" name="company_name" id="company-name" class="input" readonly>
-                        </div>
-
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="label">Nr. Reg. Comertului</label>
-                                <input type="text" name="reg_com" id="company-reg" class="input" readonly>
-                            </div>
-                            <div>
-                                <label class="label flex items-center gap-2">
-                                    Platitor TVA
-                                    <span id="vat-badge" class="hidden px-2 py-0.5 text-xs rounded-full"></span>
+                            <label class="label mb-3">Tip persoana *</label>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <label class="relative flex items-center p-4 border-2 border-border rounded-xl cursor-pointer hover:border-primary/50 transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                    <input type="radio" name="person_type" value="pj" class="sr-only" required>
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-secondary">Persoana Juridica</p>
+                                            <p class="text-sm text-muted">SRL, SA, PFA, II, etc.</p>
+                                        </div>
+                                    </div>
+                                    <div class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-border has-[:checked]:border-primary has-[:checked]:bg-primary flex items-center justify-center">
+                                        <svg class="w-3 h-3 text-white hidden" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                    </div>
                                 </label>
-                                <input type="hidden" name="vat_payer" id="company-vat" value="0">
-                                <div id="vat-display" class="input bg-gray-50 cursor-not-allowed">-</div>
+                                <label class="relative flex items-center p-4 border-2 border-border rounded-xl cursor-pointer hover:border-primary/50 transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                    <input type="radio" name="person_type" value="pf" class="sr-only">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-secondary">Persoana Fizica</p>
+                                            <p class="text-sm text-muted">Fara forma juridica</p>
+                                        </div>
+                                    </div>
+                                    <div class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-border flex items-center justify-center"></div>
+                                </label>
                             </div>
                         </div>
 
+                        <!-- Work Mode Selection -->
                         <div>
-                            <label class="label">Adresa sediului</label>
-                            <input type="text" name="company_address" id="company-address" class="input" readonly>
+                            <label class="label mb-3">Mod de lucru *</label>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <label class="relative flex items-start p-4 border-2 border-border rounded-xl cursor-pointer hover:border-primary/50 transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                    <input type="radio" name="work_mode" value="exclusive" class="sr-only" required>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <p class="font-semibold text-secondary">Lucru Exclusiv</p>
+                                            <span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">Recomandat</span>
+                                        </div>
+                                        <p class="text-sm text-muted">Vinzi bilete doar prin <?= SITE_NAME ?>. Beneficiezi de comision redus si invitatii gratuite.</p>
+                                    </div>
+                                    <div class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-border flex items-center justify-center"></div>
+                                </label>
+                                <label class="relative flex items-start p-4 border-2 border-border rounded-xl cursor-pointer hover:border-primary/50 transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                    <input type="radio" name="work_mode" value="non_exclusive" class="sr-only">
+                                    <div class="flex-1">
+                                        <p class="font-semibold text-secondary">Lucru Neexclusiv</p>
+                                        <p class="text-sm text-muted">Vinzi bilete si prin alte platforme sau canale proprii.</p>
+                                    </div>
+                                    <div class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 border-border flex items-center justify-center"></div>
+                                </label>
+                            </div>
                         </div>
 
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="label">Oras</label>
-                                <input type="text" name="company_city" id="company-city" class="input" readonly>
-                            </div>
-                            <div>
-                                <label class="label">Judet</label>
-                                <input type="text" name="company_county" id="company-county" class="input" readonly>
-                            </div>
+                        <div class="flex gap-4 mt-6">
+                            <button type="button" onclick="goToStep(1)" class="btn btn-secondary flex-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Inapoi</button>
+                            <button type="submit" class="btn btn-primary flex-1">Continua <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
                         </div>
+                    </form>
+                </div>
+            </div>
 
-                        <!-- Organizer Type -->
+            <!-- Step 3: Company Details (only for PJ) -->
+            <div id="step3" class="step-content hidden">
+                <div class="bg-white rounded-2xl border border-border p-8">
+                    <h2 class="text-2xl font-bold text-secondary mb-2">Detalii Companie</h2>
+                    <p class="text-muted mb-6">Verifica datele companiei tale la ANAF</p>
+                    <form id="step3-form" class="space-y-6">
+                        <!-- CUI Verification -->
                         <div>
+                            <label class="label">CUI / CIF *</label>
+                            <div class="flex gap-2">
+                                <input type="text" name="cui" id="cui-input" class="input flex-1" placeholder="12345678 sau RO12345678" required>
+                                <button type="button" onclick="verifyCUI()" class="btn btn-secondary whitespace-nowrap" id="verify-cui-btn">
+                                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                    Verificare ANAF
+                                </button>
+                            </div>
+                            <p class="text-xs text-muted mt-1">Introdu CUI-ul si apasa verificare pentru a prelua datele automat</p>
+                        </div>
+
+                        <!-- Company Details (hidden until ANAF verification) -->
+                        <div id="company-details" class="hidden space-y-4">
+                            <div class="p-4 bg-green-50 border border-green-200 rounded-xl">
+                                <div class="flex items-center gap-2 text-green-700 mb-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <span class="font-medium">Date verificate la ANAF</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="label">Denumire companie</label>
+                                <input type="text" name="company_name" id="company-name" class="input" readonly>
+                            </div>
+
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="label">Nr. Reg. Comertului</label>
+                                    <input type="text" name="reg_com" id="company-reg" class="input" readonly>
+                                </div>
+                                <div>
+                                    <label class="label flex items-center gap-2">
+                                        Platitor TVA
+                                        <span id="vat-badge" class="hidden px-2 py-0.5 text-xs rounded-full"></span>
+                                    </label>
+                                    <input type="hidden" name="vat_payer" id="company-vat" value="0">
+                                    <div id="vat-display" class="input bg-gray-50 cursor-not-allowed">-</div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="label">Adresa sediului</label>
+                                <input type="text" name="company_address" id="company-address" class="input" readonly>
+                            </div>
+
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="label">Oras</label>
+                                    <input type="text" name="company_city" id="company-city" class="input" readonly>
+                                </div>
+                                <div>
+                                    <label class="label">Judet</label>
+                                    <input type="text" name="company_county" id="company-county" class="input" readonly>
+                                </div>
+                            </div>
+
+                            <!-- Organizer Type -->
+                            <div>
+                                <label class="label">Tip organizator *</label>
+                                <select name="organizer_type" id="organizer-type-pj" class="input" required>
+                                    <option value="">Selecteaza...</option>
+                                    <option value="agency">Agentie de evenimente</option>
+                                    <option value="promoter">Promoter independent</option>
+                                    <option value="venue">Locatie / Sala</option>
+                                    <option value="artist">Artist / Manager</option>
+                                    <option value="ngo">ONG / Fundatie</option>
+                                    <option value="other">Altele</option>
+                                </select>
+                            </div>
+
+                            <!-- Company Representative -->
+                            <div class="pt-4 border-t border-border">
+                                <h3 class="text-lg font-semibold text-secondary mb-4">Reprezentant Legal</h3>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="label">Prenume reprezentant *</label>
+                                        <input type="text" name="representative_first_name" id="rep-first-name" class="input" required placeholder="Ion">
+                                    </div>
+                                    <div>
+                                        <label class="label">Nume reprezentant *</label>
+                                        <input type="text" name="representative_last_name" id="rep-last-name" class="input" required placeholder="Popescu">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4 mt-6">
+                            <button type="button" onclick="goToStep(2)" class="btn btn-secondary flex-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Inapoi</button>
+                            <button type="submit" class="btn btn-primary flex-1" id="step3-submit" disabled>Continua <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Step 4: Guarantor / Personal Details -->
+            <div id="step4" class="step-content hidden">
+                <div class="bg-white rounded-2xl border border-border p-8">
+                    <h2 class="text-2xl font-bold text-secondary mb-2" id="step4-title">Date Personale</h2>
+                    <p class="text-muted mb-6" id="step4-subtitle">Informatii pentru identificare si contract</p>
+                    <form id="step4-form" class="space-y-4">
+                        <!-- Organizer Type (only for PF) -->
+                        <div id="organizer-type-pf-container" class="hidden">
                             <label class="label">Tip organizator *</label>
-                            <select name="organizer_type" id="organizer-type-pj" class="input" required>
+                            <select name="organizer_type_pf" id="organizer-type-pf" class="input">
                                 <option value="">Selecteaza...</option>
                                 <option value="agency">Agentie de evenimente</option>
                                 <option value="promoter">Promoter independent</option>
@@ -204,261 +249,218 @@ require_once dirname(__DIR__) . '/includes/head.php';
                             </select>
                         </div>
 
-                        <!-- Company Representative -->
-                        <div class="pt-4 border-t border-border">
-                            <h3 class="text-lg font-semibold text-secondary mb-4">Reprezentant Legal</h3>
-                            <div class="grid md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="label">Prenume reprezentant *</label>
-                                    <input type="text" name="representative_first_name" id="rep-first-name" class="input" required placeholder="Ion">
-                                </div>
-                                <div>
-                                    <label class="label">Nume reprezentant *</label>
-                                    <input type="text" name="representative_last_name" id="rep-last-name" class="input" required placeholder="Popescu">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-4 mt-6">
-                        <button type="button" onclick="goToStep(2)" class="btn btn-secondary flex-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Inapoi</button>
-                        <button type="submit" class="btn btn-primary flex-1" id="step3-submit" disabled>Continua <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Step 4: Guarantor / Personal Details -->
-        <div id="step4" class="step-content hidden">
-            <div class="bg-white rounded-2xl border border-border p-8">
-                <h2 class="text-2xl font-bold text-secondary mb-2" id="step4-title">Date Personale</h2>
-                <p class="text-muted mb-6" id="step4-subtitle">Informatii pentru identificare si contract</p>
-                <form id="step4-form" class="space-y-4">
-                    <!-- Organizer Type (only for PF) -->
-                    <div id="organizer-type-pf-container" class="hidden">
-                        <label class="label">Tip organizator *</label>
-                        <select name="organizer_type_pf" id="organizer-type-pf" class="input">
-                            <option value="">Selecteaza...</option>
-                            <option value="agency">Agentie de evenimente</option>
-                            <option value="promoter">Promoter independent</option>
-                            <option value="venue">Locatie / Sala</option>
-                            <option value="artist">Artist / Manager</option>
-                            <option value="ngo">ONG / Fundatie</option>
-                            <option value="other">Altele</option>
-                        </select>
-                    </div>
-
-                    <!-- Personal Name -->
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="label">Prenume *</label>
-                            <input type="text" name="guarantor_first_name" id="guarantor-first-name" required class="input" placeholder="Ion">
-                        </div>
-                        <div>
-                            <label class="label">Nume *</label>
-                            <input type="text" name="guarantor_last_name" id="guarantor-last-name" required class="input" placeholder="Popescu">
-                        </div>
-                    </div>
-
-                    <!-- CNP -->
-                    <div>
-                        <label class="label">CNP *</label>
-                        <input type="text" name="cnp" id="guarantor-cnp" required class="input" placeholder="1234567890123" maxlength="13" pattern="[0-9]{13}">
-                        <p class="text-xs text-muted mt-1">Codul Numeric Personal - 13 cifre</p>
-                    </div>
-
-                    <!-- Address -->
-                    <div>
-                        <label class="label">Adresa de domiciliu *</label>
-                        <input type="text" name="guarantor_address" id="guarantor-address" required class="input" placeholder="Str. Exemplu, Nr. 1, Bl. A, Ap. 10">
-                    </div>
-
-                    <div>
-                        <label class="label">Localitate *</label>
-                        <input type="text" name="guarantor_city" id="guarantor-city" required class="input" placeholder="Bucuresti">
-                    </div>
-
-                    <!-- ID Card Details -->
-                    <div class="pt-4 border-t border-border">
-                        <h3 class="text-lg font-semibold text-secondary mb-4">Act de Identitate</h3>
+                        <!-- Personal Name -->
                         <div class="grid md:grid-cols-2 gap-4">
                             <div>
-                                <label class="label">Tip act *</label>
-                                <select name="id_type" id="guarantor-id-type" required class="input">
-                                    <option value="ci">Carte de Identitate (CI)</option>
-                                    <option value="bi">Buletin de Identitate (BI)</option>
-                                </select>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="label">Serie *</label>
-                                    <input type="text" name="id_series" id="guarantor-id-series" required class="input" placeholder="RX" maxlength="2" style="text-transform: uppercase;">
-                                </div>
-                                <div>
-                                    <label class="label">Numar *</label>
-                                    <input type="text" name="id_number" id="guarantor-id-number" required class="input" placeholder="123456" maxlength="6">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="grid md:grid-cols-2 gap-4 mt-4">
-                            <div>
-                                <label class="label">Eliberat de *</label>
-                                <input type="text" name="id_issued_by" id="guarantor-id-issued-by" required class="input" placeholder="SPCLEP Sector 1">
+                                <label class="label">Prenume *</label>
+                                <input type="text" name="guarantor_first_name" id="guarantor-first-name" required class="input" placeholder="Ion">
                             </div>
                             <div>
-                                <label class="label">La data de *</label>
-                                <input type="date" name="id_issued_date" id="guarantor-id-issued-date" required class="input">
+                                <label class="label">Nume *</label>
+                                <input type="text" name="guarantor_last_name" id="guarantor-last-name" required class="input" placeholder="Popescu">
                             </div>
                         </div>
-                    </div>
 
-                    <div class="flex gap-4 mt-6">
-                        <button type="button" onclick="goToPreviousStep()" class="btn btn-secondary flex-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Inapoi</button>
-                        <button type="submit" class="btn btn-primary flex-1">Continua <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Step 5: Payment / Bank Details -->
-        <div id="step5" class="step-content hidden">
-            <div class="bg-white rounded-2xl border border-border p-8">
-                <h2 class="text-2xl font-bold text-secondary mb-2">Detalii Bancare</h2>
-                <p class="text-muted mb-6">Contul in care vei primi platile pentru biletele vandute</p>
-                <form id="step5-form" class="space-y-4">
-                    <div>
-                        <label class="label">IBAN *</label>
-                        <input type="text" name="iban" id="bank-iban" required class="input" placeholder="RO49AAAA1B31007593840000" maxlength="24" oninput="validateIBAN(this)">
-                        <div id="iban-validation" class="mt-1 text-xs hidden"></div>
-                    </div>
-
-                    <div>
-                        <label class="label">Titular cont *</label>
-                        <input type="text" name="account_holder" id="bank-holder" required class="input" placeholder="SC Exemplu SRL sau Popescu Ion">
-                        <p class="text-xs text-muted mt-1">Numele exact al titularului contului bancar</p>
-                    </div>
-
-                    <div>
-                        <label class="label">Banca</label>
-                        <input type="text" name="bank_name" id="bank-name" class="input" placeholder="Se completeaza automat" readonly>
-                    </div>
-
-                    <div class="p-4 bg-accent/10 rounded-xl">
-                        <div class="flex items-start gap-3">
-                            <svg class="w-5 h-5 text-accent flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <div>
-                                <p class="font-medium text-secondary">Cand primesc banii?</p>
-                                <p class="text-sm text-muted">Platile sunt procesate in maxim 5 zile lucratoare dupa eveniment. Pentru evenimente cu valoare mare, poti solicita plati partiale in avans.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-4 mt-6">
-                        <button type="button" onclick="goToStep(4)" class="btn btn-secondary flex-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Inapoi</button>
-                        <button type="submit" class="btn btn-primary flex-1" id="step5-submit">Continua <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Step 6: Finalization -->
-        <div id="step6" class="step-content hidden">
-            <div class="bg-white rounded-2xl border border-border p-8">
-                <h2 class="text-2xl font-bold text-secondary mb-2">Finalizare Inregistrare</h2>
-                <p class="text-muted mb-6">Verifica datele si confirma inregistrarea</p>
-
-                <!-- Summary Sections -->
-                <div class="space-y-4 mb-6">
-                    <!-- Account Summary -->
-                    <div class="p-4 bg-surface rounded-xl">
-                        <h4 class="font-medium text-secondary mb-2 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                            Informatii Cont
-                        </h4>
-                        <div class="text-sm text-muted space-y-1" id="summary-account"></div>
-                    </div>
-
-                    <!-- Organizer Type Summary -->
-                    <div class="p-4 bg-surface rounded-xl">
-                        <h4 class="font-medium text-secondary mb-2 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                            Tip Organizator
-                        </h4>
-                        <div class="text-sm text-muted space-y-1" id="summary-type"></div>
-                    </div>
-
-                    <!-- Company Summary (only for PJ) -->
-                    <div class="p-4 bg-surface rounded-xl" id="summary-company-section">
-                        <h4 class="font-medium text-secondary mb-2 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                            Informatii Companie
-                        </h4>
-                        <div class="text-sm text-muted space-y-1" id="summary-company"></div>
-                    </div>
-
-                    <!-- Guarantor Summary -->
-                    <div class="p-4 bg-surface rounded-xl">
-                        <h4 class="font-medium text-secondary mb-2 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/></svg>
-                            <span id="summary-guarantor-title">Date Personale / Garant</span>
-                        </h4>
-                        <div class="text-sm text-muted space-y-1" id="summary-guarantor"></div>
-                    </div>
-
-                    <!-- Bank Summary -->
-                    <div class="p-4 bg-surface rounded-xl">
-                        <h4 class="font-medium text-secondary mb-2 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-                            Detalii Bancare
-                        </h4>
-                        <div class="text-sm text-muted space-y-1" id="summary-bank"></div>
-                    </div>
-                </div>
-
-                <!-- Commission Info -->
-                <div class="space-y-3 mb-6 p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                    <h4 class="font-semibold text-secondary">Informatii Tarifare</h4>
-                    <div class="space-y-2 text-sm">
-                        <div class="flex items-start gap-2">
-                            <svg class="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span><strong>Comision:</strong> maxim 6% din valoarea biletului, dar nu mai putin de 2.50 lei per bilet emis</span>
-                        </div>
-                        <div class="flex items-start gap-2" id="invitation-cost-info">
-                            <svg class="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span><strong>Cost invitatie:</strong> <span id="invitation-cost-text">0.25 lei per bucata</span></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Contract Info -->
-                <div class="p-4 bg-accent/10 border border-accent/20 rounded-xl mb-6">
-                    <div class="flex items-start gap-3">
-                        <svg class="w-5 h-5 text-accent flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <!-- CNP -->
                         <div>
-                            <p class="font-medium text-secondary">Contract Electronic</p>
-                            <p class="text-sm text-muted">Prin finalizarea inregistrarii, iti vom genera un contract electronic personalizat. Contractul va trebui semnat (electronic sau olograf) si incarcat in platforma pentru validarea contului.</p>
+                            <label class="label">CNP *</label>
+                            <input type="text" name="cnp" id="guarantor-cnp" required class="input" placeholder="1234567890123" maxlength="13" pattern="[0-9]{13}">
+                            <p class="text-xs text-muted mt-1">Codul Numeric Personal - 13 cifre</p>
+                        </div>
+
+                        <!-- Address -->
+                        <div>
+                            <label class="label">Adresa de domiciliu *</label>
+                            <input type="text" name="guarantor_address" id="guarantor-address" required class="input" placeholder="Str. Exemplu, Nr. 1, Bl. A, Ap. 10">
+                        </div>
+
+                        <div>
+                            <label class="label">Localitate *</label>
+                            <input type="text" name="guarantor_city" id="guarantor-city" required class="input" placeholder="Bucuresti">
+                        </div>
+
+                        <!-- ID Card Details -->
+                        <div class="pt-4 border-t border-border">
+                            <h3 class="text-lg font-semibold text-secondary mb-4">Act de Identitate</h3>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="label">Tip act *</label>
+                                    <select name="id_type" id="guarantor-id-type" required class="input">
+                                        <option value="ci">Carte de Identitate (CI)</option>
+                                        <option value="bi">Buletin de Identitate (BI)</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="label">Serie *</label>
+                                        <input type="text" name="id_series" id="guarantor-id-series" required class="input" placeholder="RX" maxlength="2" style="text-transform: uppercase;">
+                                    </div>
+                                    <div>
+                                        <label class="label">Numar *</label>
+                                        <input type="text" name="id_number" id="guarantor-id-number" required class="input" placeholder="123456" maxlength="6">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-4 mt-4">
+                                <div>
+                                    <label class="label">Eliberat de *</label>
+                                    <input type="text" name="id_issued_by" id="guarantor-id-issued-by" required class="input" placeholder="SPCLEP Sector 1">
+                                </div>
+                                <div>
+                                    <label class="label">La data de *</label>
+                                    <input type="date" name="id_issued_date" id="guarantor-id-issued-date" required class="input">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4 mt-6">
+                            <button type="button" onclick="goToPreviousStep()" class="btn btn-secondary flex-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Inapoi</button>
+                            <button type="submit" class="btn btn-primary flex-1">Continua <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Step 5: Payment / Bank Details -->
+            <div id="step5" class="step-content hidden">
+                <div class="bg-white rounded-2xl border border-border p-8">
+                    <h2 class="text-2xl font-bold text-secondary mb-2">Detalii Bancare</h2>
+                    <p class="text-muted mb-6">Contul in care vei primi platile pentru biletele vandute</p>
+                    <form id="step5-form" class="space-y-4">
+                        <div>
+                            <label class="label">IBAN *</label>
+                            <input type="text" name="iban" id="bank-iban" required class="input" placeholder="RO49AAAA1B31007593840000" maxlength="24" oninput="validateIBAN(this)">
+                            <div id="iban-validation" class="mt-1 text-xs hidden"></div>
+                        </div>
+
+                        <div>
+                            <label class="label">Titular cont *</label>
+                            <input type="text" name="account_holder" id="bank-holder" required class="input" placeholder="SC Exemplu SRL sau Popescu Ion">
+                            <p class="text-xs text-muted mt-1">Numele exact al titularului contului bancar</p>
+                        </div>
+
+                        <div>
+                            <label class="label">Banca</label>
+                            <input type="text" name="bank_name" id="bank-name" class="input" placeholder="Se completeaza automat" readonly>
+                        </div>
+
+                        <div class="p-4 bg-accent/10 rounded-xl">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-accent flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <div>
+                                    <p class="font-medium text-secondary">Cand primesc banii?</p>
+                                    <p class="text-sm text-muted">Platile sunt procesate in maxim 5 zile lucratoare dupa eveniment. Pentru evenimente cu valoare mare, poti solicita plati partiale in avans.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4 mt-6">
+                            <button type="button" onclick="goToStep(4)" class="btn btn-secondary flex-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Inapoi</button>
+                            <button type="submit" class="btn btn-primary flex-1" id="step5-submit">Continua <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Step 6: Finalization -->
+            <div id="step6" class="step-content hidden">
+                <div class="bg-white rounded-2xl border border-border p-8">
+                    <h2 class="text-2xl font-bold text-secondary mb-2">Finalizare Inregistrare</h2>
+                    <p class="text-muted mb-6">Verifica datele si confirma inregistrarea</p>
+
+                    <!-- Summary Sections -->
+                    <div class="space-y-4 mb-6">
+                        <!-- Account Summary -->
+                        <div class="p-4 bg-surface rounded-xl">
+                            <h4 class="font-medium text-secondary mb-2 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                Informatii Cont
+                            </h4>
+                            <div class="text-sm text-muted space-y-1" id="summary-account"></div>
+                        </div>
+
+                        <!-- Organizer Type Summary -->
+                        <div class="p-4 bg-surface rounded-xl">
+                            <h4 class="font-medium text-secondary mb-2 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                Tip Organizator
+                            </h4>
+                            <div class="text-sm text-muted space-y-1" id="summary-type"></div>
+                        </div>
+
+                        <!-- Company Summary (only for PJ) -->
+                        <div class="p-4 bg-surface rounded-xl" id="summary-company-section">
+                            <h4 class="font-medium text-secondary mb-2 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                                Informatii Companie
+                            </h4>
+                            <div class="text-sm text-muted space-y-1" id="summary-company"></div>
+                        </div>
+
+                        <!-- Guarantor Summary -->
+                        <div class="p-4 bg-surface rounded-xl">
+                            <h4 class="font-medium text-secondary mb-2 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/></svg>
+                                <span id="summary-guarantor-title">Date Personale / Garant</span>
+                            </h4>
+                            <div class="text-sm text-muted space-y-1" id="summary-guarantor"></div>
+                        </div>
+
+                        <!-- Bank Summary -->
+                        <div class="p-4 bg-surface rounded-xl">
+                            <h4 class="font-medium text-secondary mb-2 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                                Detalii Bancare
+                            </h4>
+                            <div class="text-sm text-muted space-y-1" id="summary-bank"></div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Terms and Conditions -->
-                <div class="space-y-3 mb-6">
-                    <label class="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" name="terms" required class="mt-1 w-4 h-4 rounded border-border text-primary focus:ring-primary">
-                        <span class="text-sm text-muted">Accept <a href="/terms.php" class="text-primary hover:underline" target="_blank">Termenii si Conditiile</a> pentru organizatori si <a href="/privacy.php" class="text-primary hover:underline" target="_blank">Politica de Confidentialitate</a> *</span>
-                    </label>
-                    <label class="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" name="contract" required class="mt-1 w-4 h-4 rounded border-border text-primary focus:ring-primary">
-                        <span class="text-sm text-muted">Sunt de acord cu generarea <a href="/contract.php" class="text-primary hover:underline" target="_blank">Contractului de prestari servicii</a> <?= SITE_NAME ?> *</span>
-                    </label>
-                </div>
+                    <!-- Commission Info -->
+                    <div class="space-y-3 mb-6 p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                        <h4 class="font-semibold text-secondary">Informatii Tarifare</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-start gap-2">
+                                <svg class="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span><strong>Comision:</strong> maxim 6% din valoarea biletului, dar nu mai putin de 2.50 lei per bilet emis</span>
+                            </div>
+                            <div class="flex items-start gap-2" id="invitation-cost-info">
+                                <svg class="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span><strong>Cost invitatie:</strong> <span id="invitation-cost-text">0.25 lei per bucata</span></span>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="flex gap-4">
-                    <button type="button" onclick="goToStep(5)" class="btn btn-secondary flex-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Inapoi</button>
-                    <button type="button" onclick="submitRegistration()" class="btn btn-primary flex-1" id="final-submit">
-                        <span id="final-btn-text">Finalizeaza Inregistrarea</span>
-                        <div id="final-btn-spinner" class="hidden spinner"></div>
-                    </button>
+                    <!-- Contract Info -->
+                    <div class="p-4 bg-accent/10 border border-accent/20 rounded-xl mb-6">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-accent flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <div>
+                                <p class="font-medium text-secondary">Contract Electronic</p>
+                                <p class="text-sm text-muted">Prin finalizarea inregistrarii, iti vom genera un contract electronic personalizat. Contractul va trebui semnat (electronic sau olograf) si incarcat in platforma pentru validarea contului.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terms and Conditions -->
+                    <div class="space-y-3 mb-6">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" name="terms" required class="mt-1 w-4 h-4 rounded border-border text-primary focus:ring-primary">
+                            <span class="text-sm text-muted">Accept <a href="/terms.php" class="text-primary hover:underline" target="_blank">Termenii si Conditiile</a> pentru organizatori si <a href="/privacy.php" class="text-primary hover:underline" target="_blank">Politica de Confidentialitate</a> *</span>
+                        </label>
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" name="contract" required class="mt-1 w-4 h-4 rounded border-border text-primary focus:ring-primary">
+                            <span class="text-sm text-muted">Sunt de acord cu generarea <a href="/contract.php" class="text-primary hover:underline" target="_blank">Contractului de prestari servicii</a> <?= SITE_NAME ?> *</span>
+                        </label>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <button type="button" onclick="goToStep(5)" class="btn btn-secondary flex-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Inapoi</button>
+                        <button type="button" onclick="submitRegistration()" class="btn btn-primary flex-1" id="final-submit">
+                            <span id="final-btn-text">Finalizeaza Inregistrarea</span>
+                            <div id="final-btn-spinner" class="hidden spinner"></div>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -535,14 +537,14 @@ function goToStep(step) {
         if (i < step) {
             indicator.className = 'flex items-center justify-center w-10 h-10 rounded-full bg-success text-white font-bold text-sm';
             indicator.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
-            if (line) line.className = 'w-8 sm:w-12 h-0.5 bg-success mx-2';
+            if (line) line.className = 'w-8 sm:w-12 h-0.5 bg-success ml-2';
         } else if (i === step) {
             indicator.className = 'flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white font-bold text-sm';
             indicator.textContent = i;
         } else {
             indicator.className = 'flex items-center justify-center w-10 h-10 rounded-full bg-border text-muted font-bold text-sm';
             indicator.textContent = i;
-            if (line) line.className = 'w-8 sm:w-12 h-0.5 bg-border mx-2';
+            if (line) line.className = 'w-8 sm:w-12 h-0.5 bg-border ml-2';
         }
     }
 
