@@ -28,7 +28,7 @@ class Notifications extends Page implements HasTable
     // Hide from navigation since we access it through the dropdown
     protected static bool $shouldRegisterNavigation = false;
 
-    protected static string $view = 'filament.marketplace.pages.notifications';
+    protected string $view = 'filament.marketplace.pages.notifications';
 
     protected function getTableQuery(): Builder
     {
