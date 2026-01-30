@@ -90,12 +90,15 @@ class AuthController extends BaseController
         // Use CUI from either 'cui' or 'company_tax_id' field
         $companyTaxId = $validated['cui'] ?? $validated['company_tax_id'] ?? null;
 
+        // Generate unique slug for this marketplace
+        $slug = $this->generateUniqueSlug($validated['name'], $client->id);
+
         $organizer = MarketplaceOrganizer::create([
             'marketplace_client_id' => $client->id,
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'name' => $validated['name'],
-            'slug' => Str::slug($validated['name']),
+            'slug' => $slug,
             'contact_name' => $contactName,
             'phone' => $validated['phone'] ?? null,
             'description' => $validated['description'] ?? null,
@@ -868,5 +871,28 @@ class AuthController extends BaseController
             'api_key_masked' => $organizer->getMaskedApiKey(),
             'created_at' => $organizer->created_at->toIso8601String(),
         ];
+    }
+
+    /**
+     * Generate a unique slug for the organizer within a marketplace
+     * If slug already exists (including soft-deleted), appends a number suffix
+     */
+    protected function generateUniqueSlug(string $name, int $marketplaceClientId): string
+    {
+        $baseSlug = Str::slug($name);
+        $slug = $baseSlug;
+        $counter = 1;
+
+        // Check for existing slugs (including soft-deleted records)
+        while (MarketplaceOrganizer::withTrashed()
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('slug', $slug)
+            ->exists()
+        ) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
     }
 }
