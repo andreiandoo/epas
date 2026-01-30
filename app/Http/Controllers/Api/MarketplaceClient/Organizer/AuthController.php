@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Jobs\SendMarketplaceOrganizerEmailJob;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceOrganizerBankAccount;
 use App\Models\OrganizerDocument;
@@ -157,6 +158,22 @@ class AuthController extends BaseController
             'organizer',
             $client->domain
         ));
+
+        // Send welcome/confirmation email immediately
+        SendMarketplaceOrganizerEmailJob::dispatch(
+            $client->id,
+            $organizer->id,
+            'Bine ai venit la {{marketplace_name}}!',
+            $this->getWelcomeEmailBody()
+        );
+
+        // Send document upload reminder email with 1 minute delay
+        SendMarketplaceOrganizerEmailJob::dispatch(
+            $client->id,
+            $organizer->id,
+            'Important: Incarca documentele necesare pentru activarea contului',
+            $this->getDocumentReminderEmailBody()
+        )->delay(now()->addMinute());
 
         // Generate token
         $token = $organizer->createToken('organizer-api')->plainTextToken;
@@ -621,10 +638,23 @@ class AuthController extends BaseController
 
         $organizer->update([$fieldName => $path]);
 
+        // Refresh the organizer to get updated document paths
+        $organizer->refresh();
+
+        // Check if both documents are now uploaded - if so, set verified_at to trigger contract generation
+        if ($organizer->id_card_document && $organizer->cui_document && !$organizer->verified_at) {
+            $organizer->update(['verified_at' => now()]);
+
+            // The MarketplaceOrganizerObserver will automatically generate the contract
+            // when verified_at changes from null to a value
+        }
+
         return $this->success([
             'path' => $path,
             'url' => url('storage/' . $path),
             'type' => $type,
+            'both_documents_uploaded' => $organizer->id_card_document && $organizer->cui_document,
+            'contract_generation_triggered' => $organizer->id_card_document && $organizer->cui_document && $organizer->verified_at,
         ], 'Document uploaded successfully');
     }
 
@@ -894,5 +924,144 @@ class AuthController extends BaseController
         }
 
         return $slug;
+    }
+
+    /**
+     * Get the welcome email body for new organizer registration
+     */
+    protected function getWelcomeEmailBody(): string
+    {
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; }
+        .footer { background: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 8px 8px; }
+        .btn { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
+        .highlight { background: #fef3c7; padding: 15px; border-radius: 6px; border-left: 4px solid #f59e0b; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Bine ai venit la {{marketplace_name}}!</h1>
+        </div>
+        <div class="content">
+            <p>Salut {{organizer_name}},</p>
+
+            <p>Iti multumim pentru inregistrarea pe platforma noastra! Contul tau de organizator a fost creat cu succes.</p>
+
+            <div class="highlight">
+                <strong>Pasii urmatori:</strong>
+                <ol>
+                    <li>Verifica adresa de email (vei primi un email separat)</li>
+                    <li>Completeaza profilul organizatorului</li>
+                    <li>Incarca documentele necesare (CI si CUI)</li>
+                    <li>Asteapta aprobarea contului</li>
+                </ol>
+            </div>
+
+            <p>Dupa aprobarea contului, vei putea sa:</p>
+            <ul>
+                <li>Creezi si gestionezi evenimente</li>
+                <li>Vinzi bilete online</li>
+                <li>Urmaresti vanzarile in timp real</li>
+                <li>Generezi rapoarte detaliate</li>
+            </ul>
+
+            <p style="text-align: center;">
+                <a href="{{dashboard_url}}" class="btn">Acceseaza Dashboard-ul</a>
+            </p>
+
+            <p>Daca ai intrebari, nu ezita sa ne contactezi la <a href="mailto:{{support_email}}">{{support_email}}</a>.</p>
+
+            <p>Cu drag,<br>Echipa {{marketplace_name}}</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {{current_year}} {{marketplace_name}}. Toate drepturile rezervate.</p>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Get the document upload reminder email body
+     */
+    protected function getDocumentReminderEmailBody(): string
+    {
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #f59e0b; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; }
+        .footer { background: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 8px 8px; }
+        .btn { display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
+        .important { background: #fef2f2; padding: 15px; border-radius: 6px; border-left: 4px solid #ef4444; margin: 20px 0; }
+        .doc-list { background: white; padding: 20px; border-radius: 6px; margin: 20px 0; }
+        .doc-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #e5e7eb; }
+        .doc-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Documente necesare pentru activarea contului</h1>
+        </div>
+        <div class="content">
+            <p>Salut {{organizer_name}},</p>
+
+            <div class="important">
+                <strong>Actiune necesara:</strong> Pentru a-ti activa contul de organizator, trebuie sa incarci urmatoarele documente:
+            </div>
+
+            <div class="doc-list">
+                <h3>Documente obligatorii:</h3>
+                <div class="doc-item">
+                    <span>📄</span>
+                    <div style="margin-left: 10px;">
+                        <strong>Carte de Identitate (CI)</strong>
+                        <p style="margin: 5px 0; font-size: 14px; color: #6b7280;">Copia CI a reprezentantului legal sau garantului</p>
+                    </div>
+                </div>
+                <div class="doc-item">
+                    <span>📄</span>
+                    <div style="margin-left: 10px;">
+                        <strong>Certificat de Inregistrare Fiscala (CUI)</strong>
+                        <p style="margin: 5px 0; font-size: 14px; color: #6b7280;">Documentul care atesta inregistrarea la ANAF</p>
+                    </div>
+                </div>
+            </div>
+
+            <p>Dupa incarcarea documentelor si verificarea acestora de catre echipa noastra, contul tau va fi activat si vei putea incepe sa creezi evenimente.</p>
+
+            <p style="text-align: center;">
+                <a href="{{contract_url}}" class="btn">Incarca Documentele Acum</a>
+            </p>
+
+            <p><small>Link direct: {{contract_url}}</small></p>
+
+            <p>Daca ai intrebari despre documentele necesare, contacteaza-ne la <a href="mailto:{{support_email}}">{{support_email}}</a>.</p>
+
+            <p>Cu drag,<br>Echipa {{marketplace_name}}</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {{current_year}} {{marketplace_name}}. Toate drepturile rezervate.</p>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
     }
 }

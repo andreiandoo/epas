@@ -29,6 +29,7 @@ class Event extends Model
         'ticket_template_id',
         'commission_mode',
         'commission_rate',
+        'use_fixed_commission',
         'title',
         'slug',
         'event_series',
@@ -113,6 +114,7 @@ class Event extends Model
 
         // commission
         'commission_rate'   => 'decimal:2',
+        'use_fixed_commission' => 'bool',
 
         // json
         'multi_slots'       => 'array',

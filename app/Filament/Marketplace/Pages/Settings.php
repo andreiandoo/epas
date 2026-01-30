@@ -45,6 +45,7 @@ class Settings extends Page
                 'reg_com' => $marketplace->reg_com,
                 'vat_payer' => (bool) $marketplace->vat_payer,
                 'tax_display_mode' => $marketplace->tax_display_mode ?? 'included',
+                'fixed_commission' => $marketplace->fixed_commission,
                 'address' => $marketplace->address,
                 'city' => $marketplace->city,
                 'state' => $marketplace->state,
@@ -145,6 +146,15 @@ class Settings extends Page
                                             ->default('included')
                                             ->helperText('Alegeți cum vor fi afișate taxele pe website: incluse în prețul biletului sau adăugate separat la checkout.')
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Aceasta setare afecteaza modul in care clientii vad preturile pe website.'),
+
+                                        Forms\Components\TextInput::make('fixed_commission')
+                                            ->label('Comision Fix')
+                                            ->numeric()
+                                            ->step(0.01)
+                                            ->minValue(0)
+                                            ->suffix('LEI')
+                                            ->helperText('Comision fix per bilet (în LEI). Dacă este setat, poate fi folosit în locul comisionului procentual.')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Această sumă fixă poate fi aplicată per bilet în loc de comisionul procentual.'),
 
                                         Forms\Components\TextInput::make('bank_name')
                                             ->maxLength(255),
@@ -528,6 +538,7 @@ class Settings extends Page
             'reg_com' => $data['reg_com'],
             'vat_payer' => (bool) ($data['vat_payer'] ?? false),
             'tax_display_mode' => $data['tax_display_mode'] ?? 'included',
+            'fixed_commission' => $data['fixed_commission'] ?? null,
             'address' => $data['address'],
             'city' => $data['city'],
             'state' => $data['state'],

@@ -962,7 +962,7 @@ class EventResource extends Resource
                                         ->exists() ?? false),
 
                                 // Commission Mode and Rate for event
-                                SC\Grid::make(3)->schema([
+                                SC\Grid::make(4)->schema([
                                     Forms\Components\Select::make('commission_mode')
                                         ->label('Commission Mode')
                                         ->options([
@@ -986,6 +986,15 @@ class EventResource extends Resource
                                         ->live()
                                         ->nullable(),
 
+                                    Forms\Components\Toggle::make('use_fixed_commission')
+                                        ->label('Comision Fix')
+                                        ->helperText(fn () => $marketplace->fixed_commission
+                                            ? "Folosește comision fix: {$marketplace->fixed_commission} LEI per bilet"
+                                            : 'Nu este setat un comision fix în setările marketplace')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Când este activat, se va folosi comisionul fix din setările marketplace în loc de comisionul procentual.')
+                                        ->live()
+                                        ->default(false),
+
                                     Forms\Components\TextInput::make('commission_rate')
                                         ->label('Custom Commission Rate (%)')
                                         ->numeric()
@@ -1005,7 +1014,8 @@ class EventResource extends Resource
                                         })
                                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty to use organizer\'s or marketplace default rate')
                                         ->live()
-                                        ->nullable(),
+                                        ->nullable()
+                                        ->visible(fn (SGet $get) => !$get('use_fixed_commission')),
 
                                     Forms\Components\TextInput::make('target_price')
                                         ->label('Door Price')

@@ -88,6 +88,24 @@ $skipJsComponents = true;
     </div>
 </header>
 
+<!-- Pending Account Banner -->
+<div id="pending-account-banner" class="hidden bg-warning/10 border-b border-warning/30">
+    <div class="px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-warning/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <div>
+                <p class="font-semibold text-secondary text-sm">Contul tau este in asteptare</p>
+                <p class="text-xs text-muted">Pentru a activa contul, completeaza profilul si incarca documentele necesare (CI/CUI).</p>
+            </div>
+        </div>
+        <a href="/organizator/setari#contract" class="btn btn-warning text-sm px-4 py-2 rounded-lg whitespace-nowrap">
+            Completeaza acum
+        </a>
+    </div>
+</div>
+
 <script>
 // Populate topbar with logged-in organizer data
 (function() {
@@ -97,6 +115,7 @@ $skipJsComponents = true;
             const nameEl = document.getElementById('topbar-org-name');
             const emailEl = document.getElementById('topbar-org-email');
             const initialsEl = document.getElementById('topbar-org-initials');
+            const pendingBanner = document.getElementById('pending-account-banner');
 
             const name = orgData.name || orgData.company_name || 'Organizator';
             const email = orgData.email || '';
@@ -109,6 +128,11 @@ $skipJsComponents = true;
                     ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
                     : name.substring(0, 2).toUpperCase();
                 initialsEl.textContent = initials;
+            }
+
+            // Show pending account banner if status is not active
+            if (pendingBanner && orgData.status && orgData.status !== 'active') {
+                pendingBanner.classList.remove('hidden');
             }
         }
     } catch (e) {}
