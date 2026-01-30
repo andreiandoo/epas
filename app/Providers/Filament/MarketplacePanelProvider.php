@@ -65,6 +65,8 @@ class MarketplacePanelProvider extends PanelProvider
                     ->name('filament.marketplace.pages.microservice-settings');
                 Route::get('/organizers/{id}/balance', \App\Filament\Marketplace\Pages\OrganizerBalance::class)
                     ->name('filament.marketplace.pages.organizer-balance');
+                Route::get('/event-tax-report/{event}', \App\Filament\Marketplace\Pages\EventTaxReport::class)
+                    ->name('filament.marketplace.pages.event-tax-report');
             })
 
             // Define navigation group order
