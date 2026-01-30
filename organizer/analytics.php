@@ -837,6 +837,8 @@ function updateMainChart(chartData) {
         colors.push('#10b981');
         yaxisConfigs.push({
             seriesName: 'Venituri',
+            min: 0,
+            forceNiceScale: true,
             title: { text: 'Venituri (RON)' },
             labels: { formatter: v => formatNumber(v) }
         });
@@ -846,6 +848,8 @@ function updateMainChart(chartData) {
         colors.push('#3b82f6');
         yaxisConfigs.push({
             seriesName: 'Bilete',
+            min: 0,
+            forceNiceScale: true,
             opposite: yaxisConfigs.length > 0,
             title: { text: 'Bilete' },
             labels: { formatter: v => formatNumber(v) }
@@ -856,6 +860,8 @@ function updateMainChart(chartData) {
         colors.push('#06b6d4');
         yaxisConfigs.push({
             seriesName: 'Vizualizări',
+            min: 0,
+            forceNiceScale: true,
             opposite: yaxisConfigs.length > 0,
             title: { text: 'Vizualizări' },
             labels: { formatter: v => formatNumber(v) }
@@ -947,8 +953,8 @@ function updateMainChart(chartData) {
                 formatter: (val, { seriesIndex }) => {
                     const name = series[seriesIndex]?.name || '';
                     if (name === 'Venituri') return formatCurrency(val);
-                    if (name === 'Bilete') return formatNumber(val) + ' bilete';
-                    if (name === 'Vizualizări') return formatNumber(val) + ' vizualizări';
+                    if (name === 'Bilete') return formatNumber(val) + (val === 1 ? ' bilet' : ' bilete');
+                    if (name === 'Vizualizări') return formatNumber(val) + (val === 1 ? ' vizualizare' : ' vizualizări');
                     return formatNumber(val);
                 }
             }
