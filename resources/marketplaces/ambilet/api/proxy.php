@@ -966,11 +966,117 @@ switch ($action) {
         break;
 
     case 'organizer.verify-cui':
-        $method = 'POST';
-        $body = file_get_contents('php://input');
-        $endpoint = '/organizer/verify-cui';
-        $requiresAuth = true;
-        break;
+        // Call ANAF public API directly (no auth required)
+        $inputBody = file_get_contents('php://input');
+        $inputData = json_decode($inputBody, true);
+
+        $cui = $inputData['cui'] ?? '';
+        if (!$cui) {
+            http_response_code(400);
+            echo json_encode(['error' => 'CUI is required']);
+            exit;
+        }
+
+        // Clean CUI - remove 'RO' prefix if present and any non-numeric characters
+        $cui = preg_replace('/[^0-9]/', '', preg_replace('/^RO/i', '', $cui));
+
+        if (empty($cui)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid CUI format']);
+            exit;
+        }
+
+        // Prepare ANAF API request using cURL for better reliability
+        // ANAF API endpoint v9
+        $anafUrl = 'https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva';
+        $anafBody = json_encode([
+            ['cui' => (int)$cui, 'data' => date('Y-m-d')]
+        ]);
+
+        $ch = curl_init($anafUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $anafBody,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Accept: application/json'
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_FOLLOWLOCATION => true
+        ]);
+
+        $anafResponse = curl_exec($ch);
+        $curlError = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($anafResponse === false || !empty($curlError)) {
+            http_response_code(503);
+            echo json_encode(['error' => 'ANAF service unavailable: ' . $curlError]);
+            exit;
+        }
+
+        $anafData = json_decode($anafResponse, true);
+
+        // Check for ANAF API errors
+        if (!$anafData) {
+            http_response_code(502);
+            echo json_encode(['error' => 'Invalid response from ANAF API', 'debug' => substr($anafResponse, 0, 500)]);
+            exit;
+        }
+
+        // ANAF returns 'found' array for found companies and 'notFound' for not found
+        if (!isset($anafData['found']) || empty($anafData['found'])) {
+            // Check if it's in notFound
+            if (isset($anafData['notFound']) && !empty($anafData['notFound'])) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Compania nu a fost gasita in baza de date ANAF. Verifica CUI-ul.']);
+                exit;
+            }
+            // Return more info about what went wrong
+            http_response_code(404);
+            echo json_encode([
+                'error' => 'Compania nu a fost gasita sau CUI invalid',
+                'anaf_response' => $anafData
+            ]);
+            exit;
+        }
+
+        // Extract company data from ANAF response
+        $company = $anafData['found'][0];
+        $dateGen = $company['date_generale'] ?? [];
+        $adresa = $company['adresa_sediu_social'] ?? [];
+        $tva = $company['inregistrare_scop_Tva'] ?? [];
+
+        // Build normalized response (matching frontend expected format)
+        $result = [
+            'success' => true,
+            'data' => [
+                'cui' => $dateGen['cui'] ?? $cui,
+                'company_name' => $dateGen['denumire'] ?? '',
+                'address' => trim(sprintf(
+                    '%s %s %s',
+                    $adresa['sdenumire_Strada'] ?? '',
+                    $adresa['snumar_Strada'] ?? '',
+                    $adresa['sdetalii_Adresa'] ?? ''
+                )),
+                'city' => $adresa['sdenumire_Localitate'] ?? '',
+                'county' => $adresa['sdenumire_Judet'] ?? '',
+                'zip' => $adresa['scod_Postal'] ?? '',
+                'reg_com' => $dateGen['nrRegCom'] ?? '',
+                'vat_payer' => !empty($tva['scpTVA']),
+                'status' => $dateGen['stare_inregistrare'] ?? '',
+                'phone' => $dateGen['telefon'] ?? '',
+                'fax' => $dateGen['fax'] ?? ''
+            ]
+        ];
+
+        http_response_code(200);
+        echo json_encode($result);
+        exit;
 
     case 'organizer.contract':
         $method = 'GET';
