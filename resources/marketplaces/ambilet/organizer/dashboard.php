@@ -180,32 +180,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </div>
                     </div>
 
-                    <!-- Tax Summary -->
-                    <div class="bg-white rounded-2xl border border-border p-5">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="font-bold text-secondary">Taxe automatizate</h2>
-                            <span class="px-2 py-1 bg-success/10 text-success text-xs font-semibold rounded-full">Conform</span>
-                        </div>
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between py-2 border-b border-border">
-                                <span class="text-sm text-muted">Timbru Muzical (5%)</span>
-                                <span id="tax-musical" class="font-medium text-secondary">0 lei</span>
-                            </div>
-                            <div class="flex items-center justify-between py-2 border-b border-border">
-                                <span class="text-sm text-muted">Taxa Crucea Rosie (1%)</span>
-                                <span id="tax-redcross" class="font-medium text-secondary">0 lei</span>
-                            </div>
-                            <div class="flex items-center justify-between py-2">
-                                <span class="text-sm font-medium text-secondary">Total retinut</span>
-                                <span id="tax-total" class="font-bold text-primary">0 lei</span>
-                            </div>
-                        </div>
-                        <p class="text-xs text-muted mt-4 flex items-center gap-1">
-                            <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            Toate taxele sunt platite automat
-                        </p>
-                    </div>
-
                     <!-- Recent Activity -->
                     <div class="bg-white rounded-2xl border border-border p-5">
                         <h2 class="font-bold text-secondary mb-4">Activitate recenta</h2>
@@ -262,34 +236,17 @@ const OrgDashboard = {
                 this.render();
                 return;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error('Failed to load dashboard:', e);
+        }
 
-        // Demo data
+        // Empty data fallback
         this.data = {
-            revenue_month: 45230,
-            revenue_change: 23,
-            tickets_sold: 892,
-            tickets_change: 15,
-            active_events: 5,
-            conversion_rate: 4.2,
-            conversion_change: 5,
-            weekly_sales: 127,
-            events: [
-                { id: 1, title: 'Mos Craciun e Rocker', artist: 'Dirty Shirt', venue: 'Grand Gala', image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=100', start_date: '2024-12-27', tickets_sold: 234, tickets_total: 300, status: 'active' },
-                { id: 2, title: 'Cargo Live', artist: 'Cargo', venue: 'Arenele Romane', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100', start_date: '2025-01-15', tickets_sold: 450, tickets_total: 1000, status: 'active' },
-                { id: 3, title: 'Trooper Unplugged', artist: 'Trooper', venue: 'Hard Rock Cafe', image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=100', start_date: '2025-01-22', tickets_sold: 50, tickets_total: 200, status: 'active' }
-            ],
-            sales_chart: {
-                labels: ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sam', 'Dum'],
-                tickets: [12, 19, 8, 25, 32, 45, 28],
-                revenue: [960, 1520, 640, 2000, 2560, 3600, 2240]
-            },
-            recent_activity: [
-                { type: 'sale', message: 'Vanzare: 3x VIP', details: 'Mos Craciun e Rocker - 450 lei', time: 'Acum 15 min' },
-                { type: 'sale', message: 'Vanzare: 2x Standard', details: 'Cargo Live - 160 lei', time: 'Acum 45 min' },
-                { type: 'promo', message: 'Cod ROCK2024 folosit', details: 'Reducere 10% aplicata', time: 'Acum 1 ora' }
-            ],
-            taxes: { musical: 2261, redcross: 452, total: 2713 }
+            revenue_month: 0,
+            tickets_sold: 0,
+            active_events: 0,
+            events_list: [],
+            recent_activity: []
         };
         this.render();
     },
@@ -330,13 +287,6 @@ const OrgDashboard = {
         // Activity
         this.renderActivity(d.recent_activity);
 
-        // Taxes
-        if (d.taxes) {
-            document.getElementById('tax-musical').textContent = this.formatCurrency(d.taxes.musical);
-            document.getElementById('tax-redcross').textContent = this.formatCurrency(d.taxes.redcross);
-            document.getElementById('tax-total').textContent = this.formatCurrency(d.taxes.total);
-        }
-
         // Notifications
         this.renderNotifications();
     },
@@ -358,19 +308,24 @@ const OrgDashboard = {
         document.getElementById('events-count-text').textContent = `${events.length} evenimente active`;
 
         tbody.innerHTML = events.map(e => {
-            const percent = Math.round((e.tickets_sold / e.tickets_total) * 100);
+            const ticketsSold = e.tickets_sold || 0;
+            const ticketsTotal = e.tickets_total || 100;
+            const percent = ticketsTotal > 0 ? Math.round((ticketsSold / ticketsTotal) * 100) : 0;
             const barColor = percent > 50 ? 'bg-success' : percent > 25 ? 'bg-warning' : 'bg-primary';
             const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const date = new Date(e.start_date);
+            const date = new Date(e.start_date || e.starts_at);
+            const eventName = e.name || e.title || 'Eveniment';
+            const venueName = e.venue || e.venue_name || '';
+            const venueCity = e.venue_city ? `, ${e.venue_city}` : '';
 
             return `
                 <tr class="event-row">
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
-                            <img src="${e.image || '/assets/images/default-event.png'}" class="w-12 h-12 rounded-xl object-cover" alt="">
+                            <img src="${getStorageUrl(e.image)}" class="w-12 h-12 rounded-xl object-cover" alt="" onerror="this.src='/assets/images/default-event.png'">
                             <div>
-                                <p class="font-semibold text-secondary">${e.title}</p>
-                                <p class="text-xs text-muted">${e.artist || ''} • ${e.venue || ''}</p>
+                                <p class="font-semibold text-secondary">${eventName}</p>
+                                <p class="text-xs text-muted">${venueName}${venueCity}</p>
                             </div>
                         </div>
                     </td>
@@ -383,16 +338,16 @@ const OrgDashboard = {
                             <div class="flex-1 h-2 bg-surface rounded-full overflow-hidden w-20">
                                 <div class="h-full ${barColor} rounded-full" style="width: ${percent}%"></div>
                             </div>
-                            <span class="text-sm font-medium text-secondary">${e.tickets_sold}/${e.tickets_total}</span>
+                            <span class="text-sm font-medium text-secondary">${ticketsSold}/${ticketsTotal}</span>
                         </div>
                     </td>
                     <td class="px-6 py-4">
-                        <span class="px-2.5 py-1 bg-success/10 text-success text-xs font-semibold rounded-full">Activ</span>
+                        <span class="px-2.5 py-1 bg-success/10 text-success text-xs font-semibold rounded-full">${e.status === 'published' ? 'Activ' : 'Draft'}</span>
                     </td>
                     <td class="px-6 py-4 text-right">
-                        <button class="p-2 hover:bg-surface rounded-lg transition-colors">
-                            <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
-                        </button>
+                        <a href="/organizator/events?id=${e.id}" class="p-2 hover:bg-surface rounded-lg transition-colors inline-block">
+                            <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        </a>
                     </td>
                 </tr>
             `;
@@ -402,19 +357,34 @@ const OrgDashboard = {
     renderUpcomingEvent(event) {
         const container = document.getElementById('upcoming-event-content');
         const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const date = new Date(event.start_date);
-        const available = event.tickets_total - event.tickets_sold;
+        const date = new Date(event.start_date || event.starts_at);
+        const ticketsSold = event.tickets_sold || 0;
+        const ticketsTotal = event.tickets_total || 100;
+        const available = ticketsTotal - ticketsSold;
+        const eventName = event.name || event.title || 'Eveniment';
+        const venueName = event.venue || event.venue_name || '';
+        const venueCity = event.venue_city ? `, ${event.venue_city}` : '';
+
+        // Calculate days until event
+        const now = new Date();
+        const diffTime = date - now;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        let daysLabel = '';
+        if (diffDays === 0) daysLabel = 'Astazi';
+        else if (diffDays === 1) daysLabel = 'Maine';
+        else if (diffDays > 0) daysLabel = `In ${diffDays} zile`;
+        else daysLabel = 'Incheiat';
 
         container.innerHTML = `
             <div class="relative mb-4">
-                <img src="${getStorageUrl(event.image)}" class="w-full h-32 object-cover rounded-xl" alt="">
-                <div class="absolute top-3 left-3 px-3 py-1 bg-primary text-white text-xs font-bold rounded-lg">In 3 zile</div>
+                <img src="${getStorageUrl(event.image)}" class="w-full h-32 object-cover rounded-xl" alt="" onerror="this.src='/assets/images/default-event.png'">
+                ${diffDays >= 0 ? `<div class="absolute top-3 left-3 px-3 py-1 bg-primary text-white text-xs font-bold rounded-lg">${daysLabel}</div>` : ''}
             </div>
-            <h3 class="font-bold text-secondary mb-1">${event.title}</h3>
-            <p class="text-sm text-muted mb-4">${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()} • ${event.venue || ''}</p>
+            <h3 class="font-bold text-secondary mb-1">${eventName}</h3>
+            <p class="text-sm text-muted mb-4">${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()} • ${venueName}${venueCity}</p>
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div class="bg-surface rounded-xl p-3 text-center">
-                    <p class="text-xl font-bold text-secondary">${event.tickets_sold}</p>
+                    <p class="text-xl font-bold text-secondary">${ticketsSold}</p>
                     <p class="text-xs text-muted">Bilete vandute</p>
                 </div>
                 <div class="bg-surface rounded-xl p-3 text-center">
@@ -423,7 +393,7 @@ const OrgDashboard = {
                 </div>
             </div>
             <div class="flex gap-2">
-                <a href="/organizator/checkin?event=${event.id}" class="flex-1 btn-primary py-2.5 rounded-xl font-semibold text-white text-sm text-center">Check-in</a>
+                <a href="/organizator/participanti" class="flex-1 btn-primary py-2.5 rounded-xl font-semibold text-white text-sm text-center">Check-in</a>
                 <a href="/organizator/events?id=${event.id}" class="flex-1 py-2.5 rounded-xl font-semibold text-secondary text-sm text-center border border-border hover:border-primary transition-colors">Detalii</a>
             </div>
         `;
@@ -489,10 +459,10 @@ const OrgDashboard = {
         this.salesChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: this.data.sales_chart?.labels || [],
+                labels: [],
                 datasets: [{
-                    label: 'Bilete vandute',
-                    data: this.data.sales_chart?.tickets || [],
+                    label: 'Comenzi',
+                    data: [],
                     borderColor: '#A51C30',
                     backgroundColor: 'rgba(165, 28, 48, 0.1)',
                     borderWidth: 3,
@@ -505,7 +475,7 @@ const OrgDashboard = {
                     pointHoverRadius: 7
                 }, {
                     label: 'Venituri (lei)',
-                    data: this.data.sales_chart?.revenue || [],
+                    data: [],
                     borderColor: '#10B981',
                     backgroundColor: 'transparent',
                     borderWidth: 2,
@@ -542,19 +512,54 @@ const OrgDashboard = {
                 }
             }
         });
+        // Load initial data for 7 days
+        this.loadChartData(7);
     },
 
     setupChartPeriod() {
         document.querySelectorAll('.chart-period').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
+                // Update button styles
                 document.querySelectorAll('.chart-period').forEach(b => {
                     b.classList.remove('bg-primary/10', 'text-primary');
                     b.classList.add('text-muted');
                 });
                 btn.classList.add('bg-primary/10', 'text-primary');
                 btn.classList.remove('text-muted');
+
+                // Load chart data for selected period
+                const days = parseInt(btn.dataset.days) || 7;
+                await this.loadChartData(days);
             });
         });
+    },
+
+    async loadChartData(days = 7) {
+        try {
+            const toDate = new Date().toISOString().split('T')[0];
+            const fromDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+            const response = await AmbiletAPI.get(`/organizer/dashboard/sales-timeline?from_date=${fromDate}&to_date=${toDate}&group_by=day`);
+            if (response.success && response.data?.timeline) {
+                const timeline = response.data.timeline;
+                const labels = timeline.map(t => {
+                    const d = new Date(t.period);
+                    return `${d.getDate()}/${d.getMonth() + 1}`;
+                });
+                const tickets = timeline.map(t => t.orders || 0);
+                const revenue = timeline.map(t => parseFloat(t.revenue) || 0);
+
+                // Update chart
+                if (this.salesChart) {
+                    this.salesChart.data.labels = labels;
+                    this.salesChart.data.datasets[0].data = tickets;
+                    this.salesChart.data.datasets[1].data = revenue;
+                    this.salesChart.update();
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load chart data:', e);
+        }
     },
 
     logout() {
