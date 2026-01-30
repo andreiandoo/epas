@@ -28,9 +28,9 @@ class KbArticleResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-book-open';
 
-    protected static ?string $navigationLabel = 'Knowledge Base';
+    protected static ?string $navigationLabel = 'KB Articles';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Content';
+    protected static \UnitEnum|string|null $navigationGroup = 'Knowledge Base';
 
     protected static ?int $navigationSort = 1;
 
