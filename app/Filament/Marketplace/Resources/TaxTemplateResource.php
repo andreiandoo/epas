@@ -125,13 +125,30 @@ class TaxTemplateResource extends Resource
                             ->default('portrait')
                             ->required(),
 
-                        Forms\Components\Textarea::make('html_content')
+                        Forms\Components\RichEditor::make('html_content')
                             ->label('Page 1 HTML Template')
                             ->required()
-                            ->rows(20)
                             ->columnSpanFull()
-                            ->helperText('Use the variables above in your HTML. Example: {{marketplace_legal_name}}')
-                            ->extraAttributes(['class' => 'font-mono text-sm']),
+                            ->fileAttachmentsDisk('public')
+                            ->fileAttachmentsDirectory('tax-templates')
+                            ->fileAttachmentsVisibility('public')
+                            ->toolbarButtons([
+                                'attachFiles',
+                                'blockquote',
+                                'bold',
+                                'bulletList',
+                                'codeBlock',
+                                'h2',
+                                'h3',
+                                'italic',
+                                'link',
+                                'orderedList',
+                                'redo',
+                                'strike',
+                                'underline',
+                                'undo',
+                            ])
+                            ->helperText('Use the variables above in your HTML. Example: {{marketplace_legal_name}}. You can also upload images using the attach button.'),
                     ]),
 
                 Section::make('Page 2 - HTML Content (Optional)')
@@ -143,12 +160,29 @@ class TaxTemplateResource extends Resource
                             ->options(MarketplaceTaxTemplate::ORIENTATIONS)
                             ->placeholder('Select orientation for page 2'),
 
-                        Forms\Components\Textarea::make('html_content_page_2')
+                        Forms\Components\RichEditor::make('html_content_page_2')
                             ->label('Page 2 HTML Template')
-                            ->rows(20)
                             ->columnSpanFull()
-                            ->helperText('Leave empty if you only need one page')
-                            ->extraAttributes(['class' => 'font-mono text-sm']),
+                            ->fileAttachmentsDisk('public')
+                            ->fileAttachmentsDirectory('tax-templates')
+                            ->fileAttachmentsVisibility('public')
+                            ->toolbarButtons([
+                                'attachFiles',
+                                'blockquote',
+                                'bold',
+                                'bulletList',
+                                'codeBlock',
+                                'h2',
+                                'h3',
+                                'italic',
+                                'link',
+                                'orderedList',
+                                'redo',
+                                'strike',
+                                'underline',
+                                'undo',
+                            ])
+                            ->helperText('Leave empty if you only need one page. You can also upload images using the attach button.'),
                     ])
                     ->collapsible()
                     ->collapsed(),
@@ -190,6 +224,7 @@ class TaxTemplateResource extends Resource
                                     'marketplace_email' => $marketplace?->contact_email ?? 'office@marketplace.ro',
                                     'marketplace_phone' => $marketplace?->contact_phone ?? '+40 21 987 6543',
                                     'marketplace_website' => $marketplace?->domain ?? 'www.marketplace.ro',
+                                    'marketplace_contract_number' => $marketplace?->getCurrentContractNumber() ?? '1',
 
                                     'organizer_name' => 'Sample Organizer',
                                     'organizer_email' => 'organizer@sample.ro',
@@ -200,6 +235,21 @@ class TaxTemplateResource extends Resource
                                     'organizer_city' => 'București',
                                     'organizer_county' => 'București',
                                     'organizer_vat_status' => 'plătitor TVA bilete (cota 19%)',
+                                    'organizer_work_mode' => 'Exclusiv',
+                                    'organizer_bank_name' => 'Banca Transilvania',
+                                    'organizer_iban' => 'RO49BTRL1234567890123456',
+
+                                    // Guarantor sample data
+                                    'guarantor_first_name' => 'Ion',
+                                    'guarantor_last_name' => 'Popescu',
+                                    'guarantor_cnp' => '1850101123456',
+                                    'guarantor_id_type' => 'CI',
+                                    'guarantor_id_series' => 'XY',
+                                    'guarantor_id_number' => '123456',
+                                    'guarantor_id_issued_by' => 'SPCLEP București',
+                                    'guarantor_id_issued_date' => '15.03.2020',
+                                    'guarantor_address' => 'Str. Exemplu Nr. 10, Ap. 5',
+                                    'guarantor_city' => 'București',
 
                                     'event_name' => 'Sample Concert 2024',
                                     'event_date' => date('d.m.Y H:i', strtotime('+30 days')),

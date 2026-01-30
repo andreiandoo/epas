@@ -51,6 +51,7 @@ class MarketplaceClient extends Model
         'language',
         'smtp_settings',
         'email_settings',
+        'next_contract_number',
     ];
 
     protected $casts = [
@@ -699,5 +700,27 @@ class MarketplaceClient extends Model
         }
 
         return $settings['price'];
+    }
+
+    /**
+     * Get the next contract number and increment it
+     *
+     * @return int The next contract number
+     */
+    public function getNextContractNumber(): int
+    {
+        $current = $this->next_contract_number ?? 1;
+        $this->update(['next_contract_number' => $current + 1]);
+        return $current;
+    }
+
+    /**
+     * Get the current contract number without incrementing
+     *
+     * @return int The current contract number
+     */
+    public function getCurrentContractNumber(): int
+    {
+        return $this->next_contract_number ?? 1;
     }
 }

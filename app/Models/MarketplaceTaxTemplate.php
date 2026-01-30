@@ -88,6 +88,7 @@ class MarketplaceTaxTemplate extends Model
             '{{marketplace_email}}' => 'Contact Email',
             '{{marketplace_phone}}' => 'Contact Phone',
             '{{marketplace_website}}' => 'Website',
+            '{{marketplace_contract_number}}' => 'Contract Number (incremental)',
         ],
         'Organizer' => [
             '{{organizer_name}}' => 'Name',
@@ -99,6 +100,21 @@ class MarketplaceTaxTemplate extends Model
             '{{organizer_city}}' => 'Company City',
             '{{organizer_county}}' => 'Company County/State',
             '{{organizer_vat_status}}' => 'VAT Status (platitor/neplatitor TVA cota %)',
+            '{{organizer_work_mode}}' => 'Work Mode (Exclusiv/Neexclusiv)',
+            '{{organizer_bank_name}}' => 'Bank Name',
+            '{{organizer_iban}}' => 'IBAN',
+        ],
+        'Organizer Guarantor' => [
+            '{{guarantor_first_name}}' => 'Guarantor First Name (Prenume)',
+            '{{guarantor_last_name}}' => 'Guarantor Last Name (Nume)',
+            '{{guarantor_cnp}}' => 'Guarantor CNP',
+            '{{guarantor_id_type}}' => 'ID Type (BI/CI)',
+            '{{guarantor_id_series}}' => 'ID Series (Serie)',
+            '{{guarantor_id_number}}' => 'ID Number (Numar)',
+            '{{guarantor_id_issued_by}}' => 'ID Issued By (Eliberat de)',
+            '{{guarantor_id_issued_date}}' => 'ID Issue Date (La data de)',
+            '{{guarantor_address}}' => 'Guarantor Address',
+            '{{guarantor_city}}' => 'Guarantor City',
         ],
         'Event' => [
             '{{event_name}}' => 'Event Name',
@@ -255,6 +271,7 @@ class MarketplaceTaxTemplate extends Model
             $variables['marketplace_email'] = $marketplace->contact_email ?? '';
             $variables['marketplace_phone'] = $marketplace->contact_phone ?? '';
             $variables['marketplace_website'] = $marketplace->website ?? $marketplace->domain ?? '';
+            $variables['marketplace_contract_number'] = $marketplace->getCurrentContractNumber();
         }
 
         // Organizer variables
@@ -275,6 +292,34 @@ class MarketplaceTaxTemplate extends Model
             $variables['organizer_vat_status'] = $isVatPayer
                 ? "plătitor TVA bilete (cota {$vatRate}%)"
                 : "neplătitor TVA bilete";
+
+            // Work mode (exclusiv/neexclusiv)
+            $workMode = $organizer->work_mode ?? '';
+            $variables['organizer_work_mode'] = match ($workMode) {
+                'exclusive' => 'Exclusiv',
+                'non_exclusive', 'nonexclusive' => 'Neexclusiv',
+                default => $workMode,
+            };
+
+            // Bank details
+            $variables['organizer_bank_name'] = $organizer->bank_name ?? '';
+            $variables['organizer_iban'] = $organizer->iban ?? '';
+
+            // Guarantor variables
+            $variables['guarantor_first_name'] = $organizer->guarantor_first_name ?? '';
+            $variables['guarantor_last_name'] = $organizer->guarantor_last_name ?? '';
+            $variables['guarantor_cnp'] = $organizer->guarantor_cnp ?? '';
+            $variables['guarantor_id_type'] = $organizer->guarantor_id_type ?? 'CI';
+            $variables['guarantor_id_series'] = $organizer->guarantor_id_series ?? '';
+            $variables['guarantor_id_number'] = $organizer->guarantor_id_number ?? '';
+            $variables['guarantor_id_issued_by'] = $organizer->guarantor_id_issued_by ?? '';
+            $variables['guarantor_id_issued_date'] = $organizer->guarantor_id_issued_date
+                ? (is_string($organizer->guarantor_id_issued_date)
+                    ? $organizer->guarantor_id_issued_date
+                    : $organizer->guarantor_id_issued_date->format('d.m.Y'))
+                : '';
+            $variables['guarantor_address'] = $organizer->guarantor_address ?? '';
+            $variables['guarantor_city'] = $organizer->guarantor_city ?? '';
         }
 
         // Event variables

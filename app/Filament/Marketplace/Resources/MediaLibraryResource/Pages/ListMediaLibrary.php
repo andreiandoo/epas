@@ -26,8 +26,6 @@ class ListMediaLibrary extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        $marketplace = static::getMarketplaceClient();
-
         return [
             // Upload Action
             Actions\Action::make('upload')
@@ -39,7 +37,11 @@ class ListMediaLibrary extends ListRecords
                         ->label('Selectează Fișiere')
                         ->multiple()
                         ->disk('public')
-                        ->directory('marketplace/' . ($marketplace?->id ?? 'default') . '/uploads/' . now()->format('Y/m'))
+                        ->directory(function () {
+                            $marketplace = static::getMarketplaceClient();
+                            $marketplaceId = $marketplace?->id ?? 'default';
+                            return 'marketplace/' . $marketplaceId . '/uploads/' . now()->format('Y/m');
+                        })
                         ->visibility('public')
                         ->maxSize(10240) // 10MB
                         ->acceptedFileTypes([
@@ -67,10 +69,15 @@ class ListMediaLibrary extends ListRecords
                         ])
                         ->default('uploads'),
                 ])
-                ->action(function (array $data) use ($marketplace) {
+                ->action(function (array $data) {
+                    // Get marketplace fresh inside the action to ensure it's current
+                    $marketplace = static::getMarketplaceClient();
+                    $marketplaceId = $marketplace?->id;
+
                     $files = $data['files'] ?? [];
                     $collection = $data['collection'] ?? 'uploads';
                     $uploaded = 0;
+                    $errors = [];
 
                     foreach ($files as $filePath) {
                         try {
@@ -78,20 +85,31 @@ class ListMediaLibrary extends ListRecords
                                 path: $filePath,
                                 disk: 'public',
                                 collection: $collection,
-                                marketplaceClientId: $marketplace?->id,
+                                marketplaceClientId: $marketplaceId,
                                 uploadedBy: auth()->id()
                             );
                             $uploaded++;
                         } catch (\Throwable $e) {
+                            $errors[] = basename($filePath) . ': ' . $e->getMessage();
                             \Illuminate\Support\Facades\Log::warning("Failed to create media record for {$filePath}: " . $e->getMessage());
                         }
                     }
 
-                    Notification::make()
-                        ->title('Fișiere Încărcate')
-                        ->body("S-au încărcat cu succes {$uploaded} fișier(e) în biblioteca media.")
-                        ->success()
-                        ->send();
+                    if ($uploaded > 0) {
+                        Notification::make()
+                            ->title('Fișiere Încărcate')
+                            ->body("S-au încărcat cu succes {$uploaded} fișier(e) în biblioteca media.")
+                            ->success()
+                            ->send();
+                    }
+
+                    if (!empty($errors)) {
+                        Notification::make()
+                            ->title('Erori la încărcare')
+                            ->body(implode("\n", array_slice($errors, 0, 3)))
+                            ->danger()
+                            ->send();
+                    }
                 }),
 
             // Compress Images Action
@@ -120,7 +138,8 @@ class ListMediaLibrary extends ListRecords
                         ->suffix('px')
                         ->helperText('Redimensionează imaginile mai mari decât această dimensiune.'),
                 ])
-                ->action(function (array $data) use ($marketplace) {
+                ->action(function (array $data) {
+                    $marketplace = static::getMarketplaceClient();
                     $this->compressImages($marketplace?->id, $data);
                 }),
 
@@ -133,7 +152,8 @@ class ListMediaLibrary extends ListRecords
                 ->modalHeading('Scanează Storage pentru Fișiere Media')
                 ->modalDescription('Aceasta va scana directorul de storage pentru fișiere media și va adăuga fișierele noi în bibliotecă. Fișierele existente vor fi ignorate.')
                 ->modalIcon('heroicon-o-magnifying-glass')
-                ->action(function () use ($marketplace) {
+                ->action(function () {
+                    $marketplace = static::getMarketplaceClient();
                     $this->scanStorageForMedia($marketplace?->id);
                 }),
 
@@ -146,7 +166,8 @@ class ListMediaLibrary extends ListRecords
                 ->modalHeading('Curăță Fișierele Lipsă')
                 ->modalDescription('Aceasta va elimina înregistrările din baza de date pentru fișierele care nu mai există pe disc.')
                 ->modalIcon('heroicon-o-exclamation-triangle')
-                ->action(function () use ($marketplace) {
+                ->action(function () {
+                    $marketplace = static::getMarketplaceClient();
                     $deleted = 0;
 
                     MediaLibrary::query()
