@@ -171,6 +171,18 @@ function get_kb_categories(): array
 }
 
 /**
+ * Get KB category by slug with its articles
+ *
+ * @param string $slug Category slug
+ * @return array|null Category data with articles or null if not found
+ */
+function get_kb_category(string $slug): ?array
+{
+    $response = api_get('/kb/categories/' . urlencode($slug));
+    return $response['success'] ? $response['data'] : null;
+}
+
+/**
  * Get KB article by slug
  *
  * @param string $slug Article slug

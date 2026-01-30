@@ -119,7 +119,7 @@ function getColorClasses($color) {
             </div>
             <div class="flex flex-wrap gap-2">
                 <?php foreach ($popularTopics as $topic): ?>
-                <a href="/help/search?q=<?= urlencode($topic) ?>" class="px-5 py-2.5 bg-gray-50 border border-gray-200 rounded-full text-sm font-medium text-gray-600 hover:bg-primary hover:border-primary hover:text-white transition-all">
+                <a href="/ajutor/cautare?q=<?= urlencode($topic) ?>" class="px-5 py-2.5 bg-gray-50 border border-gray-200 rounded-full text-sm font-medium text-gray-600 hover:bg-primary hover:border-primary hover:text-white transition-all">
                     <?= htmlspecialchars($topic) ?>
                 </a>
                 <?php endforeach; ?>
@@ -137,7 +137,7 @@ function getColorClasses($color) {
 
         <div class="grid grid-cols-1 gap-6 mb-12 md:grid-cols-2 lg:grid-cols-3">
             <?php foreach ($categories as $category): ?>
-            <a href="/help/<?= htmlspecialchars($category['slug']) ?>" class="p-8 transition-all bg-white border border-gray-200 group rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
+            <a href="/ajutor/<?= htmlspecialchars($category['slug']) ?>" class="p-8 transition-all bg-white border border-gray-200 group rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
                 <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 <?= getColorClasses($category['color'] ?? '#6B7280') ?>">
                     <?= getIconSvg($category['icon'] ?? 'heroicon-o-document-text') ?>
                 </div>
@@ -159,7 +159,7 @@ function getColorClasses($color) {
 
         <div class="mb-12 overflow-hidden bg-white border border-gray-200 rounded-2xl">
             <?php foreach ($recentArticles as $index => $article): ?>
-            <a href="/help/article/<?= htmlspecialchars($article['slug']) ?>" class="flex items-center justify-between px-6 py-5 <?= $index < count($recentArticles) - 1 ? 'border-b border-gray-200' : '' ?> hover:bg-gray-50 group transition-colors">
+            <a href="/ajutor/articol/<?= htmlspecialchars($article['slug']) ?>" class="flex items-center justify-between px-6 py-5 <?= $index < count($recentArticles) - 1 ? 'border-b border-gray-200' : '' ?> hover:bg-gray-50 group transition-colors">
                 <div class="flex items-center gap-4">
                     <div class="flex items-center justify-center text-gray-500 bg-gray-100 w-11 h-11 rounded-xl">
                         <?= getIconSvg($article['icon'] ?? ($article['type'] === 'faq' ? 'heroicon-o-question-mark-circle' : 'heroicon-o-document-text'), 'w-5 h-5') ?>
@@ -303,7 +303,7 @@ function getColorClasses($color) {
                             const title = article.type === 'faq' ? article.question : article.title;
                             const category = article.category ? article.category.name : '';
                             html += `
-                                <a href="/help/article/${article.slug}" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 transition-colors">
+                                <a href="/ajutor/articol/${article.slug}" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 transition-colors">
                                     <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500">
                                         ${article.type === 'faq' ? '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'}
                                     </div>
