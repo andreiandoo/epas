@@ -5,8 +5,10 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\MediaLibraryResource\Pages;
 use App\Models\MediaLibrary;
+use App\Services\Media\ImageCompressionService;
 use BackedEnum;
 use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
@@ -220,9 +222,157 @@ class MediaLibraryResource extends Resource
                                     ");
                                 }),
                         ]),
+
+                    // Usage Tracking Section
+                    SC\Section::make('Utilizare')
+                        ->compact()
+                        ->schema([
+                            Forms\Components\Placeholder::make('usage_info')
+                                ->hiddenLabel()
+                                ->content(function (?MediaLibrary $record) {
+                                    if (!$record) {
+                                        return '';
+                                    }
+
+                                    $usages = static::findFileUsages($record);
+
+                                    if (empty($usages)) {
+                                        return new HtmlString("
+                                            <div style='color: #64748b; text-align: center; padding: 12px;'>
+                                                <span style='font-size: 24px;'>📂</span>
+                                                <p style='margin-top: 8px;'>Acest fișier nu este utilizat nicăieri.</p>
+                                            </div>
+                                        ");
+                                    }
+
+                                    $usageHtml = '';
+                                    foreach ($usages as $usage) {
+                                        $usageHtml .= "
+                                            <div style='display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                                                <span style='color: #e2e8f0;'>{$usage['model']}</span>
+                                                <span style='color: #64748b;'>{$usage['field']}</span>
+                                            </div>
+                                        ";
+                                    }
+
+                                    return new HtmlString("
+                                        <div>
+                                            <div style='color: #64748b; font-size: 12px; margin-bottom: 8px;'>Utilizat în " . count($usages) . " loc(uri):</div>
+                                            {$usageHtml}
+                                        </div>
+                                    ");
+                                }),
+                        ]),
+
+                    // Compression Info Section
+                    SC\Section::make('Compresie')
+                        ->compact()
+                        ->schema([
+                            Forms\Components\Placeholder::make('compression_info')
+                                ->hiddenLabel()
+                                ->content(function (?MediaLibrary $record) {
+                                    if (!$record) {
+                                        return '';
+                                    }
+
+                                    $metadata = $record->metadata ?? [];
+                                    $isCompressed = isset($metadata['compressed_at']);
+
+                                    if (!$isCompressed) {
+                                        if (!$record->is_image) {
+                                            return new HtmlString("
+                                                <div style='color: #64748b; text-align: center; padding: 12px;'>
+                                                    <p>Compresia este disponibilă doar pentru imagini.</p>
+                                                </div>
+                                            ");
+                                        }
+
+                                        return new HtmlString("
+                                            <div style='color: #f59e0b; text-align: center; padding: 12px;'>
+                                                <span style='font-size: 24px;'>⚡</span>
+                                                <p style='margin-top: 8px;'>Această imagine nu a fost compresată.</p>
+                                            </div>
+                                        ");
+                                    }
+
+                                    $compressedAt = $metadata['compressed_at'] ?? '-';
+                                    $originalSize = isset($metadata['original_size']) ? ImageCompressionService::formatBytes($metadata['original_size']) : '-';
+                                    $savedBytes = isset($metadata['saved_bytes']) ? ImageCompressionService::formatBytes($metadata['saved_bytes']) : '-';
+                                    $savedPct = $metadata['saved_percentage'] ?? 0;
+
+                                    return new HtmlString("
+                                        <div>
+                                            <div style='display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                                                <span style='color: #64748b;'>Compresată La</span>
+                                                <span style='color: #10b981;'>{$compressedAt}</span>
+                                            </div>
+                                            <div style='display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                                                <span style='color: #64748b;'>Mărime Originală</span>
+                                                <span style='color: #e2e8f0;'>{$originalSize}</span>
+                                            </div>
+                                            <div style='display: flex; justify-content: space-between; padding: 8px 0;'>
+                                                <span style='color: #64748b;'>Spațiu Salvat</span>
+                                                <span style='color: #10b981;'>{$savedBytes} ({$savedPct}%)</span>
+                                            </div>
+                                        </div>
+                                    ");
+                                }),
+                        ]),
                 ]),
             ]),
         ])->columns(1);
+    }
+
+    /**
+     * Find where a media file is used in the application
+     */
+    protected static function findFileUsages(MediaLibrary $media): array
+    {
+        $usages = [];
+        $url = $media->url;
+        $path = $media->path;
+
+        // Check Artist model
+        if (class_exists(\App\Models\Artist::class)) {
+            $artistCount = \App\Models\Artist::where('image', $url)
+                ->orWhere('image', $path)
+                ->count();
+            if ($artistCount > 0) {
+                $usages[] = ['model' => 'Artiști', 'field' => 'imagine', 'count' => $artistCount];
+            }
+        }
+
+        // Check Event model
+        if (class_exists(\App\Models\Event::class)) {
+            $eventCount = \App\Models\Event::where('cover_image', $url)
+                ->orWhere('cover_image', $path)
+                ->count();
+            if ($eventCount > 0) {
+                $usages[] = ['model' => 'Evenimente', 'field' => 'cover_image', 'count' => $eventCount];
+            }
+        }
+
+        // Check Product model
+        if (class_exists(\App\Models\Product::class)) {
+            $productCount = \App\Models\Product::where('image', $url)
+                ->orWhere('image', $path)
+                ->count();
+            if ($productCount > 0) {
+                $usages[] = ['model' => 'Produse', 'field' => 'imagine', 'count' => $productCount];
+            }
+        }
+
+        // Check Venue model
+        if (class_exists(\App\Models\Venue::class)) {
+            $venueCount = \App\Models\Venue::where('image', $url)
+                ->orWhere('image', $path)
+                ->count();
+            if ($venueCount > 0) {
+                $usages[] = ['model' => 'Locații', 'field' => 'imagine', 'count' => $venueCount];
+            }
+        }
+
+        return $usages;
     }
 
     public static function table(Table $table): Table
@@ -308,6 +458,16 @@ class MediaLibraryResource extends Resource
                     ->dateTime('d M Y H:i')
                     ->sortable()
                     ->toggleable(),
+
+                Tables\Columns\IconColumn::make('compressed')
+                    ->label('Comprimat')
+                    ->getStateUsing(fn (MediaLibrary $record) => isset($record->metadata['compressed_at']))
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 // Year Filter
@@ -404,11 +564,59 @@ class MediaLibraryResource extends Resource
                             };
                         });
                     }),
+
+                // Compression Filter
+                Tables\Filters\SelectFilter::make('compressed')
+                    ->label('Status Compresie')
+                    ->options([
+                        'compressed' => 'Comprimat',
+                        'uncompressed' => 'Necomprimat',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when($data['value'], function (Builder $query, string $status) {
+                            if ($status === 'compressed') {
+                                return $query->whereNotNull('metadata')
+                                    ->whereRaw("JSON_EXTRACT(metadata, '$.compressed_at') IS NOT NULL");
+                            }
+                            return $query->where(function ($q) {
+                                $q->whereNull('metadata')
+                                    ->orWhereRaw("JSON_EXTRACT(metadata, '$.compressed_at') IS NULL");
+                            });
+                        });
+                    }),
             ])
             ->defaultSort('created_at', 'desc')
             ->actions([
                 Tables\Actions\ViewAction::make()
                     ->iconButton(),
+                Tables\Actions\Action::make('compress')
+                    ->icon('heroicon-o-bolt')
+                    ->iconButton()
+                    ->color('warning')
+                    ->tooltip('Comprimă Imagine')
+                    ->visible(fn (MediaLibrary $record) => $record->is_image && !isset($record->metadata['compressed_at']))
+                    ->requiresConfirmation()
+                    ->modalHeading('Comprimă Imagine')
+                    ->modalDescription('Aceasta va comprima imaginea pentru a reduce mărimea fișierului. Acțiunea nu poate fi anulată.')
+                    ->action(function (MediaLibrary $record) {
+                        $service = new ImageCompressionService();
+                        $service->quality(80);
+                        $result = $service->compress($record);
+
+                        if ($result->success) {
+                            Notification::make()
+                                ->title('Imagine Comprimată')
+                                ->body("Salvat {$result->savedPercentage}% ({$result->savedHuman})")
+                                ->success()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Compresie Eșuată')
+                                ->body($result->error)
+                                ->danger()
+                                ->send();
+                        }
+                    }),
                 Tables\Actions\Action::make('download')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->iconButton()
@@ -421,11 +629,67 @@ class MediaLibraryResource extends Resource
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
+                    BulkAction::make('compress')
+                        ->label('Comprimă Imagini')
+                        ->icon('heroicon-o-bolt')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->modalHeading('Comprimă Imaginile Selectate')
+                        ->modalDescription('Aceasta va comprima toate imaginile selectate. Celelalte fișiere vor fi ignorate.')
+                        ->action(function (Collection $records) {
+                            $service = new ImageCompressionService();
+                            $service->quality(80);
+
+                            $results = [];
+                            foreach ($records as $record) {
+                                if ($record->is_image && !isset($record->metadata['compressed_at'])) {
+                                    $results[] = $service->compress($record);
+                                }
+                            }
+
+                            $stats = ImageCompressionService::getStatistics($results);
+
+                            Notification::make()
+                                ->title('Compresie în Masă Completă')
+                                ->body("Procesate: {$stats['successful']}/{$stats['total_processed']}. Salvat: {$stats['total_saved_human']}")
+                                ->success()
+                                ->send();
+                        }),
+                    BulkAction::make('change_collection')
+                        ->label('Schimbă Colecția')
+                        ->icon('heroicon-o-folder')
+                        ->form([
+                            Forms\Components\Select::make('collection')
+                                ->label('Colecție Nouă')
+                                ->options([
+                                    'artists' => 'Artiști',
+                                    'events' => 'Evenimente',
+                                    'products' => 'Produse',
+                                    'venues' => 'Locații',
+                                    'blog' => 'Blog',
+                                    'shop' => 'Magazin',
+                                    'gallery' => 'Galerie',
+                                    'documents' => 'Documente',
+                                    'other' => 'Altele',
+                                ])
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $records->each(function ($record) use ($data) {
+                                $record->update(['collection' => $data['collection']]);
+                            });
+
+                            Notification::make()
+                                ->title('Colecție Actualizată')
+                                ->body("S-au actualizat {$records->count()} fișier(e)")
+                                ->success()
+                                ->send();
+                        }),
                     BulkAction::make('export_urls')
                         ->label('Exportă URL-uri')
                         ->icon('heroicon-o-clipboard-document-list')
                         ->action(function (Collection $records) {
-                            \Filament\Notifications\Notification::make()
+                            Notification::make()
                                 ->title('URL-uri Exportate')
                                 ->body("S-au exportat {$records->count()} URL-uri")
                                 ->success()

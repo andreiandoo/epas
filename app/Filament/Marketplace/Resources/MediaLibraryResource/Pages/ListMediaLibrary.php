@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\MediaLibraryResource;
 use App\Filament\Marketplace\Widgets\MediaLibraryStatsWidget;
 use App\Models\MediaLibrary;
+use App\Services\Media\ImageCompressionService;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
@@ -93,6 +94,36 @@ class ListMediaLibrary extends ListRecords
                         ->send();
                 }),
 
+            // Compress Images Action
+            Actions\Action::make('compress_images')
+                ->label('Comprimă Imagini')
+                ->icon('heroicon-o-bolt')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalHeading('Comprimă Toate Imaginile Necompresate')
+                ->modalDescription('Aceasta va comprima toate imaginile care nu au fost încă comprimate. Acest lucru poate dura ceva timp în funcție de numărul de imagini.')
+                ->modalIcon('heroicon-o-bolt')
+                ->form([
+                    \Filament\Forms\Components\TextInput::make('quality')
+                        ->label('Calitate Compresie')
+                        ->numeric()
+                        ->default(80)
+                        ->minValue(1)
+                        ->maxValue(100)
+                        ->suffix('%')
+                        ->helperText('O calitate mai mare înseamnă fișiere mai mari dar imagini mai clare.'),
+
+                    \Filament\Forms\Components\TextInput::make('max_dimension')
+                        ->label('Dimensiune Maximă (opțional)')
+                        ->numeric()
+                        ->placeholder('ex: 1920')
+                        ->suffix('px')
+                        ->helperText('Redimensionează imaginile mai mari decât această dimensiune.'),
+                ])
+                ->action(function (array $data) use ($marketplace) {
+                    $this->compressImages($marketplace?->id, $data);
+                }),
+
             // Scan Storage Action
             Actions\Action::make('scan_storage')
                 ->label('Scanează')
@@ -136,6 +167,50 @@ class ListMediaLibrary extends ListRecords
                         ->send();
                 }),
         ];
+    }
+
+    /**
+     * Compress uncompressed images in the library
+     */
+    protected function compressImages(?int $marketplaceId, array $options): void
+    {
+        $quality = (int) ($options['quality'] ?? 80);
+        $maxDimension = !empty($options['max_dimension']) ? (int) $options['max_dimension'] : null;
+
+        $service = new ImageCompressionService();
+        $service->quality($quality);
+
+        if ($maxDimension) {
+            $service->maxDimension($maxDimension);
+        }
+
+        // Get uncompressed images
+        $images = MediaLibrary::query()
+            ->where('marketplace_client_id', $marketplaceId)
+            ->where('mime_type', 'LIKE', 'image/%')
+            ->where(function ($q) {
+                $q->whereNull('metadata')
+                    ->orWhereRaw("JSON_EXTRACT(metadata, '$.compressed_at') IS NULL");
+            })
+            ->get();
+
+        if ($images->isEmpty()) {
+            Notification::make()
+                ->title('Fără Imagini de Comprimat')
+                ->body('Toate imaginile au fost deja compresate.')
+                ->info()
+                ->send();
+            return;
+        }
+
+        $results = $service->compressMany($images);
+        $stats = ImageCompressionService::getStatistics($results);
+
+        Notification::make()
+            ->title('Compresie Completă')
+            ->body("Procesate: {$stats['successful']}/{$stats['total_processed']}. Spațiu salvat: {$stats['total_saved_human']} ({$stats['total_saved_percentage']}%)")
+            ->success()
+            ->send();
     }
 
     /**

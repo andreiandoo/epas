@@ -5,6 +5,7 @@ namespace App\Filament\Resources\MediaLibrary;
 use App\Filament\Resources\MediaLibrary\Pages\ListMediaLibrary;
 use App\Filament\Resources\MediaLibrary\Pages\ViewMedia;
 use App\Models\MediaLibrary;
+use App\Services\Media\ImageCompressionService;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -15,6 +16,7 @@ use Filament\Tables\Table;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\BulkAction;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -120,6 +122,49 @@ class MediaLibraryResource extends Resource
                                 ->searchable(),
                         ])
                         ->columns(1),
+
+                    // Usage Tracking Section
+                    SC\Section::make('Usage')
+                        ->description('Where this file is being used')
+                        ->icon('heroicon-o-link')
+                        ->collapsed()
+                        ->visible(fn (?MediaLibrary $record) => $record && $record->exists)
+                        ->schema([
+                            Forms\Components\Placeholder::make('usage_info')
+                                ->hiddenLabel()
+                                ->content(function (?MediaLibrary $record) {
+                                    if (!$record) {
+                                        return '';
+                                    }
+
+                                    $usages = self::findFileUsages($record);
+
+                                    if (empty($usages)) {
+                                        return new HtmlString("
+                                            <div style='text-align: center; padding: 20px; color: #64748b;'>
+                                                <p>No usages found for this file.</p>
+                                                <p style='font-size: 12px; margin-top: 8px;'>This file may be unused or manually referenced.</p>
+                                            </div>
+                                        ");
+                                    }
+
+                                    $html = "<div style='space-y-2;'>";
+                                    foreach ($usages as $usage) {
+                                        $html .= "
+                                            <div style='display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #1e293b; border-radius: 8px; margin-bottom: 8px;'>
+                                                <div>
+                                                    <div style='font-weight: 600; color: #e2e8f0;'>{$usage['model']}</div>
+                                                    <div style='font-size: 12px; color: #64748b;'>{$usage['field']} - ID: {$usage['id']}</div>
+                                                </div>
+                                                <span style='padding: 2px 8px; background: #334155; color: #94a3b8; border-radius: 4px; font-size: 11px;'>{$usage['type']}</span>
+                                            </div>
+                                        ";
+                                    }
+                                    $html .= "</div>";
+
+                                    return new HtmlString($html);
+                                }),
+                        ]),
                 ]),
 
                 SC\Group::make()->columnSpan(1)->schema([
@@ -149,6 +194,22 @@ class MediaLibraryResource extends Resource
                                         ? "<span style='padding: 2px 8px; background: rgba(16, 185, 129, 0.2); color: #10b981; border-radius: 4px; font-size: 12px;'>✓ Exists</span>"
                                         : "<span style='padding: 2px 8px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border-radius: 4px; font-size: 12px;'>✗ Missing</span>";
 
+                                    // Compression info
+                                    $compressionInfo = '';
+                                    if (isset($record->metadata['compressed_at'])) {
+                                        $originalSize = $record->metadata['original_size'] ?? 0;
+                                        $savedBytes = $originalSize - $record->size;
+                                        $savedPct = $originalSize > 0 ? round(($savedBytes / $originalSize) * 100, 1) : 0;
+                                        $savedHuman = ImageCompressionService::formatBytes($savedBytes);
+
+                                        $compressionInfo = "
+                                            <div style='display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                                                <span style='color: #64748b;'>Compressed</span>
+                                                <span style='padding: 2px 8px; background: rgba(16, 185, 129, 0.2); color: #10b981; border-radius: 4px; font-size: 12px;'>✓ {$savedHuman} saved ({$savedPct}%)</span>
+                                            </div>
+                                        ";
+                                    }
+
                                     return new HtmlString("
                                         <div>
                                             <div style='display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
@@ -164,6 +225,7 @@ class MediaLibraryResource extends Resource
                                                 <span style='color: #e2e8f0;'>{$record->human_readable_size}</span>
                                             </div>
                                             {$dimensions}
+                                            {$compressionInfo}
                                             <div style='display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
                                                 <span style='color: #64748b;'>Directory</span>
                                                 <span style='color: #e2e8f0; font-size: 12px;'>" . e($record->directory ?? '/') . "</span>
@@ -323,6 +385,16 @@ class MediaLibraryResource extends Resource
                     ->sortable(query: fn (Builder $query, string $direction) => $query->orderBy('size', $direction))
                     ->toggleable(),
 
+                Tables\Columns\IconColumn::make('is_compressed')
+                    ->label('Compressed')
+                    ->getStateUsing(fn (MediaLibrary $record) => isset($record->metadata['compressed_at']))
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('dimensions')
                     ->label('Dimensions')
                     ->getStateUsing(fn (MediaLibrary $record) => $record->width && $record->height
@@ -431,11 +503,58 @@ class MediaLibraryResource extends Resource
                             };
                         });
                     }),
+
+                // Compression Filter
+                Tables\Filters\TernaryFilter::make('compressed')
+                    ->label('Compressed')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereNotNull('metadata')
+                            ->whereRaw("JSON_EXTRACT(metadata, '$.compressed_at') IS NOT NULL"),
+                        false: fn (Builder $query) => $query->where(function ($q) {
+                            $q->whereNull('metadata')
+                              ->orWhereRaw("JSON_EXTRACT(metadata, '$.compressed_at') IS NULL");
+                        }),
+                    ),
             ])
             ->defaultSort('created_at', 'desc')
             ->actions([
                 Tables\Actions\ViewAction::make()
                     ->iconButton(),
+                Tables\Actions\Action::make('compress')
+                    ->icon('heroicon-o-arrow-down-on-square-stack')
+                    ->iconButton()
+                    ->color('warning')
+                    ->tooltip('Compress image')
+                    ->visible(fn (MediaLibrary $record) => $record->is_image && !isset($record->metadata['compressed_at']))
+                    ->requiresConfirmation()
+                    ->modalHeading('Compress Image')
+                    ->modalDescription('This will compress the image to reduce file size.')
+                    ->action(function (MediaLibrary $record) {
+                        $service = new ImageCompressionService();
+                        $service->quality(80);
+
+                        $result = $service->compress($record);
+
+                        if ($result->success && !$result->skipped) {
+                            Notification::make()
+                                ->title('Image Compressed')
+                                ->body("Saved {$result->getSavedHuman()} ({$result->savedPercentage}% reduction)")
+                                ->success()
+                                ->send();
+                        } elseif ($result->skipped) {
+                            Notification::make()
+                                ->title('Compression Skipped')
+                                ->body($result->skipReason)
+                                ->info()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Compression Failed')
+                                ->body($result->error)
+                                ->danger()
+                                ->send();
+                        }
+                    }),
                 Tables\Actions\Action::make('download')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->iconButton()
@@ -443,39 +562,166 @@ class MediaLibraryResource extends Resource
                     ->url(fn (MediaLibrary $record) => $record->url)
                     ->openUrlInNewTab(),
                 Tables\Actions\DeleteAction::make()
-                    ->iconButton()
-                    ->before(function (MediaLibrary $record) {
-                        // Optionally delete file from disk
-                        // $record->deleteWithFile();
-                    }),
+                    ->iconButton(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->before(function (Collection $records) {
-                            // Optionally delete files from disk
-                            // foreach ($records as $record) {
-                            //     $record->deleteWithFile();
-                            // }
-                        }),
+                    // Bulk Compress Action
+                    BulkAction::make('compress')
+                        ->label('Compress Images')
+                        ->icon('heroicon-o-arrow-down-on-square-stack')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->modalHeading('Compress Selected Images')
+                        ->modalDescription('This will compress all selected images. Non-image files will be skipped.')
+                        ->form([
+                            Forms\Components\Select::make('quality')
+                                ->label('Quality')
+                                ->options([
+                                    90 => 'High (90%)',
+                                    80 => 'Medium (80%)',
+                                    70 => 'Standard (70%)',
+                                    60 => 'Low (60%)',
+                                ])
+                                ->default(80)
+                                ->required(),
+                            Forms\Components\Toggle::make('convert_webp')
+                                ->label('Convert to WebP')
+                                ->default(false),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $service = new ImageCompressionService();
+                            $service->quality((int) $data['quality']);
+
+                            if ($data['convert_webp'] ?? false) {
+                                $service->convertToWebp();
+                            }
+
+                            $results = $service->compressMany($records->filter(fn ($r) => $r->is_image));
+                            $stats = ImageCompressionService::getStatistics($results);
+
+                            Notification::make()
+                                ->title('Compression Complete')
+                                ->body(sprintf(
+                                    'Processed %d images. Saved %s (%s%% reduction).',
+                                    $stats['successful'],
+                                    $stats['total_saved_human'],
+                                    $stats['total_saved_percentage']
+                                ))
+                                ->success()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    DeleteBulkAction::make(),
+
                     BulkAction::make('export_urls')
                         ->label('Export URLs')
                         ->icon('heroicon-o-clipboard-document-list')
                         ->action(function (Collection $records) {
                             $urls = $records->pluck('url')->filter()->implode("\n");
-                            // In production, you might want to download as a file
-                            // For now, we just show a notification
-                            \Filament\Notifications\Notification::make()
+                            Notification::make()
                                 ->title('URLs Exported')
                                 ->body("Exported {$records->count()} URLs")
                                 ->success()
                                 ->send();
                         }),
+
+                    BulkAction::make('change_collection')
+                        ->label('Change Collection')
+                        ->icon('heroicon-o-folder')
+                        ->form([
+                            Forms\Components\Select::make('collection')
+                                ->label('Collection')
+                                ->options([
+                                    'artists' => 'Artists',
+                                    'events' => 'Events',
+                                    'products' => 'Products',
+                                    'venues' => 'Venues',
+                                    'blog' => 'Blog',
+                                    'shop' => 'Shop',
+                                    'gallery' => 'Gallery',
+                                    'documents' => 'Documents',
+                                    'uploads' => 'Uploads',
+                                    'other' => 'Other',
+                                ])
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $records->each(fn ($record) => $record->update(['collection' => $data['collection']]));
+
+                            Notification::make()
+                                ->title('Collection Updated')
+                                ->body("Updated {$records->count()} files to collection: {$data['collection']}")
+                                ->success()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ])
             ->emptyStateHeading('No media files')
             ->emptyStateDescription('Upload files through the application or scan existing files.')
             ->emptyStateIcon('heroicon-o-photo');
+    }
+
+    /**
+     * Find usages of the media file across the application
+     */
+    protected static function findFileUsages(MediaLibrary $media): array
+    {
+        $usages = [];
+        $path = $media->path;
+
+        // Define models and their URL fields to search
+        $modelsToSearch = [
+            ['model' => \App\Models\Artist::class, 'fields' => ['main_image_url', 'logo_url', 'portrait_url'], 'name' => 'Artist'],
+            ['model' => \App\Models\Event::class, 'fields' => ['poster_url', 'hero_image_url'], 'name' => 'Event'],
+        ];
+
+        // Add more models if they exist
+        if (class_exists(\App\Models\Venue::class)) {
+            $modelsToSearch[] = ['model' => \App\Models\Venue::class, 'fields' => ['image_url', 'logo_url'], 'name' => 'Venue'];
+        }
+        if (class_exists(\App\Models\BlogArticle::class)) {
+            $modelsToSearch[] = ['model' => \App\Models\BlogArticle::class, 'fields' => ['featured_image'], 'name' => 'Blog Article'];
+        }
+        if (class_exists(\App\Models\ShopProduct::class)) {
+            $modelsToSearch[] = ['model' => \App\Models\ShopProduct::class, 'fields' => ['image_url'], 'name' => 'Shop Product'];
+        }
+
+        foreach ($modelsToSearch as $config) {
+            if (!class_exists($config['model'])) {
+                continue;
+            }
+
+            foreach ($config['fields'] as $field) {
+                try {
+                    $records = $config['model']::where($field, $path)->get();
+                    foreach ($records as $record) {
+                        $usages[] = [
+                            'model' => $config['name'],
+                            'field' => $field,
+                            'id' => $record->id,
+                            'type' => 'Direct Reference',
+                        ];
+                    }
+                } catch (\Throwable) {
+                    // Skip if field doesn't exist
+                }
+            }
+        }
+
+        // Check polymorphic association
+        if ($media->model_type && $media->model_id) {
+            $usages[] = [
+                'model' => class_basename($media->model_type),
+                'field' => 'media association',
+                'id' => $media->model_id,
+                'type' => 'Associated',
+            ];
+        }
+
+        return $usages;
     }
 
     public static function getRelations(): array
