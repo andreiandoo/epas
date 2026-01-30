@@ -2,36 +2,43 @@
     class="relative"
     wire:poll.30s="checkForNewNotifications"
     x-data="{
+        soundEnabled: localStorage.getItem('marketplace_notification_sound_enabled') !== 'false',
+        toggleSound() {
+            this.soundEnabled = !this.soundEnabled;
+            localStorage.setItem('marketplace_notification_sound_enabled', this.soundEnabled);
+            if (this.soundEnabled) this.playSound();
+        },
         playSound() {
+            if (!this.soundEnabled) return;
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
+                if (audioContext.state === 'suspended') audioContext.resume();
 
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
+                // First tone
+                const osc1 = audioContext.createOscillator();
+                const gain1 = audioContext.createGain();
+                osc1.connect(gain1);
+                gain1.connect(audioContext.destination);
+                osc1.frequency.value = 587.33; // D5
+                osc1.type = 'sine';
+                gain1.gain.setValueAtTime(0, audioContext.currentTime);
+                gain1.gain.linearRampToValueAtTime(0.15, audioContext.currentTime + 0.01);
+                gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                osc1.start(audioContext.currentTime);
+                osc1.stop(audioContext.currentTime + 0.12);
 
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.3);
-
-                // Second beep
-                setTimeout(() => {
-                    const osc2 = audioContext.createOscillator();
-                    const gain2 = audioContext.createGain();
-                    osc2.connect(gain2);
-                    gain2.connect(audioContext.destination);
-                    osc2.frequency.value = 1000;
-                    osc2.type = 'sine';
-                    gain2.gain.setValueAtTime(0.1, audioContext.currentTime);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-                    osc2.start(audioContext.currentTime);
-                    osc2.stop(audioContext.currentTime + 0.2);
-                }, 150);
+                // Second tone (chime effect)
+                const osc2 = audioContext.createOscillator();
+                const gain2 = audioContext.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioContext.destination);
+                osc2.frequency.value = 783.99; // G5
+                osc2.type = 'sine';
+                gain2.gain.setValueAtTime(0, audioContext.currentTime + 0.08);
+                gain2.gain.linearRampToValueAtTime(0.15, audioContext.currentTime + 0.09);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                osc2.start(audioContext.currentTime + 0.08);
+                osc2.stop(audioContext.currentTime + 0.2);
             } catch (e) {
                 console.log('Audio notification not supported');
             }
@@ -156,15 +163,32 @@
 
             {{-- Footer --}}
             <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700">
-                <a
-                    href="{{ route('filament.marketplace.pages.notifications') }}"
-                    class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition"
-                >
-                    Vezi toate notificarile
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                    </svg>
-                </a>
+                <div class="flex items-center justify-between gap-3">
+                    <a
+                        href="{{ route('filament.marketplace.pages.notifications') }}"
+                        class="flex items-center gap-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition"
+                    >
+                        Vezi toate
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                    <button
+                        @click.stop="toggleSound()"
+                        type="button"
+                        class="flex items-center gap-1.5 px-2 py-1 text-xs rounded-lg transition"
+                        :class="soundEnabled ? 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' : 'text-gray-400 hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-700'"
+                        :title="soundEnabled ? 'Dezactiveaza sunetul' : 'Activeaza sunetul'"
+                    >
+                        <svg x-show="soundEnabled" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+                        </svg>
+                        <svg x-show="!soundEnabled" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+                        </svg>
+                        <span x-text="soundEnabled ? 'Sunet On' : 'Sunet Off'"></span>
+                    </button>
+                </div>
             </div>
         </div>
     @endif

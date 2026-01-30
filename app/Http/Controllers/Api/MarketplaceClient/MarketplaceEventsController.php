@@ -1260,4 +1260,273 @@ class MarketplaceEventsController extends BaseController
             ->where('service_end_date', '>=', $today)
             ->exists();
     }
+
+    /**
+     * Get list of organizers with their event counts
+     */
+    public function organizers(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+        $language = $client->language ?? 'ro';
+
+        $query = MarketplaceOrganizer::where('marketplace_client_id', $client->id)
+            ->where('status', 'active')
+            ->withCount(['events' => function ($query) use ($client) {
+                $query->where('marketplace_client_id', $client->id)
+                    ->where(function ($q) {
+                        $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+                    });
+            }]);
+
+        // Filter: only organizers with events
+        if ($request->boolean('with_events')) {
+            $query->has('events');
+        }
+
+        // Search filter
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('slug', 'like', "%{$search}%");
+            });
+        }
+
+        // Verified only
+        if ($request->boolean('verified')) {
+            $query->whereNotNull('verified_at');
+        }
+
+        // Sorting
+        $sort = $request->get('sort', 'name');
+        switch ($sort) {
+            case 'events':
+                $query->orderByDesc('events_count');
+                break;
+            case 'newest':
+                $query->orderByDesc('created_at');
+                break;
+            case 'name':
+            default:
+                $query->orderBy('name');
+                break;
+        }
+
+        $perPage = min((int) $request->get('per_page', 20), 100);
+        $organizers = $query->paginate($perPage);
+
+        return $this->paginated($organizers, function ($organizer) {
+            return [
+                'id' => $organizer->id,
+                'name' => $organizer->name,
+                'slug' => $organizer->slug,
+                'logo' => $organizer->logo ? Storage::disk('public')->url($organizer->logo) : null,
+                'verified' => $organizer->verified_at !== null,
+                'event_count' => $organizer->events_count ?? 0,
+                'city' => $organizer->city,
+            ];
+        });
+    }
+
+    /**
+     * Get single organizer public profile by slug or ID
+     */
+    public function organizer(Request $request, $identifier): JsonResponse
+    {
+        $client = $this->requireClient($request);
+        $language = $client->language ?? 'ro';
+
+        $query = MarketplaceOrganizer::where('marketplace_client_id', $client->id)
+            ->where('status', 'active');
+
+        if (is_numeric($identifier)) {
+            $query->where('id', $identifier);
+        } else {
+            $query->where('slug', $identifier);
+        }
+
+        $organizer = $query->first();
+
+        if (!$organizer) {
+            return $this->error('Organizer not found', 404);
+        }
+
+        // Get upcoming events
+        $upcomingEventsQuery = Event::where('marketplace_client_id', $client->id)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->with([
+                'venue:id,name,city',
+                'marketplaceEventCategory',
+                'ticketTypes' => function ($query) {
+                    $query->select('id', 'event_id', 'price_cents', 'sale_price_cents')
+                        ->where('status', 'active');
+                },
+            ]);
+
+        $this->applyUpcomingFilter($upcomingEventsQuery);
+
+        $upcomingEvents = $upcomingEventsQuery
+            ->orderBy('event_date')
+            ->orderBy('start_time')
+            ->limit(12)
+            ->get();
+
+        // Get past events
+        $pastEventsQuery = Event::where('marketplace_client_id', $client->id)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->with(['venue:id,name,city'])
+            ->where(function ($q) {
+                $today = now()->toDateString();
+                $q->where('event_date', '<', $today)
+                    ->orWhere('range_end_date', '<', $today);
+            })
+            ->orderByDesc('event_date')
+            ->limit(10)
+            ->get();
+
+        // Calculate stats
+        $totalEvents = Event::where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $client->id)
+            ->count();
+
+        $totalTicketsSold = $organizer->total_tickets_sold ?? 0;
+        $followers = $organizer->followers_count ?? 0;
+        $rating = $organizer->average_rating ?? 0;
+
+        // Format upcoming events
+        $formattedUpcoming = $upcomingEvents->map(function ($event) use ($language) {
+            $venue = $event->venue;
+            $category = $event->marketplaceEventCategory;
+            $eventDate = $event->event_date ?? $event->range_start_date;
+
+            // Get minimum price
+            $minPrice = null;
+            if ($event->ticketTypes->isNotEmpty()) {
+                $minPriceCents = $event->ticketTypes->map(function ($ticket) {
+                    if ($ticket->sale_price_cents !== null && $ticket->sale_price_cents > 0) {
+                        return $ticket->sale_price_cents;
+                    }
+                    return $ticket->price_cents;
+                })->min();
+                $minPrice = $minPriceCents ? $minPriceCents / 100 : null;
+            }
+
+            // Determine status
+            $status = 'available';
+            if ($event->is_sold_out) {
+                $status = 'soldout';
+            } elseif ($eventDate && $eventDate->diffInDays(now()) <= 7) {
+                $status = 'soon';
+            }
+
+            return [
+                'id' => $event->id,
+                'title' => $event->getTranslation('title', $language),
+                'slug' => $event->slug,
+                'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
+                'day' => $eventDate?->format('d'),
+                'month' => $eventDate?->translatedFormat('M'),
+                'category' => $category?->getTranslation('name', $language),
+                'venue' => $venue?->getTranslation('name', $language) ?? $venue?->city,
+                'time' => $event->start_time ? substr($event->start_time, 0, 5) : null,
+                'price' => $minPrice,
+                'status' => $status,
+            ];
+        });
+
+        // Format past events
+        $formattedPast = $pastEventsQuery->map(function ($event) use ($language) {
+            $venue = $event->venue;
+            $eventDate = $event->event_date ?? $event->range_start_date;
+
+            return [
+                'id' => $event->id,
+                'title' => $event->getTranslation('title', $language),
+                'slug' => $event->slug,
+                'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
+                'date' => $eventDate?->translatedFormat('d F Y'),
+                'participants' => $event->tickets_sold ?? 0,
+                'rating' => $event->average_rating ?? 0,
+            ];
+        });
+
+        // Parse social links
+        $socialLinks = $organizer->social_links ?? [];
+        $social = [
+            'facebook' => $socialLinks['facebook'] ?? null,
+            'instagram' => $socialLinks['instagram'] ?? null,
+            'website' => $organizer->website ?? null,
+        ];
+
+        // Build quick facts
+        $facts = [
+            [
+                'icon' => 'calendar',
+                'label' => 'Activ din',
+                'value' => $organizer->created_at?->format('Y'),
+            ],
+            [
+                'icon' => 'location',
+                'label' => 'Locație',
+                'value' => $organizer->city ?? 'România',
+            ],
+        ];
+
+        if ($rating > 0) {
+            $facts[] = [
+                'icon' => 'star',
+                'label' => 'Rating mediu',
+                'value' => number_format($rating, 1) . ' / 5',
+            ];
+        }
+
+        if ($organizer->verified_at) {
+            $facts[] = [
+                'icon' => 'shield',
+                'label' => 'Status',
+                'value' => 'Verificat',
+            ];
+        }
+
+        return $this->success([
+            'avatar' => $organizer->logo ? Storage::disk('public')->url($organizer->logo) : null,
+            'name' => $organizer->name,
+            'slug' => $organizer->slug,
+            'verified' => $organizer->verified_at !== null,
+            'pro' => $organizer->is_pro ?? false,
+            'tagline' => $organizer->tagline ?? $organizer->description ?? '',
+            'location' => $organizer->city ?? 'România',
+            'stats' => [
+                'events' => $totalEvents,
+                'tickets' => $this->formatNumber($totalTicketsSold),
+                'followers' => $this->formatNumber($followers),
+                'rating' => $rating > 0 ? number_format($rating, 1) : '-',
+            ],
+            'social' => $social,
+            'upcomingEvents' => $formattedUpcoming,
+            'pastEvents' => $formattedPast,
+            'about' => $organizer->description ?? '',
+            'facts' => $facts,
+        ]);
+    }
+
+    /**
+     * Format large numbers for display (e.g., 1500 -> 1.5K)
+     */
+    protected function formatNumber(int $number): string
+    {
+        if ($number >= 1000000) {
+            return number_format($number / 1000000, 1) . 'M';
+        }
+        if ($number >= 1000) {
+            return number_format($number / 1000, 1) . 'K';
+        }
+        return (string) $number;
+    }
 }
