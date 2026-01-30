@@ -30,11 +30,11 @@ class TaxTemplateResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
-    protected static ?string $navigationLabel = 'Tax Templates';
+    protected static ?string $navigationLabel = 'Doc Templates';
 
-    protected static ?string $modelLabel = 'Tax Template';
+    protected static ?string $modelLabel = 'Doc Template';
 
-    protected static ?string $pluralModelLabel = 'Tax Templates';
+    protected static ?string $pluralModelLabel = 'Doc Templates';
 
     protected static ?string $slug = 'tax-templates';
 

@@ -36,6 +36,7 @@ class MarketplaceTaxTemplate extends Model
     public const TRIGGERS = [
         'after_event_published' => 'After Event is Published',
         'after_event_finished' => 'After Event is Finished',
+        'after_organizer_registered' => 'After Organizer is Registered',
     ];
 
     /**
@@ -57,6 +58,7 @@ class MarketplaceTaxTemplate extends Model
         'credit_note' => 'Credit Note',
         'cerere_avizare' => 'Cerere avizare',
         'declaratie_impozite' => 'Declaratie impozite',
+        'organizer_contract' => 'Organizer Contract',
         'other' => 'Other',
     ];
 

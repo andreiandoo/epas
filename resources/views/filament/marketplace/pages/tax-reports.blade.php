@@ -69,7 +69,10 @@
                             <div class="p-6">
                                 <div class="flex justify-between items-start mb-4">
                                     <div>
-                                        <h4 class="font-medium text-gray-900 dark:text-white">{{ $event['event']['title'] }}</h4>
+                                        <a href="{{ route('filament.marketplace.pages.event-tax-report', ['event' => $event['event']['id']]) }}"
+                                           class="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">
+                                            {{ $event['event']['title'] }}
+                                        </a>
                                         <p class="text-sm text-gray-500">{{ $event['event']['date'] }} &middot; {{ $event['event']['venue'] }}</p>
                                     </div>
                                     <span class="px-2 py-1 text-xs rounded-full {{ $event['event']['status'] === 'upcoming' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
