@@ -68,15 +68,6 @@ $navQuickLinks = $navQuickLinks ?? [
     ['name' => 'Noi', 'slug' => 'evenimente?filter=noi', 'icon' => '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>']
 ];
 
-// Popular searches
-$navPopularSearches = $navPopularSearches ?? [
-    'Coldplay București',
-    'UNTOLD 2025',
-    'Stand-up comedy',
-    'Teatru București',
-    'Concerte weekend'
-];
-
 // ==================== APPLY CACHED COUNTS ====================
 // Note: Categories and cities already have counts from their respective API caches
 // Only apply nav counts to items that don't already have count from API
@@ -107,16 +98,6 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     </div>
 
     <div class="max-w-[800px] mx-auto px-6 pb-6 max-h-[calc(100vh-120px)] overflow-y-auto">
-        <!-- Quick Links (shown when no search query) -->
-        <div class="mb-6" id="searchQuickLinks">
-            <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 px-1">Căutări populare</div>
-            <div class="flex flex-wrap gap-2">
-                <?php foreach ($navPopularSearches as $search): ?>
-                <button type="button" class="search-suggestion px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full text-gray-600 text-[13px] font-medium hover:bg-primary hover:border-primary hover:text-white transition-all cursor-pointer" data-query="<?= htmlspecialchars($search) ?>"><?= htmlspecialchars($search) ?></button>
-                <?php endforeach; ?>
-            </div>
-        </div>
-
         <!-- Search Results Container -->
         <div id="searchResults" class="hidden">
             <!-- Loading state -->
