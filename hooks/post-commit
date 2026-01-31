@@ -1,11 +1,34 @@
 #!/bin/bash
 
-# Auto-versioning post-commit hook
-# This hook automatically increments version numbers based on changed files
+# Post-commit hook for:
+# 1. Auto-versioning - increments version numbers based on changed files
+# 2. Auto-changelog - updates changelog database with commit info
 
 # Get the project root directory
 PROJECT_ROOT="$(git rev-parse --show-toplevel)"
 VERSION_FILE="$PROJECT_ROOT/version.json"
+
+# =============================================================================
+# CHANGELOG UPDATE
+# =============================================================================
+update_changelog() {
+    if [ -f "$PROJECT_ROOT/artisan" ]; then
+        COMMIT_HASH=$(git rev-parse HEAD)
+        COMMIT_SHORT=$(git rev-parse --short HEAD)
+
+        # Run changelog update silently (only for this commit)
+        cd "$PROJECT_ROOT"
+        php artisan changelog:update --from="$COMMIT_HASH^" --to="$COMMIT_HASH" 2>/dev/null && \
+            echo "📝 Changelog updated for commit: $COMMIT_SHORT"
+    fi
+}
+
+# Update changelog first (doesn't modify files)
+update_changelog
+
+# =============================================================================
+# VERSION AUTO-BUMP
+# =============================================================================
 
 # Skip if version.json doesn't exist
 if [ ! -f "$VERSION_FILE" ]; then

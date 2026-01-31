@@ -138,6 +138,15 @@ Route::prefix('v1/public')->middleware(['api.key'])->group(function () {
     Route::get('/tenants/{slug}', [PublicDataController::class, 'tenant'])->name('api.public.tenant');
     Route::get('/events', [PublicDataController::class, 'events'])->name('api.public.events');
     Route::get('/events/{slug}', [PublicDataController::class, 'event'])->name('api.public.event');
+
+    // Changelog API - for tixello.com integration
+    Route::prefix('changelog')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\ChangelogController::class, 'index'])->name('api.public.changelog');
+        Route::get('/summary', [\App\Http\Controllers\Api\ChangelogController::class, 'summary'])->name('api.public.changelog.summary');
+        Route::get('/grouped', [\App\Http\Controllers\Api\ChangelogController::class, 'grouped'])->name('api.public.changelog.grouped');
+        Route::get('/modules', [\App\Http\Controllers\Api\ChangelogController::class, 'modules'])->name('api.public.changelog.modules');
+        Route::get('/{hash}', [\App\Http\Controllers\Api\ChangelogController::class, 'show'])->name('api.public.changelog.show');
+    });
 });
 
 /*
