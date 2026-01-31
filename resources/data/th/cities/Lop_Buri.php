@@ -1,0 +1,81 @@
+<?php
+return [
+    [
+        'id'        => 105203,
+        'name'      => 'Amphoe Ban Mi',
+        'latitude'  => '15.06154000',
+        'longitude' => '100.55200000',
+    ],
+    [
+        'id'        => 105269,
+        'name'      => 'Amphoe Chai Badan',
+        'latitude'  => '15.18944000',
+        'longitude' => '101.12682000',
+    ],
+    [
+        'id'        => 105415,
+        'name'      => 'Amphoe Khok Charoen',
+        'latitude'  => '15.40384000',
+        'longitude' => '100.84968000',
+    ],
+    [
+        'id'        => 105418,
+        'name'      => 'Amphoe Khok Samrong',
+        'latitude'  => '15.04303000',
+        'longitude' => '100.77151000',
+    ],
+    [
+        'id'        => 105475,
+        'name'      => 'Amphoe Lam Sonthi',
+        'latitude'  => '15.32833000',
+        'longitude' => '101.34783000',
+    ],
+    [
+        'id'        => 105672,
+        'name'      => 'Amphoe Nong Muang',
+        'latitude'  => '15.27740000',
+        'longitude' => '100.70413000',
+    ],
+    [
+        'id'        => 105732,
+        'name'      => 'Amphoe Phatthana Nikhom',
+        'latitude'  => '14.90917000',
+        'longitude' => '101.02673000',
+    ],
+    [
+        'id'        => 105816,
+        'name'      => 'Amphoe Sa Bot',
+        'latitude'  => '15.23832000',
+        'longitude' => '100.88318000',
+    ],
+    [
+        'id'        => 106276,
+        'name'      => 'Amphoe Tha Luang',
+        'latitude'  => '15.04786000',
+        'longitude' => '101.19986000',
+    ],
+    [
+        'id'        => 106291,
+        'name'      => 'Amphoe Tha Wung',
+        'latitude'  => '14.82506000',
+        'longitude' => '100.50921000',
+    ],
+    [
+        'id'        => 106461,
+        'name'      => 'Chai Badan',
+        'latitude'  => '15.20000000',
+        'longitude' => '101.13333000',
+    ],
+    [
+        'id'        => 106560,
+        'name'      => 'Lop Buri',
+        'latitude'  => '14.79808000',
+        'longitude' => '100.65397000',
+    ],
+    [
+        'id'        => 106571,
+        'name'      => 'Muang Lop Buri District',
+        'latitude'  => '14.82334000',
+        'longitude' => '100.67557000',
+    ],
+];

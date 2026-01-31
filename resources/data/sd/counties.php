@@ -1,0 +1,21 @@
+<?php
+return [
+    'Al Jazirah',
+    'Al Qadarif',
+    'Blue Nile',
+    'Central Darfur',
+    'East Darfur',
+    'Kassala',
+    'Khartoum',
+    'North Darfur',
+    'North Kordofan',
+    'Northern',
+    'Red Sea',
+    'River Nile',
+    'Sennar',
+    'South Darfur',
+    'South Kordofan',
+    'West Darfur',
+    'West Kordofan',
+    'White Nile',
+];

@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 81232,
+        'name'      => 'Altavas',
+        'latitude'  => '11.51937220',
+        'longitude' => '122.38395760',
+    ],
+    [
+        'id'        => 81462,
+        'name'      => 'Balete',
+        'latitude'  => '11.52259720',
+        'longitude' => '122.29336200',
+    ],
+    [
+        'id'        => 81522,
+        'name'      => 'Banga',
+        'latitude'  => '11.59926330',
+        'longitude' => '122.29023350',
+    ],
+    [
+        'id'        => 81613,
+        'name'      => 'Batan',
+        'latitude'  => '11.56991310',
+        'longitude' => '122.31240560',
+    ],
+    [
+        'id'        => 81914,
+        'name'      => 'Buruanga',
+        'latitude'  => '11.82986870',
+        'longitude' => '121.84434010',
+    ],
+    [
+        'id'        => 82709,
+        'name'      => 'Ibajay',
+        'latitude'  => '11.73394600',
+        'longitude' => '122.07758510',
+    ],
+    [
+        'id'        => 154475,
+        'name'      => 'Kalibo',
+        'latitude'  => '11.69854460',
+        'longitude' => '122.33619590',
+    ],
+    [
+        'id'        => 154476,
+        'name'      => 'Lezo',
+        'latitude'  => '11.68036010',
+        'longitude' => '122.27302710',
+    ],
+    [
+        'id'        => 83075,
+        'name'      => 'Libacao',
+        'latitude'  => '11.41467410',
+        'longitude' => '122.20092380',
+    ],
+    [
+        'id'        => 83308,
+        'name'      => 'Madalag',
+        'latitude'  => '11.44121480',
+        'longitude' => '122.07375060',
+    ],
+    [
+        'id'        => 83376,
+        'name'      => 'Makato',
+        'latitude'  => '11.71366850',
+        'longitude' => '122.18036730',
+    ],
+    [
+        'id'        => 83415,
+        'name'      => 'Malay',
+        'latitude'  => '11.91246850',
+        'longitude' => '121.86493950',
+    ],
+    [
+        'id'        => 83434,
+        'name'      => 'Malinao',
+        'latitude'  => '11.60513720',
+        'longitude' => '122.15049950',
+    ],
+    [
+        'id'        => 83736,
+        'name'      => 'Nabas',
+        'latitude'  => '11.85230360',
+        'longitude' => '121.95579400',
+    ],
+    [
+        'id'        => 83813,
+        'name'      => 'New Washington',
+        'latitude'  => '11.63431580',
+        'longitude' => '122.34151430',
+    ],
+    [
+        'id'        => 83831,
+        'name'      => 'Numancia',
+        'latitude'  => '11.71329610',
+        'longitude' => '122.29263690',
+    ],
+    [
+        'id'        => 85035,
+        'name'      => 'Tangalan',
+        'latitude'  => '11.73931560',
+        'longitude' => '122.16096950',
+    ],
+];

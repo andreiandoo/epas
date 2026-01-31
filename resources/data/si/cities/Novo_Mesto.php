@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 104208,
+        'name'      => 'Novo Mesto',
+        'latitude'  => '45.80397000',
+        'longitude' => '15.16886000',
+    ],
+];

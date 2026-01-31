@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 130184,
+        'name'      => 'Cao Lãnh',
+        'latitude'  => '10.46017000',
+        'longitude' => '105.63294000',
+    ],
+    [
+        'id'        => 130266,
+        'name'      => 'Huyện Cái Bè',
+        'latitude'  => '10.38824000',
+        'longitude' => '105.94620000',
+    ],
+    [
+        'id'        => 130241,
+        'name'      => 'Huyện Cai Lậy',
+        'latitude'  => '10.38943000',
+        'longitude' => '106.06774000',
+    ],
+    [
+        'id'        => 130252,
+        'name'      => 'Huyện Châu Thành',
+        'latitude'  => '10.38600000',
+        'longitude' => '106.27311000',
+    ],
+    [
+        'id'        => 130260,
+        'name'      => 'Huyện Chợ Gạo',
+        'latitude'  => '10.37373000',
+        'longitude' => '106.44341000',
+    ],
+    [
+        'id'        => 130293,
+        'name'      => 'Huyện Gò Công Đông',
+        'latitude'  => '10.36784000',
+        'longitude' => '106.74592000',
+    ],
+    [
+        'id'        => 130292,
+        'name'      => 'Huyện Gò Công Tây',
+        'latitude'  => '10.34527000',
+        'longitude' => '106.59851000',
+    ],
+    [
+        'id'        => 130340,
+        'name'      => 'Huyện Lai Vung',
+        'latitude'  => '10.24051000',
+        'longitude' => '105.66327000',
+    ],
+    [
+        'id'        => 130351,
+        'name'      => 'Huyện Lấp Vò',
+        'latitude'  => '10.35918000',
+        'longitude' => '105.60611000',
+    ],
+    [
+        'id'        => 130430,
+        'name'      => 'Huyện Tam Nông',
+        'latitude'  => '10.72761000',
+        'longitude' => '105.52522000',
+    ],
+    [
+        'id'        => 130483,
+        'name'      => 'Huyện Tân Hồng',
+        'latitude'  => '10.87089000',
+        'longitude' => '105.49104000',
+    ],
+    [
+        'id'        => 130486,
+        'name'      => 'Huyện Tân Phước',
+        'latitude'  => '10.51489000',
+        'longitude' => '106.23312000',
+    ],
+    [
+        'id'        => 130435,
+        'name'      => 'Huyện Thanh Bình',
+        'latitude'  => '10.60137000',
+        'longitude' => '105.47811000',
+    ],
+    [
+        'id'        => 130443,
+        'name'      => 'Huyện Tháp Mười',
+        'latitude'  => '10.54398000',
+        'longitude' => '105.81875000',
+    ],
+    [
+        'id'        => 130574,
+        'name'      => 'Mỹ Tho',
+        'latitude'  => '10.36004000',
+        'longitude' => '106.35996000',
+    ],
+    [
+        'id'        => 130589,
+        'name'      => 'Sa Dec',
+        'latitude'  => '10.29085000',
+        'longitude' => '105.75635000',
+    ],
+    [
+        'id'        => 130599,
+        'name'      => 'Thành Phố Mỹ Tho',
+        'latitude'  => '10.36221000',
+        'longitude' => '106.36824000',
+    ],
+    [
+        'id'        => 130607,
+        'name'      => 'Thị Trấn Tân Thành',
+        'latitude'  => '10.25616000',
+        'longitude' => '105.59280000',
+    ],
+    [
+        'id'        => 130610,
+        'name'      => 'Thị Xã Gò Công',
+        'latitude'  => '10.40005000',
+        'longitude' => '106.65847000',
+    ],
+];

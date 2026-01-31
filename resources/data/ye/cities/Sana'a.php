@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 130696,
+        'name'      => 'Al Haymah Ad Dakhiliyah',
+        'latitude'  => '15.27220000',
+        'longitude' => '43.83930000',
+    ],
+    [
+        'id'        => 130697,
+        'name'      => 'Al Haymah Al Kharijiyah',
+        'latitude'  => '15.02670000',
+        'longitude' => '43.85000000',
+    ],
+    [
+        'id'        => 130700,
+        'name'      => 'Al Husn',
+        'latitude'  => '15.02060000',
+        'longitude' => '44.50440000',
+    ],
+    [
+        'id'        => 130707,
+        'name'      => 'Al Khāniq',
+        'latitude'  => '15.50253000',
+        'longitude' => '44.18158000',
+    ],
+    [
+        'id'        => 130770,
+        'name'      => 'Arhab',
+        'latitude'  => '15.79950000',
+        'longitude' => '44.24660000',
+    ],
+    [
+        'id'        => 130802,
+        'name'      => 'Attyal',
+        'latitude'  => '15.32931000',
+        'longitude' => '44.57739000',
+    ],
+    [
+        'id'        => 130813,
+        'name'      => 'Bani Dhabyan',
+        'latitude'  => '15.04810000',
+        'longitude' => '44.87180000',
+    ],
+    [
+        'id'        => 130814,
+        'name'      => 'Bani Hushaysh',
+        'latitude'  => '15.45050000',
+        'longitude' => '44.37820000',
+    ],
+    [
+        'id'        => 130815,
+        'name'      => 'Bani Matar',
+        'latitude'  => '15.21500000',
+        'longitude' => '44.04980000',
+    ],
+    [
+        'id'        => 130825,
+        'name'      => 'Bilad Ar Rus',
+        'latitude'  => '15.03510000',
+        'longitude' => '44.25140000',
+    ],
+    [
+        'id'        => 130853,
+        'name'      => 'Hamdān',
+        'latitude'  => '15.50662000',
+        'longitude' => '44.06030000',
+    ],
+    [
+        'id'        => 130883,
+        'name'      => 'Jihanah',
+        'latitude'  => '15.19190000',
+        'longitude' => '44.51950000',
+    ],
+    [
+        'id'        => 130892,
+        'name'      => 'Khwlan',
+        'latitude'  => '15.27490000',
+        'longitude' => '44.76860000',
+    ],
+    [
+        'id'        => 130909,
+        'name'      => 'Manakhah',
+        'latitude'  => '15.07170000',
+        'longitude' => '43.68620000',
+    ],
+    [
+        'id'        => 130937,
+        'name'      => 'Nihm',
+        'latitude'  => '15.75160000',
+        'longitude' => '44.57460000',
+    ],
+    [
+        'id'        => 130958,
+        'name'      => 'Sa\'fan',
+        'latitude'  => '15.07120000',
+        'longitude' => '43.58270000',
+    ],
+    [
+        'id'        => 130971,
+        'name'      => 'Saḩar',
+        'latitude'  => '15.31637000',
+        'longitude' => '44.30880000',
+    ],
+    [
+        'id'        => 130965,
+        'name'      => 'Sanhan',
+        'latitude'  => '15.22520000',
+        'longitude' => '44.30570000',
+    ],
+    [
+        'id'        => 130970,
+        'name'      => 'Sayyān',
+        'latitude'  => '15.17177000',
+        'longitude' => '44.32442000',
+    ],
+];

@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleek Template Preview - Tixello</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ========================================
+           CSS RESET & BASE STYLES
+           ======================================== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --sleek-bg: #0a0a0f;
+            --sleek-surface: #12121a;
+            --sleek-surface-elevated: #1a1a24;
+            --sleek-border: rgba(255,255,255,0.08);
+            --sleek-border-light: rgba(255,255,255,0.12);
+            --sleek-text: #ffffff;
+            --sleek-text-muted: #94a3b8;
+            --sleek-text-subtle: #64748b;
+            --sleek-gradient-start: #6366f1;
+            --sleek-gradient-end: #8b5cf6;
+            --sleek-success: #10b981;
+            --sleek-warning: #f59e0b;
+            --sleek-error: #ef4444;
+            --sleek-glow: rgba(99, 102, 241, 0.15);
+            --sleek-radius: 16px;
+            --sleek-radius-sm: 12px;
+            --sleek-radius-xs: 8px;
+            --sleek-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--sleek-bg);
+            color: var(--sleek-text);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ========================================
+           HEADER STYLES
+           ======================================== */
+        .sleek-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--sleek-border);
+        }
+
+        .sleek-header-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        @media (min-width: 768px) {
+            .sleek-header-inner {
+                height: 72px;
+                padding: 0 2rem;
+            }
+        }
+
+        .sleek-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--sleek-text);
+            letter-spacing: -0.02em;
+        }
+
+        .sleek-logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sleek-nav {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .sleek-nav {
+                display: flex;
+            }
+        }
+
+        .sleek-nav-link {
+            padding: 0.5rem 1rem;
+            color: var(--sleek-text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-radius: var(--sleek-radius-xs);
+            transition: var(--sleek-transition);
+        }
+
+        .sleek-nav-link:hover {
+            color: var(--sleek-text);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .sleek-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sleek-cart-btn {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--sleek-border);
+            color: var(--sleek-text);
+            text-decoration: none;
+            transition: var(--sleek-transition);
+        }
+
+        .sleek-cart-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: var(--sleek-border-light);
+            transform: scale(1.05);
+        }
+
+        .sleek-cart-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end));
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px var(--sleek-glow);
+        }
+
+        .sleek-account-btn {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end));
+            color: white;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: 50px;
+            transition: var(--sleek-transition);
+            box-shadow: 0 4px 15px var(--sleek-glow);
+        }
+
+        @media (min-width: 768px) {
+            .sleek-account-btn {
+                display: flex;
+            }
+        }
+
+        .sleek-account-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--sleek-glow);
+        }
+
+        .sleek-menu-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: transparent;
+            color: var(--sleek-text);
+            cursor: pointer;
+            border-radius: var(--sleek-radius-xs);
+        }
+
+        @media (min-width: 768px) {
+            .sleek-menu-btn {
+                display: none;
+            }
+        }
+
+        /* ========================================
+           MAIN CONTENT
+           ======================================== */
+        main {
+            padding-top: 72px;
+            min-height: 100vh;
+        }
+
+        @media (max-width: 767px) {
+            main {
+                padding-top: 64px;
+                padding-bottom: 80px;
+            }
+        }
+
+        /* ========================================
+           DASHBOARD STYLES
+           ======================================== */
+        .sleek-dashboard {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1.5rem 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .sleek-dashboard {
+                padding: 3rem 2rem;
+            }
+        }
+
+        .sleek-dashboard-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .sleek-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 8px 24px var(--sleek-glow);
+        }
+
+        .sleek-greeting {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--sleek-text);
+            margin-bottom: 0.25rem;
+        }
+
+        .sleek-greeting-sub {
+            color: var(--sleek-text-muted);
+            font-size: 0.9rem;
+        }
+
+        .sleek-quick-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .sleek-quick-stats {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .sleek-stat-card {
+            background: var(--sleek-surface);
+            border: 1px solid var(--sleek-border);
+            border-radius: var(--sleek-radius);
+            padding: 1.25rem;
+            text-align: center;
+            transition: var(--sleek-transition);
+        }
+
+        .sleek-stat-card:hover {
+            border-color: var(--sleek-border-light);
+        }
+
+        .sleek-stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--sleek-text);
+            display: block;
+        }
+
+        .sleek-stat-label {
+            font-size: 0.75rem;
+            color: var(--sleek-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        .sleek-menu-section {
+            margin-bottom: 2rem;
+        }
+
+        .sleek-menu-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--sleek-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+            padding-left: 0.5rem;
+        }
+
+        .sleek-menu-list {
+            background: var(--sleek-surface);
+            border: 1px solid var(--sleek-border);
+            border-radius: var(--sleek-radius);
+            overflow: hidden;
+        }
+
+        .sleek-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            color: var(--sleek-text);
+            text-decoration: none;
+            border-bottom: 1px solid var(--sleek-border);
+            transition: var(--sleek-transition);
+            cursor: pointer;
+        }
+
+        .sleek-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .sleek-menu-item:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .sleek-menu-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--sleek-radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .sleek-menu-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .sleek-menu-icon.tickets {
+            background: rgba(99, 102, 241, 0.15);
+            color: #6366f1;
+        }
+
+        .sleek-menu-icon.orders {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+
+        .sleek-menu-icon.events {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .sleek-menu-icon.profile {
+            background: rgba(139, 92, 246, 0.15);
+            color: #8b5cf6;
+        }
+
+        .sleek-menu-icon.logout {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .sleek-menu-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .sleek-menu-content h3 {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--sleek-text);
+            margin: 0;
+        }
+
+        .sleek-menu-content p {
+            font-size: 0.8rem;
+            color: var(--sleek-text-muted);
+            margin: 0.125rem 0 0 0;
+        }
+
+        .sleek-menu-arrow {
+            color: var(--sleek-text-subtle);
+        }
+
+        /* ========================================
+           TICKET CARDS
+           ======================================== */
+        .sleek-page {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1.5rem 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .sleek-page {
+                padding: 2rem;
+            }
+        }
+
+        .sleek-page-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .sleek-page-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--sleek-text);
+            margin: 0;
+        }
+
+        .sleek-page-subtitle {
+            color: var(--sleek-text-muted);
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .sleek-ticket-card {
+            background: var(--sleek-surface);
+            border: 1px solid var(--sleek-border);
+            border-radius: var(--sleek-radius);
+            overflow: hidden;
+            margin-bottom: 1rem;
+            transition: var(--sleek-transition);
+        }
+
+        .sleek-ticket-card:hover {
+            border-color: var(--sleek-border-light);
+        }
+
+        .sleek-ticket-header {
+            display: flex;
+            gap: 1rem;
+            padding: 1.25rem;
+        }
+
+        .sleek-ticket-image {
+            width: 80px;
+            height: 80px;
+            border-radius: var(--sleek-radius-sm);
+            object-fit: cover;
+            background: linear-gradient(135deg, #1e1e2e, #2a2a3e);
+            flex-shrink: 0;
+        }
+
+        @media (min-width: 768px) {
+            .sleek-ticket-image {
+                width: 100px;
+                height: 100px;
+            }
+        }
+
+        .sleek-ticket-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .sleek-ticket-event {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--sleek-text);
+            margin-bottom: 0.375rem;
+        }
+
+        .sleek-ticket-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--sleek-text-muted);
+        }
+
+        .sleek-ticket-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .sleek-ticket-meta svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .sleek-ticket-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.875rem 1.25rem;
+            background: var(--sleek-surface-elevated);
+            border-top: 1px solid var(--sleek-border);
+        }
+
+        .sleek-ticket-type {
+            font-size: 0.8rem;
+            color: var(--sleek-text-muted);
+        }
+
+        .sleek-ticket-type strong {
+            color: var(--sleek-text);
+            font-weight: 600;
+        }
+
+        .sleek-ticket-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 50px;
+            text-transform: uppercase;
+        }
+
+        .sleek-ticket-status.valid {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+
+        /* ========================================
+           EVENT CARDS
+           ======================================== */
+        .sleek-events-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 640px) {
+            .sleek-events-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .sleek-events-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .sleek-event-card {
+            background: var(--sleek-surface);
+            border: 1px solid var(--sleek-border);
+            border-radius: var(--sleek-radius);
+            overflow: hidden;
+            transition: var(--sleek-transition);
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .sleek-event-card:hover {
+            border-color: var(--sleek-border-light);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .sleek-event-image {
+            aspect-ratio: 16/9;
+            background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end));
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sleek-event-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .sleek-event-card:hover .sleek-event-image img {
+            transform: scale(1.05);
+        }
+
+        .sleek-event-date-badge {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--sleek-radius-xs);
+            text-align: center;
+        }
+
+        .sleek-event-date-day {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1;
+        }
+
+        .sleek-event-date-month {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+        }
+
+        .sleek-event-body {
+            padding: 1.25rem;
+        }
+
+        .sleek-event-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--sleek-text);
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .sleek-event-venue {
+            font-size: 0.85rem;
+            color: var(--sleek-text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .sleek-event-venue svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .sleek-event-price {
+            font-weight: 700;
+            color: var(--sleek-gradient-start);
+        }
+
+        /* ========================================
+           MOBILE BOTTOM NAVIGATION
+           ======================================== */
+        .sleek-bottom-nav {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 90;
+            background: rgba(18, 18, 26, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--sleek-border);
+            padding: 0.5rem 0;
+            padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+        }
+
+        @media (min-width: 768px) {
+            .sleek-bottom-nav {
+                display: none;
+            }
+        }
+
+        .sleek-bottom-nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.5rem;
+            color: var(--sleek-text-muted);
+            text-decoration: none;
+            font-size: 0.65rem;
+            font-weight: 500;
+            transition: var(--sleek-transition);
+        }
+
+        .sleek-bottom-nav-item.active,
+        .sleek-bottom-nav-item:hover {
+            color: var(--sleek-gradient-start);
+        }
+
+        .sleek-bottom-nav-item svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* ========================================
+           FOOTER
+           ======================================== */
+        .sleek-footer {
+            background: var(--sleek-surface);
+            border-top: 1px solid var(--sleek-border);
+            margin-top: 4rem;
+        }
+
+        @media (max-width: 767px) {
+            .sleek-footer {
+                margin-bottom: 64px;
+            }
+        }
+
+        .sleek-footer-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .sleek-footer-inner {
+                padding: 4rem 2rem;
+            }
+        }
+
+        .sleek-footer-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .sleek-footer-grid {
+                grid-template-columns: 2fr 1fr 1fr 1fr;
+                gap: 3rem;
+            }
+        }
+
+        .sleek-footer-brand {
+            max-width: 300px;
+        }
+
+        .sleek-footer-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--sleek-text);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .sleek-footer-desc {
+            color: var(--sleek-text-muted);
+            font-size: 0.9rem;
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+        }
+
+        .sleek-social-icons {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .sleek-social-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--sleek-border);
+            border-radius: 50%;
+            color: var(--sleek-text-muted);
+            transition: var(--sleek-transition);
+        }
+
+        .sleek-social-link:hover {
+            background: var(--sleek-gradient-start);
+            border-color: var(--sleek-gradient-start);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .sleek-footer-col h4 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--sleek-text);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.25rem;
+        }
+
+        .sleek-footer-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .sleek-footer-link {
+            color: var(--sleek-text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: var(--sleek-transition);
+        }
+
+        .sleek-footer-link:hover {
+            color: var(--sleek-text);
+        }
+
+        .sleek-footer-bottom {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--sleek-border);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        @media (min-width: 768px) {
+            .sleek-footer-bottom {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+        }
+
+        .sleek-footer-copyright {
+            color: var(--sleek-text-subtle);
+            font-size: 0.85rem;
+        }
+
+        .sleek-footer-powered {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--sleek-text-subtle);
+            font-size: 0.85rem;
+        }
+
+        .sleek-footer-powered a {
+            color: var(--sleek-gradient-start);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* ========================================
+           BUTTONS
+           ======================================== */
+        .sleek-btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.75rem;
+            background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end));
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: var(--sleek-transition);
+            box-shadow: 0 4px 15px var(--sleek-glow);
+            text-decoration: none;
+        }
+
+        .sleek-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--sleek-glow);
+        }
+
+        /* ========================================
+           TAB NAVIGATION
+           ======================================== */
+        .sleek-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            padding: 0.5rem;
+            background: var(--sleek-surface);
+            border-radius: var(--sleek-radius);
+            border: 1px solid var(--sleek-border);
+        }
+
+        .sleek-tab {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            text-align: center;
+            color: var(--sleek-text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            border-radius: var(--sleek-radius-sm);
+            transition: var(--sleek-transition);
+            cursor: pointer;
+        }
+
+        .sleek-tab:hover {
+            color: var(--sleek-text);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .sleek-tab.active {
+            background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end));
+            color: white;
+        }
+
+        /* ========================================
+           ANIMATION
+           ======================================== */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="sleek-header">
+        <div class="sleek-header-inner">
+            <a href="#" class="sleek-logo">
+                <div class="sleek-logo-icon">
+                    <svg width="18" height="18" fill="white" viewBox="0 0 24 24">
+                        <path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <span>Tixello</span>
+            </a>
+
+            <nav class="sleek-nav">
+                <a href="#events" class="sleek-nav-link">Evenimente</a>
+                <a href="#" class="sleek-nav-link">Blog</a>
+                <a href="#" class="sleek-nav-link">Contact</a>
+            </nav>
+
+            <div class="sleek-header-actions">
+                <a href="#" class="sleek-cart-btn">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
+                    <span class="sleek-cart-badge">2</span>
+                </a>
+                <a href="#account" class="sleek-account-btn">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    <span>Contul meu</span>
+                </a>
+                <button class="sleek-menu-btn">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main>
+        <!-- Tab Navigation for Demo -->
+        <div style="max-width: 800px; margin: 0 auto; padding: 1rem;">
+            <div class="sleek-tabs">
+                <button class="sleek-tab active" onclick="showSection('dashboard')">Dashboard</button>
+                <button class="sleek-tab" onclick="showSection('tickets')">Bilete</button>
+                <button class="sleek-tab" onclick="showSection('events')">Evenimente</button>
+            </div>
+        </div>
+
+        <!-- DASHBOARD SECTION -->
+        <section id="dashboard-section" class="animate-in">
+            <div class="sleek-dashboard">
+                <div class="sleek-dashboard-header">
+                    <div class="sleek-avatar">A</div>
+                    <h1 class="sleek-greeting">Salut, Alexandru!</h1>
+                    <p class="sleek-greeting-sub">Gestioneaza-ti biletele si comenzile</p>
+                </div>
+
+                <div class="sleek-quick-stats">
+                    <div class="sleek-stat-card">
+                        <span class="sleek-stat-value">5</span>
+                        <span class="sleek-stat-label">Bilete</span>
+                    </div>
+                    <div class="sleek-stat-card">
+                        <span class="sleek-stat-value">3</span>
+                        <span class="sleek-stat-label">Comenzi</span>
+                    </div>
+                    <div class="sleek-stat-card">
+                        <span class="sleek-stat-value">2</span>
+                        <span class="sleek-stat-label">Evenimente</span>
+                    </div>
+                    <div class="sleek-stat-card">
+                        <span class="sleek-stat-value">850</span>
+                        <span class="sleek-stat-label">RON</span>
+                    </div>
+                </div>
+
+                <div class="sleek-menu-section">
+                    <h2 class="sleek-menu-title">Bilete & Comenzi</h2>
+                    <div class="sleek-menu-list">
+                        <a href="#" class="sleek-menu-item">
+                            <div class="sleek-menu-icon tickets">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                                </svg>
+                            </div>
+                            <div class="sleek-menu-content">
+                                <h3>Biletele mele</h3>
+                                <p>Vizualizeaza si descarca biletele</p>
+                            </div>
+                            <svg class="sleek-menu-arrow" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="sleek-menu-item">
+                            <div class="sleek-menu-icon orders">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                            </div>
+                            <div class="sleek-menu-content">
+                                <h3>Comenzile mele</h3>
+                                <p>Istoricul comenzilor</p>
+                            </div>
+                            <svg class="sleek-menu-arrow" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="sleek-menu-item">
+                            <div class="sleek-menu-icon events">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div class="sleek-menu-content">
+                                <h3>Evenimentele mele</h3>
+                                <p>Evenimente la care vei participa</p>
+                            </div>
+                            <svg class="sleek-menu-arrow" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="sleek-menu-section">
+                    <h2 class="sleek-menu-title">Setari</h2>
+                    <div class="sleek-menu-list">
+                        <a href="#" class="sleek-menu-item">
+                            <div class="sleek-menu-icon profile">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                            </div>
+                            <div class="sleek-menu-content">
+                                <h3>Profil</h3>
+                                <p>Editeaza datele personale</p>
+                            </div>
+                            <svg class="sleek-menu-arrow" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                        <div class="sleek-menu-item">
+                            <div class="sleek-menu-icon logout">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                                </svg>
+                            </div>
+                            <div class="sleek-menu-content">
+                                <h3 style="color: #ef4444;">Deconecteaza-te</h3>
+                                <p>Iesi din cont</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TICKETS SECTION -->
+        <section id="tickets-section" style="display: none;">
+            <div class="sleek-page animate-in">
+                <div class="sleek-page-header">
+                    <h1 class="sleek-page-title">Biletele mele</h1>
+                    <p class="sleek-page-subtitle">Toate biletele tale intr-un singur loc</p>
+                </div>
+
+                <div class="sleek-ticket-card">
+                    <div class="sleek-ticket-header">
+                        <div class="sleek-ticket-image"></div>
+                        <div class="sleek-ticket-info">
+                            <h3 class="sleek-ticket-event">Coldplay - Music of the Spheres World Tour</h3>
+                            <div class="sleek-ticket-meta">
+                                <span>
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    Mar, 15 Iun 2024
+                                </span>
+                                <span>
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    </svg>
+                                    Arena Nationala, Bucuresti
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sleek-ticket-footer">
+                        <div class="sleek-ticket-type">
+                            <strong>VIP Standing</strong> &bull; #TKT-2024-001234
+                        </div>
+                        <span class="sleek-ticket-status valid">Valid</span>
+                    </div>
+                </div>
+
+                <div class="sleek-ticket-card">
+                    <div class="sleek-ticket-header">
+                        <div class="sleek-ticket-image"></div>
+                        <div class="sleek-ticket-info">
+                            <h3 class="sleek-ticket-event">Electric Castle Festival 2024</h3>
+                            <div class="sleek-ticket-meta">
+                                <span>
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    Vin, 19 Jul 2024
+                                </span>
+                                <span>
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    </svg>
+                                    Castelul Banffy, Cluj
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sleek-ticket-footer">
+                        <div class="sleek-ticket-type">
+                            <strong>4-Day Pass</strong> &bull; #TKT-2024-005678
+                        </div>
+                        <span class="sleek-ticket-status valid">Valid</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- EVENTS SECTION -->
+        <section id="events-section" style="display: none;">
+            <div class="sleek-page animate-in" style="max-width: 1200px;">
+                <div class="sleek-page-header">
+                    <h1 class="sleek-page-title">Evenimente</h1>
+                    <p class="sleek-page-subtitle">Descopera cele mai bune evenimente</p>
+                </div>
+
+                <div class="sleek-events-grid">
+                    <a href="#" class="sleek-event-card">
+                        <div class="sleek-event-image">
+                            <div class="sleek-event-date-badge">
+                                <div class="sleek-event-date-day">15</div>
+                                <div class="sleek-event-date-month">Iun</div>
+                            </div>
+                        </div>
+                        <div class="sleek-event-body">
+                            <h3 class="sleek-event-title">Coldplay - Music of the Spheres</h3>
+                            <div class="sleek-event-venue">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                </svg>
+                                Arena Nationala, Bucuresti
+                            </div>
+                            <span class="sleek-event-price">de la 350 RON</span>
+                        </div>
+                    </a>
+
+                    <a href="#" class="sleek-event-card">
+                        <div class="sleek-event-image">
+                            <div class="sleek-event-date-badge">
+                                <div class="sleek-event-date-day">19</div>
+                                <div class="sleek-event-date-month">Iul</div>
+                            </div>
+                        </div>
+                        <div class="sleek-event-body">
+                            <h3 class="sleek-event-title">Electric Castle Festival 2024</h3>
+                            <div class="sleek-event-venue">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                </svg>
+                                Castelul Banffy, Cluj
+                            </div>
+                            <span class="sleek-event-price">de la 599 RON</span>
+                        </div>
+                    </a>
+
+                    <a href="#" class="sleek-event-card">
+                        <div class="sleek-event-image">
+                            <div class="sleek-event-date-badge">
+                                <div class="sleek-event-date-day">22</div>
+                                <div class="sleek-event-date-month">Aug</div>
+                            </div>
+                        </div>
+                        <div class="sleek-event-body">
+                            <h3 class="sleek-event-title">Untold Festival 2024</h3>
+                            <div class="sleek-event-venue">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                </svg>
+                                Cluj Arena, Cluj-Napoca
+                            </div>
+                            <span class="sleek-event-price">de la 449 RON</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MOBILE BOTTOM NAVIGATION -->
+    <nav class="sleek-bottom-nav">
+        <a href="#" class="sleek-bottom-nav-item active" onclick="showSection('dashboard')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+            </svg>
+            Acasa
+        </a>
+        <a href="#" class="sleek-bottom-nav-item" onclick="showSection('events')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            Descopera
+        </a>
+        <a href="#" class="sleek-bottom-nav-item" onclick="showSection('tickets')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+            </svg>
+            Bilete
+        </a>
+        <a href="#" class="sleek-bottom-nav-item" onclick="showSection('dashboard')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            Cont
+        </a>
+    </nav>
+
+    <!-- FOOTER -->
+    <footer class="sleek-footer">
+        <div class="sleek-footer-inner">
+            <div class="sleek-footer-grid">
+                <div class="sleek-footer-brand">
+                    <span class="sleek-footer-logo">Tixello</span>
+                    <p class="sleek-footer-desc">Descopera cele mai bune evenimente si cumpara bilete online in cel mai simplu mod posibil.</p>
+                    <div class="sleek-social-icons">
+                        <a href="#" class="sleek-social-link">
+                            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                        </a>
+                        <a href="#" class="sleek-social-link">
+                            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="sleek-footer-col">
+                    <h4>Navigare</h4>
+                    <div class="sleek-footer-links">
+                        <a href="#" class="sleek-footer-link">Evenimente</a>
+                        <a href="#" class="sleek-footer-link">Evenimente trecute</a>
+                        <a href="#" class="sleek-footer-link">Blog</a>
+                        <a href="#" class="sleek-footer-link">Contul meu</a>
+                    </div>
+                </div>
+
+                <div class="sleek-footer-col">
+                    <h4>Cont</h4>
+                    <div class="sleek-footer-links">
+                        <a href="#" class="sleek-footer-link">Comenzile mele</a>
+                        <a href="#" class="sleek-footer-link">Biletele mele</a>
+                        <a href="#" class="sleek-footer-link">Profil</a>
+                    </div>
+                </div>
+
+                <div class="sleek-footer-col">
+                    <h4>Legal</h4>
+                    <div class="sleek-footer-links">
+                        <a href="#" class="sleek-footer-link">Termeni si conditii</a>
+                        <a href="#" class="sleek-footer-link">Confidentialitate</a>
+                        <a href="#" class="sleek-footer-link">GDPR</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sleek-footer-bottom">
+                <p class="sleek-footer-copyright">&copy; 2024 Tixello. Toate drepturile rezervate.</p>
+                <div class="sleek-footer-powered">
+                    <span>Powered by</span>
+                    <a href="#">Tixello Platform</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function showSection(section) {
+            // Hide all sections
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('tickets-section').style.display = 'none';
+            document.getElementById('events-section').style.display = 'none';
+
+            // Show selected section
+            document.getElementById(section + '-section').style.display = 'block';
+
+            // Update tabs
+            document.querySelectorAll('.sleek-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.sleek-tab')[section === 'dashboard' ? 0 : section === 'tickets' ? 1 : 2].classList.add('active');
+
+            // Update bottom nav
+            document.querySelectorAll('.sleek-bottom-nav-item').forEach(item => item.classList.remove('active'));
+            if (section === 'dashboard') {
+                document.querySelectorAll('.sleek-bottom-nav-item')[0].classList.add('active');
+            } else if (section === 'events') {
+                document.querySelectorAll('.sleek-bottom-nav-item')[1].classList.add('active');
+            } else if (section === 'tickets') {
+                document.querySelectorAll('.sleek-bottom-nav-item')[2].classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

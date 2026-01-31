@@ -1,0 +1,11 @@
+name,slug,description,parent_slug
+Outdoor,outdoor,Outdoor events,
+Indoor,indoor,Indoor events,
+Family Friendly,family-friendly,Suitable for families with children,
+18+,18-plus,Adults only,
+Seated,seated,Seated events,
+Standing,standing,Standing room events,
+Free Entry,free-entry,Free admission,
+VIP Available,vip-available,VIP tickets available,
+Food & Drinks,food-drinks,Food and drinks available,
+Parking Available,parking-available,Parking facilities available,

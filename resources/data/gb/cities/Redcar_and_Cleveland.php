@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 48510,
+        'name'      => 'Bilsdale',
+        'latitude'  => '54.37356000',
+        'longitude' => '-1.11923000',
+    ],
+    [
+        'id'        => 48593,
+        'name'      => 'Boosbeck',
+        'latitude'  => '54.54265000',
+        'longitude' => '-0.98139000',
+    ],
+    [
+        'id'        => 48726,
+        'name'      => 'Brotton',
+        'latitude'  => '54.56661000',
+        'longitude' => '-0.93929000',
+    ],
+    [
+        'id'        => 48777,
+        'name'      => 'Burniston',
+        'latitude'  => '54.32385000',
+        'longitude' => '-0.44813000',
+    ],
+    [
+        'id'        => 49230,
+        'name'      => 'Danby',
+        'latitude'  => '54.46606000',
+        'longitude' => '-0.91073000',
+    ],
+    [
+        'id'        => 49764,
+        'name'      => 'Guisborough',
+        'latitude'  => '54.53478000',
+        'longitude' => '-1.05606000',
+    ],
+    [
+        'id'        => 50051,
+        'name'      => 'Ingleby Greenhow',
+        'latitude'  => '54.44983000',
+        'longitude' => '-1.10687000',
+    ],
+    [
+        'id'        => 50201,
+        'name'      => 'Kirkbymoorside',
+        'latitude'  => '54.27014000',
+        'longitude' => '-0.93218000',
+    ],
+    [
+        'id'        => 50308,
+        'name'      => 'Lingdale',
+        'latitude'  => '54.53787000',
+        'longitude' => '-0.95864000',
+    ],
+    [
+        'id'        => 50386,
+        'name'      => 'Loftus',
+        'latitude'  => '54.55543000',
+        'longitude' => '-0.89459000',
+    ],
+    [
+        'id'        => 50519,
+        'name'      => 'Marske-by-the-Sea',
+        'latitude'  => '54.59147000',
+        'longitude' => '-1.01959000',
+    ],
+    [
+        'id'        => 50690,
+        'name'      => 'New Marske',
+        'latitude'  => '54.57848000',
+        'longitude' => '-1.04224000',
+    ],
+    [
+        'id'        => 51048,
+        'name'      => 'Redcar',
+        'latitude'  => '54.61657000',
+        'longitude' => '-1.05999000',
+    ],
+    [
+        'id'        => 51049,
+        'name'      => 'Redcar and Cleveland',
+        'latitude'  => '54.55000000',
+        'longitude' => '-1.00000000',
+    ],
+    [
+        'id'        => 51187,
+        'name'      => 'Saltburn-by-the-Sea',
+        'latitude'  => '54.58237000',
+        'longitude' => '-0.97367000',
+    ],
+    [
+        'id'        => 51324,
+        'name'      => 'Skinningrove',
+        'latitude'  => '54.56908000',
+        'longitude' => '-0.89869000',
+    ],
+    [
+        'id'        => 51330,
+        'name'      => 'Sleights',
+        'latitude'  => '54.45506000',
+        'longitude' => '-0.66484000',
+    ],
+    [
+        'id'        => 51868,
+        'name'      => 'Whitby',
+        'latitude'  => '54.48774000',
+        'longitude' => '-0.61498000',
+    ],
+];

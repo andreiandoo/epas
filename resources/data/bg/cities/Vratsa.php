@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 9280,
+        'name'      => 'Borovan',
+        'latitude'  => '43.44635800',
+        'longitude' => '23.73543160',
+    ],
+    [
+        'id'        => 9295,
+        'name'      => 'Byala Slatina',
+        'latitude'  => '43.46667000',
+        'longitude' => '23.93333000',
+    ],
+    [
+        'id'        => 9344,
+        'name'      => 'Hayredin',
+        'latitude'  => '43.60193000',
+        'longitude' => '23.66135000',
+    ],
+    [
+        'id'        => 9373,
+        'name'      => 'Kozloduy',
+        'latitude'  => '43.77864000',
+        'longitude' => '23.72058000',
+    ],
+    [
+        'id'        => 9376,
+        'name'      => 'Krivodol',
+        'latitude'  => '43.37444000',
+        'longitude' => '23.48444000',
+    ],
+    [
+        'id'        => 9400,
+        'name'      => 'Mezdra',
+        'latitude'  => '43.15000000',
+        'longitude' => '23.70000000',
+    ],
+    [
+        'id'        => 9403,
+        'name'      => 'Mizia',
+        'latitude'  => '43.68623000',
+        'longitude' => '23.85371000',
+    ],
+    [
+        'id'        => 9434,
+        'name'      => 'Obshtina Borovan',
+        'latitude'  => '43.43333000',
+        'longitude' => '23.75000000',
+    ],
+    [
+        'id'        => 9488,
+        'name'      => 'Obshtina Hayredin',
+        'latitude'  => '43.58333000',
+        'longitude' => '23.66667000',
+    ],
+    [
+        'id'        => 9510,
+        'name'      => 'Obshtina Kozloduy',
+        'latitude'  => '43.71667000',
+        'longitude' => '23.73333000',
+    ],
+    [
+        'id'        => 9513,
+        'name'      => 'Obshtina Krivodol',
+        'latitude'  => '43.38333000',
+        'longitude' => '23.48333000',
+    ],
+    [
+        'id'        => 9531,
+        'name'      => 'Obshtina Mezdra',
+        'latitude'  => '43.13333000',
+        'longitude' => '23.73333000',
+    ],
+    [
+        'id'        => 9534,
+        'name'      => 'Obshtina Mizia',
+        'latitude'  => '43.63333000',
+        'longitude' => '23.85000000',
+    ],
+    [
+        'id'        => 9546,
+        'name'      => 'Obshtina Oryahovo',
+        'latitude'  => '43.69038000',
+        'longitude' => '23.98643000',
+    ],
+    [
+        'id'        => 9574,
+        'name'      => 'Obshtina Roman',
+        'latitude'  => '43.15000000',
+        'longitude' => '23.91667000',
+    ],
+    [
+        'id'        => 9631,
+        'name'      => 'Obshtina Vratsa',
+        'latitude'  => '43.28333000',
+        'longitude' => '23.60000000',
+    ],
+    [
+        'id'        => 9643,
+        'name'      => 'Oryahovo',
+        'latitude'  => '43.73618000',
+        'longitude' => '23.96052000',
+    ],
+    [
+        'id'        => 9672,
+        'name'      => 'Roman',
+        'latitude'  => '43.14637670',
+        'longitude' => '23.92549080',
+    ],
+    [
+        'id'        => 9742,
+        'name'      => 'Vratsa',
+        'latitude'  => '43.21000000',
+        'longitude' => '23.56250000',
+    ],
+];

@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 107318,
+        'name'      => 'Başmakçı',
+        'latitude'  => '37.89722000',
+        'longitude' => '30.01167000',
+    ],
+    [
+        'id'        => 107293,
+        'name'      => 'Bayat',
+        'latitude'  => '38.98306000',
+        'longitude' => '30.92472000',
+    ],
+    [
+        'id'        => 107367,
+        'name'      => 'Bolvadin',
+        'latitude'  => '38.71111000',
+        'longitude' => '31.04861000',
+    ],
+    [
+        'id'        => 108795,
+        'name'      => 'Çay',
+        'latitude'  => '38.59167000',
+        'longitude' => '31.02861000',
+    ],
+    [
+        'id'        => 108841,
+        'name'      => 'Çobanlar',
+        'latitude'  => '38.71085000',
+        'longitude' => '30.78874000',
+    ],
+    [
+        'id'        => 107455,
+        'name'      => 'Dazkırı',
+        'latitude'  => '37.91861000',
+        'longitude' => '29.86056000',
+    ],
+    [
+        'id'        => 107498,
+        'name'      => 'Dinar',
+        'latitude'  => '38.06500000',
+        'longitude' => '30.16557000',
+    ],
+    [
+        'id'        => 107576,
+        'name'      => 'Emirdağ',
+        'latitude'  => '39.01972000',
+        'longitude' => '31.15000000',
+    ],
+    [
+        'id'        => 107612,
+        'name'      => 'Evciler',
+        'latitude'  => '38.04139000',
+        'longitude' => '29.88667000',
+    ],
+    [
+        'id'        => 107831,
+        'name'      => 'Hocalar',
+        'latitude'  => '38.57824000',
+        'longitude' => '29.96768000',
+    ],
+    [
+        'id'        => 108883,
+        'name'      => 'İhsaniye',
+        'latitude'  => '39.02916000',
+        'longitude' => '30.41639000',
+    ],
+    [
+        'id'        => 108912,
+        'name'      => 'İscehisar',
+        'latitude'  => '38.93900000',
+        'longitude' => '30.75002000',
+    ],
+    [
+        'id'        => 108120,
+        'name'      => 'Kızılören',
+        'latitude'  => '38.25806000',
+        'longitude' => '30.15167000',
+    ],
+    [
+        'id'        => 108190,
+        'name'      => 'Merkez',
+        'latitude'  => '38.79698000',
+        'longitude' => '30.51951000',
+    ],
+    [
+        'id'        => 108383,
+        'name'      => 'Sandıklı',
+        'latitude'  => '38.46472000',
+        'longitude' => '30.26946000',
+    ],
+    [
+        'id'        => 108468,
+        'name'      => 'Sinanpaşa',
+        'latitude'  => '38.74444000',
+        'longitude' => '30.24278000',
+    ],
+    [
+        'id'        => 108964,
+        'name'      => 'Şuhut',
+        'latitude'  => '38.53111000',
+        'longitude' => '30.54583000',
+    ],
+    [
+        'id'        => 108493,
+        'name'      => 'Sultandağı',
+        'latitude'  => '38.53111000',
+        'longitude' => '31.22806000',
+    ],
+];

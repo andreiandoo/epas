@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Șterge contul - AmBilet.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #F8FAFC;
+            color: #1E293B;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: white;
+            border-bottom: 1px solid #E2E8F0;
+            padding: 1rem 2rem;
+        }
+
+        .header-content {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+
+        .logo-icon { width: 40px; height: 40px; }
+        .logo-text { font-size: 1.5rem; font-weight: 700; }
+        .logo-text .am { color: #1E293B; }
+        .logo-text .bilet { color: #A51C30; }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .delete-card {
+            background: white;
+            border-radius: 1.5rem;
+            border: 1px solid #E2E8F0;
+            max-width: 500px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .delete-header {
+            background: linear-gradient(135deg, #DC2626, #B91C1C);
+            padding: 2rem;
+            text-align: center;
+            color: white;
+        }
+
+        .delete-icon {
+            width: 72px;
+            height: 72px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .delete-icon svg {
+            width: 36px;
+            height: 36px;
+        }
+
+        .delete-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .delete-header p {
+            font-size: 0.9375rem;
+            opacity: 0.9;
+        }
+
+        .delete-body {
+            padding: 2rem;
+        }
+
+        .warning-box {
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .warning-box h3 {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: #991B1B;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .warning-box h3 svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .warning-list {
+            list-style: none;
+            font-size: 0.875rem;
+            color: #991B1B;
+        }
+
+        .warning-list li {
+            padding: 0.375rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .warning-list li::before {
+            content: '✕';
+            position: absolute;
+            left: 0;
+            color: #DC2626;
+            font-weight: bold;
+        }
+
+        .account-summary {
+            background: #F8FAFC;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .account-summary h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #64748B;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 0.75rem;
+            background: white;
+            border-radius: 0.5rem;
+        }
+
+        .summary-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1E293B;
+        }
+
+        .summary-label {
+            font-size: 0.75rem;
+            color: #64748B;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1E293B;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 1px solid #E2E8F0;
+            border-radius: 0.5rem;
+            font-family: inherit;
+            font-size: 0.9375rem;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #DC2626;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+
+        .form-hint {
+            font-size: 0.75rem;
+            color: #64748B;
+            margin-top: 0.375rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
+        .checkbox-item input { display: none; }
+
+        .checkbox-custom {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #E2E8F0;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            margin-top: 2px;
+        }
+
+        .checkbox-item input:checked + .checkbox-custom {
+            background: #DC2626;
+            border-color: #DC2626;
+        }
+
+        .checkbox-custom svg {
+            width: 14px;
+            height: 14px;
+            color: white;
+            opacity: 0;
+        }
+
+        .checkbox-item input:checked + .checkbox-custom svg { opacity: 1; }
+
+        .checkbox-label {
+            font-size: 0.875rem;
+            color: #475569;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.875rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.9375rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn-cancel {
+            background: #F1F5F9;
+            color: #475569;
+        }
+
+        .btn-cancel:hover {
+            background: #E2E8F0;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #DC2626, #B91C1C);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        }
+
+        .btn-danger:disabled {
+            background: #FCA5A5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .alternative-box {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #E2E8F0;
+            text-align: center;
+        }
+
+        .alternative-box p {
+            font-size: 0.875rem;
+            color: #64748B;
+            margin-bottom: 0.75rem;
+        }
+
+        .alternative-link {
+            color: #A51C30;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .alternative-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .header { padding: 1rem; }
+            .delete-header { padding: 1.5rem; }
+            .delete-body { padding: 1.5rem; }
+            .btn-group { flex-direction: column; }
+            .summary-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <svg class="logo-icon" viewBox="0 0 48 48" fill="none">
+                    <rect x="4" y="12" width="40" height="24" rx="4" fill="url(#grad)"/>
+                    <path d="M4 16C4 13.79 5.79 12 8 12H14V36H8C5.79 36 4 34.21 4 32V16Z" fill="#1E293B"/>
+                    <circle cx="14" cy="12" r="3" fill="#F8FAFC"/><circle cx="14" cy="36" r="3" fill="#F8FAFC"/>
+                    <rect x="20" y="18" width="12" height="2" rx="1" fill="white" opacity="0.8"/>
+                    <rect x="20" y="23" width="18" height="2" rx="1" fill="white" opacity="0.6"/>
+                    <defs><linearGradient id="grad" x1="4" y1="12" x2="44" y2="36"><stop stop-color="#A51C30"/><stop offset="1" stop-color="#C41E3A"/></linearGradient></defs>
+                </svg>
+                <span class="logo-text"><span class="am">Am</span><span class="bilet">Bilet</span></span>
+            </a>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="delete-card">
+            <div class="delete-header">
+                <div class="delete-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </div>
+                <h1>Șterge contul definitiv</h1>
+                <p>Această acțiune este ireversibilă</p>
+            </div>
+
+            <div class="delete-body">
+                <div class="warning-box">
+                    <h3>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        Vei pierde permanent
+                    </h3>
+                    <ul class="warning-list">
+                        <li>Toate biletele și istoricul comenzilor</li>
+                        <li>Creditul și recompensele acumulate (200 RON)</li>
+                        <li>Recenziile și preferințele salvate</li>
+                        <li>Accesul la evenimente viitoare achiziționate</li>
+                        <li>Link-urile de referral și bonusurile asociate</li>
+                    </ul>
+                </div>
+
+                <div class="account-summary">
+                    <h3>Ce vei pierde</h3>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="summary-value">47</div>
+                            <div class="summary-label">Bilete achiziționate</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value">200 RON</div>
+                            <div class="summary-label">Credit disponibil</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value">12</div>
+                            <div class="summary-label">Recenzii scrise</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value">3</div>
+                            <div class="summary-label">Bilete active</div>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="deleteForm">
+                    <div class="form-group">
+                        <label class="form-label">Introdu parola pentru confirmare</label>
+                        <input type="password" class="form-input" placeholder="Parola curentă" required>
+                        <p class="form-hint">Pentru securitate, confirmă identitatea ta</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">De ce pleci? (opțional)</label>
+                        <select class="form-input">
+                            <option value="">Selectează un motiv</option>
+                            <option value="not-using">Nu mai folosesc serviciul</option>
+                            <option value="privacy">Motive de confidențialitate</option>
+                            <option value="alternative">Am găsit o alternativă</option>
+                            <option value="experience">Experiență nesatisfăcătoare</option>
+                            <option value="other">Alt motiv</option>
+                        </select>
+                    </div>
+
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="confirm1" required>
+                        <span class="checkbox-custom">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        </span>
+                        <span class="checkbox-label">Înțeleg că toate datele mele vor fi șterse permanent și nu pot fi recuperate</span>
+                    </label>
+
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="confirm2" required>
+                        <span class="checkbox-custom">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        </span>
+                        <span class="checkbox-label">Confirm că vreau să șterg definitiv contul meu AmBilet</span>
+                    </label>
+
+                    <div class="btn-group">
+                        <a href="/account/settings" class="btn btn-cancel">Anulează</a>
+                        <button type="submit" class="btn btn-danger" id="deleteBtn" disabled>Șterge contul</button>
+                    </div>
+                </form>
+
+                <div class="alternative-box">
+                    <p>Nu ești sigur? Poți dezactiva temporar contul în schimb.</p>
+                    <a href="/account/settings/deactivate" class="alternative-link">Dezactivează contul temporar →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        const deleteBtn = document.getElementById('deleteBtn');
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', () => {
+                const allChecked = Array.from(checkboxes).every(c => c.checked);
+                deleteBtn.disabled = !allChecked;
+            });
+        });
+    </script>
+</body>
+</html>

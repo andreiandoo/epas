@@ -1,0 +1,22 @@
+<?php
+return [
+    'Ba',
+    'Bua',
+    'Cakaudrove',
+    'Central',
+    'Eastern',
+    'Kadavu',
+    'Lau',
+    'Lomaiviti',
+    'Macuata',
+    'Nadroga-Navosa',
+    'Naitasiri',
+    'Namosi',
+    'Northern',
+    'Ra',
+    'Rewa',
+    'Rotuma',
+    'Serua',
+    'Tailevu',
+    'Western',
+];

@@ -1,0 +1,13 @@
+<?php
+return [
+    'Brokopondo',
+    'Commewijne',
+    'Coronie',
+    'Marowijne',
+    'Nickerie',
+    'Para',
+    'Paramaribo',
+    'Saramacca',
+    'Sipaliwini',
+    'Wanica',
+];

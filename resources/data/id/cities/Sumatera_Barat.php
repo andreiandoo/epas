@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 56234,
+        'name'      => 'Bukittinggi',
+        'latitude'  => '-0.30907000',
+        'longitude' => '100.37055000',
+    ],
+    [
+        'id'        => 56318,
+        'name'      => 'Kabupaten Agam',
+        'latitude'  => '-0.25000000',
+        'longitude' => '100.16667000',
+    ],
+    [
+        'id'        => 56398,
+        'name'      => 'Kabupaten Dharmasraya',
+        'latitude'  => '-1.05000000',
+        'longitude' => '101.36700000',
+    ],
+    [
+        'id'        => 56452,
+        'name'      => 'Kabupaten Kepulauan Mentawai',
+        'latitude'  => '1.98917000',
+        'longitude' => '99.51889000',
+    ],
+    [
+        'id'        => 56494,
+        'name'      => 'Kabupaten Lima Puluh Kota',
+        'latitude'  => '-0.01680000',
+        'longitude' => '100.58720000',
+    ],
+    [
+        'id'        => 56571,
+        'name'      => 'Kabupaten Padang Pariaman',
+        'latitude'  => '-0.60000000',
+        'longitude' => '100.28333000',
+    ],
+    [
+        'id'        => 56579,
+        'name'      => 'Kabupaten Pasaman',
+        'latitude'  => '0.42503000',
+        'longitude' => '99.94606000',
+    ],
+    [
+        'id'        => 56580,
+        'name'      => 'Kabupaten Pasaman Barat',
+        'latitude'  => '0.28152000',
+        'longitude' => '99.51965000',
+    ],
+    [
+        'id'        => 56592,
+        'name'      => 'Kabupaten Pesisir Selatan',
+        'latitude'  => '-1.58333000',
+        'longitude' => '100.85000000',
+    ],
+    [
+        'id'        => 56631,
+        'name'      => 'Kabupaten Sijunjung',
+        'latitude'  => '-1.18270000',
+        'longitude' => '101.60560000',
+    ],
+    [
+        'id'        => 56638,
+        'name'      => 'Kabupaten Solok',
+        'latitude'  => '-0.96667000',
+        'longitude' => '100.81667000',
+    ],
+    [
+        'id'        => 56639,
+        'name'      => 'Kabupaten Solok Selatan',
+        'latitude'  => '-1.23333000',
+        'longitude' => '101.41700000',
+    ],
+    [
+        'id'        => 56664,
+        'name'      => 'Kabupaten Tanah Datar',
+        'latitude'  => '-0.45550000',
+        'longitude' => '100.57710000',
+    ],
+    [
+        'id'        => 56893,
+        'name'      => 'Padang',
+        'latitude'  => '-0.94924000',
+        'longitude' => '100.35427000',
+    ],
+    [
+        'id'        => 56917,
+        'name'      => 'Pariaman',
+        'latitude'  => '-0.61898000',
+        'longitude' => '100.11997000',
+    ],
+    [
+        'id'        => 56923,
+        'name'      => 'Payakumbuh',
+        'latitude'  => '-0.21590000',
+        'longitude' => '100.63340000',
+    ],
+    [
+        'id'        => 56977,
+        'name'      => 'Sijunjung',
+        'latitude'  => '-0.70050000',
+        'longitude' => '100.97740000',
+    ],
+    [
+        'id'        => 56993,
+        'name'      => 'Solok',
+        'latitude'  => '-0.80060000',
+        'longitude' => '100.65710000',
+    ],
+];

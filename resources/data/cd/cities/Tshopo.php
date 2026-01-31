@@ -1,0 +1,21 @@
+<?php
+return [
+    [
+        'id'        => 17227,
+        'name'      => 'Basoko',
+        'latitude'  => '1.23909000',
+        'longitude' => '23.61598000',
+    ],
+    [
+        'id'        => 17265,
+        'name'      => 'Kisangani',
+        'latitude'  => '0.51528000',
+        'longitude' => '25.19099000',
+    ],
+    [
+        'id'        => 17293,
+        'name'      => 'Yangambi',
+        'latitude'  => '0.76755000',
+        'longitude' => '24.43973000',
+    ],
+];

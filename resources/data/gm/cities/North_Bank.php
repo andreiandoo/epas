@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 52220,
+        'name'      => 'Bambali',
+        'latitude'  => '13.48333000',
+        'longitude' => '-15.33333000',
+    ],
+    [
+        'id'        => 52224,
+        'name'      => 'Barra',
+        'latitude'  => '13.48278000',
+        'longitude' => '-16.54556000',
+    ],
+    [
+        'id'        => 52230,
+        'name'      => 'Central Baddibu',
+        'latitude'  => '13.53333000',
+        'longitude' => '-15.91667000',
+    ],
+    [
+        'id'        => 52231,
+        'name'      => 'Chilla',
+        'latitude'  => '13.55000000',
+        'longitude' => '-16.28333000',
+    ],
+    [
+        'id'        => 52234,
+        'name'      => 'Daru Rilwan',
+        'latitude'  => '13.55000000',
+        'longitude' => '-15.98333000',
+    ],
+    [
+        'id'        => 52239,
+        'name'      => 'Essau',
+        'latitude'  => '13.48389000',
+        'longitude' => '-16.53472000',
+    ],
+    [
+        'id'        => 52240,
+        'name'      => 'Farafenni',
+        'latitude'  => '13.56667000',
+        'longitude' => '-15.60000000',
+    ],
+    [
+        'id'        => 52250,
+        'name'      => 'Gunjur',
+        'latitude'  => '13.52278000',
+        'longitude' => '-16.02778000',
+    ],
+    [
+        'id'        => 52261,
+        'name'      => 'Jokadu',
+        'latitude'  => '13.53333000',
+        'longitude' => '-16.18333000',
+    ],
+    [
+        'id'        => 52267,
+        'name'      => 'Katchang',
+        'latitude'  => '13.50000000',
+        'longitude' => '-15.75000000',
+    ],
+    [
+        'id'        => 52269,
+        'name'      => 'Kerewan',
+        'latitude'  => '13.48980000',
+        'longitude' => '-16.08879000',
+    ],
+    [
+        'id'        => 52282,
+        'name'      => 'Lamin',
+        'latitude'  => '13.35222000',
+        'longitude' => '-16.43389000',
+    ],
+    [
+        'id'        => 52283,
+        'name'      => 'Lower Baddibu District',
+        'latitude'  => '13.50000000',
+        'longitude' => '-16.05000000',
+    ],
+    [
+        'id'        => 52284,
+        'name'      => 'Lower Niumi District',
+        'latitude'  => '13.53333000',
+        'longitude' => '-16.41667000',
+    ],
+    [
+        'id'        => 52292,
+        'name'      => 'No Kunda',
+        'latitude'  => '13.56667000',
+        'longitude' => '-15.83333000',
+    ],
+    [
+        'id'        => 52296,
+        'name'      => 'Saba',
+        'latitude'  => '13.51639000',
+        'longitude' => '-16.04917000',
+    ],
+    [
+        'id'        => 52302,
+        'name'      => 'Sara Kunda',
+        'latitude'  => '13.53333000',
+        'longitude' => '-15.41667000',
+    ],
+    [
+        'id'        => 52315,
+        'name'      => 'Upper Baddibu',
+        'latitude'  => '13.55000000',
+        'longitude' => '-15.66667000',
+    ],
+    [
+        'id'        => 52316,
+        'name'      => 'Upper Niumi District',
+        'latitude'  => '13.40000000',
+        'longitude' => '-16.33333000',
+    ],
+];

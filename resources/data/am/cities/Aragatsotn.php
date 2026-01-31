@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 286,
+        'name'      => 'Agarakavan',
+        'latitude'  => '40.33069000',
+        'longitude' => '44.07233000',
+    ],
+    [
+        'id'        => 303,
+        'name'      => 'Aparan',
+        'latitude'  => '40.59323000',
+        'longitude' => '44.35890000',
+    ],
+    [
+        'id'        => 305,
+        'name'      => 'Aragats',
+        'latitude'  => '40.48889000',
+        'longitude' => '44.35290000',
+    ],
+    [
+        'id'        => 329,
+        'name'      => 'Arteni',
+        'latitude'  => '40.29730000',
+        'longitude' => '43.76672000',
+    ],
+    [
+        'id'        => 334,
+        'name'      => 'Ashnak',
+        'latitude'  => '40.33069000',
+        'longitude' => '43.91669000',
+    ],
+    [
+        'id'        => 335,
+        'name'      => 'Ashtarak',
+        'latitude'  => '40.29910000',
+        'longitude' => '44.36204000',
+    ],
+    [
+        'id'        => 361,
+        'name'      => 'Byurakan',
+        'latitude'  => '40.33894000',
+        'longitude' => '44.27275000',
+    ],
+    [
+        'id'        => 412,
+        'name'      => 'Hnaberd',
+        'latitude'  => '40.63721000',
+        'longitude' => '44.14058000',
+    ],
+    [
+        'id'        => 428,
+        'name'      => 'Karbi',
+        'latitude'  => '40.33069000',
+        'longitude' => '44.37793000',
+    ],
+    [
+        'id'        => 430,
+        'name'      => 'Kasakh',
+        'latitude'  => '40.53697000',
+        'longitude' => '44.41046000',
+    ],
+    [
+        'id'        => 434,
+        'name'      => 'Kosh',
+        'latitude'  => '40.30011000',
+        'longitude' => '44.16107000',
+    ],
+    [
+        'id'        => 486,
+        'name'      => 'Nor Yerznka',
+        'latitude'  => '40.30011000',
+        'longitude' => '44.38892000',
+    ],
+    [
+        'id'        => 497,
+        'name'      => 'Oshakan',
+        'latitude'  => '40.26392000',
+        'longitude' => '44.31671000',
+    ],
+    [
+        'id'        => 512,
+        'name'      => 'Sasunik',
+        'latitude'  => '40.25012000',
+        'longitude' => '44.34448000',
+    ],
+    [
+        'id'        => 520,
+        'name'      => 'Shenavan',
+        'latitude'  => '40.48328000',
+        'longitude' => '44.38348000',
+    ],
+    [
+        'id'        => 546,
+        'name'      => 'T’alin',
+        'latitude'  => '40.39172000',
+        'longitude' => '43.87793000',
+    ],
+    [
+        'id'        => 538,
+        'name'      => 'Tsaghkahovit',
+        'latitude'  => '40.63428000',
+        'longitude' => '44.22241000',
+    ],
+    [
+        'id'        => 548,
+        'name'      => 'Ushi',
+        'latitude'  => '40.34729000',
+        'longitude' => '44.37512000',
+    ],
+    [
+        'id'        => 570,
+        'name'      => 'Voskevaz',
+        'latitude'  => '40.27508000',
+        'longitude' => '44.30011000',
+    ],
+    [
+        'id'        => 588,
+        'name'      => 'Zovuni',
+        'latitude'  => '40.51111000',
+        'longitude' => '44.43890000',
+    ],
+];

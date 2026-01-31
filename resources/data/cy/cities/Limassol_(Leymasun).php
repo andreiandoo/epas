@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 22103,
+        'name'      => 'Ágios Tomás',
+        'latitude'  => '34.71158000',
+        'longitude' => '32.73129000',
+    ],
+    [
+        'id'        => 22104,
+        'name'      => 'Ágios Týchon',
+        'latitude'  => '34.72606000',
+        'longitude' => '33.13872000',
+    ],
+    [
+        'id'        => 22028,
+        'name'      => 'Erími',
+        'latitude'  => '34.67766000',
+        'longitude' => '32.91815000',
+    ],
+    [
+        'id'        => 22031,
+        'name'      => 'Germasógeia',
+        'latitude'  => '34.72207000',
+        'longitude' => '33.08254000',
+    ],
+    [
+        'id'        => 22044,
+        'name'      => 'Kyperoúnta',
+        'latitude'  => '34.93815000',
+        'longitude' => '32.97551000',
+    ],
+    [
+        'id'        => 22053,
+        'name'      => 'Lemesós',
+        'latitude'  => '34.69218000',
+        'longitude' => '33.02854000',
+    ],
+    [
+        'id'        => 22055,
+        'name'      => 'Limassol',
+        'latitude'  => '34.68406000',
+        'longitude' => '33.03794000',
+    ],
+    [
+        'id'        => 22065,
+        'name'      => 'Mouttagiáka',
+        'latitude'  => '34.72022000',
+        'longitude' => '33.10066000',
+    ],
+    [
+        'id'        => 22082,
+        'name'      => 'Páchna',
+        'latitude'  => '34.77874000',
+        'longitude' => '32.79355000',
+    ],
+    [
+        'id'        => 22084,
+        'name'      => 'Páno Polemídia',
+        'latitude'  => '34.70559000',
+        'longitude' => '32.99269000',
+    ],
+    [
+        'id'        => 22073,
+        'name'      => 'Parekklisha',
+        'latitude'  => '34.74583000',
+        'longitude' => '33.15833000',
+    ],
+    [
+        'id'        => 22074,
+        'name'      => 'Peléndri',
+        'latitude'  => '34.89597000',
+        'longitude' => '32.96817000',
+    ],
+    [
+        'id'        => 22077,
+        'name'      => 'Pissoúri',
+        'latitude'  => '34.66942000',
+        'longitude' => '32.70132000',
+    ],
+    [
+        'id'        => 22081,
+        'name'      => 'Pyrgos',
+        'latitude'  => '34.74167000',
+        'longitude' => '33.18333000',
+    ],
+    [
+        'id'        => 22091,
+        'name'      => 'Sotíra',
+        'latitude'  => '34.71189000',
+        'longitude' => '32.86340000',
+    ],
+    [
+        'id'        => 22092,
+        'name'      => 'Soúni-Zanakiá',
+        'latitude'  => '34.73570000',
+        'longitude' => '32.88437000',
+    ],
+    [
+        'id'        => 22105,
+        'name'      => 'Ýpsonas',
+        'latitude'  => '34.68797000',
+        'longitude' => '32.96191000',
+    ],
+];

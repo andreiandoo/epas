@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 107087,
+        'name'      => 'Akkışla',
+        'latitude'  => '39.00222000',
+        'longitude' => '36.17381000',
+    ],
+    [
+        'id'        => 107416,
+        'name'      => 'Bünyan',
+        'latitude'  => '38.84630000',
+        'longitude' => '35.86033000',
+    ],
+    [
+        'id'        => 107485,
+        'name'      => 'Develi',
+        'latitude'  => '38.26789000',
+        'longitude' => '35.59161000',
+    ],
+    [
+        'id'        => 107636,
+        'name'      => 'Felahiye',
+        'latitude'  => '39.09056000',
+        'longitude' => '35.56722000',
+    ],
+    [
+        'id'        => 107767,
+        'name'      => 'Hacılar',
+        'latitude'  => '38.64631000',
+        'longitude' => '35.44937000',
+    ],
+    [
+        'id'        => 107849,
+        'name'      => 'İncesu',
+        'latitude'  => '38.63789000',
+        'longitude' => '35.19394000',
+    ],
+    [
+        'id'        => 153790,
+        'name'      => 'Kayseri',
+        'latitude'  => '38.72355320',
+        'longitude' => '35.30537320',
+    ],
+    [
+        'id'        => 108010,
+        'name'      => 'Kocasinan',
+        'latitude'  => '38.87959000',
+        'longitude' => '35.35540000',
+    ],
+    [
+        'id'        => 108169,
+        'name'      => 'Melikgazi',
+        'latitude'  => '38.77933000',
+        'longitude' => '35.66076000',
+    ],
+    [
+        'id'        => 108870,
+        'name'      => 'Özvatan',
+        'latitude'  => '39.11737000',
+        'longitude' => '35.71149000',
+    ],
+    [
+        'id'        => 108355,
+        'name'      => 'Pınarbaşı',
+        'latitude'  => '38.72285000',
+        'longitude' => '36.39314000',
+    ],
+    [
+        'id'        => 108405,
+        'name'      => 'Sarıoğlan',
+        'latitude'  => '39.07694000',
+        'longitude' => '35.96671000',
+    ],
+    [
+        'id'        => 108412,
+        'name'      => 'Sarız',
+        'latitude'  => '38.47917000',
+        'longitude' => '36.49898000',
+    ],
+    [
+        'id'        => 108531,
+        'name'      => 'Talas',
+        'latitude'  => '38.69080000',
+        'longitude' => '35.55380000',
+    ],
+    [
+        'id'        => 108581,
+        'name'      => 'Tomarza',
+        'latitude'  => '38.44722000',
+        'longitude' => '35.79917000',
+    ],
+    [
+        'id'        => 108658,
+        'name'      => 'Yahyalı',
+        'latitude'  => '38.10228000',
+        'longitude' => '35.35704000',
+    ],
+    [
+        'id'        => 108720,
+        'name'      => 'Yeşilhisar',
+        'latitude'  => '38.33475000',
+        'longitude' => '35.11795000',
+    ],
+];

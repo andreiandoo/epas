@@ -1,0 +1,23 @@
+<?php
+return [
+    'Bjelovar-Bilogora',
+    'Brod-Posavina',
+    'Dubrovnik-Neretva',
+    'Istria',
+    'Karlovac',
+    'Koprivnica-Križevci',
+    'Krapina-Zagorje',
+    'Lika-Senj',
+    'Međimurje',
+    'Osijek-Baranja',
+    'Požega-Slavonia',
+    'Primorje-Gorski Kotar',
+    'Šibenik-Knin',
+    'Sisak-Moslavina',
+    'Split-Dalmatia',
+    'Varaždin',
+    'Virovitica-Podravina',
+    'Vukovar-Syrmia',
+    'Zadar',
+    'Zagreb',
+];

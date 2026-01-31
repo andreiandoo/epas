@@ -1,0 +1,14 @@
+<?php
+return [
+    'A\'ana',
+    'Aiga-i-le-Tai',
+    'Atua',
+    'Fa\'asaleleaga',
+    'Gaga\'emauga',
+    'Gaga\'ifomauga',
+    'Palauli',
+    'Satupa\'itea',
+    'Tuamasaga',
+    'Va\'a-o-Fonoti',
+    'Vaisigano',
+];
