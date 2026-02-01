@@ -12,6 +12,7 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
+use App\Helpers\HtmlSanitizer;
 
 class InvoiceMail extends Mailable
 {
@@ -96,7 +97,8 @@ class InvoiceMail extends Mailable
 
     public function build()
     {
-        return $this->html($this->processedBody);
+        // SECURITY FIX: Sanitize HTML content to prevent XSS
+        return $this->html(HtmlSanitizer::sanitize($this->processedBody));
     }
 
     public function attachments(): array

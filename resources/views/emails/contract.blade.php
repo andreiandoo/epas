@@ -48,7 +48,8 @@
     </div>
 
     <div class="content">
-        {!! $emailContent !!}
+        {{-- SECURITY FIX: Sanitize HTML content to prevent XSS --}}
+        {!! \App\Helpers\HtmlSanitizer::sanitize($emailContent) !!}
 
         @if(isset($signingUrl))
         <div style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; text-align: center;">
@@ -78,7 +79,8 @@
 
         @if($settings && $settings->email_footer)
             <div style="margin-top: 15px;">
-                {!! $settings->email_footer !!}
+                {{-- SECURITY FIX: Sanitize HTML footer to prevent XSS --}}
+                {!! \App\Helpers\HtmlSanitizer::sanitize($settings->email_footer) !!}
             </div>
         @endif
     </div>

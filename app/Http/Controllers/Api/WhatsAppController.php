@@ -253,11 +253,23 @@ class WhatsAppController extends Controller
             ], 400);
         }
 
-        // TODO: Verify webhook signature in production
-        // $signature = $request->header('X-Webhook-Signature');
-        // if (!$this->verifySignature($signature, $request->getContent())) {
-        //     return response()->json(['error' => 'Invalid signature'], 401);
-        // }
+        // SECURITY FIX: Enable webhook signature verification
+        $signature = $request->header('X-Webhook-Signature') ?? $request->header('X-Hub-Signature-256');
+        $webhookSecret = config('services.whatsapp.webhook_secret');
+
+        if ($webhookSecret) {
+            if (!$signature || !$this->verifyWebhookSignature($signature, $request->getContent(), $webhookSecret)) {
+                \Log::warning('WhatsApp webhook signature verification failed', [
+                    'tenant_id' => $tenantId,
+                    'ip' => $request->ip(),
+                ]);
+                return response()->json(['error' => 'Invalid signature'], 401);
+            }
+        } else {
+            \Log::warning('WhatsApp webhook secret not configured - signature verification skipped', [
+                'tenant_id' => $tenantId,
+            ]);
+        }
 
         $result = $this->whatsAppService->handleWebhook(
             $tenantId,

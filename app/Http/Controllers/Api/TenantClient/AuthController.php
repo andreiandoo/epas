@@ -25,30 +25,38 @@ class AuthController extends Controller
         $this->gamificationService = $gamificationService;
     }
     /**
-     * Resolve tenant from request (hostname preferred, ID fallback)
+     * Resolve tenant from request (hostname ONLY - no ID fallback for security)
+     * SECURITY FIX: Removed tenant ID from query params - was allowing arbitrary tenant access
      */
     private function resolveTenant(Request $request): ?Tenant
     {
-        $hostname = $request->query('hostname');
-        $tenantId = $request->query('tenant');
-
-        if ($hostname) {
-            $domain = Domain::where('domain', $hostname)
-                ->where('is_active', true)
-                ->first();
-
-            if (!$domain) {
-                return null;
-            }
-
-            return $domain->tenant;
+        // First check if tenant was set by middleware
+        if ($request->attributes->has('tenant')) {
+            return $request->attributes->get('tenant');
         }
 
-        if ($tenantId) {
-            return Tenant::find($tenantId);
+        $hostname = $request->query('hostname') ?? $request->header('X-Tenant-Domain');
+
+        if (!$hostname) {
+            return null;
         }
 
-        return null;
+        $domain = Domain::where('domain', $hostname)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$domain) {
+            \Log::warning('Tenant resolution failed', [
+                'hostname' => $hostname,
+                'ip' => $request->ip(),
+            ]);
+            return null;
+        }
+
+        return $domain->tenant;
+
+        // SECURITY: Removed - was allowing bypass via ?tenant=X
+        // if ($tenantId) { return Tenant::find($tenantId); }
     }
     /**
      * Register a new customer

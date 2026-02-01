@@ -55,5 +55,10 @@ class Kernel extends HttpKernel
 
         // custom
         'set.locale'      => \App\Http\Middleware\SetLocale::class,
+
+        // SECURITY: New middleware added by security audit
+        'tenant.admin.auth' => \App\Http\Middleware\TenantAdminAuth::class,
+        'tenant.auth.secure' => \App\Http\Middleware\TenantAuthenticationSecure::class,
+        'ddos.protection' => \App\Http\Middleware\DDoSProtectionMiddleware::class,
     ];
 }

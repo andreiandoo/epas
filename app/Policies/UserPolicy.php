@@ -15,11 +15,8 @@ class UserPolicy
             return false;
         }
 
-        // TEMPORARY: Allow all for testing
-        return true;
-
-        // Original:
-        // return $user->isAdmin() || $user->isSuperAdmin();
+        // SECURITY FIX: Removed temporary bypass that allowed all access
+        return $user->isAdmin() || $user->isSuperAdmin();
     }
 
     public function view(Authenticatable $user, User $record): bool

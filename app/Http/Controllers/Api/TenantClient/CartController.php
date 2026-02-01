@@ -17,13 +17,26 @@ class CartController extends Controller
 
     /**
      * Get session ID from request
+     * SECURITY FIX: Generate cryptographically secure session IDs
+     * Previously used md5(IP + UserAgent) which was predictable
      */
     protected function getSessionId(Request $request): string
     {
-        return $request->header('X-Session-ID')
-            ?? $request->cookie('session_id')
-            ?? $request->session()->getId()
-            ?? md5($request->ip() . $request->userAgent());
+        // First try to get existing session ID from secure sources
+        $sessionId = $request->session()->getId();
+        if ($sessionId && strlen($sessionId) >= 32) {
+            return $sessionId;
+        }
+
+        // Check cookie (must be validated)
+        $cookieSession = $request->cookie('session_id');
+        if ($cookieSession && preg_match('/^[a-zA-Z0-9]{32,64}$/', $cookieSession)) {
+            return $cookieSession;
+        }
+
+        // SECURITY FIX: Generate cryptographically secure random ID
+        // Previously was: md5($request->ip() . $request->userAgent()) - PREDICTABLE!
+        return bin2hex(random_bytes(32));
     }
 
     /**

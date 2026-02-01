@@ -30,7 +30,8 @@ class Artist extends Model
         });
     }
 
-    protected $guarded = [];
+    // SECURITY FIX: Removed $guarded = [] which allowed mass assignment on ALL fields
+    // Using explicit $fillable list for controlled mass assignment
 
     protected $fillable = [
         'name', 'slug', 'letter', 'bio_html',

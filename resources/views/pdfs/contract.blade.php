@@ -167,7 +167,8 @@
     </div>
 
     <div class="contract-content">
-        {!! $content !!}
+        {{-- SECURITY FIX: Sanitize HTML content to prevent XSS --}}
+        {!! \App\Helpers\HtmlSanitizer::sanitize($content) !!}
     </div>
 
     <div class="signatures">
