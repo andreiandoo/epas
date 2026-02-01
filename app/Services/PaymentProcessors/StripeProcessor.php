@@ -171,9 +171,12 @@ class StripeProcessor implements PaymentProcessorInterface
 
     public function verifySignature(array $payload, array $headers): bool
     {
+        // SECURITY FIX: If no webhook secret, REJECT the webhook instead of accepting
         if (empty($this->keys['webhook_secret'])) {
-            // If no webhook secret configured, we can't verify
-            return true;
+            \Log::critical('Stripe webhook rejected: webhook_secret not configured', [
+                'ip' => request()->ip(),
+            ]);
+            return false;
         }
 
         try {

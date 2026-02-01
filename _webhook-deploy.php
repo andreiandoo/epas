@@ -17,8 +17,15 @@
 
 // ===================== CONFIGURATION =====================
 
-// Secret key - SCHIMBĂ ASTA! Generează cu: https://randomkeygen.com/
-define('DEPLOY_SECRET', 'CHANGE_THIS_TO_RANDOM_SECRET');
+// SECURITY FIX: Secret must come from environment variable
+// Set DEPLOY_WEBHOOK_SECRET in server environment or .htaccess
+// Generate a secure random value: openssl rand -hex 32
+$deploySecret = getenv('DEPLOY_WEBHOOK_SECRET');
+if (empty($deploySecret) || $deploySecret === 'CHANGE_THIS_TO_RANDOM_SECRET') {
+    http_response_code(500);
+    die('ERROR: DEPLOY_WEBHOOK_SECRET not configured. Set environment variable.');
+}
+define('DEPLOY_SECRET', $deploySecret);
 
 // GitHub repo details
 define('GITHUB_USER', 'andreiandoo');

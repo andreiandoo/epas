@@ -136,8 +136,12 @@ class PayUProcessor implements PaymentProcessorInterface
 
     public function verifySignature(array $payload, array $headers): bool
     {
+        // SECURITY FIX: If no secret key, REJECT the webhook
         if (empty($this->keys['secret_key'])) {
-            return true; // Can't verify without secret key
+            \Log::critical('PayU webhook rejected: secret_key not configured', [
+                'ip' => request()->ip(),
+            ]);
+            return false;
         }
 
         $receivedHash = $payload['HASH'] ?? $payload['ORDER_HASH'] ?? '';

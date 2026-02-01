@@ -1247,7 +1247,8 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
     });
 
     // Admin (requires admin auth)
-    Route::prefix('admin')->group(function () {
+    // SECURITY FIX: Added authentication middleware - was previously unprotected!
+    Route::prefix('admin')->middleware(['tenant.admin.auth', 'throttle:30,1'])->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])
             ->name('api.tenant-client.admin.dashboard');
 
