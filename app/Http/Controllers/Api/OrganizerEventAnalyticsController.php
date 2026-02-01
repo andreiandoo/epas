@@ -544,14 +544,30 @@ class OrganizerEventAnalyticsController extends Controller
      */
     public function download(string $filename)
     {
+        // SECURITY FIX: Prevent path traversal attacks
+        // Remove any directory traversal attempts and validate filename
+        $filename = basename($filename);
+
+        // Validate filename format (alphanumeric, underscores, dashes, dots only)
+        if (!preg_match('/^[a-zA-Z0-9_\-]+\.(csv|xlsx|pdf|json)$/', $filename)) {
+            abort(400, 'Invalid filename format');
+        }
+
         $filepath = "exports/{$filename}";
 
         if (!Storage::disk('local')->exists($filepath)) {
             abort(404, 'File not found');
         }
 
+        // Additional check: ensure resolved path is within exports directory
+        $realPath = Storage::disk('local')->path($filepath);
+        $exportsDir = Storage::disk('local')->path('exports');
+        if (strpos($realPath, $exportsDir) !== 0) {
+            abort(403, 'Access denied');
+        }
+
         return response()->download(
-            Storage::disk('local')->path($filepath),
+            $realPath,
             $filename,
             ['Content-Type' => $this->getContentType($filename)]
         )->deleteFileAfterSend(true);

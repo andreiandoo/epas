@@ -73,6 +73,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // SECURITY FIX: Dedicated channel for security audit logs
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'info',
+            'days' => env('LOG_SECURITY_DAYS', 90), // Keep security logs for 90 days
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

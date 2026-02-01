@@ -34,8 +34,18 @@ class DefaultPricingEngine implements DynamicPricingEngine
         $cacheKey = "price:{$eventSeatingId}:{$seatUid}";
         $cached = Cache::get($cacheKey);
 
+        // SECURITY FIX: Use JSON instead of unserialize to prevent PHP Object Injection
         if ($cached) {
-            return unserialize($cached);
+            $data = json_decode($cached, true);
+            if ($data && isset($data['base_price_cents'])) {
+                return new PriceDecision(
+                    basePriceCents: $data['base_price_cents'],
+                    effectivePriceCents: $data['effective_price_cents'],
+                    sourceRuleId: $data['source_rule_id'] ?? null,
+                    strategy: $data['strategy'] ?? 'base',
+                    metadata: $data['metadata'] ?? []
+                );
+            }
         }
 
         $seat = EventSeat::where('event_seating_id', $eventSeatingId)
@@ -74,7 +84,8 @@ class DefaultPricingEngine implements DynamicPricingEngine
                 ]
             );
 
-            Cache::put($cacheKey, serialize($decision), $this->cacheTtl);
+            // SECURITY FIX: Use JSON instead of serialize
+            Cache::put($cacheKey, json_encode($decision->toArray()), $this->cacheTtl);
 
             return $decision;
         }
@@ -86,7 +97,8 @@ class DefaultPricingEngine implements DynamicPricingEngine
             strategy: 'base'
         );
 
-        Cache::put($cacheKey, serialize($decision), $this->cacheTtl);
+        // SECURITY FIX: Use JSON instead of serialize
+        Cache::put($cacheKey, json_encode($decision->toArray()), $this->cacheTtl);
 
         return $decision;
     }

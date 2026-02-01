@@ -607,28 +607,31 @@ Route::prefix('webhooks')->middleware(['throttle:api'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('feature-flags')->middleware(['throttle:api'])->group(function () {
+// SECURITY FIX: Added auth:sanctum and tenant.admin.auth middleware
+// Feature flags management requires admin authentication
+Route::prefix('feature-flags')->middleware(['throttle:api', 'auth:sanctum', 'tenant.admin.auth'])->group(function () {
     Route::get('/', [FeatureFlagController::class, 'index'])
         ->name('api.feature-flags.index');
-    
+
     Route::post('/', [FeatureFlagController::class, 'store'])
         ->name('api.feature-flags.store');
-    
+
     Route::put('/{featureKey}', [FeatureFlagController::class, 'update'])
         ->name('api.feature-flags.update');
-    
+
     Route::post('/{featureKey}/enable', [FeatureFlagController::class, 'enable'])
         ->name('api.feature-flags.enable');
-    
+
     Route::post('/{featureKey}/disable', [FeatureFlagController::class, 'disable'])
         ->name('api.feature-flags.disable');
-    
+
+    // Check endpoint can be accessed by authenticated users (read-only)
     Route::get('/{featureKey}/check', [FeatureFlagController::class, 'check'])
         ->name('api.feature-flags.check');
-    
+
     Route::post('/{featureKey}/tenant/{tenantId}/enable', [FeatureFlagController::class, 'enableForTenant'])
         ->name('api.feature-flags.enable-tenant');
-    
+
     Route::post('/{featureKey}/tenant/{tenantId}/disable', [FeatureFlagController::class, 'disableForTenant'])
         ->name('api.feature-flags.disable-tenant');
 });

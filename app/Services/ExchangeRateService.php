@@ -70,7 +70,11 @@ class ExchangeRateService
                 return null;
             }
 
-            $xml = simplexml_load_string($response->body());
+            // SECURITY FIX: Disable external entity loading to prevent XXE attacks
+            $previousValue = libxml_disable_entity_loader(true);
+            libxml_use_internal_errors(true);
+            $xml = simplexml_load_string($response->body(), 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOCDATA);
+            libxml_disable_entity_loader($previousValue);
 
             if (!$xml) {
                 return null;
@@ -106,7 +110,11 @@ class ExchangeRateService
                 return null;
             }
 
-            $xml = simplexml_load_string($response->body());
+            // SECURITY FIX: Disable external entity loading to prevent XXE attacks
+            $previousValue = libxml_disable_entity_loader(true);
+            libxml_use_internal_errors(true);
+            $xml = simplexml_load_string($response->body(), 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOCDATA);
+            libxml_disable_entity_loader($previousValue);
 
             if (!$xml) {
                 return null;

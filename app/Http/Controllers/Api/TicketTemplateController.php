@@ -148,12 +148,17 @@ class TicketTemplateController extends Controller
      *
      * GET /api/tickets/templates/{id}
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
         $template = TicketTemplate::find($id);
 
         if (!$template) {
             return response()->json(['error' => 'Template not found'], 404);
+        }
+
+        // SECURITY FIX: Verify user has access to this tenant's template
+        if (!$this->canAccessTenant($request, $template->tenant_id)) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         return response()->json([
@@ -181,6 +186,12 @@ class TicketTemplateController extends Controller
                 'success' => false,
                 'errors' => $validator->errors()->all(),
             ], 422);
+        }
+
+        // SECURITY FIX: Verify user has access to create templates for this tenant
+        $tenantId = $request->input('tenant_id');
+        if (!$this->canAccessTenant($request, $tenantId)) {
+            return response()->json(['error' => 'Unauthorized to create templates for this tenant'], 403);
         }
 
         // Validate template structure
@@ -228,6 +239,11 @@ class TicketTemplateController extends Controller
 
         if (!$template) {
             return response()->json(['error' => 'Template not found'], 404);
+        }
+
+        // SECURITY FIX: Verify user has access to this tenant's template
+        if (!$this->canAccessTenant($request, $template->tenant_id)) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -297,12 +313,17 @@ class TicketTemplateController extends Controller
      *
      * DELETE /api/tickets/templates/{id}
      */
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
         $template = TicketTemplate::find($id);
 
         if (!$template) {
             return response()->json(['error' => 'Template not found'], 404);
+        }
+
+        // SECURITY FIX: Verify user has access to this tenant's template
+        if (!$this->canAccessTenant($request, $template->tenant_id)) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         // Soft delete
@@ -453,5 +474,41 @@ class TicketTemplateController extends Controller
         return response()->json([
             'presets' => $presets,
         ]);
+    }
+
+    /**
+     * SECURITY FIX: Check if the authenticated user has access to a tenant
+     *
+     * Validates access through:
+     * 1. Super admin users have access to all tenants
+     * 2. Tenant from request attributes (set by middleware)
+     * 3. User's associated tenant
+     */
+    private function canAccessTenant(Request $request, ?int $tenantId): bool
+    {
+        if (!$tenantId) {
+            return false;
+        }
+
+        // Check for authenticated user
+        $user = $request->user();
+
+        // Super admins have access to all tenants
+        if ($user && method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Check tenant from middleware (API authentication)
+        $tenant = $request->attributes->get('tenant');
+        if ($tenant && $tenant->id === $tenantId) {
+            return true;
+        }
+
+        // Check user's tenant association
+        if ($user && isset($user->tenant_id) && $user->tenant_id === $tenantId) {
+            return true;
+        }
+
+        return false;
     }
 }
