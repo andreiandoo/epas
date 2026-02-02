@@ -161,7 +161,7 @@ class PayoutResource extends Resource
     {
         return $infolist
             ->components([
-                Infolists\Components\Section::make('Payout Request')
+                Section::make('Payout Request')
                     ->schema([
                         Infolists\Components\TextEntry::make('reference')
                             ->copyable()
@@ -202,7 +202,7 @@ class PayoutResource extends Resource
                     ])
                     ->columns(3),
 
-                Infolists\Components\Section::make('Amount Breakdown')
+                Section::make('Amount Breakdown')
                     ->schema([
                         Infolists\Components\TextEntry::make('gross_amount')
                             ->money('RON')
@@ -223,7 +223,7 @@ class PayoutResource extends Resource
                     ])
                     ->columns(4),
 
-                Infolists\Components\Section::make('Payout Method')
+                Section::make('Payout Method')
                     ->schema([
                         Infolists\Components\TextEntry::make('payout_method.bank_name')
                             ->label('Bank'),
@@ -242,7 +242,7 @@ class PayoutResource extends Resource
                     ])
                     ->columns(3),
 
-                Infolists\Components\Section::make('Organizer Notes')
+                Section::make('Organizer Notes')
                     ->schema([
                         Infolists\Components\TextEntry::make('organizer_notes')
                             ->label('')
@@ -251,7 +251,7 @@ class PayoutResource extends Resource
                     ])
                     ->collapsed(fn ($record): bool => empty($record?->organizer_notes)),
 
-                Infolists\Components\Section::make('Admin Notes')
+                Section::make('Admin Notes')
                     ->schema([
                         Infolists\Components\TextEntry::make('admin_notes')
                             ->label('')
@@ -260,7 +260,7 @@ class PayoutResource extends Resource
                     ])
                     ->collapsed(fn ($record): bool => empty($record?->admin_notes)),
 
-                Infolists\Components\Section::make('Rejection Details')
+                Section::make('Rejection Details')
                     ->schema([
                         Infolists\Components\TextEntry::make('rejection_reason')
                             ->columnSpanFull(),
@@ -272,7 +272,7 @@ class PayoutResource extends Resource
                     ->columns(2)
                     ->visible(fn ($record) => $record->isRejected()),
 
-                Infolists\Components\Section::make('Payment Confirmation')
+                Section::make('Payment Confirmation')
                     ->schema([
                         Infolists\Components\TextEntry::make('payment_reference')
                             ->copyable(),
@@ -283,7 +283,7 @@ class PayoutResource extends Resource
                     ->columns(2)
                     ->visible(fn ($record) => $record->payment_reference),
 
-                Infolists\Components\Section::make('Timeline')
+                Section::make('Timeline')
                     ->schema([
                         Infolists\Components\TextEntry::make('created_at')
                             ->label('Requested')
