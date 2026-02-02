@@ -67,6 +67,16 @@ class PayoutResource extends Resource
                             ->label('Organizer')
                             ->content(fn (?MarketplacePayout $record): string => $record?->organizer?->name ?? '-'),
 
+                        Forms\Components\Placeholder::make('event_display')
+                            ->label('Event')
+                            ->content(function (?MarketplacePayout $record): string {
+                                if (!$record?->event) return 'General payout (no specific event)';
+                                $title = $record->event->title;
+                                return is_array($title)
+                                    ? ($title['ro'] ?? $title['en'] ?? reset($title) ?? 'Untitled')
+                                    : ($title ?? 'Untitled');
+                            }),
+
                         Forms\Components\Placeholder::make('amount_display')
                             ->label('Amount')
                             ->content(fn (?MarketplacePayout $record): string =>
@@ -75,8 +85,13 @@ class PayoutResource extends Resource
                         Forms\Components\Placeholder::make('status_display')
                             ->label('Status')
                             ->content(fn (?MarketplacePayout $record): string => $record?->status_label ?? '-'),
+
+                        Forms\Components\Placeholder::make('created_at_display')
+                            ->label('Requested At')
+                            ->content(fn (?MarketplacePayout $record): string =>
+                                $record?->created_at?->format('d.m.Y H:i') ?? '-'),
                     ])
-                    ->columns(4),
+                    ->columns(3),
 
                 Section::make('Amount Breakdown')
                     ->schema([
@@ -102,6 +117,16 @@ class PayoutResource extends Resource
                     ])
                     ->columns(4),
 
+                Section::make('Organizer Notes')
+                    ->schema([
+                        Forms\Components\Placeholder::make('organizer_notes_display')
+                            ->label('')
+                            ->content(fn (?MarketplacePayout $record): string =>
+                                $record?->organizer_notes ?? 'No notes from organizer')
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsed(fn (?MarketplacePayout $record): bool => empty($record?->organizer_notes)),
+
                 Section::make('Admin Notes')
                     ->schema([
                         Forms\Components\Textarea::make('admin_notes')
@@ -125,6 +150,15 @@ class PayoutResource extends Resource
                     ->label('Organizer')
                     ->searchable()
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('event.title')
+                    ->label('Event')
+                    ->placeholder('General')
+                    ->formatStateUsing(fn ($state) => is_array($state)
+                        ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
+                        : $state)
+                    ->limit(25)
+                    ->searchable(),
 
                 Tables\Columns\TextColumn::make('amount')
                     ->money('RON')
