@@ -177,6 +177,7 @@ const AmbiletAPI = {
         if (endpoint.includes('/locations/regions')) return 'locations.regions';
 
         if (endpoint.includes('/cart')) return 'cart';
+        if (endpoint === '/checkout.features' || endpoint === '/checkout/features') return 'checkout.features';
         if (endpoint.includes('/checkout')) return 'checkout';
 
         // Orders endpoints (payment)
