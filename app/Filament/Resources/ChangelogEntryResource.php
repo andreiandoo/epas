@@ -7,9 +7,6 @@ use App\Models\ChangelogEntry;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components as SC;
-use Filament\Forms\Components as FC;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,15 +40,16 @@ class ChangelogEntryResource extends Resource
                     ->fontFamily('mono')
                     ->color('primary'),
 
-                Tables\Columns\BadgeColumn::make('type')
+                Tables\Columns\TextColumn::make('type')
                     ->label('Tip')
-                    ->colors([
-                        'success' => 'feat',
-                        'danger' => 'fix',
-                        'warning' => 'refactor',
-                        'info' => 'docs',
-                        'secondary' => fn ($state) => !in_array($state, ['feat', 'fix', 'refactor', 'docs']),
-                    ])
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'feat' => 'success',
+                        'fix' => 'danger',
+                        'refactor' => 'warning',
+                        'docs' => 'info',
+                        default => 'gray',
+                    })
                     ->formatStateUsing(fn ($state) => ChangelogEntry::TYPE_LABELS[$state] ?? $state),
 
                 Tables\Columns\TextColumn::make('module')
@@ -74,9 +72,8 @@ class ChangelogEntryResource extends Resource
                     ->trueColor('danger')
                     ->falseColor('success'),
 
-                Tables\Columns\IconColumn::make('is_visible')
-                    ->label('Vizibil')
-                    ->boolean(),
+                Tables\Columns\ToggleColumn::make('is_visible')
+                    ->label('Vizibil'),
 
                 Tables\Columns\TextColumn::make('committed_at')
                     ->label('Data')
@@ -109,27 +106,8 @@ class ChangelogEntryResource extends Resource
                     ->label('Ultimele 30 zile')
                     ->query(fn (Builder $query) => $query->where('committed_at', '>=', now()->subDays(30))),
             ])
-            ->actions([
-                Tables\Actions\Action::make('toggle_visibility')
-                    ->label(fn ($record) => $record->is_visible ? 'Ascunde' : 'Afișează')
-                    ->icon(fn ($record) => $record->is_visible ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')
-                    ->action(fn ($record) => $record->update(['is_visible' => !$record->is_visible]))
-                    ->requiresConfirmation(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkAction::make('hide')
-                    ->label('Ascunde selectate')
-                    ->icon('heroicon-o-eye-slash')
-                    ->action(fn ($records) => $records->each->update(['is_visible' => false]))
-                    ->requiresConfirmation()
-                    ->deselectRecordsAfterCompletion(),
-
-                Tables\Actions\BulkAction::make('show')
-                    ->label('Afișează selectate')
-                    ->icon('heroicon-o-eye')
-                    ->action(fn ($records) => $records->each->update(['is_visible' => true]))
-                    ->deselectRecordsAfterCompletion(),
-            ])
+            ->actions([])
+            ->bulkActions([])
             ->defaultSort('committed_at', 'desc')
             ->poll('30s');
     }
