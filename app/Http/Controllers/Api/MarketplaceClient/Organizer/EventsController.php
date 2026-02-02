@@ -1382,8 +1382,17 @@ class EventsController extends BaseController
         $eventName = $this->getLocalizedTitle($event);
         $totalRevenue = (float) $event->total_revenue;
 
-        // Use event's effective commission rate (may be custom per-event or default from organizer)
+        // Use event's effective commission rate and mode (may be custom per-event or default from organizer)
         $effectiveCommissionRate = $event->getEffectiveCommissionRate();
+        $commissionMode = $event->getEffectiveCommissionMode();
+        $commissionAmount = round($totalRevenue * $effectiveCommissionRate / 100, 2);
+
+        // Net revenue depends on commission mode:
+        // - "added_on_top": commission paid by customer extra, organizer gets full ticket price
+        // - "included": commission deducted from ticket price
+        $netRevenue = $commissionMode === 'added_on_top'
+            ? $totalRevenue
+            : round($totalRevenue - $commissionAmount, 2);
 
         return $this->success([
             'event_id' => $event->id,
@@ -1393,9 +1402,10 @@ class EventsController extends BaseController
                 'total_tickets_sold' => $event->total_tickets_sold,
                 'gross_revenue' => $totalRevenue,
                 'commission_rate' => $effectiveCommissionRate,
+                'commission_mode' => $commissionMode,
                 'use_fixed_commission' => (bool) $event->use_fixed_commission,
-                'commission_amount' => round($totalRevenue * $effectiveCommissionRate / 100, 2),
-                'net_revenue' => round($totalRevenue * (1 - $effectiveCommissionRate / 100), 2),
+                'commission_amount' => $commissionAmount,
+                'net_revenue' => $netRevenue,
                 'views' => $event->views_count ?? 0,
             ],
             'ticket_types' => $ticketStats,
@@ -1621,6 +1631,9 @@ class EventsController extends BaseController
                 'tickets_change' => $ticketsChange,
                 'views_change' => 0,
                 'days_until' => $daysUntil,
+                'commission_rate' => $event->getEffectiveCommissionRate(),
+                'commission_mode' => $event->getEffectiveCommissionMode(),
+                'use_fixed_commission' => (bool) $event->use_fixed_commission,
             ],
             'chart' => [
                 'labels' => $chartLabels,

@@ -84,7 +84,7 @@ class PayoutController extends BaseController
         return $this->success([
             'available_balance' => (float) $organizer->available_balance,
             'pending_balance' => (float) $organizer->pending_balance,
-            'total_earned' => (float) $organizer->total_revenue,
+            'total_earned' => (float) $organizer->total_paid_out,
             'total_paid_out' => (float) $organizer->total_paid_out,
             'commission_rate' => $organizer->getEffectiveCommissionRate(),
             'commission_mode' => $organizer->getEffectiveCommissionMode(),
