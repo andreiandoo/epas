@@ -9,13 +9,15 @@
  * Now uses environment variables for allowed origins.
  * Set CORS_ALLOWED_ORIGINS in .env as comma-separated list:
  * CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+ *
+ * For development, set CORS_ALLOW_LOCALHOST=true in .env
  */
 
 $allowedOrigins = env('CORS_ALLOWED_ORIGINS', '');
 $originsArray = $allowedOrigins ? array_map('trim', explode(',', $allowedOrigins)) : [];
 
-// In development, allow localhost
-if (app()->environment('local', 'development', 'testing')) {
+// In development, allow localhost (check via env variable, not app())
+if (env('CORS_ALLOW_LOCALHOST', false) || env('APP_ENV') === 'local') {
     $originsArray = array_merge($originsArray, [
         'http://localhost:3000',
         'http://localhost:5173',
