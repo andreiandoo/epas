@@ -94,17 +94,17 @@ class MarketplacePayout extends Model
 
     public function approvedByUser(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->belongsTo(MarketplaceAdmin::class, 'approved_by');
     }
 
     public function processedByUser(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'processed_by');
+        return $this->belongsTo(MarketplaceAdmin::class, 'processed_by');
     }
 
     public function rejectedByUser(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'rejected_by');
+        return $this->belongsTo(MarketplaceAdmin::class, 'rejected_by');
     }
 
     public function transactions(): HasMany
