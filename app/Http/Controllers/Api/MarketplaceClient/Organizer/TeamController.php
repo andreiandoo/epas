@@ -128,7 +128,11 @@ class TeamController extends BaseController
 
         // Generate invite token and send email
         $token = $member->generateInviteToken();
-        $this->sendInviteEmail($member, $organizer, $token);
+        $emailSent = $this->sendInviteEmail($member, $organizer, $token);
+
+        $message = $emailSent
+            ? 'Invitatie trimisa cu succes'
+            : 'Membru adaugat, dar emailul nu a putut fi trimis. Verificati configurarea serviciului de email.';
 
         return $this->success([
             'member' => [
@@ -139,7 +143,8 @@ class TeamController extends BaseController
                 'permissions' => $member->getEffectivePermissions(),
                 'status' => $member->status,
             ],
-        ], 'Invitatie trimisa cu succes');
+            'email_sent' => $emailSent,
+        ], $message);
     }
 
     /**
@@ -255,7 +260,11 @@ class TeamController extends BaseController
         }
 
         $token = $member->generateInviteToken();
-        $this->sendInviteEmail($member, $organizer, $token);
+        $emailSent = $this->sendInviteEmail($member, $organizer, $token);
+
+        if (!$emailSent) {
+            return $this->error('Emailul nu a putut fi trimis. Verificati configurarea serviciului de email.', 500);
+        }
 
         return $this->success(null, 'Invitatie retrimisa cu succes');
     }
@@ -276,27 +285,43 @@ class TeamController extends BaseController
             ->get();
 
         $sent = 0;
+        $failed = 0;
         foreach ($pendingMembers as $member) {
             if ($member->canResendInvite()) {
                 $token = $member->generateInviteToken();
-                $this->sendInviteEmail($member, $organizer, $token);
-                $sent++;
+                if ($this->sendInviteEmail($member, $organizer, $token)) {
+                    $sent++;
+                } else {
+                    $failed++;
+                }
             }
         }
 
-        if ($sent === 0) {
+        if ($sent === 0 && $failed === 0) {
             return $this->error('Nu exista invitatii care pot fi retrimise in acest moment', 422);
+        }
+
+        if ($sent === 0 && $failed > 0) {
+            return $this->error('Emailurile nu au putut fi trimise. Verificati configurarea serviciului de email.', 500);
+        }
+
+        $message = $sent . ' invitatii au fost retrimise';
+        if ($failed > 0) {
+            $message .= ' (' . $failed . ' au esuat)';
         }
 
         return $this->success([
             'sent_count' => $sent,
-        ], $sent . ' invitatii au fost retrimise');
+            'failed_count' => $failed,
+        ], $message);
     }
 
     /**
      * Send invite email to team member using marketplace mail settings
+     *
+     * @return bool Whether the email was sent successfully
      */
-    protected function sendInviteEmail(MarketplaceOrganizerTeamMember $member, MarketplaceOrganizer $organizer, string $token): void
+    protected function sendInviteEmail(MarketplaceOrganizerTeamMember $member, MarketplaceOrganizer $organizer, string $token): bool
     {
         $client = $organizer->marketplaceClient;
         $domain = preg_replace('#^https?://#', '', $client->domain);
@@ -309,15 +334,24 @@ class TeamController extends BaseController
             if (!$transport) {
                 \Log::warning('No mail transport configured for marketplace', [
                     'marketplace_id' => $client->id,
+                    'marketplace_domain' => $client->domain,
                     'member_id' => $member->id,
+                    'member_email' => $member->email,
                 ]);
-                return;
+                return false;
             }
 
             // Get sender details from marketplace settings
             $mailSettings = $client->getMailSettings();
             $fromEmail = $mailSettings['from_address'] ?? $client->contact_email ?? 'noreply@' . $client->domain;
             $fromName = $mailSettings['from_name'] ?? $client->name ?? $client->domain;
+
+            \Log::info('Sending team invite email', [
+                'marketplace_id' => $client->id,
+                'from' => $fromEmail,
+                'to' => $member->email,
+                'member_name' => $member->name,
+            ]);
 
             // Build email using Symfony Mime
             $email = (new Email())
@@ -329,13 +363,22 @@ class TeamController extends BaseController
             // Send via marketplace transport
             $transport->send($email);
 
+            \Log::info('Team invite email sent successfully', [
+                'member_id' => $member->id,
+                'member_email' => $member->email,
+            ]);
+
+            return true;
+
         } catch (\Exception $e) {
-            // Log error but don't fail the request
             \Log::error('Failed to send team invite email', [
                 'member_id' => $member->id,
+                'member_email' => $member->email,
                 'marketplace_id' => $client->id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
+            return false;
         }
     }
 
