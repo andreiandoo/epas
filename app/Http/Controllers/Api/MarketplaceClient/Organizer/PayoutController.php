@@ -58,8 +58,9 @@ class PayoutController extends BaseController
             ->where('status', 'completed')
             ->sum('amount');
 
-        // Get recent transactions
+        // Get recent transactions (with order relationship for event_id)
         $transactions = MarketplaceTransaction::where('marketplace_organizer_id', $organizer->id)
+            ->with('order:id,event_id')
             ->orderByDesc('created_at')
             ->limit(20)
             ->get()
@@ -73,6 +74,7 @@ class PayoutController extends BaseController
                     'currency' => $tx->currency,
                     'description' => $tx->description,
                     'order_id' => $tx->order_id,
+                    'event_id' => $tx->order?->event_id,
                     'payout_id' => $tx->marketplace_payout_id,
                     'date' => $tx->created_at->toIso8601String(),
                     'created_at' => $tx->created_at->toIso8601String(),
@@ -518,6 +520,7 @@ class PayoutController extends BaseController
             'status' => $payout->status,
             'status_label' => $payout->status_label,
             'account' => $payout->payout_method['iban'] ?? null,
+            'event_id' => $payout->event_id,
             'period_start' => $payout->period_start?->toDateString(),
             'period_end' => $payout->period_end?->toDateString(),
             'created_at' => $payout->created_at->toIso8601String(),
@@ -544,6 +547,7 @@ class PayoutController extends BaseController
             'currency' => $payout->currency,
             'status' => $payout->status,
             'status_label' => $payout->status_label,
+            'event_id' => $payout->event_id,
             'period_start' => $payout->period_start->toDateString(),
             'period_end' => $payout->period_end->toDateString(),
             'breakdown' => [
