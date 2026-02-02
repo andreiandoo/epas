@@ -15,10 +15,23 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // First, drop the old foreign key
-        Schema::table('organizer_documents', function (Blueprint $table) {
-            $table->dropForeign(['event_id']);
-        });
+        // First, try to drop the old foreign key if it exists
+        $foreignKeys = DB::select("
+            SELECT CONSTRAINT_NAME
+            FROM information_schema.TABLE_CONSTRAINTS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'organizer_documents'
+            AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+            AND CONSTRAINT_NAME LIKE '%event_id%'
+        ");
+
+        if (!empty($foreignKeys)) {
+            Schema::table('organizer_documents', function (Blueprint $table) use ($foreignKeys) {
+                foreach ($foreignKeys as $fk) {
+                    $table->dropForeign($fk->CONSTRAINT_NAME);
+                }
+            });
+        }
 
         // Delete orphaned records where event_id doesn't exist in events table
         DB::statement('DELETE FROM organizer_documents WHERE event_id NOT IN (SELECT id FROM events)');
