@@ -53,7 +53,7 @@ class MarketplacePayout extends Model
         'adjustments_amount' => 'decimal:2',
         'period_start' => 'date',
         'period_end' => 'date',
-        'payout_method' => 'encrypted:array',
+        'payout_method' => 'array',
         'approved_at' => 'datetime',
         'processed_at' => 'datetime',
         'completed_at' => 'datetime',
