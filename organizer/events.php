@@ -864,38 +864,40 @@ function resetFormState() {
 }
 
 async function loadEventForEdit(eventId) {
-    // Show the form first
-    showCreateForm();
-
-    // Fix URL for edit mode (showCreateForm sets it to action=create)
-    history.replaceState({}, '', `/organizator/event/${eventId}?action=edit`);
-
-    // Update page title for edit mode
-    const titleEl = document.querySelector('#create-event-view h1');
-    if (titleEl) titleEl.textContent = 'Editare eveniment';
-
-    // Set the event ID so subsequent saves update instead of create
-    document.getElementById('saved-event-id').value = eventId;
-
-    // Show status actions section (only in edit mode)
-    const statusActions = document.getElementById('event-status-actions');
-    if (statusActions) statusActions.classList.remove('hidden');
-
+    // First, fetch the event to check if it's editable BEFORE showing the form
     try {
         const response = await AmbiletAPI.organizer.getEvent(eventId);
         const event = response.data?.event || response.event || response.data || response;
 
         if (!event || !event.id) {
             AmbiletNotifications.error('Evenimentul nu a fost gasit.');
+            window.location.href = '/organizator/events';
             return;
         }
 
-        // Check if event is editable (not past/ended)
+        // Check if event is editable (not past/ended) - redirect BEFORE showing form
         if (event.is_editable === false || event.is_past === true) {
             AmbiletNotifications.error('Acest eveniment este încheiat și nu mai poate fi editat.');
-            hideCreateForm();
+            window.location.href = '/organizator/events';
             return;
         }
+
+        // Event is editable - now show the form
+        showCreateForm();
+
+        // Fix URL for edit mode (showCreateForm sets it to action=create)
+        history.replaceState({}, '', `/organizator/event/${eventId}?action=edit`);
+
+        // Update page title for edit mode
+        const titleEl = document.querySelector('#create-event-view h1');
+        if (titleEl) titleEl.textContent = 'Editare eveniment';
+
+        // Set the event ID so subsequent saves update instead of create
+        document.getElementById('saved-event-id').value = eventId;
+
+        // Show status actions section (only in edit mode)
+        const statusActions = document.getElementById('event-status-actions');
+        if (statusActions) statusActions.classList.remove('hidden');
 
         // Load current status flags
         currentEventStatus = {
@@ -1138,6 +1140,7 @@ async function loadEventForEdit(eventId) {
 
     } catch (error) {
         AmbiletNotifications.error('Eroare la incarcarea evenimentului: ' + (error.message || 'Incearca din nou.'));
+        window.location.href = '/organizator/events';
     }
 }
 
