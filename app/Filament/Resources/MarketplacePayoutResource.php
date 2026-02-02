@@ -111,6 +111,14 @@ class MarketplacePayoutResource extends Resource
                     ->label('Organizer')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('event.title')
+                    ->label('Event')
+                    ->placeholder('General')
+                    ->formatStateUsing(fn ($state) => is_array($state)
+                        ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
+                        : $state)
+                    ->limit(30)
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('marketplaceClient.name')
                     ->label('Marketplace')
                     ->searchable()
@@ -249,12 +257,21 @@ class MarketplacePayoutResource extends Resource
                                 'cancelled' => 'gray',
                                 default => 'gray',
                             }),
+                        Infolists\Components\TextEntry::make('created_at')
+                            ->label('Requested At')
+                            ->dateTime(),
                         Infolists\Components\TextEntry::make('organizer.name')
                             ->label('Organizer'),
                         Infolists\Components\TextEntry::make('marketplaceClient.name')
                             ->label('Marketplace'),
+                        Infolists\Components\TextEntry::make('event.title')
+                            ->label('Event')
+                            ->placeholder('General payout (no specific event)')
+                            ->formatStateUsing(fn ($state) => is_array($state)
+                                ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
+                                : $state),
                     ])
-                    ->columns(4),
+                    ->columns(3),
 
                 Infolists\Components\Section::make('Amount Breakdown')
                     ->schema([
@@ -301,12 +318,13 @@ class MarketplacePayoutResource extends Resource
                     ->schema([
                         Infolists\Components\TextEntry::make('organizer_notes')
                             ->label('Organizer Notes')
+                            ->placeholder('No notes from organizer')
                             ->columnSpanFull(),
                         Infolists\Components\TextEntry::make('admin_notes')
                             ->label('Admin Notes')
+                            ->placeholder('No admin notes')
                             ->columnSpanFull(),
-                    ])
-                    ->visible(fn ($record) => $record->organizer_notes || $record->admin_notes),
+                    ]),
 
                 Infolists\Components\Section::make('Rejection Details')
                     ->schema([
