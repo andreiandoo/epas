@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -14,11 +15,16 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // First, drop the old foreign key
         Schema::table('organizer_documents', function (Blueprint $table) {
-            // Drop the old foreign key
             $table->dropForeign(['event_id']);
+        });
 
-            // Add new foreign key referencing events table
+        // Delete orphaned records where event_id doesn't exist in events table
+        DB::statement('DELETE FROM organizer_documents WHERE event_id NOT IN (SELECT id FROM events)');
+
+        // Add new foreign key referencing events table
+        Schema::table('organizer_documents', function (Blueprint $table) {
             $table->foreign('event_id')
                 ->references('id')
                 ->on('events')
