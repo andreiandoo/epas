@@ -58,13 +58,16 @@ class PayoutController extends BaseController
             ->where('status', 'completed')
             ->sum('amount');
 
-        // Get recent transactions (with order relationship for event_id)
+        // Get recent transactions (with order and payout relationships for event_id)
         $transactions = MarketplaceTransaction::where('marketplace_organizer_id', $organizer->id)
-            ->with('order:id,event_id')
+            ->with(['order:id,event_id', 'payout:id,event_id'])
             ->orderByDesc('created_at')
             ->limit(20)
             ->get()
             ->map(function ($tx) {
+                // Get event_id from order (for sale/commission/refund) or from payout (for payout transactions)
+                $eventId = $tx->order?->event_id ?? $tx->payout?->event_id;
+
                 return [
                     'id' => $tx->id,
                     'type' => $tx->type,
@@ -74,7 +77,7 @@ class PayoutController extends BaseController
                     'currency' => $tx->currency,
                     'description' => $tx->description,
                     'order_id' => $tx->order_id,
-                    'event_id' => $tx->order?->event_id,
+                    'event_id' => $eventId,
                     'payout_id' => $tx->marketplace_payout_id,
                     'date' => $tx->created_at->toIso8601String(),
                     'created_at' => $tx->created_at->toIso8601String(),
