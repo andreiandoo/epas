@@ -592,7 +592,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     </style>
 
 <?php
-$scriptsExtra = <<<'JS'
+$scriptsExtra = '<script>const MARKETPLACE_NAME = ' . json_encode(SITE_NAME) . ';</script>';
+$scriptsExtra .= <<<'JS'
 <script>
 AmbiletAuth.requireOrganizerAuth();
 
@@ -776,7 +777,7 @@ function renderEvents(events) {
                             </div>
                             <p class="text-xs text-muted">${event.use_fixed_commission ? 'Comision fix' : 'Comision'} ${event.commission_mode === 'added_on_top' ? '(+preț)' : '(inclus)'}</p>
                             <div class="absolute z-10 hidden group-hover:block bottom-full left-0 mb-2 px-3 py-2 text-xs text-white bg-gray-800 rounded-lg whitespace-nowrap">
-                                Setat de <?= SITE_NAME ?> pentru acest eveniment
+                                Setat de ${MARKETPLACE_NAME} pentru acest eveniment
                                 <div class="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
                             </div>
                         </div>
