@@ -164,7 +164,8 @@ class MarketplacePayout extends Model
 
     public function canBeCompleted(): bool
     {
-        return $this->isProcessing();
+        // Can complete from either approved or processing status
+        return $this->isApproved() || $this->isProcessing();
     }
 
     public function canBeCancelled(): bool

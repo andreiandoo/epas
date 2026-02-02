@@ -1579,6 +1579,50 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // ==================== ORGANIZER NOTIFICATIONS ====================
+
+    case 'organizer.notifications':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['unread_only'])) $params['unread_only'] = $_GET['unread_only'];
+        if (isset($_GET['read'])) $params['read'] = $_GET['read'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/organizer/notifications' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.unread-count':
+        $method = 'GET';
+        $endpoint = '/organizer/notifications/unread-count';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.recent':
+        $method = 'GET';
+        $endpoint = '/organizer/notifications/recent';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.read':
+        $notificationId = $_GET['id'] ?? '';
+        if (!$notificationId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing notification id']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/organizer/notifications/' . urlencode($notificationId) . '/read';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.read-all':
+        $method = 'POST';
+        $endpoint = '/organizer/notifications/read-all';
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER PROMO CODES ====================
 
     case 'organizer.promo-codes':
