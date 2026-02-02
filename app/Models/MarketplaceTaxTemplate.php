@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Event;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -250,7 +251,7 @@ class MarketplaceTaxTemplate extends Model
         ?MarketplaceTaxRegistry $taxRegistry = null,
         ?MarketplaceClient $marketplace = null,
         ?MarketplaceOrganizer $organizer = null,
-        ?MarketplaceEvent $event = null,
+        MarketplaceEvent|Event|null $event = null,
         ?Order $order = null
     ): array {
         $variables = [];
