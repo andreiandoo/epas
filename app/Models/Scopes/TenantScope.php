@@ -42,9 +42,11 @@ class TenantScope implements Scope
             return session()->get('tenant_id');
         }
 
-        // Try to get from request (for admin impersonation)
-        if (request()->has('_tenant_id')) {
-            return request()->get('_tenant_id');
+        // SECURITY FIX: Removed _tenant_id from query params - was a critical vulnerability!
+        // Previously allowed bypass via ?_tenant_id=X
+        // Now only accepts tenant_id from validated middleware (request attributes)
+        if (request() && request()->attributes->has('tenant_id')) {
+            return request()->attributes->get('tenant_id');
         }
 
         return null;

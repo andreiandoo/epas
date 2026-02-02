@@ -136,8 +136,12 @@ class PayUProcessor implements PaymentProcessorInterface
 
     public function verifySignature(array $payload, array $headers): bool
     {
+        // SECURITY FIX: If no secret key, REJECT the webhook
         if (empty($this->keys['secret_key'])) {
-            return true; // Can't verify without secret key
+            \Log::critical('PayU webhook rejected: secret_key not configured', [
+                'ip' => request()->ip(),
+            ]);
+            return false;
         }
 
         $receivedHash = $payload['HASH'] ?? $payload['ORDER_HASH'] ?? '';
@@ -192,8 +196,11 @@ class PayUProcessor implements PaymentProcessorInterface
             $response = curl_exec($ch);
             curl_close($ch);
 
-            // Parse XML response
-            $xml = simplexml_load_string($response);
+            // SECURITY FIX: Parse XML with XXE protection
+            $previousValue = libxml_disable_entity_loader(true);
+            libxml_use_internal_errors(true);
+            $xml = simplexml_load_string($response, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOCDATA);
+            libxml_disable_entity_loader($previousValue);
 
             if (!$xml || !isset($xml->ORDER)) {
                 throw new \Exception('Invalid response from PayU');
@@ -264,8 +271,11 @@ class PayUProcessor implements PaymentProcessorInterface
             $response = curl_exec($ch);
             curl_close($ch);
 
-            // Parse XML response
-            $xml = simplexml_load_string($response);
+            // SECURITY FIX: Parse XML with XXE protection
+            $previousValue = libxml_disable_entity_loader(true);
+            libxml_use_internal_errors(true);
+            $xml = simplexml_load_string($response, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOCDATA);
+            libxml_disable_entity_loader($previousValue);
 
             if (!$xml || !isset($xml->REFUND)) {
                 throw new \Exception('Invalid response from PayU');

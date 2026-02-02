@@ -21,7 +21,8 @@
     <div class="border-t pt-4">
         <h3 class="text-lg font-medium mb-2">Contract Content Preview</h3>
         <div class="bg-white dark:bg-gray-900 border rounded-lg p-6 max-h-96 overflow-y-auto prose dark:prose-invert max-w-none">
-            {!! $content !!}
+            {{-- SECURITY FIX: Sanitize HTML content to prevent XSS --}}
+            {!! \App\Helpers\HtmlSanitizer::sanitize($content) !!}
         </div>
     </div>
 

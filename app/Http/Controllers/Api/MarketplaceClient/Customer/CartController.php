@@ -568,30 +568,30 @@ class CartController extends BaseController
 
     /**
      * Get session ID from request
+     * SECURITY FIX: Generate cryptographically secure session IDs
      */
     protected function getSessionId(Request $request): string
     {
-        // Try header first
-        if ($sessionId = $request->header('X-Session-ID')) {
-            return $sessionId;
-        }
-
-        // Try cookie
-        if ($sessionId = $request->cookie('session_id')) {
-            return $sessionId;
-        }
-
-        // Try Laravel session (may not be available on API routes)
+        // Try Laravel session first (most secure)
         try {
             if ($request->hasSession() && ($sessionId = $request->session()->getId())) {
-                return $sessionId;
+                if (strlen($sessionId) >= 32) {
+                    return $sessionId;
+                }
             }
         } catch (\Exception $e) {
-            // Session not available, fall through to fallback
+            // Session not available, fall through
         }
 
-        // Fallback: generate deterministic ID from IP and user agent
-        return md5($request->ip() . $request->userAgent());
+        // Try cookie (must be validated format)
+        $cookieSession = $request->cookie('session_id');
+        if ($cookieSession && preg_match('/^[a-zA-Z0-9]{32,64}$/', $cookieSession)) {
+            return $cookieSession;
+        }
+
+        // SECURITY FIX: Generate cryptographically secure random ID
+        // Previously was: md5($request->ip() . $request->userAgent()) - PREDICTABLE!
+        return bin2hex(random_bytes(32));
     }
 
     /**

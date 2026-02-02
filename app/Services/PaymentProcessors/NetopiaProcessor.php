@@ -114,7 +114,12 @@ class NetopiaProcessor implements PaymentProcessorInterface
         }
 
         $decryptedData = $this->decryptData($encryptedData, $envKey);
-        $xmlData = simplexml_load_string($decryptedData);
+
+        // SECURITY FIX: Parse XML with XXE protection
+        $previousValue = libxml_disable_entity_loader(true);
+        libxml_use_internal_errors(true);
+        $xmlData = simplexml_load_string($decryptedData, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOCDATA);
+        libxml_disable_entity_loader($previousValue);
 
         // Parse the response
         $action = (string) $xmlData->attributes()->action;

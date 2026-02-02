@@ -187,6 +187,19 @@ class PaymentController extends BaseController
             $result = $processor->processCallback($request->all(), $request->headers->all());
 
             if ($result['status'] === 'success') {
+                // SECURITY FIX: Idempotency check - prevent double-spending via webhook replay
+                if ($order->payment_status === 'paid') {
+                    \Log::info('Payment callback received for already paid order', [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                    ]);
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Order already paid',
+                        'data' => ['order_number' => $order->order_number],
+                    ]);
+                }
+
                 // Payment successful - save transaction ID from processor
                 $order->update([
                     'status' => 'completed',

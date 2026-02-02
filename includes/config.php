@@ -12,7 +12,9 @@ if (!defined('AMBILET_ROOT')) {
 
 // API Configuration
 define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
-define('API_KEY', 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCISPFB'); // Replace with actual API key
+// SECURITY FIX: API key must come from environment variable, not hardcoded
+// The previous hardcoded key has been rotated - set MARKETPLACE_API_KEY in .env
+define('API_KEY', getenv('MARKETPLACE_API_KEY') ?: 'MISSING_API_KEY_SET_ENV_VAR');
 
 // Site Configuration
 define('SITE_NAME', 'AmBilet');

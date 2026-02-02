@@ -44,7 +44,11 @@
                 <section class="bg-white rounded-2xl border p-6">
                     <h2 class="text-2xl font-bold mb-4">About</h2>
                     <div class="prose max-w-none">
-                        {!! $venue->getTranslation('description', app()->getLocale()) ?? $venue->getTranslation('description', 'en') !!}
+                        {{-- SECURITY FIX: Sanitize HTML content to prevent XSS --}}
+                        @php
+                            $descContent = $venue->getTranslation('description', app()->getLocale()) ?? $venue->getTranslation('description', 'en');
+                        @endphp
+                        {!! \App\Helpers\HtmlSanitizer::sanitize($descContent) !!}
                     </div>
                 </section>
             @endif

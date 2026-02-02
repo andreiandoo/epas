@@ -261,10 +261,20 @@ class OrderController extends Controller
 
     /**
      * Get order details
+     * SECURITY FIX: Added tenant_id verification to prevent IDOR
      */
     public function show(Request $request, int $orderId): JsonResponse
     {
-        $order = Order::with(['tickets.ticketType.event', 'customer'])->find($orderId);
+        // SECURITY FIX: Must verify order belongs to current tenant
+        $tenant = $request->attributes->get('tenant');
+
+        if (!$tenant) {
+            return response()->json(['error' => 'Tenant context required'], 401);
+        }
+
+        $order = Order::with(['tickets.ticketType.event', 'customer'])
+            ->where('tenant_id', $tenant->id)  // SECURITY: Enforce tenant isolation
+            ->find($orderId);
 
         if (!$order) {
             return response()->json(['error' => 'Order not found'], 404);

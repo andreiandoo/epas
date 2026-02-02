@@ -17,6 +17,7 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Helpers\HtmlSanitizer;
 
 class ContractMail extends Mailable implements ShouldQueue
 {
@@ -145,19 +146,21 @@ class ContractMail extends Mailable implements ShouldQueue
 
     /**
      * Process template variables
+     * SECURITY FIX: Escape variable values to prevent XSS when injected into HTML templates
      */
     protected function processVariables(string $content): string
     {
         $platformName = $this->settings?->company_name ?? 'Tixello';
 
+        // SECURITY: Escape all variable values to prevent XSS injection
         $variables = [
-            '{{tenant_name}}' => $this->tenant->contact_first_name ?? $this->tenant->public_name ?? $this->tenant->name,
-            '{{tenant_company_name}}' => $this->tenant->company_name ?? $this->tenant->name,
-            '{{tenant_email}}' => $this->tenant->contact_email ?? '',
-            '{{contract_number}}' => $this->tenant->contract_number ?? '',
-            '{{work_method}}' => $this->formatWorkMethod($this->tenant->work_method),
-            '{{commission_rate}}' => $this->tenant->commission_rate ?? '',
-            '{{platform_name}}' => $platformName,
+            '{{tenant_name}}' => HtmlSanitizer::escape($this->tenant->contact_first_name ?? $this->tenant->public_name ?? $this->tenant->name),
+            '{{tenant_company_name}}' => HtmlSanitizer::escape($this->tenant->company_name ?? $this->tenant->name),
+            '{{tenant_email}}' => HtmlSanitizer::escape($this->tenant->contact_email ?? ''),
+            '{{contract_number}}' => HtmlSanitizer::escape($this->tenant->contract_number ?? ''),
+            '{{work_method}}' => HtmlSanitizer::escape($this->formatWorkMethod($this->tenant->work_method)),
+            '{{commission_rate}}' => HtmlSanitizer::escape($this->tenant->commission_rate ?? ''),
+            '{{platform_name}}' => HtmlSanitizer::escape($platformName),
         ];
 
         return str_replace(array_keys($variables), array_values($variables), $content);

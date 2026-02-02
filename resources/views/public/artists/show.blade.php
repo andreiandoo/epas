@@ -50,7 +50,11 @@
                 <section class="bg-white rounded-2xl border p-6">
                     <h2 class="text-2xl font-bold mb-4">About</h2>
                     <div class="prose max-w-none">
-                        {!! is_array($artist->bio) ? ($artist->bio[app()->getLocale()] ?? $artist->bio['en'] ?? reset($artist->bio)) : $artist->bio !!}
+                        {{-- SECURITY FIX: Sanitize HTML content to prevent XSS --}}
+                        @php
+                            $bioContent = is_array($artist->bio) ? ($artist->bio[app()->getLocale()] ?? $artist->bio['en'] ?? reset($artist->bio)) : $artist->bio;
+                        @endphp
+                        {!! \App\Helpers\HtmlSanitizer::sanitize($bioContent) !!}
                     </div>
                 </section>
             @endif
