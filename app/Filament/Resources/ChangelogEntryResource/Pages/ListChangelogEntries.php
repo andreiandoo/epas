@@ -6,6 +6,7 @@ use App\Filament\Resources\ChangelogEntryResource;
 use App\Models\ChangelogEntry;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Actions;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Artisan;
 
 class ListChangelogEntries extends ListRecords
@@ -20,7 +21,10 @@ class ListChangelogEntries extends ListRecords
                 ->icon('heroicon-o-arrow-path')
                 ->action(function () {
                     Artisan::call('changelog:update');
-                    $this->notify('success', 'Changelog sincronizat cu succes!');
+                    Notification::make()
+                        ->title('Changelog sincronizat cu succes!')
+                        ->success()
+                        ->send();
                 })
                 ->requiresConfirmation()
                 ->modalHeading('Sincronizare Changelog')
@@ -33,7 +37,10 @@ class ListChangelogEntries extends ListRecords
                 ->color('warning')
                 ->action(function () {
                     Artisan::call('changelog:update', ['--full' => true]);
-                    $this->notify('success', 'Changelog resincronizat complet!');
+                    Notification::make()
+                        ->title('Changelog resincronizat complet!')
+                        ->success()
+                        ->send();
                 })
                 ->requiresConfirmation()
                 ->modalHeading('Resincronizare Completă')
@@ -45,16 +52,17 @@ class ListChangelogEntries extends ListRecords
                 ->icon('heroicon-o-document-arrow-down')
                 ->action(function () {
                     Artisan::call('changelog:generate-md');
-                    $this->notify('success', 'CHANGELOG.md generat cu succes!');
+                    Notification::make()
+                        ->title('CHANGELOG.md generat cu succes!')
+                        ->success()
+                        ->send();
                 }),
         ];
     }
 
     protected function getHeaderWidgets(): array
     {
-        return [
-            // Stats widgets could go here
-        ];
+        return [];
     }
 
     public function getSubheading(): ?string
