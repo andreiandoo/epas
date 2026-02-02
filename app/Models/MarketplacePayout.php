@@ -69,6 +69,13 @@ class MarketplacePayout extends Model
                 $payout->reference = 'PAY-' . strtoupper(Str::random(8));
             }
         });
+
+        static::created(function ($payout) {
+            // Append payout ID to reference (e.g., PAY-QGTQJTNF-1)
+            if (!str_ends_with($payout->reference, '-' . $payout->id)) {
+                $payout->updateQuietly(['reference' => $payout->reference . '-' . $payout->id]);
+            }
+        });
     }
 
     // =========================================
