@@ -386,7 +386,7 @@ const ThankYouPage = {
         const eventInfo = document.getElementById('eventInfo');
         if (order.event) {
             eventInfo.innerHTML = `
-                <img src="${getStorageUrl(order.event.image)}" alt="${order.event.title}" class="w-20 h-20 rounded-xl object-cover">
+                <img src="${getStorageUrl(order.event.image)}" alt="${order.event.title}" class="w-20 h-20 rounded-xl object-cover" loading="lazy">
                 <div>
                     <h3 class="font-bold text-secondary">${order.event.title}</h3>
                     <p class="text-sm text-muted mt-1">${order.event.date ? AmbiletUtils.formatDate(order.event.date) : ''} ${order.event.time ? '• ' + order.event.time : ''}</p>

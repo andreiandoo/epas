@@ -453,7 +453,7 @@ const CartPage = {
         return '<div class="bg-white border-2 cart-item rounded-2xl border-border" data-item-key="' + itemKey + '" data-index="' + index + '">' +
             '<div class="flex gap-4 p-3">' +
                 '<div class="w-24 h-24 overflow-hidden rounded-xl shrink-0">' +
-                    '<img src="' + eventImage + '" alt="' + eventTitle + '" class="object-cover w-full h-full">' +
+                    '<img src="' + eventImage + '" alt="' + eventTitle + '" class="object-cover w-full h-full" loading="lazy">' +
                 '</div>' +
                 '<div class="flex-1 min-w-0">' +
                     '<div class="flex items-center justify-between">' +

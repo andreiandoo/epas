@@ -235,7 +235,7 @@ const ArtistsPage = {
         return '<a href="/artist/' + this.escapeHtml(artist.slug) + '" class="flex items-center gap-4 p-4 transition-colors rounded-2xl bg-surface hover:bg-border/50">' +
             '<div class="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold text-white rounded-lg ' + rankClass + '">' + rank + '</div>' +
             '<div class="flex-shrink-0 overflow-hidden w-14 h-14 rounded-xl">' +
-                '<img src="' + this.escapeHtml(artistImage) + '" alt="' + this.escapeHtml(artist.name) + '" class="object-cover w-full h-full">' +
+                '<img src="' + this.escapeHtml(artistImage) + '" alt="' + this.escapeHtml(artist.name) + '" class="object-cover w-full h-full" loading="lazy">' +
             '</div>' +
             '<div class="flex-1 min-w-0">' +
                 '<div class="flex items-center text-sm font-bold text-secondary">' + this.escapeHtml(artist.name) + verifiedBadge + '</div>' +

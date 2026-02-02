@@ -218,7 +218,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
                     </div>
                     <div class="relative p-5 -mt-12">
                         <div class="relative z-10 w-20 h-20 mb-4 overflow-hidden bg-white border-4 rounded-2xl border-slate-800">
-                            <img src="<?= $org['avatar'] ?>" alt="<?= $org['name'] ?>" class="object-cover w-full h-full">
+                            <img src="<?= $org['avatar'] ?>" alt="<?= $org['name'] ?>" class="object-cover w-full h-full" loading="lazy">
                         </div>
                         <div class="absolute top-[-30px] right-5 flex gap-2">
                             <?php if ($org['verified']): ?>
@@ -315,7 +315,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
             <a href="/organizator/<?= $org['slug'] ?>" class="overflow-hidden transition-all bg-white border border-gray-200 group rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
                 <div class="h-24 <?= $gradients[$org['gradient']] ?> relative">
                     <div class="absolute -bottom-9 left-6 w-[72px] h-[72px] rounded-2xl border-4 border-white bg-white overflow-hidden shadow-lg">
-                        <img src="<?= $org['avatar'] ?>" alt="<?= $org['name'] ?>" class="object-cover w-full h-full">
+                        <img src="<?= $org['avatar'] ?>" alt="<?= $org['name'] ?>" class="object-cover w-full h-full" loading="lazy">
                     </div>
                     <?php if ($org['verified']): ?>
                     <div class="absolute -bottom-2 left-[80px] w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white">

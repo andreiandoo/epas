@@ -566,7 +566,7 @@ const CheckoutPage = {
         // Event info
         const eventInfo = document.getElementById('event-info');
         eventInfo.innerHTML = `
-            <img src="${eventImage}" alt="Event" class="object-cover w-20 h-20 rounded-xl">
+            <img src="${eventImage}" alt="Event" class="object-cover w-20 h-20 rounded-xl" loading="lazy">
             <div>
                 <h3 class="font-bold text-secondary">${eventTitle}</h3>
                 <p class="text-sm text-muted">${eventDate ? AmbiletUtils.formatDate(eventDate) : ''}</p>

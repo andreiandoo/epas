@@ -940,7 +940,7 @@ const EventPage = {
         var self = this;
         container.innerHTML = this.galleryImages.slice(0, 4).map(function(img, i) {
             return '<button onclick="EventPage.changeImage(' + i + ')" class="gallery-thumb ' + (i === 0 ? 'active' : '') + ' w-16 h-12 rounded-lg overflow-hidden border-2 border-white/50 opacity-80">' +
-                '<img src="' + img + '" class="object-cover w-full h-full">' +
+                '<img src="' + img + '" class="object-cover w-full h-full" loading="lazy">' +
             '</button>';
         }).join('');
     },
@@ -1003,7 +1003,7 @@ const EventPage = {
             allHtml += '<div class="flex flex-col gap-6 md:flex-row' + (i > 0 ? ' pt-6 mt-6 border-t border-border' : '') + '">' +
                 '<div class="md:w-1/3">' +
                     '<a href="' + artistLink + '">' +
-                        '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105">' +
+                        '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105" loading="lazy">' +
                     '</a>' +
                 '</div>' +
                 '<div class="md:w-2/3">' +
@@ -1043,7 +1043,7 @@ const EventPage = {
 
         var html = '<div class="flex flex-col gap-6 md:flex-row">' +
             '<div class="md:w-1/3">' +
-                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl">' +
+                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl" loading="lazy">' +
             '</div>' +
             '<div class="md:w-2/3">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
