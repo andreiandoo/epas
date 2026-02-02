@@ -261,16 +261,29 @@ class PayoutController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        // Validate payout details exist
-        if (empty($organizer->payout_details)) {
-            return $this->error('Please set up your payout details first', 400);
-        }
-
         $validated = $request->validate([
             'amount' => 'nullable|numeric|min:1',
             'event_id' => 'nullable|integer|exists:events,id',
+            'bank_account_id' => 'nullable|integer',
             'notes' => 'nullable|string|max:500',
         ]);
+
+        // Get bank account - either from request or primary
+        $bankAccount = null;
+        if (!empty($validated['bank_account_id'])) {
+            $bankAccount = $organizer->bankAccounts()->find($validated['bank_account_id']);
+            if (!$bankAccount) {
+                return $this->error('Contul bancar selectat nu a fost găsit', 400);
+            }
+        } else {
+            $bankAccount = $organizer->bankAccounts()->where('is_primary', true)->first()
+                ?? $organizer->bankAccounts()->first();
+        }
+
+        // Validate payout details exist (bank account or legacy payout_details)
+        if (!$bankAccount && empty($organizer->payout_details)) {
+            return $this->error('Te rugăm să adaugi un cont bancar în Setări înainte de a solicita plata', 400);
+        }
 
         $eventId = $validated['event_id'] ?? null;
 
@@ -339,6 +352,15 @@ class PayoutController extends BaseController
                 $commissionAmount = $grossAmount - $requestedAmount;
             }
 
+            // Build payout method info from bank account or legacy payout_details
+            $payoutMethod = $bankAccount ? [
+                'type' => 'bank_transfer',
+                'bank_account_id' => $bankAccount->id,
+                'bank_name' => $bankAccount->bank_name,
+                'iban' => $bankAccount->iban,
+                'account_holder' => $bankAccount->account_holder,
+            ] : $organizer->payout_details;
+
             // Create payout request
             $payout = MarketplacePayout::create([
                 'marketplace_client_id' => $organizer->marketplace_client_id,
@@ -353,7 +375,7 @@ class PayoutController extends BaseController
                 'fees_amount' => 0,
                 'adjustments_amount' => 0,
                 'status' => 'pending',
-                'payout_method' => $organizer->payout_details,
+                'payout_method' => $payoutMethod,
                 'organizer_notes' => $validated['notes'] ?? null,
             ]);
 
