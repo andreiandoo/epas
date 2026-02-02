@@ -207,13 +207,31 @@ function renderTransactions(transactions) {
 function renderPayouts(payouts) {
     if (!payouts.length) { document.getElementById('payouts-list').innerHTML = '<tr><td colspan="4" class="px-6 py-12 text-center text-muted">Nu exista plati momentan</td></tr>'; return; }
     document.getElementById('payouts-list').innerHTML = payouts.map(p => {
-        const statusClass = p.status === 'completed' ? 'bg-success/10 text-success' : p.status === 'rejected' ? 'bg-error/10 text-error' : 'bg-warning/10 text-warning';
-        const statusLabel = p.status === 'completed' ? 'Finalizata' : p.status === 'rejected' ? 'Respinsa' : 'In procesare';
+        const statusColors = {
+            'pending': { class: 'bg-warning/10 text-warning', label: 'In asteptare' },
+            'approved': { class: 'bg-blue-100 text-blue-600', label: 'Aprobata' },
+            'processing': { class: 'bg-blue-100 text-blue-600', label: 'In procesare' },
+            'completed': { class: 'bg-success/10 text-success', label: 'Finalizata' },
+            'rejected': { class: 'bg-error/10 text-error', label: 'Respinsa' },
+            'cancelled': { class: 'bg-gray-100 text-gray-600', label: 'Anulata' }
+        };
+        const statusInfo = statusColors[p.status] || statusColors['pending'];
+        const rejectionTooltip = p.status === 'rejected' && p.rejection_reason
+            ? `<span class="ml-1 relative group cursor-help">
+                <svg class="w-4 h-4 inline text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap max-w-xs z-50">
+                    <span class="font-semibold">Motiv:</span> ${p.rejection_reason}
+                </span>
+               </span>`
+            : '';
         return `
             <tr class="hover:bg-surface/50">
                 <td class="px-6 py-4 font-medium text-secondary">${p.reference || '#' + p.id}</td>
                 <td class="px-6 py-4 font-semibold">${AmbiletUtils.formatCurrency(p.amount)}</td>
-                <td class="px-6 py-4"><span class="px-3 py-1 ${statusClass} text-sm rounded-full">${statusLabel}</span></td>
+                <td class="px-6 py-4">
+                    <span class="px-3 py-1 ${statusInfo.class} text-sm rounded-full">${statusInfo.label}</span>
+                    ${rejectionTooltip}
+                </td>
                 <td class="px-6 py-4 text-muted">${AmbiletUtils.formatDate(p.created_at)}</td>
             </tr>
         `;
