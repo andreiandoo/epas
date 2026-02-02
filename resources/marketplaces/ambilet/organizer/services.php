@@ -975,8 +975,22 @@ async function loadEvents() {
         const response = await AmbiletAPI.get('/organizer/events');
         // API returns paginated response with data array directly
         if (response.success && response.data) {
-            events = Array.isArray(response.data) ? response.data : [];
+            const allEvents = Array.isArray(response.data) ? response.data : [];
+            // Filter out past/finished events - only show live events for promotions
+            events = allEvents.filter(e => e.is_editable !== false && e.is_past !== true && !e.is_cancelled);
+
             const select = document.getElementById('service-event');
+
+            if (events.length === 0) {
+                // No live events available
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'Momentan nu ai evenimente in derulare pentru care sa faci promovare';
+                opt.disabled = true;
+                select.appendChild(opt);
+                return;
+            }
+
             events.forEach(e => {
                 const opt = document.createElement('option');
                 opt.value = e.id;
