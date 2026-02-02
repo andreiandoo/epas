@@ -893,7 +893,7 @@ async function loadEventForEdit(eventId) {
         // Check if event is editable (not past/ended)
         if (event.is_editable === false || event.is_past === true) {
             AmbiletNotifications.error('Acest eveniment este încheiat și nu mai poate fi editat.');
-            hideCreateForm();
+            window.location.href = '/organizator/events';
             return;
         }
 

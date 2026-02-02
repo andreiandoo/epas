@@ -93,7 +93,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <p class="font-semibold text-secondary" id="payout-event-name"></p>
                 </div>
                 <div class="p-4 mb-6 bg-surface rounded-xl"><p class="mb-1 text-sm text-muted">Suma disponibila</p><p class="text-2xl font-bold text-secondary" id="modal-available-balance">0 RON</p></div>
-                <div class="mb-4"><label class="label">Suma de retras</label><input type="number" id="payout-amount" min="100" step="0.01" class="w-full input" required><p class="mt-1 text-sm text-muted">Suma minima: 100 RON</p></div>
+                <div class="mb-4"><label class="label">Suma de retras</label><input type="number" id="payout-amount" min="100" step="0.01" class="w-full input" required><p class="mt-1 text-sm text-muted" id="payout-amount-hint">Suma minima: 100 RON</p></div>
+                <div class="mb-4"><label class="label">Cont Bancar</label><select id="payout-account" class="w-full input" required><option value="">Se incarca...</option></select></div>
                 <div class="mb-6"><label class="label">Note (optional)</label><textarea id="payout-notes" class="w-full input" rows="2" placeholder="Adauga note sau detalii..."></textarea></div>
                 <div class="flex gap-3"><button type="button" onclick="closePayoutModal()" class="flex-1 btn btn-secondary">Anuleaza</button><button type="submit" class="flex-1 btn btn-primary">Solicita Plata</button></div>
             </form>
@@ -227,16 +228,52 @@ function setTab(tabName) {
     document.getElementById(`${tabName}-tab`).classList.remove('hidden');
 }
 
-function openPayoutModal(eventId, eventName, availableBalance) {
+let currentPayoutMaxAmount = 0;
+
+async function openPayoutModal(eventId, eventName, availableBalance) {
+    currentPayoutMaxAmount = availableBalance;
     document.getElementById('payout-event-id').value = eventId;
     document.getElementById('payout-event-name').textContent = eventName;
     document.getElementById('payout-event-info').classList.remove('hidden');
     document.getElementById('modal-available-balance').textContent = AmbiletUtils.formatCurrency(availableBalance);
     document.getElementById('payout-amount').value = '';
     document.getElementById('payout-amount').max = availableBalance;
+    document.getElementById('payout-amount-hint').textContent = `Suma minima: 100 RON, maxima: ${AmbiletUtils.formatCurrency(availableBalance)}`;
     document.getElementById('payout-notes').value = '';
+
+    // Load bank accounts
+    const select = document.getElementById('payout-account');
+    select.innerHTML = '<option value="">Se incarca...</option>';
+    try {
+        const response = await AmbiletAPI.get('/organizer/bank-accounts');
+        if (response.success && response.data) {
+            const accounts = response.data.accounts || response.data || [];
+            select.innerHTML = '<option value="">Selecteaza contul</option>';
+            if (accounts.length === 0) {
+                select.innerHTML = '<option value="">Nu ai conturi bancare adaugate. Adauga unul in Setari.</option>';
+            } else {
+                accounts.forEach(acc => {
+                    const label = (acc.bank_name || 'Cont') + ' - ****' + (acc.iban ? acc.iban.slice(-4) : acc.account_number?.slice(-4) || '');
+                    select.innerHTML += `<option value="${acc.id}">${label}</option>`;
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load bank accounts:', error);
+        select.innerHTML = '<option value="">Eroare la incarcarea conturilor</option>';
+    }
+
     document.getElementById('payout-modal').classList.remove('hidden');
     document.getElementById('payout-modal').classList.add('flex');
+
+    // Add input watcher for amount
+    const amountInput = document.getElementById('payout-amount');
+    amountInput.oninput = function() {
+        const val = parseFloat(this.value) || 0;
+        if (val > currentPayoutMaxAmount) {
+            this.value = currentPayoutMaxAmount;
+        }
+    };
 }
 
 function closePayoutModal() {
@@ -249,9 +286,18 @@ async function submitPayoutRequest(e) {
     const eventId = document.getElementById('payout-event-id').value;
     const amount = parseFloat(document.getElementById('payout-amount').value);
     const notes = document.getElementById('payout-notes').value;
+    const accountId = document.getElementById('payout-account').value;
 
+    if (!accountId) {
+        AmbiletNotifications.error('Te rugam sa selectezi un cont bancar');
+        return;
+    }
     if (amount < 100) {
         AmbiletNotifications.error('Suma minima este 100 RON');
+        return;
+    }
+    if (amount > currentPayoutMaxAmount) {
+        AmbiletNotifications.error('Suma depaseste soldul disponibil');
         return;
     }
 
@@ -259,6 +305,7 @@ async function submitPayoutRequest(e) {
         const response = await AmbiletAPI.post('/organizer/payouts', {
             amount: amount,
             event_id: eventId || null,
+            bank_account_id: accountId,
             notes: notes || null
         });
 

@@ -139,7 +139,7 @@ class PayoutController extends BaseController
                 return [
                     'id' => $event->id,
                     'title' => $title,
-                    'image' => $event->poster_url,
+                    'image' => $this->getStorageUrl($event->poster_url),
                     'starts_at' => $event->event_date?->toIso8601String() ?? $event->starts_at?->toIso8601String(),
                     'status' => $event->is_published ? 'published' : 'draft',
                     'is_past' => $event->event_date ? $event->event_date->isPast() : false,
@@ -539,5 +539,30 @@ class PayoutController extends BaseController
             'created_at' => $payout->created_at->toIso8601String(),
             'can_cancel' => $payout->canBeCancelled(),
         ];
+    }
+
+    /**
+     * Get full storage URL for an image path
+     */
+    protected function getStorageUrl(?string $path): ?string
+    {
+        if (empty($path)) {
+            return null;
+        }
+        // If it's already a full URL, return as-is
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        // Get the core storage base URL
+        $baseUrl = rtrim(config('app.url'), '/') . '/storage';
+
+        // Clean the path - remove leading slashes and 'storage/' prefix if present
+        $cleanPath = ltrim($path, '/');
+        if (str_starts_with($cleanPath, 'storage/')) {
+            $cleanPath = substr($cleanPath, 8);
+        }
+
+        return $baseUrl . '/' . $cleanPath;
     }
 }
