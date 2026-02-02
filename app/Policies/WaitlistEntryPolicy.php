@@ -9,9 +9,13 @@ use Illuminate\Contracts\Auth\Authenticatable;
 
 class WaitlistEntryPolicy
 {
+    // SECURITY FIX: viewAny should verify user has proper role/permissions
     public function viewAny(Authenticatable $user): bool
     {
-        return true;
+        if ($user instanceof MarketplaceAdmin) {
+            return $user->marketplace_client_id !== null;
+        }
+        return $user->tenant_id !== null || $this->isAdmin($user);
     }
 
     public function view(Authenticatable $user, WaitlistEntry $entry): bool
@@ -22,9 +26,18 @@ class WaitlistEntryPolicy
         return $user->tenant_id === $entry->tenant_id;
     }
 
+    // SECURITY FIX: create should verify user has proper role/permissions
     public function create(Authenticatable $user): bool
     {
-        return true;
+        if ($user instanceof MarketplaceAdmin) {
+            return $user->marketplace_client_id !== null;
+        }
+        return $user->tenant_id !== null || $this->isAdmin($user);
+    }
+
+    private function isAdmin(Authenticatable $user): bool
+    {
+        return in_array($user->role ?? '', ['super-admin', 'admin', 'editor']);
     }
 
     public function update(Authenticatable $user, WaitlistEntry $entry): bool

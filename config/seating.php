@@ -277,7 +277,9 @@ return [
     */
 
     'cors' => [
-        'allowed_origins' => env('SEATING_CORS_ORIGINS', '*'),
+        // SECURITY FIX: Default to empty array to require explicit configuration
+        // Wildcard (*) with credentials is a security vulnerability
+        'allowed_origins' => env('SEATING_CORS_ORIGINS') ? explode(',', env('SEATING_CORS_ORIGINS')) : [],
         'allowed_methods' => ['GET', 'POST', 'DELETE', 'OPTIONS'],
         'allowed_headers' => ['Content-Type', 'X-Session-Id', 'X-Requested-With'],
         'exposed_headers' => ['X-Expires-At', 'X-Hold-Count'],

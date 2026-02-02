@@ -67,7 +67,8 @@
             @endif
 
             @if($venue->description)
-                <div class="p-4 prose bg-white border rounded-lg max-w-none">{!! $venue->description !!}</div>
+                {{-- SECURITY FIX: Sanitize HTML to prevent XSS --}}
+                <div class="p-4 prose bg-white border rounded-lg max-w-none">{!! \App\Helpers\HtmlSanitizer::sanitize($venue->description) !!}</div>
             @endif
         </div>
     </div>

@@ -38,7 +38,8 @@
                     <section class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                         <h2 class="text-xl font-semibold text-gray-900 mb-4">Overview</h2>
                         <div class="prose prose-sm max-w-none text-gray-600">
-                            {!! $microservice->getTranslation('description', app()->getLocale()) ?? $microservice->description['en'] ?? 'No description available.' !!}
+                            {{-- SECURITY FIX: Sanitize HTML to prevent XSS --}}
+                            {!! \App\Helpers\HtmlSanitizer::sanitize($microservice->getTranslation('description', app()->getLocale()) ?? $microservice->description['en'] ?? 'No description available.') !!}
                         </div>
                     </section>
 

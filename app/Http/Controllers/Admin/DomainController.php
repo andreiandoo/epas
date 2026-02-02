@@ -9,15 +9,76 @@ use Illuminate\Http\Request;
 class DomainController extends Controller
 {
     /**
+     * SECURITY FIX: Verify user is authenticated super admin
+     */
+    private function authorizeSuperAdmin(): bool
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return false;
+        }
+
+        // Check if user is super admin
+        return $user->role === 'super-admin' ||
+               (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin());
+    }
+
+    /**
+     * SECURITY FIX: Validate domain format to prevent SSRF/injection
+     */
+    private function validateDomainFormat(string $domain): bool
+    {
+        // Must be valid domain format (no protocols, paths, or special chars)
+        // Allow only alphanumeric, dots, and hyphens
+        if (!preg_match('/^[a-zA-Z0-9]([a-zA-Z0-9\-\.]{0,253}[a-zA-Z0-9])?$/', $domain)) {
+            return false;
+        }
+
+        // Must contain at least one dot
+        if (strpos($domain, '.') === false) {
+            return false;
+        }
+
+        // No consecutive dots or leading/trailing dots
+        if (preg_match('/\.\./', $domain) || $domain[0] === '.' || substr($domain, -1) === '.') {
+            return false;
+        }
+
+        // Block localhost and internal domains
+        $blocked = ['localhost', '127.0.0.1', '0.0.0.0', '::1', 'internal', 'local'];
+        foreach ($blocked as $b) {
+            if (stripos($domain, $b) !== false) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Create a new domain for a tenant
      */
     public function store(Request $request, $tenantId)
     {
+        // SECURITY FIX: Require super admin authorization
+        if (!$this->authorizeSuperAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
             $request->validate([
                 'domain' => 'required|string|max:255|unique:domains,domain',
                 'is_primary' => 'boolean',
             ]);
+
+            // SECURITY FIX: Validate domain format
+            $domainName = $request->input('domain');
+            if (!$this->validateDomainFormat($domainName)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid domain format',
+                ], 422);
+            }
 
             $tenant = \App\Models\Tenant::findOrFail($tenantId);
 
@@ -67,6 +128,11 @@ class DomainController extends Controller
      */
     public function toggleActive(Request $request, $domainId)
     {
+        // SECURITY FIX: Require super admin authorization
+        if (!$this->authorizeSuperAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
             $domain = Domain::findOrFail($domainId);
 
@@ -97,6 +163,11 @@ class DomainController extends Controller
      */
     public function toggleConfirmed(Request $request, $domainId)
     {
+        // SECURITY FIX: Require super admin authorization
+        if (!$this->authorizeSuperAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
             $domain = Domain::findOrFail($domainId);
 
@@ -145,6 +216,11 @@ class DomainController extends Controller
      */
     public function toggleSuspended(Request $request, $domainId)
     {
+        // SECURITY FIX: Require super admin authorization
+        if (!$this->authorizeSuperAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
             $domain = Domain::findOrFail($domainId);
 
@@ -175,6 +251,11 @@ class DomainController extends Controller
      */
     public function destroy($domainId)
     {
+        // SECURITY FIX: Require super admin authorization
+        if (!$this->authorizeSuperAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
             $domain = Domain::findOrFail($domainId);
 
@@ -209,6 +290,11 @@ class DomainController extends Controller
      */
     public function verify($domainId)
     {
+        // SECURITY FIX: Require super admin authorization
+        if (!$this->authorizeSuperAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         try {
             $domain = Domain::findOrFail($domainId);
             $verification = $domain->verifications()->latest()->first();
@@ -312,19 +398,31 @@ class DomainController extends Controller
      */
     public function loginAsAdmin($tenantId, $domain)
     {
-        try {
-            // TODO: Implement Super Admin impersonation logic
-            // This should:
-            // 1. Verify current user is Super Admin
-            // 2. Create a temporary auth token
-            // 3. Redirect to tenant's admin panel with the token
-            // 4. Log the action for audit purposes
+        // SECURITY FIX: Require super admin authorization
+        if (!$this->authorizeSuperAdmin()) {
+            abort(403, 'Unauthorized - Super Admin access required');
+        }
 
+        try {
             $tenant = \App\Models\Tenant::findOrFail($tenantId);
             $domainRecord = $tenant->domains()->where('domain', $domain)->firstOrFail();
 
+            // SECURITY FIX: Validate domain format before redirect
+            if (!$this->validateDomainFormat($domainRecord->domain)) {
+                abort(400, 'Invalid domain format');
+            }
+
+            // Log the impersonation action for audit
+            \Log::info('Super Admin impersonation attempt', [
+                'admin_user_id' => auth()->id(),
+                'admin_email' => auth()->user()->email,
+                'tenant_id' => $tenantId,
+                'domain' => $domainRecord->domain,
+                'ip' => request()->ip(),
+            ]);
+
             // For now, just redirect to the domain
-            // In production, you'll need to implement proper authentication token exchange
+            // In production, implement proper authentication token exchange
             return redirect('https://' . $domainRecord->domain . '/admin')
                 ->with('info', 'Super Admin login functionality coming soon');
 

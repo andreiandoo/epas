@@ -28,35 +28,8 @@ Route::get('/login', function () {
     return redirect('/admin/login');
 })->name('login');
 
-// DEBUG: Check auth status (NO auth middleware - shows if user is logged in)
-Route::middleware(['web'])->get('/check-auth', function() {
-    return response()->json([
-        'is_authenticated' => auth()->check(),
-        'user_id' => auth()->id(),
-        'user_email' => auth()->user()?->email,
-        'user_role' => auth()->user()?->role,
-        'session_id' => session()->getId(),
-        'session_driver' => config('session.driver'),
-        'has_session_cookie' => request()->hasCookie(config('session.cookie')),
-        'session_data' => session()->all(),
-    ]);
-})->name('check.auth');
-
-// DEBUG: Test route to bypass Filament and test middleware
-Route::middleware(['web', 'auth'])->get('/test-admin-access', function() {
-    $user = auth()->user();
-    return response()->json([
-        'success' => true,
-        'message' => 'Middleware auth passed successfully!',
-        'user' => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'role' => $user->role,
-        ],
-        'can_access_panel' => $user->canAccessPanel(\Filament\Facades\Filament::getPanel('admin')),
-    ]);
-})->name('test.admin.access');
+// SECURITY FIX: Removed debug routes that exposed sensitive session data
+// Previously had /check-auth, /test-admin-access, /test-session, /test-session-read
 
 // Global Search API (requires authentication) - outside Filament panels to avoid route conflicts
 Route::middleware(['web', 'auth'])->group(function () {
@@ -89,29 +62,6 @@ Route::middleware(['web'])->get('/marketplace/switch-client/{clientId}', functio
 
     return redirect('/marketplace');
 })->name('marketplace.switch-client');
-
-// DEBUG: Test session and cookies
-Route::middleware(['web'])->get('/test-session', function() {
-    session(['test_key' => 'test_value_' . time()]);
-    return response()->json([
-        'session_id' => session()->getId(),
-        'test_key' => session('test_key'),
-        'all_session' => session()->all(),
-        'has_cookie' => request()->hasCookie(config('session.cookie')),
-        'cookie_name' => config('session.cookie'),
-        'session_driver' => config('session.driver'),
-    ])->withCookie(cookie('manual-test', 'manual-value', 120));
-});
-
-Route::middleware(['web'])->get('/test-session-read', function() {
-    return response()->json([
-        'session_id' => session()->getId(),
-        'test_key' => session('test_key'),
-        'all_session' => session()->all(),
-        'has_cookie' => request()->hasCookie(config('session.cookie')),
-        'manual_test_cookie' => request()->cookie('manual-test'),
-    ]);
-});
 
 /*
 |--------------------------------------------------------------------------
@@ -210,7 +160,8 @@ Route::get('/.well-known/apple-developer-merchantid-domain-association', ApplePa
     ->name('apple-pay.verification');
 
 // Admin Domain Management Routes
-Route::middleware(['web'])->prefix('admin')->group(function () {
+// SECURITY FIX: Added auth middleware - these routes require admin authentication
+Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {
     Route::post('/tenants/{tenantId}/domains', [DomainController::class, 'store'])->name('admin.tenants.domains.store');
     Route::post('/domains/{domainId}/toggle-active', [DomainController::class, 'toggleActive'])->name('admin.domains.toggle-active');
     Route::post('/domains/{domainId}/toggle-confirmed', [DomainController::class, 'toggleConfirmed'])->name('admin.domains.toggle-confirmed');

@@ -78,8 +78,9 @@
                         </header>
 
                         <!-- Content -->
+                        {{-- SECURITY FIX: Sanitize HTML to prevent XSS --}}
                         <div class="prose prose-indigo max-w-none">
-                            {!! $doc->content !!}
+                            {!! \App\Helpers\HtmlSanitizer::sanitize($doc->content) !!}
                         </div>
 
                         <!-- Tags -->

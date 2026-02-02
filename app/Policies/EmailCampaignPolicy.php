@@ -9,9 +9,13 @@ use Illuminate\Contracts\Auth\Authenticatable;
 
 class EmailCampaignPolicy
 {
+    // SECURITY FIX: viewAny should verify user has proper role/permissions
     public function viewAny(Authenticatable $user): bool
     {
-        return true;
+        if ($user instanceof MarketplaceAdmin) {
+            return $user->marketplace_client_id !== null;
+        }
+        return $user->tenant_id !== null || $this->isAdmin($user);
     }
 
     public function view(Authenticatable $user, EmailCampaign $campaign): bool
@@ -22,9 +26,18 @@ class EmailCampaignPolicy
         return $user->tenant_id === $campaign->tenant_id;
     }
 
+    // SECURITY FIX: create should verify user has proper role/permissions
     public function create(Authenticatable $user): bool
     {
-        return true;
+        if ($user instanceof MarketplaceAdmin) {
+            return $user->marketplace_client_id !== null;
+        }
+        return $user->tenant_id !== null || $this->isAdmin($user);
+    }
+
+    private function isAdmin(Authenticatable $user): bool
+    {
+        return in_array($user->role ?? '', ['super-admin', 'admin', 'editor']);
     }
 
     public function update(Authenticatable $user, EmailCampaign $campaign): bool

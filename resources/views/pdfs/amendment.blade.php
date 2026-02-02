@@ -92,8 +92,9 @@
 
         <p>The parties hereby agree to amend the Original Contract as follows:</p>
 
+        {{-- SECURITY FIX: Sanitize HTML to prevent XSS --}}
         <div style="margin: 20px 0; padding: 15px; background-color: #fafafa;">
-            {!! $amendment->content !!}
+            {!! \App\Helpers\HtmlSanitizer::sanitize($amendment->content) !!}
         </div>
 
         <p>All other terms and conditions of the Original Contract shall remain in full force and effect.</p>

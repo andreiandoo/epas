@@ -157,9 +157,13 @@ class NetopiaProcessor implements PaymentProcessorInterface
 
     public function verifySignature(array $payload, array $headers): bool
     {
-        // For Netopia, we verify using RSA signature
+        // SECURITY FIX: Reject webhooks if public_key is not configured
+        // Previously returned true which allowed unauthenticated webhooks
         if (empty($this->keys['public_key'])) {
-            return true; // Can't verify without key
+            \Log::critical('Netopia webhook rejected: public_key not configured', [
+                'ip' => request()->ip(),
+            ]);
+            return false;
         }
 
         try {
