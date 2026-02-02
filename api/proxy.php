@@ -588,6 +588,10 @@ switch ($action) {
         $endpoint = '/customer/cart';
         break;
 
+    case 'checkout.features':
+        $endpoint = '/checkout/features';
+        break;
+
     case 'checkout':
         $method = 'POST';
         $body = file_get_contents('php://input');
