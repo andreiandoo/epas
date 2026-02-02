@@ -340,7 +340,7 @@ class Event extends Model
     }
 
     /**
-     * Get effective commission mode (event's or tenant's default)
+     * Get effective commission mode (event's, marketplace organizer's, or tenant's default)
      */
     public function getEffectiveCommissionMode(): string
     {
@@ -348,16 +348,26 @@ class Event extends Model
             return $this->commission_mode;
         }
 
+        // For marketplace events, check organizer's mode
+        if ($this->marketplace_organizer_id) {
+            return $this->marketplaceOrganizer?->getEffectiveCommissionMode() ?? 'included';
+        }
+
         return $this->tenant->commission_mode ?? 'included';
     }
 
     /**
-     * Get effective commission rate (event's or tenant's default)
+     * Get effective commission rate (event's, marketplace organizer's, or tenant's default)
      */
     public function getEffectiveCommissionRate(): float
     {
         if ($this->commission_rate !== null) {
             return (float) $this->commission_rate;
+        }
+
+        // For marketplace events, check organizer's rate
+        if ($this->marketplace_organizer_id) {
+            return $this->marketplaceOrganizer?->getEffectiveCommissionRate() ?? 5.00;
         }
 
         return (float) ($this->tenant->commission_rate ?? 5.00);

@@ -17,6 +17,7 @@ class MarketplacePayout extends Model
     protected $fillable = [
         'marketplace_client_id',
         'marketplace_organizer_id',
+        'event_id',
         'reference',
         'amount',
         'currency',
@@ -102,6 +103,11 @@ class MarketplacePayout extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(MarketplaceTransaction::class);
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(Event::class);
     }
 
     // =========================================
