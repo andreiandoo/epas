@@ -11,6 +11,7 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components as SC;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class TicketInsuranceSettings extends Page
@@ -96,17 +97,17 @@ class TicketInsuranceSettings extends Page
                             ->label('Afișează în Checkout')
                             ->helperText('Afișează opțiunea în pagina de finalizare comandă')
                             ->default(true)
-                            ->visible(fn (Forms\Get $get) => $get('is_enabled')),
+                            ->visible(fn (Get $get) => $get('is_enabled')),
 
                         Forms\Components\Toggle::make('pre_checked')
                             ->label('Pre-bifat')
                             ->helperText('Checkbox-ul va fi bifat implicit (clientul poate debifa)')
                             ->default(false)
-                            ->visible(fn (Forms\Get $get) => $get('is_enabled')),
+                            ->visible(fn (Get $get) => $get('is_enabled')),
                     ])->columns(3),
 
                 SC\Section::make('Denumire și Descriere')
-                    ->visible(fn (Forms\Get $get) => $get('is_enabled'))
+                    ->visible(fn (Get $get) => $get('is_enabled'))
                     ->schema([
                         Forms\Components\TextInput::make('label')
                             ->label('Etichetă')
@@ -130,7 +131,7 @@ class TicketInsuranceSettings extends Page
                     ]),
 
                 SC\Section::make('Preț')
-                    ->visible(fn (Forms\Get $get) => $get('is_enabled'))
+                    ->visible(fn (Get $get) => $get('is_enabled'))
                     ->schema([
                         Forms\Components\Radio::make('price_type')
                             ->label('Tip preț')
@@ -150,7 +151,7 @@ class TicketInsuranceSettings extends Page
                             ->suffix($currency)
                             ->placeholder('5.00')
                             ->required()
-                            ->visible(fn (Forms\Get $get) => $get('price_type') === 'fixed')
+                            ->visible(fn (Get $get) => $get('price_type') === 'fixed')
                             ->helperText('Suma fixă adăugată la comandă'),
 
                         Forms\Components\TextInput::make('price_percentage')
@@ -162,12 +163,12 @@ class TicketInsuranceSettings extends Page
                             ->suffix('%')
                             ->placeholder('5')
                             ->required()
-                            ->visible(fn (Forms\Get $get) => $get('price_type') === 'percentage')
+                            ->visible(fn (Get $get) => $get('price_type') === 'percentage')
                             ->helperText('Procentul din valoarea totală a comenzii'),
                     ])->columns(2),
 
                 SC\Section::make('Aplicare')
-                    ->visible(fn (Forms\Get $get) => $get('is_enabled'))
+                    ->visible(fn (Get $get) => $get('is_enabled'))
                     ->schema([
                         Forms\Components\Radio::make('apply_to')
                             ->label('Aplică pentru')

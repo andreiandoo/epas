@@ -19,6 +19,7 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Contracts\Support\Htmlable;
 
 class OrganizerEventAnalytics extends Page implements HasForms
@@ -293,19 +294,19 @@ class OrganizerEventAnalytics extends Page implements HasForms
 
                     Forms\Components\DatePicker::make('end_date')
                         ->label('End Date')
-                        ->visible(fn (Forms\Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
+                        ->visible(fn (Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
                 ]),
 
             Forms\Components\TextInput::make('budget')
                 ->label('Budget (RON)')
                 ->numeric()
                 ->minValue(0)
-                ->visible(fn (Forms\Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
+                ->visible(fn (Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
 
             Forms\Components\TextInput::make('targeting')
                 ->label('Targeting')
                 ->placeholder('e.g., 18-35, Music lovers, Romania')
-                ->visible(fn (Forms\Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
+                ->visible(fn (Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
 
             Forms\Components\Textarea::make('description')
                 ->label('Notes')
@@ -528,7 +529,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
                 ->columnSpanFull(),
 
             Forms\Components\TextInput::make('target_value')
-                ->label(fn (Forms\Get $get) => match ($get('type')) {
+                ->label(fn (Get $get) => match ($get('type')) {
                     'revenue' => 'Target Revenue (RON)',
                     'tickets' => 'Target Tickets',
                     'visitors' => 'Target Visitors',
@@ -800,12 +801,12 @@ class OrganizerEventAnalytics extends Page implements HasForms
                     5 => 'Friday',
                     6 => 'Saturday',
                 ])
-                ->visible(fn (Forms\Get $get) => $get('frequency') === 'weekly'),
+                ->visible(fn (Get $get) => $get('frequency') === 'weekly'),
 
             Forms\Components\Select::make('day_of_month')
                 ->label('Day of Month')
                 ->options(array_combine(range(1, 28), range(1, 28)))
-                ->visible(fn (Forms\Get $get) => $get('frequency') === 'monthly'),
+                ->visible(fn (Get $get) => $get('frequency') === 'monthly'),
 
             Forms\Components\TimePicker::make('send_at')
                 ->label('Send At')

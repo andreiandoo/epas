@@ -12,6 +12,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -127,8 +128,8 @@ class AffiliateWithdrawalResource extends Resource
                         Forms\Components\Textarea::make('rejection_reason')
                             ->label('Rejection Reason')
                             ->rows(2)
-                            ->visible(fn (Forms\Get $get) => $get('status') === 'rejected')
-                            ->required(fn (Forms\Get $get) => $get('status') === 'rejected'),
+                            ->visible(fn (Get $get) => $get('status') === 'rejected')
+                            ->required(fn (Get $get) => $get('status') === 'rejected'),
                     ]),
             ]);
     }
