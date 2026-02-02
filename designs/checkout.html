@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finalizare Comandă — Ambilet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 'sans': ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        'primary': '#A51C30',
+                        'primary-dark': '#8B1728',
+                        'secondary': '#1E293B',
+                        'accent': '#E67E22',
+                        'surface': '#F8FAFC',
+                        'muted': '#64748B',
+                        'border': '#E2E8F0',
+                        'success': '#10B981',
+                        'warning': '#F59E0B',
+                        'error': '#EF4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/assets/css/custom.css">
+</head>
+<body class="min-h-screen bg-surface">
+    <div id="header-container"></div>
+
+    <main class="px-4 py-8 mx-auto max-w-7xl">
+        <!-- Breadcrumb -->
+        <nav class="flex items-center gap-2 mb-6 text-sm text-muted">
+            <a href="/" class="hover:text-primary">Acasă</a>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <a href="/cart.php" class="hover:text-primary">Coș</a>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <span class="font-medium text-secondary">Finalizare comandă</span>
+        </nav>
+
+        <!-- Progress Steps -->
+        <div class="flex items-center justify-center mb-8">
+            <div class="flex items-center">
+                <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-full bg-success">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+                <span class="ml-2 text-sm font-medium text-secondary">Coș</span>
+            </div>
+            <div class="w-16 h-0.5 bg-primary mx-2"></div>
+            <div class="flex items-center">
+                <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-full bg-primary">2</div>
+                <span class="ml-2 text-sm font-medium text-secondary">Date</span>
+            </div>
+            <div class="w-16 h-0.5 bg-border mx-2"></div>
+            <div class="flex items-center">
+                <div class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-full bg-border text-muted">3</div>
+                <span class="ml-2 text-sm text-muted">Plată</span>
+            </div>
+        </div>
+
+        <!-- Timer Warning -->
+        <div id="timer-warning" class="hidden p-4 mb-6 border bg-warning/10 border-warning/30 rounded-xl">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="text-sm text-secondary">
+                    Biletele sunt rezervate pentru <strong id="timer-display">15:00</strong>. Finalizează comanda înainte să expire.
+                </span>
+            </div>
+        </div>
+
+        <!-- Empty Cart Message -->
+        <div id="empty-cart" class="hidden py-16 text-center">
+            <div class="flex items-center justify-center w-24 h-24 mx-auto mb-6 rounded-full bg-muted/10">
+                <svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+            </div>
+            <h2 class="mb-2 text-2xl font-bold text-secondary">Coșul tău este gol</h2>
+            <p class="mb-6 text-muted">Adaugă bilete în coș pentru a continua.</p>
+            <a href="/" class="btn btn-primary">
+                Explorează evenimente
+            </a>
+        </div>
+
+        <!-- Checkout Form -->
+        <form id="checkout-form" class="grid gap-8 lg:grid-cols-3">
+            <div class="space-y-6 lg:col-span-2">
+                <!-- Customer Info -->
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <h2 class="mb-4 text-lg font-bold text-secondary">Date cumpărător</h2>
+
+                    <div id="logged-in-info" class="hidden p-4 mb-4 border bg-success/10 border-success/30 rounded-xl">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="text-sm text-secondary">Ești autentificat ca <strong id="user-email"></strong></span>
+                        </div>
+                    </div>
+
+                    <div id="guest-fields" class="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="label">Prenume *</label>
+                            <input type="text" name="first_name" required class="input" placeholder="Ion">
+                        </div>
+                        <div>
+                            <label class="label">Nume *</label>
+                            <input type="text" name="last_name" required class="input" placeholder="Popescu">
+                        </div>
+                        <div>
+                            <label class="label">Email *</label>
+                            <input type="email" name="email" required class="input" placeholder="nume@email.com">
+                        </div>
+                        <div>
+                            <label class="label">Telefon *</label>
+                            <input type="tel" name="phone" required class="input" placeholder="+40 7XX XXX XXX">
+                        </div>
+                    </div>
+
+                    <div id="guest-account" class="hidden pt-4 mt-4 border-t border-border">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" name="create_account" class="w-4 h-4 rounded border-border text-primary focus:ring-primary">
+                            <span class="text-sm text-muted">Vreau să îmi creez un cont pentru a urmări comenzile</span>
+                        </label>
+                        <div id="account-password" class="grid hidden gap-4 mt-4 md:grid-cols-2">
+                            <div>
+                                <label class="label">Parolă</label>
+                                <input type="password" name="password" class="input" placeholder="Minim 8 caractere">
+                            </div>
+                            <div>
+                                <label class="label">Confirmă parola</label>
+                                <input type="password" name="password_confirmation" class="input" placeholder="Repetă parola">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ticket Holders -->
+                <div id="ticket-holders-section" class="p-6 bg-white border rounded-2xl border-border">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-secondary">Beneficiari bilete</h2>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="same-as-buyer" class="w-4 h-4 rounded border-border text-primary focus:ring-primary">
+                            <span class="text-sm text-muted">Sunt eu pe toate biletele</span>
+                        </label>
+                    </div>
+
+                    <p class="mb-4 text-sm text-muted">Introdu numele persoanelor care vor folosi biletele.</p>
+
+                    <div id="ticket-holders-list" class="space-y-4">
+                        <!-- Will be populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Payment Methods -->
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <h2 class="mb-4 text-lg font-bold text-secondary">Metodă de plată</h2>
+
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-4 p-4 transition-colors border cursor-pointer border-border rounded-xl hover:border-primary payment-option">
+                            <input type="radio" name="payment_method" value="card" checked class="w-4 h-4 text-primary focus:ring-primary">
+                            <div class="flex items-center flex-1 gap-3">
+                                <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50">
+                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-secondary">Card bancar</span>
+                                    <p class="text-xs text-muted">Visa, Mastercard, American Express</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-1">
+                                <img src="https://cdn.jsdelivr.net/gh/lipis/flag-icons@6.6.6/flags/4x3/us.svg" alt="Visa" class="h-5 rounded">
+                            </div>
+                        </label>
+
+                        <label class="flex items-center gap-4 p-4 transition-colors border cursor-pointer border-border rounded-xl hover:border-primary payment-option">
+                            <input type="radio" name="payment_method" value="transfer" class="w-4 h-4 text-primary focus:ring-primary">
+                            <div class="flex items-center flex-1 gap-3">
+                                <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-green-50">
+                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-secondary">Transfer bancar</span>
+                                    <p class="text-xs text-muted">Procesare în 1-2 zile lucrătoare</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Terms -->
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <div class="space-y-3">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" name="terms" required class="w-4 h-4 mt-1 rounded border-border text-primary focus:ring-primary">
+                            <span class="text-sm text-muted">
+                                Accept <a href="/terms.php" class="text-primary hover:underline">Termenii și Condițiile</a> și
+                                <a href="/privacy.php" class="text-primary hover:underline">Politica de Confidențialitate</a> *
+                            </span>
+                        </label>
+
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" name="newsletter" class="w-4 h-4 mt-1 rounded border-border text-primary focus:ring-primary">
+                            <span class="text-sm text-muted">
+                                Vreau să primesc noutăți despre evenimente și oferte speciale
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="lg:col-span-1">
+                <div class="sticky p-6 bg-white border rounded-2xl border-border top-24">
+                    <h2 class="mb-4 text-lg font-bold text-secondary">Sumar comandă</h2>
+
+                    <div id="order-items" class="mb-4 space-y-4">
+                        <!-- Will be populated by JS -->
+                    </div>
+
+                    <div class="pt-4 space-y-2 border-t border-border">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-muted">Subtotal</span>
+                            <span class="text-secondary" id="subtotal">0 RON</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-muted">Taxă Crucea Roșie (1%)</span>
+                            <span class="text-secondary" id="red-cross-tax">0 RON</span>
+                        </div>
+                        <div id="discount-row" class="flex justify-between hidden text-sm">
+                            <span class="text-success">Discount</span>
+                            <span class="text-success" id="discount-amount">-0 RON</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 mt-4 border-t border-border">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-secondary">Total</span>
+                            <span class="text-2xl font-bold text-primary" id="total">0 RON</span>
+                        </div>
+                        <p class="mt-1 text-xs text-muted">Include toate taxele</p>
+                    </div>
+
+                    <!-- Points Info -->
+                    <div id="points-info" class="p-3 mt-4 bg-accent/10 rounded-xl">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="text-sm text-secondary">Vei primi <strong id="points-earned">0</strong> puncte</span>
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="checkout-error" class="hidden p-3 mt-4 text-sm border border-red-200 bg-red-50 rounded-xl text-error">
+                    </div>
+
+                    <button type="submit" class="w-full mt-6 btn btn-primary" id="submit-btn">
+                        <span id="btn-text">Plătește acum</span>
+                        <div id="btn-spinner" class="hidden spinner"></div>
+                    </button>
+
+                    <p class="mt-4 text-xs text-center text-muted">
+                        <svg class="inline-block w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        Plată securizată SSL
+                    </p>
+                </div>
+            </div>
+        </form>
+    </main>
+
+    <div id="footer-container"></div>
+
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/utils.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/cart.js"></script>
+    <script src="/assets/js/components/header.js"></script>
+    <script src="/assets/js/components/footer.js"></script>
+    <script src="/assets/js/components/notifications.js"></script>
+
+    <script>
+        // Initialize components
+        AmbiletHeader.init('header-container');
+        AmbiletFooter.init('footer-container');
+
+        const cart = AmbiletCart.getCart();
+        const checkoutForm = document.getElementById('checkout-form');
+        const emptyCart = document.getElementById('empty-cart');
+
+        // Check if cart is empty
+        if (!cart.items || cart.items.length === 0) {
+            checkoutForm.classList.add('hidden');
+            emptyCart.classList.remove('hidden');
+        } else {
+            initCheckout();
+        }
+
+        function initCheckout() {
+            // Show timer
+            const timerWarning = document.getElementById('timer-warning');
+            timerWarning.classList.remove('hidden');
+            updateTimer();
+            setInterval(updateTimer, 1000);
+
+            // Check if user is logged in
+            if (AmbiletAuth.isCustomer()) {
+                const user = AmbiletAuth.getCustomer();
+                document.getElementById('logged-in-info').classList.remove('hidden');
+                document.getElementById('user-email').textContent = user.email;
+
+                // Pre-fill fields
+                const form = document.getElementById('checkout-form');
+                if (user.first_name) form.first_name.value = user.first_name;
+                if (user.last_name) form.last_name.value = user.last_name;
+                if (user.email) form.email.value = user.email;
+                if (user.phone) form.phone.value = user.phone;
+            } else {
+                document.getElementById('guest-account').classList.remove('hidden');
+            }
+
+            // Populate order summary
+            renderOrderSummary();
+
+            // Populate ticket holders
+            renderTicketHolders();
+
+            // Handle create account checkbox
+            document.querySelector('input[name="create_account"]')?.addEventListener('change', function(e) {
+                document.getElementById('account-password').classList.toggle('hidden', !e.target.checked);
+            });
+
+            // Handle same as buyer checkbox
+            document.getElementById('same-as-buyer').addEventListener('change', function(e) {
+                const holders = document.querySelectorAll('.ticket-holder-fields');
+                const firstName = document.querySelector('input[name="first_name"]').value;
+                const lastName = document.querySelector('input[name="last_name"]').value;
+
+                holders.forEach(holder => {
+                    if (e.target.checked) {
+                        holder.querySelector('input[name$="[first_name]"]').value = firstName;
+                        holder.querySelector('input[name$="[last_name]"]').value = lastName;
+                        holder.querySelector('input[name$="[first_name]"]').disabled = true;
+                        holder.querySelector('input[name$="[last_name]"]').disabled = true;
+                    } else {
+                        holder.querySelector('input[name$="[first_name]"]').disabled = false;
+                        holder.querySelector('input[name$="[last_name]"]').disabled = false;
+                    }
+                });
+            });
+
+            // Payment option styling
+            document.querySelectorAll('.payment-option input').forEach(input => {
+                input.addEventListener('change', function() {
+                    document.querySelectorAll('.payment-option').forEach(opt => {
+                        opt.classList.remove('border-primary', 'bg-primary/5');
+                        opt.classList.add('border-border');
+                    });
+                    if (this.checked) {
+                        this.closest('.payment-option').classList.remove('border-border');
+                        this.closest('.payment-option').classList.add('border-primary', 'bg-primary/5');
+                    }
+                });
+            });
+
+            // Trigger initial state
+            document.querySelector('.payment-option input:checked')?.dispatchEvent(new Event('change'));
+        }
+
+        function updateTimer() {
+            const remaining = AmbiletCart.getRemainingTime();
+            if (remaining <= 0) {
+                AmbiletCart.clearCart();
+                window.location.href = '/cart.php?expired=1';
+                return;
+            }
+
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            document.getElementById('timer-display').textContent =
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+            if (remaining < 120000) {
+                document.getElementById('timer-warning').classList.add('bg-error/10', 'border-error/30');
+                document.getElementById('timer-warning').classList.remove('bg-warning/10', 'border-warning/30');
+            }
+        }
+
+        function renderOrderSummary() {
+            const container = document.getElementById('order-items');
+            const cart = AmbiletCart.getCart();
+
+            container.innerHTML = cart.items.map(item => `
+                <div class="flex gap-3">
+                    <img src="${item.eventImage || AMBILET_CONFIG.PLACEHOLDER_EVENT}" alt="${item.eventTitle}"
+                         class="object-cover w-16 h-16 rounded-lg">
+                    <div class="flex-1">
+                        <h4 class="text-sm font-medium text-secondary line-clamp-1">${item.eventTitle}</h4>
+                        <p class="text-xs text-muted">${item.ticketTypeName}</p>
+                        <p class="text-xs text-muted">${item.quantity}x ${AmbiletUtils.formatCurrency(item.price)}</p>
+                    </div>
+                    <span class="font-medium text-secondary">${AmbiletUtils.formatCurrency(item.price * item.quantity)}</span>
+                </div>
+            `).join('');
+
+            // Update totals
+            const totals = AmbiletCart.getTotals();
+            document.getElementById('subtotal').textContent = AmbiletUtils.formatCurrency(totals.subtotal);
+            document.getElementById('red-cross-tax').textContent = AmbiletUtils.formatCurrency(totals.redCrossTax);
+            document.getElementById('total').textContent = AmbiletUtils.formatCurrency(totals.total);
+            document.getElementById('points-earned').textContent = totals.points;
+
+            if (totals.discount > 0) {
+                document.getElementById('discount-row').classList.remove('hidden');
+                document.getElementById('discount-amount').textContent = '-' + AmbiletUtils.formatCurrency(totals.discount);
+            }
+        }
+
+        function renderTicketHolders() {
+            const container = document.getElementById('ticket-holders-list');
+            const cart = AmbiletCart.getCart();
+
+            let holderIndex = 0;
+            const holders = [];
+
+            cart.items.forEach(item => {
+                for (let i = 0; i < item.quantity; i++) {
+                    holders.push({
+                        index: holderIndex++,
+                        eventTitle: item.eventTitle,
+                        ticketType: item.ticketTypeName
+                    });
+                }
+            });
+
+            container.innerHTML = holders.map(holder => `
+                <div class="p-4 ticket-holder-fields bg-surface rounded-xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-sm font-medium text-secondary">Bilet #${holder.index + 1}</span>
+                        <span class="text-xs text-muted">${holder.ticketType}</span>
+                    </div>
+                    <div class="grid gap-3 md:grid-cols-2">
+                        <div>
+                            <label class="text-xs label">Prenume *</label>
+                            <input type="text" name="holders[${holder.index}][first_name]" required class="text-sm input" placeholder="Prenume">
+                        </div>
+                        <div>
+                            <label class="text-xs label">Nume *</label>
+                            <input type="text" name="holders[${holder.index}][last_name]" required class="text-sm input" placeholder="Nume">
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Form submission
+        checkoutForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submit-btn');
+            const btnText = document.getElementById('btn-text');
+            const btnSpinner = document.getElementById('btn-spinner');
+            const errorDiv = document.getElementById('checkout-error');
+
+            submitBtn.disabled = true;
+            btnText.classList.add('hidden');
+            btnSpinner.classList.remove('hidden');
+            errorDiv.classList.add('hidden');
+
+            try {
+                const formData = new FormData(this);
+                const cart = AmbiletCart.getCart();
+
+                // Build holders array
+                const holders = [];
+                const holderInputs = document.querySelectorAll('.ticket-holder-fields');
+                holderInputs.forEach((holder, index) => {
+                    holders.push({
+                        first_name: holder.querySelector(`input[name="holders[${index}][first_name]"]`).value,
+                        last_name: holder.querySelector(`input[name="holders[${index}][last_name]"]`).value
+                    });
+                });
+
+                const checkoutData = {
+                    customer: {
+                        first_name: formData.get('first_name'),
+                        last_name: formData.get('last_name'),
+                        email: formData.get('email'),
+                        phone: formData.get('phone')
+                    },
+                    items: cart.items.map(item => ({
+                        event_id: item.eventId,
+                        ticket_type_id: item.ticketTypeId,
+                        quantity: item.quantity
+                    })),
+                    holders: holders,
+                    payment_method: formData.get('payment_method'),
+                    promo_code: cart.promoCode || null,
+                    create_account: formData.get('create_account') === 'on',
+                    password: formData.get('password'),
+                    newsletter: formData.get('newsletter') === 'on'
+                };
+
+                const result = await AmbiletAPI.customer.checkout(checkoutData);
+
+                if (result.success !== false) {
+                    // Clear cart
+                    AmbiletCart.clearCart();
+
+                    // Redirect to payment or thank you page
+                    if (result.payment_url) {
+                        window.location.href = result.payment_url;
+                    } else {
+                        window.location.href = `/thank-you.php?order=${result.order_id || result.id}`;
+                    }
+                } else {
+                    errorDiv.textContent = result.message || 'A apărut o eroare la procesarea comenzii.';
+                    errorDiv.classList.remove('hidden');
+
+                    submitBtn.disabled = false;
+                    btnText.classList.remove('hidden');
+                    btnSpinner.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Checkout error:', error);
+                errorDiv.textContent = 'A apărut o eroare. Te rugăm să încerci din nou.';
+                errorDiv.classList.remove('hidden');
+
+                submitBtn.disabled = false;
+                btnText.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

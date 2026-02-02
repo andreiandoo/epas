@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 88953,
+        'name'      => 'Alter do Chão',
+        'latitude'  => '39.23098000',
+        'longitude' => '-7.74430000',
+    ],
+    [
+        'id'        => 88995,
+        'name'      => 'Arronches',
+        'latitude'  => '39.12242000',
+        'longitude' => '-7.28619000',
+    ],
+    [
+        'id'        => 88999,
+        'name'      => 'Atalaia',
+        'latitude'  => '39.45551000',
+        'longitude' => '-7.87295000',
+    ],
+    [
+        'id'        => 89008,
+        'name'      => 'Avis',
+        'latitude'  => '39.06448000',
+        'longitude' => '-7.89560000',
+    ],
+    [
+        'id'        => 89078,
+        'name'      => 'Campo Maior',
+        'latitude'  => '39.02935000',
+        'longitude' => '-7.06479000',
+    ],
+    [
+        'id'        => 89107,
+        'name'      => 'Castelo de Vide',
+        'latitude'  => '39.41624000',
+        'longitude' => '-7.45680000',
+    ],
+    [
+        'id'        => 89134,
+        'name'      => 'Crato',
+        'latitude'  => '39.28657000',
+        'longitude' => '-7.64408000',
+    ],
+    [
+        'id'        => 89142,
+        'name'      => 'Elvas',
+        'latitude'  => '38.88150000',
+        'longitude' => '-7.16282000',
+    ],
+    [
+        'id'        => 89195,
+        'name'      => 'Fronteira',
+        'latitude'  => '39.07179000',
+        'longitude' => '-7.61052000',
+    ],
+    [
+        'id'        => 89208,
+        'name'      => 'Gavião',
+        'latitude'  => '39.44462000',
+        'longitude' => '-7.89532000',
+    ],
+    [
+        'id'        => 89282,
+        'name'      => 'Marvão',
+        'latitude'  => '39.39377000',
+        'longitude' => '-7.37663000',
+    ],
+    [
+        'id'        => 89314,
+        'name'      => 'Monforte',
+        'latitude'  => '39.04960000',
+        'longitude' => '-7.44428000',
+    ],
+    [
+        'id'        => 89319,
+        'name'      => 'Montargil',
+        'latitude'  => '39.07771000',
+        'longitude' => '-8.17044000',
+    ],
+    [
+        'id'        => 89347,
+        'name'      => 'Nisa',
+        'latitude'  => '39.51828000',
+        'longitude' => '-7.67496000',
+    ],
+    [
+        'id'        => 89418,
+        'name'      => 'Ponte de Sor',
+        'latitude'  => '39.21441000',
+        'longitude' => '-8.05420000',
+    ],
+    [
+        'id'        => 89422,
+        'name'      => 'Portalegre',
+        'latitude'  => '39.29740000',
+        'longitude' => '-7.41538000',
+    ],
+    [
+        'id'        => 89513,
+        'name'      => 'Santo André',
+        'latitude'  => '39.05532000',
+        'longitude' => '-8.24414000',
+    ],
+    [
+        'id'        => 89553,
+        'name'      => 'Sousel',
+        'latitude'  => '38.96685000',
+        'longitude' => '-7.71788000',
+    ],
+    [
+        'id'        => 89624,
+        'name'      => 'Vale da Amoreira',
+        'latitude'  => '39.06969000',
+        'longitude' => '-7.69849000',
+    ],
+];

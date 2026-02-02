@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 48293,
+        'name'      => 'Ashington',
+        'latitude'  => '55.17719000',
+        'longitude' => '-1.56412000',
+    ],
+    [
+        'id'        => 48450,
+        'name'      => 'Bedlington',
+        'latitude'  => '55.13061000',
+        'longitude' => '-1.59319000',
+    ],
+    [
+        'id'        => 48577,
+        'name'      => 'Blyth',
+        'latitude'  => '55.12708000',
+        'longitude' => '-1.50856000',
+    ],
+    [
+        'id'        => 48982,
+        'name'      => 'Choppington',
+        'latitude'  => '55.15004000',
+        'longitude' => '-1.60332000',
+    ],
+    [
+        'id'        => 49141,
+        'name'      => 'Cramlington',
+        'latitude'  => '55.08652000',
+        'longitude' => '-1.58598000',
+    ],
+    [
+        'id'        => 49237,
+        'name'      => 'Darras Hall',
+        'latitude'  => '55.03560000',
+        'longitude' => '-1.76425000',
+    ],
+    [
+        'id'        => 49390,
+        'name'      => 'East Chevington',
+        'latitude'  => '55.28333000',
+        'longitude' => '-1.58333000',
+    ],
+    [
+        'id'        => 49869,
+        'name'      => 'Hazlerigg',
+        'latitude'  => '55.04135000',
+        'longitude' => '-1.63912000',
+    ],
+    [
+        'id'        => 50453,
+        'name'      => 'Lynemouth',
+        'latitude'  => '55.21306000',
+        'longitude' => '-1.54250000',
+    ],
+    [
+        'id'        => 50632,
+        'name'      => 'Morpeth',
+        'latitude'  => '55.16882000',
+        'longitude' => '-1.68893000',
+    ],
+    [
+        'id'        => 50700,
+        'name'      => 'Newbiggin-by-the-Sea',
+        'latitude'  => '55.18532000',
+        'longitude' => '-1.51469000',
+    ],
+    [
+        'id'        => 50868,
+        'name'      => 'Pegswood',
+        'latitude'  => '55.17930000',
+        'longitude' => '-1.64525000',
+    ],
+    [
+        'id'        => 50939,
+        'name'      => 'Ponteland',
+        'latitude'  => '55.05024000',
+        'longitude' => '-1.74532000',
+    ],
+    [
+        'id'        => 51226,
+        'name'      => 'Seaton Delaval',
+        'latitude'  => '55.07196000',
+        'longitude' => '-1.52609000',
+    ],
+    [
+        'id'        => 51233,
+        'name'      => 'Seghill',
+        'latitude'  => '55.06225000',
+        'longitude' => '-1.55027000',
+    ],
+    [
+        'id'        => 51412,
+        'name'      => 'Stakeford',
+        'latitude'  => '55.16110000',
+        'longitude' => '-1.57529000',
+    ],
+    [
+        'id'        => 51428,
+        'name'      => 'Stannington',
+        'latitude'  => '55.10862000',
+        'longitude' => '-1.66855000',
+    ],
+    [
+        'id'        => 51896,
+        'name'      => 'Wideopen',
+        'latitude'  => '55.04514000',
+        'longitude' => '-1.62246000',
+    ],
+];

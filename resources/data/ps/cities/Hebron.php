@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 153970,
+        'name'      => 'ad-Dhahiriya',
+        'latitude'  => '31.40967250',
+        'longitude' => '34.95490830',
+    ],
+    [
+        'id'        => 153980,
+        'name'      => 'as-Samu',
+        'latitude'  => '31.39864450',
+        'longitude' => '35.04468830',
+    ],
+    [
+        'id'        => 153971,
+        'name'      => 'Bani Na\'im',
+        'latitude'  => '31.51490050',
+        'longitude' => '35.14474030',
+    ],
+    [
+        'id'        => 153972,
+        'name'      => 'Beit \'Awwa',
+        'latitude'  => '31.50675240',
+        'longitude' => '34.92956130',
+    ],
+    [
+        'id'        => 153973,
+        'name'      => 'Beit Ula',
+        'latitude'  => '31.59845640',
+        'longitude' => '35.00577530',
+    ],
+    [
+        'id'        => 153974,
+        'name'      => 'Beit Ummar',
+        'latitude'  => '31.62284640',
+        'longitude' => '35.08159930',
+    ],
+    [
+        'id'        => 153975,
+        'name'      => 'Deir Sammit',
+        'latitude'  => '31.51996340',
+        'longitude' => '34.95207130',
+    ],
+    [
+        'id'        => 153966,
+        'name'      => 'Dura',
+        'latitude'  => '31.50512740',
+        'longitude' => '35.00692730',
+    ],
+    [
+        'id'        => 153967,
+        'name'      => 'Halhul',
+        'latitude'  => '31.57992420',
+        'longitude' => '35.07930450',
+    ],
+    [
+        'id'        => 153968,
+        'name'      => 'Hebron',
+        'latitude'  => '31.53260350',
+        'longitude' => '35.07922630',
+    ],
+    [
+        'id'        => 153976,
+        'name'      => 'Idhna',
+        'latitude'  => '31.55728640',
+        'longitude' => '34.95864330',
+    ],
+    [
+        'id'        => 153977,
+        'name'      => 'Kharas',
+        'latitude'  => '31.61225240',
+        'longitude' => '35.02365130',
+    ],
+    [
+        'id'        => 153978,
+        'name'      => 'Nuba',
+        'latitude'  => '31.61382080',
+        'longitude' => '35.00579200',
+    ],
+    [
+        'id'        => 153979,
+        'name'      => 'Sa\'ir',
+        'latitude'  => '31.58248950',
+        'longitude' => '35.12317630',
+    ],
+    [
+        'id'        => 153981,
+        'name'      => 'Surif',
+        'latitude'  => '31.64958640',
+        'longitude' => '35.04411230',
+    ],
+    [
+        'id'        => 153983,
+        'name'      => 'Taffuh',
+        'latitude'  => '31.53848250',
+        'longitude' => '35.03037330',
+    ],
+    [
+        'id'        => 153982,
+        'name'      => 'Tarqumiya',
+        'latitude'  => '31.57736440',
+        'longitude' => '34.99357430',
+    ],
+    [
+        'id'        => 153969,
+        'name'      => 'Yatta',
+        'latitude'  => '31.44418450',
+        'longitude' => '35.06950530',
+    ],
+];

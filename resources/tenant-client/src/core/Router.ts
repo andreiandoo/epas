@@ -1,0 +1,8085 @@
+import { TixelloConfig } from './ConfigManager';
+import { TemplateManager } from '../templates';
+import { PageBuilderModule, PageLayout } from '../modules/PageBuilderModule';
+import { PreviewMode } from './PreviewMode';
+import { Tracking } from './TrackingModule';
+import { EventBus } from './EventBus';
+
+type RouteHandler = (params: Record<string, string>) => void | Promise<void>;
+
+interface Route {
+    pattern: RegExp;
+    handler: RouteHandler;
+    paramNames: string[];
+}
+
+
+// Cart item interface
+interface CartItem {
+    eventId: number;
+    eventTitle: string;
+    eventSlug: string;
+    eventDate: string;
+    ticketTypeId: number;
+    ticketTypeName: string;
+    price: number;          // Base price (original price)
+    salePrice: number | null;  // Sale price (discounted price if any)
+    finalPrice: number;     // Price including commission if applicable
+    commissionAmount: number;  // Commission amount per ticket (calculated from base price)
+    commissionRate: number;    // Commission rate percentage
+    hasCommissionOnTop: boolean;  // Whether commission is added on top
+    quantity: number;
+    currency: string;
+    bulkDiscounts: any[];
+}
+
+interface AppliedDiscount {
+    code: string;
+    name: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    discountAmount: number;
+}
+
+// Shop cart service to track shop product count (synced from API)
+class ShopCartService {
+    private static STORAGE_KEY = 'shop_cart_count';
+
+    static getItemCount(): number {
+        const count = localStorage.getItem(this.STORAGE_KEY);
+        return count ? parseInt(count, 10) : 0;
+    }
+
+    static setItemCount(count: number): void {
+        localStorage.setItem(this.STORAGE_KEY, count.toString());
+        // Dispatch event so other parts of the app can react
+        window.dispatchEvent(new CustomEvent('shop-cart-updated', { detail: { count } }));
+    }
+
+    static clear(): void {
+        localStorage.removeItem(this.STORAGE_KEY);
+        window.dispatchEvent(new CustomEvent('shop-cart-updated', { detail: { count: 0 } }));
+    }
+}
+
+// Make ShopCartService available globally
+(window as any).ShopCartService = ShopCartService;
+
+class CartService {
+    private static STORAGE_KEY = 'tixello_cart';
+    private static DISCOUNT_KEY = 'tixello_discount';
+
+    static getCart(): CartItem[] {
+        const cartJson = localStorage.getItem(this.STORAGE_KEY);
+        return cartJson ? JSON.parse(cartJson) : [];
+    }
+
+    static addItem(item: CartItem): void {
+        const cart = this.getCart();
+        const existingIndex = cart.findIndex(
+            i => i.eventId === item.eventId && i.ticketTypeId === item.ticketTypeId
+        );
+
+        if (existingIndex >= 0) {
+            cart[existingIndex].quantity += item.quantity;
+        } else {
+            cart.push(item);
+        }
+
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
+    }
+
+    static updateQuantity(eventId: number, ticketTypeId: number, quantity: number): void {
+        const cart = this.getCart();
+        const item = cart.find(i => i.eventId === eventId && i.ticketTypeId === ticketTypeId);
+        if (item) {
+            item.quantity = quantity;
+            if (item.quantity <= 0) {
+                this.removeItem(eventId, ticketTypeId);
+            } else {
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
+            }
+        }
+    }
+
+    static removeItem(eventId: number, ticketTypeId: number): void {
+        let cart = this.getCart();
+        cart = cart.filter(i => !(i.eventId === eventId && i.ticketTypeId === ticketTypeId));
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
+    }
+
+    static clearCart(): void {
+        localStorage.removeItem(this.STORAGE_KEY);
+    }
+
+    static getItemCount(): number {
+        return this.getCart().reduce((sum, item) => sum + item.quantity, 0);
+    }
+
+    static calculateBulkDiscount(qty: number, price: number, discounts: any[]): { total: number; discount: number } {
+        let bestTotal = qty * price;
+        let bestDiscount = 0;
+
+        for (const discount of discounts) {
+            let discountedTotal = qty * price;
+            let discountAmount = 0;
+
+            if (discount.rule_type === 'buy_x_get_y' && qty >= discount.buy_qty) {
+                const sets = Math.floor(qty / discount.buy_qty);
+                const freeTickets = sets * discount.get_qty;
+                const paidTickets = qty - freeTickets;
+                discountedTotal = paidTickets * price;
+                discountAmount = freeTickets * price;
+            } else if (discount.rule_type === 'amount_off_per_ticket' && qty >= discount.min_qty) {
+                const amountOff = discount.amount_off / 100;
+                discountAmount = qty * amountOff;
+                discountedTotal = (qty * price) - discountAmount;
+            } else if (discount.rule_type === 'percent_off' && qty >= discount.min_qty) {
+                discountAmount = (qty * price) * (discount.percent_off / 100);
+                discountedTotal = (qty * price) - discountAmount;
+            }
+
+            if (discountedTotal < bestTotal) {
+                bestTotal = discountedTotal;
+                bestDiscount = discountAmount;
+            }
+        }
+
+        return { total: bestTotal, discount: bestDiscount };
+    }
+
+    static getTotal(): { subtotal: number; bulkDiscount: number; couponDiscount: number; couponName: string | null; discount: number; commission: number; total: number; currency: string; hasCommission: boolean } {
+        const cart = this.getCart();
+        let subtotal = 0;
+        let bulkDiscount = 0;
+        let totalCommission = 0;
+        let hasCommission = false;
+        let currency = 'RON';
+
+        for (const item of cart) {
+            // Use salePrice if available, otherwise base price (NOT finalPrice which includes commission)
+            const itemPrice = item.salePrice || item.price;
+            const result = this.calculateBulkDiscount(item.quantity, itemPrice, item.bulkDiscounts);
+            subtotal += result.total;  // This is already the discounted total
+            bulkDiscount += result.discount;
+            currency = item.currency;
+
+            // Calculate commission from BASE price × quantity (not affected by discounts)
+            if (item.hasCommissionOnTop && item.commissionRate > 0) {
+                const commission = item.quantity * item.price * (item.commissionRate / 100);
+                totalCommission += commission;
+                hasCommission = true;
+            }
+        }
+
+        // Apply coupon discount if exists
+        const couponDiscountData = this.getDiscount();
+        let couponDiscountAmount = 0;
+        let couponName: string | null = null;
+        if (couponDiscountData) {
+            couponName = couponDiscountData.name;
+            if (couponDiscountData.type === 'percentage') {
+                couponDiscountAmount = subtotal * (couponDiscountData.value / 100);
+            } else {
+                couponDiscountAmount = couponDiscountData.discountAmount;
+            }
+        }
+
+        return {
+            subtotal: subtotal + bulkDiscount, // Original subtotal before discount
+            bulkDiscount,
+            couponDiscount: couponDiscountAmount,
+            couponName,
+            discount: bulkDiscount + couponDiscountAmount,
+            commission: totalCommission,
+            total: Math.max(0, subtotal + totalCommission - couponDiscountAmount),  // subtotal already has bulk discount applied, add commission, subtract coupon
+            currency,
+            hasCommission
+        };
+    }
+
+    static setDiscount(discount: AppliedDiscount): void {
+        localStorage.setItem(this.DISCOUNT_KEY, JSON.stringify(discount));
+    }
+
+    static getDiscount(): AppliedDiscount | null {
+        const discountJson = localStorage.getItem(this.DISCOUNT_KEY);
+        return discountJson ? JSON.parse(discountJson) : null;
+    }
+
+    static removeDiscount(): void {
+        localStorage.removeItem(this.DISCOUNT_KEY);
+    }
+}
+
+
+class ToastNotification {
+    static show(message: string, type: 'success' | 'error' | 'info' = 'success'): void {
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white font-medium z-50 transform transition-all duration-300 translate-y-0 opacity-100`;
+
+        const colors = {
+            success: 'bg-green-600',
+            error: 'bg-red-600',
+            info: 'bg-blue-600'
+        };
+
+        toast.classList.add(colors[type]);
+        toast.textContent = message;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+}
+
+export class Router {
+    private routes: Route[] = [];
+    private config: TixelloConfig;
+    private currentPath: string = '';
+    private authToken: string | null = null;
+    private currentUser: any = null;
+    private eventBus: EventBus;
+
+    constructor(config: TixelloConfig) {
+        this.config = config;
+        this.eventBus = new EventBus();
+        TemplateManager.init(config);
+        this.loadAuthState();
+        this.setupDefaultRoutes();
+    }
+
+    // Auth state management
+    private loadAuthState(): void {
+        this.authToken = localStorage.getItem('tixello_auth_token');
+        const userJson = localStorage.getItem('tixello_user');
+        if (userJson) {
+            try {
+                this.currentUser = JSON.parse(userJson);
+            } catch {
+                this.currentUser = null;
+            }
+        }
+    }
+
+    private saveAuthState(token: string, user: any): void {
+        if (!token || !user) {
+            console.error('Cannot save auth state: token or user is undefined', { token, user });
+            return;
+        }
+        this.authToken = token;
+        this.currentUser = user;
+        localStorage.setItem('tixello_auth_token', token);
+        localStorage.setItem('tixello_user', JSON.stringify(user));
+    }
+
+    private clearAuthState(): void {
+        this.authToken = null;
+        this.currentUser = null;
+        localStorage.removeItem('tixello_auth_token');
+        localStorage.removeItem('tixello_user');
+    }
+
+    public isAuthenticated(): boolean {
+        return !!this.authToken;
+    }
+
+    public getUser(): any {
+        return this.currentUser;
+    }
+
+    // Update cart badge in header
+    private updateCartBadge(): void {
+        const badge = document.getElementById('cart-badge');
+        const badgeMobile = document.getElementById('cart-badge-mobile');
+        const badgeMenu = document.getElementById('cart-badge-menu');
+
+        // Combine ticket cart count + shop cart count
+        const ticketCount = CartService.getItemCount();
+        const shopCount = ShopCartService.getItemCount();
+        const totalCount = ticketCount + shopCount;
+
+        // Update all badge elements
+        [badge, badgeMobile, badgeMenu].forEach(b => {
+            if (b) {
+                b.textContent = totalCount.toString();
+                if (totalCount > 0) {
+                    b.classList.remove('hidden');
+                } else {
+                    b.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    // Update header to show user name when logged in
+    private updateHeaderForUser(): void {
+        const accountLink = document.getElementById('account-link');
+        if (accountLink && this.currentUser) {
+            const firstName = this.currentUser.name?.split(' ')[0] || this.currentUser.email;
+            accountLink.textContent = `Buna, ${firstName}`;
+            accountLink.href = '/account';
+        }
+    }
+
+    // API helper method
+    private async fetchApi(endpoint: string, params: Record<string, string> = {}, options: RequestInit = {}): Promise<any> {
+        const url = new URL(`${this.config.apiEndpoint}${endpoint}`);
+        url.searchParams.set('hostname', window.location.hostname);
+
+        Object.entries(params).forEach(([key, value]) => {
+            url.searchParams.set(key, value);
+        });
+
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+            ...(options.headers || {}),
+        };
+
+        if (this.authToken) {
+            (headers as Record<string, string>)['Authorization'] = `Bearer ${this.authToken}`;
+        }
+
+        const response = await fetch(url.toString(), {
+            ...options,
+            headers,
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'Request failed' }));
+            throw new Error(error.message || `API error: ${response.status}`);
+        }
+        return response.json();
+    }
+
+    // POST helper
+    private async postApi(endpoint: string, data: any, customHeaders: Record<string, string> = {}): Promise<any> {
+        const url = new URL(`${this.config.apiEndpoint}${endpoint}`);
+        url.searchParams.set('hostname', window.location.hostname);
+
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+            ...customHeaders,
+        };
+
+        if (this.authToken) {
+            (headers as Record<string, string>)['Authorization'] = `Bearer ${this.authToken}`;
+        }
+
+        const response = await fetch(url.toString(), {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || result.error || 'Request failed');
+        }
+
+        return result;
+    }
+
+    // DELETE helper
+    private async deleteApi(endpoint: string): Promise<any> {
+        const url = new URL(`${this.config.apiEndpoint}${endpoint}`);
+        url.searchParams.set('hostname', window.location.hostname);
+
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
+
+        if (this.authToken) {
+            (headers as Record<string, string>)['Authorization'] = `Bearer ${this.authToken}`;
+        }
+
+        const response = await fetch(url.toString(), {
+            method: 'DELETE',
+            headers,
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || result.error || 'Request failed');
+        }
+
+        return result;
+    }
+
+    // Event card HTML generator
+    private renderEventCard(event: any): string {
+        // Use postponed date if event is postponed
+        const displayDate = event.is_postponed && event.postponed_date ? event.postponed_date : event.start_date;
+        const date = displayDate ? new Date(displayDate).toLocaleDateString('ro-RO', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        }) : '';
+
+        // Use poster_url or hero_image_url from new API
+        const imageUrl = event.poster_url || event.hero_image_url;
+
+        return `
+            <a href="/event/${event.slug}" class="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition group">
+                <div class="aspect-[16/9] bg-gray-200 relative overflow-hidden">
+                    ${imageUrl
+                        ? `<img src="${imageUrl}" alt="${event.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">`
+                        : `<div class="w-full h-full flex items-center justify-center text-gray-400">
+                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                          </div>`
+                    }
+                    ${event.is_sold_out ? `<span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">SOLD OUT</span>` : ''}
+                    ${event.is_cancelled ? `<span class="absolute top-2 right-2 bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded">ANULAT</span>` : ''}
+                    ${event.is_postponed && !event.is_cancelled ? `<span class="absolute top-2 right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">AMÂNAT</span>` : ''}
+                </div>
+                <div class="p-4">
+                    <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2">${event.title}</h3>
+                    <p class="text-sm text-gray-500 mb-2">${date}</p>
+                    ${event.venue ? `<p class="text-sm text-gray-600 mb-2">${event.venue.name}${event.venue.city ? `, ${event.venue.city}` : ''}</p>` : ''}
+                    ${event.price_from ? `<p class="text-sm font-semibold text-primary">de la ${event.price_from} ${event.currency || 'RON'}</p>` : ''}
+                </div>
+            </a>
+        `;
+    }
+
+    init(): void {
+        // Listen for popstate (browser back/forward)
+        window.addEventListener('popstate', () => this.handleRoute());
+
+        // Intercept all link clicks for SPA navigation
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            const anchor = target.closest('a');
+            if (anchor && anchor.href && anchor.href.startsWith(window.location.origin)) {
+                const url = new URL(anchor.href);
+                if (!anchor.hasAttribute('data-external')) {
+                    e.preventDefault();
+                    this.navigate(url.pathname);
+                }
+            }
+        });
+
+        // Handle initial route
+        this.handleRoute();
+
+        // Update cart badge on page load
+        this.updateCartBadge();
+
+        // Listen for shop cart updates
+        window.addEventListener('shop-cart-updated', () => {
+            this.updateCartBadge();
+        });
+    }
+
+    private setupDefaultRoutes(): void {
+        // Public routes
+        this.addRoute('/', this.renderHome.bind(this));
+        this.addRoute('/events', this.renderEvents.bind(this));
+        this.addRoute('/event/:slug', this.renderEventDetail.bind(this));
+        this.addRoute('/cart', this.renderCart.bind(this));
+        this.addRoute('/checkout', this.renderCheckout.bind(this));
+        this.addRoute('/order-success/:orderId', this.renderOrderSuccess.bind(this));
+        this.addRoute('/thank-you/:orderNumber', this.renderThankYou.bind(this));
+        this.addRoute('/login', this.renderLogin.bind(this));
+        this.addRoute('/register', this.renderRegister.bind(this));
+        this.addRoute('/forgot-password', this.renderForgotPassword.bind(this));
+        this.addRoute('/reset-password', this.renderResetPassword.bind(this));
+        this.addRoute('/account', this.renderAccount.bind(this));
+        this.addRoute('/account/orders', this.renderOrders.bind(this));
+        this.addRoute('/account/orders/:id', this.renderOrderDetail.bind(this));
+        this.addRoute('/account/tickets', this.renderTickets.bind(this));
+        this.addRoute('/account/events', this.renderMyEvents.bind(this));
+        this.addRoute('/account/profile', this.renderProfile.bind(this));
+        this.addRoute('/account/watchlist', this.renderWatchlist.bind(this));
+        this.addRoute('/terms', this.renderTerms.bind(this));
+        this.addRoute('/privacy', this.renderPrivacy.bind(this));
+        this.addRoute('/past-events', this.renderPastEvents.bind(this));
+        this.addRoute('/page/:slug', this.renderPage.bind(this));
+        this.addRoute('/blog', this.renderBlog.bind(this));
+        this.addRoute('/blog/:slug', this.renderBlogArticle.bind(this));
+
+        // Shop routes
+        this.addRoute('/shop', this.renderShop.bind(this));
+        this.addRoute('/shop/category/:slug', this.renderShopCategory.bind(this));
+        this.addRoute('/shop/product/:slug', this.renderShopProduct.bind(this));
+        this.addRoute('/shop/cart', this.renderShopCart.bind(this));
+        this.addRoute('/shop/checkout', this.renderShopCheckout.bind(this));
+        this.addRoute('/shop/thank-you/:orderNumber', this.renderShopThankYou.bind(this));
+        this.addRoute('/account/shop-orders', this.renderAccountShopOrders.bind(this));
+        this.addRoute('/account/shop-orders/:id', this.renderAccountShopOrderDetail.bind(this));
+        this.addRoute('/account/wishlist', this.renderAccountWishlist.bind(this));
+        this.addRoute('/account/stock-alerts', this.renderAccountStockAlerts.bind(this));
+
+        // Gamification routes
+        this.addRoute('/account/points', this.renderAccountPoints.bind(this));
+        this.addRoute('/account/points-history', this.renderAccountPointsHistory.bind(this));
+        this.addRoute('/account/referral', this.renderAccountReferral.bind(this));
+    }
+
+    addRoute(path: string, handler: RouteHandler): void {
+        const paramNames: string[] = [];
+        const pattern = path.replace(/:([^/]+)/g, (_, paramName) => {
+            paramNames.push(paramName);
+            return '([^/]+)';
+        });
+
+        this.routes.push({
+            pattern: new RegExp(`^${pattern}$`),
+            handler,
+            paramNames,
+        });
+    }
+
+    navigate(path: string): void {
+        window.history.pushState({}, '', path);
+        this.handleRoute();
+    }
+
+    getEventBus(): EventBus {
+        return this.eventBus;
+    }
+
+    private handleRoute(): void {
+        const path = window.location.pathname || '/';
+        this.currentPath = path;
+
+        // Reset meta tags to defaults on every navigation
+        this.resetMetaTags();
+
+        // Track page view on SPA navigation
+        Tracking.trackPageView();
+
+        for (const route of this.routes) {
+            const match = path.match(route.pattern);
+            if (match) {
+                const params: Record<string, string> = {};
+                route.paramNames.forEach((name, index) => {
+                    params[name] = match[index + 1];
+                });
+
+                route.handler(params);
+                return;
+            }
+        }
+
+        // 404
+        this.render404();
+    }
+
+    private getContentElement(): HTMLElement | null {
+        return document.getElementById('tixello-content');
+    }
+
+    /**
+     * Reset meta tags to default site values
+     * Called on every navigation to clear article-specific meta tags
+     */
+    private resetMetaTags(): void {
+        const siteTitle = this.config.site?.title || 'Tixello';
+        const tagline = this.config.site?.tagline;
+        const description = this.config.site?.description || `Events and tickets by ${siteTitle}`;
+
+        // Reset document title
+        document.title = tagline ? `${siteTitle} - ${tagline}` : siteTitle;
+
+        // Reset meta description
+        const metaDescription = document.querySelector('meta[name="description"]');
+        if (metaDescription) {
+            metaDescription.setAttribute('content', description);
+        }
+
+        // Reset Open Graph tags
+        const ogTitle = document.querySelector('meta[property="og:title"]');
+        if (ogTitle) ogTitle.setAttribute('content', siteTitle);
+
+        const ogDescription = document.querySelector('meta[property="og:description"]');
+        if (ogDescription) ogDescription.setAttribute('content', description);
+
+        const ogType = document.querySelector('meta[property="og:type"]');
+        if (ogType) ogType.setAttribute('content', 'website');
+
+        const ogImage = document.querySelector('meta[property="og:image"]');
+        if (ogImage && this.config.theme?.logo) {
+            ogImage.setAttribute('content', this.config.theme.logo);
+        }
+
+        // Reset Twitter Card tags
+        const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+        if (twitterTitle) twitterTitle.setAttribute('content', siteTitle);
+
+        const twitterDescription = document.querySelector('meta[name="twitter:description"]');
+        if (twitterDescription) twitterDescription.setAttribute('content', description);
+
+        const twitterCard = document.querySelector('meta[name="twitter:card"]');
+        if (twitterCard) twitterCard.setAttribute('content', 'summary');
+
+        // Remove article-specific canonical URL
+        const canonical = document.querySelector('link[rel="canonical"]');
+        if (canonical) {
+            canonical.setAttribute('href', window.location.origin);
+        }
+    }
+
+    // Route handlers
+    private async renderHome(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        // Check if there's a page builder layout for the home page
+        try {
+            const pageData = await this.fetchApi('/pages/home');
+            if (pageData.success && pageData.data?.page_type === 'builder' && pageData.data?.layout?.blocks) {
+                // Use PageBuilder to render the home page
+                content.innerHTML = `<div id="page-content"></div>`;
+                PageBuilderModule.updateLayout(pageData.data.layout as PageLayout, 'page-content');
+
+                // Register for preview mode updates
+                if (PreviewMode.isActive()) {
+                    PreviewMode.onLayoutUpdate((layout) => {
+                        PageBuilderModule.updateLayout(layout as PageLayout, 'page-content');
+                    });
+                }
+                return;
+            }
+        } catch {
+            // Fall back to default home page
+        }
+
+        // Default home page (backwards compatible)
+        content.innerHTML = `
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <!-- Hero Section -->
+                <div class="text-center mb-16">
+                    <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                        Descoperă evenimente unice
+                    </h1>
+                    <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+                        Găsește și cumpără bilete pentru cele mai bune concerte, spectacole și experiențe
+                    </p>
+                    <a href="/events" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-primary hover:bg-primary-dark transition">
+                        Vezi toate evenimentele
+                        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </a>
+                </div>
+
+                <!-- Featured Events -->
+                <div class="mb-16">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Evenimente recomandate</h2>
+                    <div id="featured-events" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-64"></div>
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-64"></div>
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-64"></div>
+                    </div>
+                </div>
+
+                <!-- Categories -->
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Explorează pe categorii</h2>
+                    <div id="categories" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Fetch and render featured events
+        try {
+            const [featuredData, categoriesData] = await Promise.all([
+                this.fetchApi('/events/featured'),
+                this.fetchApi('/categories')
+            ]);
+
+            // Render featured events
+            const featuredEl = document.getElementById('featured-events');
+            if (featuredEl && featuredData.data) {
+                const events = featuredData.data.events || featuredData.data || [];
+                if (events.length === 0) {
+                    featuredEl.innerHTML = `<p class="col-span-3 text-center text-gray-500">Nu există evenimente recomandate momentan.</p>`;
+                } else {
+                    featuredEl.innerHTML = events.map((event: any) => this.renderEventCard(event)).join('');
+                }
+            }
+
+            // Render categories
+            const categoriesEl = document.getElementById('categories');
+            if (categoriesEl && categoriesData.data) {
+                const categories = categoriesData.data.categories || categoriesData.data || [];
+                if (categories.length === 0) {
+                    categoriesEl.innerHTML = `<p class="col-span-4 text-center text-gray-500">Nu există categorii disponibile.</p>`;
+                } else {
+                    categoriesEl.innerHTML = categories.map((cat: any) => `
+                        <a href="/events?category=${cat.slug}" class="block p-4 bg-white rounded-lg shadow hover:shadow-md transition text-center">
+                            <div class="text-primary mb-2">
+                                <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <span class="font-medium text-gray-900">${cat.name}</span>
+                        </a>
+                    `).join('');
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load home data:', error);
+        }
+    }
+
+    private async renderEvents(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">Evenimente</h1>
+
+                <!-- Calendar Timeline (Sticky) -->
+                <div id="events-calendar" class="space-y-4 mb-8 sticky top-4 z-20 bg-gray-50 pt-4 px-2 pb-2 -mt-4 border-b border-gray-200">
+                    <!-- Year/Month Navigator -->
+                    <div id="month-navigator" class="flex items-center gap-x-8 flex-wrap">
+                        <div class="animate-pulse bg-gray-200 h-8 w-full rounded"></div>
+                    </div>
+
+                    <!-- Days Strip (hidden scrollbar, drag to scroll) -->
+                    <div class="relative">
+                        <div id="days-scroller" class="days-scroller flex items-stretch gap-6 overflow-x-scroll pb-2 whitespace-nowrap cursor-grab active:cursor-grabbing" style="scrollbar-width: none; -ms-overflow-style: none;">
+                            <div class="animate-pulse flex gap-2">
+                                ${Array(14).fill(0).map(() => '<div class="w-14 h-16 bg-white/70 rounded-xl shrink-0"></div>').join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Events List -->
+                <div id="events-container" class="min-h-[80px]">
+                    <div class="animate-pulse space-y-3">
+                        <div class="bg-gray-400 h-20 rounded-xl"></div>
+                        <div class="bg-gray-300 h-20 rounded-xl"></div>
+                        <div class="bg-gray-200 h-20 rounded-xl"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Fetch events
+        try {
+            const eventsData = await this.fetchApi('/events');
+            const events = eventsData.data?.events || eventsData.data || [];
+
+            // Initialize calendar with events
+            this.initEventsCalendar(events);
+        } catch (error) {
+            console.error('Failed to load events:', error);
+            const container = document.getElementById('events-container');
+            if (container) {
+                container.innerHTML = `<p class="text-center text-red-500 py-4">Eroare la încărcarea evenimentelor.</p>`;
+            }
+        }
+    }
+
+    private initEventsCalendar(rawEvents: any[]): void {
+        const MONTHS_AHEAD = 3;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // State
+        let selectedType: 'all' | 'day' | 'month' = 'all';
+        let selectedDateStr: string | null = null;
+        let selectedYear: number | null = null;
+        let selectedMonthIndex: number | null = null;
+
+        const monthNamesShort = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthNamesFull = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
+        const weekdayNamesShort = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
+
+        // Helper functions
+        const formatYmd = (date: Date): string => {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+
+        const todayStr = formatYmd(today);
+
+        // Parse event date
+        const parseEventDate = (ev: any): Date => {
+            const usePostponed = ev.is_postponed && ev.postponed_date;
+            const dateRaw = usePostponed ? ev.postponed_date : ev.start_date;
+            const timeRaw = usePostponed ? ev.postponed_start_time : ev.start_time;
+
+            if (!dateRaw) return today;
+
+            const datePart = String(dateRaw).split('T')[0];
+            const parts = datePart.split('-').map(Number);
+            if (parts.length !== 3) return today;
+
+            const [y, m, d] = parts;
+            let hh = 0, mm = 0;
+            if (timeRaw) {
+                const tParts = String(timeRaw).split(':');
+                if (tParts.length >= 2) {
+                    hh = parseInt(tParts[0]) || 0;
+                    mm = parseInt(tParts[1]) || 0;
+                }
+            }
+
+            return new Date(y, m - 1, d, hh, mm);
+        };
+
+        // Normalize events
+        const eventsByDate: Record<string, any[]> = {};
+        const allEvents = rawEvents.map((ev) => {
+            const date = parseEventDate(ev);
+            const dateStr = formatYmd(date);
+
+            const prettyDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' });
+            const prettyTime = date.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+
+            const normalized = {
+                id: ev.id,
+                title: ev.title || ev.name || 'Untitled',
+                slug: ev.slug,
+                venue: ev.venue?.name || '',
+                city: ev.venue?.city || '',
+                posterUrl: ev.poster_url || ev.hero_image_url,
+                date,
+                dateStr,
+                dateLabel: prettyDate,
+                timeLabel: prettyTime,
+                isPostponed: !!ev.is_postponed,
+                isCancelled: !!ev.is_cancelled,
+                isSoldOut: !!ev.is_sold_out,
+                doorSalesOnly: !!ev.door_sales_only,
+                priceFrom: ev.price_from || null,
+            };
+
+            if (!eventsByDate[dateStr]) eventsByDate[dateStr] = [];
+            eventsByDate[dateStr].push(normalized);
+
+            return normalized;
+        });
+
+        // Build days range
+        interface DayInfo {
+            date: Date;
+            dateStr: string;
+            year: number;
+            monthIndex: number;
+            weekdayShort: string;
+            day: number;
+            isToday: boolean;
+            hasEvents: boolean;
+            hasPostponed: boolean;
+            hasCancelled: boolean;
+        }
+
+        const days: DayInfo[] = [];
+        const end = new Date(today);
+        end.setMonth(end.getMonth() + MONTHS_AHEAD);
+
+        for (let d = new Date(today); d <= end; d.setDate(d.getDate() + 1)) {
+            const date = new Date(d);
+            const dateStr = formatYmd(date);
+            const eventsForDay = eventsByDate[dateStr] || [];
+
+            days.push({
+                date,
+                dateStr,
+                year: date.getFullYear(),
+                monthIndex: date.getMonth(),
+                weekdayShort: weekdayNamesShort[date.getDay()],
+                day: date.getDate(),
+                isToday: dateStr === todayStr,
+                hasEvents: eventsForDay.length > 0,
+                hasPostponed: eventsForDay.some(e => e.isPostponed),
+                hasCancelled: eventsForDay.some(e => e.isCancelled),
+            });
+        }
+
+        // Build year/month groups
+        interface MonthInfo { index: number; label: string; eventCount: number; }
+        interface YearGroup { year: number; months: MonthInfo[]; }
+
+        const byYear: Record<number, Record<number, MonthInfo>> = {};
+        days.forEach((day) => {
+            if (!byYear[day.year]) byYear[day.year] = {};
+            if (!byYear[day.year][day.monthIndex]) {
+                byYear[day.year][day.monthIndex] = {
+                    index: day.monthIndex,
+                    label: monthNamesShort[day.monthIndex],
+                    eventCount: 0,
+                };
+            }
+            if (eventsByDate[day.dateStr]) {
+                byYear[day.year][day.monthIndex].eventCount += eventsByDate[day.dateStr].length;
+            }
+        });
+
+        const years: YearGroup[] = Object.keys(byYear).sort().map((yearStr) => {
+            const yearNum = Number(yearStr);
+            const months = Object.values(byYear[yearNum]).sort((a, b) => a.index - b.index);
+            return { year: yearNum, months };
+        });
+
+        // Build month blocks for days strip
+        interface MonthBlock { year: number; monthIndex: number; label: string; days: DayInfo[]; }
+        const monthBlocks: MonthBlock[] = [];
+        const blocksMap: Record<string, MonthBlock> = {};
+
+        days.forEach((day) => {
+            const key = `${day.year}-${day.monthIndex}`;
+            if (!blocksMap[key]) {
+                blocksMap[key] = {
+                    year: day.year,
+                    monthIndex: day.monthIndex,
+                    label: monthNamesFull[day.monthIndex],
+                    days: [],
+                };
+                monthBlocks.push(blocksMap[key]);
+            }
+            blocksMap[key].days.push(day);
+        });
+
+        // Render functions
+        const renderMonthNavigator = () => {
+            const nav = document.getElementById('month-navigator');
+            if (!nav) return;
+
+            nav.innerHTML = years.map(year => `
+                <div class="flex items-center">
+                    <div class="w-10 text-xs font-bold text-gray-800">${year.year}</div>
+                    <div class="flex flex-wrap gap-2">
+                        ${year.months.map(month => {
+                            const isSelected = selectedType === 'month' && selectedYear === year.year && selectedMonthIndex === month.index;
+                            return `
+                                <button type="button" data-year="${year.year}" data-month="${month.index}"
+                                    class="month-btn px-2 py-1 rounded-md text-[11px] uppercase font-semibold transition
+                                    ${isSelected ? 'bg-gray-900 text-white border border-gray-900' : 'border bg-white/70 border-gray-200 text-gray-800 hover:border-gray-400 hover:bg-gray-50'}">
+                                    <span>${month.label}</span>
+                                    ${month.eventCount ? `<span class="ml-1 text-[11px] font-bold ${isSelected ? 'text-gray-400' : 'text-gray-800'}">${month.eventCount}</span>` : ''}
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            nav.querySelectorAll('.month-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const year = parseInt((btn as HTMLElement).dataset.year || '0');
+                    const month = parseInt((btn as HTMLElement).dataset.month || '0');
+                    selectMonth(year, month);
+                });
+            });
+        };
+
+        const getDayClasses = (day: DayInfo): string => {
+            const isSelected = selectedType === 'day' && selectedDateStr === day.dateStr;
+            if (isSelected) return 'border-gray-900 bg-gray-900 text-white';
+            if (day.hasCancelled) return 'border-red-300 bg-red-50 text-red-900';
+            if (day.hasPostponed) return 'border-amber-300 bg-amber-50 text-amber-900';
+            if (day.hasEvents) return 'border-emerald-300 bg-emerald-50 text-gray-900';
+            return 'border-gray-200 text-gray-700 hover:border-gray-400';
+        };
+
+        const getDotClass = (day: DayInfo): string => {
+            if (day.hasCancelled) return 'bg-red-500';
+            if (day.hasPostponed) return 'bg-amber-500';
+            if (day.hasEvents) return 'bg-emerald-500';
+            return 'bg-transparent';
+        };
+
+        const renderDaysStrip = () => {
+            const scroller = document.getElementById('days-scroller');
+            if (!scroller) return;
+
+            scroller.innerHTML = monthBlocks.map(month => `
+                <div class="flex flex-col items-start gap-1 shrink-0">
+                    <div class="text-xs font-semibold text-gray-800 uppercase">${month.label}</div>
+                    <div class="flex items-stretch gap-2">
+                        ${month.days.map(day => {
+                            const isSelected = selectedType === 'day' && selectedDateStr === day.dateStr;
+                            return `
+                                <button type="button" data-date="${day.dateStr}"
+                                    class="day-btn flex flex-col items-center justify-between w-14 h-16 ${day.isToday ? 'py-1 px-3' : 'p-3'} rounded-xl border text-xs leading-tight shrink-0 transition ${getDayClasses(day)}">
+                                    <span class="text-xl font-bold">${day.day}</span>
+                                    <span class="text-[11px] capitalize">${day.weekdayShort}</span>
+                                    ${day.isToday ? `<span class="mt-0.5 text-[9px] uppercase tracking-wide ${isSelected ? 'text-white' : 'text-blue-600'}">Azi</span>` : ''}
+                                    <span class="mt-0.5 h-1.5 w-1.5 rounded-full ${getDotClass(day)}"></span>
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            scroller.querySelectorAll('.day-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const dateStr = (btn as HTMLElement).dataset.date || '';
+                    selectDay(dateStr);
+                });
+            });
+        };
+
+        const renderEventsList = () => {
+            const container = document.getElementById('events-container');
+            if (!container) return;
+
+            // Filter events
+            let filtered = [...allEvents];
+
+            if (selectedType === 'day' && selectedDateStr) {
+                filtered = eventsByDate[selectedDateStr] || [];
+            } else if (selectedType === 'month' && selectedYear !== null && selectedMonthIndex !== null) {
+                filtered = allEvents.filter(ev =>
+                    ev.date.getFullYear() === selectedYear && ev.date.getMonth() === selectedMonthIndex
+                );
+            }
+
+            // Sort by date ascending
+            filtered.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="text-sm text-gray-500 py-4">Nu există evenimente care să corespundă filtrelor selectate.</p>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    ${filtered.map(event => `
+                        <a href="/event/${event.slug}" class="group block rounded-xl border border-gray-200 bg-white overflow-hidden hover:border-gray-400 hover:shadow-md transition">
+                            ${event.posterUrl ? `
+                                <div class="aspect-[3/4] w-full overflow-hidden bg-gray-100">
+                                    <img src="${event.posterUrl}" alt="${event.title}" class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
+                                </div>
+                            ` : `
+                                <div class="aspect-[3/4] w-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                    <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                </div>
+                            `}
+                            <div class="p-3">
+                                <p class="font-semibold text-gray-900 text-sm line-clamp-2 leading-tight">${event.title}</p>
+                                <p class="mt-1 text-xs text-gray-500 truncate">${event.venue}${event.city ? ` · ${event.city}` : ''}</p>
+                                <div class="mt-2 flex items-center justify-between">
+                                    <div class="text-xs text-gray-600">
+                                        <span class="font-medium">${event.dateLabel}</span>
+                                        <span class="text-gray-400 ml-1">${event.timeLabel}</span>
+                                    </div>
+                                    ${event.priceFrom ? `<span class="text-xs font-semibold text-gray-900">${event.priceFrom} RON</span>` : ''}
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    ${event.isCancelled ? `<span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700">Anulat</span>` : ''}
+                                    ${!event.isCancelled && event.isPostponed ? `<span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Amânat</span>` : ''}
+                                    ${event.isSoldOut ? `<span class="inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-800">Sold-out</span>` : ''}
+                                    ${event.doorSalesOnly ? `<span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">Doar la intrare</span>` : ''}
+                                </div>
+                            </div>
+                        </a>
+                    `).join('')}
+                </div>
+            `;
+        };
+
+        // Selection handlers
+        const selectDay = (dateStr: string) => {
+            const day = days.find(d => d.dateStr === dateStr);
+            if (!day) return;
+
+            selectedType = 'day';
+            selectedDateStr = dateStr;
+            selectedYear = day.year;
+            selectedMonthIndex = day.monthIndex;
+
+            renderMonthNavigator();
+            renderDaysStrip();
+            renderEventsList();
+        };
+
+        const selectMonth = (year: number, monthIndex: number) => {
+            selectedType = 'month';
+            selectedYear = year;
+            selectedMonthIndex = monthIndex;
+            selectedDateStr = null;
+
+            renderMonthNavigator();
+            renderDaysStrip();
+            renderEventsList();
+
+            // Scroll to first day of month
+            const firstDay = days.find(d => d.year === year && d.monthIndex === monthIndex);
+            if (firstDay) {
+                const scroller = document.getElementById('days-scroller');
+                const el = scroller?.querySelector(`[data-date="${firstDay.dateStr}"]`);
+                el?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+            }
+        };
+
+        const scrollToToday = () => {
+            const scroller = document.getElementById('days-scroller');
+            const todayEl = scroller?.querySelector(`[data-date="${todayStr}"]`);
+            if (todayEl && scroller) {
+                scroller.scrollLeft = (todayEl as HTMLElement).offsetLeft - 24;
+            }
+        };
+
+        // Initial render
+        renderMonthNavigator();
+        renderDaysStrip();
+        renderEventsList();
+
+        // Scroll to today after render
+        setTimeout(scrollToToday, 100);
+
+        // Enable drag-to-scroll on days scroller
+        const scroller = document.getElementById('days-scroller');
+        if (scroller) {
+            // Hide webkit scrollbar
+            const styleId = 'days-scroller-style';
+            if (!document.getElementById(styleId)) {
+                const style = document.createElement('style');
+                style.id = styleId;
+                style.textContent = '.days-scroller::-webkit-scrollbar { display: none; }';
+                document.head.appendChild(style);
+            }
+            let isDown = false;
+            let startX = 0;
+            let scrollLeft = 0;
+
+            scroller.addEventListener('mousedown', (e) => {
+                isDown = true;
+                scroller.classList.add('active');
+                startX = e.pageX - scroller.offsetLeft;
+                scrollLeft = scroller.scrollLeft;
+            });
+
+            scroller.addEventListener('mouseleave', () => {
+                isDown = false;
+                scroller.classList.remove('active');
+            });
+
+            scroller.addEventListener('mouseup', () => {
+                isDown = false;
+                scroller.classList.remove('active');
+            });
+
+            scroller.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - scroller.offsetLeft;
+                const walk = (x - startX) * 2; // Scroll speed multiplier
+                scroller.scrollLeft = scrollLeft - walk;
+            });
+
+            // Touch support for mobile
+            scroller.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].pageX - scroller.offsetLeft;
+                scrollLeft = scroller.scrollLeft;
+            }, { passive: true });
+
+            scroller.addEventListener('touchmove', (e) => {
+                const x = e.touches[0].pageX - scroller.offsetLeft;
+                const walk = (x - startX) * 2;
+                scroller.scrollLeft = scrollLeft - walk;
+            }, { passive: true });
+        }
+    }
+
+    private async renderEventDetail(params: Record<string, string>): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <a href="/events" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Înapoi la evenimente
+                </a>
+                <div id="event-detail" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-96 mb-6"></div>
+                        <div class="animate-pulse bg-gray-200 h-8 w-3/4 mb-4 rounded"></div>
+                        <div class="animate-pulse bg-gray-200 h-4 w-full mb-2 rounded"></div>
+                        <div class="animate-pulse bg-gray-200 h-4 w-full mb-2 rounded"></div>
+                        <div class="animate-pulse bg-gray-200 h-4 w-2/3 rounded"></div>
+                    </div>
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-lg shadow-lg p-6 sticky top-24">
+                            <div class="animate-pulse bg-gray-200 h-6 w-1/2 mb-4 rounded"></div>
+                            <div class="animate-pulse bg-gray-200 h-10 w-full mb-4 rounded"></div>
+                            <div class="animate-pulse bg-gray-200 h-12 w-full rounded"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Fetch event details
+        try {
+            const eventData = await this.fetchApi(`/events/${params.slug}`);
+            const event = eventData.data;
+
+            if (!event) {
+                this.render404();
+                return;
+            }
+
+            // Store event data globally for cart functionality
+            (window as any).currentEventData = event;
+
+            // Use postponed date/time if event is postponed
+            const isPostponed = event.is_postponed === true;
+            const displayDate = isPostponed && event.postponed_date ? event.postponed_date : event.start_date;
+            const displayStartTime = isPostponed && event.postponed_start_time ? event.postponed_start_time : event.start_time;
+            const displayDoorTime = isPostponed && event.postponed_door_time ? event.postponed_door_time : event.door_time;
+            const displayEndTime = isPostponed && event.postponed_end_time ? event.postponed_end_time : event.end_time;
+
+            const date = displayDate ? new Date(displayDate).toLocaleDateString('ro-RO', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            }) : '';
+
+            const time = displayStartTime || (displayDate ? new Date(displayDate).toLocaleTimeString('ro-RO', {
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : '');
+
+            // Use poster_url or hero_image_url from new API
+            const imageUrl = event.poster_url || event.hero_image_url || event.image;
+
+            // Check if event is in the past
+            const eventDateObj = displayDate ? new Date(displayDate) : null;
+            const isPastEvent = eventDateObj ? eventDateObj < new Date() : false;
+
+            const eventDetailEl = document.getElementById('event-detail');
+            if (eventDetailEl) {
+                eventDetailEl.innerHTML = `
+                    <div class="${isPastEvent ? 'lg:col-span-3' : 'lg:col-span-2'}">
+                        ${imageUrl
+                            ? `<img src="${imageUrl}" alt="${event.title}" class="w-full h-96 object-cover rounded-lg mb-6">`
+                            : `<div class="w-full h-96 bg-gray-200 rounded-lg mb-6 flex items-center justify-center">
+                                <svg class="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                              </div>`
+                        }
+
+                        ${!isPastEvent ? `<div id="countdown-container" data-event-date="${displayDate || ''}" data-event-time="${displayStartTime || ''}" data-is-cancelled="${event.is_cancelled || false}" data-is-postponed="${event.is_postponed || false}"></div>` : ''}
+
+                        ${event.is_cancelled ? `
+                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                            <strong>Eveniment anulat:</strong> ${event.cancel_reason || 'Acest eveniment a fost anulat.'}
+                        </div>
+                        ` : ''}
+
+                        ${isPostponed ? `
+                        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+                            <strong>Eveniment amânat${event.postponed_date ? ` pentru ${date}${displayStartTime ? ` ora ${displayStartTime}` : ''}` : ''}:</strong> ${event.postponed_reason || 'Acest eveniment a fost amânat.'}
+                        </div>
+                        ` : ''}
+
+                        ${isPastEvent && !event.is_cancelled ? `
+                        <div class="bg-gray-100 border border-gray-300 text-gray-700 px-4 py-3 rounded mb-4">
+                            <strong>Eveniment încheiat</strong> - Acest eveniment a avut loc în ${date}.
+                        </div>
+                        ` : ''}
+
+                        <h1 class="text-3xl font-bold text-gray-900 mb-4">${event.title}</h1>
+
+                        <div class="flex flex-wrap gap-4 mb-6 text-gray-600">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                ${date}
+                            </div>
+                            ${time ? `
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                ${time}
+                            </div>
+                            ` : ''}
+                            ${event.venue ? `
+                            <div class="flex items-center flex-wrap gap-2">
+                                <div class="flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    <a href="https://core.tixello.com/venue/${event.venue.slug}?locale=en" target="_blank" class="hover:underline text-blue-600">${event.venue.name}</a>
+                                    ${event.venue.city ? `, ${event.venue.city}` : ''}
+                                </div>
+                                ${event.venue.latitude && event.venue.longitude ? `
+                                <a href="https://www.google.com/maps?q=${event.venue.latitude},${event.venue.longitude}" target="_blank" class="text-sm text-blue-600 hover:underline">
+                                    Vezi pe Google Maps
+                                </a>
+                                ` : event.venue.address ? `
+                                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue.address)}" target="_blank" class="text-sm text-blue-600 hover:underline">
+                                    Vezi pe Google Maps
+                                </a>
+                                ` : ''}
+                            </div>
+                            ` : ''}
+                        </div>
+
+                        ${event.description ? `
+                        <div class="mb-8">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Descriere</h2>
+                            <div class="prose prose-gray max-w-none text-gray-700 [&>p]:mb-4 [&>ul]:mb-4 [&>ol]:mb-4 [&>p:last-child]:mb-0">${event.description}</div>
+                        </div>
+                        ` : ''}
+
+                        ${event.ticket_terms ? `
+                        <div class="prose max-w-none mb-8">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Termeni și condiții bilete</h2>
+                            <div class="text-gray-700 text-sm">${event.ticket_terms}</div>
+                        </div>
+                        ` : ''}
+
+                        ${event.event_website_url || event.facebook_url ? `
+                        <div class="mb-8">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Link-uri</h2>
+                            <div class="flex flex-wrap gap-4">
+                                ${event.event_website_url ? `<a href="${event.event_website_url}" target="_blank" class="text-blue-600 hover:underline">Website eveniment</a>` : ''}
+                                ${event.facebook_url ? `<a href="${event.facebook_url}" target="_blank" class="text-blue-600 hover:underline">Facebook</a>` : ''}
+                                ${event.website_url ? `<a href="${event.website_url}" target="_blank" class="text-blue-600 hover:underline">Website</a>` : ''}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${event.artists && event.artists.length > 0 ? `
+                        <div class="mb-8 collapsible-section" data-section="artists">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-6 collapsible-header cursor-pointer lg:cursor-default flex items-center justify-between" data-target="artists">
+                                <span>Artiști</span>
+                                <svg class="w-5 h-5 collapsible-icon lg:hidden transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </h2>
+                            <div class="space-y-8 collapsible-content" data-content="artists">
+                                ${event.artists.map((artist: any) => {
+                                    const formatNumber = (num: number | null | undefined): string => {
+                                        if (!num) return '';
+                                        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                                        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                                        return num.toString();
+                                    };
+
+                                    const hasStats = artist.youtube_subscribers || artist.youtube_total_views ||
+                                                     artist.spotify_followers || artist.facebook_followers ||
+                                                     artist.instagram_followers || artist.tiktok_followers;
+
+                                    const hasSocial = artist.facebook_url || artist.instagram_url || artist.youtube_url ||
+                                                      artist.spotify_url || artist.tiktok_url || artist.website;
+
+                                    const latestVideo = artist.youtube_videos && artist.youtube_videos.length > 0
+                                        ? artist.youtube_videos[0] : null;
+
+                                    return `
+                                    <div class="rounded-2xl overflow-hidden shadow-sm">
+                                        <div class="">
+                                            <!-- Header: Image, Name, Types/Genres -->
+                                            <div class="flex flex-col md:flex-row gap-6">
+                                                <a href="https://tixello.com/artist/${artist.slug}" target="_blank" class="flex-shrink-0 group">
+                                                    ${artist.image || artist.portrait
+                                                        ? `<img src="${artist.portrait || artist.image}" alt="${artist.name}" class="w-32 h-32 md:w-40 md:h-40 rounded-xl object-cover shadow-md group-hover:shadow-lg transition">`
+                                                        : `<div class="w-32 h-32 md:w-40 md:h-40 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+                                                            <span class="text-4xl text-white font-bold">${artist.name.charAt(0)}</span>
+                                                           </div>`
+                                                    }
+                                                </a>
+                                                <div class="flex-1">
+                                                    <a href="https://tixello.com/artist/${artist.slug}" target="_blank" class="hover:text-primary transition">
+                                                        <h3 class="text-2xl font-bold text-gray-900 mb-2">${artist.name}</h3>
+                                                    </a>
+                                                    ${artist.city || artist.country ? `
+                                                        <p class="text-gray-500 mb-3">📍 ${[artist.city, artist.country].filter(Boolean).join(', ')}</p>
+                                                    ` : ''}
+
+                                                    ${artist.artist_types && artist.artist_types.length > 0 ? `
+                                                        <div class="flex flex-wrap gap-2 mb-2">
+                                                            ${artist.artist_types.map((t: any) => `
+                                                                <span class="px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">${t.name}</span>
+                                                            `).join('')}
+                                                        </div>
+                                                    ` : ''}
+
+                                                    ${artist.artist_genres && artist.artist_genres.length > 0 ? `
+                                                        <div class="flex flex-wrap gap-2">
+                                                            ${artist.artist_genres.map((g: any) => `
+                                                                <span class="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-full">${g.name}</span>
+                                                            `).join('')}
+                                                        </div>
+                                                    ` : ''}
+
+                                                    ${hasSocial ? `
+                                                        <div class="flex flex-wrap gap-3 mt-4">
+                                                            ${artist.spotify_url ? `<a href="${artist.spotify_url}" target="_blank" class="w-10 h-10 flex items-center justify-center bg-[#1DB954] text-white rounded-full hover:scale-110 transition" title="Spotify"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg></a>` : ''}
+                                                            ${artist.youtube_url ? `<a href="${artist.youtube_url}" target="_blank" class="w-10 h-10 flex items-center justify-center bg-[#FF0000] text-white rounded-full hover:scale-110 transition" title="YouTube"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>` : ''}
+                                                            ${artist.instagram_url ? `<a href="${artist.instagram_url}" target="_blank" class="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] text-white rounded-full hover:scale-110 transition" title="Instagram"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>` : ''}
+                                                            ${artist.facebook_url ? `<a href="${artist.facebook_url}" target="_blank" class="w-10 h-10 flex items-center justify-center bg-[#1877F2] text-white rounded-full hover:scale-110 transition" title="Facebook"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>` : ''}
+                                                            ${artist.tiktok_url ? `<a href="${artist.tiktok_url}" target="_blank" class="w-10 h-10 flex items-center justify-center bg-black text-white rounded-full hover:scale-110 transition" title="TikTok"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg></a>` : ''}
+                                                            ${artist.website ? `<a href="${artist.website}" target="_blank" class="w-10 h-10 flex items-center justify-center bg-gray-700 text-white rounded-full hover:scale-110 transition" title="Website"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg></a>` : ''}
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+
+                                            ${hasStats ? `
+                                            <!-- Social Stats -->
+                                            <div class="mt-6 pt-6 border-t border-gray-200">
+                                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+                                                    ${artist.spotify_followers ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-[#1DB954] mb-1"><svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.spotify_followers)}</div>
+                                                            <div class="text-xs text-gray-500">Followers</div>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${artist.spotify_monthly_listeners ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-[#1DB954] mb-1"><svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.spotify_monthly_listeners)}</div>
+                                                            <div class="text-xs text-gray-500">Monthly</div>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${artist.youtube_subscribers ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-[#FF0000] mb-1"><svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.youtube_subscribers)}</div>
+                                                            <div class="text-xs text-gray-500">Subscribers</div>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${artist.youtube_total_views ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-[#FF0000] mb-1"><svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.youtube_total_views)}</div>
+                                                            <div class="text-xs text-gray-500">Views</div>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${artist.instagram_followers ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-[#E4405F] mb-1"><svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.instagram_followers)}</div>
+                                                            <div class="text-xs text-gray-500">Followers</div>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${artist.facebook_followers ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-[#1877F2] mb-1"><svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.facebook_followers)}</div>
+                                                            <div class="text-xs text-gray-500">Followers</div>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${artist.tiktok_followers ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-black mb-1"><svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.tiktok_followers)}</div>
+                                                            <div class="text-xs text-gray-500">Followers</div>
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                            ` : ''}
+
+                                            ${artist.bio ? `
+                                            <!-- Bio -->
+                                            <div class="mt-6 pt-6 border-t border-gray-200">
+                                                <div class="prose prose-sm max-w-none text-gray-600 px-6">${artist.bio}</div>
+                                            </div>
+                                            ` : ''}
+
+                                            ${latestVideo && latestVideo.video_id ? `
+                                            <!-- YouTube Video Embed -->
+                                            <div class="mt-6 pt-6 border-t border-gray-200">
+                                                <div class="relative pb-[56.25%] h-0 rounded-xl overflow-hidden shadow-lg">
+                                                    <iframe
+                                                        class="absolute top-0 left-0 w-full h-full"
+                                                        src="https://www.youtube.com/embed/${latestVideo.video_id}"
+                                                        title="${latestVideo.title || 'YouTube video'}"
+                                                        frameborder="0"
+                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                        allowfullscreen>
+                                                    </iframe>
+                                                </div>
+                                                ${latestVideo.title ? `<p class="mt-2 text-sm text-gray-600">${latestVideo.title}</p>` : ''}
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `}).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${event.venue ? `
+                        <div class="mb-8 collapsible-section" data-section="location">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4 collapsible-header cursor-pointer lg:cursor-default flex items-center justify-between" data-target="location">
+                                <span>Locație</span>
+                                <svg class="w-5 h-5 collapsible-icon lg:hidden transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </h2>
+                            <div class="bg-gray-50 rounded-lg overflow-hidden collapsible-content" data-content="location">
+                                ${event.venue.image_url ? `
+                                <img src="${event.venue.image_url}" alt="${event.venue.name}" class="w-full h-48 object-cover">
+                                ` : ''}
+                                <div class="p-4">
+                                    <h3 class="font-semibold text-lg text-gray-900 mb-2">${event.venue.name}</h3>
+
+                                    ${event.venue.address || event.venue.city || event.venue.state || event.venue.country ? `
+                                    <div class="flex items-start mb-3">
+                                        <svg class="w-5 h-5 text-gray-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                        <div class="text-gray-600">
+                                            ${event.venue.address ? `<div>${event.venue.address}</div>` : ''}
+                                            ${event.venue.city || event.venue.state || event.venue.country ? `
+                                            <div>${[event.venue.city, event.venue.state, event.venue.country].filter(Boolean).join(', ')}</div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+
+                                    ${event.venue.phone || event.venue.phone2 ? `
+                                    <div class="flex items-center mb-3">
+                                        <svg class="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                        </svg>
+                                        <div class="text-gray-600">
+                                            ${event.venue.phone ? `<a href="tel:${event.venue.phone}" class="hover:text-primary">${event.venue.phone}</a>` : ''}
+                                            ${event.venue.phone && event.venue.phone2 ? ' / ' : ''}
+                                            ${event.venue.phone2 ? `<a href="tel:${event.venue.phone2}" class="hover:text-primary">${event.venue.phone2}</a>` : ''}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+
+                                    ${event.venue.email || event.venue.email2 ? `
+                                    <div class="flex items-center mb-3">
+                                        <svg class="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                        </svg>
+                                        <div class="text-gray-600">
+                                            ${event.venue.email ? `<a href="mailto:${event.venue.email}" class="hover:text-primary">${event.venue.email}</a>` : ''}
+                                            ${event.venue.email && event.venue.email2 ? ' / ' : ''}
+                                            ${event.venue.email2 ? `<a href="mailto:${event.venue.email2}" class="hover:text-primary">${event.venue.email2}</a>` : ''}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+
+                                    <div class="flex flex-wrap gap-3 mt-4">
+                                        ${event.venue.website_url ? `
+                                        <a href="${event.venue.website_url}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-gray-200 hover:bg-gray-300 rounded text-sm text-gray-700 transition">
+                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                                            </svg>
+                                            Website
+                                        </a>
+                                        ` : ''}
+                                        ${event.venue.google_maps_url ? `
+                                        <a href="${event.venue.google_maps_url}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-blue-100 hover:bg-blue-200 rounded text-sm text-blue-700 transition">
+                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                                            </svg>
+                                            Google Maps
+                                        </a>
+                                        ` : event.venue.latitude && event.venue.longitude ? `
+                                        <a href="https://www.google.com/maps?q=${event.venue.latitude},${event.venue.longitude}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-blue-100 hover:bg-blue-200 rounded text-sm text-blue-700 transition">
+                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                                            </svg>
+                                            Google Maps
+                                        </a>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    ${!isPastEvent ? `
+                    <!-- Desktop tickets sidebar - hidden on mobile -->
+                    <div class="lg:col-span-1 hidden lg:block" id="desktop-tickets-sidebar">
+                        <div class="sticky top-18">
+
+                            ${event.is_sold_out || event.door_sales_only || event.is_cancelled ? `
+                                <div class="mb-4 p-4 rounded ${event.is_cancelled ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}">
+                                    <p class="text-sm ${event.is_cancelled ? 'text-red-700' : 'text-yellow-700'}">
+                                        ${event.is_cancelled ? 'Eveniment anulat' : event.is_sold_out ? 'Bilete epuizate' : 'Bilete disponibile doar la intrare'}
+                                    </p>
+                                </div>
+                            ` : ''}
+
+                            ${event.ticket_types && event.ticket_types.length > 0 && !event.is_cancelled && !event.door_sales_only && !event.is_sold_out ? `
+                                <div class="space-y-4 mb-6">
+                                    ${event.ticket_types.map((ticket: any) => {
+                                        const currency = ticket.currency || event.currency || 'RON';
+                                        const available = ticket.available ?? 0;
+                                        const maxQty = Math.min(10, available);
+                                        const commissionInfo = event.commission;
+                                        const hasCommissionOnTop = commissionInfo?.is_added_on_top && ticket.commission_amount > 0;
+                                        return `
+                                        <div class="bg-white border border-gray-200 rounded-lg p-4 ${ticket.status !== 'active' ? 'opacity-50' : ''}">
+                                            ${ticket.bulk_discounts && ticket.bulk_discounts.length > 0 ? `
+                                            <div class="mb-2 space-y-1">
+                                                ${ticket.bulk_discounts.map((discount: any) => {
+                                                    if (discount.rule_type === 'buy_x_get_y') {
+                                                        return `<div class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                                            🎁 Cumpără ${discount.buy_qty}, primești ${discount.get_qty} GRATUIT
+                                                        </div>`;
+                                                    } else if (discount.rule_type === 'amount_off_per_ticket') {
+                                                        return `<div class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                                            💰 ${discount.amount_off / 100} ${currency} reducere/bilet pentru ${discount.min_qty}+ bilete
+                                                        </div>`;
+                                                    } else if (discount.rule_type === 'percent_off') {
+                                                        return `<div class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                                            📊 ${discount.percent_off}% reducere pentru ${discount.min_qty}+ bilete
+                                                        </div>`;
+                                                    }
+                                                    return '';
+                                                }).join('')}
+                                            </div>
+                                            ` : ''}
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div class="flex flex-col items-start">
+                                                    <div class="flex items-center gap-2">
+                                                        <h3 class="font-semibold text-gray-900">${ticket.name}</h3>
+                                                        ${hasCommissionOnTop ? `
+                                                        <div class="relative group">
+                                                            <svg class="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                            </svg>
+                                                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                                Prețul include comision Tixello de ${ticket.commission_amount} ${currency}
+                                                            </div>
+                                                        </div>
+                                                        ` : ''}
+                                                    </div>
+                                                    ${ticket.description ? `<p class="text-xs text-gray-500 mb-2">${ticket.description}</p>` : ''}
+                                                </div>
+                                                <div class="flex justify-between items-start">
+                                                    <div class="text-right">
+                                                        ${hasCommissionOnTop ? `
+                                                            <div class="flex flex-col items-end">
+                                                                ${ticket.sale_price ? `
+                                                                    <span class="line-through text-gray-400 text-sm">${ticket.price} ${currency}</span>
+                                                                    <span class="font-bold text-primary block">${(parseFloat(ticket.sale_price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${currency}</span>
+                                                                ` : `
+                                                                    <span class="font-bold text-primary">${(parseFloat(ticket.price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${currency}</span>
+                                                                `}
+                                                            </div>
+                                                        ` : ticket.sale_price ? `
+                                                            <div>
+                                                                <span class="line-through text-gray-400 text-sm">${ticket.price} ${currency}</span>
+                                                                <span class="font-bold text-red-600 block">${ticket.sale_price} ${currency}</span>
+                                                                ${ticket.discount_percent ? `<span class="text-xs text-red-600">-${ticket.discount_percent}%</span>` : ''}
+                                                            </div>
+                                                        ` : `
+                                                            <span class="font-bold text-primary">${ticket.price} ${currency}</span>
+                                                        `}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            
+                                            ${ticket.status === 'active' && available > 0 ? `
+                                            <div class="flex items-center justify-between mt-3">
+                                                <div class="flex items-center gap-2">
+                                                    <button class="ticket-minus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-ticket-id="${ticket.id}">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                                                        </svg>
+                                                    </button>
+                                                    <span class="ticket-qty-display w-12 text-center font-semibold text-primary" data-ticket-id="${ticket.id}" data-price="${ticket.sale_price || ticket.price}" data-base-price="${ticket.price}" data-currency="${currency}" data-bulk-discounts='${JSON.stringify(ticket.bulk_discounts || [])}' data-commission-rate="${commissionInfo?.rate || 0}" data-has-commission-on-top="${hasCommissionOnTop}">0</span>
+                                                    <button class="ticket-plus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-ticket-id="${ticket.id}" data-max="${maxQty}">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <span class="text-xs text-gray-500">${available} disponibile</span>
+                                            </div>
+                                            ` : `
+                                                <p class="text-sm text-gray-500 mt-2">${ticket.status !== 'active' ? 'Indisponibil' : 'Stoc epuizat'}</p>
+                                            `}
+                                            <div class="ticket-bundle-container" data-ticket-id="${ticket.id}"></div>
+                                        </div>
+                                    `}).join('')}
+                                </div>
+
+                                <div class="bg-white p-4">
+                                    <div class="border-t pt-4 mb-4">
+                                        <div class="flex justify-between items-center text-lg font-bold">
+                                            <span>Total</span>
+                                            <span id="cart-total-price">0 ${event.currency || 'RON'}</span>
+                                        </div>
+                                        ${this.isGamificationEnabled() ? `
+                                        <div id="total-points-container" class="hidden flex justify-center mt-2">
+                                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 text-sm font-medium rounded-full">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/></svg>
+                                                Vei câștiga <strong id="total-points-value">0</strong> puncte
+                                            </span>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+
+                                    <button id="add-to-cart-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                                        Adaugă în coș
+                                    </button>
+                                    <button id="watchlist-btn" class="w-full mt-3 py-3 border-2 border-primary text-primary font-semibold rounded-lg hover:bg-primary hover:text-white transition flex items-center justify-center gap-2" data-event-id="${event.id}">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                        </svg>
+                                        <span id="watchlist-btn-text">Adaugă la favorite</span>
+                                    </button>
+                                </div>
+                            ` : `
+                                <p class="text-gray-500 text-center py-4">Nu sunt bilete disponibile pentru achiziție online.</p>
+                            `}
+                        </div>
+                    </div>
+                    ` : ''}
+                `;
+
+                // Add mobile tickets button and panel for non-past events
+                if (!isPastEvent && event.ticket_types && event.ticket_types.length > 0 && !event.is_cancelled && !event.door_sales_only && !event.is_sold_out) {
+                    const minTicketPrice = event.ticket_types.reduce((min: number, t: any) => {
+                        const price = parseFloat(t.sale_price || t.price) || 0;
+                        return price > 0 && (min === 0 || price < min) ? price : min;
+                    }, 0);
+                    const currency = event.currency || 'RON';
+
+                    const mobileTicketsHtml = `
+                        <style>
+                            .mobile-tickets-btn {
+                                display: none;
+                                position: fixed;
+                                bottom: 0;
+                                left: 0;
+                                right: 0;
+                                z-index: 40;
+                                background: linear-gradient(135deg, var(--tixello-primary, #6366f1) 0%, var(--tixello-primary-dark, #4f46e5) 100%);
+                                color: white;
+                                padding: 1rem 1.5rem;
+                                justify-content: space-between;
+                                align-items: center;
+                                cursor: pointer;
+                                box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+                            }
+                            @media (max-width: 1023px) {
+                                .mobile-tickets-btn { display: flex; }
+                                .event-detail-container { padding-bottom: 80px; }
+                            }
+                            .mobile-tickets-overlay {
+                                position: fixed;
+                                inset: 0;
+                                background: rgba(0,0,0,0.5);
+                                z-index: 45;
+                                opacity: 0;
+                                pointer-events: none;
+                                transition: opacity 0.3s ease;
+                            }
+                            .mobile-tickets-overlay.open {
+                                opacity: 1;
+                                pointer-events: auto;
+                            }
+                            .mobile-tickets-panel {
+                                position: fixed;
+                                bottom: 0;
+                                left: 0;
+                                right: 0;
+                                z-index: 50;
+                                background: white;
+                                border-radius: 1.5rem 1.5rem 0 0;
+                                box-shadow: 0 -8px 30px rgba(0,0,0,0.2);
+                                transform: translateY(100%);
+                                transition: transform 0.3s ease-out;
+                                max-height: 85vh;
+                                overflow-y: auto;
+                            }
+                            .mobile-tickets-panel.open {
+                                transform: translateY(0);
+                            }
+                            @media (min-width: 1024px) {
+                                .mobile-tickets-btn, .mobile-tickets-overlay, .mobile-tickets-panel { display: none !important; }
+                            }
+                        </style>
+
+                        <!-- Mobile: Sticky bottom button -->
+                        <div class="mobile-tickets-btn" id="mobile-tickets-btn">
+                            <div>
+                                <div style="font-weight: 700; font-size: 1.1rem;">Bilete</div>
+                                <div style="font-size: 0.875rem; opacity: 0.9;">Începând de la ${minTicketPrice} ${currency}</div>
+                            </div>
+                            <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                            </svg>
+                        </div>
+
+                        <!-- Mobile: Overlay -->
+                        <div class="mobile-tickets-overlay" id="mobile-tickets-overlay"></div>
+
+                        <!-- Mobile: Tickets panel -->
+                        <div class="mobile-tickets-panel" id="mobile-tickets-panel">
+                            <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; border-radius: 1.5rem 1.5rem 0 0;">
+                                <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0;">Selectează bilete</h2>
+                                <button id="mobile-tickets-close" style="padding: 0.5rem; border-radius: 0.5rem; border: none; background: #f3f4f6; cursor: pointer;">
+                                    <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div style="padding: 1rem 1.5rem;">
+                                <div id="mobile-ticket-types" class="space-y-4">
+                                    ${event.ticket_types.map((ticket: any) => {
+                                        const ticketCurrency = ticket.currency || event.currency || 'RON';
+                                        const available = ticket.available ?? 0;
+                                        const maxQty = Math.min(10, available);
+                                        const commissionInfo = event.commission;
+                                        const hasCommissionOnTop = commissionInfo?.is_added_on_top && ticket.commission_amount > 0;
+                                        return `
+                                        <div class="border border-gray-200 rounded-lg p-4 ${ticket.status !== 'active' ? 'opacity-50' : ''}">
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div class="flex items-center gap-2">
+                                                    <h3 class="font-semibold text-gray-900">${ticket.name}</h3>
+                                                    ${hasCommissionOnTop ? `
+                                                    <div class="relative group">
+                                                        <svg class="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                        </svg>
+                                                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                            Prețul include comision Tixello de ${ticket.commission_amount} ${ticketCurrency}
+                                                        </div>
+                                                    </div>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                            ${ticket.description ? `<p class="text-sm text-gray-500 mb-2">${ticket.description}</p>` : ''}
+                                            ${ticket.bulk_discounts && ticket.bulk_discounts.length > 0 ? `
+                                            <div class="mt-2 space-y-1">
+                                                ${ticket.bulk_discounts.map((discount: any) => {
+                                                    if (discount.rule_type === 'buy_x_get_y') {
+                                                        return `<div class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                                            🎁 Cumpără ${discount.buy_qty}, primești ${discount.get_qty} GRATUIT
+                                                        </div>`;
+                                                    } else if (discount.rule_type === 'amount_off_per_ticket') {
+                                                        return `<div class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                                            💰 ${discount.amount_off / 100} ${ticketCurrency} reducere/bilet pentru ${discount.min_qty}+ bilete
+                                                        </div>`;
+                                                    } else if (discount.rule_type === 'percent_off') {
+                                                        return `<div class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                                            📊 ${discount.percent_off}% reducere pentru ${discount.min_qty}+ bilete
+                                                        </div>`;
+                                                    }
+                                                    return '';
+                                                }).join('')}
+                                            </div>
+                                            ` : ''}
+                                            <div class="flex justify-between items-start">
+                                                <div></div>
+                                                <div class="text-right">
+                                                    ${hasCommissionOnTop ? `
+                                                        <div>
+                                                            ${ticket.sale_price ? `
+                                                                <span class="line-through text-gray-400 text-sm">${ticket.price} ${ticketCurrency}</span>
+                                                                <span class="font-bold text-primary block">${(parseFloat(ticket.sale_price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${ticketCurrency}</span>
+                                                                <span class="text-xs text-gray-500">(${ticket.sale_price} + ${ticket.commission_amount} comision)</span>
+                                                            ` : `
+                                                                <span class="font-bold text-primary">${(parseFloat(ticket.price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${ticketCurrency}</span>
+                                                                <span class="text-xs text-gray-500 block">(${ticket.price} + ${ticket.commission_amount} comision)</span>
+                                                            `}
+                                                        </div>
+                                                    ` : ticket.sale_price ? `
+                                                        <div>
+                                                            <span class="line-through text-gray-400 text-sm">${ticket.price} ${ticketCurrency}</span>
+                                                            <span class="font-bold text-red-600 block">${ticket.sale_price} ${ticketCurrency}</span>
+                                                            ${ticket.discount_percent ? `<span class="text-xs text-red-600">-${ticket.discount_percent}%</span>` : ''}
+                                                        </div>
+                                                    ` : `
+                                                        <span class="font-bold text-primary">${ticket.price} ${ticketCurrency}</span>
+                                                    `}
+                                                </div>
+                                            </div>
+                                            ${ticket.status === 'active' && available > 0 ? `
+                                            <div class="flex items-center justify-between mt-3">
+                                                <div class="flex items-center gap-2">
+                                                    <button class="mobile-ticket-minus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-ticket-id="${ticket.id}">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                                                        </svg>
+                                                    </button>
+                                                    <span class="mobile-ticket-qty w-12 text-center font-semibold" data-ticket-id="${ticket.id}" data-price="${ticket.sale_price || ticket.price}" data-base-price="${ticket.price}" data-currency="${ticketCurrency}" data-bulk-discounts='${JSON.stringify(ticket.bulk_discounts || [])}' data-commission-rate="${commissionInfo?.rate || 0}" data-has-commission-on-top="${hasCommissionOnTop}">0</span>
+                                                    <button class="mobile-ticket-plus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-ticket-id="${ticket.id}" data-max="${maxQty}">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <span class="text-sm text-gray-500">${available} disponibile</span>
+                                            </div>
+                                            ` : `
+                                                <p class="text-sm text-gray-500 mt-2">${ticket.status !== 'active' ? 'Indisponibil' : 'Stoc epuizat'}</p>
+                                            `}
+                                            <div class="mobile-ticket-bundle-container" data-ticket-id="${ticket.id}"></div>
+                                        </div>
+                                    `}).join('')}
+                                </div>
+                                <div class="border-t pt-4 mt-4">
+                                    <div class="flex justify-between items-center text-lg font-bold mb-4">
+                                        <span>Total</span>
+                                        <span id="mobile-cart-total">0 ${currency}</span>
+                                    </div>
+                                    <button id="mobile-add-to-cart-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                                        Adaugă în coș
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Append mobile HTML to body
+                    const mobileContainer = document.createElement('div');
+                    mobileContainer.id = 'mobile-tickets-container';
+                    mobileContainer.innerHTML = mobileTicketsHtml;
+                    document.body.appendChild(mobileContainer);
+
+                    // Setup mobile panel handlers
+                    this.setupMobileTicketsPanel();
+                }
+
+                // Setup ticket quantity handlers
+                if (!isPastEvent) {
+                    this.setupTicketHandlers();
+                }
+
+                // Fetch and display event upsells (in sidebar)
+                if (!isPastEvent && this.isShopEnabled() && event.id) {
+                    this.loadEventUpsells(event.id, event.currency || 'RON');
+                }
+
+                // Load bundled products for each ticket type
+                if (!isPastEvent && this.isShopEnabled() && event.ticket_types) {
+                    this.loadTicketTypeBundles(event.ticket_types, event.currency || 'RON');
+                }
+
+                // Setup collapsible sections for mobile
+                this.setupCollapsibleSections();
+
+                // Initialize countdown timer
+                this.initCountdown();
+            }
+        } catch (error) {
+            console.error('Failed to load event:', error);
+            this.render404();
+        }
+    }
+
+    private setupTicketHandlers(): void {
+        const qtyDisplays = document.querySelectorAll('.ticket-qty-display');
+        const totalEl = document.getElementById('cart-total-price');
+        const addBtn = document.getElementById('add-to-cart-btn');
+
+        // Store quantities in memory
+        const quantities: { [key: string]: number } = {};
+
+        // Store bulk discounts per ticket
+        const ticketBulkDiscounts: { [key: string]: any[] } = {};
+        document.querySelectorAll('.ticket-qty-display').forEach((display) => {
+            const ticketId = (display as HTMLElement).dataset.ticketId || '';
+            const discountsAttr = (display as HTMLElement).dataset.bulkDiscounts;
+            if (discountsAttr) {
+                try {
+                    ticketBulkDiscounts[ticketId] = JSON.parse(discountsAttr);
+                } catch (e) {
+                    ticketBulkDiscounts[ticketId] = [];
+                }
+            } else {
+                ticketBulkDiscounts[ticketId] = [];
+            }
+        });
+
+        const calculateBulkDiscount = (qty: number, price: number, discounts: any[]): { total: number; discount: number; info: string } => {
+            let bestTotal = qty * price;
+            let bestDiscount = 0;
+            let bestInfo = '';
+
+            for (const discount of discounts) {
+                let discountedTotal = qty * price;
+                let discountAmount = 0;
+                let info = '';
+
+                if (discount.rule_type === 'buy_x_get_y' && qty >= discount.buy_qty) {
+                    // Calculate how many free tickets
+                    const sets = Math.floor(qty / discount.buy_qty);
+                    const freeTickets = sets * discount.get_qty;
+                    const paidTickets = qty - freeTickets;
+                    discountedTotal = paidTickets * price;
+                    discountAmount = freeTickets * price;
+                    info = `Buy ${discount.buy_qty} get ${discount.get_qty} free`;
+                } else if (discount.rule_type === 'amount_off_per_ticket' && qty >= discount.min_qty) {
+                    const amountOff = discount.amount_off / 100; // Convert cents to currency
+                    discountAmount = qty * amountOff;
+                    discountedTotal = (qty * price) - discountAmount;
+                    info = `${amountOff} off per ticket`;
+                } else if (discount.rule_type === 'percent_off' && qty >= discount.min_qty) {
+                    discountAmount = (qty * price) * (discount.percent_off / 100);
+                    discountedTotal = (qty * price) - discountAmount;
+                    info = `${discount.percent_off}% off`;
+                }
+
+                if (discountedTotal < bestTotal) {
+                    bestTotal = discountedTotal;
+                    bestDiscount = discountAmount;
+                    bestInfo = info;
+                }
+            }
+
+            return { total: bestTotal, discount: bestDiscount, info: bestInfo };
+        };
+
+        const updateTotal = () => {
+            let total = 0;
+            let totalDiscount = 0;
+            let totalCommission = 0;
+            let hasSelection = false;
+            let currency = 'RON';
+            let discountInfos: string[] = [];
+            let hasCommissionOnTop = false;
+
+            qtyDisplays.forEach((display) => {
+                const ticketId = (display as HTMLElement).dataset.ticketId || '';
+                const qty = quantities[ticketId] || 0;
+                const price = parseFloat((display as HTMLElement).dataset.price || '0');
+                const basePrice = parseFloat((display as HTMLElement).dataset.basePrice || '0');
+                const ticketCurrency = (display as HTMLElement).dataset.currency || 'RON';
+                const commissionRate = parseFloat((display as HTMLElement).dataset.commissionRate || '0');
+                const ticketHasCommission = (display as HTMLElement).dataset.hasCommissionOnTop === 'true';
+                const discounts = ticketBulkDiscounts[ticketId] || [];
+
+                if (qty > 0) {
+                    const result = calculateBulkDiscount(qty, price, discounts);
+                    total += result.total;
+                    totalDiscount += result.discount;
+                    if (result.info) discountInfos.push(result.info);
+                    hasSelection = true;
+                    currency = ticketCurrency;
+
+                    // Commission is calculated from BASE price × quantity, not affected by discounts
+                    if (ticketHasCommission && commissionRate > 0) {
+                        const commission = qty * basePrice * (commissionRate / 100);
+                        totalCommission += commission;
+                        hasCommissionOnTop = true;
+                    }
+                }
+            });
+
+            // Add commission to total if applicable
+            const finalTotal = total + totalCommission;
+
+            if (totalEl) {
+                if (totalDiscount > 0 && hasCommissionOnTop) {
+                    // Has both discount and commission
+                    const originalTotal = total + totalDiscount;
+                    totalEl.innerHTML = `
+                        <div class="text-sm text-gray-500 line-through">${originalTotal.toFixed(2)} ${currency}</div>
+                        <div class="text-sm text-green-600">-${totalDiscount.toFixed(2)} ${currency} reducere</div>
+                        <div class="text-sm text-gray-500">+${totalCommission.toFixed(2)} ${currency} comision</div>
+                        <div class="text-lg font-bold text-primary">${finalTotal.toFixed(2)} ${currency}</div>
+                    `;
+                } else if (totalDiscount > 0) {
+                    // Only discount, no commission
+                    const originalTotal = total + totalDiscount;
+                    totalEl.innerHTML = `
+                        <div class="text-sm text-gray-500 line-through">${originalTotal.toFixed(2)} ${currency}</div>
+                        <div class="text-lg font-bold text-green-600">${total.toFixed(2)} ${currency}</div>
+                        <div class="text-xs text-green-600">Economisești ${totalDiscount.toFixed(2)} ${currency}</div>
+                    `;
+                } else if (hasCommissionOnTop) {
+                    // Only commission, no discount
+                    totalEl.innerHTML = `
+                        <div class="text-sm text-gray-500">${total.toFixed(2)} + ${totalCommission.toFixed(2)} comision</div>
+                        <div class="text-lg font-bold text-primary">${finalTotal.toFixed(2)} ${currency}</div>
+                    `;
+                } else {
+                    totalEl.textContent = `${total.toFixed(2)} ${currency}`;
+                }
+            }
+            if (addBtn) (addBtn as HTMLButtonElement).disabled = !hasSelection;
+
+            // Update gamification points display
+            const pointsContainer = document.getElementById('total-points-container');
+            const pointsValue = document.getElementById('total-points-value');
+            if (pointsContainer && pointsValue) {
+                if (hasSelection && finalTotal > 0) {
+                    const totalPoints = Math.floor(finalTotal); // 1 point per RON
+                    pointsValue.textContent = totalPoints.toString();
+                    pointsContainer.classList.remove('hidden');
+                } else {
+                    pointsContainer.classList.add('hidden');
+                    pointsValue.textContent = '0';
+                }
+            }
+        };
+
+        // Setup + buttons
+        document.querySelectorAll('.ticket-plus').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const ticketId = (btn as HTMLElement).dataset.ticketId || '';
+                const max = parseInt((btn as HTMLElement).dataset.max || '10');
+                const current = quantities[ticketId] || 0;
+
+                if (current < max) {
+                    quantities[ticketId] = current + 1;
+                    const display = document.querySelector(`.ticket-qty-display[data-ticket-id="${ticketId}"]`);
+                    if (display) display.textContent = quantities[ticketId].toString();
+                    updateTotal();
+                }
+            });
+        });
+
+        // Setup - buttons
+        document.querySelectorAll('.ticket-minus').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const ticketId = (btn as HTMLElement).dataset.ticketId || '';
+                const current = quantities[ticketId] || 0;
+
+                if (current > 0) {
+                    quantities[ticketId] = current - 1;
+                    const display = document.querySelector(`.ticket-qty-display[data-ticket-id="${ticketId}"]`);
+                    if (display) display.textContent = quantities[ticketId].toString();
+                    updateTotal();
+                }
+            });
+        });
+
+        if (addBtn) {
+            addBtn.addEventListener('click', () => {
+                // Get current event data
+                const eventTitle = document.querySelector('#event-detail h1')?.textContent || '';
+                const eventData = (window as any).currentEventData; // Store event data globally
+
+                // Collect selected tickets
+                let hasItems = false;
+                qtyDisplays.forEach((display) => {
+                    const ticketId = parseInt((display as HTMLElement).dataset.ticketId || '0');
+                    const qty = quantities[ticketId] || 0;
+
+                    if (qty > 0 && eventData) {
+                        const ticketType = eventData.ticket_types.find((t: any) => t.id === ticketId);
+                        const commissionInfo = eventData.commission;
+                        const hasCommissionOnTop = commissionInfo?.is_added_on_top && ticketType.commission_amount > 0;
+                        if (ticketType) {
+                            CartService.addItem({
+                                eventId: eventData.id,
+                                eventTitle: eventData.title,
+                                eventSlug: eventData.slug,
+                                eventDate: eventData.start_date,
+                                ticketTypeId: ticketType.id,
+                                ticketTypeName: ticketType.name,
+                                price: ticketType.price,  // Base price
+                                salePrice: ticketType.sale_price,  // Discounted price
+                                finalPrice: ticketType.final_price || ticketType.sale_price || ticketType.price,
+                                commissionAmount: ticketType.commission_amount || 0,
+                                commissionRate: commissionInfo?.rate || 0,
+                                hasCommissionOnTop: hasCommissionOnTop,
+                                quantity: qty,
+                                currency: ticketType.currency || 'RON',
+                                bulkDiscounts: ticketType.bulk_discounts || []
+                            });
+                            hasItems = true;
+                        }
+                    }
+                });
+
+                if (hasItems) {
+                    ToastNotification.show('✓ Biletele au fost adăugate în coș!', 'success');
+                    this.updateCartBadge();
+                    this.navigate('/cart');
+                } else {
+                    ToastNotification.show('Te rog selectează cel puțin un bilet.', 'error');
+                }
+            });
+        }
+
+        // Setup watchlist button handler
+        const watchlistBtn = document.getElementById('watchlist-btn');
+        if (watchlistBtn) {
+            // Check if event is in watchlist on page load
+            const checkWatchlist = async () => {
+                if (!this.isAuthenticated()) return;
+
+                try {
+                    const eventId = watchlistBtn.dataset.eventId;
+                    const data = await this.fetchApi(`/account/watchlist/${eventId}/check`);
+                    const btnText = document.getElementById('watchlist-btn-text');
+
+                    if (data.in_watchlist) {
+                        if (btnText) btnText.textContent = 'În watchlist';
+                        watchlistBtn.classList.add('bg-primary', 'text-white');
+                        watchlistBtn.classList.remove('text-primary');
+                    } else {
+                        if (btnText) btnText.textContent = 'Adaugă la favorite';
+                        watchlistBtn.classList.remove('bg-primary', 'text-white');
+                        watchlistBtn.classList.add('text-primary');
+                    }
+                } catch (error) {
+                    // Silent fail if not authenticated
+                }
+            };
+
+            checkWatchlist();
+
+            watchlistBtn.addEventListener('click', async () => {
+                if (!this.isAuthenticated()) {
+                    this.navigate('/login');
+                    return;
+                }
+
+                const eventId = watchlistBtn.dataset.eventId;
+                const btnText = document.getElementById('watchlist-btn-text');
+
+                try {
+                    // Check current status
+                    const checkData = await this.fetchApi(`/account/watchlist/${eventId}/check`);
+
+                    if (checkData.in_watchlist) {
+                        // Remove from watchlist
+                        await this.deleteApi(`/account/watchlist/${eventId}`);
+                        if (btnText) btnText.textContent = 'Adaugă la favorite';
+                        watchlistBtn.classList.remove('bg-primary', 'text-white');
+                        watchlistBtn.classList.add('text-primary');
+                        ToastNotification.show('✓ Eveniment șters din watchlist', 'success');
+                    } else {
+                        // Add to watchlist
+                        await this.postApi(`/account/watchlist/${eventId}`, {});
+                        if (btnText) btnText.textContent = 'În watchlist';
+                        watchlistBtn.classList.add('bg-primary', 'text-white');
+                        watchlistBtn.classList.remove('text-primary');
+                        ToastNotification.show('✓ Eveniment adăugat la watchlist', 'success');
+                    }
+                } catch (error: any) {
+                    if (error.message?.includes('deja în watchlist')) {
+                        ToastNotification.show('Evenimentul este deja în watchlist', 'info');
+                    } else {
+                        ToastNotification.show('Eroare la actualizarea watchlist-ului', 'error');
+                    }
+                }
+            });
+        }
+    }
+
+    private setupMobileTicketsPanel(): void {
+        const btn = document.getElementById('mobile-tickets-btn');
+        const closeBtn = document.getElementById('mobile-tickets-close');
+        const overlay = document.getElementById('mobile-tickets-overlay');
+        const panel = document.getElementById('mobile-tickets-panel');
+        const mobileAddBtn = document.getElementById('mobile-add-to-cart-btn');
+        const mobileTotalEl = document.getElementById('mobile-cart-total');
+
+        if (!btn || !panel || !overlay) return;
+
+        const openPanel = () => {
+            overlay.classList.add('open');
+            panel.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        };
+
+        const closePanel = () => {
+            overlay.classList.remove('open');
+            panel.classList.remove('open');
+            document.body.style.overflow = '';
+        };
+
+        btn.addEventListener('click', openPanel);
+        if (closeBtn) closeBtn.addEventListener('click', closePanel);
+        overlay.addEventListener('click', closePanel);
+
+        // Mobile ticket quantity handling
+        const mobileQuantities: { [key: string]: number } = {};
+        const eventData = (window as any).currentEventData;
+        const currency = eventData?.currency || 'RON';
+
+        const updateMobileTotal = () => {
+            let total = 0;
+            let hasSelection = false;
+
+            document.querySelectorAll('.mobile-ticket-qty').forEach((el) => {
+                const ticketId = (el as HTMLElement).dataset.ticketId || '';
+                const qty = mobileQuantities[ticketId] || 0;
+                if (qty > 0) {
+                    hasSelection = true;
+                    const ticket = eventData?.ticket_types?.find((t: any) => t.id == ticketId);
+                    if (ticket) {
+                        const price = parseFloat(ticket.sale_price || ticket.price) || 0;
+                        total += price * qty;
+                    }
+                }
+            });
+
+            if (mobileTotalEl) mobileTotalEl.textContent = `${total.toFixed(2)} ${currency}`;
+            if (mobileAddBtn) (mobileAddBtn as HTMLButtonElement).disabled = !hasSelection;
+
+            // Sync with desktop quantities
+            Object.keys(mobileQuantities).forEach(ticketId => {
+                const desktopDisplay = document.querySelector(`.ticket-qty-display[data-ticket-id="${ticketId}"]`);
+                if (desktopDisplay) {
+                    desktopDisplay.textContent = mobileQuantities[ticketId].toString();
+                }
+            });
+        };
+
+        // Mobile + buttons
+        document.querySelectorAll('.mobile-ticket-plus').forEach((plusBtn) => {
+            plusBtn.addEventListener('click', () => {
+                const ticketId = (plusBtn as HTMLElement).dataset.ticketId || '';
+                const max = parseInt((plusBtn as HTMLElement).dataset.max || '10');
+                const current = mobileQuantities[ticketId] || 0;
+
+                if (current < max) {
+                    mobileQuantities[ticketId] = current + 1;
+                    const display = document.querySelector(`.mobile-ticket-qty[data-ticket-id="${ticketId}"]`);
+                    if (display) display.textContent = mobileQuantities[ticketId].toString();
+                    updateMobileTotal();
+                }
+            });
+        });
+
+        // Mobile - buttons
+        document.querySelectorAll('.mobile-ticket-minus').forEach((minusBtn) => {
+            minusBtn.addEventListener('click', () => {
+                const ticketId = (minusBtn as HTMLElement).dataset.ticketId || '';
+                const current = mobileQuantities[ticketId] || 0;
+
+                if (current > 0) {
+                    mobileQuantities[ticketId] = current - 1;
+                    const display = document.querySelector(`.mobile-ticket-qty[data-ticket-id="${ticketId}"]`);
+                    if (display) display.textContent = mobileQuantities[ticketId].toString();
+                    updateMobileTotal();
+                }
+            });
+        });
+
+        // Mobile add to cart
+        if (mobileAddBtn) {
+            mobileAddBtn.addEventListener('click', () => {
+                let hasItems = false;
+
+                Object.keys(mobileQuantities).forEach(ticketId => {
+                    const qty = mobileQuantities[ticketId] || 0;
+                    if (qty > 0 && eventData) {
+                        const ticketType = eventData.ticket_types.find((t: any) => t.id == ticketId);
+                        if (ticketType) {
+                            CartService.addItem({
+                                eventId: eventData.id,
+                                eventTitle: eventData.title,
+                                eventSlug: eventData.slug,
+                                eventDate: eventData.start_date,
+                                ticketTypeId: ticketType.id,
+                                ticketTypeName: ticketType.name,
+                                price: ticketType.price,
+                                salePrice: ticketType.sale_price,
+                                finalPrice: ticketType.final_price || ticketType.sale_price || ticketType.price,
+                                commissionAmount: ticketType.commission_amount || 0,
+                                commissionRate: eventData.commission?.rate || 0,
+                                hasCommissionOnTop: eventData.commission?.is_added_on_top && ticketType.commission_amount > 0,
+                                quantity: qty,
+                                currency: ticketType.currency || 'RON',
+                                bulkDiscounts: ticketType.bulk_discounts || []
+                            });
+                            hasItems = true;
+                        }
+                    }
+                });
+
+                if (hasItems) {
+                    closePanel();
+                    ToastNotification.show('✓ Biletele au fost adăugate în coș!', 'success');
+                    this.updateCartBadge();
+                    this.navigate('/cart');
+                } else {
+                    ToastNotification.show('Te rog selectează cel puțin un bilet.', 'error');
+                }
+            });
+        }
+
+        // Clean up on navigation
+        window.addEventListener('popstate', () => {
+            const container = document.getElementById('mobile-tickets-container');
+            if (container) container.remove();
+        }, { once: true });
+    }
+
+    private setupCollapsibleSections(): void {
+        // Only apply collapsible behavior on mobile (< 1024px)
+        const isMobile = window.innerWidth < 1024;
+
+        // Add collapsible CSS if not already added
+        if (!document.getElementById('collapsible-styles')) {
+            const style = document.createElement('style');
+            style.id = 'collapsible-styles';
+            style.textContent = `
+                @media (max-width: 1023px) {
+                    .collapsible-section .collapsible-content {
+                        max-height: 0;
+                        overflow: hidden;
+                        transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+                        opacity: 0;
+                    }
+                    .collapsible-section.expanded .collapsible-content {
+                        max-height: 2000px;
+                        opacity: 1;
+                    }
+                    .collapsible-section .collapsible-icon {
+                        transition: transform 0.3s ease;
+                    }
+                    .collapsible-section.expanded .collapsible-icon {
+                        transform: rotate(180deg);
+                    }
+                    .collapsible-header {
+                        padding: 0.75rem 0;
+                        border-bottom: 1px solid #e5e7eb;
+                        margin-bottom: 0 !important;
+                    }
+                    .collapsible-section.expanded .collapsible-header {
+                        border-bottom-color: transparent;
+                        margin-bottom: 1rem !important;
+                    }
+                }
+                @media (min-width: 1024px) {
+                    .collapsible-section .collapsible-content {
+                        max-height: none !important;
+                        opacity: 1 !important;
+                        overflow: visible !important;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Setup click handlers for headers
+        const headers = document.querySelectorAll('.collapsible-header');
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                // Only toggle on mobile
+                if (window.innerWidth >= 1024) return;
+
+                const target = (header as HTMLElement).dataset.target;
+                const section = document.querySelector(`[data-section="${target}"]`);
+
+                if (section) {
+                    section.classList.toggle('expanded');
+                }
+            });
+        });
+
+        // On desktop, ensure all sections are expanded
+        if (!isMobile) {
+            document.querySelectorAll('.collapsible-section').forEach(section => {
+                section.classList.add('expanded');
+            });
+        }
+    }
+
+    private renderCart(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        const ticketCart = CartService.getCart();
+        const ticketTotals = CartService.getTotal();
+        const shopCount = ShopCartService.getItemCount();
+
+        // If both carts are empty
+        if (ticketCart.length === 0 && shopCount === 0) {
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                    <svg class="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
+                    <h1 class="text-2xl font-bold text-gray-900 mb-4">Coșul tău este gol</h1>
+                    <p class="text-gray-600 mb-8">Explorează evenimentele noastre și adaugă bilete sau produse în coș.</p>
+                    <div class="flex gap-4 justify-center">
+                        <a href="/events" class="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition inline-block">
+                            Vezi evenimente
+                        </a>
+                        <a href="/shop" class="px-6 py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-700 transition inline-block">
+                            Vezi magazin
+                        </a>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // Use combined cart rendering
+        this.renderCombinedCart(ticketCart, ticketTotals);
+    }
+
+    private async renderCombinedCart(ticketCart: CartItem[], ticketTotals: any): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        // Fetch shop cart from API
+        let shopCart: any = null;
+        try {
+            const sessionId = localStorage.getItem('shop_session_id');
+            if (sessionId) {
+                const shopResponse = await this.fetchApi('/shop/cart', {}, {
+                    headers: { 'X-Session-ID': sessionId }
+                });
+                if (shopResponse.success) {
+                    shopCart = shopResponse.data;
+                    // Sync cart count
+                    if (shopCart?.item_count !== undefined) {
+                        ShopCartService.setItemCount(shopCart.item_count);
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('Could not fetch shop cart');
+        }
+
+        // Render ticket items
+        const ticketItemsHtml = ticketCart.map((item, index) => {
+            // Use sale price if available, otherwise base price (same as getTotal)
+            const ticketPrice = item.salePrice || item.price;
+            const result = CartService.calculateBulkDiscount(item.quantity, ticketPrice, item.bulkDiscounts);
+            let itemTotal = result.total;
+            const itemDiscount = result.discount;
+            let originalTotal = item.quantity * ticketPrice;
+
+            // Add commission if applicable (from BASE price, not affected by discounts/sale price)
+            let itemCommission = 0;
+            if (item.hasCommissionOnTop && item.commissionRate > 0) {
+                itemCommission = item.quantity * item.price * (item.commissionRate / 100);
+                itemTotal += itemCommission;
+                originalTotal += itemCommission;
+            }
+            const dateFormatted = new Date(item.eventDate).toLocaleDateString('ro-RO', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+
+            return `
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-lg text-gray-900 mb-1">${item.eventTitle}</h3>
+                        <p class="text-sm text-gray-600">${item.ticketTypeName}</p>
+                        <p class="text-sm text-gray-500">${dateFormatted}</p>
+                    </div>
+                    <button class="remove-item-btn text-red-600 hover:text-red-700" data-event-id="${item.eventId}" data-ticket-id="${item.ticketTypeId}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <button class="cart-qty-minus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-event-id="${item.eventId}" data-ticket-id="${item.ticketTypeId}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                            </svg>
+                        </button>
+                        <span class="cart-qty-display w-12 text-center font-semibold">${item.quantity}</span>
+                        <button class="cart-qty-plus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-event-id="${item.eventId}" data-ticket-id="${item.ticketTypeId}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="text-right">
+                        ${itemDiscount > 0 ? `
+                            <div class="text-sm text-gray-500 line-through">${originalTotal.toFixed(2)} ${item.currency}</div>
+                            <div class="font-bold text-green-600">${itemTotal.toFixed(2)} ${item.currency}</div>
+                            <div class="text-xs text-green-600">-${itemDiscount.toFixed(2)} ${item.currency}</div>
+                        ` : `
+                            <div class="font-bold text-gray-900">${itemTotal.toFixed(2)} ${item.currency}</div>
+                        `}
+                    </div>
+                </div>
+            </div>
+        `}).join('');
+
+        // Render shop items with attributes
+        const shopItemsHtml = shopCart?.items?.map((item: any) => {
+            // Render attributes as small badges
+            const attributesHtml = item.attributes?.length > 0
+                ? `<div class="flex flex-wrap gap-2 mt-1">
+                    ${item.attributes.map((attr: any) => `
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                            ${attr.color_hex ? `<span class="w-3 h-3 rounded-full mr-1" style="background-color: ${attr.color_hex}"></span>` : ''}
+                            ${attr.name}: ${attr.value}
+                        </span>
+                    `).join('')}
+                </div>`
+                : '';
+
+            return `
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex gap-4">
+                    <img src="${item.image_url || '/images/placeholder.png'}" alt="${item.title}" class="w-20 h-20 object-cover rounded-lg">
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-semibold text-gray-900">${item.title}</h3>
+                                ${attributesHtml}
+                                <p class="text-xs text-gray-400 mt-1">SKU: ${item.sku || '-'}</p>
+                            </div>
+                            <button class="shop-remove-item-btn text-red-600 hover:text-red-700" data-item-id="${item.id}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex justify-between items-center mt-3">
+                            <div class="flex items-center gap-3">
+                                <button class="shop-qty-minus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-item-id="${item.id}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                                    </svg>
+                                </button>
+                                <span class="shop-qty-display w-12 text-center font-semibold" data-item-id="${item.id}">${item.quantity}</span>
+                                <button class="shop-qty-plus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-item-id="${item.id}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-gray-900">${item.total.toFixed(2)} ${shopCart.currency}</div>
+                                <div class="text-xs text-gray-500">${item.unit_price.toFixed(2)} × ${item.quantity}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `}).join('') || '';
+
+        // Calculate combined totals
+        const shopTotal = shopCart?.total || 0;
+        const currency = ticketTotals.currency || shopCart?.currency || 'RON';
+        const grandTotal = ticketTotals.total + shopTotal;
+
+        content.innerHTML = `
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="flex justify-between items-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-900">Coșul meu</h1>
+                    <button id="clear-cart-btn" class="text-sm text-red-600 hover:text-red-700">Golește coșul</button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-4">
+                        ${ticketCart.length > 0 ? `
+                            <h2 class="text-lg font-semibold text-gray-700 mb-2">Bilete</h2>
+                            ${ticketItemsHtml}
+                        ` : ''}
+
+                        ${shopCart?.items?.length > 0 ? `
+                            <h2 class="text-lg font-semibold text-gray-700 mb-2 ${ticketCart.length > 0 ? 'mt-8' : ''}">Produse magazin</h2>
+                            ${shopItemsHtml}
+                        ` : ''}
+
+                        <!-- Upsells container - loaded dynamically -->
+                        <div id="cart-upsells-container"></div>
+                    </div>
+
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-lg shadow p-6 sticky top-4">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Sumar comandă</h2>
+
+                            <div class="space-y-2 mb-4 pb-4 border-b">
+                                ${ticketCart.length > 0 ? `
+                                <div class="flex justify-between text-gray-600 group relative">
+                                    <span class="${ticketTotals.hasCommission ? 'cursor-help border-b border-dotted border-gray-400' : ''}">
+                                        Subtotal bilete
+                                        ${ticketTotals.hasCommission ? `
+                                        <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                            Valoare bilete: ${ticketTotals.subtotal.toFixed(2)} ${ticketTotals.currency}<br>
+                                            Comision Tixello: +${ticketTotals.commission.toFixed(2)} ${ticketTotals.currency}
+                                        </span>
+                                        ` : ''}
+                                    </span>
+                                    <span>${ticketTotals.total.toFixed(2)} ${ticketTotals.currency}</span>
+                                </div>
+                                ${ticketTotals.bulkDiscount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Discount bulk</span>
+                                    <span>-${ticketTotals.bulkDiscount.toFixed(2)} ${ticketTotals.currency}</span>
+                                </div>
+                                ` : ''}
+                                ${ticketTotals.couponDiscount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Cod promoțional${ticketTotals.couponName ? ` (${ticketTotals.couponName})` : ''}</span>
+                                    <span>-${ticketTotals.couponDiscount.toFixed(2)} ${ticketTotals.currency}</span>
+                                </div>
+                                ` : ''}
+                                ` : ''}
+
+                                ${shopCart?.items?.length > 0 ? `
+                                <div class="flex justify-between text-gray-600 group relative">
+                                    <span class="${shopCart.commission_rate > 0 ? 'cursor-help border-b border-dotted border-gray-400' : ''}">
+                                        Subtotal produse
+                                        ${shopCart.commission_rate > 0 ? `
+                                        <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                            Valoare produse: ${parseFloat(shopCart.subtotal).toFixed(2)} ${shopCart.currency}<br>
+                                            Comision Tixello: ${parseFloat(shopCart.commission_display || shopCart.commission).toFixed(2)} ${shopCart.currency}${shopCart.commission_mode === 'included' ? ' (inclus)' : ''}
+                                        </span>
+                                        ` : ''}
+                                    </span>
+                                    <span>${parseFloat(shopCart.total).toFixed(2)} ${shopCart.currency}</span>
+                                </div>
+                                ${shopCart.discount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Discount${shopCart.coupon?.code ? ` (${shopCart.coupon.code})` : ''}</span>
+                                    <span>-${shopCart.discount.toFixed(2)} ${shopCart.currency}</span>
+                                </div>
+                                ` : ''}
+                                ` : ''}
+                            </div>
+
+                            <!-- Discount Code Section -->
+                            <div class="mb-4 pb-4 border-b">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Cod de reducere</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="discount-code-input" placeholder="Introdu codul"
+                                           class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm">
+                                    <button id="apply-discount-btn" class="px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition">
+                                        Aplică
+                                    </button>
+                                </div>
+                                <div id="discount-code-message" class="mt-2 text-sm hidden"></div>
+                                <div id="applied-discount-display" class="hidden mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <span class="text-sm font-medium text-green-800" id="applied-discount-name"></span>
+                                            <span class="text-sm text-green-600 ml-2" id="applied-discount-value"></span>
+                                        </div>
+                                        <button id="remove-discount-btn" class="text-red-600 hover:text-red-700 text-sm">Elimină</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${this.isGamificationEnabled() ? this.renderPointsSection(grandTotal, currency) : ''}
+
+                            <!-- Taxes (including VAT for VAT payer tenants) -->
+                            <div id="cart-taxes-section" class="mb-4 pb-4 border-b hidden"></div>
+
+                            <div class="flex justify-between items-center mb-6">
+                                <span class="text-lg font-semibold">Total</span>
+                                <span class="text-2xl font-bold text-primary" id="cart-total-amount">${grandTotal.toFixed(2)} ${currency}</span>
+                            </div>
+
+                            <button id="checkout-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition">
+                                Finalizează comanda
+                            </button>
+
+                            <a href="/events" class="w-full mt-3 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition block text-center">
+                                Continuă cumpărăturile
+                            </a>
+
+                            <p class="text-center text-xs text-gray-400 mt-4">
+                                Ticketing system powered by <a href="https://tixello.com" target="_blank" class="text-primary hover:underline">Tixello</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.setupCartHandlers();
+
+        // Load upsells from events in cart
+        if (this.isShopEnabled() && ticketCart.length > 0) {
+            this.loadCartUpsells(ticketCart, shopCart, ticketTotals.currency);
+        }
+
+        // Load taxes (including VAT for VAT payer tenants)
+        this.loadCartTaxes(grandTotal, currency);
+    }
+
+    private async loadCartTaxes(amount: number, currency: string): Promise<void> {
+        const container = document.getElementById('cart-taxes-section');
+        const totalAmountEl = document.getElementById('cart-total-amount');
+        if (!container) return;
+
+        try {
+            const response = await this.fetchApi(`/taxes/checkout?amount=${amount}&currency=${currency}`);
+            if (response.success && response.data) {
+                const { taxes, is_vat_payer, vat_amount, vat_rate, taxes_to_add } = response.data;
+
+                // Only show section if tenant is VAT payer or there are visible taxes
+                if ((is_vat_payer && vat_amount > 0) || taxes?.length > 0) {
+                    container.classList.remove('hidden');
+
+                    let taxHtml = '<div class="space-y-2">';
+
+                    // Show VAT info prominently for VAT payer tenants (informational only - included in price)
+                    if (is_vat_payer && vat_amount > 0) {
+                        taxHtml += `
+                            <div class="flex justify-between text-gray-500 text-sm">
+                                <span class="flex items-center gap-1">
+                                    TVA inclus (${vat_rate}%)
+                                    <span class="cursor-help text-gray-400" title="Taxa pe valoarea adaugata inclusa in pret">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </span>
+                                </span>
+                                <span>${vat_amount.toFixed(2)} ${currency}</span>
+                            </div>
+                        `;
+                    }
+
+                    // Show other taxes (non-VAT)
+                    taxes?.filter((tax: any) => !tax.is_vat).forEach((tax: any) => {
+                        taxHtml += `
+                            <div class="flex justify-between text-gray-600">
+                                <span class="flex items-center gap-1">
+                                    ${tax.name}
+                                    ${tax.explanation ? `
+                                    <span class="cursor-help text-gray-400" title="${tax.explanation}">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </span>
+                                    ` : ''}
+                                </span>
+                                <span>${tax.is_added_to_price ? '+' : ''}${tax.tax_amount.toFixed(2)} ${currency}</span>
+                            </div>
+                        `;
+                    });
+
+                    taxHtml += '</div>';
+                    container.innerHTML = taxHtml;
+
+                    // Update total if there are taxes to add
+                    if (taxes_to_add > 0 && totalAmountEl) {
+                        const newTotal = amount + taxes_to_add;
+                        totalAmountEl.textContent = `${newTotal.toFixed(2)} ${currency}`;
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('Could not load cart taxes:', e);
+        }
+    }
+
+    private async loadCartUpsells(ticketCart: CartItem[], shopCart: any, currency: string): Promise<void> {
+        // Get unique event IDs from ticket cart
+        const eventIds = [...new Set(ticketCart.map(item => item.eventId))];
+        if (eventIds.length === 0) return;
+
+        // Get already added product IDs from shop cart
+        const addedProductIds = new Set(shopCart?.items?.map((item: any) => item.product_id) || []);
+
+        // Fetch upsells for all events
+        const allUpsells: any[] = [];
+        for (const eventId of eventIds) {
+            const upsells = await this.fetchEventUpsells(eventId);
+            allUpsells.push(...upsells);
+        }
+
+        // Filter out products already in cart and deduplicate by product ID
+        const seenProductIds = new Set<string>();
+        const filteredUpsells = allUpsells.filter(item => {
+            const productId = item.product?.id;
+            if (!productId || addedProductIds.has(productId) || seenProductIds.has(productId)) {
+                return false;
+            }
+            seenProductIds.add(productId);
+            return item.product?.in_stock;
+        });
+
+        if (filteredUpsells.length === 0) return;
+
+        // Render upsells section
+        const container = document.getElementById('cart-upsells-container');
+        if (container) {
+            container.innerHTML = this.renderCartUpsellsSection(filteredUpsells, currency);
+            this.setupUpsellHandlers();
+        }
+    }
+
+    private setupCartHandlers(): void {
+        document.querySelectorAll('.remove-item-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const eventId = parseInt(target.dataset.eventId || '0');
+                const ticketId = parseInt(target.dataset.ticketId || '0');
+                CartService.removeItem(eventId, ticketId);
+                this.updateCartBadge();
+                this.renderCart();
+            });
+        });
+
+        document.querySelectorAll('.cart-qty-plus').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const eventId = parseInt(target.dataset.eventId || '0');
+                const ticketId = parseInt(target.dataset.ticketId || '0');
+                const cart = CartService.getCart();
+                const item = cart.find(i => i.eventId === eventId && i.ticketTypeId === ticketId);
+                if (item) {
+                    CartService.updateQuantity(eventId, ticketId, item.quantity + 1);
+                    this.updateCartBadge();
+                    this.renderCart();
+                }
+            });
+        });
+
+        document.querySelectorAll('.cart-qty-minus').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const eventId = parseInt(target.dataset.eventId || '0');
+                const ticketId = parseInt(target.dataset.ticketId || '0');
+                const cart = CartService.getCart();
+                const item = cart.find(i => i.eventId === eventId && i.ticketTypeId === ticketId);
+                if (item && item.quantity > 1) {
+                    CartService.updateQuantity(eventId, ticketId, item.quantity - 1);
+                    this.updateCartBadge();
+                    this.renderCart();
+                }
+            });
+        });
+
+        const clearBtn = document.getElementById('clear-cart-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', async () => {
+                if (confirm('Sigur vrei să golești coșul?')) {
+                    CartService.clearCart();
+                    // Also clear shop cart
+                    const sessionId = localStorage.getItem('shop_session_id');
+                    if (sessionId) {
+                        try {
+                            await this.fetchApi('/shop/cart', {}, {
+                                method: 'DELETE',
+                                headers: { 'X-Session-ID': sessionId }
+                            });
+                            ShopCartService.clear();
+                        } catch (e) {
+                            console.log('Could not clear shop cart');
+                        }
+                    }
+                    this.updateCartBadge();
+                    this.renderCart();
+                }
+            });
+        }
+
+        const checkoutBtn = document.getElementById('checkout-btn');
+        if (checkoutBtn) {
+            checkoutBtn.addEventListener('click', () => {
+                this.navigate('/checkout');
+            });
+        }
+
+        // Shop cart handlers
+        this.setupShopCartHandlers();
+
+        // Discount code handlers
+        this.setupDiscountCodeHandlers();
+
+        // Gamification points handlers
+        this.setupPointsHandlers();
+    }
+
+    private setupShopCartHandlers(): void {
+        const sessionId = localStorage.getItem('shop_session_id');
+        if (!sessionId) return;
+
+        // Shop remove item buttons
+        document.querySelectorAll('.shop-remove-item-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const itemId = target.dataset.itemId;
+                if (itemId) {
+                    try {
+                        await this.fetchApi(`/shop/cart/items/${itemId}`, {}, {
+                            method: 'DELETE',
+                            headers: { 'X-Session-ID': sessionId }
+                        });
+                        this.renderCart();
+                    } catch (e) {
+                        console.error('Failed to remove shop item:', e);
+                    }
+                }
+            });
+        });
+
+        // Shop quantity plus buttons
+        document.querySelectorAll('.shop-qty-plus').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const itemId = target.dataset.itemId;
+                const qtyDisplay = document.querySelector(`.shop-qty-display[data-item-id="${itemId}"]`);
+                const currentQty = parseInt(qtyDisplay?.textContent || '1');
+
+                if (itemId) {
+                    try {
+                        await this.fetchApi(`/shop/cart/items/${itemId}`, {}, {
+                            method: 'PUT',
+                            headers: { 'X-Session-ID': sessionId },
+                            body: JSON.stringify({ quantity: currentQty + 1 })
+                        });
+                        this.renderCart();
+                    } catch (e) {
+                        console.error('Failed to update shop item:', e);
+                    }
+                }
+            });
+        });
+
+        // Shop quantity minus buttons
+        document.querySelectorAll('.shop-qty-minus').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const itemId = target.dataset.itemId;
+                const qtyDisplay = document.querySelector(`.shop-qty-display[data-item-id="${itemId}"]`);
+                const currentQty = parseInt(qtyDisplay?.textContent || '1');
+
+                if (itemId && currentQty > 1) {
+                    try {
+                        await this.fetchApi(`/shop/cart/items/${itemId}`, {}, {
+                            method: 'PUT',
+                            headers: { 'X-Session-ID': sessionId },
+                            body: JSON.stringify({ quantity: currentQty - 1 })
+                        });
+                        this.renderCart();
+                    } catch (e) {
+                        console.error('Failed to update shop item:', e);
+                    }
+                }
+            });
+        });
+    }
+
+    private setupDiscountCodeHandlers(): void {
+        const applyBtn = document.getElementById('apply-discount-btn');
+        const input = document.getElementById('discount-code-input') as HTMLInputElement;
+        const messageDiv = document.getElementById('discount-code-message');
+        const appliedDisplay = document.getElementById('applied-discount-display');
+        const removeBtn = document.getElementById('remove-discount-btn');
+
+        if (applyBtn && input) {
+            applyBtn.addEventListener('click', async () => {
+                const code = input.value.trim();
+                if (!code) {
+                    this.showDiscountMessage('Te rugăm să introduci un cod de reducere.', 'error');
+                    return;
+                }
+
+                applyBtn.textContent = 'Se verifică...';
+                (applyBtn as HTMLButtonElement).disabled = true;
+
+                try {
+                    const response = await this.fetchApi('/cart/promo-code', {}, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            code: code,
+                            cart: CartService.getCart()
+                        })
+                    });
+
+                    if (response.success && response.data) {
+                        // Store discount in CartService
+                        CartService.setDiscount({
+                            code: code,
+                            name: response.data.name || code,
+                            type: response.data.discount_type,
+                            value: response.data.discount_value,
+                            discountAmount: response.data.discount_amount
+                        });
+
+                        // Show applied discount
+                        const nameSpan = document.getElementById('applied-discount-name');
+                        const valueSpan = document.getElementById('applied-discount-value');
+                        if (nameSpan) nameSpan.textContent = response.data.name || code;
+                        if (valueSpan) {
+                            valueSpan.textContent = response.data.discount_type === 'percentage'
+                                ? `(-${response.data.discount_value}%)`
+                                : `(-${response.data.discount_amount} ${CartService.getTotal().currency})`;
+                        }
+                        if (appliedDisplay) appliedDisplay.classList.remove('hidden');
+                        if (messageDiv) messageDiv.classList.add('hidden');
+                        input.value = '';
+                        input.disabled = true;
+
+                        // Update total display
+                        this.updateCartTotal();
+                    } else {
+                        this.showDiscountMessage(response.message || 'Cod invalid sau expirat.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Discount validation error:', error);
+                    this.showDiscountMessage('A apărut o eroare. Te rugăm să încerci din nou.', 'error');
+                } finally {
+                    applyBtn.textContent = 'Aplică';
+                    (applyBtn as HTMLButtonElement).disabled = false;
+                }
+            });
+
+            // Allow Enter key to apply
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyBtn.click();
+                }
+            });
+        }
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                CartService.removeDiscount();
+                if (appliedDisplay) appliedDisplay.classList.add('hidden');
+                if (input) {
+                    input.disabled = false;
+                    input.value = '';
+                }
+                this.updateCartTotal();
+            });
+        }
+
+        // Check if there's already an applied discount
+        const existingDiscount = CartService.getDiscount();
+        if (existingDiscount && appliedDisplay) {
+            const nameSpan = document.getElementById('applied-discount-name');
+            const valueSpan = document.getElementById('applied-discount-value');
+            if (nameSpan) nameSpan.textContent = existingDiscount.name;
+            if (valueSpan) {
+                valueSpan.textContent = existingDiscount.type === 'percentage'
+                    ? `(-${existingDiscount.value}%)`
+                    : `(-${existingDiscount.discountAmount} ${CartService.getTotal().currency})`;
+            }
+            appliedDisplay.classList.remove('hidden');
+            if (input) input.disabled = true;
+        }
+    }
+
+    private showDiscountMessage(message: string, type: 'success' | 'error'): void {
+        const messageDiv = document.getElementById('discount-code-message');
+        if (messageDiv) {
+            messageDiv.textContent = message;
+            messageDiv.className = `mt-2 text-sm ${type === 'error' ? 'text-red-600' : 'text-green-600'}`;
+            messageDiv.classList.remove('hidden');
+        }
+    }
+
+    private updateCartTotal(): void {
+        const totals = CartService.getTotal();
+        const totalEl = document.getElementById('cart-total-amount');
+        if (totalEl) {
+            totalEl.textContent = `${totals.total.toFixed(2)} ${totals.currency}`;
+        }
+    }
+
+    // ========================================
+    // EVENT UPSELLS & BUNDLES
+    // ========================================
+
+    private isShopEnabled(): boolean {
+        try {
+            const modules = this.config?.modules || (window as any).TIXELLO?.config?.modules;
+            return modules?.includes('shop');
+        } catch {
+            return false;
+        }
+    }
+
+    private async fetchEventUpsells(eventId: number): Promise<any[]> {
+        if (!this.isShopEnabled()) return [];
+        try {
+            const response = await this.fetchApi(`/shop/events/${eventId}/upsells`);
+            return response.success ? (response.data?.upsells || []) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private async fetchTicketTypeBundles(ticketTypeId: number): Promise<any[]> {
+        if (!this.isShopEnabled()) return [];
+        try {
+            const response = await this.fetchApi(`/shop/ticket-types/${ticketTypeId}/bundles`);
+            return response.success ? (response.data?.bundles || []) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private renderEventUpsellsSection(upsells: any[], currency: string): string {
+        if (!upsells || upsells.length === 0) return '';
+
+        return `
+            <div class="mt-6 pt-6 border-t">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    Adaugă la comandă
+                </h3>
+                <div class="space-y-3" id="event-upsells-list">
+                    ${upsells.map(item => {
+                        const product = item.product;
+                        const price = product.price_cents / 100;
+                        const originalPrice = product.original_price_cents / 100;
+                        const isOnSale = product.is_on_sale && originalPrice > price;
+                        const imageUrl = product.image_url || '/storage/shop/placeholder.png';
+                        const productData = JSON.stringify(product).replace(/"/g, '&quot;');
+
+                        return `
+                        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                            <img src="${imageUrl}" alt="${product.title}"
+                                 class="w-14 h-14 object-cover rounded-lg cursor-pointer hover:opacity-80 transition product-detail-trigger"
+                                 data-product='${productData}'
+                                 data-currency="${currency}">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-medium text-gray-900 truncate cursor-pointer hover:text-primary transition product-detail-trigger"
+                                    data-product='${productData}'
+                                    data-currency="${currency}">${product.title}</h4>
+                                <div class="flex items-center gap-2">
+                                    ${isOnSale ? `<span class="text-xs text-gray-400 line-through">${originalPrice.toFixed(2)} ${currency}</span>` : ''}
+                                    <span class="text-sm font-semibold text-primary">${price.toFixed(2)} ${currency}</span>
+                                </div>
+                            </div>
+                            <button class="upsell-add-btn px-3 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition flex-shrink-0"
+                                    data-product-id="${product.id}"
+                                    ${!product.in_stock ? 'disabled' : ''}>
+                                ${product.in_stock ? 'Adaugă' : 'Stoc epuizat'}
+                            </button>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    private renderCartUpsellsSection(upsells: any[], currency: string): string {
+        if (!upsells || upsells.length === 0) return '';
+
+        return `
+            <div class="bg-white rounded-lg shadow p-6 mt-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                    </svg>
+                    Ți-ar putea plăcea
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="cart-upsells-grid">
+                    ${upsells.slice(0, 6).map(item => {
+                        const product = item.product;
+                        const price = product.price_cents / 100;
+                        const originalPrice = product.original_price_cents / 100;
+                        const isOnSale = product.is_on_sale && originalPrice > price;
+                        const imageUrl = product.image_url || '/storage/shop/placeholder.png';
+                        const productData = JSON.stringify(product).replace(/"/g, '&quot;');
+
+                        return `
+                        <div class="flex flex-col bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition">
+                            <img src="${imageUrl}" alt="${product.title}"
+                                 class="w-full h-32 object-cover cursor-pointer hover:opacity-80 transition product-detail-trigger"
+                                 data-product='${productData}'
+                                 data-currency="${currency}">
+                            <div class="p-3 flex-1 flex flex-col">
+                                <h4 class="font-medium text-gray-900 text-sm mb-1 line-clamp-2 cursor-pointer hover:text-primary transition product-detail-trigger"
+                                    data-product='${productData}'
+                                    data-currency="${currency}">${product.title}</h4>
+                                <div class="flex items-center gap-2 mb-3">
+                                    ${isOnSale ? `<span class="text-xs text-gray-400 line-through">${originalPrice.toFixed(2)}</span>` : ''}
+                                    <span class="font-semibold text-primary">${price.toFixed(2)} ${currency}</span>
+                                </div>
+                                <button class="cart-upsell-add-btn mt-auto w-full py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition"
+                                        data-product-id="${product.id}"
+                                        ${!product.in_stock ? 'disabled' : ''}>
+                                    ${product.in_stock ? 'Adaugă în coș' : 'Stoc epuizat'}
+                                </button>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    private renderBundleInfo(bundles: any[]): string {
+        if (!bundles || bundles.length === 0) return '';
+
+        return `
+            <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                    </svg>
+                    <span class="text-sm font-medium text-green-800">Include produse bonus:</span>
+                </div>
+                <div class="space-y-1">
+                    ${bundles.map(b => `
+                        <div class="flex items-center gap-2 text-sm text-green-700">
+                            <span class="font-medium">${b.quantity_included}x</span>
+                            <span>${b.product.title}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    private async addUpsellToShopCart(productId: string): Promise<boolean> {
+        try {
+            let sessionId = localStorage.getItem('shop_session_id');
+            if (!sessionId) {
+                sessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + Date.now();
+                localStorage.setItem('shop_session_id', sessionId);
+            }
+
+            const response = await this.postApi('/shop/cart/items', {
+                product_id: productId,
+                quantity: 1
+            }, {
+                'X-Session-ID': sessionId
+            });
+
+            if (response.success) {
+                ShopCartService.setItemCount(response.data?.item_count || ShopCartService.getItemCount() + 1);
+                this.updateShopCartBadge();
+                return true;
+            }
+            return false;
+        } catch {
+            return false;
+        }
+    }
+
+    private async loadEventUpsells(eventId: number, currency: string): Promise<void> {
+        const upsells = await this.fetchEventUpsells(eventId);
+        if (upsells.length === 0) return;
+
+        // Find the sidebar panel to inject upsells
+        const sidebar = document.querySelector('.lg\\:col-span-1 .bg-white.rounded-lg.shadow-lg.sticky');
+        if (!sidebar) return;
+
+        // Find the watchlist button or the last element before footer
+        const watchlistBtn = document.getElementById('watchlist-btn');
+        const tixelloFooter = sidebar.querySelector('.text-center.text-xs.text-gray-400.mt-4');
+
+        // Create upsells container
+        const upsellsContainer = document.createElement('div');
+        upsellsContainer.id = 'event-upsells-container';
+        upsellsContainer.innerHTML = this.renderEventUpsellsSection(upsells, currency);
+
+        // Insert before footer or append to sidebar
+        if (tixelloFooter) {
+            tixelloFooter.parentNode?.insertBefore(upsellsContainer, tixelloFooter);
+        } else if (watchlistBtn) {
+            watchlistBtn.parentNode?.insertBefore(upsellsContainer, watchlistBtn.nextSibling);
+        } else {
+            sidebar.appendChild(upsellsContainer);
+        }
+
+        // Setup handlers for upsell buttons
+        this.setupUpsellHandlers();
+    }
+
+    private showProductDetailModal(product: any, currency: string): void {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('product-detail-modal');
+        if (existingModal) existingModal.remove();
+
+        const price = product.price_cents / 100;
+        const originalPrice = product.original_price_cents / 100;
+        const isOnSale = product.is_on_sale && originalPrice > price;
+        const imageUrl = product.image_url || '/storage/shop/placeholder.png';
+        const gallery = product.gallery || [];
+        const allImages = [imageUrl, ...gallery.filter((img: string) => img !== imageUrl)];
+
+        const modalHtml = `
+            <div id="product-detail-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <!-- Overlay -->
+                    <div class="product-modal-overlay fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+
+                    <!-- Modal panel -->
+                    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                        <!-- Close button -->
+                        <button class="product-modal-close absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+
+                        <div class="p-6">
+                            <!-- Image gallery -->
+                            <div class="mb-6">
+                                <img id="modal-main-image" src="${imageUrl}" alt="${product.title}" class="w-full h-64 sm:h-80 object-contain rounded-lg bg-gray-100">
+                                ${allImages.length > 1 ? `
+                                <div class="flex gap-2 mt-3 overflow-x-auto pb-2">
+                                    ${allImages.map((img: string, idx: number) => `
+                                        <img src="${img}" alt="${product.title} ${idx + 1}"
+                                             class="modal-gallery-thumb w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${idx === 0 ? 'border-primary' : 'border-transparent'} hover:border-primary transition"
+                                             data-image="${img}">
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Product info -->
+                            <h2 class="text-2xl font-bold text-gray-900 mb-2">${product.title}</h2>
+
+                            <div class="flex items-center gap-3 mb-4">
+                                ${isOnSale ? `<span class="text-lg text-gray-400 line-through">${originalPrice.toFixed(2)} ${currency}</span>` : ''}
+                                <span class="text-2xl font-bold text-primary">${price.toFixed(2)} ${currency}</span>
+                                ${isOnSale ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-sm font-medium rounded">Reducere!</span>` : ''}
+                            </div>
+
+                            ${product.short_description ? `
+                            <p class="text-gray-600 mb-4">${product.short_description}</p>
+                            ` : ''}
+
+                            ${product.description ? `
+                            <div class="prose prose-sm max-w-none text-gray-700 mb-6">${product.description}</div>
+                            ` : ''}
+
+                            <!-- Add to cart button -->
+                            <button class="modal-add-to-cart-btn w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition"
+                                    data-product-id="${product.id}"
+                                    ${!product.in_stock ? 'disabled' : ''}>
+                                ${product.in_stock ? 'Adaugă în coș' : 'Stoc epuizat'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modal = document.getElementById('product-detail-modal');
+        if (!modal) return;
+
+        // Close handlers
+        const closeModal = () => modal.remove();
+
+        modal.querySelector('.product-modal-overlay')?.addEventListener('click', closeModal);
+        modal.querySelector('.product-modal-close')?.addEventListener('click', closeModal);
+
+        // Gallery thumbnails
+        modal.querySelectorAll('.modal-gallery-thumb').forEach(thumb => {
+            thumb.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                const mainImage = document.getElementById('modal-main-image') as HTMLImageElement;
+                if (mainImage && target.dataset.image) {
+                    mainImage.src = target.dataset.image;
+                    // Update active border
+                    modal.querySelectorAll('.modal-gallery-thumb').forEach(t => {
+                        t.classList.remove('border-primary');
+                        t.classList.add('border-transparent');
+                    });
+                    target.classList.remove('border-transparent');
+                    target.classList.add('border-primary');
+                }
+            });
+        });
+
+        // Add to cart from modal
+        const addBtn = modal.querySelector('.modal-add-to-cart-btn') as HTMLButtonElement;
+        if (addBtn) {
+            addBtn.addEventListener('click', async () => {
+                const productId = addBtn.dataset.productId;
+                if (!productId) return;
+
+                addBtn.disabled = true;
+                addBtn.textContent = 'Se adaugă...';
+
+                const success = await this.addUpsellToShopCart(productId);
+
+                if (success) {
+                    addBtn.textContent = 'Adăugat în coș ✓';
+                    addBtn.classList.remove('bg-primary', 'hover:bg-primary-dark');
+                    addBtn.classList.add('bg-green-600');
+                    setTimeout(() => closeModal(), 1500);
+                } else {
+                    addBtn.textContent = 'Eroare - Încearcă din nou';
+                    addBtn.disabled = false;
+                }
+            });
+        }
+
+        // Close on Escape
+        const escHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
+
+    private async loadTicketTypeBundles(ticketTypes: any[], currency: string): Promise<void> {
+        for (const ticket of ticketTypes) {
+            try {
+                const bundles = await this.fetchTicketTypeBundles(ticket.id);
+                if (bundles && bundles.length > 0) {
+                    // Find desktop container
+                    const desktopContainer = document.querySelector(`.ticket-bundle-container[data-ticket-id="${ticket.id}"]`);
+                    if (desktopContainer) {
+                        desktopContainer.innerHTML = this.renderTicketBundleDisplay(bundles, currency);
+                    }
+                    // Find mobile container
+                    const mobileContainer = document.querySelector(`.mobile-ticket-bundle-container[data-ticket-id="${ticket.id}"]`);
+                    if (mobileContainer) {
+                        mobileContainer.innerHTML = this.renderTicketBundleDisplay(bundles, currency);
+                    }
+                    // Setup click handlers for bundle product names
+                    this.setupBundleProductHandlers();
+                }
+            } catch (err) {
+                console.error(`Failed to load bundles for ticket type ${ticket.id}:`, err);
+            }
+        }
+    }
+
+    private renderTicketBundleDisplay(bundles: any[], currency: string): string {
+        return `
+            <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                    </svg>
+                    <span class="text-xs font-medium text-amber-800">Include în preț:</span>
+                </div>
+                <div class="space-y-1">
+                    ${bundles.map(b => {
+                        const product = b.product;
+                        const productData = JSON.stringify(product).replace(/"/g, '&quot;');
+                        return `
+                        <div class="flex items-center gap-2 text-xs text-amber-700">
+                            <span class="font-medium">${b.quantity_included}×</span>
+                            <span class="bundle-product-link cursor-pointer hover:text-amber-900 hover:underline transition"
+                                  data-bundle-product='${productData}'
+                                  data-currency="${currency}">${product.title}</span>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    private setupBundleProductHandlers(): void {
+        document.querySelectorAll('.bundle-product-link').forEach(el => {
+            // Remove existing listeners by cloning
+            const newEl = el.cloneNode(true);
+            el.parentNode?.replaceChild(newEl, el);
+
+            newEl.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const target = e.currentTarget as HTMLElement;
+                try {
+                    const productData = target.dataset.bundleProduct;
+                    const currency = target.dataset.currency || 'RON';
+                    if (productData) {
+                        const product = JSON.parse(productData.replace(/&quot;/g, '"'));
+                        this.showBundleProductModal(product, currency);
+                    }
+                } catch (err) {
+                    console.error('Failed to parse bundle product data:', err);
+                }
+            });
+        });
+    }
+
+    private showBundleProductModal(product: any, currency: string): void {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('bundle-product-modal');
+        if (existingModal) existingModal.remove();
+
+        const imageUrl = product.image_url || '/storage/shop/placeholder.png';
+        const gallery = product.gallery || [];
+        const allImages = [imageUrl, ...gallery.filter((img: string) => img !== imageUrl)];
+
+        const modalHtml = `
+            <div id="bundle-product-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <!-- Overlay -->
+                    <div class="bundle-modal-overlay fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+
+                    <!-- Modal panel -->
+                    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <!-- Close button -->
+                        <button class="bundle-modal-close absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+
+                        <div class="p-6">
+                            <!-- Image gallery -->
+                            <div class="mb-4">
+                                <img id="bundle-modal-main-image" src="${imageUrl}" alt="${product.title}" class="w-full h-48 sm:h-64 object-contain rounded-lg bg-gray-100">
+                                ${allImages.length > 1 ? `
+                                <div class="flex gap-2 mt-3 overflow-x-auto pb-2">
+                                    ${allImages.map((img: string, idx: number) => `
+                                        <img src="${img}" alt="${product.title} ${idx + 1}"
+                                             class="bundle-modal-gallery-thumb w-14 h-14 object-cover rounded-lg cursor-pointer border-2 ${idx === 0 ? 'border-primary' : 'border-transparent'} hover:border-primary transition"
+                                             data-image="${img}">
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Product info -->
+                            <h2 class="text-xl font-bold text-gray-900 mb-2">${product.title}</h2>
+
+                            <div class="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-800 text-sm font-medium rounded-full mb-4">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                                </svg>
+                                Inclus în bilet
+                            </div>
+
+                            ${product.short_description ? `
+                            <p class="text-gray-600 mb-4">${product.short_description}</p>
+                            ` : ''}
+
+                            ${product.description ? `
+                            <div class="prose prose-sm max-w-none text-gray-700">${product.description}</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modal = document.getElementById('bundle-product-modal');
+        if (!modal) return;
+
+        // Close handlers
+        const closeModal = () => modal.remove();
+
+        modal.querySelector('.bundle-modal-overlay')?.addEventListener('click', closeModal);
+        modal.querySelector('.bundle-modal-close')?.addEventListener('click', closeModal);
+
+        // Gallery thumbnails
+        modal.querySelectorAll('.bundle-modal-gallery-thumb').forEach(thumb => {
+            thumb.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                const mainImage = document.getElementById('bundle-modal-main-image') as HTMLImageElement;
+                if (mainImage && target.dataset.image) {
+                    mainImage.src = target.dataset.image;
+                    // Update active border
+                    modal.querySelectorAll('.bundle-modal-gallery-thumb').forEach(t => {
+                        t.classList.remove('border-primary');
+                        t.classList.add('border-transparent');
+                    });
+                    target.classList.remove('border-transparent');
+                    target.classList.add('border-primary');
+                }
+            });
+        });
+
+        // Close on Escape
+        const escHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
+
+    private setupUpsellHandlers(): void {
+        // Product detail modal triggers
+        document.querySelectorAll('.product-detail-trigger').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const target = e.currentTarget as HTMLElement;
+                try {
+                    const productData = target.dataset.product;
+                    const currency = target.dataset.currency || 'RON';
+                    if (productData) {
+                        const product = JSON.parse(productData.replace(/&quot;/g, '"'));
+                        this.showProductDetailModal(product, currency);
+                    }
+                } catch (err) {
+                    console.error('Failed to parse product data:', err);
+                }
+            });
+        });
+
+        // Event page upsell buttons
+        document.querySelectorAll('.upsell-add-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const target = e.currentTarget as HTMLButtonElement;
+                const productId = target.dataset.productId;
+                if (!productId) return;
+
+                target.disabled = true;
+                target.textContent = 'Se adaugă...';
+
+                const success = await this.addUpsellToShopCart(productId);
+
+                if (success) {
+                    target.textContent = 'Adăugat ✓';
+                    target.classList.remove('bg-primary', 'hover:bg-primary-dark');
+                    target.classList.add('bg-green-600');
+                    setTimeout(() => {
+                        target.textContent = 'Adaugă';
+                        target.classList.remove('bg-green-600');
+                        target.classList.add('bg-primary', 'hover:bg-primary-dark');
+                        target.disabled = false;
+                    }, 2000);
+                } else {
+                    target.textContent = 'Eroare';
+                    target.disabled = false;
+                    setTimeout(() => {
+                        target.textContent = 'Adaugă';
+                    }, 2000);
+                }
+            });
+        });
+
+        // Cart page upsell buttons
+        document.querySelectorAll('.cart-upsell-add-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const target = e.currentTarget as HTMLButtonElement;
+                const productId = target.dataset.productId;
+                if (!productId) return;
+
+                target.disabled = true;
+                target.textContent = 'Se adaugă...';
+
+                const success = await this.addUpsellToShopCart(productId);
+
+                if (success) {
+                    target.textContent = 'Adăugat ✓';
+                    setTimeout(() => {
+                        this.renderCart();
+                    }, 1000);
+                } else {
+                    target.textContent = 'Eroare';
+                    setTimeout(() => {
+                        target.textContent = 'Adaugă în coș';
+                        target.disabled = false;
+                    }, 2000);
+                }
+            });
+        });
+    }
+
+    // ========================================
+    // GAMIFICATION POINTS SECTION
+    // ========================================
+
+    private isGamificationEnabled(): boolean {
+        try {
+            // Check both local config and window config
+            const modules = this.config?.modules || (window as any).TIXELLO?.config?.modules;
+            const features = this.config?.features || (window as any).TIXELLO?.config?.features;
+            return modules?.includes('gamification') || features?.gamification === true;
+        } catch {
+            return false;
+        }
+    }
+
+    private renderPointsSection(cartTotal: number, currency: string): string {
+        // Calculate points that will be earned (1 point per RON)
+        const pointsToEarn = Math.floor(cartTotal);
+
+        return `
+            <!-- Gamification Points Section -->
+            <div class="mb-4 pb-4 border-b" id="points-section">
+                <div class="flex items-center gap-2 mb-3">
+                    <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/>
+                    </svg>
+                    <span class="text-sm font-medium text-gray-700">Puncte de fidelitate</span>
+                </div>
+
+                <!-- Points you'll earn -->
+                <div class="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-lg p-3 mb-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-amber-800">Vei câștiga cu această comandă</span>
+                        <span class="font-bold text-amber-600">+${pointsToEarn} puncte</span>
+                    </div>
+                </div>
+
+                <!-- Current balance and redemption (loaded dynamically) -->
+                <div id="points-balance-section" class="hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm text-gray-600">Punctele tale disponibile:</span>
+                        <span class="font-semibold text-gray-900" id="available-points">0</span>
+                    </div>
+
+                    <div id="points-redemption-form" class="hidden">
+                        <div class="flex gap-2 mb-2">
+                            <input type="number" id="points-to-redeem" min="0" max="0" value="0" placeholder="Puncte de folosit"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm">
+                            <button id="apply-points-btn" class="px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 transition">
+                                Folosește
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500">
+                            <span id="points-value-info">100 puncte = 1 ${currency}</span>
+                            <span class="mx-1">•</span>
+                            Max: <span id="max-redeemable-points">0</span> puncte
+                        </p>
+                    </div>
+
+                    <div id="points-applied-display" class="hidden mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="text-sm font-medium text-amber-800">Puncte aplicate:</span>
+                                <span class="text-sm text-amber-600 ml-2" id="applied-points-count">0</span>
+                            </div>
+                            <button id="remove-points-btn" class="text-red-600 hover:text-red-700 text-sm">Elimină</button>
+                        </div>
+                        <div class="text-sm text-amber-700 mt-1">
+                            Reducere: -<span id="points-discount-amount">0</span> ${currency}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Login prompt for non-logged-in users -->
+                <div id="points-login-prompt" class="hidden text-center py-2">
+                    <a href="/login" class="text-sm text-primary hover:underline">Conectează-te pentru a folosi punctele tale</a>
+                </div>
+            </div>
+        `;
+    }
+
+    private async setupPointsHandlers(): Promise<void> {
+        if (!this.isGamificationEnabled()) return;
+
+        const balanceSection = document.getElementById('points-balance-section');
+        const loginPrompt = document.getElementById('points-login-prompt');
+        const redemptionForm = document.getElementById('points-redemption-form');
+        const pointsInput = document.getElementById('points-to-redeem') as HTMLInputElement;
+        const applyBtn = document.getElementById('apply-points-btn');
+        const removeBtn = document.getElementById('remove-points-btn');
+
+        if (!this.authToken) {
+            // Show login prompt for non-logged-in users
+            if (loginPrompt) loginPrompt.classList.remove('hidden');
+            return;
+        }
+
+        // Fetch user's points balance
+        try {
+            const response = await this.fetchApi('/account/points');
+            if (response.success && response.data) {
+                const balance = response.data.balance || 0;
+                const pointsPerCurrency = response.data.points_per_currency || 100;
+
+                if (balanceSection) {
+                    balanceSection.classList.remove('hidden');
+                    const availableEl = document.getElementById('available-points');
+                    if (availableEl) availableEl.textContent = String(balance);
+                }
+
+                if (balance > 0 && redemptionForm && pointsInput) {
+                    redemptionForm.classList.remove('hidden');
+
+                    // Calculate max redeemable (can't exceed cart total value)
+                    const totals = CartService.getTotal();
+                    const maxPointsValue = totals.total * pointsPerCurrency;
+                    const maxRedeemable = Math.min(balance, Math.floor(maxPointsValue));
+
+                    pointsInput.max = String(maxRedeemable);
+                    const maxEl = document.getElementById('max-redeemable-points');
+                    if (maxEl) maxEl.textContent = String(maxRedeemable);
+
+                    // Store for later use
+                    (window as any).TIXELLO_POINTS_CONFIG = {
+                        balance,
+                        pointsPerCurrency,
+                        maxRedeemable
+                    };
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch points balance:', error);
+        }
+
+        // Apply points handler
+        if (applyBtn && pointsInput) {
+            applyBtn.addEventListener('click', () => {
+                const pointsToUse = parseInt(pointsInput.value) || 0;
+                const config = (window as any).TIXELLO_POINTS_CONFIG;
+
+                if (!config || pointsToUse <= 0) return;
+                if (pointsToUse > config.maxRedeemable) {
+                    alert(`Poți folosi maxim ${config.maxRedeemable} puncte.`);
+                    return;
+                }
+
+                const discountValue = pointsToUse / config.pointsPerCurrency;
+
+                // Store applied points in localStorage
+                localStorage.setItem('tixello_points_applied', JSON.stringify({
+                    points: pointsToUse,
+                    discountValue
+                }));
+
+                // Update UI
+                const appliedDisplay = document.getElementById('points-applied-display');
+                const appliedCount = document.getElementById('applied-points-count');
+                const discountAmount = document.getElementById('points-discount-amount');
+
+                if (appliedDisplay) appliedDisplay.classList.remove('hidden');
+                if (appliedCount) appliedCount.textContent = String(pointsToUse);
+                if (discountAmount) discountAmount.textContent = discountValue.toFixed(2);
+                if (redemptionForm) redemptionForm.classList.add('hidden');
+
+                // Update cart total
+                this.updateCartTotalWithPoints();
+            });
+        }
+
+        // Remove points handler
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                localStorage.removeItem('tixello_points_applied');
+
+                const appliedDisplay = document.getElementById('points-applied-display');
+                if (appliedDisplay) appliedDisplay.classList.add('hidden');
+                if (redemptionForm) redemptionForm.classList.remove('hidden');
+
+                // Update cart total
+                this.updateCartTotalWithPoints();
+            });
+        }
+
+        // Check if points are already applied
+        const appliedPoints = localStorage.getItem('tixello_points_applied');
+        if (appliedPoints) {
+            const { points, discountValue } = JSON.parse(appliedPoints);
+            const appliedDisplay = document.getElementById('points-applied-display');
+            const appliedCount = document.getElementById('applied-points-count');
+            const discountAmount = document.getElementById('points-discount-amount');
+
+            if (appliedDisplay) appliedDisplay.classList.remove('hidden');
+            if (appliedCount) appliedCount.textContent = String(points);
+            if (discountAmount) discountAmount.textContent = discountValue.toFixed(2);
+            if (redemptionForm) redemptionForm.classList.add('hidden');
+        }
+    }
+
+    private updateCartTotalWithPoints(): void {
+        const totals = CartService.getTotal();
+        let finalTotal = totals.total;
+
+        // Apply points discount if any
+        const appliedPoints = localStorage.getItem('tixello_points_applied');
+        if (appliedPoints) {
+            const { discountValue } = JSON.parse(appliedPoints);
+            finalTotal = Math.max(0, finalTotal - discountValue);
+        }
+
+        const totalEl = document.getElementById('cart-total-amount');
+        if (totalEl) {
+            totalEl.textContent = `${finalTotal.toFixed(2)} ${totals.currency}`;
+        }
+    }
+
+    private renderCheckoutPointsSection(cartTotal: number, currency: string): string {
+        if (!this.isGamificationEnabled()) return '';
+
+        // Calculate points that will be earned (1 point per RON)
+        const pointsToEarn = Math.floor(cartTotal);
+
+        // Check if points are applied
+        const appliedPoints = localStorage.getItem('tixello_points_applied');
+        let pointsDiscountHtml = '';
+
+        if (appliedPoints) {
+            const { points, discountValue } = JSON.parse(appliedPoints);
+            pointsDiscountHtml = `
+                <div class="flex justify-between text-amber-600">
+                    <span>Puncte folosite (${points})</span>
+                    <span>-${discountValue.toFixed(2)} ${currency}</span>
+                </div>
+            `;
+        }
+
+        return `
+            ${pointsDiscountHtml}
+            <div class="flex justify-between text-amber-600 text-sm mt-2">
+                <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/>
+                    </svg>
+                    Vei câștiga
+                </span>
+                <span class="font-semibold">+${pointsToEarn} puncte</span>
+            </div>
+        `;
+    }
+
+    private renderCommissionSection(ticketTotals: any, shopCart: any, currency: string): string {
+        const ticketCommission = ticketTotals.hasCommission ? ticketTotals.commission : 0;
+        const shopCommission = shopCart?.commission_rate > 0 ? parseFloat(shopCart.commission_display || shopCart.commission || 0) : 0;
+        const totalCommission = ticketCommission + shopCommission;
+        const shopIncluded = shopCart?.commission_mode === 'included';
+
+        if (totalCommission <= 0) return '';
+
+        let tooltipParts: string[] = [];
+        if (ticketCommission > 0) {
+            tooltipParts.push(`Bilete: +${ticketCommission.toFixed(2)} ${currency}`);
+        }
+        if (shopCommission > 0) {
+            tooltipParts.push(`Produse: ${shopIncluded ? '' : '+'}${shopCommission.toFixed(2)} ${currency}${shopIncluded ? ' (inclus)' : ''}`);
+        }
+
+        const commissionSign = (shopIncluded && ticketCommission === 0) ? '' : '+';
+
+        return `
+            <div class="flex justify-between text-gray-600 group relative">
+                <span class="cursor-help border-b border-dotted border-gray-400">
+                    Comisioane Tixello
+                    <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                        ${tooltipParts.join('<br>')}
+                    </span>
+                </span>
+                <span>${commissionSign}${totalCommission.toFixed(2)} ${currency}</span>
+            </div>
+        `;
+    }
+
+    private getCheckoutFinalTotal(cartTotal: number, currency: string): string {
+        let finalTotal = cartTotal;
+
+        // Apply points discount if any
+        const appliedPoints = localStorage.getItem('tixello_points_applied');
+        if (appliedPoints) {
+            const { discountValue } = JSON.parse(appliedPoints);
+            finalTotal = Math.max(0, finalTotal - discountValue);
+        }
+
+        return `${finalTotal.toFixed(2)} ${currency}`;
+    }
+
+    private async renderCheckout(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        const ticketCart = CartService.getCart();
+        const ticketTotals = CartService.getTotal();
+
+        // Fetch shop cart
+        let shopCart: any = null;
+        try {
+            const sessionId = localStorage.getItem('shop_session_id');
+            if (sessionId) {
+                const shopResponse = await this.fetchApi('/shop/cart', {}, {
+                    headers: { 'X-Session-ID': sessionId }
+                });
+                if (shopResponse.success && shopResponse.data?.items?.length > 0) {
+                    shopCart = shopResponse.data;
+                    ShopCartService.setItemCount(shopCart.item_count);
+                }
+            }
+        } catch (e) {
+            console.log('Could not fetch shop cart');
+        }
+
+        // Check if cart is empty
+        if (ticketCart.length === 0 && (!shopCart || shopCart.items.length === 0)) {
+            this.navigate('/cart');
+            return;
+        }
+
+        // Calculate combined totals
+        const shopTotal = parseFloat(shopCart?.total) || 0;
+        const currency = ticketTotals.currency || shopCart?.currency || 'RON';
+        const grandTotal = ticketTotals.total + shopTotal;
+        const hasPhysicalProducts = shopCart?.has_physical_products || false;
+
+        // Check if any bundle products attached to tickets are physical
+        let bundlesHavePhysicalProducts = false;
+        if (this.isShopEnabled() && ticketCart.length > 0) {
+            const ticketTypeIds = [...new Set(ticketCart.map(item => item.ticketTypeId))];
+            for (const ticketTypeId of ticketTypeIds) {
+                try {
+                    const bundles = await this.fetchTicketTypeBundles(ticketTypeId);
+                    if (bundles.some(b => b.product?.type === 'physical')) {
+                        bundlesHavePhysicalProducts = true;
+                        break;
+                    }
+                } catch (e) {
+                    // Ignore errors, continue checking
+                }
+            }
+        }
+        const needsShipping = hasPhysicalProducts || bundlesHavePhysicalProducts;
+
+        // Store shop cart total for shipping calculation
+        localStorage.setItem('shop_cart_total', shopTotal.toString());
+
+        // Fetch user profile if logged in
+        let userData: any = null;
+        if (this.authToken) {
+            try {
+                const profileResponse = await this.fetchApi('/account/profile');
+                if (profileResponse.success) {
+                    userData = profileResponse.data;
+                }
+            } catch (error) {
+                console.log('Could not fetch user profile:', error);
+            }
+        }
+
+        // Prepare pre-filled values
+        const customerFirstName = userData?.first_name || '';
+        const customerLastName = userData?.last_name || '';
+        const customerEmail = userData?.email || '';
+        const customerPhone = userData?.phone || '';
+
+        content.innerHTML = `
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-8">Finalizare comandă</h1>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        <form id="checkout-form" class="space-y-6">
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Date personale</h2>
+                                <div class="space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="customer_first_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Prenume *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="customer_first_name"
+                                                name="customer_first_name"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Ion"
+                                                value="${customerFirstName}"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label for="customer_last_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Nume *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="customer_last_name"
+                                                name="customer_last_name"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Popescu"
+                                                value="${customerLastName}"
+                                            >
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="customer_email" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Email *
+                                        </label>
+                                        <input
+                                            type="email"
+                                            id="customer_email"
+                                            name="customer_email"
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder="ion@example.com"
+                                            value="${customerEmail}"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label for="customer_phone" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Telefon
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            id="customer_phone"
+                                            name="customer_phone"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder="0722123456"
+                                            value="${customerPhone}"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Beneficiari bilete</h2>
+                                <p class="text-sm text-gray-600 mb-4">
+                                    Implicit, toate biletele vor fi pe numele tău. Poți specifica beneficiari diferiți pentru fiecare bilet.
+                                </p>
+                                <div class="flex items-start mb-4">
+                                    <input
+                                        type="checkbox"
+                                        id="different_beneficiaries"
+                                        name="different_beneficiaries"
+                                        class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                    >
+                                    <label for="different_beneficiaries" class="ml-2 text-sm text-gray-700">
+                                        Doresc să specific beneficiari diferiți pentru fiecare bilet
+                                    </label>
+                                </div>
+                                <div id="beneficiaries-section" class="hidden">
+                                    <div class="border-t pt-4">
+                                        <p class="text-sm text-gray-600 mb-4">
+                                            Completează datele pentru fiecare bilet. Primul bilet va fi pre-completat cu datele tale.
+                                        </p>
+                                        <div id="beneficiaries-container" class="space-y-4">
+                                            <!-- Beneficiary fields will be generated dynamically -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${needsShipping ? `
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Adresa de livrare</h2>
+                                <p class="text-sm text-gray-600 mb-4">Completează adresa pentru livrarea produselor fizice.</p>
+                                <div class="space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="shipping_first_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Prenume *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="shipping_first_name"
+                                                name="shipping_first_name"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Ion"
+                                                value="${customerFirstName}"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label for="shipping_last_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Nume *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="shipping_last_name"
+                                                name="shipping_last_name"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Popescu"
+                                                value="${customerLastName}"
+                                            >
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="shipping_address" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Adresa *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="shipping_address"
+                                            name="shipping_address"
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder="Strada, număr, bloc, apartament"
+                                        >
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="shipping_county" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Județ *
+                                            </label>
+                                            <select
+                                                id="shipping_county"
+                                                name="shipping_county"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            >
+                                                <option value="">Selectează județul</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="shipping_city" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Oraș *
+                                            </label>
+                                            <select
+                                                id="shipping_city"
+                                                name="shipping_city"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            >
+                                                <option value="">Selectează mai întâi județul</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="shipping_postal_code" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Cod poștal (opțional)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="shipping_postal_code"
+                                                name="shipping_postal_code"
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="010101"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label for="shipping_country" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Țara *
+                                            </label>
+                                            <select
+                                                id="shipping_country"
+                                                name="shipping_country"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            >
+                                                <option value="RO" selected>România</option>
+                                                <option value="MD">Republica Moldova</option>
+                                                <option value="BG">Bulgaria</option>
+                                                <option value="HU">Ungaria</option>
+                                                <option value="RS">Serbia</option>
+                                                <option value="UA">Ucraina</option>
+                                                <option value="DE">Germania</option>
+                                                <option value="AT">Austria</option>
+                                                <option value="IT">Italia</option>
+                                                <option value="ES">Spania</option>
+                                                <option value="FR">Franța</option>
+                                                <option value="GB">Marea Britanie</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="shipping_phone" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Telefon pentru livrare *
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            id="shipping_phone"
+                                            name="shipping_phone"
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder="0722123456"
+                                            value="${customerPhone}"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Metodă de livrare</h2>
+                                <div id="shipping-methods-container" class="space-y-3">
+                                    <div class="animate-pulse">
+                                        <div class="h-16 bg-gray-200 rounded mb-2"></div>
+                                        <div class="h-16 bg-gray-200 rounded"></div>
+                                    </div>
+                                </div>
+                                <p id="shipping-methods-error" class="hidden text-red-600 text-sm mt-2"></p>
+                            </div>
+                            ` : ''}
+
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Acorduri</h2>
+                                <div class="space-y-3 mb-6">
+                                    <div class="flex items-start">
+                                        <input
+                                            type="checkbox"
+                                            id="agree_terms"
+                                            name="agree_terms"
+                                            required
+                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        >
+                                        <label for="agree_terms" class="ml-2 text-sm text-gray-700">
+                                            Sunt de acord cu <a href="/terms" target="_blank" class="text-primary hover:underline">Termenii și Condițiile</a> *
+                                        </label>
+                                    </div>
+                                    <div class="flex items-start">
+                                        <input
+                                            type="checkbox"
+                                            id="agree_privacy"
+                                            name="agree_privacy"
+                                            required
+                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        >
+                                        <label for="agree_privacy" class="ml-2 text-sm text-gray-700">
+                                            Sunt de acord cu <a href="/privacy" target="_blank" class="text-primary hover:underline">Politica de Confidențialitate</a> a organizatorului, <a href="https://tixello.com/data-privacy-client" target="_blank" class="text-primary hover:underline">Politica Tixello</a> și procesarea datelor personale *
+                                        </label>
+                                    </div>
+                                    ${!this.authToken ? `
+                                    <div class="flex items-start">
+                                        <input
+                                            type="checkbox"
+                                            id="create_account"
+                                            name="create_account"
+                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        >
+                                        <label for="create_account" class="ml-2 text-sm text-gray-700">
+                                            Doresc să îmi creez un cont automat pentru comenzi viitoare
+                                        </label>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Preferințe notificări</h2>
+                                <p class="text-sm text-gray-600 mb-4">Alegeți cum doriți să primiți actualizări despre comandă:</p>
+                                <div class="space-y-3">
+                                    <div class="flex items-start">
+                                        <input
+                                            type="checkbox"
+                                            id="notification_email"
+                                            name="notification_email"
+                                            checked
+                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        >
+                                        <label for="notification_email" class="ml-2 text-sm text-gray-700">
+                                            Primește notificări pe email (confirmare comandă, bilete, reamintiri)
+                                        </label>
+                                    </div>
+                                    <div id="whatsapp-notification-option" class="hidden">
+                                        <div class="flex items-start">
+                                            <input
+                                                type="checkbox"
+                                                id="notification_whatsapp"
+                                                name="notification_whatsapp"
+                                                class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                            >
+                                            <label for="notification_whatsapp" class="ml-2 text-sm text-gray-700">
+                                                Primește notificări pe WhatsApp (necesită număr de telefon valid)
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Metodă de plată</h2>
+                                <p class="text-sm text-gray-600 mb-4">Acceptăm carduri de credit/debit, Apple Pay și Google Pay.</p>
+
+                                <!-- Payment Element container -->
+                                <div id="payment-element-container" class="mb-4">
+                                    <div id="payment-element" class="min-h-[150px]">
+                                        <!-- Stripe Payment Element will be mounted here -->
+                                        <div class="animate-pulse flex flex-col space-y-3">
+                                            <div class="h-10 bg-gray-200 rounded"></div>
+                                            <div class="flex space-x-3">
+                                                <div class="h-10 bg-gray-200 rounded flex-1"></div>
+                                                <div class="h-10 bg-gray-200 rounded flex-1"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="payment-message" class="hidden text-red-600 text-sm mt-2"></div>
+                                </div>
+
+                                <p class="text-gray-500 text-sm mb-4">
+                                    <svg class="w-4 h-4 inline mr-1 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                    Plată securizată prin Stripe. Vei primi biletele pe email imediat după finalizare.
+                                </p>
+
+                                <button
+                                    type="submit"
+                                    id="submit-order-btn"
+                                    class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    disabled
+                                >
+                                    <span id="submit-btn-text">Plasează comanda - ${grandTotal.toFixed(2)} ${currency}</span>
+                                    <svg id="submit-btn-spinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </button>
+                                <p class="text-center text-xs text-gray-400 mt-4">
+                                    Ticketing system powered by <a href="https://tixello.com" target="_blank" class="text-primary hover:underline">Tixello</a>
+                                </p>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-lg shadow p-6 sticky top-4">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Sumar comandă</h2>
+
+                            ${ticketCart.length > 0 ? `
+                            <div class="space-y-3 mb-4 pb-4 border-b">
+                                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Bilete</h3>
+                                ${ticketCart.map(item => {
+                                    // Use sale price if available, otherwise base price (same as getTotal)
+                                    const ticketPrice = item.salePrice || item.price;
+                                    const result = CartService.calculateBulkDiscount(item.quantity, ticketPrice, item.bulkDiscounts);
+                                    let itemTotal = result.total;
+                                    // Add commission if applicable (from BASE price)
+                                    if (item.hasCommissionOnTop && item.commissionRate > 0) {
+                                        const commission = item.quantity * item.price * (item.commissionRate / 100);
+                                        itemTotal += commission;
+                                    }
+                                    return `
+                                    <div class="text-sm">
+                                        <div class="flex justify-between">
+                                            <div>
+                                                <div class="font-medium">${item.eventTitle}</div>
+                                                <div class="text-gray-500">${item.ticketTypeName} × ${item.quantity}</div>
+                                            </div>
+                                            <div class="font-medium">${itemTotal.toFixed(2)} ${item.currency}</div>
+                                        </div>
+                                        <div id="bundle-info-${item.ticketTypeId}" class="bundle-info-container"></div>
+                                    </div>
+                                `}).join('')}
+                            </div>
+                            ` : ''}
+
+                            ${shopCart?.items?.length > 0 ? `
+                            <div class="space-y-3 mb-4 pb-4 border-b">
+                                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Produse</h3>
+                                ${shopCart.items.map((item: any) => `
+                                    <div class="flex justify-between text-sm">
+                                        <div>
+                                            <div class="font-medium">${item.title}</div>
+                                            <div class="text-gray-500">${item.variant_name || ''} × ${item.quantity}</div>
+                                            ${item.attributes?.length > 0 ? `
+                                            <div class="flex flex-wrap gap-1 mt-1">
+                                                ${item.attributes.map((attr: any) => `
+                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
+                                                        ${attr.color_hex ? `<span class="w-2 h-2 rounded-full mr-1" style="background-color: ${attr.color_hex}"></span>` : ''}
+                                                        ${attr.name}: ${attr.value}
+                                                    </span>
+                                                `).join('')}
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                        <div class="font-medium">${item.total} ${shopCart.currency}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ` : ''}
+
+                            <div class="space-y-2 mb-4 pb-4 border-b">
+                                <!-- Subtotals with commission in hover tooltip -->
+                                ${ticketCart.length > 0 ? `
+                                <div class="flex justify-between text-gray-600 group relative">
+                                    <span class="${ticketTotals.hasCommission ? 'cursor-help border-b border-dotted border-gray-400' : ''}">
+                                        Subtotal bilete
+                                        ${ticketTotals.hasCommission ? `
+                                        <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                            Valoare bilete: ${ticketTotals.subtotal.toFixed(2)} ${ticketTotals.currency}<br>
+                                            Comision Tixello: +${ticketTotals.commission.toFixed(2)} ${ticketTotals.currency}
+                                        </span>
+                                        ` : ''}
+                                    </span>
+                                    <span>${ticketTotals.total.toFixed(2)} ${ticketTotals.currency}</span>
+                                </div>
+                                ` : ''}
+
+                                ${shopCart?.items?.length > 0 ? `
+                                <div class="flex justify-between text-gray-600 group relative">
+                                    <span class="${shopCart.commission_rate > 0 ? 'cursor-help border-b border-dotted border-gray-400' : ''}">
+                                        Subtotal produse
+                                        ${shopCart.commission_rate > 0 ? `
+                                        <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                            Valoare produse: ${parseFloat(shopCart.subtotal).toFixed(2)} ${shopCart.currency}<br>
+                                            Comision Tixello: ${parseFloat(shopCart.commission_display || shopCart.commission).toFixed(2)} ${shopCart.currency}${shopCart.commission_mode === 'included' ? ' (inclus)' : ''}
+                                        </span>
+                                        ` : ''}
+                                    </span>
+                                    <span>${parseFloat(shopCart.total).toFixed(2)} ${shopCart.currency}</span>
+                                </div>
+                                ` : ''}
+
+                                <!-- Discounts -->
+                                ${ticketTotals.bulkDiscount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Discount bulk</span>
+                                    <span>-${ticketTotals.bulkDiscount.toFixed(2)} ${ticketTotals.currency}</span>
+                                </div>
+                                ` : ''}
+                                ${ticketTotals.couponDiscount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Cod promoțional${ticketTotals.couponName ? ` (${ticketTotals.couponName})` : ''}</span>
+                                    <span>-${ticketTotals.couponDiscount.toFixed(2)} ${ticketTotals.currency}</span>
+                                </div>
+                                ` : ''}
+                                ${shopCart?.discount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Reducere produse</span>
+                                    <span>-${parseFloat(shopCart.discount).toFixed(2)} ${shopCart.currency}</span>
+                                </div>
+                                ` : ''}
+
+                                <!-- Taxes visible on checkout (global taxes) -->
+                                <div id="checkout-taxes-section"></div>
+
+                                <!-- Shipping -->
+                                <div id="shipping-cost-row" class="${needsShipping ? '' : 'hidden'}">
+                                    <div class="flex justify-between text-gray-600">
+                                        <span>Transport</span>
+                                        <span id="shipping-cost-display">Se calculează...</span>
+                                    </div>
+                                </div>
+
+                                ${this.renderCheckoutPointsSection(grandTotal, currency)}
+                            </div>
+
+                            <div class="flex justify-between items-center">
+                                <span class="text-lg font-semibold">Total</span>
+                                <span class="text-2xl font-bold text-primary" id="checkout-total-amount">${this.getCheckoutFinalTotal(grandTotal, currency)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.setupCheckoutHandlers(bundlesHavePhysicalProducts);
+
+        // Load bundle info for ticket types
+        if (this.isShopEnabled() && ticketCart.length > 0) {
+            this.loadCheckoutBundles(ticketCart);
+        }
+
+        // Load checkout taxes (global taxes visible on checkout)
+        this.loadCheckoutTaxes(grandTotal, currency);
+    }
+
+    private async loadCheckoutTaxes(amount: number, currency: string): Promise<void> {
+        const container = document.getElementById('checkout-taxes-section');
+        const totalAmountEl = document.getElementById('checkout-total-amount');
+        const submitBtnText = document.getElementById('submit-btn-text');
+        if (!container) return;
+
+        try {
+            const response = await this.fetchApi(`/taxes/checkout?amount=${amount}&currency=${currency}`);
+            if (response.success && response.data) {
+                const { taxes, is_vat_payer, vat_amount, vat_rate, taxes_to_add, tax_display_mode } = response.data;
+
+                // Only show if there are taxes to display
+                if ((is_vat_payer && vat_amount > 0) || taxes?.length > 0) {
+                    let taxHtml = '';
+
+                    // Default info icon
+                    const defaultInfoIcon = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>`;
+
+                    // Show VAT info for VAT payer tenants (informational only - included in price)
+                    if (is_vat_payer && vat_amount > 0) {
+                        taxHtml += `
+                            <div class="flex justify-between text-gray-500 text-sm">
+                                <span class="flex items-center gap-1">
+                                    TVA inclus (${vat_rate}%)
+                                    <span class="cursor-help text-gray-400" title="Taxa pe valoarea adaugata inclusa in pret">
+                                        ${defaultInfoIcon}
+                                    </span>
+                                </span>
+                                <span>${vat_amount.toFixed(2)} ${currency}</span>
+                            </div>
+                        `;
+                    }
+
+                    // Show other taxes (non-VAT)
+                    taxes?.filter((tax: any) => !tax.is_vat).forEach((tax: any) => {
+                        // Use custom icon_svg if available, otherwise show info icon with explanation
+                        const taxIcon = tax.icon_svg || '';
+                        const infoIcon = tax.explanation ? `
+                            <span class="cursor-help text-gray-400" title="${tax.explanation}">
+                                ${defaultInfoIcon}
+                            </span>` : '';
+
+                        taxHtml += `
+                            <div class="flex justify-between text-gray-600">
+                                <span class="flex items-center gap-1.5">
+                                    ${taxIcon ? `<span class="inline-flex items-center">${taxIcon}</span>` : ''}
+                                    ${tax.name}
+                                    ${infoIcon}
+                                </span>
+                                <span>${tax.is_added_to_price ? '+' : ''}${tax.tax_amount.toFixed(2)} ${currency}</span>
+                            </div>
+                        `;
+                    });
+
+                    container.innerHTML = taxHtml;
+
+                    // Store taxes_to_add for other functions to use
+                    (window as any).checkoutTaxesToAdd = taxes_to_add;
+
+                    // Update total if there are taxes to add (include shipping if present)
+                    if (taxes_to_add > 0) {
+                        const shippingCost = (window as any).checkoutShippingCost || 0;
+                        const newTotal = amount + taxes_to_add + shippingCost;
+                        if (totalAmountEl) {
+                            totalAmountEl.textContent = `${newTotal.toFixed(2)} ${currency}`;
+                        }
+                        if (submitBtnText) {
+                            submitBtnText.textContent = `Plasează comanda - ${newTotal.toFixed(2)} ${currency}`;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('Could not load checkout taxes:', e);
+        }
+    }
+
+    private async loadCheckoutBundles(ticketCart: CartItem[]): Promise<void> {
+        // Get unique ticket type IDs
+        const ticketTypeIds = [...new Set(ticketCart.map(item => item.ticketTypeId))];
+
+        for (const ticketTypeId of ticketTypeIds) {
+            const bundles = await this.fetchTicketTypeBundles(ticketTypeId);
+            if (bundles.length > 0) {
+                const container = document.getElementById(`bundle-info-${ticketTypeId}`);
+                if (container) {
+                    // Get quantity of this ticket type
+                    const ticketItem = ticketCart.find(item => item.ticketTypeId === ticketTypeId);
+                    const ticketQty = ticketItem?.quantity || 1;
+
+                    container.innerHTML = `
+                        <div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
+                            <div class="flex items-center gap-1 text-green-700 font-medium mb-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                                </svg>
+                                Include:
+                            </div>
+                            ${bundles.map(b => `
+                                <div class="text-green-700 pl-4">
+                                    ${b.quantity_included * ticketQty}× ${b.product.title}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            }
+        }
+    }
+
+    private setupCheckoutHandlers(hasBundlePhysical: boolean = false): void {
+        const form = document.getElementById('checkout-form') as HTMLFormElement;
+        const submitBtn = document.getElementById('submit-order-btn') as HTMLButtonElement;
+        const submitBtnText = document.getElementById('submit-btn-text');
+        const submitBtnSpinner = document.getElementById('submit-btn-spinner');
+        const paymentMessage = document.getElementById('payment-message');
+
+        // Store Stripe instances
+        let stripe: any = null;
+        let elements: any = null;
+        let clientSecret: string = '';
+
+        // Initialize Stripe Payment Element
+        this.initializeStripePayment().then(result => {
+            if (result) {
+                stripe = result.stripe;
+                elements = result.elements;
+                clientSecret = result.clientSecret;
+
+                // Enable submit button once Stripe is ready
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                }
+            }
+        }).catch(error => {
+            console.error('Failed to initialize Stripe:', error);
+            // Show error message but allow form submission without payment
+            if (paymentMessage) {
+                paymentMessage.textContent = 'Nu s-a putut încărca sistemul de plată. Încercați din nou.';
+                paymentMessage.classList.remove('hidden');
+            }
+        });
+
+        // Check WhatsApp availability from API
+        this.fetchApi('/checkout/init').then(response => {
+            if (response.success && response.data?.has_whatsapp) {
+                const whatsappOption = document.getElementById('whatsapp-notification-option');
+                if (whatsappOption) {
+                    whatsappOption.classList.remove('hidden');
+                }
+            }
+        }).catch(() => {
+            // Ignore errors, just don't show WhatsApp option
+        });
+
+        // Handle shipping methods for physical products
+        const shippingMethodsContainer = document.getElementById('shipping-methods-container');
+        const shippingCostDisplay = document.getElementById('shipping-cost-display');
+        const checkoutTotalAmount = document.getElementById('checkout-total-amount');
+        let selectedShippingMethod: any = null;
+        let shippingCost = 0;
+
+        const loadShippingMethods = async () => {
+            if (!shippingMethodsContainer) return;
+
+            // Create session if doesn't exist (needed for bundle-only shipping too)
+            let sessionId = localStorage.getItem('shop_session_id');
+            if (!sessionId) {
+                sessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + Date.now();
+                localStorage.setItem('shop_session_id', sessionId);
+            }
+
+            // Default to Romania for shipping calculation
+            try {
+                const response = await this.postApi('/shop/checkout/shipping-methods', {
+                    country: (document.getElementById('shipping_country') as HTMLSelectElement)?.value || 'RO',
+                    city: (document.getElementById('shipping_city') as HTMLInputElement)?.value || '',
+                    postal_code: (document.getElementById('shipping_postal_code') as HTMLInputElement)?.value || '',
+                    region: (document.getElementById('shipping_county') as HTMLInputElement)?.value || '',
+                    has_bundle_physical: hasBundlePhysical,
+                }, {
+                    'X-Session-ID': sessionId
+                });
+
+                if (response.success && response.data?.shipping_methods?.length > 0) {
+                    const methods = response.data.shipping_methods;
+                    shippingMethodsContainer.innerHTML = methods.map((method: any, index: number) => `
+                        <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:border-primary transition ${index === 0 ? 'border-primary bg-primary/5' : 'border-gray-200'}">
+                            <input type="radio" name="shipping_method" value="${method.id}"
+                                   class="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
+                                   data-cost="${method.cost}" data-name="${method.name}"
+                                   ${index === 0 ? 'checked' : ''}>
+                            <div class="ml-3 flex-1">
+                                <div class="font-medium text-gray-900">${method.name}</div>
+                                ${method.description ? `<div class="text-sm text-gray-500">${method.description}</div>` : ''}
+                                ${method.estimated_days ? `<div class="text-xs text-gray-400">Livrare în ${method.estimated_days} zile</div>` : ''}
+                            </div>
+                            <div class="font-semibold text-gray-900">${method.cost} RON</div>
+                        </label>
+                    `).join('');
+
+                    // Select first method by default
+                    if (methods.length > 0) {
+                        selectedShippingMethod = methods[0];
+                        shippingCost = parseFloat(methods[0].cost) || 0;
+                        updateShippingDisplay();
+                    }
+
+                    // Add event listeners to radio buttons
+                    shippingMethodsContainer.querySelectorAll('input[name="shipping_method"]').forEach((radio: Element) => {
+                        radio.addEventListener('change', (e) => {
+                            const target = e.target as HTMLInputElement;
+                            shippingCost = parseFloat(target.dataset.cost || '0');
+                            selectedShippingMethod = { id: target.value, name: target.dataset.name, cost: shippingCost };
+                            updateShippingDisplay();
+
+                            // Update radio button styling
+                            shippingMethodsContainer.querySelectorAll('label').forEach(label => {
+                                label.classList.remove('border-primary', 'bg-primary/5');
+                                label.classList.add('border-gray-200');
+                            });
+                            target.closest('label')?.classList.remove('border-gray-200');
+                            target.closest('label')?.classList.add('border-primary', 'bg-primary/5');
+                        });
+                    });
+                } else {
+                    shippingMethodsContainer.innerHTML = `
+                        <div class="text-center py-4 text-amber-600">
+                            <p>Nu există metode de livrare disponibile pentru locația selectată.</p>
+                            <p class="text-sm mt-1">Verifică adresa de livrare sau contactează-ne.</p>
+                        </div>
+                    `;
+                    shippingCost = 0;
+                    updateShippingDisplay();
+                }
+            } catch (error) {
+                console.error('Failed to load shipping methods:', error);
+                shippingMethodsContainer.innerHTML = `
+                    <div class="text-center py-4 text-red-500">
+                        <p>Nu s-au putut încărca metodele de livrare.</p>
+                        <button type="button" id="retry-shipping-methods"
+                                class="mt-2 text-primary hover:underline">Reîncearcă</button>
+                    </div>
+                `;
+                // Add event listener for retry button
+                document.getElementById('retry-shipping-methods')?.addEventListener('click', () => {
+                    shippingMethodsContainer.innerHTML = `
+                        <div class="animate-pulse">
+                            <div class="h-16 bg-gray-200 rounded mb-2"></div>
+                            <div class="h-16 bg-gray-200 rounded"></div>
+                        </div>
+                    `;
+                    loadShippingMethods();
+                });
+            }
+        };
+
+        const updateShippingDisplay = () => {
+            // Store shipping cost on window for other functions to use
+            (window as any).checkoutShippingCost = shippingCost;
+
+            if (shippingCostDisplay) {
+                shippingCostDisplay.textContent = shippingCost > 0 ? `${shippingCost.toFixed(2)} RON` : 'Gratuit';
+            }
+            // Update total - include taxes_to_add if present
+            const taxesToAdd = (window as any).checkoutTaxesToAdd || 0;
+            if (checkoutTotalAmount) {
+                const ticketTotals = CartService.getTotal();
+                const shopTotal = parseFloat(localStorage.getItem('shop_cart_total') || '0');
+                const grandTotal = ticketTotals.total + shopTotal + shippingCost + taxesToAdd;
+                checkoutTotalAmount.textContent = `${grandTotal.toFixed(2)} RON`;
+            }
+            // Update submit button text
+            if (submitBtnText) {
+                const ticketTotals = CartService.getTotal();
+                const shopTotal = parseFloat(localStorage.getItem('shop_cart_total') || '0');
+                const grandTotal = ticketTotals.total + shopTotal + shippingCost + taxesToAdd;
+                const currency = ticketTotals.currency || 'RON';
+                submitBtnText.textContent = `Plasează comanda - ${grandTotal.toFixed(2)} ${currency}`;
+            }
+        };
+
+        // Load shipping methods if container exists (means there are physical products)
+        if (shippingMethodsContainer) {
+            loadShippingMethods();
+
+            // Sync customer fields to shipping fields
+            const syncField = (sourceId: string, targetId: string) => {
+                const source = document.getElementById(sourceId) as HTMLInputElement;
+                const target = document.getElementById(targetId) as HTMLInputElement;
+                if (source && target) {
+                    source.addEventListener('input', () => {
+                        // Only sync if target is empty or hasn't been manually modified
+                        if (!target.dataset.modified) {
+                            target.value = source.value;
+                        }
+                    });
+                    target.addEventListener('input', () => {
+                        target.dataset.modified = 'true';
+                    });
+                }
+            };
+
+            syncField('customer_first_name', 'shipping_first_name');
+            syncField('customer_last_name', 'shipping_last_name');
+            syncField('customer_phone', 'shipping_phone');
+
+            // Reload shipping methods when country changes
+            const countrySelect = document.getElementById('shipping_country') as HTMLSelectElement;
+            if (countrySelect) {
+                countrySelect.addEventListener('change', () => {
+                    shippingMethodsContainer.innerHTML = `
+                        <div class="animate-pulse">
+                            <div class="h-16 bg-gray-200 rounded mb-2"></div>
+                            <div class="h-16 bg-gray-200 rounded"></div>
+                        </div>
+                    `;
+                    loadShippingMethods();
+                });
+            }
+
+            // Also reload when postal code or city changes (debounced)
+            let shippingDebounce: NodeJS.Timeout;
+            const debouncedLoadShipping = () => {
+                clearTimeout(shippingDebounce);
+                shippingDebounce = setTimeout(() => {
+                    loadShippingMethods();
+                }, 500);
+            };
+
+            const postalField = document.getElementById('shipping_postal_code') as HTMLInputElement;
+            postalField?.addEventListener('blur', debouncedLoadShipping);
+
+            // Romanian counties and cities data
+            const romanianLocations: Record<string, string[]> = {
+                'Alba': ['Alba Iulia', 'Sebeș', 'Aiud', 'Blaj', 'Cugir', 'Ocna Mureș'],
+                'Arad': ['Arad', 'Ineu', 'Lipova', 'Pecica', 'Curtici', 'Chișineu-Criș'],
+                'Argeș': ['Pitești', 'Câmpulung', 'Curtea de Argeș', 'Mioveni', 'Costești'],
+                'Bacău': ['Bacău', 'Onești', 'Moinești', 'Comănești', 'Buhuși', 'Dărmănești'],
+                'Bihor': ['Oradea', 'Salonta', 'Marghita', 'Beiuș', 'Aleșd', 'Ștei'],
+                'Bistrița-Năsăud': ['Bistrița', 'Năsăud', 'Beclean', 'Sângeorz-Băi'],
+                'Botoșani': ['Botoșani', 'Dorohoi', 'Săveni', 'Darabani', 'Flămânzi'],
+                'Brăila': ['Brăila', 'Făurei', 'Însurăței', 'Ianca'],
+                'Brașov': ['Brașov', 'Făgăraș', 'Săcele', 'Codlea', 'Zărnești', 'Râșnov', 'Rupea'],
+                'București': ['Sector 1', 'Sector 2', 'Sector 3', 'Sector 4', 'Sector 5', 'Sector 6'],
+                'Buzău': ['Buzău', 'Râmnicu Sărat', 'Nehoiu', 'Pătârlagele', 'Pogoanele'],
+                'Călărași': ['Călărași', 'Oltenița', 'Budești', 'Fundulea', 'Lehliu Gară'],
+                'Caraș-Severin': ['Reșița', 'Caransebeș', 'Bocșa', 'Oravița', 'Moldova Nouă'],
+                'Cluj': ['Cluj-Napoca', 'Turda', 'Dej', 'Câmpia Turzii', 'Gherla', 'Huedin'],
+                'Constanța': ['Constanța', 'Mangalia', 'Medgidia', 'Năvodari', 'Cernavodă', 'Eforie'],
+                'Covasna': ['Sfântu Gheorghe', 'Târgu Secuiesc', 'Covasna', 'Baraolt', 'Întorsura Buzăului'],
+                'Dâmbovița': ['Târgoviște', 'Moreni', 'Pucioasa', 'Găești', 'Titu', 'Fieni'],
+                'Dolj': ['Craiova', 'Băilești', 'Calafat', 'Filiași', 'Dăbuleni', 'Segarcea'],
+                'Galați': ['Galați', 'Tecuci', 'Târgu Bujor', 'Berești'],
+                'Giurgiu': ['Giurgiu', 'Bolintin-Vale', 'Mihăilești'],
+                'Gorj': ['Târgu Jiu', 'Motru', 'Rovinari', 'Bumbești-Jiu', 'Novaci', 'Țicleni'],
+                'Harghita': ['Miercurea Ciuc', 'Odorheiu Secuiesc', 'Gheorgheni', 'Toplița', 'Cristuru Secuiesc'],
+                'Hunedoara': ['Deva', 'Hunedoara', 'Petroșani', 'Lupeni', 'Orăștie', 'Brad', 'Vulcan'],
+                'Ialomița': ['Slobozia', 'Fetești', 'Urziceni', 'Țăndărei', 'Amara'],
+                'Iași': ['Iași', 'Pașcani', 'Hârlău', 'Târgu Frumos', 'Podu Iloaiei'],
+                'Ilfov': ['Buftea', 'Voluntari', 'Pantelimon', 'Popești-Leordeni', 'Bragadiru', 'Otopeni', 'Chitila', 'Măgurele'],
+                'Maramureș': ['Baia Mare', 'Sighetu Marmației', 'Borșa', 'Vișeu de Sus', 'Târgu Lăpuș'],
+                'Mehedinți': ['Drobeta-Turnu Severin', 'Orșova', 'Strehaia', 'Vânju Mare', 'Baia de Aramă'],
+                'Mureș': ['Târgu Mureș', 'Reghin', 'Sighișoara', 'Târnăveni', 'Luduș', 'Sovata'],
+                'Neamț': ['Piatra Neamț', 'Roman', 'Târgu Neamț', 'Bicaz', 'Roznov'],
+                'Olt': ['Slatina', 'Caracal', 'Balș', 'Corabia', 'Scornicești', 'Drăgănești-Olt'],
+                'Prahova': ['Ploiești', 'Câmpina', 'Băicoi', 'Breaza', 'Sinaia', 'Bușteni', 'Azuga', 'Vălenii de Munte'],
+                'Satu Mare': ['Satu Mare', 'Carei', 'Negrești-Oaș', 'Tășnad', 'Livada'],
+                'Sălaj': ['Zalău', 'Șimleu Silvaniei', 'Jibou', 'Cehu Silvaniei'],
+                'Sibiu': ['Sibiu', 'Mediaș', 'Cisnădie', 'Avrig', 'Dumbrăveni', 'Agnita', 'Copșa Mică'],
+                'Suceava': ['Suceava', 'Fălticeni', 'Rădăuți', 'Câmpulung Moldovenesc', 'Vatra Dornei', 'Gura Humorului'],
+                'Teleorman': ['Alexandria', 'Roșiori de Vede', 'Turnu Măgurele', 'Zimnicea', 'Videle'],
+                'Timiș': ['Timișoara', 'Lugoj', 'Sânnicolau Mare', 'Jimbolia', 'Făget', 'Buziaș', 'Recaș'],
+                'Tulcea': ['Tulcea', 'Măcin', 'Babadag', 'Isaccea', 'Sulina'],
+                'Vâlcea': ['Râmnicu Vâlcea', 'Drăgășani', 'Băbeni', 'Brezoi', 'Călimănești', 'Horezu'],
+                'Vaslui': ['Vaslui', 'Bârlad', 'Huși', 'Negrești', 'Murgeni'],
+                'Vrancea': ['Focșani', 'Adjud', 'Mărășești', 'Panciu', 'Odobești'],
+            };
+
+            // Populate counties dropdown
+            const countySelect = document.getElementById('shipping_county') as HTMLSelectElement;
+            const citySelect = document.getElementById('shipping_city') as HTMLSelectElement;
+
+            if (countySelect && citySelect) {
+                // Add counties to dropdown
+                Object.keys(romanianLocations).sort().forEach(county => {
+                    const option = document.createElement('option');
+                    option.value = county;
+                    option.textContent = county;
+                    countySelect.appendChild(option);
+                });
+
+                // Handle county change - populate cities
+                countySelect.addEventListener('change', () => {
+                    const selectedCounty = countySelect.value;
+                    citySelect.innerHTML = '<option value="">Selectează orașul</option>';
+
+                    if (selectedCounty && romanianLocations[selectedCounty]) {
+                        romanianLocations[selectedCounty].forEach(city => {
+                            const option = document.createElement('option');
+                            option.value = city;
+                            option.textContent = city;
+                            citySelect.appendChild(option);
+                        });
+                    }
+
+                    // Reload shipping methods
+                    debouncedLoadShipping();
+                });
+
+                // Reload shipping when city changes
+                citySelect.addEventListener('change', debouncedLoadShipping);
+            }
+        }
+
+        // Handle beneficiaries checkbox toggle
+        const beneficiariesCheckbox = document.getElementById('different_beneficiaries') as HTMLInputElement;
+        const beneficiariesSection = document.getElementById('beneficiaries-section');
+        const beneficiariesContainer = document.getElementById('beneficiaries-container');
+        const cart = CartService.getCart();
+        const totalTickets = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+        if (beneficiariesCheckbox && beneficiariesSection && beneficiariesContainer) {
+            beneficiariesCheckbox.addEventListener('change', () => {
+                if (beneficiariesCheckbox.checked) {
+                    beneficiariesSection.classList.remove('hidden');
+
+                    // Generate beneficiary fields
+                    const customerFirstName = (document.getElementById('customer_first_name') as HTMLInputElement)?.value || '';
+                    const customerLastName = (document.getElementById('customer_last_name') as HTMLInputElement)?.value || '';
+                    const customerName = `${customerFirstName} ${customerLastName}`.trim();
+                    const customerEmail = (document.getElementById('customer_email') as HTMLInputElement)?.value || '';
+                    const customerPhone = (document.getElementById('customer_phone') as HTMLInputElement)?.value || '';
+
+                    let html = '';
+                    for (let i = 0; i < totalTickets; i++) {
+                        const isFirst = i === 0;
+                        html += `
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-medium text-gray-900 mb-3">Bilet ${i + 1}</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Nume complet *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="beneficiary_${i}_name"
+                                            required
+                                            value="${isFirst ? customerName : ''}"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                                            placeholder="Nume complet"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Email (optional)
+                                        </label>
+                                        <input
+                                            type="email"
+                                            name="beneficiary_${i}_email"
+                                            value="${isFirst ? customerEmail : ''}"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                                            placeholder="email@example.com"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Telefon (optional)
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            name="beneficiary_${i}_phone"
+                                            value="${isFirst ? customerPhone : ''}"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                                            placeholder="0722123456"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    beneficiariesContainer.innerHTML = html;
+                } else {
+                    beneficiariesSection.classList.add('hidden');
+                    beneficiariesContainer.innerHTML = '';
+                }
+            });
+        }
+
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                // Show loading state
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                }
+                if (submitBtnText) {
+                    submitBtnText.textContent = 'Se procesează...';
+                }
+                if (submitBtnSpinner) {
+                    submitBtnSpinner.classList.remove('hidden');
+                }
+
+                const formData = new FormData(form);
+                const cartData = CartService.getCart();
+
+                // Collect beneficiaries data if checkbox is checked
+                const beneficiariesData: any[] = [];
+                const beneficiariesChk = document.getElementById('different_beneficiaries') as HTMLInputElement;
+                if (beneficiariesChk?.checked) {
+                    const totalTix = cartData.reduce((sum, item) => sum + item.quantity, 0);
+                    for (let i = 0; i < totalTix; i++) {
+                        beneficiariesData.push({
+                            name: formData.get(`beneficiary_${i}_name`),
+                            email: formData.get(`beneficiary_${i}_email`) || null,
+                            phone: formData.get(`beneficiary_${i}_phone`) || null,
+                        });
+                    }
+                }
+
+                // Get checkbox values
+                const agreeTerms = (document.getElementById('agree_terms') as HTMLInputElement)?.checked ?? false;
+                const agreePrivacy = (document.getElementById('agree_privacy') as HTMLInputElement)?.checked ?? false;
+                const createAccount = (document.getElementById('create_account') as HTMLInputElement)?.checked ?? false;
+                const notificationEmail = (document.getElementById('notification_email') as HTMLInputElement)?.checked ?? true;
+                const notificationWhatsapp = (document.getElementById('notification_whatsapp') as HTMLInputElement)?.checked ?? false;
+
+                const resetButton = () => {
+                    if (submitBtn) submitBtn.disabled = false;
+                    if (submitBtnText) submitBtnText.textContent = 'Plasează comanda';
+                    if (submitBtnSpinner) submitBtnSpinner.classList.add('hidden');
+                };
+
+                try {
+                    // If Stripe is initialized, confirm payment first
+                    if (stripe && elements && clientSecret) {
+                        // Confirm the payment with Stripe
+                        const { error: stripeError } = await stripe.confirmPayment({
+                            elements,
+                            confirmParams: {
+                                return_url: window.location.origin + '/checkout/complete',
+                                payment_method_data: {
+                                    billing_details: {
+                                        name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
+                                        email: formData.get('customer_email') as string,
+                                        phone: formData.get('customer_phone') as string || undefined,
+                                    },
+                                },
+                            },
+                            redirect: 'if_required',
+                        });
+
+                        if (stripeError) {
+                            // Show error in payment message area
+                            if (paymentMessage) {
+                                paymentMessage.textContent = stripeError.message || 'Eroare la procesarea plății';
+                                paymentMessage.classList.remove('hidden');
+                            }
+                            throw new Error(stripeError.message || 'Plata nu a putut fi procesată');
+                        }
+                    }
+
+                    // Create order after successful payment (or for free orders)
+                    let ticketOrderId: number | null = null;
+                    let shopOrderNumber: string | null = null;
+                    const hasTickets = cartData.length > 0;
+                    const hasShopProducts = ShopCartService.getItemCount() > 0;
+                    const sessionId = localStorage.getItem('shop_session_id');
+
+                    // Create ticket order if there are tickets
+                    if (hasTickets) {
+                        const response = await this.postApi('/orders', {
+                            customer_first_name: formData.get('customer_first_name'),
+                            customer_last_name: formData.get('customer_last_name'),
+                            customer_name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
+                            customer_email: formData.get('customer_email'),
+                            customer_phone: formData.get('customer_phone'),
+                            agree_terms: agreeTerms,
+                            agree_privacy: agreePrivacy,
+                            create_account: createAccount,
+                            notification_email: notificationEmail,
+                            notification_whatsapp: notificationWhatsapp,
+                            payment_intent_id: clientSecret ? clientSecret.split('_secret_')[0] : null,
+                            cart: cartData.map(item => ({
+                                eventId: item.eventId,
+                                ticketTypeId: item.ticketTypeId,
+                                quantity: item.quantity,
+                            })),
+                            beneficiaries: beneficiariesData.length > 0 ? beneficiariesData : null,
+                        });
+
+                        if (!response.success) {
+                            throw new Error(response.error || 'Eroare la plasarea comenzii de bilete');
+                        }
+                        ticketOrderId = response.data.order_id;
+                    }
+
+                    // Create shop order if there are shop products
+                    if (hasShopProducts && sessionId) {
+                        // Get shipping data if needed
+                        const selectedShipping = document.querySelector('input[name="shipping_method"]:checked') as HTMLInputElement;
+                        const shippingMethodId = selectedShipping?.value || null;
+
+                        // Collect shipping address if there are physical products
+                        let shippingAddress: any = null;
+                        const shippingFirstName = (document.getElementById('shipping_first_name') as HTMLInputElement)?.value;
+                        const shippingAddress1 = (document.getElementById('shipping_address') as HTMLInputElement)?.value;
+
+                        // Check if shipping fields exist (means we have physical products)
+                        if (shippingFirstName !== undefined && shippingAddress1) {
+                            shippingAddress = {
+                                name: `${(document.getElementById('shipping_first_name') as HTMLInputElement)?.value || ''} ${(document.getElementById('shipping_last_name') as HTMLInputElement)?.value || ''}`.trim(),
+                                line1: shippingAddress1,
+                                city: (document.getElementById('shipping_city') as HTMLInputElement)?.value || '',
+                                region: (document.getElementById('shipping_county') as HTMLInputElement)?.value || '',
+                                postal_code: (document.getElementById('shipping_postal_code') as HTMLInputElement)?.value || '',
+                                country: (document.getElementById('shipping_country') as HTMLSelectElement)?.value || 'RO',
+                                phone: (document.getElementById('shipping_phone') as HTMLInputElement)?.value || '',
+                            };
+                        }
+
+                        const shopOrderResponse = await this.postApi('/shop/checkout/create-order', {
+                            customer_email: formData.get('customer_email'),
+                            customer_phone: formData.get('customer_phone') || (document.getElementById('shipping_phone') as HTMLInputElement)?.value,
+                            customer_name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
+                            shipping_address: shippingAddress,
+                            shipping_method_id: shippingMethodId,
+                            ticket_order_id: ticketOrderId,
+                        }, {
+                            'X-Session-ID': sessionId
+                        });
+
+                        if (!shopOrderResponse.success) {
+                            throw new Error(shopOrderResponse.message || 'Eroare la plasarea comenzii de produse');
+                        }
+                        shopOrderNumber = shopOrderResponse.data?.order_number;
+                    }
+
+                    // Clear carts
+                    CartService.clearCart();
+                    if (sessionId) {
+                        try {
+                            await this.fetchApi('/shop/cart', {}, {
+                                method: 'DELETE',
+                                headers: { 'X-Session-ID': sessionId }
+                            });
+                        } catch (e) {
+                            console.log('Could not clear shop cart');
+                        }
+                        ShopCartService.clear();
+                    }
+                    this.updateCartBadge();
+
+                    ToastNotification.show('✓ Comanda a fost plasată cu succes!', 'success');
+
+                    // Redirect based on order type
+                    if (ticketOrderId) {
+                        this.navigate(`/order-success/${ticketOrderId}`);
+                    } else if (shopOrderNumber) {
+                        this.navigate(`/shop/thank-you/${shopOrderNumber}`);
+                    } else {
+                        this.navigate('/');
+                    }
+                } catch (error: any) {
+                    ToastNotification.show(error.message || 'Eroare la plasarea comenzii', 'error');
+                    resetButton();
+                }
+            });
+        }
+    }
+
+    private async initializeStripePayment(): Promise<{
+        stripe: any;
+        elements: any;
+        paymentElement: any;
+        clientSecret: string;
+    } | null> {
+        const paymentElementContainer = document.getElementById('payment-element');
+        if (!paymentElementContainer) return null;
+
+        try {
+            // Fetch payment configuration
+            const configResponse = await this.fetchApi('/payment/config');
+            if (!configResponse.success || !configResponse.data?.publishable_key) {
+                console.log('Payment not configured or free order');
+                // For free orders, show a message and enable submit
+                paymentElementContainer.innerHTML = `
+                    <div class="text-center py-4 text-gray-600">
+                        <svg class="w-12 h-12 mx-auto text-green-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p>Comanda nu necesită plată online.</p>
+                    </div>
+                `;
+                return null;
+            }
+
+            const publishableKey = configResponse.data.publishable_key;
+
+            // Load Stripe.js
+            if (!(window as any).Stripe) {
+                await this.loadStripeScript();
+            }
+
+            const stripe = (window as any).Stripe(publishableKey);
+
+            // Create payment intent - combine ticket cart and shop cart totals
+            const cart = CartService.getCart();
+            const totals = CartService.getTotal();
+
+            // Get shop cart total from localStorage (set during checkout render)
+            const shopCartTotal = parseFloat(localStorage.getItem('shop_cart_total') || '0');
+
+            // Get shipping cost if selected
+            const selectedShippingRadio = document.querySelector('input[name="shipping_method"]:checked') as HTMLInputElement;
+            const shippingCost = selectedShippingRadio ? parseFloat(selectedShippingRadio.dataset.cost || '0') : 0;
+
+            // Get taxes to add (taxes with is_added_to_price: true)
+            const taxesToAdd = (window as any).checkoutTaxesToAdd || 0;
+
+            // Calculate grand total: tickets + shop products + shipping + taxes
+            const grandTotal = totals.total + shopCartTotal + shippingCost + taxesToAdd;
+            const currency = totals.currency || 'RON';
+
+            const intentResponse = await this.postApi('/payment/create-intent', {
+                amount: Math.round(grandTotal * 100), // Convert to cents
+                currency: currency.toLowerCase(),
+                cart: cart.map(item => ({
+                    eventId: item.eventId,
+                    ticketTypeId: item.ticketTypeId,
+                    quantity: item.quantity,
+                })),
+                shop_cart_total: shopCartTotal,
+                shipping_cost: shippingCost,
+                taxes_to_add: taxesToAdd,
+            });
+
+            if (!intentResponse.success || !intentResponse.data?.client_secret) {
+                throw new Error('Nu s-a putut crea sesiunea de plată');
+            }
+
+            const clientSecret = intentResponse.data.client_secret;
+
+            // Create Payment Element
+            const elements = stripe.elements({
+                clientSecret,
+                appearance: {
+                    theme: 'stripe',
+                    variables: {
+                        colorPrimary: getComputedStyle(document.documentElement).getPropertyValue('--tixello-primary').trim() || '#6366f1',
+                        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    },
+                },
+            });
+
+            const paymentElement = elements.create('payment', {
+                layout: 'tabs',
+                wallets: {
+                    applePay: 'auto',
+                    googlePay: 'auto',
+                },
+            });
+
+            // Mount the Payment Element
+            paymentElementContainer.innerHTML = '';
+            paymentElement.mount(paymentElementContainer);
+
+            return { stripe, elements, paymentElement, clientSecret };
+        } catch (error: any) {
+            console.error('Stripe initialization error:', error);
+            paymentElementContainer.innerHTML = `
+                <div class="text-center py-4 text-red-600">
+                    <svg class="w-12 h-12 mx-auto text-red-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p>${error.message || 'Eroare la încărcarea sistemului de plată'}</p>
+                    <button onclick="location.reload()" class="mt-2 text-primary hover:underline">Reîncarcă pagina</button>
+                </div>
+            `;
+            throw error;
+        }
+    }
+
+    private loadStripeScript(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if ((window as any).Stripe) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://js.stripe.com/v3/';
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load Stripe.js'));
+            document.head.appendChild(script);
+        });
+    }
+
+    private async renderOrderSuccess(params: Record<string, string>): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        const orderId = params.orderId;
+
+        content.innerHTML = `
+            <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                <div class="mb-8">
+                    <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Comanda plasată cu succes!</h1>
+                    <p class="text-gray-600 mb-4">
+                        Comanda ta <strong>#${orderId}</strong> a fost înregistrată.
+                    </p>
+                    <p class="text-gray-600">
+                        Vei primi biletele pe email în câteva minute.
+                    </p>
+                </div>
+
+                <div class="space-y-3">
+                    <a href="/events" class="w-full max-w-xs mx-auto block px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition text-center">
+                        Înapoi la evenimente
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+
+    private renderLogin(): void {
+        // Redirect if already logged in
+        if (this.isAuthenticated()) {
+            this.navigate('/account');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="min-h-[60vh] flex items-center justify-center px-4">
+                <div class="max-w-md w-full space-y-8">
+                    <div class="text-center">
+                        <h1 class="text-3xl font-bold text-gray-900">Bine ai revenit</h1>
+                        <p class="mt-2 text-gray-600">Conectează-te la contul tău</p>
+                    </div>
+                    <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"></div>
+                    <form id="login-form" class="space-y-6">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="email" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="password" class="block text-sm font-medium text-gray-700">Parolă</label>
+                                <a href="/forgot-password" class="text-xs text-primary hover:text-blue-700">Ai uitat parola?</a>
+                            </div>
+                            <input type="password" id="password" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        </div>
+                        <button type="submit" id="login-btn" class="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
+                            Conectare
+                        </button>
+                    </form>
+                    <p class="text-center text-gray-600">
+                        Nu ai cont? <a href="/register" class="text-primary hover:text-blue-700 font-medium">Înregistrează-te</a>
+                    </p>
+                </div>
+            </div>
+        `;
+
+        // Setup form handler
+        const form = document.getElementById('login-form');
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = (document.getElementById('email') as HTMLInputElement).value;
+            const password = (document.getElementById('password') as HTMLInputElement).value;
+            const errorEl = document.getElementById('login-error');
+            const btn = document.getElementById('login-btn') as HTMLButtonElement;
+
+            btn.disabled = true;
+            btn.textContent = 'Se conectează...';
+            errorEl?.classList.add('hidden');
+
+            try {
+                const result = await this.postApi('/auth/login', { email, password });
+                console.log('Login response:', result);
+                if (result.success && result.data) {
+                    this.saveAuthState(result.data.token, result.data.user);
+                    this.navigate('/account');
+                } else {
+                    throw new Error(result.message || 'Invalid response from server');
+                }
+            } catch (error: any) {
+                console.error('Login error:', error);
+                if (errorEl) {
+                    errorEl.textContent = error.message || 'Eroare la autentificare';
+                    errorEl.classList.remove('hidden');
+                }
+                btn.disabled = false;
+                btn.textContent = 'Conectare';
+            }
+        });
+    }
+
+    private renderRegister(): void {
+        // Redirect if already logged in
+        if (this.isAuthenticated()) {
+            this.navigate('/account');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="min-h-[60vh] flex items-center justify-center px-4">
+                <div class="max-w-md w-full space-y-8">
+                    <div class="text-center">
+                        <h1 class="text-3xl font-bold text-gray-900">Creează cont</h1>
+                        <p class="mt-2 text-gray-600">Înregistrează-te pentru a cumpăra bilete</p>
+                    </div>
+                    <div id="register-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"></div>
+                    <form id="register-form" class="space-y-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">Prenume</label>
+                                <input type="text" id="first_name" required
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                            </div>
+                            <div>
+                                <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Nume</label>
+                                <input type="text" id="last_name" required
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="email" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                        </div>
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Telefon (opțional)</label>
+                            <input type="tel" id="phone"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parolă</label>
+                            <input type="password" id="password" required minlength="8"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                            <!-- Password Strength Meter -->
+                            <div id="password-strength" class="mt-2">
+                                <div class="flex gap-1 mb-1">
+                                    <div id="strength-bar-1" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                    <div id="strength-bar-2" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                    <div id="strength-bar-3" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                    <div id="strength-bar-4" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                </div>
+                                <p id="strength-text" class="text-xs text-gray-500"></p>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirmă parola</label>
+                            <input type="password" id="password_confirmation" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                            <p id="password-match" class="mt-1 text-xs hidden"></p>
+                        </div>
+                        <div class="border-t pt-4">
+                            <p class="text-sm font-medium text-gray-700 mb-3">Preferințe notificări</p>
+                            <div class="space-y-2">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="reg_notification_email" checked
+                                           class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary">
+                                    <label for="reg_notification_email" class="ml-2 text-sm text-gray-700">
+                                        Primește notificări pe email
+                                    </label>
+                                </div>
+                                ${this.config?.modules?.includes('whatsapp') ? `
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="reg_notification_whatsapp"
+                                           class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary">
+                                    <label for="reg_notification_whatsapp" class="ml-2 text-sm text-gray-700">
+                                        Primește notificări pe WhatsApp
+                                    </label>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <button type="submit" id="register-btn" class="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
+                            Creează cont
+                        </button>
+                    </form>
+                    <p class="text-center text-gray-600">
+                        Ai deja cont? <a href="/login" class="text-primary hover:text-blue-700 font-medium">Conectează-te</a>
+                    </p>
+                </div>
+            </div>
+        `;
+
+        // Password strength meter
+        const passwordInput = document.getElementById('password') as HTMLInputElement;
+        const confirmInput = document.getElementById('password_confirmation') as HTMLInputElement;
+        const strengthText = document.getElementById('strength-text');
+        const matchText = document.getElementById('password-match');
+        const bars = [
+            document.getElementById('strength-bar-1'),
+            document.getElementById('strength-bar-2'),
+            document.getElementById('strength-bar-3'),
+            document.getElementById('strength-bar-4'),
+        ];
+
+        const checkPasswordStrength = (password: string): { score: number; text: string; color: string } => {
+            let score = 0;
+            if (password.length >= 8) score++;
+            if (password.length >= 12) score++;
+            if (/[A-Z]/.test(password)) score++;
+            if (/[a-z]/.test(password)) score++;
+            if (/[0-9]/.test(password)) score++;
+            if (/[^A-Za-z0-9]/.test(password)) score++;
+
+            if (score <= 2) return { score: 1, text: 'Foarte slabă', color: 'bg-red-500' };
+            if (score <= 3) return { score: 2, text: 'Slabă', color: 'bg-orange-500' };
+            if (score <= 4) return { score: 3, text: 'Medie', color: 'bg-yellow-500' };
+            if (score <= 5) return { score: 4, text: 'Puternică', color: 'bg-green-500' };
+            return { score: 4, text: 'Foarte puternică', color: 'bg-green-600' };
+        };
+
+        const updateStrengthMeter = () => {
+            const password = passwordInput?.value || '';
+            if (!password) {
+                bars.forEach(bar => bar?.classList.replace(bar.className.split(' ').find(c => c.startsWith('bg-')) || 'bg-gray-200', 'bg-gray-200'));
+                if (strengthText) strengthText.textContent = '';
+                return;
+            }
+
+            const { score, text, color } = checkPasswordStrength(password);
+            bars.forEach((bar, i) => {
+                if (bar) {
+                    const currentBg = Array.from(bar.classList).find(c => c.startsWith('bg-'));
+                    if (currentBg) bar.classList.remove(currentBg);
+                    bar.classList.add(i < score ? color : 'bg-gray-200');
+                }
+            });
+            if (strengthText) {
+                strengthText.textContent = text;
+                strengthText.className = `text-xs ${color.replace('bg-', 'text-')}`;
+            }
+        };
+
+        const checkPasswordMatch = () => {
+            const password = passwordInput?.value || '';
+            const confirm = confirmInput?.value || '';
+            if (!confirm) {
+                matchText?.classList.add('hidden');
+                confirmInput?.classList.remove('border-red-300', 'border-green-300');
+                return;
+            }
+
+            matchText?.classList.remove('hidden');
+            if (password === confirm) {
+                if (matchText) {
+                    matchText.textContent = '✓ Parolele coincid';
+                    matchText.className = 'mt-1 text-xs text-green-600';
+                }
+                confirmInput?.classList.remove('border-red-300');
+                confirmInput?.classList.add('border-green-300');
+            } else {
+                if (matchText) {
+                    matchText.textContent = '✗ Parolele nu coincid';
+                    matchText.className = 'mt-1 text-xs text-red-600';
+                }
+                confirmInput?.classList.remove('border-green-300');
+                confirmInput?.classList.add('border-red-300');
+            }
+        };
+
+        passwordInput?.addEventListener('input', () => {
+            updateStrengthMeter();
+            checkPasswordMatch();
+        });
+        confirmInput?.addEventListener('input', checkPasswordMatch);
+
+        // Setup form handler
+        const form = document.getElementById('register-form');
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const first_name = (document.getElementById('first_name') as HTMLInputElement).value;
+            const last_name = (document.getElementById('last_name') as HTMLInputElement).value;
+            const email = (document.getElementById('email') as HTMLInputElement).value;
+            const phone = (document.getElementById('phone') as HTMLInputElement).value;
+            const password = (document.getElementById('password') as HTMLInputElement).value;
+            const password_confirmation = (document.getElementById('password_confirmation') as HTMLInputElement).value;
+            const errorEl = document.getElementById('register-error');
+            const btn = document.getElementById('register-btn') as HTMLButtonElement;
+
+            if (password !== password_confirmation) {
+                if (errorEl) {
+                    errorEl.textContent = 'Parolele nu coincid';
+                    errorEl.classList.remove('hidden');
+                }
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Se creează contul...';
+            errorEl?.classList.add('hidden');
+
+            const notificationEmail = (document.getElementById('reg_notification_email') as HTMLInputElement)?.checked ?? true;
+            const notificationWhatsapp = (document.getElementById('reg_notification_whatsapp') as HTMLInputElement)?.checked ?? false;
+
+            try {
+                const result = await this.postApi('/auth/register', {
+                    first_name,
+                    last_name,
+                    email,
+                    phone: phone || null,
+                    password,
+                    notification_email: notificationEmail,
+                    notification_whatsapp: notificationWhatsapp,
+                });
+                console.log('Register response:', result);
+                if (result.success && result.data) {
+                    this.saveAuthState(result.data.token, result.data.user);
+                    ToastNotification.show('✓ Cont creat cu succes!', 'success');
+                    this.navigate('/account');
+                } else {
+                    throw new Error(result.message || 'Invalid response from server');
+                }
+            } catch (error: any) {
+                console.error('Register error:', error);
+                if (errorEl) {
+                    errorEl.textContent = error.message || 'Eroare la înregistrare';
+                    errorEl.classList.remove('hidden');
+                }
+                btn.disabled = false;
+                btn.textContent = 'Creează cont';
+            }
+        });
+    }
+
+    private renderForgotPassword(): void {
+        // Redirect if already logged in
+        if (this.isAuthenticated()) {
+            this.navigate('/account');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="min-h-[60vh] flex items-center justify-center px-4">
+                <div class="max-w-md w-full space-y-8">
+                    <div class="text-center">
+                        <h1 class="text-3xl font-bold text-gray-900">Resetează parola</h1>
+                        <p class="mt-2 text-gray-600">Introdu adresa de email pentru a primi un link de resetare</p>
+                    </div>
+                    <div id="forgot-success" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"></div>
+                    <div id="forgot-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"></div>
+                    <form id="forgot-form" class="space-y-6">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="email" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        </div>
+                        <button type="submit" id="forgot-btn" class="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
+                            Trimite link de resetare
+                        </button>
+                    </form>
+                    <p class="text-center text-gray-600">
+                        <a href="/login" class="text-primary hover:text-blue-700 font-medium">← Înapoi la conectare</a>
+                    </p>
+                </div>
+            </div>
+        `;
+
+        const form = document.getElementById('forgot-form');
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = (document.getElementById('email') as HTMLInputElement).value;
+            const errorEl = document.getElementById('forgot-error');
+            const successEl = document.getElementById('forgot-success');
+            const btn = document.getElementById('forgot-btn') as HTMLButtonElement;
+
+            btn.disabled = true;
+            btn.textContent = 'Se trimite...';
+            errorEl?.classList.add('hidden');
+            successEl?.classList.add('hidden');
+
+            try {
+                const result = await this.postApi('/auth/forgot-password', { email });
+                if (result.success) {
+                    if (successEl) {
+                        successEl.textContent = 'Dacă adresa de email există în sistem, vei primi un link de resetare.';
+                        successEl.classList.remove('hidden');
+                    }
+                    (document.getElementById('email') as HTMLInputElement).value = '';
+                } else {
+                    throw new Error(result.message || 'Eroare la trimitere');
+                }
+            } catch (error: any) {
+                console.error('Forgot password error:', error);
+                if (errorEl) {
+                    errorEl.textContent = error.message || 'Eroare la trimiterea emailului';
+                    errorEl.classList.remove('hidden');
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Trimite link de resetare';
+            }
+        });
+    }
+
+    private renderResetPassword(): void {
+        // Redirect if already logged in
+        if (this.isAuthenticated()) {
+            this.navigate('/account');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        // Get token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const email = urlParams.get('email');
+
+        if (!token || !email) {
+            content.innerHTML = `
+                <div class="min-h-[60vh] flex items-center justify-center px-4">
+                    <div class="text-center">
+                        <h1 class="text-2xl font-bold text-red-600 mb-4">Link invalid</h1>
+                        <p class="text-gray-600 mb-4">Linkul de resetare este invalid sau a expirat.</p>
+                        <a href="/forgot-password" class="text-primary hover:text-blue-700">Solicită un nou link</a>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        content.innerHTML = `
+            <div class="min-h-[60vh] flex items-center justify-center px-4">
+                <div class="max-w-md w-full space-y-8">
+                    <div class="text-center">
+                        <h1 class="text-3xl font-bold text-gray-900">Setează parola nouă</h1>
+                        <p class="mt-2 text-gray-600">Introdu noua parolă pentru contul tău</p>
+                    </div>
+                    <div id="reset-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"></div>
+                    <form id="reset-form" class="space-y-6">
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parolă nouă</label>
+                            <input type="password" id="password" required minlength="8"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                            <div id="password-strength" class="mt-2">
+                                <div class="flex gap-1 mb-1">
+                                    <div id="strength-bar-1" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                    <div id="strength-bar-2" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                    <div id="strength-bar-3" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                    <div id="strength-bar-4" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                </div>
+                                <p id="strength-text" class="text-xs text-gray-500"></p>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirmă parola</label>
+                            <input type="password" id="password_confirmation" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                            <p id="password-match" class="mt-1 text-xs hidden"></p>
+                        </div>
+                        <button type="submit" id="reset-btn" class="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
+                            Resetează parola
+                        </button>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        // Password strength meter (reuse same logic)
+        const passwordInput = document.getElementById('password') as HTMLInputElement;
+        const confirmInput = document.getElementById('password_confirmation') as HTMLInputElement;
+        const strengthText = document.getElementById('strength-text');
+        const matchText = document.getElementById('password-match');
+        const bars = [
+            document.getElementById('strength-bar-1'),
+            document.getElementById('strength-bar-2'),
+            document.getElementById('strength-bar-3'),
+            document.getElementById('strength-bar-4'),
+        ];
+
+        const checkPasswordStrength = (password: string): { score: number; text: string; color: string } => {
+            let score = 0;
+            if (password.length >= 8) score++;
+            if (password.length >= 12) score++;
+            if (/[A-Z]/.test(password)) score++;
+            if (/[a-z]/.test(password)) score++;
+            if (/[0-9]/.test(password)) score++;
+            if (/[^A-Za-z0-9]/.test(password)) score++;
+
+            if (score <= 2) return { score: 1, text: 'Foarte slabă', color: 'bg-red-500' };
+            if (score <= 3) return { score: 2, text: 'Slabă', color: 'bg-orange-500' };
+            if (score <= 4) return { score: 3, text: 'Medie', color: 'bg-yellow-500' };
+            if (score <= 5) return { score: 4, text: 'Puternică', color: 'bg-green-500' };
+            return { score: 4, text: 'Foarte puternică', color: 'bg-green-600' };
+        };
+
+        const updateStrengthMeter = () => {
+            const password = passwordInput?.value || '';
+            if (!password) {
+                bars.forEach(bar => {
+                    const currentBg = Array.from(bar?.classList || []).find(c => c.startsWith('bg-'));
+                    if (currentBg && bar) bar.classList.replace(currentBg, 'bg-gray-200');
+                });
+                if (strengthText) strengthText.textContent = '';
+                return;
+            }
+
+            const { score, text, color } = checkPasswordStrength(password);
+            bars.forEach((bar, i) => {
+                if (bar) {
+                    const currentBg = Array.from(bar.classList).find(c => c.startsWith('bg-'));
+                    if (currentBg) bar.classList.remove(currentBg);
+                    bar.classList.add(i < score ? color : 'bg-gray-200');
+                }
+            });
+            if (strengthText) {
+                strengthText.textContent = text;
+                strengthText.className = `text-xs ${color.replace('bg-', 'text-')}`;
+            }
+        };
+
+        const checkPasswordMatch = () => {
+            const password = passwordInput?.value || '';
+            const confirm = confirmInput?.value || '';
+            if (!confirm) {
+                matchText?.classList.add('hidden');
+                confirmInput?.classList.remove('border-red-300', 'border-green-300');
+                return;
+            }
+
+            matchText?.classList.remove('hidden');
+            if (password === confirm) {
+                if (matchText) {
+                    matchText.textContent = '✓ Parolele coincid';
+                    matchText.className = 'mt-1 text-xs text-green-600';
+                }
+                confirmInput?.classList.remove('border-red-300');
+                confirmInput?.classList.add('border-green-300');
+            } else {
+                if (matchText) {
+                    matchText.textContent = '✗ Parolele nu coincid';
+                    matchText.className = 'mt-1 text-xs text-red-600';
+                }
+                confirmInput?.classList.remove('border-green-300');
+                confirmInput?.classList.add('border-red-300');
+            }
+        };
+
+        passwordInput?.addEventListener('input', () => {
+            updateStrengthMeter();
+            checkPasswordMatch();
+        });
+        confirmInput?.addEventListener('input', checkPasswordMatch);
+
+        // Form submit handler
+        const form = document.getElementById('reset-form');
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = passwordInput.value;
+            const password_confirmation = confirmInput.value;
+            const errorEl = document.getElementById('reset-error');
+            const btn = document.getElementById('reset-btn') as HTMLButtonElement;
+
+            if (password !== password_confirmation) {
+                if (errorEl) {
+                    errorEl.textContent = 'Parolele nu coincid';
+                    errorEl.classList.remove('hidden');
+                }
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Se resetează...';
+            errorEl?.classList.add('hidden');
+
+            try {
+                const result = await this.postApi('/auth/reset-password', {
+                    token,
+                    email,
+                    password,
+                    password_confirmation,
+                });
+                if (result.success) {
+                    ToastNotification.show('✓ Parola a fost resetată cu succes!', 'success');
+                    this.navigate('/login');
+                } else {
+                    throw new Error(result.message || 'Eroare la resetare');
+                }
+            } catch (error: any) {
+                console.error('Reset password error:', error);
+                if (errorEl) {
+                    errorEl.textContent = error.message || 'Eroare la resetarea parolei';
+                    errorEl.classList.remove('hidden');
+                }
+                btn.disabled = false;
+                btn.textContent = 'Resetează parola';
+            }
+        });
+    }
+
+    private renderAccount(): void {
+        // Redirect if not logged in
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        const user = this.getUser();
+        const userName = user?.full_name || user?.first_name || 'Utilizator';
+
+        content.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900">Contul meu</h1>
+                        <p class="text-gray-600">Bun venit, ${userName?.split(' ')[0] || userName}!</p>
+                    </div>
+                    <button id="logout-btn" class="px-4 py-2 text-red-600 hover:text-red-700 font-medium">
+                        Deconectare
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <a href="/account/orders" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
+                        <div class="text-primary mb-3">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Comenzile mele</h3>
+                        <p class="text-gray-600 text-sm">Vezi istoricul comenzilor</p>
+                    </a>
+                    <a href="/account/tickets" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
+                        <div class="text-primary mb-3">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Biletele mele</h3>
+                        <p class="text-gray-600 text-sm">Accesează biletele tale</p>
+                    </a>
+                    <a href="/account/watchlist" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
+                        <div class="text-primary mb-3">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Evenimente favorite</h3>
+                        <p class="text-gray-600 text-sm">Vezi watchlist-ul tău</p>
+                    </a>
+                    <a href="/account/profile" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
+                        <div class="text-primary mb-3">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Profil</h3>
+                        <p class="text-gray-600 text-sm">Editează datele tale</p>
+                    </a>
+                    ${this.isGamificationEnabled() ? `
+                    <a href="/account/points" class="block p-6 bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg shadow hover:shadow-md transition border border-amber-200">
+                        <div class="text-amber-600 mb-3">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-amber-900">Punctele mele</h3>
+                        <p class="text-amber-700 text-sm">Vezi și folosește punctele de fidelitate</p>
+                    </a>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+
+        // Setup logout handler
+        const logoutBtn = document.getElementById('logout-btn');
+        logoutBtn?.addEventListener('click', async () => {
+            try {
+                await this.postApi('/auth/logout', {});
+            } catch {
+                // Ignore errors
+            }
+            this.clearAuthState();
+            this.navigate('/');
+        });
+    }
+
+    private async renderOrders(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4 py-6 md:py-8">
+                <a href="/account" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 md:mb-6 text-sm">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Înapoi
+                </a>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Comenzile Mele</h1>
+                <div id="orders-list" class="space-y-3">
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-20"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-20"></div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const response = await this.fetchApi('/account/orders');
+            const orders = response.data;
+
+            const ordersListEl = document.getElementById('orders-list');
+            if (ordersListEl) {
+                if (orders && orders.length > 0) {
+                    ordersListEl.innerHTML = orders.map((order: any) => `
+                        <a href="/account/orders/${order.id}" class="block bg-white rounded-lg shadow p-4 md:p-5 hover:shadow-lg transition">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
+                                <div>
+                                    <h3 class="text-sm md:text-base font-semibold text-gray-900">${order.order_number}</h3>
+                                    <p class="text-xs md:text-sm text-gray-500">${order.date}</p>
+                                </div>
+                                <div class="flex items-center gap-2 sm:flex-col sm:items-end">
+                                    <span class="text-base md:text-lg font-bold text-gray-900">${order.total} ${order.currency}</span>
+                                    <span class="inline-block px-2 py-0.5 text-[10px] md:text-xs font-medium rounded-full ${
+                                        order.status === 'paid' ? 'bg-green-100 text-green-800' :
+                                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                        order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                        'bg-gray-100 text-gray-800'
+                                    }">
+                                        ${order.status_label}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="border-t pt-3">
+                                <p class="text-xs md:text-sm text-gray-600 mb-1.5">${order.items_count} bilet${order.items_count > 1 ? 'e' : ''}</p>
+                                <div class="space-y-0.5">
+                                    ${order.tickets.slice(0, 2).map((ticket: any) => `
+                                        <p class="text-xs md:text-sm text-gray-600 truncate">• ${ticket.event_name} - ${ticket.ticket_type} ${ticket.quantity > 1 ? `(×${ticket.quantity})` : ''}</p>
+                                    `).join('')}
+                                    ${order.tickets.length > 2 ? `<p class="text-xs text-gray-400">+${order.tickets.length - 2} mai multe...</p>` : ''}
+                                </div>
+                            </div>
+                            <div class="mt-3 pt-3 border-t flex justify-end">
+                                <span class="text-xs md:text-sm text-primary hover:text-primary-dark font-medium inline-flex items-center">
+                                    Vezi detalii
+                                    <svg class="w-3.5 h-3.5 md:w-4 md:h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </a>
+                    `).join('');
+                } else {
+                    ordersListEl.innerHTML = `
+                        <div class="bg-white rounded-lg shadow p-8 text-center">
+                            <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <p class="text-gray-600">Nu ai comenzi încă</p>
+                        </div>
+                    `;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading orders:', error);
+            const ordersListEl = document.getElementById('orders-list');
+            if (ordersListEl) {
+                ordersListEl.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                        <p class="text-red-700">Eroare la încărcarea comenzilor</p>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    private async renderTickets(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4 py-6 md:py-8">
+                <a href="/account" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 md:mb-6 text-sm">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Înapoi
+                </a>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Biletele Mele</h1>
+                <div id="tickets-list" class="space-y-3">
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const response = await this.fetchApi('/account/tickets');
+            const tickets = response.data;
+
+            const ticketsListEl = document.getElementById('tickets-list');
+            if (ticketsListEl) {
+                if (tickets && tickets.length > 0) {
+                    ticketsListEl.innerHTML = `
+                        <div class="bg-white rounded-lg shadow overflow-hidden">
+                            <div class="divide-y divide-gray-100">
+                                ${tickets.map((ticket: any) => `
+                                    <div class="p-3 md:p-4 hover:bg-gray-50 transition">
+                                        <div class="flex items-start gap-3 md:gap-4">
+                                            <img src="${ticket.qr_code}" alt="QR" class="w-14 h-14 md:w-16 md:h-16 rounded flex-shrink-0">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex flex-wrap items-center gap-1.5 md:gap-2 mb-1">
+                                                    <h3 class="font-semibold text-gray-900 text-sm md:text-base line-clamp-1">${ticket.event_name}</h3>
+                                                    <span class="inline-block px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-medium rounded-full whitespace-nowrap ${
+                                                        ticket.status === 'valid' || ticket.status === 'pending' ? 'bg-green-100 text-green-700' :
+                                                        ticket.status === 'used' ? 'bg-blue-100 text-blue-700' :
+                                                        ticket.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                        'bg-gray-100 text-gray-700'
+                                                    }">${ticket.status_label}</span>
+                                                </div>
+                                                <div class="text-xs md:text-sm text-gray-600 space-y-0.5">
+                                                    <p>${ticket.ticket_type}</p>
+                                                    ${ticket.date ? `<p>${new Date(ticket.date).toLocaleDateString('ro-RO', {day: 'numeric', month: 'short', year: 'numeric'})}</p>` : ''}
+                                                    ${ticket.venue ? `<p class="truncate">📍 ${ticket.venue}</p>` : ''}
+                                                    ${ticket.seat_label ? `<p>💺 ${ticket.seat_label}</p>` : ''}
+                                                </div>
+                                                ${ticket.beneficiary?.name ? `
+                                                    <p class="text-xs text-gray-500 mt-1">👤 ${ticket.beneficiary.name}</p>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                        <div class="mt-3 flex items-center justify-between">
+                                            <p class="text-[10px] md:text-xs text-gray-400 font-mono">${ticket.code}</p>
+                                            <button
+                                                class="view-ticket-btn bg-primary text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg hover:bg-primary-dark transition text-xs md:text-sm font-medium"
+                                            data-ticket-id="${ticket.id}"
+                                            data-ticket-code="${ticket.code}"
+                                            data-ticket-qr="${ticket.qr_code}"
+                                            data-event-name="${ticket.event_name || ''}"
+                                            data-ticket-type="${ticket.ticket_type || ''}"
+                                            data-date="${ticket.date || ''}"
+                                            data-venue="${ticket.venue || ''}"
+                                            data-seat="${ticket.seat_label || ''}"
+                                            data-status="${ticket.status || ''}"
+                                            data-status-label="${ticket.status_label || ''}"
+                                            data-beneficiary-name="${ticket.beneficiary?.name || ''}"
+                                                data-beneficiary-email="${ticket.beneficiary?.email || ''}">
+                                                Detalii
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+
+                    // Attach event listeners to ticket detail buttons
+                    document.querySelectorAll('.view-ticket-btn').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            const btn = e.currentTarget as HTMLElement;
+                            const ticketData = {
+                                id: btn.dataset.ticketId || '',
+                                code: btn.dataset.ticketCode || '',
+                                qr_code: btn.dataset.ticketQr || '',
+                                event_name: btn.dataset.eventName || '',
+                                ticket_type: btn.dataset.ticketType || '',
+                                date: btn.dataset.date || '',
+                                venue: btn.dataset.venue || '',
+                                seat_label: btn.dataset.seat || '',
+                                status: btn.dataset.status || '',
+                                status_label: btn.dataset.statusLabel || '',
+                                beneficiary: {
+                                    name: btn.dataset.beneficiaryName || '',
+                                    email: btn.dataset.beneficiaryEmail || ''
+                                }
+                            };
+                            this.showTicketDetailModal(ticketData);
+                        });
+                    });
+                } else {
+                    ticketsListEl.innerHTML = `
+                        <div class="col-span-2 bg-white rounded-lg shadow p-8 text-center">
+                            <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                            </svg>
+                            <p class="text-gray-600">Nu ai bilete încă</p>
+                        </div>
+                    `;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading tickets:', error);
+            const ticketsListEl = document.getElementById('tickets-list');
+            if (ticketsListEl) {
+                ticketsListEl.innerHTML = `
+                    <div class="col-span-2 bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                        <p class="text-red-700">Eroare la încărcarea biletelor</p>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    private async renderOrderDetail(params: Record<string, string>): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4 py-6 md:py-8">
+                <a href="/account/orders" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 md:mb-6 text-sm">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Înapoi
+                </a>
+                <div id="order-detail-container">
+                    <div class="animate-pulse space-y-4">
+                        <div class="bg-gray-200 h-8 w-1/3 rounded"></div>
+                        <div class="bg-gray-200 h-48 rounded-lg"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const response = await this.fetchApi(`/account/orders/${params.id}`);
+            const order = response.data;
+
+            const containerEl = document.getElementById('order-detail-container');
+            if (containerEl) {
+                containerEl.innerHTML = `
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Comanda ${order.order_number}</h1>
+
+                    <div class="bg-white rounded-lg shadow p-4 md:p-6 mb-4 md:mb-6">
+                        <div class="grid grid-cols-2 gap-3 md:gap-4">
+                            <div>
+                                <p class="text-xs md:text-sm text-gray-500">Status</p>
+                                <span class="inline-block mt-1 px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
+                                    order.status === 'paid' ? 'bg-green-100 text-green-800' :
+                                    order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                                }">
+                                    ${order.status_label || order.status}
+                                </span>
+                            </div>
+                            <div>
+                                <p class="text-xs md:text-sm text-gray-500">Data</p>
+                                <p class="text-sm md:text-base font-medium text-gray-900">${order.date}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs md:text-sm text-gray-500">Plată</p>
+                                <p class="text-sm md:text-base font-medium text-gray-900">${order.meta?.payment_method || 'Card'}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs md:text-sm text-gray-500">Total</p>
+                                <p class="text-base md:text-lg font-bold text-primary">${order.total} ${order.currency || 'RON'}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2 class="text-base md:text-lg font-semibold text-gray-900 mb-3">Bilete (${order.items_count})</h2>
+                    <div class="space-y-4">
+                        ${(order.events || []).map((eventGroup: any) => `
+                            <div class="bg-white rounded-lg shadow overflow-hidden">
+                                <div class="bg-gray-50 p-3 md:p-4 border-b">
+                                    <h3 class="font-semibold text-gray-900 text-sm md:text-base">${eventGroup.event?.title || 'Eveniment'}</h3>
+                                    ${eventGroup.venue ? `
+                                        <p class="text-xs md:text-sm text-gray-600">${eventGroup.venue.name}${eventGroup.venue.city ? `, ${eventGroup.venue.city}` : ''}</p>
+                                    ` : ''}
+                                    ${eventGroup.event?.date ? `
+                                        <p class="text-xs md:text-sm text-gray-500">${new Date(eventGroup.event.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' })}${eventGroup.event.time ? ` • ${eventGroup.event.time}` : ''}</p>
+                                    ` : ''}
+                                </div>
+                                <div class="divide-y">
+                                    ${(eventGroup.tickets || []).map((ticket: any) => `
+                                        <div class="p-3 md:p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                            <div class="flex-1">
+                                                <p class="font-medium text-gray-900">${ticket.ticket_type}</p>
+                                                ${ticket.seat_label ? `<p class="text-sm text-gray-600">💺 Loc: ${ticket.seat_label}</p>` : ''}
+                                                <p class="text-xs text-gray-500 font-mono mt-1">${ticket.code}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="inline-block px-2 py-1 text-xs rounded-full ${
+                                                    ticket.status === 'valid' ? 'bg-green-100 text-green-700' :
+                                                    ticket.status === 'used' ? 'bg-gray-100 text-gray-700' :
+                                                    'bg-red-100 text-red-700'
+                                                }">${ticket.status_label || ticket.status}</span>
+                                                ${ticket.price ? `<p class="font-medium mt-1">${ticket.price} ${ticket.currency || order.currency || 'RON'}</p>` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    ${order.shop_order ? `
+                        <h2 class="text-base md:text-lg font-semibold text-gray-900 mt-6 mb-3">Produse comandate</h2>
+                        <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+                            <div class="divide-y">
+                                ${order.shop_order.items.map((item: any) => `
+                                    <div class="p-3 md:p-4 flex items-center gap-3">
+                                        ${item.image_url ? `
+                                            <img src="${item.image_url}" alt="${item.title}" class="w-12 h-12 md:w-16 md:h-16 object-cover rounded">
+                                        ` : `
+                                            <div class="w-12 h-12 md:w-16 md:h-16 bg-gray-100 rounded flex items-center justify-center">
+                                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                                </svg>
+                                            </div>
+                                        `}
+                                        <div class="flex-1">
+                                            <p class="font-medium text-gray-900">${item.title}</p>
+                                            ${item.variant_name ? `<p class="text-sm text-gray-500">${item.variant_name}</p>` : ''}
+                                            <p class="text-xs text-gray-400">Cantitate: ${item.quantity}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="font-medium">${(item.total_cents / 100).toFixed(2)} ${order.shop_order.currency}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="bg-gray-50 p-3 md:p-4 border-t">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-500">Subtotal produse</span>
+                                    <span>${(order.shop_order.subtotal_cents / 100).toFixed(2)} ${order.shop_order.currency}</span>
+                                </div>
+                                ${order.shop_order.shipping_cents > 0 ? `
+                                    <div class="flex justify-between text-sm mt-1">
+                                        <span class="text-gray-500">Transport</span>
+                                        <span>${(order.shop_order.shipping_cents / 100).toFixed(2)} ${order.shop_order.currency}</span>
+                                    </div>
+                                ` : ''}
+                                <div class="flex justify-between font-medium mt-2 pt-2 border-t">
+                                    <span>Total produse</span>
+                                    <span>${(order.shop_order.total_cents / 100).toFixed(2)} ${order.shop_order.currency}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${order.shop_order.shipping_address ? `
+                            <h2 class="text-base md:text-lg font-semibold text-gray-900 mb-3">Livrare</h2>
+                            <div class="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="text-sm text-gray-500 mb-1">Adresa de livrare</p>
+                                        <p class="font-medium">${order.shop_order.shipping_address.name || ''}</p>
+                                        <p class="text-sm text-gray-700">${order.shop_order.shipping_address.line1 || ''}</p>
+                                        ${order.shop_order.shipping_address.line2 ? `<p class="text-sm text-gray-700">${order.shop_order.shipping_address.line2}</p>` : ''}
+                                        <p class="text-sm text-gray-700">${order.shop_order.shipping_address.city || ''}, ${order.shop_order.shipping_address.postal_code || ''}</p>
+                                        <p class="text-sm text-gray-700">${order.shop_order.shipping_address.country || ''}</p>
+                                    </div>
+                                    <div>
+                                        ${order.shop_order.shipping_method ? `
+                                            <p class="text-sm text-gray-500 mb-1">Metodă de livrare</p>
+                                            <p class="font-medium">${order.shop_order.shipping_method}</p>
+                                        ` : ''}
+                                        ${order.shop_order.estimated_delivery ? `
+                                            <p class="text-sm text-gray-500 mt-3 mb-1">Data estimată livrare</p>
+                                            <p class="font-medium">${order.shop_order.estimated_delivery}</p>
+                                        ` : ''}
+                                        ${order.shop_order.tracking_number ? `
+                                            <p class="text-sm text-gray-500 mt-3 mb-1">Cod urmărire</p>
+                                            <p class="font-medium font-mono">${order.shop_order.tracking_number}</p>
+                                            ${order.shop_order.tracking_url ? `
+                                                <a href="${order.shop_order.tracking_url}" target="_blank"
+                                                   class="inline-flex items-center text-sm text-primary hover:underline mt-1">
+                                                    Urmărește coletul
+                                                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                                    </svg>
+                                                </a>
+                                            ` : ''}
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <div class="mt-4 pt-4 border-t">
+                                    <span class="inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                                        order.shop_order.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                                        order.shop_order.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
+                                        order.shop_order.status === 'processing' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-gray-100 text-gray-700'
+                                    }">
+                                        ${order.shop_order.status_label}
+                                    </span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    ` : ''}
+
+                    ${order.meta ? `
+                        <h2 class="text-base md:text-lg font-semibold text-gray-900 mt-6 mb-3">Informații client</h2>
+                        <div class="bg-white rounded-lg shadow p-4 md:p-6">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-gray-500">Nume</p>
+                                    <p class="font-medium">${order.meta.customer_name || '-'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Email</p>
+                                    <p class="font-medium">${order.meta.customer_email || '-'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading order:', error);
+            const containerEl = document.getElementById('order-detail-container');
+            if (containerEl) {
+                containerEl.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                        <p class="text-red-700">Eroare la încărcarea comenzii</p>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    private renderMyEvents(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <a href="/account" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Account
+                </a>
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">My Events</h1>
+                <p class="text-gray-600 mb-8">Upcoming events you have tickets for</p>
+                <div id="my-events-list" class="space-y-4">
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-32"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-32"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    
+    private async renderWatchlist(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        try {
+            const data = await this.fetchApi('/account/watchlist');
+
+            const eventsHtml = data.data.length > 0 ? data.data.map((event: any) => `
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="md:flex">
+                        <div class="md:w-48 h-48 md:h-auto">
+                            ${event.poster_url
+                                ? `<img src="${event.poster_url}" alt="${event.title}" class="w-full h-full object-cover">`
+                                : `<div class="w-full h-full bg-gray-200 flex items-center justify-center">
+                                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>`
+                            }
+                        </div>
+                        <div class="p-6 flex-1">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900 mb-2">${event.title}</h3>
+                                    <div class="space-y-1 text-sm text-gray-600">
+                                        <p>
+                                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                            ${new Date(event.start_date).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                            ${event.start_time ? ` • ${event.start_time}` : ''}
+                                        </p>
+                                        ${event.venue ? `
+                                            <p>
+                                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                </svg>
+                                                ${event.venue.name}${event.venue.city ? `, ${event.venue.city}` : ''}
+                                            </p>
+                                        ` : ''}
+                                        <p class="text-primary font-semibold">
+                                            ${event.is_sold_out ? 'Sold Out' : `De la ${event.price_from} ${event.currency}`}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button class="remove-watchlist-btn text-red-600 hover:text-red-700 p-2" data-event-id="${event.id}">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="mt-4 flex gap-3">
+                                <a href="/event/${event.slug}" class="inline-block px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition">
+                                    Vezi detalii
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('') : `
+                <div class="text-center py-16">
+                    <svg class="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Niciun eveniment în watchlist</h2>
+                    <p class="text-gray-600 mb-6">Adaugă evenimente favorite pentru a le urmări</p>
+                    <a href="/events" class="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition">
+                        Explorează evenimente
+                    </a>
+                </div>
+            `;
+
+            content.innerHTML = `
+                <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div class="flex justify-between items-center mb-8">
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">Evenimente favorite</h1>
+                            <p class="text-gray-600">Evenimente pe care le urmărești</p>
+                        </div>
+                        <a href="/account" class="text-primary hover:text-primary-dark font-medium">← Înapoi la cont</a>
+                    </div>
+
+                    <div class="space-y-4">
+                        ${eventsHtml}
+                    </div>
+                </div>
+            `;
+
+            // Add event listeners for remove buttons
+            document.querySelectorAll('.remove-watchlist-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const target = e.currentTarget as HTMLElement;
+                    const eventId = target.dataset.eventId;
+
+                    if (confirm('Sigur vrei să ștergi acest eveniment din watchlist?')) {
+                        try {
+                            await this.deleteApi(`/account/watchlist/${eventId}`);
+                            ToastNotification.show('✓ Eveniment șters din watchlist', 'success');
+                            this.renderWatchlist();
+                        } catch (error) {
+                            ToastNotification.show('Eroare la ștergerea evenimentului', 'error');
+                        }
+                    }
+                });
+            });
+        } catch (error) {
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                    <p class="text-red-600">Eroare la încărcarea watchlist-ului</p>
+                </div>
+            `;
+        }
+    }
+private async renderProfile(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <a href="/account" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Înapoi la Cont
+                </a>
+                <h1 class="text-3xl font-bold text-gray-900 mb-8">Profilul Meu</h1>
+                <div id="profile-form" class="bg-white rounded-lg shadow p-6">
+                    <div class="animate-pulse space-y-4">
+                        <div class="bg-gray-200 h-10 rounded"></div>
+                        <div class="bg-gray-200 h-10 rounded"></div>
+                        <div class="bg-gray-200 h-10 rounded"></div>
+                        <div class="bg-gray-200 h-10 w-1/3 rounded"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const response = await this.fetchApi('/account/profile');
+            const profile = response.data;
+
+            const profileFormEl = document.getElementById('profile-form');
+            if (profileFormEl) {
+                profileFormEl.innerHTML = `
+                    <form id="update-profile-form" class="space-y-6">
+                        <div id="profile-message"></div>
+
+                        <div>
+                            <label for="first_name" class="block text-sm font-medium text-gray-700 mb-2">Prenume</label>
+                            <input type="text" id="first_name" name="first_name" value="${profile.first_name || ''}"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+
+                        <div>
+                            <label for="last_name" class="block text-sm font-medium text-gray-700 mb-2">Nume</label>
+                            <input type="text" id="last_name" name="last_name" value="${profile.last_name || ''}"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                            <input type="email" id="email" value="${profile.email || ''}" disabled
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                        </div>
+
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Telefon</label>
+                            <input type="tel" id="phone" name="phone" value="${profile.phone || ''}"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+
+                        <div>
+                            <label for="city" class="block text-sm font-medium text-gray-700 mb-2">Oraș</label>
+                            <input type="text" id="city" name="city" value="${profile.city || ''}"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+
+                        <div>
+                            <label for="country" class="block text-sm font-medium text-gray-700 mb-2">Țară</label>
+                            <input type="text" id="country" name="country" value="${profile.country || ''}"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+
+                        <div>
+                            <label for="date_of_birth" class="block text-sm font-medium text-gray-700 mb-2">Data Nașterii</label>
+                            <input type="date" id="date_of_birth" name="date_of_birth" value="${profile.date_of_birth || ''}"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+
+                        <div class="border-t pt-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Schimbă Parola</h3>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="current_password" class="block text-sm font-medium text-gray-700 mb-2">Parola Curentă</label>
+                                    <input type="password" id="current_password" name="current_password"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                </div>
+
+                                <div>
+                                    <label for="new_password" class="block text-sm font-medium text-gray-700 mb-2">Parola Nouă</label>
+                                    <input type="password" id="new_password" name="new_password"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                </div>
+
+                                <div>
+                                    <label for="new_password_confirmation" class="block text-sm font-medium text-gray-700 mb-2">Confirmă Parola Nouă</label>
+                                    <input type="password" id="new_password_confirmation" name="new_password_confirmation"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition">
+                            Salvează Modificările
+                        </button>
+
+                        <div class="border-t pt-6 mt-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">Zona Periculoasă</h3>
+                            <p class="text-sm text-gray-600 mb-4">Odată ce îți ștergi contul, nu mai există cale de întoarcere. Te rog fii sigur.</p>
+                            <button type="button" id="delete-account-btn" class="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-red-700 transition">
+                                Șterge Contul
+                            </button>
+                        </div>
+                    </form>
+                `;
+
+                // Handle form submission
+                const form = document.getElementById('update-profile-form') as HTMLFormElement;
+                if (form) {
+                    form.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const messageEl = document.getElementById('profile-message');
+
+                        try {
+                            const formData = new FormData(form);
+                            const data: any = {};
+                            formData.forEach((value, key) => {
+                                if (value) data[key] = value;
+                            });
+
+                            const response = await this.fetchApi('/account/profile', {}, {
+                                method: 'PUT',
+                                body: JSON.stringify(data)
+                            });
+
+                            if (messageEl) {
+                                messageEl.innerHTML = `
+                                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                        <p class="text-green-700">${response.message || 'Profil actualizat cu succes!'}</p>
+                                    </div>
+                                `;
+                            }
+
+                            // Clear password fields
+                            (document.getElementById('current_password') as HTMLInputElement).value = '';
+                            (document.getElementById('new_password') as HTMLInputElement).value = '';
+                            (document.getElementById('new_password_confirmation') as HTMLInputElement).value = '';
+                        } catch (error: any) {
+                            if (messageEl) {
+                                messageEl.innerHTML = `
+                                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                        <p class="text-red-700">${error.message || 'Eroare la actualizarea profilului'}</p>
+                                    </div>
+                                `;
+                            }
+                        }
+                    });
+                }
+
+                // Handle delete account
+                const deleteBtn = document.getElementById('delete-account-btn');
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', async () => {
+                        const confirmation1 = confirm('Ești absolut sigur că vrei să îți ștergi contul? Această acțiune NU poate fi anulată!');
+                        if (!confirmation1) return;
+
+                        const confirmation2 = confirm('Confirmă din nou: Toate datele tale, comenzile și biletele vor fi șterse permanent. Vrei să continui?');
+                        if (!confirmation2) return;
+
+                        try {
+                            await this.deleteApi('/account/delete');
+                            alert('Contul tău a fost șters cu succes.');
+                            this.clearAuthState();
+                            this.navigate('/');
+                        } catch (error: any) {
+                            alert(error.message || 'Eroare la ștergerea contului');
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            const profileFormEl = document.getElementById('profile-form');
+            if (profileFormEl) {
+                profileFormEl.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                        <p class="text-red-700">Eroare la încărcarea profilului</p>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    private renderThankYou(params: Record<string, string>): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-4">Thank You!</h1>
+                <p class="text-gray-600 mb-8">Your order has been confirmed. Check your email for tickets.</p>
+                <div id="order-confirmation-${params.orderNumber}" class="bg-gray-50 rounded-lg p-6 text-left mb-8">
+                    <div class="animate-pulse space-y-3">
+                        <div class="bg-gray-200 h-4 w-1/2 rounded"></div>
+                        <div class="bg-gray-200 h-4 w-3/4 rounded"></div>
+                    </div>
+                </div>
+                <a href="/account/tickets" class="inline-flex items-center px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
+                    View My Tickets
+                </a>
+            </div>
+        `;
+    }
+
+    private async renderTerms(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="bg-gray-200 h-8 w-1/3 rounded"></div>
+                    <div class="bg-gray-200 h-4 w-full rounded"></div>
+                    <div class="bg-gray-200 h-4 w-full rounded"></div>
+                    <div class="bg-gray-200 h-4 w-2/3 rounded"></div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const data = await this.fetchApi('/pages/terms');
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">${data.data.title}</h1>
+                    <div class="prose max-w-none">
+                        ${data.data.content}
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">Terms & Conditions</h1>
+                    <p class="text-gray-600">Terms page not available.</p>
+                </div>
+            `;
+        }
+    }
+
+    private async renderPrivacy(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="bg-gray-200 h-8 w-1/3 rounded"></div>
+                    <div class="bg-gray-200 h-4 w-full rounded"></div>
+                    <div class="bg-gray-200 h-4 w-full rounded"></div>
+                    <div class="bg-gray-200 h-4 w-2/3 rounded"></div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const data = await this.fetchApi('/pages/privacy');
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">${data.data.title}</h1>
+                    <div class="prose max-w-none">
+                        ${data.data.content}
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">Privacy Policy</h1>
+                    <p class="text-gray-600">Privacy page not available.</p>
+                </div>
+            `;
+        }
+    }
+
+    private async renderPastEvents(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        // Set up the container for past events
+        content.innerHTML = `
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div id="past-events-container">
+                    <div class="animate-pulse space-y-6">
+                        <div class="bg-gray-200 h-10 w-1/4 rounded"></div>
+                        <div class="flex gap-4 mb-8">
+                            <div class="bg-gray-200 h-10 w-32 rounded"></div>
+                            <div class="bg-gray-200 h-10 w-40 rounded"></div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="bg-gray-200 h-64 rounded-lg"></div>
+                            <div class="bg-gray-200 h-64 rounded-lg"></div>
+                            <div class="bg-gray-200 h-64 rounded-lg"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Fetch and render past events
+        try {
+            const response = await this.fetchApi('/events/past');
+            const events = response.data?.events || response.data || [];
+
+            const container = document.getElementById('past-events-container');
+            if (!container) return;
+
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">Evenimente trecute</h1>
+                    <p class="text-gray-500">Nu există evenimente trecute.</p>
+                `;
+                return;
+            }
+
+            // Group events by month
+            const eventsByMonth = this.groupEventsByMonth(events);
+
+            container.innerHTML = `
+                <h1 class="text-3xl font-bold text-gray-900 mb-8">Evenimente trecute</h1>
+                ${this.renderPastEventsByMonth(eventsByMonth)}
+            `;
+        } catch (error) {
+            console.error('Failed to load past events:', error);
+            const container = document.getElementById('past-events-container');
+            if (container) {
+                container.innerHTML = `
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">Evenimente trecute</h1>
+                    <p class="text-red-500">Nu s-au putut încărca evenimentele trecute.</p>
+                `;
+            }
+        }
+    }
+
+    private groupEventsByMonth(events: any[]): Map<string, any[]> {
+        const grouped = new Map<string, any[]>();
+
+        events.forEach(event => {
+            const date = new Date(event.start_date || event.event_date);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+            if (!grouped.has(monthKey)) {
+                grouped.set(monthKey, []);
+            }
+            grouped.get(monthKey)!.push(event);
+        });
+
+        // Sort by month descending (most recent first)
+        return new Map([...grouped.entries()].sort((a, b) => b[0].localeCompare(a[0])));
+    }
+
+    private renderPastEventsByMonth(eventsByMonth: Map<string, any[]>): string {
+        const monthNames = [
+            'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+            'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
+        ];
+
+        let html = '';
+
+        eventsByMonth.forEach((events, monthKey) => {
+            const [year, month] = monthKey.split('-');
+            const monthName = monthNames[parseInt(month) - 1];
+
+            html += `
+                <div class="mb-10">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4 pb-2 border-b-2 border-gray-200">
+                        ${monthName} ${year}
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${events.map(event => this.renderPastEventCard(event)).join('')}
+                    </div>
+                </div>
+            `;
+        });
+
+        return html;
+    }
+
+    private renderPastEventCard(event: any): string {
+        const date = new Date(event.start_date || event.event_date);
+        const formattedDate = date.toLocaleDateString('ro-RO', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+
+        const imageUrl = event.poster_url || event.hero_image_url || event.image;
+        const eventUrl = `/event/${event.slug}`;
+
+        return `
+            <a href="${eventUrl}" class="block bg-white rounded-lg shadow-sm border overflow-hidden opacity-90 hover:opacity-100 hover:shadow-md transition cursor-pointer">
+                ${imageUrl
+                    ? `<div class="relative">
+                        <img src="${imageUrl}" alt="${event.title}" class="w-full h-40 object-cover" style="filter: grayscale(30%);">
+                        <span class="absolute top-2 right-2 bg-gray-700 text-white text-xs px-2 py-1 rounded">Încheiat</span>
+                       </div>`
+                    : `<div class="relative h-40 bg-gray-200 flex items-center justify-center">
+                        <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span class="absolute top-2 right-2 bg-gray-700 text-white text-xs px-2 py-1 rounded">Încheiat</span>
+                       </div>`
+                }
+                <div class="p-4">
+                    <h3 class="font-semibold text-gray-900 mb-1 truncate">${event.title}</h3>
+                    <p class="text-sm text-gray-500">${formattedDate}</p>
+                    ${event.venue?.name ? `<p class="text-sm text-gray-400">${event.venue.name}</p>` : ''}
+                </div>
+            </a>
+        `;
+    }
+
+    private async renderPage(params: Record<string, string>): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="bg-gray-200 h-8 w-1/3 rounded"></div>
+                    <div class="bg-gray-200 h-4 w-full rounded"></div>
+                    <div class="bg-gray-200 h-4 w-full rounded"></div>
+                    <div class="bg-gray-200 h-4 w-2/3 rounded"></div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const data = await this.fetchApi(`/pages/${params.slug}`);
+
+            // Check if page uses page builder
+            if (data.data.page_type === 'builder' && data.data.layout?.blocks) {
+                content.innerHTML = `<div id="page-content"></div>`;
+                PageBuilderModule.updateLayout(data.data.layout as PageLayout, 'page-content');
+
+                // Register for preview mode updates
+                if (PreviewMode.isActive()) {
+                    PreviewMode.onLayoutUpdate((layout) => {
+                        PageBuilderModule.updateLayout(layout as PageLayout, 'page-content');
+                    });
+                }
+                return;
+            }
+
+            // Standard content page
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">${data.data.title}</h1>
+                    <div class="prose max-w-none">
+                        ${data.data.content}
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            this.render404();
+        }
+    }
+
+    private async renderBlog(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-8">Blog</h1>
+                <div id="blog-list">
+                    <div class="animate-pulse space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            ${[1,2,3].map(() => `
+                                <div class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden">
+                                    <div class="bg-gray-200 dark:bg-gray-700 h-48"></div>
+                                    <div class="p-5 space-y-3">
+                                        <div class="bg-gray-200 dark:bg-gray-700 h-4 w-1/4 rounded"></div>
+                                        <div class="bg-gray-200 dark:bg-gray-700 h-6 w-3/4 rounded"></div>
+                                        <div class="bg-gray-200 dark:bg-gray-700 h-4 w-full rounded"></div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const data = await this.fetchApi('/blog');
+            const articles = data.data?.articles || [];
+            const pagination = data.data?.pagination;
+
+            // Also fetch categories
+            let categories: any[] = [];
+            try {
+                const catData = await this.fetchApi('/blog/categories');
+                categories = catData.data?.categories || [];
+            } catch (e) {
+                console.log('Could not load blog categories');
+            }
+
+            const blogList = document.getElementById('blog-list');
+            if (!blogList) return;
+
+            if (articles.length === 0) {
+                blogList.innerHTML = `
+                    <div class="text-center py-12">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                        </svg>
+                        <p class="mt-4 text-gray-500 dark:text-gray-400">No articles yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            blogList.innerHTML = `
+                ${categories.length > 0 ? `
+                    <div class="mb-8 flex flex-wrap gap-2">
+                        <a href="/blog" class="px-4 py-2 rounded-full text-sm font-medium bg-primary-600 text-white">All</a>
+                        ${categories.map((cat: any) => `
+                            <a href="/blog?category=${cat.slug}" class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
+                                ${cat.name} (${cat.articles_count})
+                            </a>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${articles.map((article: any) => this.renderBlogCard(article)).join('')}
+                </div>
+            `;
+        } catch (error: any) {
+            const blogList = document.getElementById('blog-list');
+            if (blogList) {
+                if (error.response?.status === 403) {
+                    blogList.innerHTML = `
+                        <div class="text-center py-12">
+                            <p class="text-gray-500 dark:text-gray-400">Blog is not available.</p>
+                        </div>
+                    `;
+                } else {
+                    blogList.innerHTML = `
+                        <div class="text-center py-12">
+                            <p class="text-red-500">Failed to load blog. Please try again.</p>
+                        </div>
+                    `;
+                }
+            }
+            console.error('Failed to load blog:', error);
+        }
+    }
+
+    private renderBlogCard(article: any): string {
+        const publishedDate = article.published_at
+            ? new Date(article.published_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            })
+            : '';
+
+        return `
+            <article class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700">
+                <a href="/blog/${article.slug}" class="block">
+                    ${article.featured_image
+                        ? `<div class="aspect-[16/9] overflow-hidden">
+                            <img src="${article.featured_image}"
+                                 alt="${article.featured_image_alt || article.title}"
+                                 class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                           </div>`
+                        : `<div class="aspect-[16/9] bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                            <svg class="w-16 h-16 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                            </svg>
+                           </div>`
+                    }
+                </a>
+                <div class="p-5">
+                    ${article.category
+                        ? `<span class="inline-block px-3 py-1 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full mb-3">${article.category}</span>`
+                        : ''
+                    }
+                    <a href="/blog/${article.slug}" class="block group">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2 mb-2">
+                            ${article.title}
+                        </h3>
+                    </a>
+                    ${article.excerpt
+                        ? `<p class="text-gray-600 dark:text-gray-400 text-sm line-clamp-2 mb-4">${article.excerpt}</p>`
+                        : ''
+                    }
+                    <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                        <span>${publishedDate}</span>
+                        <span>${article.reading_time || 1} min read</span>
+                    </div>
+                </div>
+            </article>
+        `;
+    }
+
+    private async renderBlogArticle(params: Record<string, string>): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        const slug = params.slug;
+
+        content.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-6">
+                    <div class="bg-gray-200 dark:bg-gray-700 h-8 w-3/4 rounded"></div>
+                    <div class="bg-gray-200 dark:bg-gray-700 h-4 w-1/2 rounded"></div>
+                    <div class="bg-gray-200 dark:bg-gray-700 h-64 rounded-xl"></div>
+                    <div class="space-y-3">
+                        <div class="bg-gray-200 dark:bg-gray-700 h-4 w-full rounded"></div>
+                        <div class="bg-gray-200 dark:bg-gray-700 h-4 w-full rounded"></div>
+                        <div class="bg-gray-200 dark:bg-gray-700 h-4 w-2/3 rounded"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const data = await this.fetchApi(`/blog/${slug}`);
+            const article = data.data?.article;
+            const related = data.data?.related || [];
+
+            if (!article) {
+                this.render404();
+                return;
+            }
+
+            const publishedDate = article.published_at
+                ? new Date(article.published_at).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                })
+                : '';
+
+            content.innerHTML = `
+                <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <header class="mb-8">
+                        ${article.category
+                            ? `<a href="/blog?category=${article.category_slug}" class="inline-block px-3 py-1 text-sm font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full mb-4 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">${article.category}</a>`
+                            : ''
+                        }
+                        <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">${article.title}</h1>
+                        ${article.subtitle
+                            ? `<p class="text-xl text-gray-600 dark:text-gray-400 mb-6">${article.subtitle}</p>`
+                            : ''
+                        }
+                        <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                            ${article.author ? `<span>By ${article.author}</span>` : ''}
+                            <span>${publishedDate}</span>
+                            <span>${article.reading_time || 1} min read</span>
+                            <span>${article.view_count || 0} views</span>
+                        </div>
+                    </header>
+
+                    ${article.featured_image
+                        ? `<figure class="mb-8">
+                            <img src="${article.featured_image}"
+                                 alt="${article.featured_image_alt || article.title}"
+                                 class="w-full rounded-xl">
+                           </figure>`
+                        : ''
+                    }
+
+                    <div class="prose prose-lg dark:prose-invert max-w-none">
+                        ${article.content_html || article.content || ''}
+                    </div>
+
+                    ${article.tags && article.tags.length > 0
+                        ? `<div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                            <div class="flex flex-wrap gap-2">
+                                ${article.tags.map((tag: string) => `
+                                    <span class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full">#${tag}</span>
+                                `).join('')}
+                            </div>
+                           </div>`
+                        : ''
+                    }
+
+                    ${related.length > 0 ? `
+                        <section class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
+                            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Related Articles</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                ${related.map((rel: any) => `
+                                    <a href="/blog/${rel.slug}" class="block group">
+                                        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                                            ${rel.featured_image
+                                                ? `<img src="${rel.featured_image}" alt="${rel.title}" class="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300">`
+                                                : `<div class="w-full h-32 bg-gradient-to-br from-primary-500 to-primary-700"></div>`
+                                            }
+                                        </div>
+                                        <h3 class="mt-3 font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">${rel.title}</h3>
+                                    </a>
+                                `).join('')}
+                            </div>
+                        </section>
+                    ` : ''}
+
+                    <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <a href="/blog" class="inline-flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:underline">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
+                            Back to Blog
+                        </a>
+                    </div>
+                </article>
+            `;
+
+            // Update page title and meta tags
+            this.updateArticleMetaTags(article);
+        } catch (error) {
+            this.render404();
+            console.error('Failed to load article:', error);
+        }
+    }
+
+    private updateArticleMetaTags(article: any): void {
+        document.title = article.meta_title || article.title;
+
+        // Helper to update or create meta tag
+        const setMetaTag = (selector: string, content: string, attr: 'name' | 'property' = 'name', attrValue?: string) => {
+            if (!content) return;
+            let tag = document.querySelector(selector) as HTMLMetaElement;
+            if (!tag) {
+                tag = document.createElement('meta');
+                tag.setAttribute(attr, attrValue || '');
+                document.head.appendChild(tag);
+            }
+            tag.setAttribute('content', content);
+        };
+
+        // Update meta description
+        setMetaTag('meta[name="description"]', article.meta_description || article.excerpt || '', 'name', 'description');
+
+        // Update OG tags
+        setMetaTag('meta[property="og:title"]', article.og_title || article.title, 'property', 'og:title');
+        setMetaTag('meta[property="og:description"]', article.og_description || article.excerpt || '', 'property', 'og:description');
+        setMetaTag('meta[property="og:type"]', 'article', 'property', 'og:type');
+        setMetaTag('meta[property="og:url"]', window.location.href, 'property', 'og:url');
+
+        if (article.og_image || article.featured_image) {
+            setMetaTag('meta[property="og:image"]', article.og_image || article.featured_image || '', 'property', 'og:image');
+        }
+
+        // Update Twitter Card tags
+        setMetaTag('meta[name="twitter:card"]', 'summary_large_image', 'name', 'twitter:card');
+        setMetaTag('meta[name="twitter:title"]', article.og_title || article.title, 'name', 'twitter:title');
+        setMetaTag('meta[name="twitter:description"]', article.og_description || article.excerpt || '', 'name', 'twitter:description');
+
+        if (article.og_image || article.featured_image) {
+            setMetaTag('meta[name="twitter:image"]', article.og_image || article.featured_image || '', 'name', 'twitter:image');
+        }
+    }
+
+    private render404(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="min-h-[60vh] flex items-center justify-center px-4">
+                <div class="text-center">
+                    <h1 class="text-6xl font-bold text-gray-300 mb-4">404</h1>
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-2">Page Not Found</h2>
+                    <p class="text-gray-600 mb-8">The page you're looking for doesn't exist.</p>
+                    <a href="/" class="inline-flex items-center px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
+                        Go Home
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+
+    private showTicketDetailModal(ticket: any): void {
+        // Create modal backdrop
+        const modalHTML = `
+            <div id="ticket-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                    <!-- Backdrop -->
+                    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+                    <!-- Modal Panel -->
+                    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                            <!-- Close button -->
+                            <button id="close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-500">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+
+                            <!-- Modal content -->
+                            <div class="sm:flex sm:items-start">
+                                <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
+                                        Detalii Bilet
+                                    </h3>
+
+                                    <!-- Event Info -->
+                                    <div class="mb-4">
+                                        <h4 class="text-xl font-semibold text-gray-900 mb-1">${ticket.event_name}</h4>
+                                        <p class="text-sm text-gray-600">${ticket.ticket_type}</p>
+                                    </div>
+
+                                    <!-- Status Badge -->
+                                    <div class="mb-4">
+                                        <span class="inline-block px-3 py-1 text-sm font-medium rounded-full ${
+                                            ticket.status === 'valid' || ticket.status === 'pending' ? 'bg-green-100 text-green-800' :
+                                            ticket.status === 'used' ? 'bg-blue-100 text-blue-800' :
+                                            ticket.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                            'bg-gray-100 text-gray-800'
+                                        }">
+                                            ${ticket.status_label}
+                                        </span>
+                                    </div>
+
+                                    <!-- Event Details -->
+                                    <div class="space-y-2 mb-4">
+                                        ${ticket.date ? `<p class="text-sm text-gray-700"><strong>Dată:</strong> ${new Date(ticket.date).toLocaleDateString('ro-RO', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}</p>` : ''}
+                                        ${ticket.venue ? `<p class="text-sm text-gray-700"><strong>Locație:</strong> ${ticket.venue}</p>` : ''}
+                                        ${ticket.seat_label ? `<p class="text-sm text-gray-700"><strong>Loc:</strong> ${ticket.seat_label}</p>` : ''}
+                                    </div>
+
+                                    <!-- Beneficiary Info -->
+                                    ${ticket.beneficiary && ticket.beneficiary.name ? `
+                                        <div class="border-t pt-3 mb-4">
+                                            <p class="text-xs text-gray-500 mb-1">Beneficiar:</p>
+                                            <p class="text-sm font-medium text-gray-900">${ticket.beneficiary.name}</p>
+                                            ${ticket.beneficiary.email ? `<p class="text-xs text-gray-600">${ticket.beneficiary.email}</p>` : ''}
+                                        </div>
+                                    ` : ''}
+
+                                    <!-- QR Code -->
+                                    <div class="border-t pt-4">
+                                        <div class="flex flex-col items-center">
+                                            <img src="${ticket.qr_code}" alt="QR Code" class="w-48 h-48 rounded-lg mb-3">
+                                            <div class="text-center">
+                                                <p class="text-xs text-gray-500 mb-1">Cod bilet:</p>
+                                                <p class="text-lg font-mono font-bold text-gray-900">${ticket.code}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Download/Print Buttons -->
+                                    <div class="flex space-x-2 mt-6">
+                                        <button id="download-ticket" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium">
+                                            Descarcă Bilet
+                                        </button>
+                                        <button id="print-ticket" class="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition font-medium">
+                                            Printează
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Append modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Attach close handlers
+        const modal = document.getElementById('ticket-modal');
+        const closeBtn = document.getElementById('close-modal');
+        const backdrop = modal?.querySelector('.bg-gray-500');
+
+        const closeModal = () => {
+            modal?.remove();
+        };
+
+        closeBtn?.addEventListener('click', closeModal);
+        backdrop?.addEventListener('click', closeModal);
+
+        // Download button handler
+        document.getElementById('download-ticket')?.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.href = ticket.qr_code;
+            link.download = `bilet-${ticket.code}.png`;
+            link.click();
+        });
+
+        // Print button handler
+        document.getElementById('print-ticket')?.addEventListener('click', () => {
+            const printWindow = window.open('', '_blank');
+            if (printWindow) {
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Bilet ${ticket.code}</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+                                img { max-width: 300px; margin: 20px 0; }
+                                .code { font-size: 18px; font-weight: bold; margin: 10px 0; }
+                            </style>
+                        </head>
+                        <body>
+                            <h1>${ticket.event_name}</h1>
+                            <p>${ticket.ticket_type}</p>
+                            ${ticket.date ? `<p>${new Date(ticket.date).toLocaleDateString('ro-RO', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}</p>` : ''}
+                            ${ticket.venue ? `<p>${ticket.venue}</p>` : ''}
+                            ${ticket.seat_label ? `<p>Loc: ${ticket.seat_label}</p>` : ''}
+                            <img src="${ticket.qr_code}" alt="QR Code">
+                            <p class="code">Cod: ${ticket.code}</p>
+                            ${ticket.beneficiary && ticket.beneficiary.name ? `<p>Beneficiar: ${ticket.beneficiary.name}</p>` : ''}
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                printWindow.print();
+            }
+        });
+    }
+
+    private initCountdown(): void {
+        const container = document.getElementById('countdown-container');
+        if (!container) return;
+
+        const eventDate = container.dataset.eventDate;
+        const eventTime = container.dataset.eventTime;
+        const isCancelled = container.dataset.isCancelled === 'true';
+        const isPostponed = container.dataset.isPostponed === 'true';
+
+        // Don't show countdown for cancelled events or if no date available
+        // For postponed events, we show countdown to the NEW date (already passed in eventDate)
+        if (isCancelled || !eventDate) {
+            container.style.display = 'none';
+            return;
+        }
+
+        // Parse event datetime - handles ISO 8601 format (includes time) or date-only formats
+        let eventDateTime: Date;
+        try {
+            // Try parsing eventDate directly first (it may already include time in ISO 8601 format)
+            eventDateTime = new Date(eventDate);
+
+            // Check if we got a valid date with a meaningful time (not midnight unless midnight is the actual event time)
+            const hasTimeInDate = eventDate.includes('T') || eventDate.includes(' ');
+
+            // If eventDate is date-only and we have a separate eventTime, combine them
+            if (!hasTimeInDate && eventTime && eventTime.match(/^\d{2}:\d{2}/)) {
+                // eventDate is like "2024-03-15", eventTime is like "19:00"
+                const dateOnly = eventDate.split('T')[0]; // Handle any potential timezone suffix
+                eventDateTime = new Date(`${dateOnly}T${eventTime}`);
+            }
+
+            if (isNaN(eventDateTime.getTime())) {
+                console.warn('Countdown: Invalid date', { eventDate, eventTime });
+                container.style.display = 'none';
+                return;
+            }
+        } catch (e) {
+            console.warn('Countdown: Date parsing error', e);
+            container.style.display = 'none';
+            return;
+        }
+
+        // Create countdown elements
+        const wrapper = document.createElement('div');
+        wrapper.className = 'p-6 mb-6 text-white rounded-lg shadow-lg bg-gradient-to-r from-blue-500 to-purple-600';
+
+        const title = document.createElement('h3');
+        title.className = 'mb-3 text-lg font-semibold text-center';
+        title.textContent = isPostponed ? 'Noua dată - Începe în:' : 'Începe în:';
+
+        const timeDisplay = document.createElement('div');
+        timeDisplay.className = 'flex justify-center gap-4 text-center';
+        timeDisplay.id = 'countdown-display';
+
+        wrapper.appendChild(title);
+        wrapper.appendChild(timeDisplay);
+        container.appendChild(wrapper);
+
+        // Update countdown
+        const updateCountdown = () => {
+            const now = new Date().getTime();
+            const distance = eventDateTime.getTime() - now;
+
+            if (distance < 0) {
+                title.textContent = 'Evenimentul a început!';
+                timeDisplay.innerHTML = '';
+                return;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            timeDisplay.innerHTML = `
+                <div class="flex flex-col">
+                    <span class="text-3xl font-bold">${days}</span>
+                    <span class="text-sm">zile</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-3xl font-bold">${hours}</span>
+                    <span class="text-sm">ore</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-3xl font-bold">${minutes}</span>
+                    <span class="text-sm">minute</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-3xl font-bold">${seconds}</span>
+                    <span class="text-sm">secunde</span>
+                </div>
+            `;
+        };
+
+        // Initial update
+        updateCountdown();
+
+        // Update every second
+        setInterval(updateCountdown, 1000);
+    }
+
+    // ========================================
+    // SHOP ROUTES
+    // ========================================
+
+    private renderShop(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-products" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        ${Array(8).fill(0).map(() => '<div class="h-64 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // ShopModule will handle loading via eventBus
+        this.eventBus.emit('route:shop');
+    }
+
+    private renderShopCategory(params: Record<string, string>): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-category-container" data-slug="${params.slug}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        ${Array(8).fill(0).map(() => '<div class="h-64 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-category', params.slug);
+    }
+
+    private renderShopProduct(params: Record<string, string>): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        // Use shop-product-${slug} to match what ShopModule expects
+        content.innerHTML = `
+            <div id="shop-product-${params.slug}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="h-96 bg-gray-200 rounded"></div>
+                        <div class="space-y-4">
+                            <div class="h-8 bg-gray-200 rounded w-3/4"></div>
+                            <div class="h-6 bg-gray-200 rounded w-1/4"></div>
+                            <div class="h-24 bg-gray-200 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-product', params.slug);
+    }
+
+    private renderShopCart(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-cart-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="space-y-3">
+                        ${Array(3).fill(0).map(() => '<div class="h-24 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-cart');
+    }
+
+    private renderShopCheckout(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-checkout-container" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <div class="md:col-span-2 space-y-4">
+                            <div class="h-48 bg-gray-200 rounded"></div>
+                            <div class="h-48 bg-gray-200 rounded"></div>
+                        </div>
+                        <div class="h-64 bg-gray-200 rounded"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-checkout');
+    }
+
+    private renderShopThankYou(params: Record<string, string>): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        // Clear shop cart count after successful order
+        ShopCartService.clear();
+        this.updateCartBadge();
+
+        content.innerHTML = `
+            <div id="shop-thank-you-container" data-order="${params.orderNumber}" class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">Comanda plasata cu succes!</h1>
+                    <p class="text-gray-600 mb-4">Numarul comenzii: <span class="font-mono font-bold">${params.orderNumber}</span></p>
+                    <p class="text-gray-500 mb-6">Vei primi un email de confirmare cu detaliile comenzii.</p>
+                    <div class="space-y-3">
+                        <a href="/shop" class="block w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition">
+                            Continua cumparaturile
+                        </a>
+                        <a href="/account/shop-orders" class="block w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                            Vezi comenzile mele
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-thank-you', params.orderNumber);
+    }
+
+    private renderAccountShopOrders(): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-orders-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="space-y-3">
+                        ${Array(3).fill(0).map(() => '<div class="h-24 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-orders');
+    }
+
+    private renderAccountShopOrderDetail(params: Record<string, string>): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-order-detail-container" data-id="${params.id}" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="h-64 bg-gray-200 rounded"></div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-order-detail', params.id);
+    }
+
+    private renderAccountWishlist(): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="wishlist-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        ${Array(4).fill(0).map(() => '<div class="h-48 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:wishlist');
+    }
+
+    private renderAccountStockAlerts(): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="stock-alerts-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="space-y-3">
+                        ${Array(3).fill(0).map(() => '<div class="h-16 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:stock-alerts');
+    }
+
+    // ========================================
+    // GAMIFICATION ROUTES
+    // ========================================
+
+    private renderAccountPoints(): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="points-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="h-32 bg-gray-200 rounded"></div>
+                    <div class="grid grid-cols-3 gap-4">
+                        ${Array(3).fill(0).map(() => '<div class="h-20 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:points');
+    }
+
+    private renderAccountPointsHistory(): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="points-history-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="space-y-3">
+                        ${Array(5).fill(0).map(() => '<div class="h-16 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:points-history');
+    }
+
+    private renderAccountReferral(): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="referral-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-32 bg-gray-200 rounded"></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        ${Array(2).fill(0).map(() => '<div class="h-24 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                    <div class="h-24 bg-gray-200 rounded"></div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:referral');
+    }
+}

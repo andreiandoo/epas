@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 144635,
+        'name'      => 'Banguingui',
+        'latitude'  => '6.08188500',
+        'longitude' => '121.40761480',
+    ],
+    [
+        'id'        => 154816,
+        'name'      => 'Hadji Panglima Tahil',
+        'latitude'  => '6.22260290',
+        'longitude' => '120.78041360',
+    ],
+    [
+        'id'        => 144529,
+        'name'      => 'Indanan',
+        'latitude'  => '5.99239660',
+        'longitude' => '120.88041850',
+    ],
+    [
+        'id'        => 144531,
+        'name'      => 'Jolo',
+        'latitude'  => '6.04757200',
+        'longitude' => '120.97829560',
+    ],
+    [
+        'id'        => 144538,
+        'name'      => 'Kalingalan Caluang',
+        'latitude'  => '5.90756470',
+        'longitude' => '121.20380710',
+    ],
+    [
+        'id'        => 144569,
+        'name'      => 'Lugus',
+        'latitude'  => '5.68653540',
+        'longitude' => '120.80106040',
+    ],
+    [
+        'id'        => 144575,
+        'name'      => 'Luuk',
+        'latitude'  => '5.96916260',
+        'longitude' => '121.28382580',
+    ],
+    [
+        'id'        => 144581,
+        'name'      => 'Maimbung',
+        'latitude'  => '5.93176850',
+        'longitude' => '120.91329170',
+    ],
+    [
+        'id'        => 154817,
+        'name'      => 'Omar',
+        'latitude'  => '5.97875910',
+        'longitude' => '121.31352020',
+    ],
+    [
+        'id'        => 154818,
+        'name'      => 'Panamao',
+        'latitude'  => '5.97633070',
+        'longitude' => '121.14102200',
+    ],
+    [
+        'id'        => 144658,
+        'name'      => 'Pandami',
+        'latitude'  => '5.62628300',
+        'longitude' => '120.20873160',
+    ],
+    [
+        'id'        => 154819,
+        'name'      => 'Panglima Estino',
+        'latitude'  => '5.96502490',
+        'longitude' => '121.15327730',
+    ],
+    [
+        'id'        => 144662,
+        'name'      => 'Pangutaran',
+        'latitude'  => '6.11136880',
+        'longitude' => '119.51887770',
+    ],
+    [
+        'id'        => 154820,
+        'name'      => 'Parang',
+        'latitude'  => '5.91074330',
+        'longitude' => '120.70067690',
+    ],
+    [
+        'id'        => 145264,
+        'name'      => 'Pata',
+        'latitude'  => '5.82681960',
+        'longitude' => '120.96422010',
+    ],
+    [
+        'id'        => 144697,
+        'name'      => 'Patikul',
+        'latitude'  => '6.05236640',
+        'longitude' => '120.92966670',
+    ],
+    [
+        'id'        => 144720,
+        'name'      => 'Siasi',
+        'latitude'  => '5.53208770',
+        'longitude' => '120.80720510',
+    ],
+    [
+        'id'        => 144737,
+        'name'      => 'Talipao',
+        'latitude'  => '5.94209640',
+        'longitude' => '121.01242620',
+    ],
+    [
+        'id'        => 144744,
+        'name'      => 'Tapul',
+        'latitude'  => '5.70726520',
+        'longitude' => '120.81285770',
+    ],
+];

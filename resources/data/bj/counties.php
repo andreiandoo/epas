@@ -1,0 +1,15 @@
+<?php
+return [
+    'Alibori',
+    'Atakora',
+    'Atlantique',
+    'Borgou',
+    'Collines',
+    'Donga',
+    'Kouffo',
+    'Littoral',
+    'Mono',
+    'Ouémé',
+    'Plateau',
+    'Zou',
+];

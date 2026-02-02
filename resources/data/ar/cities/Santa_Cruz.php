@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 637,
+        'name'      => '28 de Noviembre',
+        'latitude'  => '-51.58390000',
+        'longitude' => '-72.21382000',
+    ],
+    [
+        'id'        => 711,
+        'name'      => 'Caleta Olivia',
+        'latitude'  => '-46.43929000',
+        'longitude' => '-67.52814000',
+    ],
+    [
+        'id'        => 786,
+        'name'      => 'Comandante Luis Piedra Buena',
+        'latitude'  => '-49.98513000',
+        'longitude' => '-68.91467000',
+    ],
+    [
+        'id'        => 874,
+        'name'      => 'Departamento de Deseado',
+        'latitude'  => '-47.33333000',
+        'longitude' => '-67.83333000',
+    ],
+    [
+        'id'        => 906,
+        'name'      => 'Departamento de Güer Aike',
+        'latitude'  => '-51.33333000',
+        'longitude' => '-70.33333000',
+    ],
+    [
+        'id'        => 922,
+        'name'      => 'Departamento de Lago Argentino',
+        'latitude'  => '-49.75000000',
+        'longitude' => '-72.00000000',
+    ],
+    [
+        'id'        => 935,
+        'name'      => 'Departamento de Magallanes',
+        'latitude'  => '-48.75000000',
+        'longitude' => '-68.50000000',
+    ],
+    [
+        'id'        => 972,
+        'name'      => 'Departamento de Río Chico',
+        'latitude'  => '-48.25000000',
+        'longitude' => '-71.00000000',
+    ],
+    [
+        'id'        => 1051,
+        'name'      => 'El Calafate',
+        'latitude'  => '-50.34075000',
+        'longitude' => '-72.27682000',
+    ],
+    [
+        'id'        => 1116,
+        'name'      => 'Gobernador Gregores',
+        'latitude'  => '-48.75057000',
+        'longitude' => '-70.24741000',
+    ],
+    [
+        'id'        => 1220,
+        'name'      => 'Las Heras',
+        'latitude'  => '-46.54186000',
+        'longitude' => '-68.93593000',
+    ],
+    [
+        'id'        => 1244,
+        'name'      => 'Los Antiguos',
+        'latitude'  => '-46.54972000',
+        'longitude' => '-71.63086000',
+    ],
+    [
+        'id'        => 1326,
+        'name'      => 'Perito Moreno',
+        'latitude'  => '-46.58995000',
+        'longitude' => '-70.92975000',
+    ],
+    [
+        'id'        => 1329,
+        'name'      => 'Pico Truncado',
+        'latitude'  => '-46.79490000',
+        'longitude' => '-67.95731000',
+    ],
+    [
+        'id'        => 1352,
+        'name'      => 'Puerto Deseado',
+        'latitude'  => '-47.75034000',
+        'longitude' => '-65.89382000',
+    ],
+    [
+        'id'        => 1362,
+        'name'      => 'Puerto Santa Cruz',
+        'latitude'  => '-50.01910000',
+        'longitude' => '-68.52321000',
+    ],
+    [
+        'id'        => 1391,
+        'name'      => 'Río Gallegos',
+        'latitude'  => '-51.62261000',
+        'longitude' => '-69.21813000',
+    ],
+    [
+        'id'        => 1397,
+        'name'      => 'Río Turbio',
+        'latitude'  => '-51.53587000',
+        'longitude' => '-72.33673000',
+    ],
+    [
+        'id'        => 1434,
+        'name'      => 'San Julián',
+        'latitude'  => '-49.30554000',
+        'longitude' => '-67.72743000',
+    ],
+    [
+        'id'        => 1593,
+        'name'      => 'Yacimiento Río Turbio',
+        'latitude'  => '-51.57321000',
+        'longitude' => '-72.35080000',
+    ],
+];

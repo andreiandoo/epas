@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 703,
+        'name'      => 'Buena Esperanza',
+        'latitude'  => '-34.75647000',
+        'longitude' => '-65.25379000',
+    ],
+    [
+        'id'        => 725,
+        'name'      => 'Candelaria',
+        'latitude'  => '-32.06036000',
+        'longitude' => '-65.82477000',
+    ],
+    [
+        'id'        => 788,
+        'name'      => 'Concarán',
+        'latitude'  => '-32.56009000',
+        'longitude' => '-65.24270000',
+    ],
+    [
+        'id'        => 1170,
+        'name'      => 'Juan Martín de Pueyrredón',
+        'latitude'  => '-33.27544000',
+        'longitude' => '-66.32017000',
+    ],
+    [
+        'id'        => 1174,
+        'name'      => 'Justo Daract',
+        'latitude'  => '-33.85940000',
+        'longitude' => '-65.18277000',
+    ],
+    [
+        'id'        => 1198,
+        'name'      => 'La Punta',
+        'latitude'  => '-33.18368000',
+        'longitude' => '-66.31270000',
+    ],
+    [
+        'id'        => 1202,
+        'name'      => 'La Toma',
+        'latitude'  => '-33.05258000',
+        'longitude' => '-65.62385000',
+    ],
+    [
+        'id'        => 1258,
+        'name'      => 'Luján',
+        'latitude'  => '-32.36674000',
+        'longitude' => '-65.93642000',
+    ],
+    [
+        'id'        => 1280,
+        'name'      => 'Merlo',
+        'latitude'  => '-32.34288000',
+        'longitude' => '-65.01396000',
+    ],
+    [
+        'id'        => 1297,
+        'name'      => 'Naschel',
+        'latitude'  => '-32.91656000',
+        'longitude' => '-65.37535000',
+    ],
+    [
+        'id'        => 1425,
+        'name'      => 'San Francisco del Monte de Oro',
+        'latitude'  => '-32.59825000',
+        'longitude' => '-66.12539000',
+    ],
+    [
+        'id'        => 1438,
+        'name'      => 'San Luis',
+        'latitude'  => '-33.29501000',
+        'longitude' => '-66.33563000',
+    ],
+    [
+        'id'        => 1470,
+        'name'      => 'Santa Rosa del Conlara',
+        'latitude'  => '-32.34286000',
+        'longitude' => '-65.20323000',
+    ],
+    [
+        'id'        => 1504,
+        'name'      => 'Tilisarao',
+        'latitude'  => '-32.73292000',
+        'longitude' => '-65.29109000',
+    ],
+    [
+        'id'        => 1520,
+        'name'      => 'Unión',
+        'latitude'  => '-35.15282000',
+        'longitude' => '-65.94602000',
+    ],
+    [
+        'id'        => 1555,
+        'name'      => 'Villa General Roca',
+        'latitude'  => '-32.66535000',
+        'longitude' => '-66.45052000',
+    ],
+    [
+        'id'        => 1565,
+        'name'      => 'Villa Mercedes',
+        'latitude'  => '-33.67571000',
+        'longitude' => '-65.45783000',
+    ],
+];

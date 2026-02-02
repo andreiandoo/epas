@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 79761,
+        'name'      => 'Anabar',
+        'latitude'  => '-0.50845000',
+        'longitude' => '166.95326000',
+    ],
+];

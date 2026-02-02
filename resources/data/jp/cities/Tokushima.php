@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 63245,
+        'name'      => 'Anan Shi',
+        'latitude'  => '33.87716000',
+        'longitude' => '134.60644000',
+    ],
+    [
+        'id'        => 63274,
+        'name'      => 'Awa-shi',
+        'latitude'  => '34.10000000',
+        'longitude' => '134.25000000',
+    ],
+    [
+        'id'        => 63556,
+        'name'      => 'Ikedachō',
+        'latitude'  => '34.02849000',
+        'longitude' => '133.80616000',
+    ],
+    [
+        'id'        => 63593,
+        'name'      => 'Ishii',
+        'latitude'  => '34.06752000',
+        'longitude' => '134.44208000',
+    ],
+    [
+        'id'        => 63704,
+        'name'      => 'Kamojimachō-jōgejima',
+        'latitude'  => '34.06803000',
+        'longitude' => '134.35033000',
+    ],
+    [
+        'id'        => 63761,
+        'name'      => 'Katsuura Gun',
+        'latitude'  => '33.91380000',
+        'longitude' => '134.42641000',
+    ],
+    [
+        'id'        => 63838,
+        'name'      => 'Komatsushima Shi',
+        'latitude'  => '33.98071000',
+        'longitude' => '134.59529000',
+    ],
+    [
+        'id'        => 63839,
+        'name'      => 'Komatsushimachō',
+        'latitude'  => '34.00000000',
+        'longitude' => '134.58333000',
+    ],
+    [
+        'id'        => 63956,
+        'name'      => 'Mima Shi',
+        'latitude'  => '34.01889000',
+        'longitude' => '134.14333000',
+    ],
+    [
+        'id'        => 64015,
+        'name'      => 'Miyoshi Shi',
+        'latitude'  => '33.93349000',
+        'longitude' => '133.85184000',
+    ],
+    [
+        'id'        => 64016,
+        'name'      => 'Miyoshi-gun',
+        'latitude'  => '34.03647000',
+        'longitude' => '133.91818000',
+    ],
+    [
+        'id'        => 64110,
+        'name'      => 'Naruto-shi',
+        'latitude'  => '34.17881000',
+        'longitude' => '134.61357000',
+    ],
+    [
+        'id'        => 64111,
+        'name'      => 'Narutochō-mitsuishi',
+        'latitude'  => '34.19933000',
+        'longitude' => '134.60932000',
+    ],
+    [
+        'id'        => 64497,
+        'name'      => 'Tokushima',
+        'latitude'  => '34.06667000',
+        'longitude' => '134.56667000',
+    ],
+    [
+        'id'        => 64498,
+        'name'      => 'Tokushima Shi',
+        'latitude'  => '34.04922000',
+        'longitude' => '134.52359000',
+    ],
+    [
+        'id'        => 64618,
+        'name'      => 'Wakimachi',
+        'latitude'  => '34.06667000',
+        'longitude' => '134.15000000',
+    ],
+    [
+        'id'        => 64688,
+        'name'      => 'Yoshinogawa Shi',
+        'latitude'  => '34.03705000',
+        'longitude' => '134.28354000',
+    ],
+];

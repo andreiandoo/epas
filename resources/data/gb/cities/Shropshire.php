@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 48418,
+        'name'      => 'Baschurch',
+        'latitude'  => '52.78848000',
+        'longitude' => '-2.85284000',
+    ],
+    [
+        'id'        => 48434,
+        'name'      => 'Bayston Hill',
+        'latitude'  => '52.67550000',
+        'longitude' => '-2.76156000',
+    ],
+    [
+        'id'        => 48493,
+        'name'      => 'Bicton',
+        'latitude'  => '52.72829000',
+        'longitude' => '-2.81649000',
+    ],
+    [
+        'id'        => 48525,
+        'name'      => 'Bishop\'s Castle',
+        'latitude'  => '52.49208000',
+        'longitude' => '-3.00210000',
+    ],
+    [
+        'id'        => 48995,
+        'name'      => 'Church Stretton',
+        'latitude'  => '52.53778000',
+        'longitude' => '-2.80149000',
+    ],
+    [
+        'id'        => 49147,
+        'name'      => 'Craven Arms',
+        'latitude'  => '52.44308000',
+        'longitude' => '-2.83562000',
+    ],
+    [
+        'id'        => 49455,
+        'name'      => 'Ellesmere',
+        'latitude'  => '52.90838000',
+        'longitude' => '-2.89806000',
+    ],
+    [
+        'id'        => 49583,
+        'name'      => 'Ford',
+        'latitude'  => '52.71693000',
+        'longitude' => '-2.86881000',
+    ],
+    [
+        'id'        => 49669,
+        'name'      => 'Gobowen',
+        'latitude'  => '52.89615000',
+        'longitude' => '-3.03686000',
+    ],
+    [
+        'id'        => 49720,
+        'name'      => 'Great Hanwood',
+        'latitude'  => '52.68333000',
+        'longitude' => '-2.81667000',
+    ],
+    [
+        'id'        => 50434,
+        'name'      => 'Ludlow',
+        'latitude'  => '52.37431000',
+        'longitude' => '-2.71311000',
+    ],
+    [
+        'id'        => 50601,
+        'name'      => 'Minsterley',
+        'latitude'  => '52.63989000',
+        'longitude' => '-2.92807000',
+    ],
+    [
+        'id'        => 50822,
+        'name'      => 'Oswestry',
+        'latitude'  => '52.86195000',
+        'longitude' => '-3.05497000',
+    ],
+    [
+        'id'        => 50851,
+        'name'      => 'Pant',
+        'latitude'  => '52.79005000',
+        'longitude' => '-3.08031000',
+    ],
+    [
+        'id'        => 50940,
+        'name'      => 'Pontesbury',
+        'latitude'  => '52.64826000',
+        'longitude' => '-2.89035000',
+    ],
+    [
+        'id'        => 51151,
+        'name'      => 'Ruyton-XI-Towns',
+        'latitude'  => '52.79555000',
+        'longitude' => '-2.90318000',
+    ],
+    [
+        'id'        => 51295,
+        'name'      => 'Shrewsbury',
+        'latitude'  => '52.71009000',
+        'longitude' => '-2.75208000',
+    ],
+    [
+        'id'        => 51298,
+        'name'      => 'Shropshire',
+        'latitude'  => '52.66667000',
+        'longitude' => '-2.75000000',
+    ],
+];

@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 48188,
+        'name'      => 'Accrington',
+        'latitude'  => '53.75379000',
+        'longitude' => '-2.35863000',
+    ],
+    [
+        'id'        => 48543,
+        'name'      => 'Blackburn',
+        'latitude'  => '53.75000000',
+        'longitude' => '-2.48333000',
+    ],
+    [
+        'id'        => 48544,
+        'name'      => 'Blackburn with Darwen',
+        'latitude'  => '53.66667000',
+        'longitude' => '-2.46667000',
+    ],
+    [
+        'id'        => 48689,
+        'name'      => 'Brierfield',
+        'latitude'  => '53.82468000',
+        'longitude' => '-2.23415000',
+    ],
+    [
+        'id'        => 48702,
+        'name'      => 'Brinscall',
+        'latitude'  => '53.68900000',
+        'longitude' => '-2.57208000',
+    ],
+    [
+        'id'        => 48778,
+        'name'      => 'Burnley',
+        'latitude'  => '53.80000000',
+        'longitude' => '-2.23333000',
+    ],
+    [
+        'id'        => 48984,
+        'name'      => 'Chorley',
+        'latitude'  => '53.65000000',
+        'longitude' => '-2.61667000',
+    ],
+    [
+        'id'        => 48993,
+        'name'      => 'Church',
+        'latitude'  => '53.75177000',
+        'longitude' => '-2.39121000',
+    ],
+    [
+        'id'        => 49024,
+        'name'      => 'Clayton le Moors',
+        'latitude'  => '53.76667000',
+        'longitude' => '-2.38333000',
+    ],
+    [
+        'id'        => 49025,
+        'name'      => 'Clayton-le-Woods',
+        'latitude'  => '53.69689000',
+        'longitude' => '-2.66818000',
+    ],
+    [
+        'id'        => 49243,
+        'name'      => 'Darwen',
+        'latitude'  => '53.69803000',
+        'longitude' => '-2.46494000',
+    ],
+    [
+        'id'        => 49440,
+        'name'      => 'Edgworth',
+        'latitude'  => '53.64636000',
+        'longitude' => '-2.39401000',
+    ],
+    [
+        'id'        => 49492,
+        'name'      => 'Euxton',
+        'latitude'  => '53.66990000',
+        'longitude' => '-2.67615000',
+    ],
+    [
+        'id'        => 49721,
+        'name'      => 'Great Harwood',
+        'latitude'  => '53.78512000',
+        'longitude' => '-2.40865000',
+    ],
+    [
+        'id'        => 49794,
+        'name'      => 'Hameldon Hill',
+        'latitude'  => '53.75570000',
+        'longitude' => '-2.29190000',
+    ],
+    [
+        'id'        => 49802,
+        'name'      => 'Hapton',
+        'latitude'  => '53.78333000',
+        'longitude' => '-2.31667000',
+    ],
+    [
+        'id'        => 49832,
+        'name'      => 'Haslingden',
+        'latitude'  => '53.70326000',
+        'longitude' => '-2.32382000',
+    ],
+    [
+        'id'        => 50296,
+        'name'      => 'Leyland',
+        'latitude'  => '53.69786000',
+        'longitude' => '-2.68758000',
+    ],
+    [
+        'id'        => 50844,
+        'name'      => 'Padiham',
+        'latitude'  => '53.80187000',
+        'longitude' => '-2.31511000',
+    ],
+    [
+        'id'        => 51090,
+        'name'      => 'Rishton',
+        'latitude'  => '53.76806000',
+        'longitude' => '-2.41444000',
+    ],
+];

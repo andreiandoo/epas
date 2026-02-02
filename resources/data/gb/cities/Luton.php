@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 48479,
+        'name'      => 'Berkhamsted',
+        'latitude'  => '51.76040000',
+        'longitude' => '-0.56528000',
+    ],
+    [
+        'id'        => 48629,
+        'name'      => 'Bovingdon',
+        'latitude'  => '51.72312000',
+        'longitude' => '-0.53670000',
+    ],
+    [
+        'id'        => 48808,
+        'name'      => 'Caddington',
+        'latitude'  => '51.86621000',
+        'longitude' => '-0.45679000',
+    ],
+    [
+        'id'        => 48913,
+        'name'      => 'Chalton',
+        'latitude'  => '51.92790000',
+        'longitude' => '-0.50147000',
+    ],
+    [
+        'id'        => 48940,
+        'name'      => 'Cheddington',
+        'latitude'  => '51.84784000',
+        'longitude' => '-0.66429000',
+    ],
+    [
+        'id'        => 49363,
+        'name'      => 'Dunstable',
+        'latitude'  => '51.88571000',
+        'longitude' => '-0.52288000',
+    ],
+    [
+        'id'        => 49428,
+        'name'      => 'Eaton Bray',
+        'latitude'  => '51.87697000',
+        'longitude' => '-0.59167000',
+    ],
+    [
+        'id'        => 49812,
+        'name'      => 'Harpenden',
+        'latitude'  => '51.81684000',
+        'longitude' => '-0.35706000',
+    ],
+    [
+        'id'        => 49895,
+        'name'      => 'Hemel Hempstead',
+        'latitude'  => '51.75368000',
+        'longitude' => '-0.44975000',
+    ],
+    [
+        'id'        => 49955,
+        'name'      => 'Hockliffe',
+        'latitude'  => '51.93109000',
+        'longitude' => '-0.58652000',
+    ],
+    [
+        'id'        => 50089,
+        'name'      => 'Ivinghoe',
+        'latitude'  => '51.83602000',
+        'longitude' => '-0.62983000',
+    ],
+    [
+        'id'        => 50122,
+        'name'      => 'Kensworth',
+        'latitude'  => '51.85173000',
+        'longitude' => '-0.50386000',
+    ],
+    [
+        'id'        => 50277,
+        'name'      => 'Leighton Buzzard',
+        'latitude'  => '51.91722000',
+        'longitude' => '-0.65802000',
+    ],
+    [
+        'id'        => 50439,
+        'name'      => 'Luton',
+        'latitude'  => '51.87967000',
+        'longitude' => '-0.41748000',
+    ],
+    [
+        'id'        => 50509,
+        'name'      => 'Markyate',
+        'latitude'  => '51.83846000',
+        'longitude' => '-0.46345000',
+    ],
+    [
+        'id'        => 50920,
+        'name'      => 'Pitstone',
+        'latitude'  => '51.82830000',
+        'longitude' => '-0.63987000',
+    ],
+    [
+        'id'        => 51046,
+        'name'      => 'Redbourn',
+        'latitude'  => '51.79896000',
+        'longitude' => '-0.39594000',
+    ],
+    [
+        'id'        => 51419,
+        'name'      => 'Stanbridge',
+        'latitude'  => '51.90864000',
+        'longitude' => '-0.59815000',
+    ],
+    [
+        'id'        => 51650,
+        'name'      => 'Totternhoe',
+        'latitude'  => '51.88555000',
+        'longitude' => '-0.57343000',
+    ],
+    [
+        'id'        => 51672,
+        'name'      => 'Tring',
+        'latitude'  => '51.79471000',
+        'longitude' => '-0.65824000',
+    ],
+];

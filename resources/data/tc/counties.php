@@ -1,0 +1,9 @@
+<?php
+return [
+    'Grand Turk',
+    'Middle Caicos',
+    'North Caicos',
+    'Providenciales',
+    'Salt Cay',
+    'South Caicos',
+];

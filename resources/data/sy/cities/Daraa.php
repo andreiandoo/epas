@@ -1,0 +1,93 @@
+<?php
+return [
+    [
+        'id'        => 104956,
+        'name'      => 'Al Ḩarāk',
+        'latitude'  => '32.74932000',
+        'longitude' => '36.30994000',
+    ],
+    [
+        'id'        => 104949,
+        'name'      => 'Al Muzayrīb',
+        'latitude'  => '32.71084000',
+        'longitude' => '36.02751000',
+    ],
+    [
+        'id'        => 104963,
+        'name'      => 'Al-Sanamayn District',
+        'latitude'  => '33.12559000',
+        'longitude' => '36.27540000',
+    ],
+    [
+        'id'        => 104984,
+        'name'      => 'Aş Şanamayn',
+        'latitude'  => '33.07186000',
+        'longitude' => '36.18316000',
+    ],
+    [
+        'id'        => 104979,
+        'name'      => 'Ash Shaykh Miskīn',
+        'latitude'  => '32.82944000',
+        'longitude' => '36.15933000',
+    ],
+    [
+        'id'        => 104986,
+        'name'      => 'Buşrá ash Shām',
+        'latitude'  => '32.52013000',
+        'longitude' => '36.48256000',
+    ],
+    [
+        'id'        => 104990,
+        'name'      => 'Dar‘ā',
+        'latitude'  => '32.61889000',
+        'longitude' => '36.10213000',
+    ],
+    [
+        'id'        => 104996,
+        'name'      => 'Ghabāghib',
+        'latitude'  => '33.18235000',
+        'longitude' => '36.22534000',
+    ],
+    [
+        'id'        => 105003,
+        'name'      => 'Inkhil',
+        'latitude'  => '33.01809000',
+        'longitude' => '36.12828000',
+    ],
+    [
+        'id'        => 105004,
+        'name'      => 'Izra District',
+        'latitude'  => '32.90121000',
+        'longitude' => '36.16144000',
+    ],
+    [
+        'id'        => 105005,
+        'name'      => 'Izra‘',
+        'latitude'  => '32.87060000',
+        'longitude' => '36.25453000',
+    ],
+    [
+        'id'        => 105014,
+        'name'      => 'Jāsim',
+        'latitude'  => '32.99233000',
+        'longitude' => '36.06018000',
+    ],
+    [
+        'id'        => 105037,
+        'name'      => 'Nawá',
+        'latitude'  => '32.89044000',
+        'longitude' => '36.03990000',
+    ],
+    [
+        'id'        => 105073,
+        'name'      => 'Ţafas',
+        'latitude'  => '32.73709000',
+        'longitude' => '36.06654000',
+    ],
+    [
+        'id'        => 105061,
+        'name'      => 'Tasīl',
+        'latitude'  => '32.83395000',
+        'longitude' => '35.96973000',
+    ],
+];

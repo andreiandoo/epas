@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 107085,
+        'name'      => 'Akkuş',
+        'latitude'  => '40.81000000',
+        'longitude' => '36.96000000',
+    ],
+    [
+        'id'        => 107144,
+        'name'      => 'Altınordu',
+        'latitude'  => '40.94879000',
+        'longitude' => '37.79572000',
+    ],
+    [
+        'id'        => 107219,
+        'name'      => 'Aybastı',
+        'latitude'  => '40.69690000',
+        'longitude' => '37.40794000',
+    ],
+    [
+        'id'        => 108765,
+        'name'      => 'Çamaş',
+        'latitude'  => '40.90200000',
+        'longitude' => '37.52786000',
+    ],
+    [
+        'id'        => 108790,
+        'name'      => 'Çatalpınar',
+        'latitude'  => '40.88678000',
+        'longitude' => '37.44329000',
+    ],
+    [
+        'id'        => 108797,
+        'name'      => 'Çaybaşı',
+        'latitude'  => '41.02532000',
+        'longitude' => '37.10867000',
+    ],
+    [
+        'id'        => 107633,
+        'name'      => 'Fatsa',
+        'latitude'  => '41.02778000',
+        'longitude' => '37.50139000',
+    ],
+    [
+        'id'        => 107697,
+        'name'      => 'Gölköy',
+        'latitude'  => '40.68726000',
+        'longitude' => '37.61660000',
+    ],
+    [
+        'id'        => 107733,
+        'name'      => 'Gülyalı',
+        'latitude'  => '40.96682000',
+        'longitude' => '38.05679000',
+    ],
+    [
+        'id'        => 107749,
+        'name'      => 'Gürgentepe',
+        'latitude'  => '40.78567000',
+        'longitude' => '37.58969000',
+    ],
+    [
+        'id'        => 108887,
+        'name'      => 'İkizce',
+        'latitude'  => '41.05833000',
+        'longitude' => '37.08028000',
+    ],
+    [
+        'id'        => 107855,
+        'name'      => 'Kabadüz',
+        'latitude'  => '40.86096000',
+        'longitude' => '37.88470000',
+    ],
+    [
+        'id'        => 107858,
+        'name'      => 'Kabataş',
+        'latitude'  => '40.75000000',
+        'longitude' => '37.45000000',
+    ],
+    [
+        'id'        => 108018,
+        'name'      => 'Korgan',
+        'latitude'  => '40.82472000',
+        'longitude' => '37.34667000',
+    ],
+    [
+        'id'        => 108052,
+        'name'      => 'Kumru',
+        'latitude'  => '40.87444000',
+        'longitude' => '37.26389000',
+    ],
+    [
+        'id'        => 108201,
+        'name'      => 'Mesudiye',
+        'latitude'  => '40.45446000',
+        'longitude' => '37.77353000',
+    ],
+    [
+        'id'        => 108341,
+        'name'      => 'Perşembe',
+        'latitude'  => '41.06556000',
+        'longitude' => '37.77139000',
+    ],
+    [
+        'id'        => 108622,
+        'name'      => 'Ulubey',
+        'latitude'  => '40.86863000',
+        'longitude' => '37.75405000',
+    ],
+    [
+        'id'        => 108872,
+        'name'      => 'Ünye',
+        'latitude'  => '41.13921000',
+        'longitude' => '37.27246000',
+    ],
+];

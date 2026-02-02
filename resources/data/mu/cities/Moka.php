@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 67841,
+        'name'      => 'Camp Thorel',
+        'latitude'  => '-20.21472000',
+        'longitude' => '57.61611000',
+    ],
+    [
+        'id'        => 67855,
+        'name'      => 'Dagotière',
+        'latitude'  => '-20.24476000',
+        'longitude' => '57.56188000',
+    ],
+    [
+        'id'        => 67856,
+        'name'      => 'Dubreuil',
+        'latitude'  => '-20.30132000',
+        'longitude' => '57.59861000',
+    ],
+    [
+        'id'        => 153448,
+        'name'      => 'L\'Avenir',
+        'latitude'  => '-20.21714200',
+        'longitude' => '57.55048200',
+    ],
+    [
+        'id'        => 153447,
+        'name'      => 'L\'Esperance',
+        'latitude'  => '-20.23041300',
+        'longitude' => '57.59526800',
+    ],
+    [
+        'id'        => 153449,
+        'name'      => 'La Laura-Malenga',
+        'latitude'  => '-20.20386100',
+        'longitude' => '57.54991500',
+    ],
+    [
+        'id'        => 67877,
+        'name'      => 'Melrose',
+        'latitude'  => '-20.26972000',
+        'longitude' => '57.63194000',
+    ],
+    [
+        'id'        => 67879,
+        'name'      => 'Moka',
+        'latitude'  => '-20.21889000',
+        'longitude' => '57.49583000',
+    ],
+    [
+        'id'        => 153450,
+        'name'      => 'Montagne Blanche',
+        'latitude'  => '-20.28592000',
+        'longitude' => '57.65774600',
+    ],
+    [
+        'id'        => 153451,
+        'name'      => 'Nouvelle Découverte',
+        'latitude'  => '-20.18600000',
+        'longitude' => '57.59079700',
+    ],
+    [
+        'id'        => 67885,
+        'name'      => 'Pailles',
+        'latitude'  => '-20.19271000',
+        'longitude' => '57.48826000',
+    ],
+    [
+        'id'        => 67898,
+        'name'      => 'Providence',
+        'latitude'  => '-20.24472000',
+        'longitude' => '57.61222000',
+    ],
+    [
+        'id'        => 67899,
+        'name'      => 'Quartier Militaire',
+        'latitude'  => '-20.24790000',
+        'longitude' => '57.59737000',
+    ],
+    [
+        'id'        => 153452,
+        'name'      => 'Ripailles',
+        'latitude'  => '-20.19472500',
+        'longitude' => '57.58059600',
+    ],
+    [
+        'id'        => 153445,
+        'name'      => 'Saint Julien D\'Hotman',
+        'latitude'  => '-20.23067000',
+        'longitude' => '57.64037800',
+    ],
+    [
+        'id'        => 67912,
+        'name'      => 'Saint Pierre',
+        'latitude'  => '-20.21750000',
+        'longitude' => '57.52083000',
+    ],
+    [
+        'id'        => 67921,
+        'name'      => 'Verdun',
+        'latitude'  => '-20.23417000',
+        'longitude' => '57.55476000',
+    ],
+];

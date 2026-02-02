@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Despre Noi — AmBilet.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; color: #1E293B; }
+
+        .header { height: 72px; background: #fff; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; padding: 0 48px; position: sticky; top: 0; z-index: 100; }
+        .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .logo-icon { width: 40px; height: 40px; }
+        .logo-text { font-size: 22px; font-weight: 800; display: flex; }
+        .logo-text-am { color: #1E293B; }
+        .logo-text-bilet { color: #A51C30; }
+
+        .hero { background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); padding: 100px 48px; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; top: -300px; right: -300px; width: 800px; height: 800px; background: radial-gradient(circle, rgba(165, 28, 48, 0.15) 0%, transparent 70%); }
+        .hero::after { content: ''; position: absolute; bottom: -200px; left: -200px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(165, 28, 48, 0.1) 0%, transparent 70%); }
+        .hero-content { max-width: 900px; margin: 0 auto; text-align: center; position: relative; z-index: 1; }
+        .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(165, 28, 48, 0.2); border: 1px solid rgba(165, 28, 48, 0.3); border-radius: 100px; font-size: 13px; font-weight: 600; color: #f87171; margin-bottom: 24px; }
+        .hero h1 { font-size: 56px; font-weight: 800; color: white; margin-bottom: 20px; letter-spacing: -1.5px; line-height: 1.1; }
+        .hero p { font-size: 20px; color: rgba(255,255,255,0.7); line-height: 1.6; max-width: 700px; margin: 0 auto; }
+
+        .main { max-width: 1200px; margin: 0 auto; padding: 80px 48px; }
+
+        .section { margin-bottom: 100px; }
+        .section-label { display: inline-block; padding: 6px 14px; background: linear-gradient(135deg, #A51C30, #C41E3A); border-radius: 6px; font-size: 12px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 24px; }
+
+        /* Story Section */
+        .story-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+        .story-content h2 { font-size: 36px; font-weight: 800; color: #1E293B; margin-bottom: 24px; line-height: 1.2; }
+        .story-content p { font-size: 17px; color: #64748B; line-height: 1.8; margin-bottom: 20px; }
+        .story-content p:last-child { margin-bottom: 0; }
+        .story-visual { background: linear-gradient(135deg, #A51C30, #7f1627); border-radius: 24px; padding: 60px; display: flex; align-items: center; justify-content: center; min-height: 400px; position: relative; overflow: hidden; }
+        .story-visual::before { content: ''; position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%; }
+        .story-visual svg { width: 120px; height: 120px; color: white; opacity: 0.9; }
+
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; margin-top: 60px; }
+        .stat-card { background: white; border-radius: 20px; padding: 32px; text-align: center; border: 1px solid #E2E8F0; transition: all 0.3s; }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }
+        .stat-value { font-size: 48px; font-weight: 800; color: #A51C30; margin-bottom: 8px; }
+        .stat-label { font-size: 15px; color: #64748B; font-weight: 500; }
+
+        /* Mission & Vision */
+        .mv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+        .mv-card { background: white; border-radius: 24px; padding: 40px; border: 1px solid #E2E8F0; }
+        .mv-card.dark { background: linear-gradient(135deg, #1E293B, #334155); border: none; }
+        .mv-icon { width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
+        .mv-icon.mission { background: linear-gradient(135deg, rgba(165, 28, 48, 0.1), rgba(165, 28, 48, 0.05)); color: #A51C30; }
+        .mv-icon.vision { background: rgba(255,255,255,0.1); color: white; }
+        .mv-icon svg { width: 32px; height: 32px; }
+        .mv-card h3 { font-size: 24px; font-weight: 700; color: #1E293B; margin-bottom: 16px; }
+        .mv-card.dark h3 { color: white; }
+        .mv-card p { font-size: 16px; color: #64748B; line-height: 1.7; }
+        .mv-card.dark p { color: rgba(255,255,255,0.7); }
+
+        /* Values */
+        .values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+        .value-card { background: white; border-radius: 20px; padding: 32px; border: 1px solid #E2E8F0; transition: all 0.3s; }
+        .value-card:hover { border-color: #A51C30; transform: translateY(-4px); box-shadow: 0 12px 40px rgba(165, 28, 48, 0.1); }
+        .value-icon { width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg, rgba(165, 28, 48, 0.1), rgba(165, 28, 48, 0.05)); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; color: #A51C30; }
+        .value-icon svg { width: 28px; height: 28px; }
+        .value-card h4 { font-size: 18px; font-weight: 700; color: #1E293B; margin-bottom: 12px; }
+        .value-card p { font-size: 14px; color: #64748B; line-height: 1.6; }
+
+        /* Team */
+        .team-header { text-align: center; margin-bottom: 48px; }
+        .team-header h2 { font-size: 36px; font-weight: 800; color: #1E293B; margin-bottom: 12px; }
+        .team-header p { font-size: 17px; color: #64748B; }
+        .team-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
+        .team-card { text-align: center; }
+        .team-avatar { width: 160px; height: 160px; border-radius: 50%; background: linear-gradient(135deg, #E2E8F0, #CBD5E1); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; color: #94A3B8; position: relative; overflow: hidden; }
+        .team-avatar::before { content: ''; position: absolute; inset: 4px; border-radius: 50%; border: 2px dashed #CBD5E1; }
+        .team-name { font-size: 18px; font-weight: 700; color: #1E293B; margin-bottom: 4px; }
+        .team-role { font-size: 14px; color: #A51C30; font-weight: 500; margin-bottom: 12px; }
+        .team-social { display: flex; gap: 8px; justify-content: center; }
+        .team-social a { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: #F1F5F9; border-radius: 8px; color: #64748B; transition: all 0.2s; }
+        .team-social a:hover { background: #A51C30; color: white; }
+        .team-social svg { width: 16px; height: 16px; }
+
+        /* Timeline */
+        .timeline { position: relative; padding-left: 40px; }
+        .timeline::before { content: ''; position: absolute; left: 7px; top: 0; bottom: 0; width: 2px; background: linear-gradient(to bottom, #A51C30, #E2E8F0); }
+        .timeline-item { position: relative; padding-bottom: 48px; }
+        .timeline-item:last-child { padding-bottom: 0; }
+        .timeline-dot { position: absolute; left: -40px; top: 4px; width: 16px; height: 16px; border-radius: 50%; background: #A51C30; border: 3px solid #F8FAFC; box-shadow: 0 0 0 3px rgba(165, 28, 48, 0.2); }
+        .timeline-date { font-size: 14px; font-weight: 700; color: #A51C30; margin-bottom: 8px; }
+        .timeline-title { font-size: 20px; font-weight: 700; color: #1E293B; margin-bottom: 8px; }
+        .timeline-desc { font-size: 15px; color: #64748B; line-height: 1.6; }
+
+        /* CTA */
+        .cta-section { background: linear-gradient(135deg, #1E293B, #334155); border-radius: 32px; padding: 80px; text-align: center; position: relative; overflow: hidden; }
+        .cta-section::before { content: ''; position: absolute; top: -150px; right: -150px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(165, 28, 48, 0.2), transparent 70%); }
+        .cta-content { position: relative; z-index: 1; }
+        .cta-content h2 { font-size: 40px; font-weight: 800; color: white; margin-bottom: 16px; }
+        .cta-content p { font-size: 18px; color: rgba(255,255,255,0.7); margin-bottom: 32px; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .cta-btns { display: flex; gap: 16px; justify-content: center; }
+        .cta-btn { display: inline-flex; align-items: center; gap: 10px; padding: 18px 36px; border-radius: 14px; font-size: 16px; font-weight: 700; text-decoration: none; transition: all 0.3s; }
+        .cta-btn.primary { background: linear-gradient(135deg, #A51C30, #C41E3A); color: white; }
+        .cta-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(165, 28, 48, 0.4); }
+        .cta-btn.secondary { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; }
+        .cta-btn.secondary:hover { background: rgba(255,255,255,0.15); }
+        .cta-btn svg { width: 20px; height: 20px; }
+
+        .footer { padding: 32px 48px; border-top: 1px solid #E2E8F0; text-align: center; margin-top: 80px; }
+        .footer-text { font-size: 14px; color: #94A3B8; }
+
+        @media (max-width: 1024px) {
+            .story-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .values-grid { grid-template-columns: repeat(2, 1fr); }
+            .team-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .header, .main { padding-left: 24px; padding-right: 24px; }
+            .hero { padding: 60px 24px; }
+            .hero h1 { font-size: 36px; }
+            .mv-grid, .values-grid, .stats-grid { grid-template-columns: 1fr; }
+            .team-grid { grid-template-columns: 1fr; }
+            .cta-section { padding: 48px 24px; }
+            .cta-content h2 { font-size: 28px; }
+            .cta-btns { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo">
+            <svg class="logo-icon" viewBox="0 0 48 48" fill="none"><defs><linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38"><stop stop-color="#A51C30"/><stop offset="1" stop-color="#C41E3A"/></linearGradient></defs><path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#logoGrad)"/><line x1="17" y1="15" x2="31" y2="15" stroke="white" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/><line x1="15" y1="19" x2="33" y2="19" stroke="white" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/><rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/></svg>
+            <div class="logo-text"><span class="logo-text-am">Am</span><span class="logo-text-bilet">Bilet</span></div>
+        </a>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Echipa AmBilet</div>
+            <h1>Conectăm oamenii cu experiențe memorabile</h1>
+            <p>Suntem o echipă pasionată de tehnologie și evenimente, dedicată să transformăm modul în care românii descoperă și participă la evenimente.</p>
+        </div>
+    </section>
+
+    <main class="main">
+        <!-- Story -->
+        <section class="section">
+            <div class="section-label">Povestea noastră</div>
+            <div class="story-grid">
+                <div class="story-content">
+                    <h2>Am început cu o idee simplă</h2>
+                    <p>În 2024, am observat o problemă: organizatorii de evenimente din România se luptau cu sisteme de ticketing complicate, scumpe și neadaptate pieței locale.</p>
+                    <p>Am construit AmBilet pentru a rezolva asta. O platformă modernă, intuitivă, care pune accent pe experiența utilizatorului — atât pentru organizatori, cât și pentru participanți.</p>
+                    <p>Astăzi, AmBilet este alegerea a sute de organizatori din România, de la festivaluri mari la evenimente de nișă.</p>
+                </div>
+                <div class="story-visual">
+                    <svg viewBox="0 0 48 48" fill="none"><path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="white"/><line x1="17" y1="15" x2="31" y2="15" stroke="#A51C30" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/><line x1="15" y1="19" x2="33" y2="19" stroke="#A51C30" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/><rect x="20" y="27" width="8" height="8" rx="1.5" fill="#A51C30"/></svg>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value">500+</div><div class="stat-label">Evenimente organizate</div></div>
+                <div class="stat-card"><div class="stat-value">100K+</div><div class="stat-label">Bilete vândute</div></div>
+                <div class="stat-card"><div class="stat-value">200+</div><div class="stat-label">Organizatori activi</div></div>
+                <div class="stat-card"><div class="stat-value">99.9%</div><div class="stat-label">Uptime garantat</div></div>
+            </div>
+        </section>
+
+        <!-- Mission & Vision -->
+        <section class="section">
+            <div class="section-label">Ce ne ghidează</div>
+            <div class="mv-grid">
+                <div class="mv-card">
+                    <div class="mv-icon mission"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+                    <h3>Misiunea noastră</h3>
+                    <p>Să democratizăm accesul la tehnologie de ticketing de calitate pentru toți organizatorii de evenimente din România, indiferent de mărimea lor.</p>
+                </div>
+                <div class="mv-card dark">
+                    <div class="mv-icon vision"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                    <h3>Viziunea noastră</h3>
+                    <p>Să devenim platforma preferată de ticketing din Europa de Est, recunoscută pentru inovație, fiabilitate și focus pe comunitate.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Values -->
+        <section class="section">
+            <div class="section-label">Valorile noastre</div>
+            <div class="values-grid">
+                <div class="value-card">
+                    <div class="value-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                    <h4>Excelență</h4>
+                    <p>Ne străduim să livrăm cea mai bună experiență posibilă în fiecare detaliu al platformei noastre.</p>
+                </div>
+                <div class="value-card">
+                    <div class="value-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                    <h4>Comunitate</h4>
+                    <p>Construim împreună cu organizatorii și participanții. Feedback-ul lor ne ghidează dezvoltarea.</p>
+                </div>
+                <div class="value-card">
+                    <div class="value-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+                    <h4>Inovație</h4>
+                    <p>Adoptăm cele mai noi tehnologii pentru a oferi soluții moderne și eficiente.</p>
+                </div>
+                <div class="value-card">
+                    <div class="value-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+                    <h4>Încredere</h4>
+                    <p>Securitatea datelor și a tranzacțiilor este prioritatea noastră numărul unu.</p>
+                </div>
+                <div class="value-card">
+                    <div class="value-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                    <h4>Transparență</h4>
+                    <p>Comunicăm deschis prețurile, politicile și orice schimbare care afectează utilizatorii.</p>
+                </div>
+                <div class="value-card">
+                    <div class="value-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.93 4.93l4.24 4.24"/><path d="M14.83 14.83l4.24 4.24"/><circle cx="12" cy="12" r="2.5"/><path d="M6.34 17.66l4.24-4.24"/><path d="M14.83 9.17l4.24-4.24"/></svg></div>
+                    <h4>Sustenabilitate</h4>
+                    <p>Promovăm bilete digitale și practici eco-friendly în industria evenimentelor.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Team -->
+        <section class="section">
+            <div class="team-header">
+                <div class="section-label">Echipa</div>
+                <h2>Oamenii din spatele AmBilet</h2>
+                <p>O echipă mică dar dedicată, unită de pasiunea pentru evenimente și tehnologie.</p>
+            </div>
+            <div class="team-grid">
+                <div class="team-card">
+                    <div class="team-avatar">AP</div>
+                    <div class="team-name">Alexandru Popescu</div>
+                    <div class="team-role">Co-fondator & CEO</div>
+                    <div class="team-social">
+                        <a href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
+                        <a href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg></a>
+                    </div>
+                </div>
+                <div class="team-card">
+                    <div class="team-avatar">MI</div>
+                    <div class="team-name">Maria Ionescu</div>
+                    <div class="team-role">Co-fondator & CTO</div>
+                    <div class="team-social">
+                        <a href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
+                        <a href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></a>
+                    </div>
+                </div>
+                <div class="team-card">
+                    <div class="team-avatar">AD</div>
+                    <div class="team-name">Andrei Dumitrescu</div>
+                    <div class="team-role">Head of Product</div>
+                    <div class="team-social">
+                        <a href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
+                    </div>
+                </div>
+                <div class="team-card">
+                    <div class="team-avatar">ES</div>
+                    <div class="team-name">Elena Stan</div>
+                    <div class="team-role">Customer Success</div>
+                    <div class="team-social">
+                        <a href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Timeline -->
+        <section class="section">
+            <div class="section-label">Parcursul nostru</div>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-date">Ianuarie 2024</div>
+                    <div class="timeline-title">Fondarea AmBilet</div>
+                    <div class="timeline-desc">Am pornit cu o echipă de 2 persoane și o viziune clară: să simplificăm ticketing-ul în România.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-date">Martie 2024</div>
+                    <div class="timeline-title">Lansarea platformei</div>
+                    <div class="timeline-desc">Prima versiune a platformei a fost lansată, cu primii 10 organizatori de test.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-date">Iunie 2024</div>
+                    <div class="timeline-title">100 de organizatori</div>
+                    <div class="timeline-desc">Am atins milestone-ul de 100 de organizatori activi pe platformă.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-date">Decembrie 2024</div>
+                    <div class="timeline-title">100.000 de bilete vândute</div>
+                    <div class="timeline-desc">Am celebrat vânzarea biletului cu numărul 100.000 și am lansat aplicația mobilă.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <div class="cta-section">
+            <div class="cta-content">
+                <h2>Hai să construim împreună</h2>
+                <p>Vrei să faci parte din echipa AmBilet sau să colaborezi cu noi?</p>
+                <div class="cta-btns">
+                    <a href="/careers" class="cta-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>Vezi cariere</a>
+                    <a href="/contact" class="cta-btn secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Contactează-ne</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer"><p class="footer-text">© 2024 AmBilet.ro — Toate drepturile rezervate. Powered by TIXELLO</p></footer>
+</body>
+</html>
