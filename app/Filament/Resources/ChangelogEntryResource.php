@@ -24,7 +24,7 @@ class ChangelogEntryResource extends Resource
 
     protected static UnitEnum|string|null $navigationGroup = 'Setări';
 
-    protected static string $navigationLabel = 'Changelog';
+    protected static ?string $navigationLabel = 'Changelog';
 
     protected static ?string $modelLabel = 'Changelog Entry';
 
