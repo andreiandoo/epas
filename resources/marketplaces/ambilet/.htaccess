@@ -157,7 +157,7 @@ RewriteRule ^organizator/panou/?$ organizer/dashboard.php [L]
 # Handle organizer public page - /organizator/slug (excludes login, register, dashboard routes)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} !^/organizator/(login|register|events|analytics|tickets|orders|payouts|team|support|landing|help|promo|notificari|participanti|documente|servicii|setari|facturare|echipa|sold|panou|vanzari)/?$
+RewriteCond %{REQUEST_URI} !^/organizator/(login|register|events|analytics|tickets|orders|payouts|team|support|landing|help|promo|notificari|notifications|participanti|documente|servicii|setari|facturare|echipa|sold|panou|vanzari)/?$
 RewriteRule ^organizator/([a-z0-9-]+)/?$ organizer/public.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /organizer/slug to /organizator/slug

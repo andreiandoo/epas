@@ -65,7 +65,7 @@ class DashboardController extends BaseController
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59']);
 
-        $completedOrders = (clone $orders)->where('status', 'completed');
+        $completedOrders = (clone $orders)->whereIn('status', ['paid', 'confirmed', 'completed']);
 
         $commissionRate = $organizer->getEffectiveCommissionRate();
         $grossRevenue = (float) $completedOrders->sum('total');
@@ -134,7 +134,7 @@ class DashboardController extends BaseController
         };
 
         $sales = Order::where('marketplace_organizer_id', $organizer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59'])
             ->selectRaw("DATE_FORMAT(created_at, '{$dateFormat}') as period")
             ->selectRaw('COUNT(*) as orders')
@@ -318,7 +318,7 @@ class DashboardController extends BaseController
         $endDate = Carbon::parse($month)->endOfMonth();
 
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->get();
 
