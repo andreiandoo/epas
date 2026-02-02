@@ -626,10 +626,10 @@ const EventPage = {
                         urlPrefix: '/bilete/'
                     });
                 } else if (container) {
-                    container.innerHTML = '<p class="col-span-full text-muted text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
+                    container.innerHTML = '<p class="col-span-full text-white text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
                 }
             } else if (container) {
-                container.innerHTML = '<p class="col-span-full text-muted text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
+                container.innerHTML = '<p class="col-span-full text-white text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
             }
         } catch (e) {
             console.error('Failed to load ended related events:', e);

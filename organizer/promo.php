@@ -256,16 +256,16 @@ function renderPromoCodes() {
                             ${statusBadge}
                         </div>
                     </div>
-                    <div class="relative" x-data="{ open: false }">
-                        <button @click="open = !open" class="p-2 hover:bg-surface rounded-lg">
+                    <div class="relative">
+                        <button onclick="togglePromoMenu(${c.id})" class="p-2 hover:bg-surface rounded-lg">
                             <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
                         </button>
-                        <div x-show="open" @click.away="open = false" x-cloak class="absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-border z-10">
-                            <button onclick="editCode(${c.id})" class="w-full px-4 py-2 text-left text-sm text-secondary hover:bg-surface flex items-center gap-2">
+                        <div id="promo-menu-${c.id}" class="hidden absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-border z-10">
+                            <button onclick="editCode(${c.id}); closeAllPromoMenus();" class="w-full px-4 py-2 text-left text-sm text-secondary hover:bg-surface flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 Editeaza
                             </button>
-                            <button onclick="deleteCode(${c.id})" class="w-full px-4 py-2 text-left text-sm text-error hover:bg-surface flex items-center gap-2">
+                            <button onclick="deleteCode(${c.id}); closeAllPromoMenus();" class="w-full px-4 py-2 text-left text-sm text-error hover:bg-surface flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 Sterge
                             </button>
@@ -385,6 +385,22 @@ async function editCode(id) {
 }
 function generateCode() { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let code = ''; for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length)); document.getElementById('promo-code').value = code; }
 function copyCode(code) { navigator.clipboard.writeText(code); AmbiletNotifications.success('Codul a fost copiat'); }
+
+function togglePromoMenu(id) {
+    closeAllPromoMenus();
+    const menu = document.getElementById('promo-menu-' + id);
+    if (menu) menu.classList.toggle('hidden');
+}
+function closeAllPromoMenus() {
+    document.querySelectorAll('[id^="promo-menu-"]').forEach(m => m.classList.add('hidden'));
+}
+// Close menus on click outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('[id^="promo-menu-"]') && !e.target.closest('button[onclick^="togglePromoMenu"]')) {
+        closeAllPromoMenus();
+    }
+});
+
 async function deleteCode(id) {
     if (!confirm('Stergi acest cod?')) return;
     try {
