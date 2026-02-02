@@ -294,18 +294,36 @@ function updateReport(data) {
         // Commission rate display
         const commissionRate = o.commission_rate || data.event?.commission_rate || 5;
         const useFixedCommission = o.use_fixed_commission || data.event?.use_fixed_commission || false;
+        const commissionMode = o.commission_mode || data.event?.commission_mode || 'included';
         document.getElementById('summary-commission').textContent = commissionRate + '%';
         document.getElementById('summary-commission-label').textContent = useFixedCommission ? 'Comision fix' : 'Comision';
 
-        // Financial summary
+        // Financial summary - calculate based on commission mode
         const refunds = o.refunds_total || 0;
-        const commission = o.commission_amount || ((o.total_revenue || 0) * (commissionRate / 100));
-        const netRevenue = (o.total_revenue || 0) - refunds - commission;
+        const grossRevenue = o.total_revenue || 0;
 
-        document.getElementById('financial-gross').textContent = formatCurrency(o.total_revenue || 0);
+        // Calculate commission amount
+        const commission = o.commission_amount || (grossRevenue * (commissionRate / 100));
+
+        // Net revenue depends on commission mode:
+        // - "added_on_top": commission paid by customer extra, organizer gets full ticket price
+        // - "included": commission deducted from ticket price
+        let netRevenue;
+        let commissionLabel;
+        if (commissionMode === 'added_on_top') {
+            // Commission was added on top - organizer receives full revenue
+            netRevenue = grossRevenue - refunds;
+            commissionLabel = `Comision platformă (${commissionRate}%${useFixedCommission ? ' fix' : ''} +preț)`;
+        } else {
+            // Commission is included - deducted from revenue
+            netRevenue = grossRevenue - refunds - commission;
+            commissionLabel = `Comision platformă (${commissionRate}%${useFixedCommission ? ' fix' : ''} inclus)`;
+        }
+
+        document.getElementById('financial-gross').textContent = formatCurrency(grossRevenue);
         document.getElementById('financial-refunds').textContent = '-' + formatCurrency(refunds);
-        document.getElementById('financial-commission').textContent = '-' + formatCurrency(commission);
-        document.getElementById('financial-commission-label').textContent = `Comision platformă (${commissionRate}%${useFixedCommission ? ' fix' : ''})`;
+        document.getElementById('financial-commission').textContent = commissionMode === 'added_on_top' ? formatCurrency(commission) + ' (plătit de client)' : '-' + formatCurrency(commission);
+        document.getElementById('financial-commission-label').textContent = commissionLabel;
         document.getElementById('financial-net').textContent = formatCurrency(netRevenue);
         document.getElementById('refunds-total').textContent = formatCurrency(refunds);
     }
