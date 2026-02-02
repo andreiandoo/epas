@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Resources\PayoutResource\Pages;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceAdmin;
 use Filament\Forms;
+use Filament\Infolists;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
 use Filament\Resources\Resource;
@@ -153,6 +154,151 @@ class PayoutResource extends Resource
                             ->columnSpanFull(),
                     ])
                     ->collapsed(),
+            ]);
+    }
+
+    public static function infolist(Schema $infolist): Schema
+    {
+        return $infolist
+            ->components([
+                Infolists\Components\Section::make('Payout Request')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('reference')
+                            ->copyable()
+                            ->copyMessage('Reference copied!')
+                            ->copyMessageDuration(1500),
+
+                        Infolists\Components\TextEntry::make('organizer.name')
+                            ->label('Organizer'),
+
+                        Infolists\Components\TextEntry::make('event.title')
+                            ->label('Event')
+                            ->placeholder('General payout (no specific event)')
+                            ->formatStateUsing(fn ($state) => is_array($state)
+                                ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
+                                : $state),
+
+                        Infolists\Components\TextEntry::make('amount')
+                            ->money('RON')
+                            ->copyable()
+                            ->copyMessage('Amount copied!')
+                            ->copyMessageDuration(1500),
+
+                        Infolists\Components\TextEntry::make('status')
+                            ->badge()
+                            ->color(fn (string $state): string => match ($state) {
+                                'pending' => 'warning',
+                                'approved' => 'info',
+                                'processing' => 'primary',
+                                'completed' => 'success',
+                                'rejected' => 'danger',
+                                'cancelled' => 'gray',
+                                default => 'gray',
+                            }),
+
+                        Infolists\Components\TextEntry::make('created_at')
+                            ->label('Requested At')
+                            ->dateTime('d.m.Y H:i'),
+                    ])
+                    ->columns(3),
+
+                Infolists\Components\Section::make('Amount Breakdown')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('gross_amount')
+                            ->money('RON')
+                            ->label('Gross Amount'),
+
+                        Infolists\Components\TextEntry::make('commission_amount')
+                            ->money('RON')
+                            ->label('Commission'),
+
+                        Infolists\Components\TextEntry::make('fees_amount')
+                            ->money('RON')
+                            ->label('Fees'),
+
+                        Infolists\Components\TextEntry::make('amount')
+                            ->money('RON')
+                            ->label('Net Amount')
+                            ->weight('bold'),
+                    ])
+                    ->columns(4),
+
+                Infolists\Components\Section::make('Payout Method')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('payout_method.bank_name')
+                            ->label('Bank'),
+
+                        Infolists\Components\TextEntry::make('payout_method.iban')
+                            ->label('IBAN')
+                            ->copyable()
+                            ->copyMessage('IBAN copied!')
+                            ->copyMessageDuration(1500),
+
+                        Infolists\Components\TextEntry::make('payout_method.account_holder')
+                            ->label('Account Holder')
+                            ->copyable()
+                            ->copyMessage('Account holder copied!')
+                            ->copyMessageDuration(1500),
+                    ])
+                    ->columns(3),
+
+                Infolists\Components\Section::make('Organizer Notes')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('organizer_notes')
+                            ->label('')
+                            ->placeholder('No notes from organizer')
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsed(fn ($record): bool => empty($record?->organizer_notes)),
+
+                Infolists\Components\Section::make('Admin Notes')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('admin_notes')
+                            ->label('')
+                            ->placeholder('No admin notes')
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsed(fn ($record): bool => empty($record?->admin_notes)),
+
+                Infolists\Components\Section::make('Rejection Details')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('rejection_reason')
+                            ->columnSpanFull(),
+                        Infolists\Components\TextEntry::make('rejectedByUser.name')
+                            ->label('Rejected By'),
+                        Infolists\Components\TextEntry::make('rejected_at')
+                            ->dateTime('d.m.Y H:i'),
+                    ])
+                    ->columns(2)
+                    ->visible(fn ($record) => $record->isRejected()),
+
+                Infolists\Components\Section::make('Payment Confirmation')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('payment_reference')
+                            ->copyable(),
+                        Infolists\Components\TextEntry::make('payment_method'),
+                        Infolists\Components\TextEntry::make('payment_notes')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2)
+                    ->visible(fn ($record) => $record->payment_reference),
+
+                Infolists\Components\Section::make('Timeline')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('created_at')
+                            ->label('Requested')
+                            ->dateTime('d.m.Y H:i'),
+                        Infolists\Components\TextEntry::make('approved_at')
+                            ->dateTime('d.m.Y H:i')
+                            ->visible(fn ($record) => $record->approved_at),
+                        Infolists\Components\TextEntry::make('processed_at')
+                            ->dateTime('d.m.Y H:i')
+                            ->visible(fn ($record) => $record->processed_at),
+                        Infolists\Components\TextEntry::make('completed_at')
+                            ->dateTime('d.m.Y H:i')
+                            ->visible(fn ($record) => $record->completed_at),
+                    ])
+                    ->columns(4),
             ]);
     }
 
