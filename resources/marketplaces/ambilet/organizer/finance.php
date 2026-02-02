@@ -61,25 +61,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
 
-            <div class="flex items-center gap-2 mb-6 border-b border-border">
-                <button onclick="setTab('transactions')" class="px-6 py-3 text-sm font-medium border-b-2 tab-btn active border-primary text-primary" data-tab="transactions">Tranzactii</button>
-                <button onclick="setTab('payouts')" class="px-6 py-3 text-sm font-medium border-b-2 border-transparent tab-btn text-muted hover:text-secondary" data-tab="payouts">Plati Primite</button>
-            </div>
-
-            <div id="transactions-tab" class="tab-content">
-                <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                    <div class="divide-y divide-border" id="transactions-list"></div>
-                </div>
-            </div>
-
-            <div id="payouts-tab" class="hidden tab-content">
-                <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                    <table class="w-full">
-                        <thead class="bg-surface"><tr><th class="px-6 py-4 text-sm font-semibold text-left text-secondary">ID Plata</th><th class="px-6 py-4 text-sm font-semibold text-left text-secondary">Suma</th><th class="px-6 py-4 text-sm font-semibold text-left text-secondary">Status</th><th class="px-6 py-4 text-sm font-semibold text-left text-secondary">Data</th></tr></thead>
-                        <tbody id="payouts-list" class="divide-y divide-border"></tbody>
-                    </table>
-                </div>
-            </div>
         </main>
     </div>
 
@@ -117,8 +98,6 @@ async function loadFinanceData() {
             document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(financeData.pending_balance || 0);
             document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(financeData.total_paid_out || 0);
             renderEvents(financeData.events || []);
-            renderTransactions(financeData.transactions || []);
-            renderPayouts(financeData.payouts || []);
         } else { showEmptyFinance(); }
     } catch (error) { console.error(error); showEmptyFinance(); }
 }
@@ -128,8 +107,6 @@ function showEmptyFinance() {
     document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(0);
     document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(0);
     document.getElementById('events-list').innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-muted">Nu exista evenimente</td></tr>';
-    document.getElementById('transactions-list').innerHTML = '<div class="p-6 text-center text-muted">Nu exista tranzactii momentan</div>';
-    document.getElementById('payouts-list').innerHTML = '<tr><td colspan="4" class="px-6 py-12 text-center text-muted">Nu exista plati momentan</td></tr>';
 }
 
 function renderEvents(events) {
@@ -323,63 +300,6 @@ function renderEventPayouts(eventId, payouts) {
             </tr>
         `;
     }).join('');
-}
-
-function renderTransactions(transactions) {
-    if (!transactions.length) { document.getElementById('transactions-list').innerHTML = '<div class="p-6 text-center text-muted">Nu exista tranzactii momentan</div>'; return; }
-    document.getElementById('transactions-list').innerHTML = transactions.map(t => `
-        <div class="flex items-center justify-between p-4 hover:bg-surface/50">
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'sale' ? 'bg-success/10' : t.type === 'refund' ? 'bg-error/10' : 'bg-blue-100'}">
-                    <svg class="w-5 h-5 ${t.type === 'sale' ? 'text-success' : t.type === 'refund' ? 'text-error' : 'text-blue-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${t.type === 'sale' ? 'M12 4v16m8-8H4' : t.type === 'refund' ? 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6' : 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z'}"/></svg>
-                </div>
-                <div><p class="font-medium text-secondary">${t.description}</p><p class="text-sm text-muted">${AmbiletUtils.formatDate(t.date)}</p></div>
-            </div>
-            <span class="font-semibold ${t.amount >= 0 ? 'text-success' : 'text-error'}">${t.amount >= 0 ? '+' : ''}${AmbiletUtils.formatCurrency(t.amount)}</span>
-        </div>
-    `).join('');
-}
-
-function renderPayouts(payouts) {
-    if (!payouts.length) { document.getElementById('payouts-list').innerHTML = '<tr><td colspan="4" class="px-6 py-12 text-center text-muted">Nu exista plati momentan</td></tr>'; return; }
-    document.getElementById('payouts-list').innerHTML = payouts.map(p => {
-        const statusColors = {
-            'pending': { class: 'bg-warning/10 text-warning', label: 'In asteptare' },
-            'approved': { class: 'bg-blue-100 text-blue-600', label: 'Aprobata' },
-            'processing': { class: 'bg-blue-100 text-blue-600', label: 'In procesare' },
-            'completed': { class: 'bg-success/10 text-success', label: 'Finalizata' },
-            'rejected': { class: 'bg-error/10 text-error', label: 'Respinsa' },
-            'cancelled': { class: 'bg-gray-100 text-gray-600', label: 'Anulata' }
-        };
-        const statusInfo = statusColors[p.status] || statusColors['pending'];
-        const rejectionTooltip = p.status === 'rejected' && p.rejection_reason
-            ? `<span class="ml-1 relative group cursor-help">
-                <svg class="w-4 h-4 inline text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap max-w-xs z-50">
-                    <span class="font-semibold">Motiv:</span> ${p.rejection_reason}
-                </span>
-               </span>`
-            : '';
-        return `
-            <tr class="hover:bg-surface/50">
-                <td class="px-6 py-4 font-medium text-secondary">${p.reference || '#' + p.id}</td>
-                <td class="px-6 py-4 font-semibold">${AmbiletUtils.formatCurrency(p.amount)}</td>
-                <td class="px-6 py-4">
-                    <span class="px-3 py-1 ${statusInfo.class} text-sm rounded-full">${statusInfo.label}</span>
-                    ${rejectionTooltip}
-                </td>
-                <td class="px-6 py-4 text-muted">${AmbiletUtils.formatDate(p.created_at)}</td>
-            </tr>
-        `;
-    }).join('');
-}
-
-function setTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(btn => { btn.classList.remove('active', 'border-primary', 'text-primary'); btn.classList.add('border-transparent', 'text-muted'); });
-    document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active', 'border-primary', 'text-primary');
-    document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.remove('border-transparent', 'text-muted');
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-    document.getElementById(`${tabName}-tab`).classList.remove('hidden');
 }
 
 let currentPayoutMaxAmount = 0;
