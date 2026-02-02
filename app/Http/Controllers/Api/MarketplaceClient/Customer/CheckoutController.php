@@ -53,6 +53,7 @@ class CheckoutController extends BaseController
         // Get ticket insurance data
         $hasInsurance = $request->boolean('ticket_insurance');
         $insuranceAmount = $hasInsurance ? (float) $request->input('ticket_insurance_amount', 0) : 0;
+        $insurancePerTicket = 0; // Will be calculated after we know total ticket count
 
         // Try to get items from request body first (frontend sends localStorage cart)
         $requestItems = $request->input('items', []);
@@ -116,6 +117,12 @@ class CheckoutController extends BaseController
             return $this->error('Some items are no longer available', 400, [
                 'errors' => $validationErrors,
             ]);
+        }
+
+        // Calculate per-ticket insurance amount
+        if ($hasInsurance && $insuranceAmount > 0) {
+            $totalTicketCount = collect($cartItems)->sum(fn($item) => (int) ($item['quantity'] ?? 1));
+            $insurancePerTicket = $totalTicketCount > 0 ? round($insuranceAmount / $totalTicketCount, 2) : 0;
         }
 
         try {
@@ -396,6 +403,13 @@ class CheckoutController extends BaseController
                             ];
                         }
 
+                        // Build ticket meta - combine seat info with insurance info
+                        $ticketMeta = $seatMeta ?? [];
+                        if ($hasInsurance && $insurancePerTicket > 0) {
+                            $ticketMeta['has_insurance'] = true;
+                            $ticketMeta['insurance_amount'] = $insurancePerTicket;
+                        }
+
                         Ticket::create([
                             'marketplace_client_id' => $client->id,
                             'tenant_id' => $event?->tenant_id,
@@ -413,7 +427,7 @@ class CheckoutController extends BaseController
                             'seat_label' => $seatLabel,
                             'attendee_name' => $beneficiary['name'] ?? null,
                             'attendee_email' => $beneficiary['email'] ?? null,
-                            'meta' => $seatMeta,
+                            'meta' => !empty($ticketMeta) ? $ticketMeta : null,
                         ]);
 
                         $ticketIndex++;
