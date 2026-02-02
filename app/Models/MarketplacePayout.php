@@ -225,6 +225,12 @@ class MarketplacePayout extends Model
         // Update organizer balances
         $this->organizer->recordPayoutCompleted($this->amount);
 
+        // Build description with payment reference
+        $description = "Plată {$this->reference} finalizată";
+        if ($paymentReference) {
+            $description .= " (Ref: {$paymentReference})";
+        }
+
         // Record transaction
         MarketplaceTransaction::create([
             'marketplace_client_id' => $this->marketplace_client_id,
@@ -234,7 +240,11 @@ class MarketplacePayout extends Model
             'currency' => $this->currency,
             'balance_after' => $this->organizer->available_balance,
             'marketplace_payout_id' => $this->id,
-            'description' => "Payout {$this->reference} completed",
+            'description' => $description,
+            'metadata' => [
+                'payment_reference' => $paymentReference,
+                'payment_notes' => $paymentNotes,
+            ],
         ]);
 
         $this->notifyOrganizer('completed');
