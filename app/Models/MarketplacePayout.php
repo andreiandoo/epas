@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\MarketplaceAdminPayoutRequestNotification;
 use App\Notifications\MarketplacePayoutNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -305,6 +306,21 @@ class MarketplacePayout extends Model
     {
         if ($this->organizer) {
             $this->organizer->notify(new MarketplacePayoutNotification($this, $action));
+        }
+    }
+
+    /**
+     * Send notification to marketplace admins about new payout request
+     */
+    public function notifyAdmins(): void
+    {
+        // Get all active admins for this marketplace client
+        $admins = MarketplaceAdmin::where('marketplace_client_id', $this->marketplace_client_id)
+            ->where('status', 'active')
+            ->get();
+
+        foreach ($admins as $admin) {
+            $admin->notify(new MarketplaceAdminPayoutRequestNotification($this));
         }
     }
 }

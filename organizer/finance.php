@@ -147,9 +147,35 @@ function renderTransactions(transactions) {
 
 function renderPayouts(payouts) {
     if (!payouts.length) { document.getElementById('payouts-list').innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center text-muted">Nu exista plati momentan</td></tr>'; return; }
-    document.getElementById('payouts-list').innerHTML = payouts.map(p => `
-        <tr class="hover:bg-surface/50"><td class="px-6 py-4 font-medium text-secondary">${p.id}</td><td class="px-6 py-4 font-semibold">${AmbiletUtils.formatCurrency(p.amount)}</td><td class="px-6 py-4 text-muted">${p.account}</td><td class="px-6 py-4"><span class="px-3 py-1 bg-${p.status === 'completed' ? 'success' : 'warning'}/10 text-${p.status === 'completed' ? 'success' : 'warning'} text-sm rounded-full">${p.status === 'completed' ? 'Finalizata' : 'In procesare'}</span></td><td class="px-6 py-4 text-muted">${AmbiletUtils.formatDate(p.date)}</td></tr>
-    `).join('');
+    document.getElementById('payouts-list').innerHTML = payouts.map(p => {
+        const statusColors = {
+            'pending': { bg: 'warning', label: 'In asteptare' },
+            'approved': { bg: 'blue-500', label: 'Aprobata' },
+            'processing': { bg: 'blue-500', label: 'In procesare' },
+            'completed': { bg: 'success', label: 'Finalizata' },
+            'rejected': { bg: 'error', label: 'Respinsa' },
+            'cancelled': { bg: 'gray-500', label: 'Anulata' }
+        };
+        const statusInfo = statusColors[p.status] || statusColors['pending'];
+        const rejectionTooltip = p.status === 'rejected' && p.rejection_reason
+            ? `<span class="ml-1 relative group cursor-help">
+                <svg class="w-4 h-4 inline text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap max-w-xs z-50">
+                    <span class="font-semibold">Motiv:</span> ${p.rejection_reason}
+                </span>
+               </span>`
+            : '';
+        return `<tr class="hover:bg-surface/50">
+            <td class="px-6 py-4 font-medium text-secondary">${p.reference || p.id}</td>
+            <td class="px-6 py-4 font-semibold">${AmbiletUtils.formatCurrency(p.amount)}</td>
+            <td class="px-6 py-4 text-muted">${p.account || '-'}</td>
+            <td class="px-6 py-4">
+                <span class="px-3 py-1 bg-${statusInfo.bg}/10 text-${statusInfo.bg} text-sm rounded-full">${statusInfo.label}</span>
+                ${rejectionTooltip}
+            </td>
+            <td class="px-6 py-4 text-muted">${AmbiletUtils.formatDate(p.created_at || p.date)}</td>
+        </tr>`;
+    }).join('');
 }
 
 function setTab(tabName) {

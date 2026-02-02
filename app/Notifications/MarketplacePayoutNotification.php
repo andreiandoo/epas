@@ -19,7 +19,7 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['mail', 'database'];
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -109,12 +109,47 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
 
     public function toArray(object $notifiable): array
     {
-        return [
+        $data = [
             'payout_id' => $this->payout->id,
             'reference' => $this->payout->reference,
             'amount' => $this->payout->amount,
+            'currency' => $this->payout->currency,
             'status' => $this->payout->status,
             'action' => $this->action,
+            'title' => $this->getNotificationTitle(),
+            'message' => $this->getNotificationMessage(),
         ];
+
+        if ($this->action === 'rejected' && $this->payout->rejection_reason) {
+            $data['rejection_reason'] = $this->payout->rejection_reason;
+        }
+
+        return $data;
+    }
+
+    protected function getNotificationTitle(): string
+    {
+        return match ($this->action) {
+            'submitted' => 'Cerere de plată înregistrată',
+            'approved' => 'Cerere de plată aprobată',
+            'processing' => 'Plată în procesare',
+            'completed' => 'Plată finalizată',
+            'rejected' => 'Cerere de plată respinsă',
+            default => 'Actualizare plată',
+        };
+    }
+
+    protected function getNotificationMessage(): string
+    {
+        $amount = number_format($this->payout->amount, 2) . ' ' . $this->payout->currency;
+
+        return match ($this->action) {
+            'submitted' => "Cererea de plată {$this->payout->reference} în valoare de {$amount} a fost înregistrată.",
+            'approved' => "Cererea de plată {$this->payout->reference} în valoare de {$amount} a fost aprobată.",
+            'processing' => "Plata {$this->payout->reference} în valoare de {$amount} este în curs de procesare.",
+            'completed' => "Plata {$this->payout->reference} în valoare de {$amount} a fost finalizată.",
+            'rejected' => "Cererea de plată {$this->payout->reference} în valoare de {$amount} a fost respinsă.",
+            default => "Actualizare pentru plata {$this->payout->reference}.",
+        };
     }
 }

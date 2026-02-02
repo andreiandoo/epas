@@ -382,8 +382,9 @@ class PayoutController extends BaseController
             // Reserve the balance
             $organizer->reserveBalanceForPayout($requestedAmount);
 
-            // Send notification
+            // Send notifications
             $payout->notifyOrganizer('submitted');
+            $payout->notifyAdmins();
 
             DB::commit();
 
@@ -509,18 +510,26 @@ class PayoutController extends BaseController
      */
     protected function formatPayout(MarketplacePayout $payout): array
     {
-        return [
+        $data = [
             'id' => $payout->id,
             'reference' => $payout->reference,
             'amount' => (float) $payout->amount,
             'currency' => $payout->currency,
             'status' => $payout->status,
             'status_label' => $payout->status_label,
-            'period_start' => $payout->period_start->toDateString(),
-            'period_end' => $payout->period_end->toDateString(),
+            'account' => $payout->payout_method['iban'] ?? null,
+            'period_start' => $payout->period_start?->toDateString(),
+            'period_end' => $payout->period_end?->toDateString(),
             'created_at' => $payout->created_at->toIso8601String(),
             'completed_at' => $payout->completed_at?->toIso8601String(),
         ];
+
+        // Include rejection reason for rejected payouts
+        if ($payout->status === 'rejected' && $payout->rejection_reason) {
+            $data['rejection_reason'] = $payout->rejection_reason;
+        }
+
+        return $data;
     }
 
     /**
