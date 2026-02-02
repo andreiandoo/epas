@@ -117,6 +117,25 @@ class PayoutResource extends Resource
                     ])
                     ->columns(4),
 
+                Section::make('Payout Method')
+                    ->schema([
+                        Forms\Components\Placeholder::make('bank_name_display')
+                            ->label('Bank')
+                            ->content(fn (?MarketplacePayout $record): string =>
+                                $record?->payout_method['bank_name'] ?? '-'),
+
+                        Forms\Components\Placeholder::make('iban_display')
+                            ->label('IBAN')
+                            ->content(fn (?MarketplacePayout $record): string =>
+                                $record?->payout_method['iban'] ?? '-'),
+
+                        Forms\Components\Placeholder::make('account_holder_display')
+                            ->label('Account Holder')
+                            ->content(fn (?MarketplacePayout $record): string =>
+                                $record?->payout_method['account_holder'] ?? '-'),
+                    ])
+                    ->columns(3),
+
                 Section::make('Organizer Notes')
                     ->schema([
                         Forms\Components\Placeholder::make('organizer_notes_display')
