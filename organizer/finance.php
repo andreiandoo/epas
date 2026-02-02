@@ -150,21 +150,24 @@ function renderEvents(events) {
 
         const canRequestPayout = e.available_balance >= 100;
         const payoutButton = canRequestPayout
-            ? `<button onclick="openPayoutModal(${e.id}, '${e.title.replace(/'/g, "\\'")}', ${e.available_balance})" class="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg hover:bg-primary-dark">Solicita plata</button>`
+            ? `<button onclick="event.stopPropagation(); openPayoutModal(${e.id}, '${e.title.replace(/'/g, "\\'")}', ${e.available_balance})" class="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg hover:bg-primary-dark">Solicita plata</button>`
             : `<span class="text-xs text-muted">Min. 100 RON</span>`;
 
         return `
-            <tr class="hover:bg-surface/50">
+            <tr class="hover:bg-surface/50 cursor-pointer event-row" data-event-id="${e.id}" onclick="toggleEventDetails(${e.id})">
                 <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-surface overflow-hidden flex-shrink-0">
                             ${e.image ? `<img src="${e.image}" class="w-full h-full object-cover">` : '<div class="w-full h-full flex items-center justify-center text-muted"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>'}
                         </div>
-                        <div>
-                            <p class="font-medium text-secondary">${e.title}</p>
-                            <div class="flex items-center gap-2 mt-0.5">
-                                ${statusBadge}
-                                <span class="text-xs text-muted">${e.tickets_sold || 0} bilete</span>
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-muted transition-transform event-expand-icon" id="expand-icon-${e.id}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <div>
+                                <p class="font-medium text-secondary hover:text-primary">${e.title}</p>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    ${statusBadge}
+                                    <span class="text-xs text-muted">${e.tickets_sold || 0} bilete</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -184,6 +187,128 @@ function renderEvents(events) {
                     ${e.pending_payout > 0 ? `<br><span class="text-xs text-warning">In procesare: ${AmbiletUtils.formatCurrency(e.pending_payout)}</span>` : ''}
                 </td>
                 <td class="px-6 py-4 text-center">${payoutButton}</td>
+            </tr>
+            <tr class="hidden event-details-row" id="event-details-${e.id}">
+                <td colspan="7" class="p-0 bg-slate-50">
+                    <div class="p-4 border-t border-border">
+                        <div class="flex items-center gap-2 mb-4 border-b border-border">
+                            <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'transactions')" class="px-4 py-2 text-sm font-medium border-b-2 border-primary text-primary event-tab-btn" data-event-id="${e.id}" data-tab="transactions">Tranzactii</button>
+                            <button onclick="event.stopPropagation(); setEventTab(${e.id}, 'payouts')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-muted hover:text-secondary event-tab-btn" data-event-id="${e.id}" data-tab="payouts">Plati Primite</button>
+                        </div>
+                        <div id="event-${e.id}-transactions" class="event-tab-content">
+                            <div class="overflow-hidden bg-white border rounded-xl border-border">
+                                <div class="divide-y divide-border" id="event-${e.id}-transactions-list">
+                                    <div class="p-4 text-center text-muted text-sm">Se incarca...</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="event-${e.id}-payouts" class="hidden event-tab-content">
+                            <div class="overflow-hidden bg-white border rounded-xl border-border">
+                                <table class="w-full">
+                                    <thead class="bg-surface"><tr><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">ID Plata</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Suma</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Status</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Data</th></tr></thead>
+                                    <tbody id="event-${e.id}-payouts-list" class="divide-y divide-border">
+                                        <tr><td colspan="4" class="px-4 py-4 text-center text-muted text-sm">Se incarca...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Track expanded events
+const expandedEvents = new Set();
+
+function toggleEventDetails(eventId) {
+    const detailsRow = document.getElementById(`event-details-${eventId}`);
+    const expandIcon = document.getElementById(`expand-icon-${eventId}`);
+
+    if (expandedEvents.has(eventId)) {
+        // Collapse
+        detailsRow.classList.add('hidden');
+        expandIcon.classList.remove('rotate-180');
+        expandedEvents.delete(eventId);
+    } else {
+        // Expand
+        detailsRow.classList.remove('hidden');
+        expandIcon.classList.add('rotate-180');
+        expandedEvents.add(eventId);
+        // Load event-specific data
+        loadEventFinanceDetails(eventId);
+    }
+}
+
+function setEventTab(eventId, tabName) {
+    // Update tab buttons for this event
+    document.querySelectorAll(`.event-tab-btn[data-event-id="${eventId}"]`).forEach(btn => {
+        btn.classList.remove('border-primary', 'text-primary');
+        btn.classList.add('border-transparent', 'text-muted');
+    });
+    const activeBtn = document.querySelector(`.event-tab-btn[data-event-id="${eventId}"][data-tab="${tabName}"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('border-primary', 'text-primary');
+        activeBtn.classList.remove('border-transparent', 'text-muted');
+    }
+
+    // Show/hide tab content
+    document.getElementById(`event-${eventId}-transactions`).classList.add('hidden');
+    document.getElementById(`event-${eventId}-payouts`).classList.add('hidden');
+    document.getElementById(`event-${eventId}-${tabName}`).classList.remove('hidden');
+}
+
+function loadEventFinanceDetails(eventId) {
+    // Filter transactions and payouts for this event
+    const eventTransactions = (financeData.transactions || []).filter(t => t.event_id === eventId);
+    const eventPayouts = (financeData.payouts || []).filter(p => p.event_id === eventId);
+
+    renderEventTransactions(eventId, eventTransactions);
+    renderEventPayouts(eventId, eventPayouts);
+}
+
+function renderEventTransactions(eventId, transactions) {
+    const container = document.getElementById(`event-${eventId}-transactions-list`);
+    if (!transactions.length) {
+        container.innerHTML = '<div class="p-4 text-center text-muted text-sm">Nu exista tranzactii pentru acest eveniment</div>';
+        return;
+    }
+    container.innerHTML = transactions.map(t => `
+        <div class="flex items-center justify-between p-3 hover:bg-surface/50">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'sale' ? 'bg-success/10' : t.type === 'refund' ? 'bg-error/10' : 'bg-blue-100'}">
+                    <svg class="w-4 h-4 ${t.type === 'sale' ? 'text-success' : t.type === 'refund' ? 'text-error' : 'text-blue-600'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${t.type === 'sale' ? 'M12 4v16m8-8H4' : t.type === 'refund' ? 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6' : 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z'}"/></svg>
+                </div>
+                <div><p class="text-sm font-medium text-secondary">${t.description}</p><p class="text-xs text-muted">${AmbiletUtils.formatDate(t.date)}</p></div>
+            </div>
+            <span class="text-sm font-semibold ${t.amount >= 0 ? 'text-success' : 'text-error'}">${t.amount >= 0 ? '+' : ''}${AmbiletUtils.formatCurrency(t.amount)}</span>
+        </div>
+    `).join('');
+}
+
+function renderEventPayouts(eventId, payouts) {
+    const tbody = document.getElementById(`event-${eventId}-payouts-list`);
+    if (!payouts.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-center text-muted text-sm">Nu exista plati pentru acest eveniment</td></tr>';
+        return;
+    }
+    tbody.innerHTML = payouts.map(p => {
+        const statusColors = {
+            'pending': { class: 'bg-warning/10 text-warning', label: 'In asteptare' },
+            'approved': { class: 'bg-blue-100 text-blue-600', label: 'Aprobata' },
+            'processing': { class: 'bg-blue-100 text-blue-600', label: 'In procesare' },
+            'completed': { class: 'bg-success/10 text-success', label: 'Finalizata' },
+            'rejected': { class: 'bg-error/10 text-error', label: 'Respinsa' },
+            'cancelled': { class: 'bg-gray-100 text-gray-600', label: 'Anulata' }
+        };
+        const statusInfo = statusColors[p.status] || statusColors['pending'];
+        return `
+            <tr class="hover:bg-surface/50">
+                <td class="px-4 py-3 text-sm font-medium text-secondary">${p.reference || '#' + p.id}</td>
+                <td class="px-4 py-3 text-sm font-semibold">${AmbiletUtils.formatCurrency(p.amount)}</td>
+                <td class="px-4 py-3"><span class="px-2 py-0.5 ${statusInfo.class} text-xs rounded-full">${statusInfo.label}</span></td>
+                <td class="px-4 py-3 text-sm text-muted">${AmbiletUtils.formatDate(p.created_at)}</td>
             </tr>
         `;
     }).join('');
