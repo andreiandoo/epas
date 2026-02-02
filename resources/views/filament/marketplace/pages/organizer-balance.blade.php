@@ -173,8 +173,10 @@
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         @foreach($payouts as $payout)
                             <tr>
-                                <td class="px-6 py-3 text-sm font-mono text-gray-900 dark:text-white">
-                                    {{ $payout->reference }}
+                                <td class="px-6 py-3 text-sm font-mono">
+                                    <a href="{{ url('/marketplace/payouts/' . $payout->id) }}" class="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">
+                                        {{ $payout->reference }}
+                                    </a>
                                 </td>
                                 <td class="px-6 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
                                     {{ number_format($payout->amount, 2) }} {{ $payout->currency ?? 'RON' }}
