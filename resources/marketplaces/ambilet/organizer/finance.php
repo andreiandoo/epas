@@ -237,8 +237,10 @@ function setEventTab(eventId, tabName) {
 }
 
 function loadEventFinanceDetails(eventId) {
-    // Filter transactions and payouts for this event
-    const eventTransactions = (financeData.transactions || []).filter(t => t.event_id === eventId);
+    // Filter transactions for this event (exclude payout-type transactions)
+    const eventTransactions = (financeData.transactions || []).filter(t =>
+        t.event_id === eventId && t.type !== 'payout' && t.type !== 'payout_reversal'
+    );
     const eventPayouts = (financeData.payouts || []).filter(p => p.event_id === eventId);
 
     renderEventTransactions(eventId, eventTransactions);
