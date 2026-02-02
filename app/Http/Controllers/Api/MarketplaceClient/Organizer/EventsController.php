@@ -786,13 +786,25 @@ class EventsController extends BaseController
 
         $query->orderBy('created_at', 'desc');
 
-        // Get all tickets for stats
-        $allTickets = \App\Models\Ticket::whereHas('order', function ($q) use ($eventIds, $validOrderStatuses) {
-            $q->whereIn('event_id', $eventIds)->whereIn('status', $validOrderStatuses);
+        // Get stats - per event if event_id is provided, otherwise all events
+        $statsEventIds = $request->has('event_id') ? [$request->event_id] : $eventIds->toArray();
+
+        $statsQuery = \App\Models\Ticket::whereHas('order', function ($q) use ($statsEventIds, $validOrderStatuses) {
+            $q->whereIn('event_id', $statsEventIds)->whereIn('status', $validOrderStatuses);
         });
 
-        $totalTickets = $allTickets->count();
-        $checkedInCount = (clone $allTickets)->whereNotNull('checked_in_at')->count();
+        $totalTickets = $statsQuery->count();
+        $checkedInCount = (clone $statsQuery)->whereNotNull('checked_in_at')->count();
+
+        // Calculate revenue for the selected event(s)
+        $revenue = Order::whereIn('event_id', $statsEventIds)
+            ->whereIn('status', $validOrderStatuses)
+            ->sum('total');
+
+        // Get unique orders count
+        $ordersCount = Order::whereIn('event_id', $statsEventIds)
+            ->whereIn('status', $validOrderStatuses)
+            ->count();
 
         $tickets = $query->take(200)->get();
 
@@ -827,6 +839,7 @@ class EventsController extends BaseController
                 'checked_in' => $ticket->checked_in_at !== null,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
                 'order_id' => $ticket->order->id,
+                'order_number' => $ticket->order->order_number,
                 'order_date' => $ticket->order->created_at?->toIso8601String(),
             ];
         });
@@ -838,6 +851,8 @@ class EventsController extends BaseController
                 'checked_in' => $checkedInCount,
                 'pending' => $totalTickets - $checkedInCount,
                 'rate' => $totalTickets > 0 ? round(($checkedInCount / $totalTickets) * 100, 1) : 0,
+                'revenue' => (float) $revenue,
+                'orders_count' => $ordersCount,
             ],
         ]);
     }
@@ -1077,6 +1092,249 @@ class EventsController extends BaseController
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
+    }
+
+    /**
+     * Export event report as PDF
+     */
+    public function exportReport(Request $request, int $eventId): \Illuminate\Http\Response
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->with(['ticketTypes', 'venue', 'marketplaceCity'])
+            ->first();
+
+        if (!$event) {
+            abort(404, 'Event not found');
+        }
+
+        // Get completed orders
+        $completedOrders = $event->orders()->whereIn('status', ['paid', 'confirmed', 'completed'])->get();
+
+        // Calculate statistics
+        $totalTicketsSold = $event->tickets()
+            ->whereHas('order', function ($q) {
+                $q->whereIn('status', ['paid', 'confirmed', 'completed']);
+            })->count();
+
+        $totalRevenue = $completedOrders->sum('total');
+        $totalOrders = $completedOrders->count();
+
+        // Check-in stats
+        $checkedInCount = $event->tickets()
+            ->whereHas('order', function ($q) {
+                $q->whereIn('status', ['paid', 'confirmed', 'completed']);
+            })
+            ->whereNotNull('checked_in_at')
+            ->count();
+
+        // Ticket types breakdown
+        $ticketTypeStats = $event->ticketTypes->map(function ($tt) use ($event) {
+            $sold = $event->tickets()
+                ->where('ticket_type_id', $tt->id)
+                ->whereHas('order', function ($q) {
+                    $q->whereIn('status', ['paid', 'confirmed', 'completed']);
+                })->count();
+
+            return [
+                'name' => $tt->name,
+                'price' => $tt->display_price,
+                'quota' => $tt->quota_total,
+                'sold' => $sold,
+                'revenue' => $sold * $tt->display_price,
+            ];
+        });
+
+        // Daily sales breakdown (last 30 days)
+        $dailySales = $completedOrders
+            ->where('created_at', '>=', now()->subDays(30))
+            ->groupBy(function ($order) {
+                return $order->created_at->format('Y-m-d');
+            })
+            ->map(function ($orders, $date) {
+                return [
+                    'date' => $date,
+                    'orders' => $orders->count(),
+                    'revenue' => $orders->sum('total'),
+                    'tickets' => $orders->sum(fn ($o) => $o->tickets->count()),
+                ];
+            })
+            ->values();
+
+        // Get localized title
+        $eventTitle = $event->getTranslation('title', 'ro')
+            ?: $event->getTranslation('title', 'en')
+            ?: $event->getTranslation('title')
+            ?: 'Event';
+
+        $data = [
+            'event' => $event,
+            'eventTitle' => $eventTitle,
+            'organizer' => $organizer,
+            'stats' => [
+                'total_tickets_sold' => $totalTicketsSold,
+                'total_revenue' => $totalRevenue,
+                'total_orders' => $totalOrders,
+                'checked_in' => $checkedInCount,
+                'check_in_rate' => $totalTicketsSold > 0 ? round(($checkedInCount / $totalTicketsSold) * 100, 1) : 0,
+            ],
+            'ticket_types' => $ticketTypeStats,
+            'daily_sales' => $dailySales,
+            'generated_at' => now()->format('d.m.Y H:i'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.organizer-event-report', $data);
+        $pdf->setPaper('a4', 'portrait');
+
+        $filename = 'raport-' . Str::slug($eventTitle) . '-' . now()->format('Y-m-d') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export all participants (across all events or per-event) with format support
+     */
+    public function exportAllParticipants(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse|\Illuminate\Http\Response
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $format = $request->get('format', 'csv');
+        $eventId = $request->get('event_id');
+
+        // Get event IDs
+        $eventIds = Event::where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->pluck('id');
+
+        // If event_id is provided, filter to that event only
+        if ($eventId) {
+            if (!$eventIds->contains($eventId)) {
+                abort(404, 'Event not found');
+            }
+            $eventIds = collect([$eventId]);
+        }
+
+        $validOrderStatuses = ['paid', 'confirmed', 'completed'];
+
+        $tickets = \App\Models\Ticket::whereHas('order', function ($q) use ($eventIds, $validOrderStatuses) {
+                $q->whereIn('event_id', $eventIds)
+                    ->whereIn('status', $validOrderStatuses);
+            })
+            ->with(['order.marketplaceCustomer', 'order.event', 'ticketType'])
+            ->get();
+
+        $rows = $tickets->map(function ($ticket) {
+            $customer = $ticket->order->marketplaceCustomer;
+            $event = $ticket->order->event;
+
+            $eventTitle = 'Unknown Event';
+            if ($event) {
+                $eventTitle = $event->getTranslation('title', 'ro')
+                    ?: $event->getTranslation('title', 'en')
+                    ?: $event->getTranslation('title')
+                    ?: 'Unknown Event';
+            }
+
+            return [
+                'Ticket ID' => $ticket->id,
+                'Barcode' => $ticket->barcode,
+                'Control Code' => $ticket->code,
+                'Event' => $eventTitle,
+                'Ticket Type' => $ticket->ticketType?->name ?? 'Standard',
+                'Price' => $ticket->ticketType?->display_price ?? 0,
+                'Customer Name' => $customer ? $customer->first_name . ' ' . $customer->last_name : ($ticket->order->customer_name ?? 'N/A'),
+                'Customer Email' => $customer?->email ?? $ticket->order->customer_email ?? '',
+                'Customer Phone' => $customer?->phone ?? $ticket->order->customer_phone ?? '',
+                'Order Number' => $ticket->order->order_number,
+                'Purchased At' => $ticket->created_at->format('Y-m-d H:i:s'),
+                'Checked In' => $ticket->checked_in_at ? 'Da' : 'Nu',
+                'Checked In At' => $ticket->checked_in_at?->format('Y-m-d H:i:s') ?? '',
+            ];
+        });
+
+        $filename = 'participanti-' . now()->format('Y-m-d');
+
+        if ($format === 'xlsx') {
+            return $this->exportToXlsx($rows->toArray(), $filename);
+        }
+
+        return $this->exportToCsv($rows->toArray(), $filename);
+    }
+
+    /**
+     * Export data to CSV
+     */
+    protected function exportToCsv(array $rows, string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+
+            // UTF-8 BOM for Excel compatibility
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            if (!empty($rows)) {
+                // Headers
+                fputcsv($handle, array_keys($rows[0]));
+
+                // Data
+                foreach ($rows as $row) {
+                    fputcsv($handle, array_values($row));
+                }
+            }
+
+            fclose($handle);
+        }, $filename . '.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
+        ]);
+    }
+
+    /**
+     * Export data to XLSX
+     */
+    protected function exportToXlsx(array $rows, string $filename): \Illuminate\Http\Response
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        if (!empty($rows)) {
+            // Headers
+            $headers = array_keys($rows[0]);
+            $col = 1;
+            foreach ($headers as $header) {
+                $sheet->setCellValue([$col, 1], $header);
+                $sheet->getStyle([$col, 1])->getFont()->setBold(true);
+                $col++;
+            }
+
+            // Data
+            $rowNum = 2;
+            foreach ($rows as $row) {
+                $col = 1;
+                foreach ($row as $value) {
+                    $sheet->setCellValue([$col, $rowNum], $value);
+                    $col++;
+                }
+                $rowNum++;
+            }
+
+            // Auto-size columns
+            foreach (range(1, count($headers)) as $col) {
+                $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+            }
+        }
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'xlsx');
+        $writer->save($tempFile);
+
+        return response()->download($tempFile, $filename . '.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 
     /**
@@ -2051,6 +2309,45 @@ class EventsController extends BaseController
     }
 
     /**
+     * Check if event is in the past (finished)
+     */
+    protected function isEventPast(Event $event): bool
+    {
+        $endDate = $this->getEndsAt($event);
+        if (!$endDate) {
+            // If no end date, use start date
+            $endDate = $this->getStartsAt($event);
+        }
+
+        if (!$endDate) {
+            return false;
+        }
+
+        return Carbon::parse($endDate)->isPast();
+    }
+
+    /**
+     * Check if event can be edited
+     * Events cannot be edited if they are:
+     * - Finished (in the past)
+     * - Cancelled
+     */
+    protected function isEventEditable(Event $event): bool
+    {
+        // Cannot edit if cancelled
+        if ($event->is_cancelled) {
+            return false;
+        }
+
+        // Cannot edit if event has finished
+        if ($this->isEventPast($event)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Get price range string
      */
     protected function getPriceRange(Event $event): ?string
@@ -2106,6 +2403,8 @@ class EventsController extends BaseController
             'is_postponed' => (bool) $event->is_postponed,
             'is_sold_out' => (bool) ($event->is_sold_out ?? false),
             'is_door_sales_only' => (bool) ($event->is_door_sales_only ?? false),
+            'is_past' => $this->isEventPast($event),
+            'is_editable' => $this->isEventEditable($event),
         ];
     }
 

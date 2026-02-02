@@ -262,7 +262,7 @@ function renderParticipants(participants) {
                 <span class="px-2.5 py-1 bg-primary/10 text-primary text-sm font-medium rounded-lg">${p.ticket_type || '-'}</span>
             </td>
             <td class="px-6 py-4">
-                <div class="text-sm font-medium text-secondary">#${p.order_id || '-'}</div>
+                <div class="text-sm font-medium text-secondary">${p.order_number || '#' + (p.order_id || '-')}</div>
                 <div class="text-xs text-muted">${orderDate}</div>
             </td>
             <td class="px-6 py-4">
@@ -343,7 +343,7 @@ async function exportParticipants() {
     }
     try {
         // Try to trigger download
-        window.open('/api/organizer/participants/export?event_id=' + selectedEventId, '_blank');
+        window.open('/api/marketplace-client/organizer/participants/export?event_id=' + selectedEventId, '_blank');
         AmbiletNotifications.success('Export initiat');
     } catch (e) {
         AmbiletNotifications.success('Lista participantilor a fost exportata');

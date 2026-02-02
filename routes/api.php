@@ -1604,6 +1604,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         // Participants / Check-in (All participants across all events)
         Route::get('/participants', [OrganizerEventsController::class, 'allParticipants'])
             ->name('api.marketplace-client.organizer.participants');
+        Route::get('/participants/export', [OrganizerEventsController::class, 'exportAllParticipants'])
+            ->name('api.marketplace-client.organizer.participants.export');
         Route::post('/participants/checkin', [OrganizerEventsController::class, 'checkInByCode'])
             ->name('api.marketplace-client.organizer.participants.checkin');
 
@@ -1612,6 +1614,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.events.participants');
         Route::get('/events/{event}/participants/export', [OrganizerEventsController::class, 'exportParticipants'])
             ->name('api.marketplace-client.organizer.events.participants.export');
+        Route::get('/events/{event}/report/export', [OrganizerEventsController::class, 'exportReport'])
+            ->name('api.marketplace-client.organizer.events.report.export');
         Route::post('/events/{event}/check-in/{barcode}', [OrganizerEventsController::class, 'checkIn'])
             ->name('api.marketplace-client.organizer.events.check-in');
         Route::delete('/events/{event}/check-in/{barcode}', [OrganizerEventsController::class, 'undoCheckIn'])
