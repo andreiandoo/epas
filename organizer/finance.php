@@ -160,9 +160,78 @@ function setTab(tabName) {
     document.getElementById(`${tabName}-tab`).classList.remove('hidden');
 }
 
-function requestPayout() { document.getElementById('modal-available-balance').textContent = AmbiletUtils.formatCurrency(availableBalance); document.getElementById('payout-modal').classList.remove('hidden'); document.getElementById('payout-modal').classList.add('flex'); }
-function closePayoutModal() { document.getElementById('payout-modal').classList.add('hidden'); document.getElementById('payout-modal').classList.remove('flex'); }
-function submitPayoutRequest(e) { e.preventDefault(); const amount = parseFloat(document.getElementById('payout-amount').value); if (amount < 100) { AmbiletNotifications.error('Suma minima este 100 RON'); return; } if (amount > availableBalance) { AmbiletNotifications.error('Suma insuficienta disponibila'); return; } AmbiletNotifications.success('Cererea de plata a fost trimisa'); closePayoutModal(); }
+async function requestPayout() {
+    if (availableBalance < 100) {
+        AmbiletNotifications.error('Balanta minima pentru retragere este 100 RON');
+        return;
+    }
+    // Load bank accounts
+    try {
+        const response = await AmbiletAPI.get('/organizer/bank-accounts');
+        if (response.success && response.data) {
+            const accounts = response.data.accounts || response.data || [];
+            const select = document.getElementById('payout-account');
+            select.innerHTML = '<option value="">Selecteaza contul</option>';
+            if (accounts.length === 0) {
+                select.innerHTML = '<option value="">Nu ai conturi bancare adaugate</option>';
+            } else {
+                accounts.forEach(acc => {
+                    const label = acc.bank_name + ' - ****' + (acc.iban ? acc.iban.slice(-4) : acc.account_number?.slice(-4) || '');
+                    select.innerHTML += `<option value="${acc.id}">${label}</option>`;
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load bank accounts:', error);
+    }
+    document.getElementById('modal-available-balance').textContent = AmbiletUtils.formatCurrency(availableBalance);
+    document.getElementById('payout-amount').value = '';
+    document.getElementById('payout-amount').max = availableBalance;
+    document.getElementById('payout-modal').classList.remove('hidden');
+    document.getElementById('payout-modal').classList.add('flex');
+}
+
+function closePayoutModal() {
+    document.getElementById('payout-modal').classList.add('hidden');
+    document.getElementById('payout-modal').classList.remove('flex');
+}
+
+async function submitPayoutRequest(e) {
+    e.preventDefault();
+    const amount = parseFloat(document.getElementById('payout-amount').value);
+    const accountId = document.getElementById('payout-account').value;
+
+    if (!accountId) {
+        AmbiletNotifications.error('Te rugam sa selectezi un cont bancar');
+        return;
+    }
+    if (amount < 100) {
+        AmbiletNotifications.error('Suma minima este 100 RON');
+        return;
+    }
+    if (amount > availableBalance) {
+        AmbiletNotifications.error('Suma insuficienta disponibila');
+        return;
+    }
+
+    try {
+        const response = await AmbiletAPI.post('/organizer/payouts', {
+            amount: amount,
+            bank_account_id: accountId
+        });
+
+        if (response.success) {
+            AmbiletNotifications.success('Cererea de plata a fost trimisa cu succes!');
+            closePayoutModal();
+            loadFinanceData(); // Refresh data
+        } else {
+            AmbiletNotifications.error(response.message || 'Eroare la trimiterea cererii de plata');
+        }
+    } catch (error) {
+        console.error('Payout request failed:', error);
+        AmbiletNotifications.error('Eroare la trimiterea cererii de plata');
+    }
+}
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';
