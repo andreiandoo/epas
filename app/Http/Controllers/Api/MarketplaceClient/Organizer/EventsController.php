@@ -435,8 +435,8 @@ class EventsController extends BaseController
         try {
             DB::beginTransaction();
 
-            // Get all completed orders for this event
-            $completedOrders = $event->orders()->where('status', 'completed')->get();
+            // Get all paid/completed orders for this event (to refund)
+            $completedOrders = $event->orders()->whereIn('status', ['paid', 'confirmed', 'completed'])->get();
             $refundedCount = 0;
             $totalRefunded = 0;
 
@@ -1006,7 +1006,7 @@ class EventsController extends BaseController
         $ticket = \App\Models\Ticket::where('barcode', $barcode)
             ->whereHas('order', function ($q) use ($event) {
                 $q->where('event_id', $event->id)
-                    ->where('status', 'completed');
+                    ->whereIn('status', ['paid', 'confirmed', 'completed']);
             })
             ->first();
 
@@ -1044,7 +1044,7 @@ class EventsController extends BaseController
 
         $tickets = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
                 $q->where('event_id', $event->id)
-                    ->where('status', 'completed');
+                    ->whereIn('status', ['paid', 'confirmed', 'completed']);
             })
             ->with(['order.marketplaceCustomer', 'ticketType'])
             ->get();
@@ -1353,11 +1353,12 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        $completedOrders = $event->orders()->where('status', 'completed');
+        $validStatuses = ['paid', 'confirmed', 'completed'];
+        $completedOrders = $event->orders()->whereIn('status', $validStatuses);
 
-        $ticketStats = $event->ticketTypes()->get()->map(function ($tt) use ($event) {
+        $ticketStats = $event->ticketTypes()->get()->map(function ($tt) use ($event, $validStatuses) {
             $sold = $event->orders()
-                ->where('status', 'completed')
+                ->whereIn('status', $validStatuses)
                 ->whereHas('tickets', function ($q) use ($tt) {
                     $q->where('ticket_type_id', $tt->id);
                 })
@@ -1445,9 +1446,12 @@ class EventsController extends BaseController
             $rangeStart = $eventCreatedAt;
         }
 
+        // Valid order statuses for analytics
+        $validStatuses = ['paid', 'confirmed', 'completed'];
+
         // Base query for orders in the range
         $ordersQuery = $event->orders()
-            ->where('status', 'completed')
+            ->whereIn('status', $validStatuses)
             ->whereBetween('created_at', [$rangeStart, $rangeEnd]);
 
         // Overview metrics
@@ -1462,7 +1466,7 @@ class EventsController extends BaseController
         $prevEnd = $rangeStart->copy()->subSecond();
 
         $prevOrdersQuery = $event->orders()
-            ->where('status', 'completed')
+            ->whereIn('status', $validStatuses)
             ->whereBetween('created_at', [$prevStart, $prevEnd]);
         $prevRevenue = (float) $prevOrdersQuery->sum('total');
         $prevTickets = (int) $prevOrdersQuery->withCount('tickets')->get()->sum('tickets_count');
@@ -1487,7 +1491,7 @@ class EventsController extends BaseController
             $dayEnd = $currentDate->copy()->endOfDay();
 
             $dayOrders = $event->orders()
-                ->where('status', 'completed')
+                ->whereIn('status', $validStatuses)
                 ->whereBetween('created_at', [$dayStart, $dayEnd]);
 
             $dailyData[] = [
@@ -1541,9 +1545,9 @@ class EventsController extends BaseController
         ];
 
         // Ticket performance
-        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event) {
+        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $validStatuses) {
             $sold = $event->orders()
-                ->where('status', 'completed')
+                ->whereIn('status', $validStatuses)
                 ->whereHas('tickets', fn ($q) => $q->where('ticket_type_id', $tt->id))
                 ->withCount(['tickets' => fn ($q) => $q->where('ticket_type_id', $tt->id)])
                 ->get()
@@ -1563,7 +1567,7 @@ class EventsController extends BaseController
 
         // Recent sales
         $recentSales = $event->orders()
-            ->where('status', 'completed')
+            ->whereIn('status', $validStatuses)
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get()
