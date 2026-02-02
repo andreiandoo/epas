@@ -284,7 +284,7 @@ class Venue extends Model
         'image_url','video_type','video_url','gallery',
         'capacity','capacity_total','capacity_standing','capacity_seated',
         'lat','lng','google_maps_url','established_at','description','schedule','meta',
-        'is_partner','partner_notes','is_featured',
+        'is_partner','partner_notes','is_featured','has_historical_monument_tax',
     ];
 
     protected $casts = [
@@ -298,6 +298,7 @@ class Venue extends Model
         'lng' => 'decimal:7',
         'is_partner' => 'boolean',
         'is_featured' => 'boolean',
+        'has_historical_monument_tax' => 'boolean',
     ];
 
     public function tenant(): BelongsTo { return $this->belongsTo(Tenant::class); }

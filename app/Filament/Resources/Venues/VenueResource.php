@@ -271,6 +271,15 @@ class VenueResource extends Resource
                     ->label('Așezați')->numeric()->minValue(0)->placeholder('Ex: 4000'),
             ])->columns(3),
 
+            SC\Section::make('Taxe')
+                ->description('Taxe speciale aplicate la acest venue')
+                ->schema([
+                    Forms\Components\Toggle::make('has_historical_monument_tax')
+                        ->label('Taxa de Monument Istoric (2%)')
+                        ->helperText('Dacă este activată, evenimentele din acest venue vor avea automat aplicată taxa de 2% pentru monument istoric.')
+                        ->default(false),
+                ]),
+
             SC\Section::make('Facilități')
                 ->description('Selectează facilitățile disponibile la acest venue')
                 ->collapsible()
@@ -349,6 +358,15 @@ class VenueResource extends Resource
                     ->label('Capacitate')
                     ->numeric()
                     ->toggleable(),
+
+                Tables\Columns\IconColumn::make('has_historical_monument_tax')
+                    ->label('Taxă Mon. Ist.')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('warning')
+                    ->falseColor('gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('established_at')
                     ->label('Din')

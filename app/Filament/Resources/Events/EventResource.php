@@ -874,37 +874,68 @@ class EventResource extends Resource
                             return \App\Models\EventTag::create($data);
                         }),
 
-                    // Dynamic tax display based on selected event types
+                    // Dynamic tax display based on selected event types and venue
                     Forms\Components\Placeholder::make('applicable_taxes')
                         ->label('Taxe aplicabile pentru tipul de eveniment')
                         ->columnSpanFull()
-                        ->visible(fn (SGet $get) => !empty($get('eventTypes')))
+                        ->visible(fn (SGet $get) => !empty($get('eventTypes')) || !empty($get('venue_id')))
                         ->content(function (SGet $get, $record) {
                             $eventTypeIds = (array) ($get('eventTypes') ?? []);
-                            if (empty($eventTypeIds)) {
-                                return '';
-                            }
+                            $venueId = $get('venue_id');
 
                             // Get tenant from record if editing, otherwise show general info
                             $tenant = $record?->tenant;
                             $isVatPayer = $tenant?->vat_payer ?? null;
                             $taxDisplayMode = $tenant?->tax_display_mode ?? 'included';
 
+                            // Check if venue has historical monument tax
+                            $venueHasMonumentTax = false;
+                            if ($venueId) {
+                                $venue = Venue::find($venueId);
+                                $venueHasMonumentTax = $venue?->has_historical_monument_tax ?? false;
+                            }
+
                             // Get applicable taxes using the new forEventTypes scope
                             $allTaxes = GeneralTax::query()
                                 ->whereNull('tenant_id') // Global taxes only
                                 ->active()
                                 ->validOn(Carbon::today())
-                                ->forEventTypes($eventTypeIds)
+                                ->when(!empty($eventTypeIds), fn($q) => $q->forEventTypes($eventTypeIds))
+                                ->when(empty($eventTypeIds), fn($q) => $q->whereDoesntHave('eventTypes'))
                                 ->orderByDesc('priority')
                                 ->get()
                                 ->unique('id');
 
-                            if ($allTaxes->isEmpty()) {
+                            // If venue has monument tax, add the "Taxa de Monument Istoric"
+                            if ($venueHasMonumentTax) {
+                                $monumentTax = GeneralTax::where('name', 'Taxa de Monument Istoric')
+                                    ->active()
+                                    ->first();
+                                if ($monumentTax && !$allTaxes->contains('id', $monumentTax->id)) {
+                                    $allTaxes = $allTaxes->push($monumentTax)->sortByDesc('priority');
+                                }
+                            }
+
+                            if ($allTaxes->isEmpty() && !$venueHasMonumentTax) {
                                 return new HtmlString('<div class="text-sm text-gray-500 italic">Nu există taxe configurate pentru tipul de eveniment selectat.</div>');
                             }
 
+                            if ($allTaxes->isEmpty()) {
+                                return new HtmlString('<div class="text-sm text-gray-500 italic">Selectați un tip de eveniment pentru a vedea taxele aplicabile.</div>');
+                            }
+
                             $html = '<div class="space-y-2">';
+
+                            // Show venue monument tax notice
+                            if ($venueHasMonumentTax && $venueId) {
+                                $venue = $venue ?? Venue::find($venueId);
+                                $venueName = $venue?->getTranslation('name', 'en') ?? $venue?->getTranslation('name', 'ro') ?? 'Venue selectat';
+                                $html .= '<div class="mb-3 p-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg">';
+                                $html .= '<div class="flex items-center gap-2 text-sm text-purple-800 dark:text-purple-200">';
+                                $html .= '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>';
+                                $html .= '<span><strong>' . e($venueName) . '</strong> este monument istoric - se aplică Taxa de Monument Istoric (2%)</span>';
+                                $html .= '</div></div>';
+                            }
 
                             // VAT payer status and tax display mode if tenant is known
                             if ($isVatPayer !== null) {
@@ -926,6 +957,7 @@ class EventResource extends Resource
                             foreach ($allTaxes as $tax) {
                                 $isVatTax = str_contains(strtolower($tax->name ?? ''), 'tva') ||
                                             str_contains(strtolower($tax->name ?? ''), 'vat');
+                                $isMonumentTax = str_contains(strtolower($tax->name ?? ''), 'monument');
 
                                 // Skip VAT if tenant is known and not a VAT payer
                                 if ($isVatTax && $isVatPayer === false) {
@@ -944,14 +976,25 @@ class EventResource extends Resource
                                     ? '<span class="ml-1 px-1.5 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">TVA</span>'
                                     : '';
 
+                                // Badge for venue-based taxes
+                                $venueBadge = $isMonumentTax
+                                    ? '<span class="ml-1 px-1.5 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">Venue</span>'
+                                    : '';
+
                                 // Custom SVG icon
                                 $iconHtml = $tax->icon_svg ? '<span class="inline-flex items-center mr-1">' . $tax->icon_svg . '</span>' : '';
 
-                                $html .= '<div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">';
+                                // Different styling for venue-based taxes
+                                $borderClass = $isMonumentTax
+                                    ? 'border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20'
+                                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800';
+
+                                $html .= '<div class="flex items-center justify-between p-2 rounded-lg border ' . $borderClass . '">';
                                 $html .= '<div class="flex items-center gap-2">';
                                 $html .= $iconHtml;
                                 $html .= '<span class="font-medium text-sm text-gray-900 dark:text-white">' . e($tax->name) . '</span>';
                                 $html .= $vatBadgeSmall;
+                                $html .= $venueBadge;
                                 $html .= '</div>';
                                 $html .= '<div class="text-right">';
                                 $html .= '<span class="font-semibold text-primary">' . $rateDisplay . '</span>';
