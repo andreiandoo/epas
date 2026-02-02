@@ -1382,6 +1382,9 @@ class EventsController extends BaseController
         $eventName = $this->getLocalizedTitle($event);
         $totalRevenue = (float) $event->total_revenue;
 
+        // Use event's effective commission rate (may be custom per-event or default from organizer)
+        $effectiveCommissionRate = $event->getEffectiveCommissionRate();
+
         return $this->success([
             'event_id' => $event->id,
             'event_name' => $eventName,
@@ -1389,9 +1392,10 @@ class EventsController extends BaseController
                 'total_orders' => $completedOrders->count(),
                 'total_tickets_sold' => $event->total_tickets_sold,
                 'gross_revenue' => $totalRevenue,
-                'commission_rate' => $organizer->getEffectiveCommissionRate(),
-                'commission_amount' => round($totalRevenue * $organizer->getEffectiveCommissionRate() / 100, 2),
-                'net_revenue' => round($totalRevenue * (1 - $organizer->getEffectiveCommissionRate() / 100), 2),
+                'commission_rate' => $effectiveCommissionRate,
+                'use_fixed_commission' => (bool) $event->use_fixed_commission,
+                'commission_amount' => round($totalRevenue * $effectiveCommissionRate / 100, 2),
+                'net_revenue' => round($totalRevenue * (1 - $effectiveCommissionRate / 100), 2),
                 'views' => $event->views_count ?? 0,
             ],
             'ticket_types' => $ticketStats,
@@ -2409,6 +2413,9 @@ class EventsController extends BaseController
             'is_door_sales_only' => (bool) ($event->is_door_sales_only ?? false),
             'is_past' => $this->isEventPast($event),
             'is_editable' => $this->isEventEditable($event),
+            'commission_rate' => $event->commission_rate !== null ? (float) $event->commission_rate : null,
+            'use_fixed_commission' => (bool) $event->use_fixed_commission,
+            'effective_commission_rate' => (float) $event->getEffectiveCommissionRate(),
         ];
     }
 

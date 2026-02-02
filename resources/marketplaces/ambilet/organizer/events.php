@@ -760,9 +760,10 @@ function renderEvents(events) {
                             ${['draft', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Șterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
                         </div>
                     </div>
-                    <div class="grid grid-cols-4 gap-4 pt-4 mt-4 border-t border-border pl-6">
+                    <div class="grid grid-cols-5 gap-4 pt-4 mt-4 border-t border-border pl-6">
                         <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
                         <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări</p></div>
+                        <div><p class="text-2xl font-bold text-secondary">${event.effective_commission_rate || 5}%</p><p class="text-xs text-muted">${event.use_fixed_commission ? 'Comision fix' : 'Comision'}</p></div>
                         <div><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
                         <div><p class="text-2xl font-bold text-secondary">${daysText || '-'}</p><p class="text-xs text-muted">${isEnded ? 'Încheiat' : 'Până la event'}</p></div>
                     </div>

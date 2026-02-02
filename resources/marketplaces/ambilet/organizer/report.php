@@ -76,7 +76,7 @@ $eventId = $_GET['event'] ?? null;
                         <p id="report-event-venue" class="text-white/60 text-sm"></p>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <div class="p-4 bg-white/10 rounded-xl text-center">
                         <div id="summary-revenue" class="text-2xl font-bold">0 lei</div>
                         <div class="text-xs text-white/70">Venituri totale</div>
@@ -84,6 +84,10 @@ $eventId = $_GET['event'] ?? null;
                     <div class="p-4 bg-white/10 rounded-xl text-center">
                         <div id="summary-tickets" class="text-2xl font-bold">0</div>
                         <div class="text-xs text-white/70">Bilete vândute</div>
+                    </div>
+                    <div class="p-4 bg-white/10 rounded-xl text-center">
+                        <div id="summary-commission" class="text-2xl font-bold">0%</div>
+                        <div id="summary-commission-label" class="text-xs text-white/70">Comision</div>
                     </div>
                     <div class="p-4 bg-white/10 rounded-xl text-center">
                         <div id="summary-views" class="text-2xl font-bold">0</div>
@@ -194,7 +198,7 @@ $eventId = $_GET['event'] ?? null;
                     <div id="financial-refunds" class="text-2xl font-bold text-red-400">-0 lei</div>
                 </div>
                 <div>
-                    <div class="text-sm text-white/60 mb-1">Comision platformă</div>
+                    <div id="financial-commission-label" class="text-sm text-white/60 mb-1">Comision platformă (5%)</div>
                     <div id="financial-commission" class="text-2xl font-bold text-amber-400">-0 lei</div>
                 </div>
                 <div>
@@ -287,14 +291,21 @@ function updateReport(data) {
         document.getElementById('summary-views').textContent = formatNumber(o.page_views || 0);
         document.getElementById('summary-conversion').textContent = (o.conversion_rate || 0).toFixed(1) + '%';
 
+        // Commission rate display
+        const commissionRate = o.commission_rate || data.event?.commission_rate || 5;
+        const useFixedCommission = o.use_fixed_commission || data.event?.use_fixed_commission || false;
+        document.getElementById('summary-commission').textContent = commissionRate + '%';
+        document.getElementById('summary-commission-label').textContent = useFixedCommission ? 'Comision fix' : 'Comision';
+
         // Financial summary
         const refunds = o.refunds_total || 0;
-        const commission = o.commission_amount || ((o.total_revenue || 0) * 0.03);
+        const commission = o.commission_amount || ((o.total_revenue || 0) * (commissionRate / 100));
         const netRevenue = (o.total_revenue || 0) - refunds - commission;
 
         document.getElementById('financial-gross').textContent = formatCurrency(o.total_revenue || 0);
         document.getElementById('financial-refunds').textContent = '-' + formatCurrency(refunds);
         document.getElementById('financial-commission').textContent = '-' + formatCurrency(commission);
+        document.getElementById('financial-commission-label').textContent = `Comision platformă (${commissionRate}%${useFixedCommission ? ' fix' : ''})`;
         document.getElementById('financial-net').textContent = formatCurrency(netRevenue);
         document.getElementById('refunds-total').textContent = formatCurrency(refunds);
     }
