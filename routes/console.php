@@ -43,6 +43,26 @@ Schedule::command('invoices:transition-new --grace-days=3')
 
 /*
 |--------------------------------------------------------------------------
+| Changelog Auto-Update
+|--------------------------------------------------------------------------
+*/
+
+// Update changelog every 5 minutes (for real-time updates)
+Schedule::command('changelog:update')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->onSuccess(function () {
+        \Log::info('Changelog updated successfully');
+    });
+
+// Regenerate CHANGELOG.md daily
+Schedule::command('changelog:generate-md')
+    ->dailyAt('03:00')
+    ->timezone('Europe/Bucharest');
+
+/*
+|--------------------------------------------------------------------------
 | Microservices Scheduled Tasks
 |--------------------------------------------------------------------------
 */
