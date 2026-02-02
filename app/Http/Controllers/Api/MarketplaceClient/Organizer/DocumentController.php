@@ -371,8 +371,16 @@ class DocumentController extends BaseController
             $declaratieImpozite = $eventDocs->firstWhere('document_type', 'declaratie_impozite');
 
             // Map Event model status to document status labels
+            // Check if event is past (ended)
+            $eventEndDate = $event->event_date;
+            if ($event->end_date) {
+                $eventEndDate = $event->end_date;
+            }
+            $isEnded = $eventEndDate && \Carbon\Carbon::parse($eventEndDate)->isPast();
+
             $status = $event->is_cancelled ? 'cancelled' :
-                ($event->is_published ? 'published' : 'draft');
+                ($isEnded ? 'ended' :
+                ($event->is_published ? 'published' : 'draft'));
 
             // Get localized event title
             $eventTitle = $event->getTranslation('title', 'ro')

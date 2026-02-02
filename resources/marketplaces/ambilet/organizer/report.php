@@ -574,9 +574,57 @@ function formatNumber(value) {
     return new Intl.NumberFormat('ro-RO').format(value || 0);
 }
 
-function exportReport() {
-    // In a real implementation, this would generate a PDF
-    window.open(`/api/marketplace-client/organizer/events/${eventId}/report/export`, '_blank');
+async function exportReport() {
+    try {
+        AmbiletNotifications.info('Se genereaza raportul PDF...');
+
+        // Get auth token
+        const authToken = localStorage.getItem('organizer_token');
+        if (!authToken) {
+            AmbiletNotifications.error('Sesiune expirata. Te rugam sa te autentifici din nou.');
+            return;
+        }
+
+        // Fetch PDF with authentication
+        const response = await fetch(`/api/marketplace-client/organizer/events/${eventId}/report/export`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Accept': 'application/pdf'
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Eroare la generarea raportului');
+        }
+
+        // Get filename from Content-Disposition header or use default
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = `raport-eveniment-${eventId}.pdf`;
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            if (match && match[1]) {
+                filename = match[1].replace(/['"]/g, '');
+            }
+        }
+
+        // Create blob and download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        AmbiletNotifications.success('Raportul a fost descarcat');
+    } catch (error) {
+        console.error('Export error:', error);
+        AmbiletNotifications.error(error.message || 'Eroare la generarea raportului PDF');
+    }
 }
 </script>
 

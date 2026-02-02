@@ -342,11 +342,54 @@ async function exportParticipants() {
         return;
     }
     try {
-        // Try to trigger download
-        window.open('/api/marketplace-client/organizer/participants/export?event_id=' + selectedEventId, '_blank');
-        AmbiletNotifications.success('Export initiat');
-    } catch (e) {
+        AmbiletNotifications.info('Se genereaza lista participantilor...');
+
+        // Get auth token
+        const authToken = localStorage.getItem('organizer_token');
+        if (!authToken) {
+            AmbiletNotifications.error('Sesiune expirata. Te rugam sa te autentifici din nou.');
+            return;
+        }
+
+        // Fetch CSV with authentication
+        const response = await fetch(`/api/marketplace-client/organizer/participants/export?event_id=${selectedEventId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Accept': 'text/csv'
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Eroare la export');
+        }
+
+        // Get filename from header or use default
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = `participanti-${selectedEventId}.csv`;
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            if (match && match[1]) {
+                filename = match[1].replace(/['"]/g, '');
+            }
+        }
+
+        // Create blob and download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
         AmbiletNotifications.success('Lista participantilor a fost exportata');
+    } catch (error) {
+        console.error('Export error:', error);
+        AmbiletNotifications.error(error.message || 'Eroare la export');
     }
 }
 
