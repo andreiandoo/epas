@@ -1352,6 +1352,8 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.config');
     Route::get('/tenants', [MarketplaceConfigController::class, 'tenants'])
         ->name('api.marketplace-client.tenants');
+    Route::get('/checkout/features', [MarketplaceConfigController::class, 'checkoutFeatures'])
+        ->name('api.marketplace-client.checkout.features');
 
     // Global Search
     Route::get('/search', [MarketplaceSearchController::class, 'search'])

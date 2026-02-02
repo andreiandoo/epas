@@ -199,6 +199,30 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                     </div>
 
+                    <!-- Ticket Insurance (shown dynamically if enabled) -->
+                    <div id="insurance-section" class="hidden p-6 mb-6 bg-white border rounded-2xl border-border">
+                        <h2 class="flex items-center gap-2 mb-4 text-lg font-bold text-secondary">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-success/10">
+                                <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            </span>
+                            <span id="insurance-label">Taxa de retur</span>
+                        </h2>
+
+                        <div class="flex items-start gap-4">
+                            <label class="flex items-start flex-1 gap-3 p-4 transition-all border-2 cursor-pointer rounded-xl hover:border-success" id="insurance-option">
+                                <input type="checkbox" id="insuranceCheckbox" class="checkbox-custom mt-0.5">
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="font-medium text-secondary" id="insurance-title">Protecție returnare bilete</span>
+                                        <span class="font-bold text-success" id="insurance-price">+5.00 lei</span>
+                                    </div>
+                                    <p class="text-sm text-muted" id="insurance-description">Poți solicita returnarea biletelor în cazul în care evenimentul este amânat sau anulat.</p>
+                                    <a href="#" id="insurance-terms-link" class="hidden mt-2 text-xs text-primary hover:underline">Vezi termeni și condiții</a>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Terms -->
                     <div class="p-6 bg-white border rounded-2xl border-border">
                         <label class="flex items-start gap-3 cursor-pointer">
@@ -248,6 +272,11 @@ require_once __DIR__ . '/includes/header.php';
                             <div id="items-summary" class="mb-6 space-y-3"></div>
 
                             <div class="pt-4 space-y-3 border-t border-border">
+                                <!-- Dynamic taxes container -->
+                                <div id="taxes-container" class="space-y-2">
+                                    <!-- Taxes will be rendered dynamically by JS -->
+                                </div>
+                                
                                 <div class="flex justify-between text-sm">
                                     <span class="text-muted">Subtotal (<span id="summary-items">0</span> bilete)</span>
                                     <span id="summary-subtotal" class="font-medium">0.00 lei</span>
@@ -262,9 +291,13 @@ require_once __DIR__ . '/includes/header.php';
                                     <span id="discount-amount" class="font-medium text-success">-0.00 lei</span>
                                 </div>
 
-                                <!-- Dynamic taxes container -->
-                                <div id="taxes-container" class="space-y-2">
-                                    <!-- Taxes will be rendered dynamically by JS -->
+                                <!-- Insurance Row (shown if selected) -->
+                                <div id="insurance-row" class="flex justify-between hidden p-2 -mx-2 text-sm rounded-lg bg-success/5">
+                                    <span class="flex items-center gap-1 text-success">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                        <span id="insurance-row-label">Taxa de retur</span>
+                                    </span>
+                                    <span id="insurance-row-amount" class="font-medium text-success">+0.00 lei</span>
                                 </div>
                             </div>
 
@@ -352,11 +385,13 @@ $scriptsExtra = <<<'SCRIPTS'
 const CheckoutPage = {
     items: [],
     taxes: [],
-    totals: { subtotal: 0, tax: 0, discount: 0, total: 0, savings: 0 },
+    insurance: null,
+    insuranceSelected: false,
+    totals: { subtotal: 0, tax: 0, discount: 0, insurance: 0, total: 0, savings: 0 },
     timerInterval: null,
     endTime: null,
 
-    init() {
+    async init() {
         this.items = AmbiletCart.getItems();
         this.loadTaxes();
 
@@ -366,9 +401,13 @@ const CheckoutPage = {
             return;
         }
 
+        // Load checkout features (insurance, etc.)
+        await this.loadCheckoutFeatures();
+
         this.setupTimer();
         this.setupPaymentOptions();
         this.setupTermsCheckbox();
+        this.setupInsuranceCheckbox();
         this.prefillBuyerInfo();
         this.renderBeneficiaries();
         this.renderSummary();
@@ -376,6 +415,105 @@ const CheckoutPage = {
         document.getElementById('checkout-loading').classList.add('hidden');
         document.getElementById('checkout-form').classList.remove('hidden');
         document.getElementById('summary-section').classList.remove('hidden');
+    },
+
+    async loadCheckoutFeatures() {
+        try {
+            const response = await AmbiletAPI.get('/checkout.features');
+            if (response.success && response.data) {
+                // Handle ticket insurance
+                if (response.data.ticket_insurance && response.data.ticket_insurance.enabled && response.data.ticket_insurance.show_in_checkout) {
+                    this.insurance = response.data.ticket_insurance;
+                    this.setupInsuranceUI();
+                }
+            }
+        } catch (error) {
+            console.log('Could not load checkout features:', error);
+        }
+    },
+
+    setupInsuranceUI() {
+        if (!this.insurance) return;
+
+        const section = document.getElementById('insurance-section');
+        if (!section) return;
+
+        // Show the insurance section
+        section.classList.remove('hidden');
+
+        // Update labels and content
+        document.getElementById('insurance-label').textContent = this.insurance.label || 'Taxa de retur';
+        document.getElementById('insurance-title').textContent = this.insurance.label || 'Protecție returnare bilete';
+        document.getElementById('insurance-description').textContent = this.insurance.description || '';
+
+        // Calculate and display price
+        const insuranceAmount = this.calculateInsuranceAmount();
+        document.getElementById('insurance-price').textContent = '+' + AmbiletUtils.formatCurrency(insuranceAmount);
+
+        // Show terms link if available
+        if (this.insurance.terms_url) {
+            const termsLink = document.getElementById('insurance-terms-link');
+            termsLink.href = this.insurance.terms_url;
+            termsLink.classList.remove('hidden');
+        }
+
+        // Pre-check if configured
+        const checkbox = document.getElementById('insuranceCheckbox');
+        if (this.insurance.pre_checked) {
+            checkbox.checked = true;
+            this.insuranceSelected = true;
+        }
+
+        // Update row label in summary
+        document.getElementById('insurance-row-label').textContent = this.insurance.label || 'Taxa de retur';
+    },
+
+    setupInsuranceCheckbox() {
+        const checkbox = document.getElementById('insuranceCheckbox');
+        if (!checkbox) return;
+
+        checkbox.addEventListener('change', () => {
+            this.insuranceSelected = checkbox.checked;
+
+            // Update option styling
+            const option = document.getElementById('insurance-option');
+            if (option) {
+                if (this.insuranceSelected) {
+                    option.classList.add('border-success', 'bg-success/5');
+                    option.classList.remove('border-border');
+                } else {
+                    option.classList.remove('border-success', 'bg-success/5');
+                    option.classList.add('border-border');
+                }
+            }
+
+            this.renderSummary();
+        });
+
+        // Trigger initial state if pre-checked
+        if (this.insuranceSelected) {
+            const option = document.getElementById('insurance-option');
+            if (option) {
+                option.classList.add('border-success', 'bg-success/5');
+                option.classList.remove('border-border');
+            }
+        }
+    },
+
+    calculateInsuranceAmount() {
+        if (!this.insurance) return 0;
+
+        if (this.insurance.price_type === 'percentage') {
+            // Calculate based on subtotal
+            const subtotal = this.items.reduce((sum, item) => {
+                const price = item.ticketType?.price || item.price || 0;
+                return sum + (price * (item.quantity || 1));
+            }, 0);
+            return Math.round(subtotal * (this.insurance.price_percentage / 100) * 100) / 100;
+        }
+
+        // Fixed price
+        return this.insurance.price || 0;
     },
 
     setupTimer() {
@@ -621,12 +759,18 @@ const CheckoutPage = {
 
         itemsSummary.innerHTML = itemsHtml;
 
-        // Total = base prices + commission (no other taxes)
+        // Calculate insurance if selected
+        let insuranceAmount = 0;
+        if (this.insuranceSelected && this.insurance) {
+            insuranceAmount = this.calculateInsuranceAmount();
+        }
+
+        // Total = base prices + commission + insurance (no other taxes)
         const subtotalWithCommission = baseSubtotal + totalCommission;
-        const total = subtotalWithCommission;
+        const total = subtotalWithCommission + insuranceAmount;
         const points = Math.floor(total / 10);
 
-        this.totals = { subtotal: subtotalWithCommission, tax: 0, discount: 0, total, savings };
+        this.totals = { subtotal: subtotalWithCommission, tax: 0, discount: 0, insurance: insuranceAmount, total, savings };
 
         // Update DOM
         document.getElementById('summary-items').textContent = totalQty;
@@ -642,6 +786,17 @@ const CheckoutPage = {
                 '</div>';
             } else {
                 taxesContainer.innerHTML = '';
+            }
+        }
+
+        // Show/hide insurance row
+        const insuranceRow = document.getElementById('insurance-row');
+        if (insuranceRow) {
+            if (this.insuranceSelected && insuranceAmount > 0) {
+                insuranceRow.classList.remove('hidden');
+                document.getElementById('insurance-row-amount').textContent = '+' + AmbiletUtils.formatCurrency(insuranceAmount);
+            } else {
+                insuranceRow.classList.add('hidden');
             }
         }
 
@@ -758,14 +913,22 @@ const CheckoutPage = {
 
         try {
             // Step 1: Create order via checkout
-            const response = await AmbiletAPI.post('/checkout', {
+            const checkoutData = {
                 customer,
                 beneficiaries,
                 items: this.items,
                 payment_method: paymentMethod,
                 newsletter,
                 accept_terms: acceptTerms
-            });
+            };
+
+            // Add ticket insurance if selected
+            if (this.insuranceSelected && this.totals.insurance > 0) {
+                checkoutData.ticket_insurance = true;
+                checkoutData.ticket_insurance_amount = this.totals.insurance;
+            }
+
+            const response = await AmbiletAPI.post('/checkout', checkoutData);
 
             if (!response.success) {
                 throw new Error(response.message || 'Eroare la procesarea comenzii');

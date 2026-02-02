@@ -46,7 +46,13 @@ class CheckoutController extends BaseController
             'items.*.quantity' => 'required_with:items|integer|min:1',
             'payment_method' => 'nullable|string|in:card,cash,transfer',
             'accept_terms' => 'required|accepted',
+            'ticket_insurance' => 'nullable|boolean',
+            'ticket_insurance_amount' => 'nullable|numeric|min:0',
         ]);
+
+        // Get ticket insurance data
+        $hasInsurance = $request->boolean('ticket_insurance');
+        $insuranceAmount = $hasInsurance ? (float) $request->input('ticket_insurance_amount', 0) : 0;
 
         // Try to get items from request body first (frontend sends localStorage cart)
         $requestItems = $request->input('items', []);
@@ -145,6 +151,7 @@ class CheckoutController extends BaseController
             // Note: Marketplace sells tenant events, so we use Event model (not MarketplaceEvent)
             $itemsByEvent = collect($cartItems)->groupBy('event_id');
             $orders = [];
+            $insuranceApplied = false; // Track if insurance has been applied to an order
 
             foreach ($itemsByEvent as $eventId => $eventItems) {
                 // Look up MarketplaceEvent (cart stores MarketplaceEvent.id as event_id)
@@ -265,6 +272,16 @@ class CheckoutController extends BaseController
                 $netAmount = $subtotal - $discount;
                 $commissionAmount = round($netAmount * ($commissionRate / 100), 2);
 
+                // Apply ticket insurance fee (only to first order if multiple orders)
+                $orderInsuranceAmount = 0;
+                if ($hasInsurance && $insuranceAmount > 0 && !$insuranceApplied) {
+                    $orderInsuranceAmount = $insuranceAmount;
+                    $insuranceApplied = true;
+                }
+
+                // Final order total includes insurance
+                $orderTotal = $netAmount + $orderInsuranceAmount;
+
                 // Get currency from cart or default to client's currency
                 $currency = isset($cart) ? $cart->currency : ($client->currency ?? 'RON');
 
@@ -287,7 +304,7 @@ class CheckoutController extends BaseController
                     'discount_amount' => $discount,
                     'commission_rate' => $commissionRate,
                     'commission_amount' => $commissionAmount,
-                    'total' => $netAmount,
+                    'total' => $orderTotal,
                     'currency' => $currency,
                     'source' => 'marketplace',
                     'customer_email' => $customer->email,
@@ -300,6 +317,8 @@ class CheckoutController extends BaseController
                         'beneficiaries' => $validated['beneficiaries'] ?? [],
                         'ip_address' => $request->ip(),
                         'user_agent' => $request->userAgent(),
+                        'ticket_insurance' => $hasInsurance && $orderInsuranceAmount > 0,
+                        'insurance_amount' => $orderInsuranceAmount,
                     ],
                 ]);
 
@@ -417,6 +436,7 @@ class CheckoutController extends BaseController
                     ],
                     'subtotal' => (float) $order->subtotal,
                     'discount' => (float) $order->discount_amount,
+                    'insurance' => (float) $orderInsuranceAmount,
                     'total' => (float) $order->total,
                     'currency' => $order->currency,
                     'expires_at' => $order->expires_at->toIso8601String(),

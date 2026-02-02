@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\MarketplaceClient;
 
+use App\Models\MarketplaceClientMicroservice;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -60,5 +61,54 @@ class ConfigController extends BaseController
             });
 
         return $this->success($tenants);
+    }
+
+    /**
+     * Get checkout features/options (ticket insurance, etc.)
+     */
+    public function checkoutFeatures(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $features = [
+            'ticket_insurance' => $this->getTicketInsuranceSettings($client),
+        ];
+
+        return $this->success($features);
+    }
+
+    /**
+     * Get ticket insurance settings for a marketplace client
+     */
+    protected function getTicketInsuranceSettings($client): ?array
+    {
+        $pivot = MarketplaceClientMicroservice::where('marketplace_client_id', $client->id)
+            ->whereHas('microservice', fn($q) => $q->where('slug', 'ticket-insurance'))
+            ->where('status', 'active')
+            ->first();
+
+        if (!$pivot) {
+            return null;
+        }
+
+        $settings = $pivot->settings ?? [];
+
+        // Only return if enabled
+        if (empty($settings['is_enabled'])) {
+            return null;
+        }
+
+        // Only return settings needed for checkout display
+        return [
+            'enabled' => true,
+            'label' => $settings['label'] ?? 'Taxa de retur',
+            'description' => $settings['description'] ?? '',
+            'price' => (float) ($settings['price'] ?? 5.00),
+            'price_type' => $settings['price_type'] ?? 'fixed',
+            'price_percentage' => (float) ($settings['price_percentage'] ?? 5),
+            'show_in_checkout' => $settings['show_in_checkout'] ?? true,
+            'pre_checked' => $settings['pre_checked'] ?? false,
+            'terms_url' => $settings['terms_url'] ?? null,
+        ];
     }
 }
