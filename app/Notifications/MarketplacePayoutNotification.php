@@ -19,7 +19,8 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        // Only mail - database notifications are handled via MarketplaceNotification model
+        return ['mail'];
     }
 
     public function toMail(object $notifiable): MailMessage

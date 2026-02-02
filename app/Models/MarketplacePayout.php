@@ -305,9 +305,72 @@ class MarketplacePayout extends Model
      */
     public function notifyOrganizer(string $action): void
     {
-        if ($this->organizer) {
-            $this->organizer->notify(new MarketplacePayoutNotification($this, $action));
+        if (!$this->organizer) {
+            return;
         }
+
+        // Send email notification
+        $this->organizer->notify(new MarketplacePayoutNotification($this, $action));
+
+        // Create database notification in MarketplaceNotification table
+        $this->createOrganizerNotification($action);
+    }
+
+    /**
+     * Create notification record in MarketplaceNotification table
+     */
+    protected function createOrganizerNotification(string $action): void
+    {
+        $amount = number_format($this->amount, 2) . ' ' . $this->currency;
+
+        $typeMap = [
+            'submitted' => MarketplaceNotification::TYPE_PAYOUT_REQUEST,
+            'approved' => MarketplaceNotification::TYPE_PAYOUT_APPROVED,
+            'processing' => MarketplaceNotification::TYPE_PAYOUT_PROCESSING,
+            'completed' => MarketplaceNotification::TYPE_PAYOUT_COMPLETED,
+            'rejected' => MarketplaceNotification::TYPE_PAYOUT_REJECTED,
+        ];
+
+        $titleMap = [
+            'submitted' => 'Cerere de plată înregistrată',
+            'approved' => 'Cerere de plată aprobată',
+            'processing' => 'Plată în procesare',
+            'completed' => 'Plată finalizată',
+            'rejected' => 'Cerere de plată respinsă',
+        ];
+
+        $messageMap = [
+            'submitted' => "Cererea de plată {$this->reference} în valoare de {$amount} a fost înregistrată.",
+            'approved' => "Cererea de plată {$this->reference} în valoare de {$amount} a fost aprobată.",
+            'processing' => "Plata {$this->reference} în valoare de {$amount} este în curs de procesare.",
+            'completed' => "Plata {$this->reference} în valoare de {$amount} a fost finalizată.",
+            'rejected' => "Cererea de plată {$this->reference} în valoare de {$amount} a fost respinsă.",
+        ];
+
+        $data = [
+            'payout_id' => $this->id,
+            'reference' => $this->reference,
+            'amount' => $this->amount,
+            'currency' => $this->currency,
+            'status' => $this->status,
+            'action' => $action,
+        ];
+
+        if ($action === 'rejected' && $this->rejection_reason) {
+            $data['rejection_reason'] = $this->rejection_reason;
+        }
+
+        MarketplaceNotification::create([
+            'marketplace_client_id' => $this->marketplace_client_id,
+            'marketplace_organizer_id' => $this->marketplace_organizer_id,
+            'type' => $typeMap[$action] ?? MarketplaceNotification::TYPE_PAYOUT_REQUEST,
+            'title' => $titleMap[$action] ?? 'Actualizare plată',
+            'message' => $messageMap[$action] ?? "Actualizare pentru plata {$this->reference}.",
+            'data' => $data,
+            'actionable_type' => self::class,
+            'actionable_id' => $this->id,
+            'action_url' => "/organizator/sold",
+        ]);
     }
 
     /**

@@ -40,6 +40,10 @@ class MarketplaceNotification extends Model
     public const TYPE_EVENT_CREATED = 'event_created';
     public const TYPE_EVENT_UPDATED = 'event_updated';
     public const TYPE_PAYOUT_REQUEST = 'payout_request';
+    public const TYPE_PAYOUT_APPROVED = 'payout_approved';
+    public const TYPE_PAYOUT_PROCESSING = 'payout_processing';
+    public const TYPE_PAYOUT_COMPLETED = 'payout_completed';
+    public const TYPE_PAYOUT_REJECTED = 'payout_rejected';
     public const TYPE_DOCUMENT_GENERATED = 'document_generated';
     public const TYPE_ADMIN_USER_ADDED = 'admin_user_added';
     public const TYPE_CUSTOMER_REGISTRATION = 'customer_registration';
@@ -65,7 +69,11 @@ class MarketplaceNotification extends Model
             self::TYPE_ORGANIZER_REGISTRATION => 'Înregistrare Organizator',
             self::TYPE_EVENT_CREATED => 'Eveniment Nou',
             self::TYPE_EVENT_UPDATED => 'Eveniment Modificat',
-            self::TYPE_PAYOUT_REQUEST => 'Cerere Payout',
+            self::TYPE_PAYOUT_REQUEST => 'Cerere Plată',
+            self::TYPE_PAYOUT_APPROVED => 'Plată Aprobată',
+            self::TYPE_PAYOUT_PROCESSING => 'Plată În Procesare',
+            self::TYPE_PAYOUT_COMPLETED => 'Plată Finalizată',
+            self::TYPE_PAYOUT_REJECTED => 'Plată Respinsă',
             self::TYPE_DOCUMENT_GENERATED => 'Document Generat',
             self::TYPE_ADMIN_USER_ADDED => 'Admin Nou',
             self::TYPE_CUSTOMER_REGISTRATION => 'Client Nou',
@@ -92,6 +100,10 @@ class MarketplaceNotification extends Model
             self::TYPE_EVENT_CREATED => 'heroicon-o-calendar-days',
             self::TYPE_EVENT_UPDATED => 'heroicon-o-pencil-square',
             self::TYPE_PAYOUT_REQUEST => 'heroicon-o-banknotes',
+            self::TYPE_PAYOUT_APPROVED => 'heroicon-o-check',
+            self::TYPE_PAYOUT_PROCESSING => 'heroicon-o-arrow-path',
+            self::TYPE_PAYOUT_COMPLETED => 'heroicon-o-check-circle',
+            self::TYPE_PAYOUT_REJECTED => 'heroicon-o-x-circle',
             self::TYPE_DOCUMENT_GENERATED => 'heroicon-o-document-text',
             self::TYPE_ADMIN_USER_ADDED => 'heroicon-o-user-plus',
             self::TYPE_CUSTOMER_REGISTRATION => 'heroicon-o-user',
@@ -118,6 +130,10 @@ class MarketplaceNotification extends Model
             self::TYPE_EVENT_CREATED => 'primary',
             self::TYPE_EVENT_UPDATED => 'primary',
             self::TYPE_PAYOUT_REQUEST => 'warning',
+            self::TYPE_PAYOUT_APPROVED => 'info',
+            self::TYPE_PAYOUT_PROCESSING => 'primary',
+            self::TYPE_PAYOUT_COMPLETED => 'success',
+            self::TYPE_PAYOUT_REJECTED => 'danger',
             self::TYPE_DOCUMENT_GENERATED => 'info',
             self::TYPE_ADMIN_USER_ADDED => 'success',
             self::TYPE_CUSTOMER_REGISTRATION => 'info',
