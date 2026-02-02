@@ -76,7 +76,7 @@ include __DIR__ . '/includes/header.php';
         <div id="featuredCities" class="grid grid-cols-4 gap-6 mobile:grid-cols-2">
             <!-- First card spans 2 rows -->
             <a href="/bucuresti" class="relative row-span-2 overflow-hidden rounded-2xl group">
-                <img src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=800&h=1000&fit=crop" alt="București" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
+                <img src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=800&h=1000&fit=crop" alt="București" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-7">
                     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary rounded-md text-xs font-bold text-white uppercase tracking-wider mb-3">
@@ -107,7 +107,7 @@ include __DIR__ . '/includes/header.php';
             </a>
 
             <a href="/cluj" class="relative rounded-2xl overflow-hidden aspect-[4/5] group">
-                <img src="https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=600&h=750&fit=crop" alt="Cluj-Napoca" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
+                <img src="https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=600&h=750&fit=crop" alt="Cluj-Napoca" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-7">
                     <h3 class="mb-2 text-3xl font-extrabold text-white mobile:text-xl">Cluj-Napoca</h3>
@@ -125,7 +125,7 @@ include __DIR__ . '/includes/header.php';
             </a>
 
             <a href="/timisoara" class="relative rounded-2xl overflow-hidden aspect-[4/5] group">
-                <img src="https://images.unsplash.com/photo-1598971861713-54ad16a7e72e?w=600&h=750&fit=crop" alt="Timișoara" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
+                <img src="https://images.unsplash.com/photo-1598971861713-54ad16a7e72e?w=600&h=750&fit=crop" alt="Timișoara" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-7">
                     <h3 class="mb-2 text-3xl font-extrabold text-white mobile:text-xl">Timișoara</h3>
@@ -143,7 +143,7 @@ include __DIR__ . '/includes/header.php';
             </a>
 
             <a href="/iasi" class="relative rounded-2xl overflow-hidden aspect-[4/5] group">
-                <img src="https://images.unsplash.com/photo-1560969184-10fe8719e047?w=600&h=750&fit=crop" alt="Iași" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
+                <img src="https://images.unsplash.com/photo-1560969184-10fe8719e047?w=600&h=750&fit=crop" alt="Iași" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-7">
                     <h3 class="mb-2 text-3xl font-extrabold text-white mobile:text-xl">Iași</h3>
@@ -161,7 +161,7 @@ include __DIR__ . '/includes/header.php';
             </a>
 
             <a href="/brasov" class="relative rounded-2xl overflow-hidden aspect-[4/5] group">
-                <img src="https://images.unsplash.com/photo-1565264216052-3c9012481015?w=600&h=750&fit=crop" alt="Brașov" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
+                <img src="https://images.unsplash.com/photo-1565264216052-3c9012481015?w=600&h=750&fit=crop" alt="Brașov" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-7">
                     <h3 class="mb-2 text-3xl font-extrabold text-white mobile:text-xl">Brașov</h3>
@@ -343,7 +343,7 @@ const CitiesPage = {
                 // First card spans 2 rows (capital city style)
                 return `
                     <a href="${cityUrl}" class="relative row-span-2 overflow-hidden rounded-2xl group">
-                        <img src="${image}" alt="${city.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
+                        <img src="${image}" alt="${city.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
                         <div class="absolute bottom-0 left-0 right-0 p-7">
                             ${city.is_capital ? `
@@ -371,7 +371,7 @@ const CitiesPage = {
                 // Regular cards
                 return `
                     <a href="${cityUrl}" class="relative rounded-2xl overflow-hidden aspect-[5/5] group">
-                        <img src="${image}" alt="${city.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
+                        <img src="${image}" alt="${city.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
                         <div class="absolute bottom-0 left-0 right-0 p-7">
                             <h3 class="mb-2 text-3xl font-extrabold text-white">${city.name}</h3>
@@ -488,7 +488,7 @@ const CitiesPage = {
             return `
                 <a href="${cityUrl}" class="flex items-center gap-4 p-4 bg-white rounded-2xl border border-border hover:border-primary hover:shadow-lg hover:-translate-y-0.5 transition-all">
                     <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-xl">
-                        <img src="${image}" alt="${city.name}" class="object-cover w-full h-full">
+                        <img src="${image}" alt="${city.name}" class="object-cover w-full h-full" loading="lazy">
                     </div>
                     <div class="flex-1 min-w-0">
                         <h3 class="mb-1 text-base font-bold text-secondary">${city.name}</h3>

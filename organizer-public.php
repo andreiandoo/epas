@@ -386,7 +386,7 @@ const OrganizerPage = {
         document.getElementById('eventsGrid').innerHTML = data.upcomingEvents.map(event => `
             <a href="/event/${AmbiletUtils.slugify(event.title)}" class="overflow-hidden transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary group">
                 <div class="relative overflow-hidden aspect-video">
-                    <img src="${event.image}" alt="${event.title}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105">
+                    <img src="${event.image}" alt="${event.title}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy">
                     <div class="absolute p-2 px-3 text-center bg-white rounded-lg shadow-md top-3 left-3">
                         <div class="text-xl font-extrabold leading-none text-primary">${event.day}</div>
                         <div class="text-[11px] font-semibold text-gray-500 uppercase">${event.month}</div>
@@ -427,7 +427,7 @@ const OrganizerPage = {
         document.getElementById('pastEventsGrid').innerHTML = data.pastEvents.map(event => `
             <a href="#" class="flex items-center gap-4 p-4 bg-white rounded-[14px] border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all">
                 <div class="flex-shrink-0 w-20 h-20 overflow-hidden rounded-xl">
-                    <img src="${event.image}" alt="${event.title}" class="object-cover w-full h-full">
+                    <img src="${event.image}" alt="${event.title}" class="object-cover w-full h-full" loading="lazy">
                 </div>
                 <div class="flex-1">
                     <div class="mb-1 text-xs text-gray-400">${event.date}</div>

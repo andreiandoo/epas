@@ -322,7 +322,7 @@ const OrgDashboard = {
                 <tr class="event-row">
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
-                            <img src="${getStorageUrl(e.image)}" class="w-12 h-12 rounded-xl object-cover" alt="" onerror="this.src='/assets/images/default-event.png'">
+                            <img src="${getStorageUrl(e.image)}" class="w-12 h-12 rounded-xl object-cover" alt="" onerror="this.src='/assets/images/default-event.png'" loading="lazy">
                             <div>
                                 <p class="font-semibold text-secondary">${eventName}</p>
                                 <p class="text-xs text-muted">${venueName}${venueCity}</p>
@@ -377,7 +377,7 @@ const OrgDashboard = {
 
         container.innerHTML = `
             <div class="relative mb-4">
-                <img src="${getStorageUrl(event.image)}" class="w-full h-32 object-cover rounded-xl" alt="" onerror="this.src='/assets/images/default-event.png'">
+                <img src="${getStorageUrl(event.image)}" class="w-full h-32 object-cover rounded-xl" alt="" onerror="this.src='/assets/images/default-event.png'" loading="lazy">
                 ${diffDays >= 0 ? `<div class="absolute top-3 left-3 px-3 py-1 bg-primary text-white text-xs font-bold rounded-lg">${daysLabel}</div>` : ''}
             </div>
             <h3 class="font-bold text-secondary mb-1">${eventName}</h3>

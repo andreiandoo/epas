@@ -250,7 +250,7 @@ const SearchPage = {
         return `
             <a href="/bilete/${event.slug}" class="group block overflow-hidden bg-white border rounded-2xl border-border hover:shadow-lg transition-all">
                 <div class="relative h-48 overflow-hidden bg-gray-100">
-                    <img src="${image}" alt="${this.escapeHtml(event.title)}" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300">
+                    <img src="${image}" alt="${this.escapeHtml(event.title)}" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" loading="lazy">
                     ${price ? `<div class="absolute bottom-3 left-3 px-3 py-1 text-sm font-semibold text-white bg-primary rounded-lg">${price}</div>` : ''}
                 </div>
                 <div class="p-4">
@@ -297,7 +297,7 @@ const SearchPage = {
         return `
             <a href="/artist/${artist.slug}" class="group block text-center p-4 bg-white border rounded-2xl border-border hover:shadow-lg transition-all">
                 <div class="relative w-24 h-24 mx-auto mb-3 overflow-hidden rounded-full bg-gray-100">
-                    <img src="${image}" alt="${this.escapeHtml(artist.name)}" class="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300">
+                    <img src="${image}" alt="${this.escapeHtml(artist.name)}" class="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300" loading="lazy">
                 </div>
                 <h3 class="font-semibold text-gray-900 truncate group-hover:text-primary transition-colors">${this.escapeHtml(artist.name)}</h3>
                 ${genre ? `<div class="mt-1 text-sm text-gray-500 truncate">${this.escapeHtml(genre)}</div>` : ''}
@@ -338,7 +338,7 @@ const SearchPage = {
         return `
             <a href="/locatie/${location.slug}" class="group block overflow-hidden bg-white border rounded-2xl border-border hover:shadow-lg transition-all">
                 <div class="relative h-36 overflow-hidden bg-gray-100">
-                    <img src="${image}" alt="${this.escapeHtml(location.name)}" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300">
+                    <img src="${image}" alt="${this.escapeHtml(location.name)}" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" loading="lazy">
                 </div>
                 <div class="p-4">
                     <h3 class="font-semibold text-gray-900 truncate group-hover:text-primary transition-colors">${this.escapeHtml(location.name)}</h3>

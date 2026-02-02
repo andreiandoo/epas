@@ -597,7 +597,7 @@ const ArtistPage = {
                 '</div>' : '';
 
             return '<div class="relative overflow-hidden cursor-pointer rounded-xl group ' + spanClass + ' aspect-square">' +
-                '<img src="' + self.escapeHtml(item.url) + '" alt="Gallery" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105">' +
+                '<img src="' + self.escapeHtml(item.url) + '" alt="Gallery" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy">' +
                 '<div class="absolute inset-0 flex items-center justify-center transition-colors bg-black/0 group-hover:bg-black/30">' + videoIcon + '</div>' +
             '</div>';
         }).join('');
@@ -619,7 +619,7 @@ const ArtistPage = {
         container.innerHTML = artists.map(function(artist) {
             return '<a href="/artist/' + self.escapeHtml(artist.slug) + '" class="text-center transition-transform group hover:-translate-y-1">' +
                 '<div class="w-full aspect-square rounded-full overflow-hidden mb-3 border-[3px] border-gray-200 group-hover:border-primary transition-colors">' +
-                    '<img src="' + self.escapeHtml(artist.image) + '" alt="' + self.escapeHtml(artist.name) + '" class="object-cover w-full h-full">' +
+                    '<img src="' + self.escapeHtml(artist.image) + '" alt="' + self.escapeHtml(artist.name) + '" class="object-cover w-full h-full" loading="lazy">' +
                 '</div>' +
                 '<h3 class="text-[15px] font-bold text-gray-900 mb-0.5">' + self.escapeHtml(artist.name) + '</h3>' +
                 '<p class="text-[13px] text-gray-500">' + self.escapeHtml(artist.genre) + '</p>' +

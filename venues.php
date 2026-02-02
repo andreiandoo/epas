@@ -266,7 +266,7 @@ const VenuesPage = {
 
         container.innerHTML = featured.map(v => `
             <a href="/locatie/${v.slug}" class="relative overflow-hidden rounded-2xl aspect-video group">
-                <img src="${v.image}" alt="${v.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105">
+                <img src="${v.image}" alt="${v.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-7">
                     <span class="inline-block px-3 py-1.5 bg-primary rounded-md text-xs font-bold text-white uppercase tracking-wider mb-3">${v.type}</span>
@@ -327,7 +327,7 @@ const VenuesPage = {
         grid.innerHTML = paginated.map(v => `
             <a href="/locatie/${v.slug}" class="overflow-hidden transition-all duration-300 bg-white border rounded-2xl border-border hover:-translate-y-1 hover:shadow-lg hover:border-primary">
                 <div class="relative aspect-[16/10] overflow-hidden">
-                    <img src="${v.image}" alt="${v.name}" class="object-cover w-full h-full transition-transform duration-500 hover:scale-105">
+                    <img src="${v.image}" alt="${v.name}" class="object-cover w-full h-full transition-transform duration-500 hover:scale-105" loading="lazy">
                     <span class="absolute top-3 left-3 px-3 py-1.5 bg-white/95 rounded-md text-xs font-semibold text-gray-600 uppercase tracking-wide">${v.type}</span>
                     <span class="absolute top-3 right-3 px-3 py-1.5 bg-primary rounded-md text-xs font-semibold text-white">${v.eventsCount} evenimente</span>
                 </div>

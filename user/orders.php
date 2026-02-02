@@ -196,7 +196,7 @@ const UserOrders = {
                 <button onclick="toggleOrder(this)" class="w-full p-4 text-left lg:p-5">
                     <div class="flex items-center gap-4">
                         <div class="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 ${isPast ? 'grayscale opacity-75' : ''}">
-                            <img src="${eventImage}" class="object-cover w-full h-full" alt="" onerror="this.src='/assets/images/default-event.png'">
+                            <img src="${eventImage}" class="object-cover w-full h-full" alt="" onerror="this.src='/assets/images/default-event.png'" loading="lazy">
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex flex-wrap items-center gap-2">

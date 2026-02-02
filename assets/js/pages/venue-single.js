@@ -459,7 +459,7 @@ const VenuePage = {
                 : '';
 
             return '<div class="' + extraClass + ' relative rounded-xl overflow-hidden ' + aspectClass + ' cursor-pointer group">' +
-                '<img src="' + self.escapeHtml(img) + '" alt="Galerie" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105">' +
+                '<img src="' + self.escapeHtml(img) + '" alt="Galerie" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy">' +
                 '<div class="absolute inset-0 transition-all bg-black/0 group-hover:bg-black/30"></div>' +
                 moreOverlay +
             '</div>';
@@ -517,7 +517,7 @@ const VenuePage = {
         var html = venues.map(function(v) {
             return '<a href="/locatie/' + self.escapeHtml(v.slug) + '" class="overflow-hidden transition-all bg-white border rounded-2xl border-border hover:-translate-y-1 hover:shadow-lg hover:border-primary">' +
                 '<div class="aspect-[16/10] overflow-hidden">' +
-                    '<img src="' + self.escapeHtml(v.image) + '" alt="' + self.escapeHtml(v.name) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">' +
+                    '<img src="' + self.escapeHtml(v.image) + '" alt="' + self.escapeHtml(v.name) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">' +
                 '</div>' +
                 '<div class="p-4">' +
                     '<h3 class="mb-1 text-base font-bold text-secondary">' + self.escapeHtml(v.name) + '</h3>' +

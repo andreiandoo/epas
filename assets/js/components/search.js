@@ -290,7 +290,7 @@ const AmbiletSearch = {
         return `
             <a href="/bilete/${event.slug}" class="flex gap-3 p-3 transition-all border border-transparent rounded-xl hover:bg-gray-50 hover:border-gray-200">
                 <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-lg bg-gray-100">
-                    <img src="${image}" alt="${this.escapeHtml(event.title)}" class="object-cover w-full h-full">
+                    <img src="${image}" alt="${this.escapeHtml(event.title)}" class="object-cover w-full h-full" loading="lazy">
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="text-sm font-semibold text-gray-900 truncate">${this.escapeHtml(event.title)}</div>
@@ -332,7 +332,7 @@ const AmbiletSearch = {
         return `
             <a href="/artist/${artist.slug}" class="flex gap-3 p-3 transition-all border border-transparent rounded-xl hover:bg-gray-50 hover:border-gray-200">
                 <div class="flex-shrink-0 w-12 h-12 overflow-hidden rounded-full bg-gray-100">
-                    <img src="${image}" alt="${this.escapeHtml(artist.name)}" class="object-cover w-full h-full">
+                    <img src="${image}" alt="${this.escapeHtml(artist.name)}" class="object-cover w-full h-full" loading="lazy">
                 </div>
                 <div class="flex-1 min-w-0 flex flex-col justify-center">
                     <div class="text-sm font-semibold text-gray-900 truncate">${this.escapeHtml(artist.name)}</div>
@@ -373,7 +373,7 @@ const AmbiletSearch = {
         return `
             <a href="/locatie/${location.slug}" class="flex gap-3 p-3 transition-all border border-transparent rounded-xl hover:bg-gray-50 hover:border-gray-200">
                 <div class="flex-shrink-0 w-12 h-12 overflow-hidden rounded-lg bg-gray-100">
-                    <img src="${image}" alt="${this.escapeHtml(location.name)}" class="object-cover w-full h-full">
+                    <img src="${image}" alt="${this.escapeHtml(location.name)}" class="object-cover w-full h-full" loading="lazy">
                 </div>
                 <div class="flex-1 min-w-0 flex flex-col justify-center">
                     <div class="text-sm font-semibold text-gray-900 truncate">${this.escapeHtml(location.name)}</div>

@@ -737,7 +737,7 @@ function renderEvents(events) {
         return `
         <div class="transition-colors bg-white border rounded-2xl border-border hover:border-primary/30">
             <div class="flex flex-col md:items-center md:flex-row">
-                <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full h-40 rounded-tr-none rounded-br-none md:w-40 rounded-xl">
+                <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full h-40 rounded-tr-none rounded-br-none md:w-40 rounded-xl" loading="lazy">
                 <div class="flex-1 py-2">
                     <div class="flex items-center justify-between gap-4 pr-4">
                         <div class="flex items-center gap-4 pl-6">

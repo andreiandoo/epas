@@ -247,7 +247,7 @@ const UserTickets = {
                     <div class="flex gap-4">
                         ${event.image ? `
                         <div class="flex-shrink-0 w-20 h-20 overflow-hidden lg:w-24 lg:h-24 rounded-xl">
-                            <img src="${getStorageUrl(event.image)}" class="object-cover w-full h-full" alt="">
+                            <img src="${getStorageUrl(event.image)}" class="object-cover w-full h-full" alt="" loading="lazy">
                         </div>` : ''}
                         <div class="flex-1 min-w-0">
                             <div class="flex flex-wrap items-center gap-2 mb-2">
@@ -357,7 +357,7 @@ const UserTickets = {
                 <div class="flex gap-4">
                     ${event.image ? `
                     <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-lg lg:w-20 lg:h-20 grayscale">
-                        <img src="${getStorageUrl(event.image)}" class="object-cover w-full h-full" alt="">
+                        <img src="${getStorageUrl(event.image)}" class="object-cover w-full h-full" alt="" loading="lazy">
                     </div>` : ''}
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-1">

@@ -361,7 +361,7 @@ const RegionPage = {
         const gradient = gradients[city.id % gradients.length];
 
         const imageHtml = city.image
-            ? `<img src="${city.image}" alt="${city.name}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">`
+            ? `<img src="${city.image}" alt="${city.name}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">`
             : `<div class="flex items-center justify-center w-full h-full bg-gradient-to-br ${gradient}">
                 <svg class="w-10 h-10 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
@@ -423,7 +423,7 @@ const RegionPage = {
         const gradient = gradients[Math.floor(Math.random() * gradients.length)];
 
         const imageHtml = event.image
-            ? `<img src="${event.image}" alt="${event.title}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">`
+            ? `<img src="${event.image}" alt="${event.title}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">`
             : `<div class="flex items-center justify-center w-full h-full bg-gradient-to-br ${gradient}">
                 <svg class="w-10 h-10 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
