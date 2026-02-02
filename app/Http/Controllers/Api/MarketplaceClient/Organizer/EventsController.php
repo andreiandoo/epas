@@ -2416,6 +2416,7 @@ class EventsController extends BaseController
             'commission_rate' => $event->commission_rate !== null ? (float) $event->commission_rate : null,
             'use_fixed_commission' => (bool) $event->use_fixed_commission,
             'effective_commission_rate' => (float) $event->getEffectiveCommissionRate(),
+            'commission_mode' => $event->getEffectiveCommissionMode(),
         ];
     }
 

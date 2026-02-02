@@ -67,6 +67,7 @@ class PayoutController extends BaseController
                     'description' => $tx->description,
                     'order_id' => $tx->order_id,
                     'payout_id' => $tx->marketplace_payout_id,
+                    'date' => $tx->created_at->toIso8601String(),
                     'created_at' => $tx->created_at->toIso8601String(),
                 ];
             });

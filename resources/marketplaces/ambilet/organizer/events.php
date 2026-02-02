@@ -763,7 +763,23 @@ function renderEvents(events) {
                     <div class="grid grid-cols-5 gap-4 pt-4 mt-4 border-t border-border pl-6">
                         <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
                         <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări</p></div>
-                        <div><p class="text-2xl font-bold text-secondary">${event.effective_commission_rate || 5}%</p><p class="text-xs text-muted">${event.use_fixed_commission ? 'Comision fix' : 'Comision'}</p></div>
+                        <div class="relative group">
+                            <div class="flex items-center gap-1">
+                                <p class="text-2xl font-bold text-secondary">${event.effective_commission_rate || 5}%</p>
+                                ${event.commission_mode === 'added_on_top'
+                                    ? '<span class="inline-flex items-center justify-center w-5 h-5 text-amber-500" title="Adăugat la preț"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg></span>'
+                                    : '<span class="inline-flex items-center justify-center w-5 h-5 text-green-500" title="Inclus în preț"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></span>'
+                                }
+                                <span class="cursor-help">
+                                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </span>
+                            </div>
+                            <p class="text-xs text-muted">${event.use_fixed_commission ? 'Comision fix' : 'Comision'} ${event.commission_mode === 'added_on_top' ? '(+preț)' : '(inclus)'}</p>
+                            <div class="absolute z-10 hidden group-hover:block bottom-full left-0 mb-2 px-3 py-2 text-xs text-white bg-gray-800 rounded-lg whitespace-nowrap">
+                                Setat de <?= SITE_NAME ?> pentru acest eveniment
+                                <div class="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                            </div>
+                        </div>
                         <div><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
                         <div><p class="text-2xl font-bold text-secondary">${daysText || '-'}</p><p class="text-xs text-muted">${isEnded ? 'Încheiat' : 'Până la event'}</p></div>
                     </div>
@@ -870,6 +886,13 @@ async function loadEventForEdit(eventId) {
 
         if (!event || !event.id) {
             AmbiletNotifications.error('Evenimentul nu a fost gasit.');
+            return;
+        }
+
+        // Check if event is editable (not past/ended)
+        if (event.is_editable === false || event.is_past === true) {
+            AmbiletNotifications.error('Acest eveniment este încheiat și nu mai poate fi editat.');
+            hideCreateForm();
             return;
         }
 
