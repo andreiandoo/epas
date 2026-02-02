@@ -341,14 +341,23 @@ class TeamController extends BaseController
                 return false;
             }
 
-            // Get sender details from marketplace settings
-            $mailSettings = $client->getMailSettings();
-            $fromEmail = $mailSettings['from_address'] ?? $client->contact_email ?? 'noreply@' . $client->domain;
-            $fromName = $mailSettings['from_name'] ?? $client->name ?? $client->domain;
+            // Get sender details using marketplace helper methods (includes legacy fallbacks)
+            $fromEmail = $client->getEmailFromAddress();
+            $fromName = $client->getEmailFromName() ?: $client->name;
+
+            // Validate from email
+            if (empty($fromEmail)) {
+                \Log::error('No from email address configured for marketplace', [
+                    'marketplace_id' => $client->id,
+                    'marketplace_domain' => $client->domain,
+                ]);
+                return false;
+            }
 
             \Log::info('Sending team invite email', [
                 'marketplace_id' => $client->id,
-                'from' => $fromEmail,
+                'from_email' => $fromEmail,
+                'from_name' => $fromName,
                 'to' => $member->email,
                 'member_name' => $member->name,
             ]);
