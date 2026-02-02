@@ -270,8 +270,12 @@ class CheckoutController extends BaseController
 
                 // Create order
                 // Note: For marketplace events, we store marketplace_event_id
+                // Get organizer ID from event or marketplace event
+                $organizerId = $event?->marketplace_organizer_id ?? $marketplaceEvent?->marketplace_organizer_id;
+
                 $order = Order::create([
                     'marketplace_client_id' => $client->id,
+                    'marketplace_organizer_id' => $organizerId,
                     'tenant_id' => $event?->tenant_id,
                     'marketplace_customer_id' => $customer->id,
                     'event_id' => $event?->id,
