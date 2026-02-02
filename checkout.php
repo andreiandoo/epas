@@ -446,9 +446,17 @@ const CheckoutPage = {
         document.getElementById('insurance-title').textContent = this.insurance.label || 'Protecție returnare bilete';
         document.getElementById('insurance-description').textContent = this.insurance.description || '';
 
-        // Calculate and display price
+        // Calculate total tickets and display price per ticket
+        const totalTickets = this.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
         const insuranceAmount = this.calculateInsuranceAmount();
-        document.getElementById('insurance-price').textContent = '+' + AmbiletUtils.formatCurrency(insuranceAmount);
+
+        // Show price per ticket info
+        if (this.insurance.price_type === 'fixed') {
+            const pricePerTicket = this.insurance.price || 0;
+            document.getElementById('insurance-price').textContent = AmbiletUtils.formatCurrency(pricePerTicket) + '/bilet';
+        } else {
+            document.getElementById('insurance-price').textContent = this.insurance.price_percentage + '% din total';
+        }
 
         // Show terms link if available
         if (this.insurance.terms_url) {
@@ -464,8 +472,8 @@ const CheckoutPage = {
             this.insuranceSelected = true;
         }
 
-        // Update row label in summary
-        document.getElementById('insurance-row-label').textContent = this.insurance.label || 'Taxa de retur';
+        // Update row label in summary to show ticket count
+        document.getElementById('insurance-row-label').textContent = (this.insurance.label || 'Taxa de retur') + ' (' + totalTickets + ' bilete)';
     },
 
     setupInsuranceCheckbox() {
@@ -503,6 +511,9 @@ const CheckoutPage = {
     calculateInsuranceAmount() {
         if (!this.insurance) return 0;
 
+        // Calculate total number of tickets
+        const totalTickets = this.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+
         if (this.insurance.price_type === 'percentage') {
             // Calculate based on subtotal
             const subtotal = this.items.reduce((sum, item) => {
@@ -512,8 +523,9 @@ const CheckoutPage = {
             return Math.round(subtotal * (this.insurance.price_percentage / 100) * 100) / 100;
         }
 
-        // Fixed price
-        return this.insurance.price || 0;
+        // Fixed price per ticket × number of tickets
+        const pricePerTicket = this.insurance.price || 0;
+        return Math.round(pricePerTicket * totalTickets * 100) / 100;
     },
 
     setupTimer() {
