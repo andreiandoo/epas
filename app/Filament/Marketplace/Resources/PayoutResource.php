@@ -166,8 +166,7 @@ class PayoutResource extends Resource
                         Infolists\Components\TextEntry::make('reference')
                             ->copyable()
                             ->copyMessage('Reference copied!')
-                            ->copyMessageDuration(1500)
-                            ->suffixIcon('heroicon-o-clipboard-document'),
+                            ->copyMessageDuration(1500),
 
                         Infolists\Components\TextEntry::make('organizer.name')
                             ->label('Organizer'),
@@ -183,8 +182,7 @@ class PayoutResource extends Resource
                             ->money('RON')
                             ->copyable()
                             ->copyMessage('Amount copied!')
-                            ->copyMessageDuration(1500)
-                            ->suffixIcon('heroicon-o-clipboard-document'),
+                            ->copyMessageDuration(1500),
 
                         Infolists\Components\TextEntry::make('status')
                             ->badge()
@@ -234,15 +232,13 @@ class PayoutResource extends Resource
                             ->label('IBAN')
                             ->copyable()
                             ->copyMessage('IBAN copied!')
-                            ->copyMessageDuration(1500)
-                            ->suffixIcon('heroicon-o-clipboard-document'),
+                            ->copyMessageDuration(1500),
 
                         Infolists\Components\TextEntry::make('payout_method.account_holder')
                             ->label('Account Holder')
                             ->copyable()
                             ->copyMessage('Account holder copied!')
-                            ->copyMessageDuration(1500)
-                            ->suffixIcon('heroicon-o-clipboard-document'),
+                            ->copyMessageDuration(1500),
                     ])
                     ->columns(3),
 
@@ -279,8 +275,7 @@ class PayoutResource extends Resource
                 Section::make('Payment Confirmation')
                     ->schema([
                         Infolists\Components\TextEntry::make('payment_reference')
-                            ->copyable()
-                            ->suffixIcon('heroicon-o-clipboard-document'),
+                            ->copyable(),
                         Infolists\Components\TextEntry::make('payment_method'),
                         Infolists\Components\TextEntry::make('payment_notes')
                             ->columnSpanFull(),
