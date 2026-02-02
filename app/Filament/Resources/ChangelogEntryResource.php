@@ -13,6 +13,7 @@ use Filament\Forms\Components as FC;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
+use UnitEnum;
 
 class ChangelogEntryResource extends Resource
 {
@@ -20,7 +21,7 @@ class ChangelogEntryResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationGroup = 'Setări';
+    protected static UnitEnum|string|null $navigationGroup = 'Setări';
 
     protected static ?string $navigationLabel = 'Changelog';
 
