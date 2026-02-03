@@ -2208,6 +2208,10 @@ switch ($action) {
             $name = trim(strip_tags($input['name'] ?? ''));
             if (mb_strlen($name) > 100) $name = mb_substr($name, 0, 100);
 
+            // Optional password protection
+            $password = trim($input['password'] ?? '');
+            $passwordHash = $password ? password_hash($password, PASSWORD_BCRYPT) : null;
+
             // Cache ticket totals using organizer's auth (for sold/total display)
             $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
             $ticketData = $authHeader ? fetchTicketTotalsWithAuth($eventIds, $authHeader) : [];
@@ -2221,6 +2225,8 @@ switch ($action) {
                 'created_at' => date('c'),
                 'access_count' => 0,
                 'last_accessed_at' => null,
+                'password_hash' => $passwordHash,
+                'has_password' => !empty($passwordHash),
                 'ticket_data' => $ticketData,
                 'ticket_data_updated_at' => date('c'),
             ];
@@ -2238,6 +2244,11 @@ switch ($action) {
             $orgLinks = array_values(array_filter($allLinks, fn($l) => ($l['organizer_id'] ?? 0) === $orgId));
             // Sort by created_at descending
             usort($orgLinks, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+            // Strip sensitive data before sending to frontend
+            $orgLinks = array_map(function($l) {
+                unset($l['password_hash'], $l['ticket_data']);
+                return $l;
+            }, $orgLinks);
             echo json_encode(['success' => true, 'data' => ['links' => $orgLinks]]);
         }
         exit;
@@ -2292,6 +2303,17 @@ switch ($action) {
             if (isset($input['is_active'])) {
                 $allLinks[$code]['is_active'] = (bool)$input['is_active'];
             }
+            if (array_key_exists('password', $input)) {
+                $pw = trim($input['password'] ?? '');
+                if ($pw === '') {
+                    // Remove password
+                    $allLinks[$code]['password_hash'] = null;
+                    $allLinks[$code]['has_password'] = false;
+                } else {
+                    $allLinks[$code]['password_hash'] = password_hash($pw, PASSWORD_BCRYPT);
+                    $allLinks[$code]['has_password'] = true;
+                }
+            }
             saveShareLinks($allLinks);
             echo json_encode(['success' => true, 'data' => $allLinks[$code]]);
         } else {
@@ -2323,6 +2345,25 @@ switch ($action) {
             http_response_code(410);
             echo json_encode(['error' => 'This link is no longer active']);
             exit;
+        }
+
+        // Password protection check
+        if (!empty($link['password_hash'])) {
+            // Accept password via POST body or query param
+            $inputData = json_decode(file_get_contents('php://input'), true);
+            $providedPassword = $inputData['password'] ?? $_GET['password'] ?? '';
+
+            if (!$providedPassword) {
+                http_response_code(401);
+                echo json_encode(['error' => 'password_required', 'message' => 'Acest link necesita o parola']);
+                exit;
+            }
+
+            if (!password_verify($providedPassword, $link['password_hash'])) {
+                http_response_code(403);
+                echo json_encode(['error' => 'invalid_password', 'message' => 'Parola introdusa este incorecta']);
+                exit;
+            }
         }
 
         // Update access stats
