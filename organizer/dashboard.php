@@ -9,182 +9,180 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>
 
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col min-h-screen lg:ml-0">
+    <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
         <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
 
     
-        <main class="flex-1 p-4 lg:p-8">
+        <main class="flex-1">
             <!-- Welcome Banner -->
-            <div class="bg-gradient-to-r from-primary to-primary-dark rounded-2xl p-6 mb-8 text-white relative overflow-hidden">
-                <div class="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                <div class="absolute right-20 bottom-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2"></div>
+            <div class="relative p-6 mb-8 overflow-hidden text-white bg-gradient-to-r from-primary to-primary-dark rounded-2xl">
+                <div class="absolute top-0 right-0 w-64 h-64 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5"></div>
+                <div class="absolute bottom-0 w-32 h-32 translate-y-1/2 rounded-full right-20 bg-white/5"></div>
                 <div class="relative">
-                    <h1 class="text-2xl md:text-3xl font-bold mb-2">Bun venit inapoi! 👋</h1>
-                    <p id="welcome-stat" class="text-white/80 mb-4">Ai vandut 0 bilete in ultima saptamana. Continua tot asa!</p>
-                    <a href="/organizator/events?new=1" class="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-primary rounded-xl font-semibold hover:bg-white/90 transition-colors text-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        Creeaza eveniment nou
-                    </a>
+                    <h1 class="mb-2 text-2xl font-bold md:text-3xl">Bun venit inapoi! 👋</h1>
+                    <p id="welcome-stat" class="mb-4 text-white/80">Ai vandut 0 bilete in ultima saptamana. Continua tot asa!</p>
                 </div>
             </div>
 
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div class="stat-card bg-white rounded-2xl p-5 border border-border">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </div>
-                        <span id="stat-revenue-change" class="text-xs font-medium text-success bg-success/10 px-2 py-1 rounded-full">+0%</span>
-                    </div>
-                    <p id="stat-revenue" class="text-2xl font-bold text-secondary">0 lei</p>
-                    <p class="text-sm text-muted mt-1">Venituri luna aceasta</p>
-                </div>
-
-                <div class="stat-card bg-white rounded-2xl p-5 border border-border">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-                        </div>
-                        <span id="stat-tickets-change" class="text-xs font-medium text-success bg-success/10 px-2 py-1 rounded-full">+0%</span>
-                    </div>
-                    <p id="stat-tickets" class="text-2xl font-bold text-secondary">0</p>
-                    <p class="text-sm text-muted mt-1">Bilete vandute</p>
-                </div>
-
-                <div class="stat-card bg-white rounded-2xl p-5 border border-border">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                        </div>
-                    </div>
-                    <p id="stat-events" class="text-2xl font-bold text-secondary">0</p>
-                    <p class="text-sm text-muted mt-1">Evenimente active</p>
-                </div>
-
-                <div class="stat-card bg-white rounded-2xl p-5 border border-border">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-                        </div>
-                        <span id="stat-conv-change" class="text-xs font-medium text-success bg-success/10 px-2 py-1 rounded-full">+0%</span>
-                    </div>
-                    <p id="stat-conversion" class="text-2xl font-bold text-secondary">0%</p>
-                    <p class="text-sm text-muted mt-1">Rata conversie</p>
-                </div>
-            </div>
-
-            <!-- Main Grid -->
-            <div class="grid lg:grid-cols-3 gap-8">
-                <!-- Left Column -->
-                <div class="lg:col-span-2 space-y-8">
-                    <!-- Sales Chart -->
-                    <div class="bg-white rounded-2xl border border-border p-6">
-                        <div class="flex items-center justify-between mb-6">
-                            <div>
-                                <h2 class="text-lg font-bold text-secondary">Vanzari bilete</h2>
-                                <p class="text-sm text-muted">Ultimele 7 zile</p>
+            <div class="p-4 lg:p-8">
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-4 mb-8 lg:grid-cols-4">
+                    <div class="p-5 bg-white border stat-card rounded-2xl border-border">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center justify-center w-10 h-10 bg-success/10 rounded-xl">
+                                <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button class="chart-period px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-lg" data-days="7">7 zile</button>
-                                <button class="chart-period px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface rounded-lg transition-colors" data-days="30">30 zile</button>
-                                <button class="chart-period px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface rounded-lg transition-colors" data-days="90">90 zile</button>
+                            <span id="stat-revenue-change" class="px-2 py-1 text-xs font-medium rounded-full text-success bg-success/10">+0%</span>
+                        </div>
+                        <p id="stat-revenue" class="text-2xl font-bold text-secondary">0 lei</p>
+                        <p class="mt-1 text-sm text-muted">Venituri luna aceasta</p>
+                    </div>
+
+                    <div class="p-5 bg-white border stat-card rounded-2xl border-border">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-xl">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                            </div>
+                            <span id="stat-tickets-change" class="px-2 py-1 text-xs font-medium rounded-full text-success bg-success/10">+0%</span>
+                        </div>
+                        <p id="stat-tickets" class="text-2xl font-bold text-secondary">0</p>
+                        <p class="mt-1 text-sm text-muted">Bilete vandute</p>
+                    </div>
+
+                    <div class="p-5 bg-white border stat-card rounded-2xl border-border">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center justify-center w-10 h-10 bg-accent/10 rounded-xl">
+                                <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                             </div>
                         </div>
-                        <div class="h-64">
-                            <canvas id="salesChart"></canvas>
-                        </div>
+                        <p id="stat-events" class="text-2xl font-bold text-secondary">0</p>
+                        <p class="mt-1 text-sm text-muted">Evenimente active</p>
                     </div>
 
-                    <!-- Events Table -->
-                    <div class="bg-white rounded-2xl border border-border overflow-hidden">
-                        <div class="flex items-center justify-between p-6 border-b border-border">
-                            <div>
-                                <h2 class="text-lg font-bold text-secondary">Evenimentele tale</h2>
-                                <p id="events-count-text" class="text-sm text-muted">0 evenimente active</p>
+                    <div class="p-5 bg-white border stat-card rounded-2xl border-border">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center justify-center w-10 h-10 bg-blue-500/10 rounded-xl">
+                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                             </div>
-                            <a href="/organizator/events" class="text-sm text-primary font-medium">Vezi toate &rarr;</a>
+                            <span id="stat-conv-change" class="px-2 py-1 text-xs font-medium rounded-full text-success bg-success/10">+0%</span>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full" id="events-table">
-                                <thead class="bg-surface">
-                                    <tr>
-                                        <th class="text-left text-xs font-semibold text-muted uppercase tracking-wider px-6 py-3">Eveniment</th>
-                                        <th class="text-left text-xs font-semibold text-muted uppercase tracking-wider px-6 py-3">Data</th>
-                                        <th class="text-left text-xs font-semibold text-muted uppercase tracking-wider px-6 py-3">Vanzari</th>
-                                        <th class="text-left text-xs font-semibold text-muted uppercase tracking-wider px-6 py-3">Status</th>
-                                        <th class="text-right text-xs font-semibold text-muted uppercase tracking-wider px-6 py-3">Actiuni</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="events-tbody" class="divide-y divide-border"></tbody>
-                            </table>
-                        </div>
-                        <div id="no-events" class="hidden text-center py-12">
-                            <svg class="w-12 h-12 text-muted/30 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            <p class="text-muted mb-3">Nu ai evenimente inca</p>
-                            <a href="/organizator/events?new=1" class="btn-primary px-4 py-2 rounded-xl text-white text-sm font-medium">Creeaza primul eveniment</a>
-                        </div>
+                        <p id="stat-conversion" class="text-2xl font-bold text-secondary">0%</p>
+                        <p class="mt-1 text-sm text-muted">Rata conversie</p>
                     </div>
                 </div>
 
-                <!-- Right Column -->
-                <div class="space-y-8">
-                    <!-- Upcoming Event -->
-                    <div class="bg-white rounded-2xl border border-border overflow-hidden" id="upcoming-event-card">
-                        <div class="p-5 border-b border-border">
-                            <h2 class="font-bold text-secondary">Urmatorul eveniment</h2>
+                <!-- Main Grid -->
+                <div class="grid gap-8 lg:grid-cols-3">
+                    <!-- Left Column -->
+                    <div class="space-y-8 lg:col-span-2">
+                        <!-- Sales Chart -->
+                        <div class="p-6 bg-white border rounded-2xl border-border">
+                            <div class="flex items-center justify-between mb-6">
+                                <div>
+                                    <h2 class="text-lg font-bold text-secondary">Vanzari bilete</h2>
+                                    <p class="text-sm text-muted">Ultimele 7 zile</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button class="chart-period px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-lg" data-days="7">7 zile</button>
+                                    <button class="chart-period px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface rounded-lg transition-colors" data-days="30">30 zile</button>
+                                    <button class="chart-period px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface rounded-lg transition-colors" data-days="90">90 zile</button>
+                                </div>
+                            </div>
+                            <div class="h-64">
+                                <canvas id="salesChart"></canvas>
+                            </div>
                         </div>
-                        <div id="upcoming-event-content" class="p-5"></div>
+
+                        <!-- Events Table -->
+                        <div class="overflow-hidden bg-white border rounded-2xl border-border">
+                            <div class="flex items-center justify-between p-6 border-b border-border">
+                                <div>
+                                    <h2 class="text-lg font-bold text-secondary">Evenimentele tale</h2>
+                                    <p id="events-count-text" class="text-sm text-muted">0 evenimente active</p>
+                                </div>
+                                <a href="/organizator/events" class="text-sm font-medium text-primary">Vezi toate &rarr;</a>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full" id="events-table">
+                                    <thead class="bg-surface">
+                                        <tr>
+                                            <th class="px-6 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Eveniment</th>
+                                            <th class="px-6 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Data</th>
+                                            <th class="px-6 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Vanzari</th>
+                                            <th class="px-6 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Status</th>
+                                            <th class="px-6 py-3 text-xs font-semibold tracking-wider text-right uppercase text-muted">Actiuni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="events-tbody" class="divide-y divide-border"></tbody>
+                                </table>
+                            </div>
+                            <div id="no-events" class="hidden py-12 text-center">
+                                <svg class="w-12 h-12 mx-auto mb-3 text-muted/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <p class="mb-3 text-muted">Nu ai evenimente inca</p>
+                                <a href="/organizator/events?new=1" class="px-4 py-2 text-sm font-medium text-white btn-primary rounded-xl">Creeaza primul eveniment</a>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Quick Actions -->
-                    <div class="bg-white rounded-2xl border border-border p-5">
-                        <h2 class="font-bold text-secondary mb-4">Actiuni rapide</h2>
-                        <div class="space-y-2">
-                            <a href="/organizator/events?new=1" class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
-                                <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                                </div>
-                                <div>
-                                    <p class="font-medium text-secondary text-sm">Creeaza eveniment</p>
-                                    <p class="text-xs text-muted">Adauga un eveniment nou</p>
-                                </div>
-                            </a>
-                            <a href="/organizator/reports" class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
-                                <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                </div>
-                                <div>
-                                    <p class="font-medium text-secondary text-sm">Descarca raport</p>
-                                    <p class="text-xs text-muted">Export vanzari si taxe</p>
-                                </div>
-                            </a>
-                            <a href="/organizator/promo" class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
-                                <div class="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                                </div>
-                                <div>
-                                    <p class="font-medium text-secondary text-sm">Cod promotional</p>
-                                    <p class="text-xs text-muted">Creeaza reduceri</p>
-                                </div>
-                            </a>
-                            <a href="/organizator/email" class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
-                                <div class="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                </div>
-                                <div>
-                                    <p class="font-medium text-secondary text-sm">Trimite email</p>
-                                    <p class="text-xs text-muted">Notifica participantii</p>
-                                </div>
-                            </a>
+                    <!-- Right Column -->
+                    <div class="space-y-8">
+                        <!-- Upcoming Event -->
+                        <div class="overflow-hidden bg-white border rounded-2xl border-border" id="upcoming-event-card">
+                            <div class="p-5 border-b border-border">
+                                <h2 class="font-bold text-secondary">Urmatorul eveniment</h2>
+                            </div>
+                            <div id="upcoming-event-content" class="p-5"></div>
                         </div>
-                    </div>
 
-                    <!-- Recent Activity -->
-                    <div class="bg-white rounded-2xl border border-border p-5">
-                        <h2 class="font-bold text-secondary mb-4">Activitate recenta</h2>
-                        <div id="recent-activity" class="space-y-4"></div>
-                        <a href="/organizator/activity" class="block text-center text-sm text-primary font-medium mt-4">Vezi toata activitatea</a>
+                        <!-- Quick Actions -->
+                        <div class="p-5 bg-white border rounded-2xl border-border">
+                            <h2 class="mb-4 font-bold text-secondary">Actiuni rapide</h2>
+                            <div class="space-y-2">
+                                <a href="/organizator/events?new=1" class="flex items-center gap-3 p-3 transition-colors rounded-xl hover:bg-surface">
+                                    <div class="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-xl">
+                                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-secondary">Creeaza eveniment</p>
+                                        <p class="text-xs text-muted">Adauga un eveniment nou</p>
+                                    </div>
+                                </a>
+                                <a href="/organizator/reports" class="flex items-center gap-3 p-3 transition-colors rounded-xl hover:bg-surface">
+                                    <div class="flex items-center justify-center w-10 h-10 bg-success/10 rounded-xl">
+                                        <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-secondary">Descarca raport</p>
+                                        <p class="text-xs text-muted">Export vanzari si taxe</p>
+                                    </div>
+                                </a>
+                                <a href="/organizator/promo" class="flex items-center gap-3 p-3 transition-colors rounded-xl hover:bg-surface">
+                                    <div class="flex items-center justify-center w-10 h-10 bg-accent/10 rounded-xl">
+                                        <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-secondary">Cod promotional</p>
+                                        <p class="text-xs text-muted">Creeaza reduceri</p>
+                                    </div>
+                                </a>
+                                <a href="/organizator/email" class="flex items-center gap-3 p-3 transition-colors rounded-xl hover:bg-surface">
+                                    <div class="flex items-center justify-center w-10 h-10 bg-blue-500/10 rounded-xl">
+                                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-secondary">Trimite email</p>
+                                        <p class="text-xs text-muted">Notifica participantii</p>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity -->
+                        <div class="p-5 bg-white border rounded-2xl border-border">
+                            <h2 class="mb-4 font-bold text-secondary">Activitate recenta</h2>
+                            <div id="recent-activity" class="space-y-4"></div>
+                            <a href="/organizator/activity" class="block mt-4 text-sm font-medium text-center text-primary">Vezi toata activitatea</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -322,7 +320,7 @@ const OrgDashboard = {
                 <tr class="event-row">
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
-                            <img src="${getStorageUrl(e.image)}" class="w-12 h-12 rounded-xl object-cover" alt="" onerror="this.src='/assets/images/default-event.png'" loading="lazy">
+                            <img src="${getStorageUrl(e.image)}" class="object-cover w-12 h-12 rounded-xl" alt="" onerror="this.src='/assets/images/default-event.png'" loading="lazy">
                             <div>
                                 <p class="font-semibold text-secondary">${eventName}</p>
                                 <p class="text-xs text-muted">${venueName}${venueCity}</p>
@@ -335,7 +333,7 @@ const OrgDashboard = {
                     </td>
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-2">
-                            <div class="flex-1 h-2 bg-surface rounded-full overflow-hidden w-20">
+                            <div class="flex-1 w-20 h-2 overflow-hidden rounded-full bg-surface">
                                 <div class="h-full ${barColor} rounded-full" style="width: ${percent}%"></div>
                             </div>
                             <span class="text-sm font-medium text-secondary">${ticketsSold}/${ticketsTotal}</span>
@@ -345,7 +343,7 @@ const OrgDashboard = {
                         <span class="px-2.5 py-1 bg-success/10 text-success text-xs font-semibold rounded-full">${e.status === 'published' ? 'Activ' : 'Draft'}</span>
                     </td>
                     <td class="px-6 py-4 text-right">
-                        <a href="/organizator/events?id=${e.id}" class="p-2 hover:bg-surface rounded-lg transition-colors inline-block">
+                        <a href="/organizator/events?id=${e.id}" class="inline-block p-2 transition-colors rounded-lg hover:bg-surface">
                             <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                         </a>
                     </td>
@@ -377,17 +375,17 @@ const OrgDashboard = {
 
         container.innerHTML = `
             <div class="relative mb-4">
-                <img src="${getStorageUrl(event.image)}" class="w-full h-32 object-cover rounded-xl" alt="" onerror="this.src='/assets/images/default-event.png'" loading="lazy">
-                ${diffDays >= 0 ? `<div class="absolute top-3 left-3 px-3 py-1 bg-primary text-white text-xs font-bold rounded-lg">${daysLabel}</div>` : ''}
+                <img src="${getStorageUrl(event.image)}" class="object-cover w-full h-32 rounded-xl" alt="" onerror="this.src='/assets/images/default-event.png'" loading="lazy">
+                ${diffDays >= 0 ? `<div class="absolute px-3 py-1 text-xs font-bold text-white rounded-lg top-3 left-3 bg-primary">${daysLabel}</div>` : ''}
             </div>
-            <h3 class="font-bold text-secondary mb-1">${eventName}</h3>
-            <p class="text-sm text-muted mb-4">${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()} • ${venueName}${venueCity}</p>
+            <h3 class="mb-1 font-bold text-secondary">${eventName}</h3>
+            <p class="mb-4 text-sm text-muted">${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()} • ${venueName}${venueCity}</p>
             <div class="grid grid-cols-2 gap-3 mb-4">
-                <div class="bg-surface rounded-xl p-3 text-center">
+                <div class="p-3 text-center bg-surface rounded-xl">
                     <p class="text-xl font-bold text-secondary">${ticketsSold}</p>
                     <p class="text-xs text-muted">Bilete vandute</p>
                 </div>
-                <div class="bg-surface rounded-xl p-3 text-center">
+                <div class="p-3 text-center bg-surface rounded-xl">
                     <p class="text-xl font-bold text-secondary">${available}</p>
                     <p class="text-xs text-muted">Disponibile</p>
                 </div>
@@ -402,7 +400,7 @@ const OrgDashboard = {
     renderActivity(activities) {
         const container = document.getElementById('recent-activity');
         if (!activities?.length) {
-            container.innerHTML = '<p class="text-center text-muted py-4">Nicio activitate recenta</p>';
+            container.innerHTML = '<p class="py-4 text-center text-muted">Nicio activitate recenta</p>';
             return;
         }
 
@@ -421,7 +419,7 @@ const OrgDashboard = {
                     <div>
                         <p class="text-sm text-secondary">${a.message}</p>
                         <p class="text-xs text-muted">${a.details}</p>
-                        <p class="text-xs text-muted mt-1">${a.time}</p>
+                        <p class="mt-1 text-xs text-muted">${a.time}</p>
                     </div>
                 </div>
             `;
@@ -431,24 +429,24 @@ const OrgDashboard = {
     renderNotifications() {
         const container = document.getElementById('notifications-list');
         container.innerHTML = `
-            <a href="#" class="flex gap-3 p-4 hover:bg-surface transition-colors border-l-2 border-primary bg-primary/5">
-                <div class="w-10 h-10 bg-success/10 rounded-full flex items-center justify-center flex-shrink-0">
+            <a href="#" class="flex gap-3 p-4 transition-colors border-l-2 hover:bg-surface border-primary bg-primary/5">
+                <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-full bg-success/10">
                     <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-secondary">Plata primita: 2,450 lei</p>
                     <p class="text-xs text-muted mt-0.5">Transfer saptamanal procesat</p>
-                    <p class="text-xs text-muted mt-1">Acum 2 ore</p>
+                    <p class="mt-1 text-xs text-muted">Acum 2 ore</p>
                 </div>
             </a>
-            <a href="#" class="flex gap-3 p-4 hover:bg-surface transition-colors border-l-2 border-primary bg-primary/5">
-                <div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+            <a href="#" class="flex gap-3 p-4 transition-colors border-l-2 hover:bg-surface border-primary bg-primary/5">
+                <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-full bg-primary/10">
                     <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-secondary">15 bilete vandute</p>
                     <p class="text-xs text-muted mt-0.5">Dirty Shirt - Mos Craciun e Rocker</p>
-                    <p class="text-xs text-muted mt-1">Acum 4 ore</p>
+                    <p class="mt-1 text-xs text-muted">Acum 4 ore</p>
                 </div>
             </a>
         `;
