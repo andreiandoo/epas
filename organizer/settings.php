@@ -302,6 +302,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <input type="text" id="share-link-name" class="input w-full" placeholder="ex: Link pentru sponsor" maxlength="100">
                 </div>
                 <div>
+                    <label class="label">Parola de acces (optional)</label>
+                    <input type="text" id="share-link-password" class="input w-full" placeholder="Lasa gol pentru acces liber" maxlength="50">
+                    <p class="text-xs text-muted mt-1">Daca setezi o parola, vizitatorii vor trebui sa o introduca pentru a vedea datele.</p>
+                </div>
+                <div>
                     <label class="label">Selecteaza evenimente *</label>
                     <div id="share-events-loading" class="text-sm text-muted py-2">Se incarca evenimentele...</div>
                     <div id="share-events-list" class="hidden max-h-60 overflow-y-auto border border-border rounded-xl divide-y divide-border"></div>
@@ -334,7 +339,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 $scriptsExtra = <<<'JS'
 <script>
 AmbiletAuth.requireOrganizerAuth();
-document.addEventListener('DOMContentLoaded', function() { loadSettings(); loadBankAccounts(); loadContract(); loadShareLinks(); initNotificationSoundToggle(); const hash = window.location.hash.replace('#', ''); if (hash) showSection(hash); });
+document.addEventListener('DOMContentLoaded', function() { loadSettings(); loadBankAccounts(); loadContract(); loadShareLinks(); initNotificationSoundToggle(); const hash = window.location.hash.replace('#', ''); const validSections = ['profile','company','bank','contract','notifications','security','sharelinks']; if (hash && validSections.includes(hash)) showSection(hash); });
 
 // Initialize notification sound toggle from saved preference
 function initNotificationSoundToggle() {
@@ -743,6 +748,7 @@ function renderShareLinks() {
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
                         <h3 class="font-semibold text-secondary truncate">${slEscapeHtml(link.name || 'Link')}</h3>
+                        ${link.has_password ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full flex-shrink-0 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>Parola</span>' : ''}
                         ${!isActive ? '<span class="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full flex-shrink-0">Inactiv</span>' : '<span class="px-2 py-0.5 bg-green-100 text-green-600 text-xs rounded-full flex-shrink-0">Activ</span>'}
                     </div>
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
@@ -779,6 +785,7 @@ async function openShareLinkModal() {
     document.getElementById('share-link-modal').classList.remove('hidden');
     document.getElementById('share-link-modal').classList.add('flex');
     document.getElementById('share-link-name').value = '';
+    document.getElementById('share-link-password').value = '';
     document.getElementById('create-share-btn').disabled = true;
 
     // Load events
@@ -849,12 +856,12 @@ async function createShareLink(e) {
 
     const eventIds = Array.from(checked).map(cb => parseInt(cb.value));
     const name = document.getElementById('share-link-name').value.trim();
+    const password = document.getElementById('share-link-password').value.trim();
 
     try {
-        const response = await AmbiletAPI.post('/organizer/share-links', {
-            event_ids: eventIds,
-            name: name
-        });
+        const payload = { event_ids: eventIds, name: name };
+        if (password) payload.password = password;
+        const response = await AmbiletAPI.post('/organizer/share-links', payload);
 
         if (response.success) {
             closeShareLinkModal();

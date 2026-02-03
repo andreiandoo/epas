@@ -497,10 +497,11 @@ const AmbiletAPI = {
             return `invoice_id=${encodeURIComponent(organizerInvoiceMatch[1])}`;
         }
 
-        // Organizer share links
+        // Organizer share links - extract code parameter
         const shareLinkMatch = endpoint.match(/\/organizer\/share-links\/([A-Za-z0-9]+)$/);
-        if (shareLinkMatch) return 'organizer.share-link';
-        if (endpoint === '/organizer/share-links') return 'organizer.share-links';
+        if (shareLinkMatch) {
+            return `code=${encodeURIComponent(shareLinkMatch[1])}`;
+        }
 
         // Organizer documents endpoint - extract event ID or document ID
         const organizerDocumentForEventMatch = endpoint.match(/\/organizer\/documents\/event\/(\d+)$/);
@@ -514,12 +515,6 @@ const AmbiletAPI = {
         const organizerDocumentViewMatch = endpoint.match(/\/organizer\/documents\/(\d+)\/view$/);
         if (organizerDocumentViewMatch) {
             return `document_id=${encodeURIComponent(organizerDocumentViewMatch[1])}`;
-        }
-
-        // Organizer share link code extraction
-        const shareLinkCodeMatch = endpoint.match(/\/organizer\/share-links\/([A-Za-z0-9]+)$/);
-        if (shareLinkCodeMatch) {
-            return `code=${encodeURIComponent(shareLinkCodeMatch[1])}`;
         }
 
         // Pass through query params

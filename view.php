@@ -62,6 +62,20 @@ require_once __DIR__ . '/includes/head.php';
                 <p class="text-muted">Se incarca datele...</p>
             </div>
 
+            <!-- Password Prompt -->
+            <div id="password-state" class="hidden text-center py-20">
+                <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                </div>
+                <h1 class="text-2xl font-bold text-secondary mb-2">Link protejat</h1>
+                <p class="text-muted mb-6">Introdu parola pentru a vizualiza datele.</p>
+                <form onsubmit="window._submitSharePassword(event)" class="max-w-xs mx-auto">
+                    <input type="password" id="share-password-input" class="w-full px-4 py-3 border border-border rounded-xl text-center text-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Parola" autocomplete="off" autofocus>
+                    <p id="password-error" class="text-red-500 text-sm mt-2 hidden">Parola incorecta</p>
+                    <button type="submit" id="password-submit-btn" class="w-full mt-4 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors">Acceseaza</button>
+                </form>
+            </div>
+
             <!-- Error State (JS) -->
             <div id="error-state" class="hidden text-center py-20">
                 <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -103,6 +117,8 @@ require_once __DIR__ . '/includes/head.php';
     const API_URL = '/api/proxy.php';
     const REFRESH_INTERVAL = 30000; // 30 seconds
     let refreshTimer = null;
+    let sharePassword = null;
+    let isFirstLoad = true;
 
     function escapeHtml(str) {
         const div = document.createElement('div');
@@ -124,12 +140,19 @@ require_once __DIR__ . '/includes/head.php';
 
     function formatTime(timeStr) {
         if (!timeStr) return '';
+        // Handle full datetime strings like "2026-01-31T18:30:00"
+        if (timeStr.includes('T')) {
+            const timePart = timeStr.split('T')[1];
+            return timePart ? timePart.substring(0, 5) : '';
+        }
+        // Handle time-only strings like "18:30:00"
         return timeStr.substring(0, 5);
     }
 
     function showError(title, desc) {
         document.getElementById('loading-state').classList.add('hidden');
         document.getElementById('content-state').classList.add('hidden');
+        document.getElementById('password-state').classList.add('hidden');
         document.getElementById('error-state').classList.remove('hidden');
         document.getElementById('error-title').textContent = title || 'Link indisponibil';
         document.getElementById('error-desc').textContent = desc || 'Acest link nu mai este activ.';
@@ -138,16 +161,59 @@ require_once __DIR__ . '/includes/head.php';
     function showContent() {
         document.getElementById('loading-state').classList.add('hidden');
         document.getElementById('error-state').classList.add('hidden');
+        document.getElementById('password-state').classList.add('hidden');
         document.getElementById('content-state').classList.remove('hidden');
+    }
+
+    function showPasswordPrompt() {
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('error-state').classList.add('hidden');
+        document.getElementById('content-state').classList.add('hidden');
+        document.getElementById('password-state').classList.remove('hidden');
+        document.getElementById('share-password-input').focus();
     }
 
     async function fetchShareData() {
         try {
-            const response = await fetch(`${API_URL}?action=share-link.data&code=${encodeURIComponent(SHARE_CODE)}`);
+            const headers = {};
+            if (!isFirstLoad) {
+                headers['X-Auto-Refresh'] = '1';
+            }
+
+            let response;
+            if (sharePassword) {
+                // Send password via POST
+                headers['Content-Type'] = 'application/json';
+                response = await fetch(`${API_URL}?action=share-link.data&code=${encodeURIComponent(SHARE_CODE)}`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ password: sharePassword })
+                });
+            } else {
+                response = await fetch(`${API_URL}?action=share-link.data&code=${encodeURIComponent(SHARE_CODE)}`, {
+                    headers: headers
+                });
+            }
             const data = await response.json();
 
             if (!response.ok || !data.success) {
-                if (response.status === 410) {
+                if (response.status === 401 && data.error === 'password_required') {
+                    showPasswordPrompt();
+                    return;
+                } else if (response.status === 403 && data.error === 'invalid_password') {
+                    document.getElementById('password-error').classList.remove('hidden');
+                    document.getElementById('password-submit-btn').disabled = false;
+                    document.getElementById('password-submit-btn').textContent = 'Acceseaza';
+                    return;
+                } else if (response.status === 429) {
+                    if (data.error === 'too_many_attempts') {
+                        document.getElementById('password-error').textContent = 'Prea multe incercari. Incearca mai tarziu.';
+                        document.getElementById('password-error').classList.remove('hidden');
+                        document.getElementById('password-submit-btn').disabled = false;
+                        document.getElementById('password-submit-btn').textContent = 'Acceseaza';
+                    }
+                    return;
+                } else if (response.status === 410) {
                     showError('Link dezactivat', 'Organizatorul a dezactivat acest link de monitorizare.');
                 } else if (response.status === 404) {
                     showError('Link inexistent', 'Acest link de monitorizare nu exista.');
@@ -158,6 +224,7 @@ require_once __DIR__ . '/includes/head.php';
                 return;
             }
 
+            isFirstLoad = false;
             renderData(data.data);
             showContent();
             updateLastUpdated();
@@ -168,6 +235,18 @@ require_once __DIR__ . '/includes/head.php';
             stopAutoRefresh();
         }
     }
+
+    // Password submit handler (exposed globally for the form)
+    window._submitSharePassword = function(e) {
+        e.preventDefault();
+        const pw = document.getElementById('share-password-input').value.trim();
+        if (!pw) return;
+        sharePassword = pw;
+        document.getElementById('password-error').classList.add('hidden');
+        document.getElementById('password-submit-btn').disabled = true;
+        document.getElementById('password-submit-btn').textContent = 'Se verifica...';
+        fetchShareData();
+    };
 
     function renderData(data) {
         // Subtitle only (no link name shown publicly)
