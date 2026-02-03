@@ -31,8 +31,17 @@ class DesignerSeatingLayout extends Page
 
     public function mount(SeatingLayout $record): void
     {
-        $this->seatingLayout = $record;
+        $this->seatingLayout = $record->load('venue');
         $this->reloadSections();
+    }
+
+    public function getSubheading(): ?string
+    {
+        $parts = [$this->seatingLayout->name];
+        if ($this->seatingLayout->venue) {
+            $parts[] = $this->seatingLayout->venue->name;
+        }
+        return implode(' — ', $parts);
     }
 
     protected function getHeaderActions(): array
@@ -207,7 +216,16 @@ class DesignerSeatingLayout extends Page
                         ->label('Section Code')
                         ->required()
                         ->maxLength(20)
-                        ->helperText('Unique identifier (e.g., A, B, VIP)')
+                        ->helperText('Unique identifier per map (e.g., A, B, VIP)')
+                        ->rules([
+                            fn () => function (string $attribute, $value, $fail) {
+                                if (SeatingSection::where('layout_id', $this->seatingLayout->id)
+                                    ->where('section_code', $value)
+                                    ->exists()) {
+                                    $fail('This section code already exists in this layout.');
+                                }
+                            },
+                        ])
                         ->columnSpanFull(),
 
                     Forms\Components\Select::make('section_type')
@@ -773,6 +791,7 @@ class DesignerSeatingLayout extends Page
                                 }
                             }
                         })
+                        ->visible(fn () => !$this->selectedSection)
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('name')
@@ -785,6 +804,18 @@ class DesignerSeatingLayout extends Page
                         ->label('Section Code')
                         ->required()
                         ->maxLength(20)
+                        ->rules([
+                            fn (\Filament\Schemas\Components\Utilities\Get $get) => function (string $attribute, $value, $fail) use ($get) {
+                                $sectionId = $get('section_id');
+                                $exists = SeatingSection::where('layout_id', $this->seatingLayout->id)
+                                    ->where('section_code', $value)
+                                    ->when($sectionId, fn ($q) => $q->where('id', '!=', $sectionId))
+                                    ->exists();
+                                if ($exists) {
+                                    $fail('This section code already exists in this layout.');
+                                }
+                            },
+                        ])
                         ->columnSpan(1),
 
                     Forms\Components\ColorPicker::make('color_hex')
@@ -1721,6 +1752,46 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Add a drawn shape (polygon, circle, text, line) as a decorative section
+     */
+    public function addDrawnShape(string $type, array $geometry, string $color, float $opacity, array $extra = []): void
+    {
+        $metadata = array_merge($geometry['metadata'] ?? [], [
+            'shape' => $type,
+            'opacity' => $opacity,
+        ]);
+
+        // Add extra properties (text content, font, stroke width, etc.)
+        if (!empty($extra)) {
+            $metadata = array_merge($metadata, $extra);
+        }
+
+        $section = SeatingSection::create([
+            'layout_id' => $this->seatingLayout->id,
+            'tenant_id' => $this->seatingLayout->tenant_id,
+            'name' => $extra['label'] ?? ucfirst($type),
+            'section_code' => strtoupper(substr($type, 0, 3)) . '_' . time(),
+            'section_type' => 'decorative',
+            'x_position' => (int) ($geometry['x_position'] ?? 100),
+            'y_position' => (int) ($geometry['y_position'] ?? 100),
+            'width' => (int) ($geometry['width'] ?? 100),
+            'height' => (int) ($geometry['height'] ?? 100),
+            'rotation' => 0,
+            'background_color' => $color,
+            'metadata' => $metadata,
+            'display_order' => 0,
+        ]);
+
+        $this->reloadSections();
+        $this->dispatch('section-added', section: $section->toArray());
+
+        Notification::make()
+            ->success()
+            ->title(ucfirst($type) . ' added')
+            ->send();
+    }
+
+    /**
      * Delete section (called from Konva.js)
      */
     public function deleteSection($sectionId): void
@@ -2122,7 +2193,9 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
-     * Align rows within a section (respects section rotation)
+     * Align rows within a section.
+     * Seat coordinates are LOCAL (relative to section origin), so no rotation transform needed.
+     * Seats rotate automatically with the Konva group.
      */
     public function alignRows(int $sectionId, array $rowIds, string $alignment): void
     {
@@ -2136,91 +2209,40 @@ class DesignerSeatingLayout extends Page
             return;
         }
 
-        // Get section properties
         $sectionWidth = $section->width ?? 200;
-        $sectionHeight = $section->height ?? 150;
-        $sectionX = $section->x_position ?? 0;
-        $sectionY = $section->y_position ?? 0;
-        $rotation = $section->rotation ?? 0;
-
-        // Calculate section center (pivot point for rotation)
-        $centerX = $sectionX + $sectionWidth / 2;
-        $centerY = $sectionY + $sectionHeight / 2;
-
-        // Convert rotation to radians (negative to reverse rotation for global->local transform)
-        $angleRad = -$rotation * M_PI / 180;
-        $cosA = cos($angleRad);
-        $sinA = sin($angleRad);
-
-        // Positive angle for local->global transform
-        $angleRadPos = $rotation * M_PI / 180;
-        $cosAPos = cos($angleRadPos);
-        $sinAPos = sin($angleRadPos);
+        $padding = 10;
 
         foreach ($rowIds as $rowId) {
             $row = SeatingRow::with('seats')->find($rowId);
             if (!$row || $row->section_id !== $section->id) continue;
 
-            $seats = $row->seats;
+            $seats = $row->seats->sortBy('x')->values();
             if ($seats->isEmpty()) continue;
 
-            // Transform seat positions from global to section-local coordinates
-            $seatsWithLocal = $seats->map(function ($seat) use ($centerX, $centerY, $cosA, $sinA) {
-                // Translate to origin (section center)
-                $dx = $seat->x - $centerX;
-                $dy = $seat->y - $centerY;
-
-                // Reverse rotation to get local coordinates
-                $localX = $dx * $cosA - $dy * $sinA;
-                $localY = $dx * $sinA + $dy * $cosA;
-
-                return [
-                    'seat' => $seat,
-                    'localX' => $localX,
-                    'localY' => $localY,
-                ];
-            })->sortBy('localX')->values();
-
-            // Calculate row width in local space
-            $minLocalX = $seatsWithLocal->first()['localX'];
-            $maxLocalX = $seatsWithLocal->last()['localX'];
-            $rowWidth = $maxLocalX - $minLocalX;
-
-            // Calculate offset in local space
-            $padding = 10;
-            // Local coordinates are relative to center, so section spans from -width/2 to +width/2
-            $localLeft = -$sectionWidth / 2 + $padding;
-            $localRight = $sectionWidth / 2 - $padding;
-            $availableWidth = $localRight - $localLeft;
+            // Seat x coordinates are local (relative to section origin, 0 to sectionWidth)
+            $minX = $seats->first()->x;
+            $maxX = $seats->last()->x;
+            $rowWidth = $maxX - $minX;
 
             $offset = 0;
             switch ($alignment) {
                 case 'left':
-                    $offset = $localLeft - $minLocalX;
+                    $offset = $padding - $minX;
                     break;
                 case 'center':
-                    $targetStart = $localLeft + ($availableWidth - $rowWidth) / 2;
-                    $offset = $targetStart - $minLocalX;
+                    $availableWidth = $sectionWidth - (2 * $padding);
+                    $targetStart = $padding + ($availableWidth - $rowWidth) / 2;
+                    $offset = $targetStart - $minX;
                     break;
                 case 'right':
-                    $targetStart = $localRight - $rowWidth;
-                    $offset = $targetStart - $minLocalX;
+                    $offset = ($sectionWidth - $padding) - $maxX;
                     break;
             }
 
-            // Apply offset in local space and transform back to global coordinates
-            foreach ($seatsWithLocal as $seatData) {
-                $seat = $seatData['seat'];
-                $newLocalX = $seatData['localX'] + $offset;
-                $localY = $seatData['localY'];
-
-                // Transform back to global coordinates (apply rotation)
-                $newGlobalX = $centerX + $newLocalX * $cosAPos - $localY * $sinAPos;
-                $newGlobalY = $centerY + $newLocalX * $sinAPos + $localY * $cosAPos;
-
+            // Apply offset to each seat's x coordinate (stays in local space)
+            foreach ($seats as $seat) {
                 $seat->update([
-                    'x' => round($newGlobalX, 2),
-                    'y' => round($newGlobalY, 2),
+                    'x' => round($seat->x + $offset, 2),
                 ]);
             }
         }
@@ -2345,7 +2367,21 @@ class DesignerSeatingLayout extends Page
             'backgroundX' => $this->seatingLayout->background_x ?? 0,
             'backgroundY' => $this->seatingLayout->background_y ?? 0,
             'backgroundOpacity' => $this->seatingLayout->background_opacity ?? 0.3,
+            'backgroundColor' => $this->seatingLayout->background_color ?? '#F3F4F6',
             'iconDefinitions' => config('seating-icons', []),
         ];
+    }
+
+    /**
+     * Save background color for the layout canvas
+     */
+    public function saveBackgroundColor(string $color): void
+    {
+        $this->seatingLayout->update(['background_color' => $color]);
+
+        Notification::make()
+            ->success()
+            ->title('Background color saved')
+            ->send();
     }
 }

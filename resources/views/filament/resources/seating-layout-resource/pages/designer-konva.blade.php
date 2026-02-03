@@ -44,14 +44,16 @@
                         Snap
                     </button>
 
-                    {{-- Background image controls toggle button --}}
-                    <div x-show="backgroundUrl" class="">
+                    {{-- Background controls toggle button (always visible) --}}
+                    <div>
                         <button @click="showBackgroundControls = !showBackgroundControls" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg"
-                            :class="showBackgroundControls ? 'bg-blue-600 text-white' : 'text-gray-100 hover:bg-gray-200'">
+                            :class="showBackgroundControls ? 'bg-blue-600 text-white' : 'text-gray-100 hover:bg-gray-200'"
+                            title="Background settings">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                             </svg>
+                            BG
                         </button>
                     </div>
 
@@ -79,6 +81,18 @@
                         <x-svg-icon name="konvacircle" class="w-4 h-4 text-purple-600" />
                         Circle
                     </button>
+                    <button @click="setDrawMode('text')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'text' ? 'bg-green-500 text-white' : 'bg-gray-100'" title="Add text label">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M8 6v14m4-14v14"></path>
+                        </svg>
+                        Text
+                    </button>
+                    <button @click="setDrawMode('line')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'line' ? 'bg-green-500 text-white' : 'bg-gray-100'" title="Draw a line">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 20L20 4"></path>
+                        </svg>
+                        Line
+                    </button>
                     <button @click="setDrawMode('seat')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'seat' ? 'bg-purple-500 text-white' : 'bg-gray-100'">
                         <x-svg-icon name="konvaseats" class="w-5 h-5 text-purple-600" />
                         Add Seats
@@ -96,7 +110,7 @@
                         <x-svg-icon name="konvafinish" class="w-5 h-5 text-purple-600" />
                         Finish
                     </button>
-                    <button @click="cancelDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-gray-600 border rounded-md border-slate-200" x-show="drawMode !== 'select' && drawMode !== 'multiselect' && drawMode !== 'selectseats'">
+                    <button @click="cancelDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-gray-600 border rounded-md border-slate-200" x-show="!['select', 'multiselect', 'selectseats'].includes(drawMode)">
                         <x-svg-icon name="konvacancel" class="w-5 h-5 text-purple-600" />
                         Cancel
                     </button>
@@ -171,37 +185,49 @@
                 </div>
             </div>
 
-            {{-- Background image controls (collapsible) --}}
-            <div x-show="backgroundUrl && showBackgroundControls" x-transition class="flex flex-wrap items-center gap-4 p-3 mb-4 border border-indigo-200 rounded-lg bg-indigo-50">
-                <div class="flex items-center gap-2">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" x-model="backgroundVisible" @change="toggleBackgroundVisibility()" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                        <span class="text-sm font-medium text-indigo-800">Show Background</span>
-                    </label>
+            {{-- Background controls (collapsible) --}}
+            <div x-show="showBackgroundControls" x-transition class="p-3 mb-4 border border-indigo-200 rounded-lg bg-indigo-50">
+                {{-- Background color (always visible) --}}
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-medium text-indigo-800">Background Color:</label>
+                        <input type="color" x-model="backgroundColor" @input="updateBackgroundColor()" class="w-8 h-8 border border-gray-300 rounded cursor-pointer">
+                    </div>
+                    <button @click="saveBackgroundColor" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Save Color</button>
                 </div>
-                <div class="h-6 mx-1 border-l border-indigo-300"></div>
-                <div class="flex items-center gap-1">
-                    <label class="text-xs text-indigo-700">Scale:</label>
-                    <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-20" :disabled="!backgroundVisible">
-                    <input type="number" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
+
+                {{-- Background image controls (only when image exists) --}}
+                <div x-show="backgroundUrl" class="flex flex-wrap items-center gap-4 pt-3 mt-3 border-t border-indigo-200">
+                    <div class="flex items-center gap-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" x-model="backgroundVisible" @change="toggleBackgroundVisibility()" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <span class="text-sm font-medium text-indigo-800">Show Image</span>
+                        </label>
+                    </div>
+                    <div class="h-6 mx-1 border-l border-indigo-300"></div>
+                    <div class="flex items-center gap-1">
+                        <label class="text-xs text-indigo-700">Scale:</label>
+                        <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-20" :disabled="!backgroundVisible">
+                        <input type="number" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <label class="text-xs text-indigo-700">X:</label>
+                        <input type="range" x-model="backgroundX" min="-1000" max="1000" step="1" @input="updateBackgroundPosition()" class="w-20" :disabled="!backgroundVisible">
+                        <input type="number" x-model="backgroundX" step="1" @input="updateBackgroundPosition()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <label class="text-xs text-indigo-700">Y:</label>
+                        <input type="range" x-model="backgroundY" min="-1000" max="1000" step="1" @input="updateBackgroundPosition()" class="w-20" :disabled="!backgroundVisible">
+                        <input type="number" x-model="backgroundY" step="1" @input="updateBackgroundPosition()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <label class="text-xs text-indigo-700">Opacity:</label>
+                        <input type="range" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-16" :disabled="!backgroundVisible">
+                        <input type="number" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded w-14" :disabled="!backgroundVisible">
+                    </div>
+                    <button @click="resetBackgroundPosition" type="button" class="px-2 py-1 text-xs text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200">Reset</button>
+                    <button @click="saveBackgroundSettings" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Save Image Settings</button>
                 </div>
-                <div class="flex items-center gap-1">
-                    <label class="text-xs text-indigo-700">X:</label>
-                    <input type="range" x-model="backgroundX" min="-1000" max="1000" step="1" @input="updateBackgroundPosition()" class="w-20" :disabled="!backgroundVisible">
-                    <input type="number" x-model="backgroundX" step="1" @input="updateBackgroundPosition()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
-                </div>
-                <div class="flex items-center gap-1">
-                    <label class="text-xs text-indigo-700">Y:</label>
-                    <input type="range" x-model="backgroundY" min="-1000" max="1000" step="1" @input="updateBackgroundPosition()" class="w-20" :disabled="!backgroundVisible">
-                    <input type="number" x-model="backgroundY" step="1" @input="updateBackgroundPosition()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
-                </div>
-                <div class="flex items-center gap-1">
-                    <label class="text-xs text-indigo-700">Opacity:</label>
-                    <input type="range" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-16" :disabled="!backgroundVisible">
-                    <input type="number" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded w-14" :disabled="!backgroundVisible">
-                </div>
-                <button @click="resetBackgroundPosition" type="button" class="px-2 py-1 text-xs text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200">Reset</button>
-                <button @click="saveBackgroundSettings" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Save Settings</button>
             </div>
 
             <div class="overflow-hidden bg-gray-100 border-2 border-gray-300 rounded-lg">
@@ -391,6 +417,55 @@
             </div>
         </div>
 
+        {{-- Shape Config Modal (for drawn shapes: polygon, circle, text, line) --}}
+        <div x-show="showShapeConfigModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div class="p-6 bg-white rounded-lg shadow-xl w-96" @click.away="showShapeConfigModal = false">
+                <h3 class="mb-4 text-lg font-semibold" x-text="'Add ' + (shapeConfigType || 'Shape')"></h3>
+                <div class="space-y-4">
+                    <div x-show="shapeConfigType === 'text'">
+                        <label class="block mb-1 text-sm font-medium">Text Content</label>
+                        <input type="text" x-model="shapeConfigText" class="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md" placeholder="Enter text...">
+                    </div>
+                    <div x-show="shapeConfigType === 'text'">
+                        <label class="block mb-1 text-sm font-medium">Font Size (px)</label>
+                        <input type="number" x-model="shapeConfigFontSize" min="8" max="200" class="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md">
+                    </div>
+                    <div x-show="shapeConfigType === 'text'">
+                        <label class="block mb-1 text-sm font-medium">Font Family</label>
+                        <select x-model="shapeConfigFontFamily" class="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md">
+                            <option value="Arial">Arial</option>
+                            <option value="Helvetica">Helvetica</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Verdana">Verdana</option>
+                            <option value="Courier New">Courier New</option>
+                        </select>
+                    </div>
+                    <div x-show="shapeConfigType === 'line'">
+                        <label class="block mb-1 text-sm font-medium">Stroke Width</label>
+                        <input type="number" x-model="shapeConfigStrokeWidth" min="1" max="20" class="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-medium" x-text="shapeConfigType === 'line' ? 'Line Color' : (shapeConfigType === 'text' ? 'Text Color' : 'Fill Color')"></label>
+                        <input type="color" x-model="shapeConfigColor" class="w-full h-10 rounded cursor-pointer">
+                    </div>
+                    <div x-show="shapeConfigType !== 'text' && shapeConfigType !== 'line'">
+                        <label class="block mb-1 text-sm font-medium">Opacity</label>
+                        <input type="range" x-model="shapeConfigOpacity" min="0.1" max="1" step="0.05" class="w-full">
+                        <span class="text-xs text-gray-500" x-text="shapeConfigOpacity"></span>
+                    </div>
+                    <div x-show="shapeConfigType !== 'text' && shapeConfigType !== 'line'">
+                        <label class="block mb-1 text-sm font-medium">Label (optional)</label>
+                        <input type="text" x-model="shapeConfigLabel" class="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md" placeholder="e.g., Stage, Exit...">
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button @click="cancelShapeConfig()" type="button" class="px-4 py-2 text-sm bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+                        <button @click="confirmShapeConfig()" type="button" class="px-4 py-2 text-sm text-white bg-green-600 rounded hover:bg-green-700">Add</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- Section Context Menu --}}
         <div x-show="showContextMenu"
              x-transition:enter="transition ease-out duration-100"
@@ -523,9 +598,27 @@
                 // Background controls toggle
                 showBackgroundControls: false,
                 backgroundVisible: true,
+                backgroundColor: '{{ $backgroundColor ?? "#F3F4F6" }}',
+                backgroundColorRect: null,
 
                 // Export modal
                 showExportModal: false,
+
+                // Shape config modal (for drawn shapes)
+                showShapeConfigModal: false,
+                shapeConfigType: '',
+                shapeConfigGeometry: null,
+                shapeConfigColor: '#10B981',
+                shapeConfigOpacity: 0.5,
+                shapeConfigLabel: '',
+                shapeConfigText: '',
+                shapeConfigFontSize: 24,
+                shapeConfigFontFamily: 'Arial',
+                shapeConfigStrokeWidth: 3,
+
+                // Line drawing state
+                lineStart: null,
+                tempLine: null,
 
                 init() {
                     this.createStage();
@@ -900,6 +993,17 @@
                         } else if (this.drawMode === 'circle' && !this.tempCircle) {
                             // Start drawing circle
                             this.circleStart = stagePos;
+                        } else if (this.drawMode === 'text') {
+                            // Text tool - open config modal at click position
+                            this.openShapeConfigModal('text', {
+                                x_position: Math.round(stagePos.x),
+                                y_position: Math.round(stagePos.y),
+                                width: 200,
+                                height: 50,
+                            });
+                        } else if (this.drawMode === 'line' && !this.lineStart) {
+                            // Line tool - first click sets start point
+                            this.lineStart = stagePos;
                         } else if (this.drawMode === 'seat') {
                             // Add seat mode
                             if (!this.selectedSection) {
@@ -968,6 +1072,24 @@
                             this.drawLayer.batchDraw();
                         }
 
+                        // Line drawing preview
+                        if (this.drawMode === 'line' && this.lineStart) {
+                            const pos = this.stage.getPointerPosition();
+                            const stagePos = {
+                                x: (pos.x - this.stage.x()) / this.zoom,
+                                y: (pos.y - this.stage.y()) / this.zoom
+                            };
+
+                            this.drawLayer.destroyChildren();
+                            this.tempLine = new Konva.Line({
+                                points: [this.lineStart.x, this.lineStart.y, stagePos.x, stagePos.y],
+                                stroke: '#10B981',
+                                strokeWidth: 3,
+                            });
+                            this.drawLayer.add(this.tempLine);
+                            this.drawLayer.batchDraw();
+                        }
+
                         // Box selection
                         if (this.drawMode === 'multiselect' && this.selectionStartPos) {
                             this.updateBoxSelection(e);
@@ -984,18 +1106,55 @@
                         if (this.drawMode === 'circle' && this.circleStart && this.tempCircle) {
                             const radius = this.tempCircle.radius();
                             if (radius > 10) {
-                                const sectionData = {
+                                this.openShapeConfigModal('circle', {
                                     x_position: Math.round(this.circleStart.x - radius),
                                     y_position: Math.round(this.circleStart.y - radius),
                                     width: Math.round(radius * 2),
                                     height: Math.round(radius * 2),
-                                    metadata: {
-                                        shape: 'circle'
-                                    }
-                                };
-                                this.openSectionForm(sectionData);
+                                    metadata: { shape: 'circle', radius: Math.round(radius) }
+                                });
                             }
-                            this.cancelDrawing();
+                            this.circleStart = null;
+                            this.tempCircle = null;
+                            this.drawLayer.destroyChildren();
+                            this.drawLayer.batchDraw();
+                        }
+
+                        // Line mouseup - finish line drawing
+                        if (this.drawMode === 'line' && this.lineStart && this.tempLine) {
+                            const pos = this.stage.getPointerPosition();
+                            const stagePos = {
+                                x: (pos.x - this.stage.x()) / this.zoom,
+                                y: (pos.y - this.stage.y()) / this.zoom
+                            };
+
+                            const dx = stagePos.x - this.lineStart.x;
+                            const dy = stagePos.y - this.lineStart.y;
+                            const length = Math.sqrt(dx * dx + dy * dy);
+
+                            if (length > 10) {
+                                const minX = Math.min(this.lineStart.x, stagePos.x);
+                                const minY = Math.min(this.lineStart.y, stagePos.y);
+                                this.openShapeConfigModal('line', {
+                                    x_position: Math.round(minX),
+                                    y_position: Math.round(minY),
+                                    width: Math.round(Math.abs(dx)),
+                                    height: Math.round(Math.abs(dy)),
+                                    metadata: {
+                                        shape: 'line',
+                                        points: [
+                                            Math.round(this.lineStart.x - minX),
+                                            Math.round(this.lineStart.y - minY),
+                                            Math.round(stagePos.x - minX),
+                                            Math.round(stagePos.y - minY)
+                                        ]
+                                    }
+                                });
+                            }
+                            this.lineStart = null;
+                            this.tempLine = null;
+                            this.drawLayer.destroyChildren();
+                            this.drawLayer.batchDraw();
                         }
 
                         // End rectangle selection for seats (works with Ctrl+drag in any mode)
@@ -1639,6 +1798,16 @@
                 },
 
                 drawBackground() {
+                    // Background color fill
+                    this.backgroundColorRect = new Konva.Rect({
+                        x: 0,
+                        y: 0,
+                        width: this.canvasWidth,
+                        height: this.canvasHeight,
+                        fill: this.backgroundColor,
+                    });
+                    this.backgroundLayer.add(this.backgroundColorRect);
+
                     // Grid
                     if (this.showGrid) {
                         const gridSize = 50;
@@ -1751,11 +1920,13 @@
                     const fillColor = isDecorativeZone && section.background_color
                         ? section.background_color
                         : (section.color_hex || '#3B82F6');
-                    const fillOpacity = isDecorativeZone ? 0.7 : 0.2;
+                    const fillOpacity = isDecorativeZone
+                        ? (metadata.opacity !== undefined ? parseFloat(metadata.opacity) : 0.7)
+                        : 0.2;
                     const strokeColor = isDecorativeZone && section.background_color
                         ? section.background_color
                         : (section.color_hex || '#3B82F6');
-                    const strokeWidth = isDecorativeZone ? 3 : 2;
+                    const strokeWidth = isDecorativeZone ? (metadata.strokeWidth || 3) : 2;
                     const cornerRadius = section.corner_radius || 4;
 
                     // Seat color for this section
@@ -1763,7 +1934,24 @@
 
                     let backgroundShape;
 
-                    if (shape === 'polygon' && metadata.points) {
+                    if (shape === 'text' && metadata.text) {
+                        // Text shape
+                        backgroundShape = new Konva.Text({
+                            text: metadata.text,
+                            fontSize: metadata.fontSize || 24,
+                            fontFamily: metadata.fontFamily || 'Arial',
+                            fill: section.background_color || fillColor,
+                            padding: 4,
+                        });
+                    } else if (shape === 'line' && metadata.points) {
+                        // Line shape
+                        backgroundShape = new Konva.Line({
+                            points: metadata.points,
+                            stroke: section.background_color || fillColor,
+                            strokeWidth: metadata.strokeWidth || 3,
+                            lineCap: 'round',
+                        });
+                    } else if (shape === 'polygon' && metadata.points) {
                         // Custom polygon shape
                         backgroundShape = new Konva.Line({
                             points: metadata.points,
@@ -1775,7 +1963,7 @@
                         });
                     } else if (shape === 'circle') {
                         // Circle shape
-                        const radius = Math.min(section.width, section.height) / 2;
+                        const radius = metadata.radius || Math.min(section.width, section.height) / 2;
                         backgroundShape = new Konva.Circle({
                             x: section.width / 2,
                             y: section.height / 2,
@@ -2669,6 +2857,17 @@
                     );
                 },
 
+                updateBackgroundColor() {
+                    if (this.backgroundColorRect) {
+                        this.backgroundColorRect.fill(this.backgroundColor);
+                        this.backgroundLayer.batchDraw();
+                    }
+                },
+
+                saveBackgroundColor() {
+                    @this.call('saveBackgroundColor', this.backgroundColor);
+                },
+
                 toggleBackgroundVisibility() {
                     if (this.backgroundImage) {
                         this.backgroundImage.visible(this.backgroundVisible);
@@ -2685,6 +2884,10 @@
                 setDrawMode(mode) {
                     this.drawMode = mode;
                     this.polygonPoints = [];
+                    this.lineStart = null;
+                    this.tempLine = null;
+                    this.circleStart = null;
+                    this.tempCircle = null;
                     this.drawLayer.destroyChildren();
                     this.drawLayer.batchDraw();
 
@@ -2788,12 +2991,12 @@
                         // Normalize points relative to top-left corner
                         const normalizedPoints = [];
                         for (let i = 0; i < this.polygonPoints.length; i += 2) {
-                            normalizedPoints.push(this.polygonPoints[i] - minX);
-                            normalizedPoints.push(this.polygonPoints[i + 1] - minY);
+                            normalizedPoints.push(Math.round(this.polygonPoints[i] - minX));
+                            normalizedPoints.push(Math.round(this.polygonPoints[i + 1] - minY));
                         }
 
-                        // Save to backend
-                        const sectionData = {
+                        // Open shape config modal for quick settings
+                        this.openShapeConfigModal('polygon', {
                             x_position: Math.round(minX),
                             y_position: Math.round(minY),
                             width: Math.round(width),
@@ -2802,13 +3005,68 @@
                                 shape: 'polygon',
                                 points: normalizedPoints
                             }
-                        };
+                        });
 
-                        // Open Filament modal to get section details
-                        this.openSectionForm(sectionData);
-
-                        this.cancelDrawing();
+                        // Clear draw layer
+                        this.polygonPoints = [];
+                        this.drawLayer.destroyChildren();
+                        this.drawLayer.batchDraw();
                     }
+                },
+
+                // Shape config modal functions
+                openShapeConfigModal(type, geometry) {
+                    this.shapeConfigType = type;
+                    this.shapeConfigGeometry = geometry;
+                    this.shapeConfigColor = '#10B981';
+                    this.shapeConfigOpacity = type === 'line' || type === 'text' ? 1.0 : 0.5;
+                    this.shapeConfigLabel = '';
+                    this.shapeConfigText = '';
+                    this.shapeConfigFontSize = 24;
+                    this.shapeConfigFontFamily = 'Arial';
+                    this.shapeConfigStrokeWidth = 3;
+                    this.showShapeConfigModal = true;
+                },
+
+                cancelShapeConfig() {
+                    this.showShapeConfigModal = false;
+                    this.shapeConfigGeometry = null;
+                    this.setDrawMode('select');
+                },
+
+                confirmShapeConfig() {
+                    if (!this.shapeConfigGeometry) return;
+
+                    const extra = {};
+                    if (this.shapeConfigType === 'text') {
+                        if (!this.shapeConfigText.trim()) {
+                            alert('Please enter text content.');
+                            return;
+                        }
+                        extra.text = this.shapeConfigText;
+                        extra.fontSize = parseInt(this.shapeConfigFontSize);
+                        extra.fontFamily = this.shapeConfigFontFamily;
+                        extra.label = this.shapeConfigText.substring(0, 30);
+                    } else if (this.shapeConfigType === 'line') {
+                        extra.strokeWidth = parseInt(this.shapeConfigStrokeWidth);
+                        extra.label = this.shapeConfigLabel || 'Line';
+                    } else {
+                        if (this.shapeConfigLabel) {
+                            extra.label = this.shapeConfigLabel;
+                        }
+                    }
+
+                    @this.call('addDrawnShape',
+                        this.shapeConfigType,
+                        this.shapeConfigGeometry,
+                        this.shapeConfigColor,
+                        parseFloat(this.shapeConfigOpacity),
+                        extra
+                    );
+
+                    this.showShapeConfigModal = false;
+                    this.shapeConfigGeometry = null;
+                    this.setDrawMode('select');
                 },
 
                 openSectionForm(geometryData) {
@@ -3026,6 +3284,8 @@
                     this.polygonPoints = [];
                     this.circleStart = null;
                     this.tempCircle = null;
+                    this.lineStart = null;
+                    this.tempLine = null;
                     this.drawLayer.destroyChildren();
                     this.drawLayer.batchDraw();
                     this.setDrawMode('select');

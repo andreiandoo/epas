@@ -29,6 +29,7 @@ class SeatingLayout extends Model
         'background_x',
         'background_y',
         'background_opacity',
+        'background_color',
         'version',
         'notes',
         'created_by',
