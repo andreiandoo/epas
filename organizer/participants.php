@@ -25,9 +25,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="flex flex-col lg:flex-row lg:items-center gap-4 mb-6">
                     <div class="flex-1">
                         <label class="text-sm font-medium text-secondary mb-2 block">Selecteaza evenimentul</label>
-                        <select id="event-filter" class="w-full lg:w-80 px-4 py-3 bg-surface border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20">
-                            <option value="">Se incarca...</option>
-                        </select>
+                        <div class="relative w-full lg:w-80" id="event-dropdown-wrapper">
+                            <input type="text" id="event-search-input" class="w-full px-4 py-3 bg-surface border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 pr-10" placeholder="Cauta eveniment..." autocomplete="off"
+                                   onfocus="openEventDropdown()" oninput="filterEventDropdown()">
+                            <input type="hidden" id="event-filter" value="">
+                            <svg class="w-5 h-5 text-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <div id="event-dropdown-list" class="hidden absolute z-50 mt-1 w-full max-h-64 overflow-y-auto bg-white border border-border rounded-xl shadow-lg"></div>
+                        </div>
                     </div>
                     <div class="flex gap-2">
                         <button onclick="openScanner()" class="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-white text-sm bg-primary hover:bg-primary/90 transition-colors">
@@ -114,54 +118,110 @@ $scriptsExtra = <<<'JS'
 AmbiletAuth.requireOrganizerAuth();
 let allParticipants = [];
 let selectedEventId = null;
+let eventsList = [];
+let dropdownOpen = false;
 
 // Initialize
-loadEvents();
+document.addEventListener('DOMContentLoaded', function() {
+    loadEvents();
+
+    // Close dropdown on outside click
+    document.addEventListener('click', function(e) {
+        const wrapper = document.getElementById('event-dropdown-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            closeEventDropdown();
+        }
+    });
+});
+
+function escapeHtmlP(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
 
 async function loadEvents() {
     try {
         const response = await AmbiletAPI.get('/organizer/events');
         const events = response.data || [];
-        const select = document.getElementById('event-filter');
-        select.innerHTML = '';
 
         if (response.success && events.length > 0) {
             // Sort events: live/published first, then by date (most recent first)
             const sortedEvents = events.sort((a, b) => {
-                // Prioritize live/published events
                 const aIsLive = a.status === 'live' || a.status === 'published' || a.is_published;
                 const bIsLive = b.status === 'live' || b.status === 'published' || b.is_published;
                 if (aIsLive && !bIsLive) return -1;
                 if (!aIsLive && bIsLive) return 1;
-                // Then sort by date (most recent first)
                 const aDate = new Date(a.event_date || a.created_at || 0);
                 const bDate = new Date(b.event_date || b.created_at || 0);
                 return bDate - aDate;
             });
 
-            sortedEvents.forEach((event, index) => {
-                const option = document.createElement('option');
-                option.value = event.id;
+            eventsList = sortedEvents.map(event => {
                 const eventDate = event.event_date ? AmbiletUtils.formatDate(event.event_date) : '';
-                option.textContent = (event.name || event.title) + (eventDate ? ' - ' + eventDate : '');
-                select.appendChild(option);
+                return { id: event.id, label: (event.name || event.title) + (eventDate ? ' - ' + eventDate : '') };
             });
 
             // Pre-select first event (most recent live)
-            if (sortedEvents.length > 0) {
-                selectedEventId = sortedEvents[0].id;
-                select.value = selectedEventId;
-                loadParticipants();
+            if (eventsList.length > 0) {
+                selectEvent(eventsList[0].id);
             }
         } else {
-            select.innerHTML = '<option value="">Nu ai evenimente</option>';
+            document.getElementById('event-search-input').placeholder = 'Nu ai evenimente';
             showNoEventMessage();
         }
     } catch (error) {
         console.error('Failed to load events:', error);
-        document.getElementById('event-filter').innerHTML = '<option value="">Eroare la incarcare</option>';
+        document.getElementById('event-search-input').placeholder = 'Eroare la incarcare';
         showNoEventMessage();
     }
+}
+
+function openEventDropdown() {
+    dropdownOpen = true;
+    renderEventDropdown(eventsList);
+    document.getElementById('event-dropdown-list').classList.remove('hidden');
+}
+
+function closeEventDropdown() {
+    dropdownOpen = false;
+    document.getElementById('event-dropdown-list').classList.add('hidden');
+}
+
+function filterEventDropdown() {
+    const query = document.getElementById('event-search-input').value.toLowerCase().trim();
+    if (!query) {
+        renderEventDropdown(eventsList);
+    } else {
+        const filtered = eventsList.filter(e => e.label.toLowerCase().includes(query));
+        renderEventDropdown(filtered);
+    }
+    document.getElementById('event-dropdown-list').classList.remove('hidden');
+}
+
+function renderEventDropdown(items) {
+    const list = document.getElementById('event-dropdown-list');
+    if (!items.length) {
+        list.innerHTML = '<div class="px-4 py-3 text-sm text-muted">Niciun rezultat</div>';
+        return;
+    }
+    list.innerHTML = items.map(item =>
+        '<div class="px-4 py-3 text-sm cursor-pointer hover:bg-primary/5 transition-colors ' +
+        (String(item.id) === String(selectedEventId) ? 'bg-primary/10 font-semibold text-primary' : 'text-secondary') +
+        '" onclick="selectEvent(\'' + item.id + '\')">' + escapeHtmlP(item.label) + '</div>'
+    ).join('');
+}
+
+function selectEvent(id) {
+    document.getElementById('event-filter').value = id;
+    const item = eventsList.find(e => String(e.id) === String(id));
+    if (item) {
+        document.getElementById('event-search-input').value = item.label;
+    }
+    closeEventDropdown();
+    selectedEventId = id;
+    loadParticipants();
 }
 
 function showNoEventMessage() {
@@ -345,7 +405,7 @@ async function exportParticipants() {
         AmbiletNotifications.info('Se genereaza lista participantilor...');
 
         // Get auth token
-        const authToken = localStorage.getItem('organizer_token');
+        const authToken = (typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null);
         if (!authToken) {
             AmbiletNotifications.error('Sesiune expirata. Te rugam sa te autentifici din nou.');
             return;
@@ -394,7 +454,6 @@ async function exportParticipants() {
 }
 
 // Event listeners
-document.getElementById('event-filter').addEventListener('change', loadParticipants);
 document.getElementById('checkin-filter').addEventListener('change', loadParticipants);
 document.getElementById('search-participant').addEventListener('input', AmbiletUtils.debounce(filterAndRenderParticipants, 300));
 </script>
