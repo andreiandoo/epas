@@ -57,6 +57,19 @@
                         </button>
                     </div>
 
+                    {{-- Drawing tools toggle button --}}
+                    <div>
+                        <button @click="showDrawingTools = !showDrawingTools" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg"
+                            :class="showDrawingTools ? 'bg-green-600 text-white' : 'text-gray-100 hover:bg-gray-200'"
+                            title="Drawing tools (polygon, circle, text, line, seats)">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                            </svg>
+                            Tools
+                        </button>
+                    </div>
+
                     <div class="h-6 mx-1 border-l border-gray-300"></div>
 
                     <button @click="setDrawMode('select')" type="button" class="flex items-center gap-2 px-3 py-2 text-sm border rounded-md border-slate-200" :class="drawMode === 'select' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-gray-100'">
@@ -72,47 +85,6 @@
                     <button @click="setDrawMode('selectseats')" type="button" class="flex items-center gap-2 px-3 py-2 text-sm border rounded-md border-slate-200" :class="drawMode === 'selectseats' ? 'bg-pink-500 text-white' : 'bg-gray-100'" title="Select individual seats - drag to select multiple">
                         <svg viewBox="0 0 64 64" style="enable-background:new 0 0 512 512"  class="w-5 h-5"><g><path d="M17.5 36.944a8.257 8.257 0 0 1 7.25-4.316c.111 0 .22.012.33.017v-.343c0-.578-.077-1.132-.229-1.646a6.172 6.172 0 0 0-1.598-2.767 6.214 6.214 0 0 0-4.423-1.838c-.402 0-.78.037-1.124.109a6.227 6.227 0 0 0-5.126 6.141v.667a8.286 8.286 0 0 1 4.92 3.976zM45.5 24.41v-1.288a6.195 6.195 0 0 0-1.827-4.413 6.218 6.218 0 0 0-4.423-1.837 6.257 6.257 0 0 0-6.25 6.25v.945c.111-.004.217-.016.33-.016 2.201 0 4.274.861 5.837 2.423a8.152 8.152 0 0 1 1.417 1.93 8.232 8.232 0 0 1 4.916-3.995zM39.25 32.628c.111 0 .22.012.33.017v-.343c0-.578-.077-1.132-.229-1.646a6.172 6.172 0 0 0-1.598-2.767 6.214 6.214 0 0 0-4.423-1.838c-.402 0-.78.037-1.124.109a6.237 6.237 0 0 0-4.892 4.474 5.89 5.89 0 0 0-.234 1.667v.667A8.286 8.286 0 0 1 32 36.944a8.257 8.257 0 0 1 7.25-4.316zM24.75 34.628a6.257 6.257 0 0 0-6.25 6.25v6.25H31v-6.25a6.257 6.257 0 0 0-6.25-6.25zM60 40.878c0-3.446-2.804-6.25-6.25-6.25s-6.25 2.804-6.25 6.25v6.25H60zM46.5 36.944a8.257 8.257 0 0 1 7.25-4.316c.111 0 .22.012.33.017v-.343a6.199 6.199 0 0 0-1.827-4.413 6.217 6.217 0 0 0-4.423-1.837c-.402 0-.78.037-1.124.109a6.237 6.237 0 0 0-4.892 4.474 5.89 5.89 0 0 0-.234 1.667v.667a8.286 8.286 0 0 1 4.92 3.976zM31 24.41v-1.288a6.195 6.195 0 0 0-1.827-4.413 6.218 6.218 0 0 0-4.423-1.837 6.257 6.257 0 0 0-6.25 6.25v.945c.111-.004.217-.016.33-.016 2.201 0 4.274.861 5.837 2.423a8.152 8.152 0 0 1 1.417 1.93A8.232 8.232 0 0 1 31 24.409zM45.5 40.878c0-3.446-2.804-6.25-6.25-6.25S33 37.432 33 40.878v6.25h12.5zM16.5 40.878c0-3.446-2.804-6.25-6.25-6.25S4 37.432 4 40.878v6.25h12.5z" fill="currentColor" opacity="1"  class=""></path></g></svg>
                         Select Seats
-                    </button>
-                    <button @click="setDrawMode('polygon')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'polygon' ? 'bg-green-500 text-white' : 'bg-gray-100'">
-                        <x-svg-icon name="konvapolygon" class="w-4 h-4 text-purple-600" />
-                        Polygon
-                    </button>
-                    <button @click="setDrawMode('circle')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'circle' ? 'bg-green-500 text-white' : 'bg-gray-100'">
-                        <x-svg-icon name="konvacircle" class="w-4 h-4 text-purple-600" />
-                        Circle
-                    </button>
-                    <button @click="setDrawMode('text')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'text' ? 'bg-green-500 text-white' : 'bg-gray-100'" title="Add text label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M8 6v14m4-14v14"></path>
-                        </svg>
-                        Text
-                    </button>
-                    <button @click="setDrawMode('line')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'line' ? 'bg-green-500 text-white' : 'bg-gray-100'" title="Draw a line">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 20L20 4"></path>
-                        </svg>
-                        Line
-                    </button>
-                    <button @click="setDrawMode('seat')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'seat' ? 'bg-purple-500 text-white' : 'bg-gray-100'">
-                        <x-svg-icon name="konvaseats" class="w-5 h-5 text-purple-600" />
-                        Add Seats
-                    </button>
-                    
-                    <div x-show="drawMode === 'seat'" x-transition class="flex items-center gap-2 px-2 py-1 ml-1 border border-purple-200 rounded-md bg-purple-50">
-                        <label class="text-xs text-purple-700">Size:</label>
-                        <input type="number" x-model="seatSize" min="4" max="30" step="1" class="w-12 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
-                        <select x-model="seatShape" class="px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
-                            <option value="circle">Circle</option>
-                            <option value="rect">Square</option>
-                        </select>
-                    </div>
-                    <button @click="finishDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-green-600 border rounded-md border-slate-200" x-show="['polygon', 'circle'].includes(drawMode) && polygonPoints.length > 0">
-                        <x-svg-icon name="konvafinish" class="w-5 h-5 text-purple-600" />
-                        Finish
-                    </button>
-                    <button @click="cancelDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-gray-600 border rounded-md border-slate-200" x-show="!['select', 'multiselect', 'selectseats'].includes(drawMode)">
-                        <x-svg-icon name="konvacancel" class="w-5 h-5 text-purple-600" />
-                        Cancel
                     </button>
 
                     <div class="h-6 mx-1 border-l border-gray-300"></div>
@@ -227,6 +199,61 @@
                     </div>
                     <button @click="resetBackgroundPosition" type="button" class="px-2 py-1 text-xs text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200">Reset</button>
                     <button @click="saveBackgroundSettings" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Save Image Settings</button>
+                </div>
+            </div>
+
+            {{-- Drawing tools panel (collapsible) --}}
+            <div x-show="showDrawingTools" x-transition class="p-3 mb-4 border border-green-200 rounded-lg bg-green-50">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="mr-1 text-xs font-medium text-green-800">Draw:</span>
+                    <button @click="setDrawMode('polygon')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'polygon' ? 'bg-green-500 text-white' : 'bg-white text-gray-700'">
+                        <x-svg-icon name="konvapolygon" class="w-4 h-4" />
+                        Polygon
+                    </button>
+                    <button @click="setDrawMode('circle')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'circle' ? 'bg-green-500 text-white' : 'bg-white text-gray-700'">
+                        <x-svg-icon name="konvacircle" class="w-4 h-4" />
+                        Circle
+                    </button>
+                    <button @click="setDrawMode('text')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'text' ? 'bg-green-500 text-white' : 'bg-white text-gray-700'" title="Add text label">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M8 6v14m4-14v14"></path>
+                        </svg>
+                        Text
+                    </button>
+                    <button @click="setDrawMode('line')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'line' ? 'bg-green-500 text-white' : 'bg-white text-gray-700'" title="Draw a line (hold Shift for angle snap)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 20L20 4"></path>
+                        </svg>
+                        Line
+                    </button>
+
+                    <div class="h-6 mx-2 border-l border-green-300"></div>
+
+                    <button @click="setDrawMode('seat')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'seat' ? 'bg-purple-500 text-white' : 'bg-white text-gray-700'">
+                        <x-svg-icon name="konvaseats" class="w-5 h-5" />
+                        Add Seats
+                    </button>
+                    <div x-show="drawMode === 'seat'" x-transition class="flex items-center gap-2 px-2 py-1 ml-1 border border-purple-200 rounded-md bg-purple-50">
+                        <label class="text-xs text-purple-700">Size:</label>
+                        <input type="number" x-model="seatSize" min="4" max="30" step="1" class="w-12 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                        <select x-model="seatShape" class="px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                            <option value="circle">Circle</option>
+                            <option value="rect">Square</option>
+                        </select>
+                    </div>
+
+                    <div class="h-6 mx-2 border-l border-green-300"></div>
+
+                    <button @click="finishDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-green-600 border rounded-md border-slate-200" x-show="['polygon', 'circle'].includes(drawMode) && polygonPoints.length > 0">
+                        <x-svg-icon name="konvafinish" class="w-5 h-5" />
+                        Finish
+                    </button>
+                    <button @click="cancelDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-gray-600 border rounded-md border-slate-200" x-show="!['select', 'multiselect', 'selectseats'].includes(drawMode)">
+                        <x-svg-icon name="konvacancel" class="w-5 h-5" />
+                        Cancel
+                    </button>
+
+                    <span class="ml-2 text-xs text-green-600" x-show="drawMode === 'line'">Hold <kbd class="px-1 py-0.5 bg-white border rounded shadow-sm text-xs">Shift</kbd> for angle snap</span>
                 </div>
             </div>
 
@@ -397,20 +424,20 @@
         @endif
 
         {{-- Color Edit Modal --}}
-        <div x-show="showColorModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div x-show="showColorModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div class="p-6 bg-white rounded-lg shadow-xl w-96" @click.away="showColorModal = false">
-                <h3 class="mb-4 text-lg font-semibold">Edit Section Colors</h3>
+                <h3 class="mb-4 text-lg font-semibold text-gray-900">Edit Section Colors</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block mb-1 text-sm font-medium">Section Background Color</label>
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Section Background Color</label>
                         <input type="color" x-model="editColorHex" class="w-full h-10 rounded cursor-pointer">
                     </div>
                     <div>
-                        <label class="block mb-1 text-sm font-medium">Seat Color (Available)</label>
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Seat Color (Available)</label>
                         <input type="color" x-model="editSeatColor" class="w-full h-10 rounded cursor-pointer">
                     </div>
                     <div class="flex justify-end gap-2">
-                        <button @click="showColorModal = false" type="button" class="px-4 py-2 text-sm bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+                        <button @click="showColorModal = false" type="button" class="px-4 py-2 text-sm text-gray-700 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
                         <button @click="saveSectionColors" type="button" class="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700">Save</button>
                     </div>
                 </div>
@@ -418,21 +445,21 @@
         </div>
 
         {{-- Shape Config Modal (for drawn shapes: polygon, circle, text, line) --}}
-        <div x-show="showShapeConfigModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div x-show="showShapeConfigModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div class="p-6 bg-white rounded-lg shadow-xl w-96" @click.away="showShapeConfigModal = false">
-                <h3 class="mb-4 text-lg font-semibold" x-text="'Add ' + (shapeConfigType || 'Shape')"></h3>
+                <h3 class="mb-4 text-lg font-semibold text-gray-900" x-text="'Add ' + (shapeConfigType || 'Shape')"></h3>
                 <div class="space-y-4">
                     <div x-show="shapeConfigType === 'text'">
-                        <label class="block mb-1 text-sm font-medium">Text Content</label>
-                        <input type="text" x-model="shapeConfigText" class="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md" placeholder="Enter text...">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Text Content</label>
+                        <input type="text" x-model="shapeConfigText" class="w-full px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md" placeholder="Enter text...">
                     </div>
                     <div x-show="shapeConfigType === 'text'">
-                        <label class="block mb-1 text-sm font-medium">Font Size (px)</label>
-                        <input type="number" x-model="shapeConfigFontSize" min="8" max="200" class="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Font Size (px)</label>
+                        <input type="number" x-model="shapeConfigFontSize" min="8" max="200" class="w-full px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md">
                     </div>
                     <div x-show="shapeConfigType === 'text'">
-                        <label class="block mb-1 text-sm font-medium">Font Family</label>
-                        <select x-model="shapeConfigFontFamily" class="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Font Family</label>
+                        <select x-model="shapeConfigFontFamily" class="w-full px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md [&>option]:text-gray-900 [&>option]:bg-white">
                             <option value="Arial">Arial</option>
                             <option value="Helvetica">Helvetica</option>
                             <option value="Times New Roman">Times New Roman</option>
@@ -441,25 +468,42 @@
                             <option value="Courier New">Courier New</option>
                         </select>
                     </div>
+                    <div x-show="shapeConfigType === 'text'">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Font Weight</label>
+                        <select x-model="shapeConfigFontWeight" class="w-full px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md [&>option]:text-gray-900 [&>option]:bg-white">
+                            <option value="normal">Normal</option>
+                            <option value="bold">Bold</option>
+                            <option value="100">Thin (100)</option>
+                            <option value="300">Light (300)</option>
+                            <option value="500">Medium (500)</option>
+                            <option value="600">Semi-Bold (600)</option>
+                            <option value="900">Black (900)</option>
+                        </select>
+                    </div>
                     <div x-show="shapeConfigType === 'line'">
-                        <label class="block mb-1 text-sm font-medium">Stroke Width</label>
-                        <input type="number" x-model="shapeConfigStrokeWidth" min="1" max="20" class="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Stroke Width</label>
+                        <input type="number" x-model="shapeConfigStrokeWidth" min="1" max="20" class="w-full px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md">
+                    </div>
+                    <div x-show="shapeConfigType === 'polygon'">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Edge Smoothing</label>
+                        <input type="range" x-model="shapeConfigTension" min="0" max="1" step="0.05" class="w-full">
+                        <span class="text-xs text-gray-500" x-text="'Tension: ' + shapeConfigTension"></span>
                     </div>
                     <div>
-                        <label class="block mb-1 text-sm font-medium" x-text="shapeConfigType === 'line' ? 'Line Color' : (shapeConfigType === 'text' ? 'Text Color' : 'Fill Color')"></label>
+                        <label class="block mb-1 text-sm font-medium text-gray-700" x-text="shapeConfigType === 'line' ? 'Line Color' : (shapeConfigType === 'text' ? 'Text Color' : 'Fill Color')"></label>
                         <input type="color" x-model="shapeConfigColor" class="w-full h-10 rounded cursor-pointer">
                     </div>
                     <div x-show="shapeConfigType !== 'text' && shapeConfigType !== 'line'">
-                        <label class="block mb-1 text-sm font-medium">Opacity</label>
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Opacity</label>
                         <input type="range" x-model="shapeConfigOpacity" min="0.1" max="1" step="0.05" class="w-full">
                         <span class="text-xs text-gray-500" x-text="shapeConfigOpacity"></span>
                     </div>
                     <div x-show="shapeConfigType !== 'text' && shapeConfigType !== 'line'">
-                        <label class="block mb-1 text-sm font-medium">Label (optional)</label>
-                        <input type="text" x-model="shapeConfigLabel" class="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md" placeholder="e.g., Stage, Exit...">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Label (optional)</label>
+                        <input type="text" x-model="shapeConfigLabel" class="w-full px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md" placeholder="e.g., Stage, Exit...">
                     </div>
                     <div class="flex justify-end gap-2">
-                        <button @click="cancelShapeConfig()" type="button" class="px-4 py-2 text-sm bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+                        <button @click="cancelShapeConfig()" type="button" class="px-4 py-2 text-sm text-gray-700 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
                         <button @click="confirmShapeConfig()" type="button" class="px-4 py-2 text-sm text-white bg-green-600 rounded hover:bg-green-700">Add</button>
                     </div>
                 </div>
@@ -507,6 +551,24 @@
                     </div>
                 </template>
                 <div class="border-t border-gray-200"></div>
+                <div class="px-3 py-1 text-xs font-medium tracking-wide text-gray-400 uppercase">Layer Order</div>
+                <button @click="changeLayerOrder('front')" class="flex items-center w-full gap-2 px-4 py-1.5 text-sm text-left text-gray-700 hover:bg-gray-100">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 11l7-7 7 7M5 19l7-7 7 7"></path></svg>
+                    Bring to Front
+                </button>
+                <button @click="changeLayerOrder('up')" class="flex items-center w-full gap-2 px-4 py-1.5 text-sm text-left text-gray-700 hover:bg-gray-100">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                    Move Up
+                </button>
+                <button @click="changeLayerOrder('down')" class="flex items-center w-full gap-2 px-4 py-1.5 text-sm text-left text-gray-700 hover:bg-gray-100">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    Move Down
+                </button>
+                <button @click="changeLayerOrder('back')" class="flex items-center w-full gap-2 px-4 py-1.5 text-sm text-left text-gray-700 hover:bg-gray-100">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13l-7 7-7-7M19 5l-7 7-7-7"></path></svg>
+                    Send to Back
+                </button>
+                <div class="border-t border-gray-200"></div>
                 <button @click="deleteFromMenu()" class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -516,6 +578,25 @@
             </div>
         </div>
     </div>
+
+    @push('styles')
+    <style>
+        /* Move header actions (Import Map, Add Section, etc.) below the page title */
+        .fi-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+        }
+        .fi-header .fi-header-actions {
+            width: 100%;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #E5E7EB;
+            margin-top: 0.5rem;
+        }
+    </style>
+    @endpush
 
     @push('scripts')
     {{-- Konva.js CDN --}}
@@ -597,6 +678,7 @@
 
                 // Background controls toggle
                 showBackgroundControls: false,
+                showDrawingTools: false,
                 backgroundVisible: true,
                 backgroundColor: '{{ $backgroundColor ?? "#F3F4F6" }}',
                 backgroundColorRect: null,
@@ -614,6 +696,8 @@
                 shapeConfigText: '',
                 shapeConfigFontSize: 24,
                 shapeConfigFontFamily: 'Arial',
+                shapeConfigFontWeight: 'normal',
+                shapeConfigTension: 0,
                 shapeConfigStrokeWidth: 3,
 
                 // Line drawing state
@@ -1075,10 +1159,15 @@
                         // Line drawing preview
                         if (this.drawMode === 'line' && this.lineStart) {
                             const pos = this.stage.getPointerPosition();
-                            const stagePos = {
+                            let stagePos = {
                                 x: (pos.x - this.stage.x()) / this.zoom,
                                 y: (pos.y - this.stage.y()) / this.zoom
                             };
+
+                            // Shift+snap to 15-degree angle increments
+                            if (e.evt.shiftKey) {
+                                stagePos = this.snapAngle(this.lineStart.x, this.lineStart.y, stagePos.x, stagePos.y, 15);
+                            }
 
                             this.drawLayer.destroyChildren();
                             this.tempLine = new Konva.Line({
@@ -1123,10 +1212,15 @@
                         // Line mouseup - finish line drawing
                         if (this.drawMode === 'line' && this.lineStart && this.tempLine) {
                             const pos = this.stage.getPointerPosition();
-                            const stagePos = {
+                            let stagePos = {
                                 x: (pos.x - this.stage.x()) / this.zoom,
                                 y: (pos.y - this.stage.y()) / this.zoom
                             };
+
+                            // Shift+snap to 15-degree angle increments
+                            if (e.evt.shiftKey) {
+                                stagePos = this.snapAngle(this.lineStart.x, this.lineStart.y, stagePos.x, stagePos.y, 15);
+                            }
 
                             const dx = stagePos.x - this.lineStart.x;
                             const dy = stagePos.y - this.lineStart.y;
@@ -1729,6 +1823,28 @@
                     this.hideContextMenu();
                 },
 
+                changeLayerOrder(direction) {
+                    if (!this.contextMenuSectionId) return;
+
+                    const sectionId = this.contextMenuSectionId;
+                    const node = this.layer.findOne(`#section-${sectionId}`);
+
+                    if (node) {
+                        switch (direction) {
+                            case 'front': node.moveToTop(); break;
+                            case 'back': node.moveToBottom(); break;
+                            case 'up': node.moveUp(); break;
+                            case 'down': node.moveDown(); break;
+                        }
+                        // Keep transformer on top
+                        this.transformer.moveToTop();
+                        this.layer.batchDraw();
+                    }
+
+                    @this.call('updateDisplayOrder', sectionId, direction);
+                    this.hideContextMenu();
+                },
+
                 deleteFromMenu() {
                     if (this.contextMenuSectionId) {
                         this.selectedSection = this.contextMenuSectionId;
@@ -1936,10 +2052,13 @@
 
                     if (shape === 'text' && metadata.text) {
                         // Text shape
+                        const fw = metadata.fontWeight || 'normal';
+                        const konvaFontStyle = (fw === 'bold' || parseInt(fw) >= 600) ? 'bold' : 'normal';
                         backgroundShape = new Konva.Text({
                             text: metadata.text,
                             fontSize: metadata.fontSize || 24,
                             fontFamily: metadata.fontFamily || 'Arial',
+                            fontStyle: konvaFontStyle,
                             fill: section.background_color || fillColor,
                             padding: 4,
                         });
@@ -1960,6 +2079,7 @@
                             stroke: strokeColor,
                             strokeWidth: strokeWidth,
                             closed: true,
+                            tension: metadata.tension || 0,
                         });
                     } else if (shape === 'circle') {
                         // Circle shape
@@ -2134,6 +2254,9 @@
 
                     // Click to select
                     group.on('click', (e) => {
+                        // Allow drawing mode clicks to pass through
+                        if (this.handleDrawModeClickThrough(e)) return;
+
                         // Stop propagation to prevent stage click handler from clearing selection
                         e.cancelBubble = true;
 
@@ -2373,6 +2496,9 @@
 
                     // Click handler
                     group.on('click', (e) => {
+                        // Allow drawing mode clicks to pass through
+                        if (this.handleDrawModeClickThrough(e)) return;
+
                         // Stop propagation to prevent stage click handler from clearing selection
                         e.cancelBubble = true;
 
@@ -3015,6 +3141,49 @@
                 },
 
                 // Shape config modal functions
+                handleDrawModeClickThrough(e) {
+                    const drawingModes = ['polygon', 'circle', 'text', 'line', 'seat'];
+                    if (!drawingModes.includes(this.drawMode)) return false;
+
+                    const pos = this.stage.getPointerPosition();
+                    const stagePos = {
+                        x: (pos.x - this.stage.x()) / this.zoom,
+                        y: (pos.y - this.stage.y()) / this.zoom
+                    };
+
+                    if (this.drawMode === 'polygon') {
+                        this.addPolygonPoint(stagePos);
+                    } else if (this.drawMode === 'text') {
+                        this.openShapeConfigModal('text', {
+                            x_position: Math.round(stagePos.x),
+                            y_position: Math.round(stagePos.y),
+                            width: 200,
+                            height: 50,
+                        });
+                    } else if (this.drawMode === 'line' && !this.lineStart) {
+                        this.lineStart = stagePos;
+                    } else if (this.drawMode === 'seat') {
+                        if (this.selectedSection) {
+                            this.addSeatAtPosition(stagePos);
+                        }
+                    }
+                    // circle mode uses mousedown/mouseup, not click
+                    return true;
+                },
+
+                snapAngle(startX, startY, endX, endY, increment = 15) {
+                    const dx = endX - startX;
+                    const dy = endY - startY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                    const snappedAngle = Math.round(angle / increment) * increment;
+                    const radians = snappedAngle * (Math.PI / 180);
+                    return {
+                        x: startX + distance * Math.cos(radians),
+                        y: startY + distance * Math.sin(radians),
+                    };
+                },
+
                 openShapeConfigModal(type, geometry) {
                     this.shapeConfigType = type;
                     this.shapeConfigGeometry = geometry;
@@ -3024,6 +3193,8 @@
                     this.shapeConfigText = '';
                     this.shapeConfigFontSize = 24;
                     this.shapeConfigFontFamily = 'Arial';
+                    this.shapeConfigFontWeight = 'normal';
+                    this.shapeConfigTension = 0;
                     this.shapeConfigStrokeWidth = 3;
                     this.showShapeConfigModal = true;
                 },
@@ -3046,10 +3217,16 @@
                         extra.text = this.shapeConfigText;
                         extra.fontSize = parseInt(this.shapeConfigFontSize);
                         extra.fontFamily = this.shapeConfigFontFamily;
+                        extra.fontWeight = this.shapeConfigFontWeight;
                         extra.label = this.shapeConfigText.substring(0, 30);
                     } else if (this.shapeConfigType === 'line') {
                         extra.strokeWidth = parseInt(this.shapeConfigStrokeWidth);
                         extra.label = this.shapeConfigLabel || 'Line';
+                    } else if (this.shapeConfigType === 'polygon') {
+                        extra.tension = parseFloat(this.shapeConfigTension);
+                        if (this.shapeConfigLabel) {
+                            extra.label = this.shapeConfigLabel;
+                        }
                     } else {
                         if (this.shapeConfigLabel) {
                             extra.label = this.shapeConfigLabel;

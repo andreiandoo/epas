@@ -637,10 +637,11 @@ class DesignerSeatingLayout extends Page
                                 ];
                             })->toArray();
 
-                            return [
+                            $data = [
                                 'section_id' => $section->id,
                                 'name' => $section->name,
                                 'section_code' => $section->section_code,
+                                'section_type' => $section->section_type ?? 'standard',
                                 'color_hex' => $section->color_hex,
                                 'seat_color' => $section->seat_color,
                                 'width' => $section->width,
@@ -653,6 +654,21 @@ class DesignerSeatingLayout extends Page
                                 'rows' => $rows,
                                 'curve_amount' => $metadata['curve_amount'] ?? 0,
                             ];
+
+                            // Add decorative-specific fields
+                            if (in_array($section->section_type, ['decorative', 'stage', 'dance_floor'])) {
+                                $data['deco_color'] = $section->background_color ?? '#10B981';
+                                $data['deco_opacity'] = $metadata['opacity'] ?? 0.5;
+                                $data['metadata_shape'] = $metadata['shape'] ?? 'rectangle';
+                                $data['text_content'] = $metadata['text'] ?? '';
+                                $data['text_font_size'] = $metadata['fontSize'] ?? 24;
+                                $data['text_font_family'] = $metadata['fontFamily'] ?? 'Arial';
+                                $data['text_font_weight'] = $metadata['fontWeight'] ?? 'normal';
+                                $data['line_stroke_width'] = $metadata['strokeWidth'] ?? 3;
+                                $data['deco_tension'] = $metadata['tension'] ?? 0;
+                            }
+
+                            return $data;
                         }
                     }
                     return [];
@@ -673,6 +689,7 @@ class DesignerSeatingLayout extends Page
                                     $metadata = $section->metadata ?? [];
                                     $set('name', $section->name);
                                     $set('section_code', $section->section_code);
+                                    $set('section_type', $section->section_type ?? 'standard');
                                     $set('color_hex', $section->color_hex);
                                     $set('seat_color', $section->seat_color);
                                     $set('width', $section->width);
@@ -683,6 +700,16 @@ class DesignerSeatingLayout extends Page
                                     $set('seat_shape', $metadata['seat_shape'] ?? 'circle');
                                     $set('numbering_mode', $metadata['numbering_mode'] ?? 'normal');
                                     $set('curve_amount', $metadata['curve_amount'] ?? 0);
+                                    // Decorative fields
+                                    $set('deco_color', $section->background_color ?? '#10B981');
+                                    $set('deco_opacity', $metadata['opacity'] ?? 0.5);
+                                    $set('metadata_shape', $metadata['shape'] ?? 'rectangle');
+                                    $set('text_content', $metadata['text'] ?? '');
+                                    $set('text_font_size', $metadata['fontSize'] ?? 24);
+                                    $set('text_font_family', $metadata['fontFamily'] ?? 'Arial');
+                                    $set('text_font_weight', $metadata['fontWeight'] ?? 'normal');
+                                    $set('line_stroke_width', $metadata['strokeWidth'] ?? 3);
+                                    $set('deco_tension', $metadata['tension'] ?? 0);
 
                                     // Load rows for this section
                                     $rows = $section->rows()->orderBy('y', 'asc')->get()->map(function ($row) {
@@ -724,15 +751,98 @@ class DesignerSeatingLayout extends Page
                         ])
                         ->columnSpan(1),
 
+                    Forms\Components\Hidden::make('section_type')
+                        ->default('standard'),
+
+                    Forms\Components\Hidden::make('metadata_shape'),
+
                     Forms\Components\ColorPicker::make('color_hex')
                         ->label('Background Color')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => !in_array($get('section_type'), ['decorative', 'stage', 'dance_floor']))
                         ->columnSpan(1),
 
                     Forms\Components\ColorPicker::make('seat_color')
                         ->label('Seat Color')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => !in_array($get('section_type'), ['decorative', 'stage', 'dance_floor']))
                         ->columnSpan(1),
 
+                    // Decorative properties section (text, polygon, circle, line)
+                    SC\Section::make('Decorative Properties')
+                        ->description('Appearance settings for this decorative element')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => in_array($get('section_type'), ['decorative', 'stage', 'dance_floor']))
+                        ->schema([
+                            Forms\Components\ColorPicker::make('deco_color')
+                                ->label('Color')
+                                ->columnSpan(1),
+
+                            Forms\Components\TextInput::make('deco_opacity')
+                                ->label('Opacity')
+                                ->numeric()
+                                ->minValue(0.1)
+                                ->maxValue(1.0)
+                                ->step(0.05)
+                                ->columnSpan(1),
+
+                            Forms\Components\TextInput::make('deco_tension')
+                                ->label('Edge Smoothing (0-1)')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(1)
+                                ->step(0.05)
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ($get('metadata_shape') ?? '') === 'polygon')
+                                ->columnSpan(1),
+
+                            Forms\Components\TextInput::make('text_content')
+                                ->label('Text Content')
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ($get('metadata_shape') ?? '') === 'text')
+                                ->columnSpanFull(),
+
+                            Forms\Components\TextInput::make('text_font_size')
+                                ->label('Font Size (px)')
+                                ->numeric()
+                                ->minValue(8)
+                                ->maxValue(200)
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ($get('metadata_shape') ?? '') === 'text')
+                                ->columnSpan(1),
+
+                            Forms\Components\Select::make('text_font_family')
+                                ->label('Font Family')
+                                ->options([
+                                    'Arial' => 'Arial',
+                                    'Helvetica' => 'Helvetica',
+                                    'Times New Roman' => 'Times New Roman',
+                                    'Georgia' => 'Georgia',
+                                    'Verdana' => 'Verdana',
+                                    'Courier New' => 'Courier New',
+                                ])
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ($get('metadata_shape') ?? '') === 'text')
+                                ->columnSpan(1),
+
+                            Forms\Components\Select::make('text_font_weight')
+                                ->label('Font Weight')
+                                ->options([
+                                    'normal' => 'Normal',
+                                    'bold' => 'Bold',
+                                    '300' => 'Light (300)',
+                                    '500' => 'Medium (500)',
+                                    '600' => 'Semi-Bold (600)',
+                                    '900' => 'Black (900)',
+                                ])
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ($get('metadata_shape') ?? '') === 'text')
+                                ->columnSpan(1),
+
+                            Forms\Components\TextInput::make('line_stroke_width')
+                                ->label('Stroke Width')
+                                ->numeric()
+                                ->minValue(1)
+                                ->maxValue(20)
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ($get('metadata_shape') ?? '') === 'line')
+                                ->columnSpan(1),
+                        ])
+                        ->columns(2),
+
                     SC\Section::make('Dimensions')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => !in_array($get('section_type'), ['decorative', 'stage', 'dance_floor']))
                         ->schema([
                             Forms\Components\TextInput::make('width')
                                 ->label('Width (px)')
@@ -752,6 +862,7 @@ class DesignerSeatingLayout extends Page
 
                     SC\Section::make('Seat Settings')
                         ->description('Fine-tune the seat appearance and spacing')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ($get('section_type') ?? 'standard') === 'standard')
                         ->schema([
                             Forms\Components\TextInput::make('seat_size')
                                 ->label('Seat Size (px)')
@@ -800,6 +911,7 @@ class DesignerSeatingLayout extends Page
 
                     SC\Section::make('Row Settings')
                         ->description('Configure individual row settings (numbering start and alignment)')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ($get('section_type') ?? 'standard') === 'standard')
                         ->schema([
                             Forms\Components\TextInput::make('row_renumber_start')
                                 ->label('Renumber rows from')
@@ -866,6 +978,7 @@ class DesignerSeatingLayout extends Page
 
                     SC\Section::make('Row Configuration')
                         ->description('Manage rows: rename, add, or delete rows')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ($get('section_type') ?? 'standard') === 'standard')
                         ->collapsible()
                         ->collapsed()
                         ->schema([
@@ -984,6 +1097,7 @@ class DesignerSeatingLayout extends Page
 
                     SC\Section::make('Seat Configuration')
                         ->description('Change the number of seats in a row')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ($get('section_type') ?? 'standard') === 'standard')
                         ->collapsible()
                         ->collapsed()
                         ->schema([
@@ -1044,6 +1158,7 @@ class DesignerSeatingLayout extends Page
 
                     SC\Section::make('Curve Settings')
                         ->description('Curve/bulge the section and its rows')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ($get('section_type') ?? 'standard') === 'standard')
                         ->schema([
                             Forms\Components\TextInput::make('curve_amount')
                                 ->label('Curve Amount')
@@ -1059,20 +1174,63 @@ class DesignerSeatingLayout extends Page
                         ->collapsible(),
                 ])
                 ->action(function (array $data): void {
-                    $section = SeatingSection::find($data['section_id']);
+                    $section = SeatingSection::find($data['section_id'] ?? $this->selectedSection);
                     if (!$section) return;
+
+                    // Common updates
+                    $updates = [
+                        'name' => $data['name'],
+                        'section_code' => $data['section_code'],
+                    ];
+
+                    // Handle decorative section types separately
+                    if (in_array($section->section_type, ['decorative', 'stage', 'dance_floor'])) {
+                        if (!empty($data['deco_color'])) {
+                            $updates['background_color'] = $data['deco_color'];
+                        }
+
+                        $metadata = $section->metadata ?? [];
+                        if (isset($data['deco_opacity'])) {
+                            $metadata['opacity'] = (float) $data['deco_opacity'];
+                        }
+                        if (isset($data['deco_tension'])) {
+                            $metadata['tension'] = (float) $data['deco_tension'];
+                        }
+                        if (isset($data['text_content'])) {
+                            $metadata['text'] = $data['text_content'];
+                        }
+                        if (isset($data['text_font_size'])) {
+                            $metadata['fontSize'] = (int) $data['text_font_size'];
+                        }
+                        if (isset($data['text_font_family'])) {
+                            $metadata['fontFamily'] = $data['text_font_family'];
+                        }
+                        if (isset($data['text_font_weight'])) {
+                            $metadata['fontWeight'] = $data['text_font_weight'];
+                        }
+                        if (isset($data['line_stroke_width'])) {
+                            $metadata['strokeWidth'] = (int) $data['line_stroke_width'];
+                        }
+                        $updates['metadata'] = $metadata;
+
+                        $section->update($updates);
+                        $this->reloadSections();
+                        $this->dispatch('layout-updated', sections: $this->sections);
+
+                        Notification::make()
+                            ->success()
+                            ->title('Section updated')
+                            ->body("Updated decorative section: {$section->name}")
+                            ->send();
+                        return;
+                    }
 
                     // Get old metadata for comparison
                     $oldMetadata = $section->metadata ?? [];
                     $oldSeatSpacing = $oldMetadata['seat_spacing'] ?? 18;
                     $oldRowSpacing = $oldMetadata['row_spacing'] ?? 25;
 
-                    // Update basic fields
-                    $updates = [
-                        'name' => $data['name'],
-                        'section_code' => $data['section_code'],
-                    ];
-
+                    // Standard section updates
                     if (!empty($data['color_hex'])) {
                         $updates['color_hex'] = $data['color_hex'];
                     }
@@ -2416,5 +2574,60 @@ class DesignerSeatingLayout extends Page
             'backgroundColor' => $this->seatingLayout->background_color ?? '#F3F4F6',
             'iconDefinitions' => config('seating-icons', []),
         ];
+    }
+
+    public function updateDisplayOrder(int $sectionId, string $direction): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            return;
+        }
+
+        $allSections = $this->seatingLayout->sections()
+            ->orderBy('display_order')
+            ->get();
+
+        $currentIndex = $allSections->search(fn ($s) => $s->id === $sectionId);
+
+        if ($currentIndex === false) return;
+
+        switch ($direction) {
+            case 'front':
+                $maxOrder = $allSections->max('display_order') ?? 0;
+                $section->update(['display_order' => $maxOrder + 1]);
+                break;
+
+            case 'back':
+                $minOrder = $allSections->min('display_order') ?? 0;
+                $section->update(['display_order' => $minOrder - 1]);
+                break;
+
+            case 'up':
+                if ($currentIndex < $allSections->count() - 1) {
+                    $nextSection = $allSections[$currentIndex + 1];
+                    $tempOrder = $section->display_order;
+                    $section->update(['display_order' => $nextSection->display_order]);
+                    $nextSection->update(['display_order' => $tempOrder]);
+                    if ($section->display_order === $nextSection->display_order) {
+                        $section->update(['display_order' => $section->display_order + 1]);
+                    }
+                }
+                break;
+
+            case 'down':
+                if ($currentIndex > 0) {
+                    $prevSection = $allSections[$currentIndex - 1];
+                    $tempOrder = $section->display_order;
+                    $section->update(['display_order' => $prevSection->display_order]);
+                    $prevSection->update(['display_order' => $tempOrder]);
+                    if ($section->display_order === $prevSection->display_order) {
+                        $prevSection->update(['display_order' => $prevSection->display_order + 1]);
+                    }
+                }
+                break;
+        }
+
+        $this->reloadSections();
     }
 }
