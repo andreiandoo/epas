@@ -2,21 +2,23 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('seating_sections', function (Blueprint $table) {
-            // Drop any existing unique index on section_code alone (if it exists)
-            try {
+        // Drop any existing unique index on section_code alone (if it exists)
+        $indexes = DB::select("SHOW INDEX FROM seating_sections WHERE Key_name = 'seating_sections_section_code_unique'");
+        if (!empty($indexes)) {
+            Schema::table('seating_sections', function (Blueprint $table) {
                 $table->dropUnique(['section_code']);
-            } catch (\Exception $e) {
-                // Index may not exist, that's fine
-            }
+            });
+        }
 
-            // Add composite unique: section_code must be unique within each layout
+        // Add composite unique: section_code must be unique within each layout
+        Schema::table('seating_sections', function (Blueprint $table) {
             $table->unique(['layout_id', 'section_code'], 'seating_sections_layout_section_code_unique');
         });
     }
