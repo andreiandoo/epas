@@ -170,10 +170,7 @@ require_once __DIR__ . '/includes/head.php';
     }
 
     function renderData(data) {
-        // Title
-        if (data.name) {
-            document.getElementById('share-title').textContent = data.name;
-        }
+        // Subtitle only (no link name shown publicly)
         document.getElementById('share-subtitle').textContent = (data.events || []).length + ' eveniment' + ((data.events || []).length !== 1 ? 'e' : '') + ' monitorizate';
 
         const events = data.events || [];
