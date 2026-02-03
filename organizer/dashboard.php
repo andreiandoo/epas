@@ -15,7 +15,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     
         <main class="flex-1">
             <!-- Welcome Banner -->
-            <div class="relative p-6 mb-8 overflow-hidden text-white bg-gradient-to-r from-primary to-primary-dark rounded-2xl">
+            <div class="relative p-6 mb-8 overflow-hidden text-white bg-gradient-to-r from-primary to-primary-dark">
                 <div class="absolute top-0 right-0 w-64 h-64 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5"></div>
                 <div class="absolute bottom-0 w-32 h-32 translate-y-1/2 rounded-full right-20 bg-white/5"></div>
                 <div class="relative">
