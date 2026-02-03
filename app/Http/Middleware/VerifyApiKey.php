@@ -12,12 +12,14 @@ class VerifyApiKey
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $key = $request->header('X-API-Key') ?? $request->query('api_key');
+        // SECURITY FIX: Only accept API key via header, not query string
+        // Query string parameters are logged in access logs, server logs, and browser history
+        $key = $request->header('X-API-Key');
 
         if (!$key) {
             return response()->json([
                 'error' => 'API key required',
-                'message' => 'Please provide an API key via X-API-Key header or api_key query parameter',
+                'message' => 'Please provide an API key via the X-API-Key header',
             ], 401);
         }
 

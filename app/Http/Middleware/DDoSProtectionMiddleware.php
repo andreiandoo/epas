@@ -134,19 +134,19 @@ class DDoSProtectionMiddleware
      */
     protected function getClientIp(Request $request): string
     {
-        // If behind Cloudflare
-        if ($request->header('CF-Connecting-IP')) {
+        // SECURITY FIX: Only trust proxy headers from configured trusted proxies
+        // X-Forwarded-For and CF-Connecting-IP can be spoofed by clients
+        $trustedProxies = config('trustedproxy.proxies', []);
+        $remoteAddr = $request->server('REMOTE_ADDR', '');
+
+        // Only trust CF-Connecting-IP if request comes from Cloudflare or trusted proxy
+        if ($request->header('CF-Connecting-IP') && (
+            !empty($trustedProxies) || $remoteAddr === '127.0.0.1'
+        )) {
             return $request->header('CF-Connecting-IP');
         }
 
-        // If behind load balancer with X-Forwarded-For
-        $forwardedFor = $request->header('X-Forwarded-For');
-        if ($forwardedFor) {
-            // Get the first (original) IP
-            $ips = explode(',', $forwardedFor);
-            return trim($ips[0]);
-        }
-
+        // Use Laravel's built-in trusted proxy handling which respects TrustProxies middleware
         return $request->ip();
     }
 

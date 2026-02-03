@@ -34,6 +34,29 @@ class WebhookService
                 ];
             }
 
+            // SECURITY FIX: Block internal/private IPs to prevent SSRF
+            $parsedUrl = parse_url($data['url']);
+            $host = $parsedUrl['host'] ?? '';
+            $blockedPatterns = ['localhost', '127.0.0.1', '0.0.0.0', '::1', '10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.', '.local', '.internal'];
+            foreach ($blockedPatterns as $pattern) {
+                if (str_starts_with($host, $pattern) || str_ends_with($host, $pattern) || $host === $pattern) {
+                    return [
+                        'success' => false,
+                        'webhook_id' => null,
+                        'message' => 'Webhook URLs pointing to internal/private addresses are not allowed',
+                    ];
+                }
+            }
+            // Also validate scheme is https for production
+            $scheme = $parsedUrl['scheme'] ?? '';
+            if (!in_array($scheme, ['http', 'https'])) {
+                return [
+                    'success' => false,
+                    'webhook_id' => null,
+                    'message' => 'Webhook URL must use http or https',
+                ];
+            }
+
             // Validate events
             if (empty($data['events']) || !is_array($data['events'])) {
                 return [

@@ -99,11 +99,14 @@ class DesignerSeatingLayout extends Page
                                             $preview .= "\n";
                                         }
 
+                                        // SECURITY FIX: Sanitize markdown output to prevent XSS
                                         return new \Illuminate\Support\HtmlString(
-                                            \Illuminate\Support\Str::markdown($preview)
+                                            \App\Helpers\HtmlSanitizer::sanitize(
+                                                \Illuminate\Support\Str::markdown($preview)
+                                            )
                                         );
                                     } catch (\Exception $e) {
-                                        return "Error parsing content: " . $e->getMessage();
+                                        return "Error parsing content: " . e($e->getMessage());
                                     }
                                 })
                                 ->columnSpanFull(),

@@ -113,8 +113,17 @@ class UpdateChangelogCommand extends Command
      */
     private function getInitialCommit(): string
     {
-        $result = Process::run('git rev-list --max-parents=0 HEAD');
+        // SECURITY FIX: Use array format to prevent command injection
+        $result = Process::run(['git', 'rev-list', '--max-parents=0', 'HEAD']);
         return trim($result->output());
+    }
+
+    /**
+     * Validate a git ref to prevent command injection
+     */
+    private function isValidGitRef(string $ref): bool
+    {
+        return (bool) preg_match('/^[a-zA-Z0-9._\/-]+$/', $ref);
     }
 
     /**
@@ -122,6 +131,12 @@ class UpdateChangelogCommand extends Command
      */
     private function getCommits(string $from, string $to): array
     {
+        // SECURITY FIX: Validate git refs to prevent command injection
+        if (!$this->isValidGitRef($from) || !$this->isValidGitRef($to)) {
+            $this->error('Invalid git ref format');
+            return [];
+        }
+
         // Get commit list with details
         $format = '%H|%an|%ae|%aI|%s';
         $range = "{$from}..{$to}";
@@ -131,7 +146,8 @@ class UpdateChangelogCommand extends Command
             $range = $to;
         }
 
-        $result = Process::run("git log {$range} --pretty=format:\"{$format}\" --reverse");
+        // SECURITY FIX: Use array format to prevent command injection
+        $result = Process::run(['git', 'log', $range, "--pretty=format:{$format}", '--reverse']);
 
         if (!$result->successful()) {
             $this->error('Failed to get git log: ' . $result->errorOutput());
@@ -170,10 +186,15 @@ class UpdateChangelogCommand extends Command
      */
     private function getCommitStats(string $hash): array
     {
-        $result = Process::run("git diff-tree --no-commit-id --name-only -r {$hash}");
+        // SECURITY FIX: Validate hash and use array format to prevent command injection
+        if (!preg_match('/^[0-9a-f]{5,40}$/', $hash)) {
+            return ['files' => [], 'additions' => 0, 'deletions' => 0];
+        }
+
+        $result = Process::run(['git', 'diff-tree', '--no-commit-id', '--name-only', '-r', $hash]);
         $files = array_filter(explode("\n", $result->output()));
 
-        $statResult = Process::run("git show --stat --format= {$hash} | tail -1");
+        $statResult = Process::run(['git', 'show', '--stat', '--format=', $hash]);
         $statLine = trim($statResult->output());
 
         $additions = 0;

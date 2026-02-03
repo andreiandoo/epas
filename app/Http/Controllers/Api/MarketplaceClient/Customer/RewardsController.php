@@ -337,7 +337,8 @@ class RewardsController extends BaseController
             // Generate voucher code if applicable
             $voucherCode = null;
             if (in_array($reward->type, ['voucher_code', 'fixed_discount', 'percentage_discount'])) {
-                $voucherCode = strtoupper(($reward->voucher_prefix ?? 'RWD') . '-' . substr(md5(uniqid()), 0, 8));
+                // SECURITY FIX: Use cryptographically secure random for voucher codes
+                $voucherCode = strtoupper(($reward->voucher_prefix ?? 'RWD') . '-' . substr(bin2hex(random_bytes(5)), 0, 8));
             }
 
             // Create redemption record

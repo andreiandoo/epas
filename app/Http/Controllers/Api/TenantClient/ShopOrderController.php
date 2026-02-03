@@ -226,8 +226,22 @@ class ShopOrderController extends Controller
         // Return file download
         $fileUrl = $product->digital_file_url;
 
-        // If it's an external URL, redirect
+        // If it's an external URL, validate domain before redirect to prevent open redirect
         if (filter_var($fileUrl, FILTER_VALIDATE_URL)) {
+            // SECURITY FIX: Only allow redirects to trusted domains
+            $parsedUrl = parse_url($fileUrl);
+            $allowedHosts = array_filter(explode(',', config('app.trusted_download_domains', '')));
+            $host = $parsedUrl['host'] ?? '';
+
+            if (empty($allowedHosts) || !in_array($host, $allowedHosts)) {
+                // If no trusted domains configured or domain not trusted, serve via proxy or block
+                \Log::warning('Digital download redirect blocked: untrusted domain', [
+                    'url' => $fileUrl,
+                    'host' => $host,
+                ]);
+                abort(403, 'External download URL not allowed. Configure trusted_download_domains.');
+            }
+
             return redirect($fileUrl);
         }
 

@@ -195,7 +195,8 @@ class CouponCampaignResource extends Resource
                             \App\Models\Coupon\CouponCode::create([
                                 'campaign_id' => $record->id,
                                 'marketplace_client_id' => $marketplace->id,
-                                'code' => strtoupper(substr(md5(uniqid()), 0, 8)),
+                                // SECURITY FIX: Use cryptographically secure random for coupon codes
+                                'code' => strtoupper(substr(bin2hex(random_bytes(5)), 0, 8)),
                                 'discount_type' => $data['discount_type'],
                                 'discount_value' => $data['discount_value'],
                                 'status' => 'active',

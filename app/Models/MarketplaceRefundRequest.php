@@ -126,7 +126,8 @@ class MarketplaceRefundRequest extends Model
     {
         $prefix = 'REF';
         $date = now()->format('Ymd');
-        $random = strtoupper(substr(md5(uniqid()), 0, 6));
+        // SECURITY FIX: Use cryptographically secure random for reference codes
+        $random = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
 
         return "{$prefix}-{$date}-{$random}";
     }

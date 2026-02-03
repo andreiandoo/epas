@@ -343,9 +343,11 @@ class KbArticleResource extends Resource
                 Tables\Columns\TextColumn::make('display_title')
                     ->label('Title/Question')
                     ->searchable(query: function (Builder $query, string $search) use ($marketplaceLanguage): Builder {
-                        return $query->where(function ($q) use ($search, $marketplaceLanguage) {
-                            $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.{$marketplaceLanguage}')) LIKE ?", ["%{$search}%"])
-                              ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(question, '$.{$marketplaceLanguage}')) LIKE ?", ["%{$search}%"]);
+                        // SECURITY FIX: Validate language to prevent SQL injection via JSON path
+                        $safeLang = preg_match('/^[a-z]{2}(-[A-Z]{2})?$/', $marketplaceLanguage) ? $marketplaceLanguage : 'en';
+                        return $query->where(function ($q) use ($search, $safeLang) {
+                            $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, ?)) LIKE ?", ['$.' . $safeLang, "%{$search}%"])
+                              ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(question, ?)) LIKE ?", ['$.' . $safeLang, "%{$search}%"]);
                         });
                     })
                     ->limit(50)

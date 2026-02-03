@@ -40,8 +40,14 @@ class ChangelogWatcherCommand extends Command
 
     private function checkForNewCommits(string $branch): void
     {
-        // Fetch latest from remote
-        Process::run("git fetch origin {$branch} 2>/dev/null");
+        // SECURITY FIX: Validate branch name to prevent command injection
+        if (!preg_match('/^[a-zA-Z0-9._\/-]+$/', $branch)) {
+            $this->error('Invalid branch name');
+            return;
+        }
+
+        // SECURITY FIX: Use array format for Process::run to prevent command injection
+        Process::run(['git', 'fetch', 'origin', $branch]);
 
         $latestCommit = $this->getLatestCommit("origin/{$branch}");
 
@@ -63,14 +69,16 @@ class ChangelogWatcherCommand extends Command
 
     private function getLatestCommit(string $ref): string
     {
-        $result = Process::run("git rev-parse {$ref}");
+        // SECURITY FIX: Use array format to prevent command injection
+        $result = Process::run(['git', 'rev-parse', $ref]);
         return trim($result->output());
     }
 
     private function getCommitsBetween(string $from, string $to): array
     {
         $format = '%H|%an|%ae|%aI|%s';
-        $result = Process::run("git log {$from}..{$to} --pretty=format:\"{$format}\" --reverse");
+        // SECURITY FIX: Use array format to prevent command injection
+        $result = Process::run(['git', 'log', "{$from}..{$to}", "--pretty=format:{$format}", '--reverse']);
 
         if (!$result->successful()) {
             return [];

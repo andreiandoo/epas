@@ -233,6 +233,10 @@ class KnowledgeBaseController extends BaseController
     {
         $client = $this->requireClient($request);
         $language = $client->language ?? 'ro';
+        // SECURITY FIX: Validate language to prevent SQL injection via JSON path
+        if (!preg_match('/^[a-z]{2}(-[A-Z]{2})?$/', $language)) {
+            $language = 'ro';
+        }
         $query = $request->input('q', '');
 
         if (strlen($query) < 2) {
@@ -243,9 +247,9 @@ class KnowledgeBaseController extends BaseController
             ->where('marketplace_client_id', $client->id)
             ->where('is_visible', true)
             ->where(function ($q) use ($query, $language) {
-                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.{$language}')) LIKE ?", ["%{$query}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(content, '$.{$language}')) LIKE ?", ["%{$query}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(question, '$.{$language}')) LIKE ?", ["%{$query}%"]);
+                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, ?)) LIKE ?", ['$.' . $language, "%{$query}%"])
+                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(content, ?)) LIKE ?", ['$.' . $language, "%{$query}%"])
+                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(question, ?)) LIKE ?", ['$.' . $language, "%{$query}%"]);
             })
             ->with('category')
             ->orderByDesc('view_count')

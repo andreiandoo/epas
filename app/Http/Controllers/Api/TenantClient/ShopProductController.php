@@ -108,9 +108,14 @@ class ShopProductController extends Controller
             $query->where('type', $type);
         }
 
+        // SECURITY FIX: Validate language to prevent SQL injection via JSON path
+        if (!preg_match('/^[a-z]{2}(-[A-Z]{2})?$/', $tenantLanguage)) {
+            $tenantLanguage = 'en';
+        }
+
         if ($search) {
             $query->where(function ($q) use ($search, $tenantLanguage) {
-                $q->whereRaw("JSON_EXTRACT(title, '$.\"{$tenantLanguage}\"') LIKE ?", ["%{$search}%"])
+                $q->whereRaw("JSON_EXTRACT(title, ?) LIKE ?", ['$."' . $tenantLanguage . '"', "%{$search}%"])
                   ->orWhere('sku', 'like', "%{$search}%");
             });
         }
@@ -126,8 +131,8 @@ class ShopProductController extends Controller
         $query = match ($sort) {
             'price_asc' => $query->orderBy('price_cents', 'asc'),
             'price_desc' => $query->orderBy('price_cents', 'desc'),
-            'name_asc' => $query->orderByRaw("JSON_EXTRACT(title, '$.\"{$tenantLanguage}\"') ASC"),
-            'name_desc' => $query->orderByRaw("JSON_EXTRACT(title, '$.\"{$tenantLanguage}\"') DESC"),
+            'name_asc' => $query->orderByRaw("JSON_EXTRACT(title, ?) ASC", ['$."' . $tenantLanguage . '"']),
+            'name_desc' => $query->orderByRaw("JSON_EXTRACT(title, ?) DESC", ['$."' . $tenantLanguage . '"']),
             'rating' => $query->orderBy('average_rating', 'desc'),
             default => $query->orderBy('created_at', 'desc'),
         };

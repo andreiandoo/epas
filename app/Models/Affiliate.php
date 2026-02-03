@@ -74,7 +74,8 @@ class Affiliate extends Model
     public static function generateUniqueCode(): string
     {
         do {
-            $code = strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+            // SECURITY FIX: Use cryptographically secure random for affiliate codes
+            $code = strtoupper(substr(bin2hex(random_bytes(5)), 0, 8));
         } while (static::withoutGlobalScopes()->where('code', $code)->exists());
 
         return $code;

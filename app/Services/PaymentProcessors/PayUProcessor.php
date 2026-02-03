@@ -28,7 +28,8 @@ class PayUProcessor implements PaymentProcessorInterface
         }
 
         // Generate unique payment reference
-        $paymentRef = $data['order_id'] ?? ('PAYU_' . strtoupper(uniqid()));
+        // SECURITY FIX: Use cryptographically secure random for payment references
+        $paymentRef = $data['order_id'] ?? ('PAYU_' . strtoupper(bin2hex(random_bytes(8))));
 
         // Prepare order data
         $orderData = [

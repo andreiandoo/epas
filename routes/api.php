@@ -200,7 +200,8 @@ Route::prefix('public')->middleware(['seating.session'])->group(function () {
 |
 */
 
-Route::prefix('affiliates')->middleware(['throttle:api'])->group(function () {
+// SECURITY FIX: Added auth:sanctum - affiliate management requires authentication
+Route::prefix('affiliates')->middleware(['throttle:api', 'auth:sanctum'])->group(function () {
     // Tenant admin endpoints
     Route::post('/', [AffiliateController::class, 'store'])
         ->name('api.affiliates.create');
@@ -318,7 +319,8 @@ Route::prefix('marketplace-tracking')->middleware(['throttle:300,1', 'marketplac
 |
 */
 
-Route::prefix('tickets/templates')->middleware(['throttle:api'])->group(function () {
+// SECURITY FIX: Added auth:sanctum - ticket template management requires authentication
+Route::prefix('tickets/templates')->middleware(['throttle:api', 'auth:sanctum'])->group(function () {
     // Get available variables and sample data
     Route::get('/variables', [TicketTemplateController::class, 'getVariables'])
         ->name('api.tickets.templates.variables');
@@ -590,7 +592,8 @@ Route::prefix('microservices')->middleware(['throttle:api'])->group(function () 
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('webhooks')->middleware(['throttle:api'])->group(function () {
+// SECURITY FIX: Added auth:sanctum - webhook management requires authentication
+Route::prefix('webhooks')->middleware(['throttle:api', 'auth:sanctum'])->group(function () {
     Route::get('/{tenantId}', [WebhookController::class, 'index'])
         ->name('api.webhooks.index');
     
@@ -651,7 +654,8 @@ Route::prefix('feature-flags')->middleware(['throttle:api', 'auth:sanctum', 'ten
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('notifications')->middleware(['throttle:api'])->group(function () {
+// SECURITY FIX: Added auth:sanctum - notifications require authentication
+Route::prefix('notifications')->middleware(['throttle:api', 'auth:sanctum'])->group(function () {
     Route::get('/{tenantId}', [NotificationController::class, 'index'])
         ->name('api.notifications.index');
     
@@ -674,7 +678,8 @@ Route::prefix('notifications')->middleware(['throttle:api'])->group(function () 
 |
 */
 
-Route::prefix('promo-codes')->middleware(['throttle:api'])->group(function () {
+// SECURITY FIX: Added auth:sanctum - promo code management requires authentication
+Route::prefix('promo-codes')->middleware(['throttle:api', 'auth:sanctum'])->group(function () {
     // Tenant admin endpoints
     Route::get('/{tenantId}', [App\Http\Controllers\Api\PromoCodeController::class, 'index'])
         ->name('api.promo-codes.index');

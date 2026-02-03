@@ -340,12 +340,18 @@ class TicketTemplateController extends Controller
      *
      * POST /api/tickets/templates/{id}/set-default
      */
-    public function setDefault(string $id)
+    public function setDefault(Request $request, string $id)
     {
         $template = TicketTemplate::find($id);
 
         if (!$template) {
             return response()->json(['error' => 'Template not found'], 404);
+        }
+
+        // SECURITY FIX: Verify tenant ownership to prevent IDOR
+        $tenantId = $request->attributes->get('tenant_id') ?? $request->input('tenant_id');
+        if ($tenantId && $template->tenant_id !== $tenantId) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $template->setAsDefault();
@@ -368,6 +374,12 @@ class TicketTemplateController extends Controller
 
         if (!$template) {
             return response()->json(['error' => 'Template not found'], 404);
+        }
+
+        // SECURITY FIX: Verify tenant ownership to prevent IDOR
+        $tenantId = $request->attributes->get('tenant_id') ?? $request->input('tenant_id');
+        if ($tenantId && $template->tenant_id !== $tenantId) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $validator = Validator::make($request->all(), [

@@ -674,7 +674,8 @@ class AnafAdapter implements AnafAdapterInterface
         // SECURITY FIX: Disable external entity loading to prevent XXE attacks
         $previousValue = libxml_disable_entity_loader(true);
         libxml_use_internal_errors(true);
-        $dom->loadXML($xml, LIBXML_NONET | LIBXML_NOCDATA | LIBXML_NOENT);
+        // SECURITY FIX: Removed LIBXML_NOENT which enables entity expansion (XXE risk)
+        $dom->loadXML($xml, LIBXML_NONET | LIBXML_NOCDATA);
         libxml_disable_entity_loader($previousValue);
 
         // Add signature placeholder comment

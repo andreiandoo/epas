@@ -43,7 +43,8 @@ class CheckoutController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'checkout_id' => 'chk_' . uniqid(),
+                // SECURITY FIX: Use cryptographically secure random ID
+                'checkout_id' => 'chk_' . bin2hex(random_bytes(12)),
                 'items' => [],
                 'subtotal' => 0,
                 'fees' => 0,
@@ -123,7 +124,8 @@ class CheckoutController extends Controller
 
         // Create order
         // TODO: Implement actual order creation with $billingData
-        $orderId = 'ord_' . uniqid();
+        // SECURITY FIX: Use cryptographically secure random ID
+        $orderId = 'ord_' . bin2hex(random_bytes(12));
         $orderAmountCents = 0; // TODO: Calculate from cart
 
         // Get customer ID for gamification

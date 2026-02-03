@@ -915,7 +915,9 @@ const EventPage = {
         var hasHtml = /<[a-z][\s\S]*>/i.test(desc);
 
         if (hasHtml) {
-            return '<div class="space-y-2 prose prose-slate prose-p:text-muted prose-p:leading-relaxed prose-headings:text-secondary prose-strong:text-secondary prose-a:text-primary prose-li:text-muted max-w-none">' + desc + '</div>';
+            // SECURITY FIX: Sanitize HTML to prevent XSS attacks
+            var sanitized = this.sanitizeHtml(desc);
+            return '<div class="space-y-2 prose prose-slate prose-p:text-muted prose-p:leading-relaxed prose-headings:text-secondary prose-strong:text-secondary prose-a:text-primary prose-li:text-muted max-w-none">' + sanitized + '</div>';
         }
 
         var paragraphs = desc.split(/\n\n+/).filter(function(p) { return p.trim(); });
@@ -924,8 +926,41 @@ const EventPage = {
         }
 
         return paragraphs.map(function(p) {
-            return '<p class="mb-4 leading-relaxed text-muted">' + p.trim() + '</p>';
-        }).join('');
+            return '<p class="mb-4 leading-relaxed text-muted">' + this.escapeHtml(p.trim()) + '</p>';
+        }.bind(this)).join('');
+    },
+
+    /**
+     * Sanitize HTML content - strip dangerous tags and attributes
+     */
+    sanitizeHtml(html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        // Remove dangerous elements
+        var dangerous = doc.querySelectorAll('script,iframe,object,embed,form,input,textarea,select,button,link,meta,style');
+        dangerous.forEach(function(el) { el.remove(); });
+        // Remove dangerous attributes from all elements
+        var allElements = doc.body.querySelectorAll('*');
+        allElements.forEach(function(el) {
+            var attrs = Array.from(el.attributes);
+            attrs.forEach(function(attr) {
+                if (attr.name.startsWith('on') || attr.name === 'srcdoc' ||
+                    (attr.name === 'href' && attr.value.trim().toLowerCase().startsWith('javascript:')) ||
+                    (attr.name === 'src' && attr.value.trim().toLowerCase().startsWith('javascript:'))) {
+                    el.removeAttribute(attr.name);
+                }
+            });
+        });
+        return doc.body.innerHTML;
+    },
+
+    /**
+     * Escape HTML special characters to prevent XSS
+     */
+    escapeHtml(text) {
+        if (!text) return '';
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
     },
 
     /**
