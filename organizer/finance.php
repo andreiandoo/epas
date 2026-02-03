@@ -86,6 +86,7 @@ $scriptsExtra = <<<'JS'
 <script>
 AmbiletAuth.requireOrganizerAuth();
 let financeData = null;
+const highlightEventId = new URLSearchParams(window.location.search).get('event');
 
 document.addEventListener('DOMContentLoaded', function() { loadFinanceData(); });
 
@@ -98,6 +99,16 @@ async function loadFinanceData() {
             document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(financeData.pending_balance || 0);
             document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(financeData.total_paid_out || 0);
             renderEvents(financeData.events || []);
+            // Highlight event if coming from events page
+            if (highlightEventId) {
+                const targetRow = document.querySelector(`.event-row[data-event-id="${highlightEventId}"]`);
+                if (targetRow) {
+                    targetRow.classList.add('ring-2', 'ring-primary', 'bg-primary/5');
+                    targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Auto-expand the highlighted event
+                    toggleEventDetails(parseInt(highlightEventId));
+                }
+            }
         } else { showEmptyFinance(); }
     } catch (error) { console.error(error); showEmptyFinance(); }
 }
@@ -237,8 +248,10 @@ function setEventTab(eventId, tabName) {
 }
 
 function loadEventFinanceDetails(eventId) {
-    // Filter transactions and payouts for this event
-    const eventTransactions = (financeData.transactions || []).filter(t => t.event_id === eventId);
+    // Filter transactions for this event (exclude payout-type transactions)
+    const eventTransactions = (financeData.transactions || []).filter(t =>
+        t.event_id === eventId && t.type !== 'payout' && t.type !== 'payout_reversal'
+    );
     const eventPayouts = (financeData.payouts || []).filter(p => p.event_id === eventId);
 
     renderEventTransactions(eventId, eventTransactions);
