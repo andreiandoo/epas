@@ -124,6 +124,12 @@ require_once __DIR__ . '/includes/head.php';
 
     function formatTime(timeStr) {
         if (!timeStr) return '';
+        // Handle full datetime strings like "2026-01-31T18:30:00"
+        if (timeStr.includes('T')) {
+            const timePart = timeStr.split('T')[1];
+            return timePart ? timePart.substring(0, 5) : '';
+        }
+        // Handle time-only strings like "18:30:00"
         return timeStr.substring(0, 5);
     }
 
