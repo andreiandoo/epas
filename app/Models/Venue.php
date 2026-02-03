@@ -285,6 +285,7 @@ class Venue extends Model
         'capacity','capacity_total','capacity_standing','capacity_seated',
         'lat','lng','google_maps_url','established_at','description','schedule','meta',
         'is_partner','partner_notes','is_featured','has_historical_monument_tax',
+        'timezone','open_hours','general_rules','child_rules','accepted_payment',
     ];
 
     protected $casts = [

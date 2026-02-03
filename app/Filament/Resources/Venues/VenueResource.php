@@ -304,6 +304,41 @@ class VenueResource extends Resource
                 Forms\Components\DatePicker::make('established_at')->label('Pe piață din')->native(false),
             ])->columns(2),
 
+            SC\Section::make('Venue Details')
+                ->description('Informații operaționale despre venue')
+                ->schema([
+                    Forms\Components\Select::make('timezone')
+                        ->label('Timezone')
+                        ->options(fn () => collect(timezone_identifiers_list())
+                            ->mapWithKeys(fn ($tz) => [$tz => $tz])
+                            ->toArray())
+                        ->searchable()
+                        ->placeholder('Europe/Bucharest'),
+
+                    Forms\Components\TextInput::make('open_hours')
+                        ->label('Open Hours')
+                        ->maxLength(255)
+                        ->placeholder('Mon-Fri 10:00-22:00, Sat-Sun 12:00-00:00'),
+
+                    Forms\Components\Textarea::make('general_rules')
+                        ->label('General Rules')
+                        ->rows(4)
+                        ->placeholder('General rules and regulations for this venue...')
+                        ->columnSpanFull(),
+
+                    Forms\Components\Textarea::make('child_rules')
+                        ->label('Child Rules')
+                        ->rows(3)
+                        ->placeholder('Rules regarding children and minors...')
+                        ->columnSpanFull(),
+
+                    Forms\Components\Textarea::make('accepted_payment')
+                        ->label('Accepted Payment Methods')
+                        ->rows(2)
+                        ->placeholder('Cash, Card (Visa/Mastercard), Contactless, Apple Pay...')
+                        ->columnSpanFull(),
+                ])->columns(2),
+
             SC\Section::make('Descriere')->schema([
                 TranslatableField::richEditor('description', 'Descriere')
                     ->columnSpanFull(),

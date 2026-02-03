@@ -132,6 +132,36 @@ class ArtistResource extends Resource
                         ->label('Spotify ID')
                         ->maxLength(190)
                         ->helperText('Used to fetch Spotify stats & show playlist.'),
+
+                    Forms\Components\TextInput::make('twitter_url')
+                        ->label('Twitter / X profile')
+                        ->default('https://x.com/')
+                        ->url()->rule('url')->maxLength(255)
+                        ->prefixIcon('heroicon-m-link'),
+
+                    Forms\Components\TextInput::make('wiki_url')
+                        ->label('Wikipedia page')
+                        ->url()->rule('url')->maxLength(255)
+                        ->prefixIcon('heroicon-m-link')
+                        ->placeholder('https://en.wikipedia.org/wiki/...'),
+
+                    Forms\Components\TextInput::make('lastfm_url')
+                        ->label('Last.fm profile')
+                        ->url()->rule('url')->maxLength(255)
+                        ->prefixIcon('heroicon-m-link')
+                        ->placeholder('https://www.last.fm/music/...'),
+
+                    Forms\Components\TextInput::make('itunes_url')
+                        ->label('iTunes / Apple Music')
+                        ->url()->rule('url')->maxLength(255)
+                        ->prefixIcon('heroicon-m-link')
+                        ->placeholder('https://music.apple.com/...'),
+
+                    Forms\Components\TextInput::make('musicbrainz_url')
+                        ->label('MusicBrainz page')
+                        ->url()->rule('url')->maxLength(255)
+                        ->prefixIcon('heroicon-m-link')
+                        ->placeholder('https://musicbrainz.org/artist/...'),
                 ])
                 ->columns(2),
 
@@ -173,6 +203,12 @@ class ArtistResource extends Resource
                         ->helperText('0-100 score'),
 
                     // Manual entry fields
+                    Forms\Components\TextInput::make('twitter_followers')
+                        ->label('Twitter / X Followers')
+                        ->numeric()
+                        ->minValue(0)
+                        ->helperText('Manual entry'),
+
                     Forms\Components\TextInput::make('followers_facebook')
                         ->label('Facebook Followers')
                         ->numeric()
