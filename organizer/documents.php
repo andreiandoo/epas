@@ -20,50 +20,101 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
 
-            <!-- Events List with Document Generation -->
-            <div class="bg-white rounded-2xl border border-border overflow-hidden">
-                <div class="p-6 border-b border-border">
-                    <h2 class="text-lg font-bold text-secondary">Genereaza Documente</h2>
-                    <p class="text-sm text-muted mt-1">Selecteaza un eveniment si genereaza documentele necesare</p>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-surface">
-                            <tr>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Eveniment</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Data</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Status</th>
-                                <th class="px-6 py-4 text-center text-sm font-semibold text-secondary">Cerere Avizare</th>
-                                <th class="px-6 py-4 text-center text-sm font-semibold text-secondary">Declaratie Impozite</th>
-                            </tr>
-                        </thead>
-                        <tbody id="events-list" class="divide-y divide-border"></tbody>
-                    </table>
+            <!-- Event Selector -->
+            <div class="bg-white rounded-2xl border border-border p-6 mb-6">
+                <label class="label mb-2 block">Selecteaza evenimentul</label>
+                <select id="event-selector" class="input w-full max-w-lg" onchange="onEventSelected()">
+                    <option value="">-- Alege un eveniment --</option>
+                </select>
+                <div id="events-loading" class="text-sm text-muted mt-2">Se incarca evenimentele...</div>
+            </div>
+
+            <!-- Event Detail + Document Generation (hidden until event selected) -->
+            <div id="event-detail-section" class="hidden mb-6">
+                <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                    <!-- Event Info Header -->
+                    <div class="p-6 border-b border-border">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h2 id="event-name" class="text-lg font-bold text-secondary"></h2>
+                                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted mt-1">
+                                    <span id="event-venue" class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                        <span id="event-venue-text"></span>
+                                    </span>
+                                    <span id="event-date" class="flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        <span id="event-date-text"></span>
+                                    </span>
+                                    <span id="event-status-badge"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Document Generation Buttons -->
+                    <div class="p-6">
+                        <h3 class="text-sm font-semibold text-muted uppercase tracking-wide mb-4">Documente disponibile</h3>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <!-- Cerere Avizare -->
+                            <div class="border border-border rounded-xl p-5">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-secondary">Cerere Avizare</h4>
+                                        <p class="text-xs text-muted">Document necesar pentru avizarea evenimentului</p>
+                                    </div>
+                                </div>
+                                <div id="aviz-actions" class="flex items-center gap-2">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+
+                            <!-- Declaratie Impozite -->
+                            <div class="border border-border rounded-xl p-5">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-secondary">Declaratie Impozite</h4>
+                                        <p class="text-xs text-muted">Disponibil dupa terminarea evenimentului</p>
+                                    </div>
+                                </div>
+                                <div id="impozite-actions" class="flex items-center gap-2">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Documents History -->
-            <div class="bg-white rounded-2xl border border-border overflow-hidden mt-8">
-                <div class="p-6 border-b border-border flex items-center justify-between">
-                    <div>
-                        <h2 class="text-lg font-bold text-secondary">Istoric Documente</h2>
-                        <p class="text-sm text-muted mt-1">Toate documentele generate</p>
+            <!-- Documents History for selected event -->
+            <div id="event-docs-history" class="hidden">
+                <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                    <div class="p-6 border-b border-border">
+                        <h2 class="text-lg font-bold text-secondary">Istoric documente</h2>
+                        <p class="text-sm text-muted mt-1" id="history-subtitle">Documentele generate pentru acest eveniment</p>
                     </div>
-                    <input type="text" id="search-docs" placeholder="Cauta..." class="input w-64">
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-surface">
-                            <tr>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Document</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Tip</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Eveniment</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Data Emiterii</th>
-                                <th class="px-6 py-4 text-right text-sm font-semibold text-secondary">Actiuni</th>
-                            </tr>
-                        </thead>
-                        <tbody id="documents-list" class="divide-y divide-border"></tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-surface">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Document</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Tip</th>
+                                    <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Data generarii</th>
+                                    <th class="px-6 py-4 text-right text-sm font-semibold text-secondary">Actiuni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="event-documents-list" class="divide-y divide-border"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </main>
@@ -72,125 +123,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 $scriptsExtra = <<<'JS'
 <script>
 AmbiletAuth.requireOrganizerAuth();
-let allDocuments = [];
+let eventsData = {};
+let selectedEventId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadEventsWithDocuments();
-    loadDocuments();
+    loadEvents();
 });
-
-async function loadEventsWithDocuments() {
-    try {
-        const response = await AmbiletAPI.get('/organizer/documents/events');
-        if (response.success && response.data.events) {
-            renderEvents(response.data.events);
-        } else {
-            renderEvents([]);
-        }
-    } catch (error) {
-        console.error('Error loading events:', error);
-        renderEvents([]);
-    }
-}
-
-async function loadDocuments() {
-    try {
-        const response = await AmbiletAPI.get('/organizer/documents');
-        if (response.success) {
-            allDocuments = response.data.documents || [];
-            renderDocuments(allDocuments);
-        } else {
-            renderDocuments([]);
-        }
-    } catch (error) {
-        console.error('Error loading documents:', error);
-        renderDocuments([]);
-    }
-}
-
-function renderEvents(events) {
-    const container = document.getElementById('events-list');
-    if (!events.length) {
-        container.innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center text-muted">Nu exista evenimente momentan</td></tr>';
-        return;
-    }
-
-    const statusColors = {
-        published: 'success',
-        pending_review: 'warning',
-        ended: 'muted',
-        draft: 'secondary',
-        cancelled: 'error'
-    };
-
-    // Store events data for click handlers
-    window._eventsData = {};
-    events.forEach(e => {
-        window._eventsData[e.id] = e;
-    });
-
-    container.innerHTML = events.map(event => {
-        const statusColor = statusColors[event.status] || 'secondary';
-        const eventName = escapeHtml(event.name || '');
-        const venueName = escapeHtml(event.venue_name || '');
-        const venueCity = event.venue_city ? ', ' + escapeHtml(event.venue_city) : '';
-        const statusLabel = escapeHtml(event.status_label || event.status || '');
-
-        return `
-        <tr class="hover:bg-surface/50">
-            <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    </div>
-                    <div>
-                        <p class="font-medium text-secondary">${eventName}</p>
-                        <p class="text-xs text-muted">${venueName}${venueCity}</p>
-                    </div>
-                </div>
-            </td>
-            <td class="px-6 py-4 text-sm text-secondary">${event.starts_at ? formatDate(event.starts_at) : '-'}</td>
-            <td class="px-6 py-4">
-                <span class="px-2.5 py-1 bg-${statusColor}/10 text-${statusColor} text-xs font-medium rounded-lg">${statusLabel}</span>
-            </td>
-            <td class="px-6 py-4 text-center">
-                ${event.cerere_avizare
-                    ? `<button onclick="downloadEventDoc(${event.id}, 'cerere_avizare')" class="btn btn-sm bg-success/10 text-success hover:bg-success/20 gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        Descarca Aviz
-                       </button>`
-                    : `<button onclick="generateDocument(${event.id}, 'cerere_avizare')" class="btn btn-sm bg-primary/10 text-primary hover:bg-primary/20 gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        Genereaza Aviz
-                       </button>`
-                }
-            </td>
-            <td class="px-6 py-4 text-center">
-                ${event.declaratie_impozite
-                    ? `<button onclick="downloadEventDoc(${event.id}, 'declaratie_impozite')" class="btn btn-sm bg-success/10 text-success hover:bg-success/20 gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        Descarca Impozite
-                       </button>`
-                    : (event.status === 'ended'
-                        ? `<button onclick="generateDocument(${event.id}, 'declaratie_impozite')" class="btn btn-sm bg-primary/10 text-primary hover:bg-primary/20 gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                            Genereaza Impozite
-                           </button>`
-                        : `<span class="text-xs text-muted italic">Disponibil dupa eveniment</span>`)
-                }
-            </td>
-        </tr>
-    `}).join('');
-}
-
-function downloadEventDoc(eventId, docType) {
-    const event = window._eventsData[eventId];
-    if (event && event[docType] && event[docType].download_url) {
-        window.open(event[docType].download_url, '_blank');
-    } else {
-        AmbiletNotifications.error('Documentul nu este disponibil');
-    }
-}
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -199,53 +137,130 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
-function renderDocuments(documents) {
-    const container = document.getElementById('documents-list');
-    if (!documents.length) {
-        container.innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center text-muted">Nu exista documente generate</td></tr>';
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ro-RO', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function formatDateShort(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+async function loadEvents() {
+    try {
+        const response = await AmbiletAPI.get('/organizer/documents/events');
+        if (response.success && response.data.events) {
+            const events = response.data.events;
+            const selector = document.getElementById('event-selector');
+
+            events.forEach(e => {
+                eventsData[e.id] = e;
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                const dateStr = e.starts_at ? ' — ' + formatDateShort(e.starts_at) : '';
+                opt.textContent = (e.name || 'Eveniment') + dateStr;
+                selector.appendChild(opt);
+            });
+
+            document.getElementById('events-loading').classList.add('hidden');
+
+            // Pre-select from URL param
+            const params = new URLSearchParams(window.location.search);
+            const preselect = params.get('event');
+            if (preselect && eventsData[preselect]) {
+                selector.value = preselect;
+                onEventSelected();
+            }
+        } else {
+            document.getElementById('events-loading').textContent = 'Nu ai evenimente.';
+        }
+    } catch (error) {
+        console.error('Error loading events:', error);
+        document.getElementById('events-loading').textContent = 'Eroare la incarcarea evenimentelor.';
+    }
+}
+
+function onEventSelected() {
+    const id = document.getElementById('event-selector').value;
+    if (!id || !eventsData[id]) {
+        document.getElementById('event-detail-section').classList.add('hidden');
+        document.getElementById('event-docs-history').classList.add('hidden');
+        selectedEventId = null;
         return;
     }
 
-    const typeLabels = {
-        cerere_avizare: 'Cerere Avizare',
-        declaratie_impozite: 'Declaratie Impozite'
-    };
-    const typeColors = {
-        cerere_avizare: 'blue-600',
-        declaratie_impozite: 'success'
-    };
+    selectedEventId = parseInt(id);
+    const event = eventsData[id];
 
-    container.innerHTML = documents.map(doc => `
-        <tr class="hover:bg-surface/50">
-            <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-surface rounded-xl flex items-center justify-center">
-                        <svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    </div>
-                    <div>
-                        <p class="font-medium text-secondary">${doc.title}</p>
-                        <p class="text-xs text-muted">${doc.file_size || ''}</p>
-                    </div>
-                </div>
-            </td>
-            <td class="px-6 py-4"><span class="px-2.5 py-1 bg-${typeColors[doc.type] || 'primary'}/10 text-${typeColors[doc.type] || 'primary'} text-xs font-medium rounded-lg">${typeLabels[doc.type] || doc.type_label}</span></td>
-            <td class="px-6 py-4 text-sm text-secondary">${doc.event_name || '-'}</td>
-            <td class="px-6 py-4 text-sm text-muted">${doc.issued_at ? formatDate(doc.issued_at) : '-'}</td>
-            <td class="px-6 py-4 text-right">
-                <button onclick="downloadDocument(${doc.id}, '${doc.download_url}')" class="p-2 text-primary hover:text-primary-dark hover:bg-primary/10 rounded-lg" title="Descarca">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    // Populate event info
+    document.getElementById('event-name').textContent = event.name || '';
+    document.getElementById('event-venue-text').textContent = (event.venue_name || '') + (event.venue_city ? ', ' + event.venue_city : '');
+    document.getElementById('event-date-text').textContent = event.starts_at ? formatDate(event.starts_at) : '-';
+
+    const statusColors = {
+        published: 'success', pending_review: 'warning', ended: 'muted', draft: 'secondary', cancelled: 'error'
+    };
+    const sc = statusColors[event.status] || 'secondary';
+    document.getElementById('event-status-badge').innerHTML =
+        '<span class="px-2.5 py-1 bg-' + sc + '/10 text-' + sc + ' text-xs font-medium rounded-lg">' + escapeHtml(event.status_label || event.status || '') + '</span>';
+
+    // Render aviz actions
+    renderAvizActions(event);
+    renderImpoziteActions(event);
+
+    document.getElementById('event-detail-section').classList.remove('hidden');
+
+    // Load event-specific document history
+    loadEventDocuments(selectedEventId);
+}
+
+function renderAvizActions(event) {
+    const container = document.getElementById('aviz-actions');
+    if (event.cerere_avizare) {
+        container.innerHTML = '<button onclick="downloadEventDoc(' + event.id + ', \'cerere_avizare\')" class="btn btn-sm bg-success/10 text-success hover:bg-success/20 gap-2">' +
+            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>' +
+            'Descarca Aviz</button>' +
+            '<button onclick="regenerateDocument(' + event.id + ', \'cerere_avizare\')" class="btn btn-sm bg-amber-50 text-amber-700 hover:bg-amber-100 gap-1.5" title="Regenereaza documentul">' +
+            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
+            'Regenereaza</button>';
+    } else {
+        container.innerHTML = '<button onclick="generateDocument(' + event.id + ', \'cerere_avizare\')" class="btn btn-sm bg-primary/10 text-primary hover:bg-primary/20 gap-2">' +
+            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+            'Genereaza Aviz</button>';
+    }
+}
+
+function renderImpoziteActions(event) {
+    const container = document.getElementById('impozite-actions');
+    if (event.declaratie_impozite) {
+        container.innerHTML = '<button onclick="downloadEventDoc(' + event.id + ', \'declaratie_impozite\')" class="btn btn-sm bg-success/10 text-success hover:bg-success/20 gap-2">' +
+            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>' +
+            'Descarca Impozite</button>' +
+            '<button onclick="regenerateDocument(' + event.id + ', \'declaratie_impozite\')" class="btn btn-sm bg-amber-50 text-amber-700 hover:bg-amber-100 gap-1.5" title="Regenereaza documentul">' +
+            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
+            'Regenereaza</button>';
+    } else if (event.status === 'ended') {
+        container.innerHTML = '<button onclick="generateDocument(' + event.id + ', \'declaratie_impozite\')" class="btn btn-sm bg-primary/10 text-primary hover:bg-primary/20 gap-2">' +
+            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+            'Genereaza Impozite</button>';
+    } else {
+        container.innerHTML = '<span class="text-xs text-muted italic">Disponibil dupa terminarea evenimentului</span>';
+    }
+}
+
+function downloadEventDoc(eventId, docType) {
+    const event = eventsData[eventId];
+    if (event && event[docType] && event[docType].download_url) {
+        window.open(event[docType].download_url, '_blank');
+    } else {
+        AmbiletNotifications.error('Documentul nu este disponibil');
+    }
 }
 
 async function generateDocument(eventId, documentType) {
-    const typeLabels = {
-        cerere_avizare: 'Cerere Avizare',
-        declaratie_impozite: 'Declaratie Impozite'
-    };
-
     try {
         AmbiletNotifications.info('Se genereaza documentul...');
 
@@ -257,12 +272,11 @@ async function generateDocument(eventId, documentType) {
         if (response.success) {
             AmbiletNotifications.success(response.data.message || 'Document generat cu succes!');
 
-            // Reload data
-            loadEventsWithDocuments();
-            loadDocuments();
+            // Refresh event data and history
+            await refreshEventData(eventId);
 
-            // Auto-download the generated document
-            if (response.data.document?.download_url) {
+            // Auto-download
+            if (response.data.document && response.data.document.download_url) {
                 window.open(response.data.document.download_url, '_blank');
             }
         } else {
@@ -274,34 +288,122 @@ async function generateDocument(eventId, documentType) {
     }
 }
 
-function downloadDocument(docId, url) {
-    if (url) {
-        window.open(url, '_blank');
-    } else {
-        AmbiletNotifications.error('Documentul nu este disponibil');
+async function regenerateDocument(eventId, documentType) {
+    if (!confirm('Esti sigur ca vrei sa regenerezi acest document? Versiunea anterioara va fi pastrata in istoric.')) return;
+
+    try {
+        AmbiletNotifications.info('Se regenereaza documentul...');
+
+        const response = await AmbiletAPI.post('/organizer/documents/generate', {
+            event_id: eventId,
+            document_type: documentType
+        });
+
+        if (response.success) {
+            AmbiletNotifications.success('Document regenerat cu succes!');
+
+            // Refresh event data and history
+            await refreshEventData(eventId);
+
+            // Auto-download
+            if (response.data.document && response.data.document.download_url) {
+                window.open(response.data.document.download_url, '_blank');
+            }
+        } else {
+            AmbiletNotifications.error(response.message || 'Eroare la regenerarea documentului');
+        }
+    } catch (error) {
+        console.error('Regenerate error:', error);
+        AmbiletNotifications.error('Eroare la regenerarea documentului.');
     }
 }
 
-function formatDate(dateStr) {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+async function refreshEventData(eventId) {
+    try {
+        const response = await AmbiletAPI.get('/organizer/documents/events');
+        if (response.success && response.data.events) {
+            response.data.events.forEach(function(e) {
+                eventsData[e.id] = e;
+            });
+            if (selectedEventId == eventId) {
+                const event = eventsData[eventId];
+                if (event) {
+                    renderAvizActions(event);
+                    renderImpoziteActions(event);
+                }
+            }
+        }
+    } catch(e) { /* ignore */ }
+
+    // Also reload history
+    loadEventDocuments(eventId);
 }
 
-// Search functionality
-document.getElementById('search-docs').addEventListener('input', AmbiletUtils.debounce(function() {
-    const q = this.value.toLowerCase();
-    if (!q) {
-        renderDocuments(allDocuments);
+async function loadEventDocuments(eventId) {
+    const container = document.getElementById('event-documents-list');
+    const section = document.getElementById('event-docs-history');
+
+    container.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-muted">Se incarca...</td></tr>';
+    section.classList.remove('hidden');
+
+    try {
+        const response = await AmbiletAPI.get('/organizer/documents', { event_id: eventId });
+        if (response.success) {
+            const docs = response.data.documents || [];
+            renderEventDocuments(docs);
+        } else {
+            renderEventDocuments([]);
+        }
+    } catch (error) {
+        console.error('Error loading event documents:', error);
+        renderEventDocuments([]);
+    }
+}
+
+function renderEventDocuments(documents) {
+    const container = document.getElementById('event-documents-list');
+
+    if (!documents.length) {
+        container.innerHTML = '<tr><td colspan="4" class="px-6 py-12 text-center text-muted">Nu exista documente generate pentru acest eveniment</td></tr>';
         return;
     }
-    const filtered = allDocuments.filter(d =>
-        (d.title || '').toLowerCase().includes(q) ||
-        (d.event_name || '').toLowerCase().includes(q) ||
-        (d.type_label || '').toLowerCase().includes(q)
-    );
-    renderDocuments(filtered);
-}, 300));
+
+    const typeLabels = {
+        cerere_avizare: 'Cerere Avizare',
+        declaratie_impozite: 'Declaratie Impozite'
+    };
+    const typeColors = {
+        cerere_avizare: 'blue-600',
+        declaratie_impozite: 'green-600'
+    };
+
+    container.innerHTML = documents.map(function(doc) {
+        const typeLabel = typeLabels[doc.type] || doc.type_label || doc.type || '';
+        const typeColor = typeColors[doc.type] || 'primary';
+        const dateStr = doc.issued_at ? formatDateShort(doc.issued_at) : (doc.created_at ? formatDateShort(doc.created_at) : '-');
+
+        let actions = '';
+        if (doc.download_url) {
+            actions += '<button onclick="window.open(\'' + doc.download_url + '\', \'_blank\')" class="p-2 text-primary hover:text-primary-dark hover:bg-primary/10 rounded-lg" title="Descarca">' +
+                '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>';
+        }
+        if (doc.view_url) {
+            actions += '<button onclick="window.open(\'' + doc.view_url + '\', \'_blank\')" class="p-2 text-muted hover:text-secondary hover:bg-surface rounded-lg" title="Vizualizeaza">' +
+                '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>';
+        }
+
+        return '<tr class="hover:bg-surface/50">' +
+            '<td class="px-6 py-4"><div class="flex items-center gap-3">' +
+            '<div class="w-10 h-10 bg-surface rounded-xl flex items-center justify-center">' +
+            '<svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>' +
+            '<div><p class="font-medium text-secondary">' + escapeHtml(doc.title || '') + '</p>' +
+            '<p class="text-xs text-muted">' + escapeHtml(doc.file_size || '') + '</p></div></div></td>' +
+            '<td class="px-6 py-4"><span class="px-2.5 py-1 bg-' + typeColor + '/10 text-' + typeColor + ' text-xs font-medium rounded-lg">' + escapeHtml(typeLabel) + '</span></td>' +
+            '<td class="px-6 py-4 text-sm text-muted">' + dateStr + '</td>' +
+            '<td class="px-6 py-4 text-right"><div class="flex items-center justify-end gap-1">' + actions + '</div></td>' +
+            '</tr>';
+    }).join('');
+}
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';
