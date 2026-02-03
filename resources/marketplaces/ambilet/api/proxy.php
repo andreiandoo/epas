@@ -2115,6 +2115,67 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // ==================== ORGANIZER BILLING / INVOICES ====================
+
+    case 'organizer.invoices':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 100);
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        $endpoint = '/organizer/invoices' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.invoice':
+        $method = 'GET';
+        $invoiceId = $_GET['invoice_id'] ?? '';
+        if (!$invoiceId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing invoice_id parameter']);
+            exit;
+        }
+        $endpoint = '/organizer/invoices/' . urlencode($invoiceId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.invoice.pdf':
+        $method = 'GET';
+        $invoiceId = $_GET['invoice_id'] ?? '';
+        if (!$invoiceId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing invoice_id parameter']);
+            exit;
+        }
+        $endpoint = '/organizer/invoices/' . urlencode($invoiceId) . '/pdf';
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
+    case 'organizer.invoices.export':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        $endpoint = '/organizer/invoices/export' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
+    case 'organizer.billing-info':
+        $method = $_SERVER['REQUEST_METHOD'] === 'PUT' ? 'PUT' : 'GET';
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/billing-info';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.payment-methods':
+        $method = 'GET';
+        $endpoint = '/organizer/payment-methods';
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER DOCUMENTS ====================
 
     case 'organizer.documents':
@@ -2538,10 +2599,11 @@ if ($useCache) {
 $url = API_BASE_URL . $endpoint;
 
 // Build headers
+$acceptHeader = (!empty($rawResponse)) ? '*/*' : 'application/json';
 $headers = [
     'Content-Type: application/json',
     'X-API-Key: ' . API_KEY,
-    'Accept: application/json',
+    'Accept: ' . $acceptHeader,
     'User-Agent: Ambilet Marketplace/1.0',
     'X-Session-ID: ' . session_id()  // Pass session ID for cart/checkout functionality
 ];
@@ -2551,6 +2613,10 @@ if ($requiresAuth) {
     $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
     if (!$authHeader && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
         $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    }
+    // For raw responses (PDF/export opened via window.open), accept token as query param
+    if (!$authHeader && !empty($rawResponse) && isset($_GET['token'])) {
+        $authHeader = 'Bearer ' . $_GET['token'];
     }
     if ($authHeader) {
         $headers[] = 'Authorization: ' . $authHeader;
@@ -2586,6 +2652,15 @@ if ($useCache && $response !== false) {
 }
 
 http_response_code($statusCode);
+
+// For raw responses (PDF, exports), forward Content-Type and Content-Disposition from upstream
+if (!empty($rawResponse) && isset($http_response_header)) {
+    foreach ($http_response_header as $header) {
+        if (preg_match('/^(Content-Type|Content-Disposition):/i', $header)) {
+            header($header);
+        }
+    }
+}
 
 if ($response === false) {
     echo json_encode(['error' => 'API request failed']);

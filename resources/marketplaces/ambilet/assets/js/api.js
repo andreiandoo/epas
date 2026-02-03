@@ -286,6 +286,8 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/team/resend-all-invites') return 'organizer.team.resend-all-invites';
 
         // Organizer billing/invoices
+        if (endpoint.match(/\/organizer\/invoices\/\d+\/pdf$/)) return 'organizer.invoice.pdf';
+        if (endpoint.match(/\/organizer\/invoices\/export/)) return 'organizer.invoices.export';
         if (endpoint.match(/\/organizer\/invoices\/\d+$/)) return 'organizer.invoice';
         if (endpoint === '/organizer/invoices' || endpoint.includes('/organizer/invoices?')) return 'organizer.invoices';
         if (endpoint === '/organizer/billing-info') return 'organizer.billing-info';
@@ -489,6 +491,12 @@ const AmbiletAPI = {
         const organizerPromoCodeMatch = endpoint.match(/\/organizer\/promo-codes\/(\d+)$/);
         if (organizerPromoCodeMatch) {
             return `code_id=${encodeURIComponent(organizerPromoCodeMatch[1])}`;
+        }
+
+        // Organizer invoice PDF endpoint - extract invoice ID
+        const organizerInvoicePdfMatch = endpoint.match(/\/organizer\/invoices\/(\d+)\/pdf$/);
+        if (organizerInvoicePdfMatch) {
+            return `invoice_id=${encodeURIComponent(organizerInvoicePdfMatch[1])}`;
         }
 
         // Organizer invoice endpoint - extract invoice ID

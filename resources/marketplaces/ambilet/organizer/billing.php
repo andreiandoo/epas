@@ -652,7 +652,9 @@ const BillingManager = {
      */
     async downloadInvoicePdf(invoiceId) {
         try {
-            window.open(`/api/marketplace-client/organizer/invoices/${invoiceId}/pdf`, '_blank');
+            const token = (typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : '') || '';
+            const proxyUrl = `/api/proxy.php?action=organizer.invoice.pdf&invoice_id=${invoiceId}&token=${encodeURIComponent(token)}`;
+            window.open(proxyUrl, '_blank');
         } catch (error) {
             console.error('Error downloading invoice:', error);
             this.showError('Nu s-a putut descărca factura');
@@ -673,7 +675,8 @@ const BillingManager = {
      */
     async exportInvoices() {
         try {
-            window.open(`/api/marketplace-client/organizer/invoices/export?status=${this.currentFilter}`, '_blank');
+            const token = (typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : '') || '';
+            window.open(`/api/proxy.php?action=organizer.invoices.export&status=${this.currentFilter}&token=${encodeURIComponent(token)}`, '_blank');
         } catch (error) {
             console.error('Error exporting invoices:', error);
             this.showError('Nu s-au putut exporta facturile');
