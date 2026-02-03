@@ -62,41 +62,38 @@ class VenueResource extends Resource
                 ]),
 
                 SC\Grid::make(3)->schema([
-                    Forms\Components\Select::make('venue_category_id')
-                        ->label('Venue Category')
+                    Forms\Components\Select::make('coreCategories')
+                        ->label('Venue Categories')
+                        ->relationship('coreCategories', 'slug')
                         ->options(fn () => VenueCategory::orderBy('sort_order')->get()->mapWithKeys(fn ($cat) => [
                             $cat->id => ($cat->icon ? $cat->icon . ' ' : '') . ($cat->name['en'] ?? $cat->slug)
                         ]))
+                        ->multiple()
+                        ->maxItems(3)
                         ->searchable()
                         ->preload()
                         ->live()
-                        ->nullable()
-                        ->dehydrated(false)
-                        ->afterStateUpdated(fn (\Filament\Schemas\Components\Utilities\Set $set) => $set('venue_type_id', null))
-                        ->afterStateHydrated(function (\Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get, $record) {
-                            if ($record && $record->venueType && $record->venueType->venue_category_id) {
-                                $set('venue_category_id', $record->venueType->venue_category_id);
-                            }
-                        })
-                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Categoria venue-ului (ex: Muzică, Sport, HoReCa)'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Max 3 categorii (ex: Muzică, Sport, HoReCa)'),
 
-                    Forms\Components\Select::make('venue_type_id')
-                        ->label('Venue Type')
+                    Forms\Components\Select::make('venueTypes')
+                        ->label('Venue Types')
+                        ->relationship('venueTypes', 'slug')
                         ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
-                            $categoryId = $get('venue_category_id');
+                            $categoryIds = $get('coreCategories') ?? [];
                             $query = VenueType::query()->orderBy('sort_order');
-                            if ($categoryId) {
-                                $query->where('venue_category_id', $categoryId);
+                            if (!empty($categoryIds)) {
+                                $query->whereIn('venue_category_id', $categoryIds);
                             }
                             return $query->get()->mapWithKeys(fn ($type) => [
                                 $type->id => ($type->icon ? $type->icon . ' ' : '') . ($type->name['en'] ?? $type->slug)
                             ]);
                         })
+                        ->multiple()
+                        ->maxItems(5)
                         ->searchable()
                         ->preload()
                         ->live()
-                        ->nullable()
-                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Tipul venue-ului (ex: Arenă, Club, Restaurant)'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Max 5 tipuri (ex: Arenă, Club, Restaurant)'),
 
                     Forms\Components\Select::make('venue_tag')
                         ->label('Venue Tag')
@@ -327,10 +324,9 @@ class VenueResource extends Resource
                     ->sortable()
                     ->url(fn ($record) => static::getUrl('view', ['record' => $record->slug])),
 
-                Tables\Columns\TextColumn::make('venueType.name.en')
-                    ->label('Type')
-                    ->formatStateUsing(fn ($record) => $record->venueType ? (($record->venueType->icon ?? '') . ' ' . ($record->venueType->name['en'] ?? '')) : '-')
-                    ->sortable()
+                Tables\Columns\TextColumn::make('venueTypes.slug')
+                    ->label('Types')
+                    ->formatStateUsing(fn ($record) => $record->venueTypes->map(fn ($t) => ($t->icon ?? '') . ' ' . ($t->name['en'] ?? $t->slug))->join(', ') ?: '-')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('venue_tag')

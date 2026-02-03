@@ -313,6 +313,24 @@ class Venue extends Model
         return $this->belongsTo(VenueType::class);
     }
 
+    /**
+     * Core venue types (many-to-many, max 5)
+     */
+    public function venueTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(VenueType::class, 'venue_type_venue')
+            ->withTimestamps();
+    }
+
+    /**
+     * Core venue categories (many-to-many, max 3)
+     */
+    public function coreCategories(): BelongsToMany
+    {
+        return $this->belongsToMany(VenueCategory::class, 'venue_category_venue')
+            ->withTimestamps();
+    }
+
     public function venueCategories(): BelongsToMany
     {
         return $this->belongsToMany(
