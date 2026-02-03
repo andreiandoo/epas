@@ -38,6 +38,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <button onclick="showSection('contract')" class="settings-tab px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-surface" data-section="contract">Contract</button>
                 <button onclick="showSection('notifications')" class="settings-tab px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-surface" data-section="notifications">Notificari</button>
                 <button onclick="showSection('security')" class="settings-tab px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-surface" data-section="security">Securitate</button>
+                <button onclick="showSection('sharelinks')" class="settings-tab px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-surface" data-section="sharelinks">Link-uri Share</button>
             </div>
 
             <div id="profile-section" class="settings-section">
@@ -255,7 +256,63 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </form>
                 </div>
             </div>
+            <div id="sharelinks-section" class="settings-section hidden">
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary">Link-uri de Monitorizare</h2>
+                            <p class="text-sm text-muted mt-1">Genereaza link-uri unice pentru a permite altora sa vada statisticile evenimentelor tale in timp real.</p>
+                        </div>
+                        <button onclick="openShareLinkModal()" class="btn btn-primary">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            Link nou
+                        </button>
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <div class="text-sm text-blue-800">
+                                <p class="font-medium mb-1">Cum functioneaza?</p>
+                                <p>Selecteaza unul sau mai multe evenimente si genereaza un link unic. Oricine acceseaza link-ul va putea vedea in timp real: numele evenimentelor, locatia, data/ora, numarul de bilete puse in vanzare si cate s-au vandut.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="share-links-list">
+                        <div class="text-center py-8 text-muted">Se incarca...</div>
+                    </div>
+                </div>
+            </div>
         </main>
+    </div>
+
+    <!-- Share Link Create Modal -->
+    <div id="share-link-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-secondary">Creeaza Link de Monitorizare</h3>
+                <button onclick="closeShareLinkModal()">
+                    <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form onsubmit="createShareLink(event)" class="space-y-4">
+                <div>
+                    <label class="label">Nume link (optional)</label>
+                    <input type="text" id="share-link-name" class="input w-full" placeholder="ex: Link pentru sponsor" maxlength="100">
+                </div>
+                <div>
+                    <label class="label">Selecteaza evenimente *</label>
+                    <div id="share-events-loading" class="text-sm text-muted py-2">Se incarca evenimentele...</div>
+                    <div id="share-events-list" class="hidden max-h-60 overflow-y-auto border border-border rounded-xl divide-y divide-border"></div>
+                    <p id="share-events-empty" class="hidden text-sm text-muted py-2">Nu ai evenimente active.</p>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeShareLinkModal()" class="btn btn-secondary flex-1">Anuleaza</button>
+                    <button type="submit" id="create-share-btn" class="btn btn-primary flex-1" disabled>Genereaza Link</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div id="bank-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
@@ -277,7 +334,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 $scriptsExtra = <<<'JS'
 <script>
 AmbiletAuth.requireOrganizerAuth();
-document.addEventListener('DOMContentLoaded', function() { loadSettings(); loadBankAccounts(); loadContract(); initNotificationSoundToggle(); const hash = window.location.hash.replace('#', ''); if (hash) showSection(hash); });
+document.addEventListener('DOMContentLoaded', function() { loadSettings(); loadBankAccounts(); loadContract(); loadShareLinks(); initNotificationSoundToggle(); const hash = window.location.hash.replace('#', ''); if (hash) showSection(hash); });
 
 // Initialize notification sound toggle from saved preference
 function initNotificationSoundToggle() {
@@ -634,6 +691,238 @@ async function downloadContract() {
             AmbiletNotifications.info('Contractul nu este disponibil momentan. Contacteaza suportul.');
         }
     } catch (error) { AmbiletNotifications.error('Eroare la descarcare contract'); }
+}
+
+// ==================== SHARE LINKS ====================
+
+let shareLinksData = [];
+let organizerEventsForShare = [];
+
+async function loadShareLinks() {
+    try {
+        const response = await AmbiletAPI.get('/organizer/share-links');
+        if (response.success) {
+            shareLinksData = response.data?.links || [];
+            renderShareLinks();
+        } else {
+            document.getElementById('share-links-list').innerHTML = '<div class="text-center py-8 text-muted">Eroare la incarcare</div>';
+        }
+    } catch (error) {
+        document.getElementById('share-links-list').innerHTML = '<div class="text-center py-8 text-muted">Eroare la incarcare</div>';
+    }
+}
+
+function slEscapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+}
+
+function renderShareLinks() {
+    const container = document.getElementById('share-links-list');
+    if (!shareLinksData.length) {
+        container.innerHTML = `
+            <div class="text-center py-12">
+                <svg class="w-16 h-16 text-muted/30 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                <p class="text-muted">Nu ai creat inca niciun link de monitorizare.</p>
+                <button onclick="openShareLinkModal()" class="btn btn-primary mt-4">Creeaza primul link</button>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = shareLinksData.map(link => {
+        const url = window.AMBILET.siteUrl + '/view/' + link.code;
+        const eventCount = (link.event_ids || []).length;
+        const isActive = link.is_active !== false;
+        const createdDate = link.created_at ? new Date(link.created_at).toLocaleDateString('ro-RO') : '-';
+        const accessCount = link.access_count || 0;
+
+        return `
+            <div class="flex items-start gap-4 p-4 bg-surface rounded-xl mb-3 ${!isActive ? 'opacity-60' : ''}">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <h3 class="font-semibold text-secondary truncate">${slEscapeHtml(link.name || 'Link')}</h3>
+                        ${!isActive ? '<span class="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full flex-shrink-0">Inactiv</span>' : '<span class="px-2 py-0.5 bg-green-100 text-green-600 text-xs rounded-full flex-shrink-0">Activ</span>'}
+                    </div>
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                        <span>${eventCount} eveniment${eventCount !== 1 ? 'e' : ''}</span>
+                        <span>&middot;</span>
+                        <span>${accessCount} accesari</span>
+                        <span>&middot;</span>
+                        <span>Creat: ${createdDate}</span>
+                    </div>
+                    <div class="mt-2 flex items-center gap-2">
+                        <code class="text-xs bg-white px-2 py-1 rounded border border-border truncate block max-w-[300px]">${slEscapeHtml(url)}</code>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1 flex-shrink-0 pt-1">
+                    <button onclick="copyShareLink('${link.code}')" class="p-2 text-muted hover:text-primary rounded-lg hover:bg-white" title="Copiaza link">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                    </button>
+                    <button onclick="window.open('/view/${link.code}', '_blank')" class="p-2 text-muted hover:text-primary rounded-lg hover:bg-white" title="Deschide link">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </button>
+                    <button onclick="toggleShareLink('${link.code}', ${isActive ? 'false' : 'true'})" class="p-2 text-muted hover:text-yellow-600 rounded-lg hover:bg-white" title="${isActive ? 'Dezactiveaza' : 'Activeaza'}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isActive ? 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636' : 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'}"/></svg>
+                    </button>
+                    <button onclick="deleteShareLink('${link.code}')" class="p-2 text-muted hover:text-error rounded-lg hover:bg-white" title="Sterge">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function openShareLinkModal() {
+    document.getElementById('share-link-modal').classList.remove('hidden');
+    document.getElementById('share-link-modal').classList.add('flex');
+    document.getElementById('share-link-name').value = '';
+    document.getElementById('create-share-btn').disabled = true;
+
+    // Load events
+    document.getElementById('share-events-loading').classList.remove('hidden');
+    document.getElementById('share-events-list').classList.add('hidden');
+    document.getElementById('share-events-empty').classList.add('hidden');
+
+    try {
+        const response = await AmbiletAPI.get('/organizer/events', { per_page: 50 });
+        if (response.success) {
+            organizerEventsForShare = response.data?.events || response.data || [];
+            if (Array.isArray(organizerEventsForShare) && organizerEventsForShare.length > 0) {
+                renderEventCheckboxes(organizerEventsForShare);
+            } else {
+                document.getElementById('share-events-loading').classList.add('hidden');
+                document.getElementById('share-events-empty').classList.remove('hidden');
+            }
+        } else {
+            document.getElementById('share-events-loading').classList.add('hidden');
+            document.getElementById('share-events-empty').classList.remove('hidden');
+        }
+    } catch (error) {
+        document.getElementById('share-events-loading').classList.add('hidden');
+        document.getElementById('share-events-empty').classList.remove('hidden');
+        document.getElementById('share-events-empty').textContent = 'Eroare la incarcarea evenimentelor.';
+    }
+}
+
+function renderEventCheckboxes(events) {
+    const container = document.getElementById('share-events-list');
+    container.innerHTML = events.map(ev => {
+        const evTitle = ev.title || ev.name || 'Eveniment';
+        const evDate = ev.start_date || ev.date || '';
+        const evStatus = ev.status || '';
+        return `
+            <label class="flex items-center gap-3 p-3 hover:bg-surface cursor-pointer">
+                <input type="checkbox" value="${ev.id}" class="share-event-checkbox rounded border-border text-primary focus:ring-primary" onchange="updateShareBtnState()">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-secondary truncate">${slEscapeHtml(evTitle)}</p>
+                    <p class="text-xs text-muted">${slEscapeHtml(evDate)}${evStatus ? ' &middot; ' + slEscapeHtml(evStatus) : ''}</p>
+                </div>
+            </label>
+        `;
+    }).join('');
+
+    document.getElementById('share-events-loading').classList.add('hidden');
+    container.classList.remove('hidden');
+}
+
+function updateShareBtnState() {
+    const checked = document.querySelectorAll('.share-event-checkbox:checked');
+    document.getElementById('create-share-btn').disabled = checked.length === 0;
+}
+
+function closeShareLinkModal() {
+    document.getElementById('share-link-modal').classList.add('hidden');
+    document.getElementById('share-link-modal').classList.remove('flex');
+}
+
+async function createShareLink(e) {
+    e.preventDefault();
+
+    const checked = document.querySelectorAll('.share-event-checkbox:checked');
+    if (checked.length === 0) {
+        AmbiletNotifications.error('Selecteaza cel putin un eveniment');
+        return;
+    }
+
+    const eventIds = Array.from(checked).map(cb => parseInt(cb.value));
+    const name = document.getElementById('share-link-name').value.trim();
+
+    try {
+        const response = await AmbiletAPI.post('/organizer/share-links', {
+            event_ids: eventIds,
+            name: name
+        });
+
+        if (response.success) {
+            closeShareLinkModal();
+            AmbiletNotifications.success('Link creat cu succes!');
+
+            // Copy to clipboard
+            if (response.url) {
+                try {
+                    await navigator.clipboard.writeText(response.url);
+                    AmbiletNotifications.info('Link-ul a fost copiat in clipboard');
+                } catch (clipErr) { /* clipboard may not be available */ }
+            }
+
+            loadShareLinks();
+        } else {
+            AmbiletNotifications.error(response.message || response.error || 'Eroare la creare');
+        }
+    } catch (error) {
+        AmbiletNotifications.error(error.message || 'Eroare la creare');
+    }
+}
+
+async function copyShareLink(code) {
+    const url = window.AMBILET.siteUrl + '/view/' + code;
+    try {
+        await navigator.clipboard.writeText(url);
+        AmbiletNotifications.success('Link copiat in clipboard!');
+    } catch (e) {
+        // Fallback for older browsers
+        const input = document.createElement('input');
+        input.value = url;
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        AmbiletNotifications.success('Link copiat!');
+    }
+}
+
+async function toggleShareLink(code, active) {
+    try {
+        const response = await AmbiletAPI.put('/organizer/share-links/' + code, { is_active: active });
+        if (response.success) {
+            AmbiletNotifications.success(active ? 'Link activat' : 'Link dezactivat');
+            loadShareLinks();
+        } else {
+            AmbiletNotifications.error(response.message || response.error || 'Eroare');
+        }
+    } catch (error) {
+        AmbiletNotifications.error(error.message || 'Eroare');
+    }
+}
+
+async function deleteShareLink(code) {
+    if (!confirm('Esti sigur ca vrei sa stergi acest link? Oricine il foloseste nu va mai putea accesa statisticile.')) return;
+    try {
+        const response = await AmbiletAPI.delete('/organizer/share-links/' + code);
+        if (response.success) {
+            AmbiletNotifications.success('Link sters');
+            loadShareLinks();
+        } else {
+            AmbiletNotifications.error(response.message || response.error || 'Eroare la stergere');
+        }
+    } catch (error) {
+        AmbiletNotifications.error(error.message || 'Eroare la stergere');
+    }
 }
 
 // Document upload functions

@@ -295,6 +295,10 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/participants' || endpoint.includes('/organizer/participants?')) return 'organizer.participants';
         if (endpoint === '/organizer/participants/checkin') return 'organizer.participants.checkin';
 
+        // Organizer share links
+        if (endpoint.match(/\/organizer\/share-links\/[A-Za-z0-9]+$/)) return 'organizer.share-link';
+        if (endpoint === '/organizer/share-links') return 'organizer.share-links';
+
         // Organizer API settings
         if (endpoint === '/organizer/api-key') return 'organizer.api-key';
         if (endpoint === '/organizer/api-key/regenerate') return 'organizer.api-key.regenerate';
@@ -493,6 +497,11 @@ const AmbiletAPI = {
             return `invoice_id=${encodeURIComponent(organizerInvoiceMatch[1])}`;
         }
 
+        // Organizer share links
+        const shareLinkMatch = endpoint.match(/\/organizer\/share-links\/([A-Za-z0-9]+)$/);
+        if (shareLinkMatch) return 'organizer.share-link';
+        if (endpoint === '/organizer/share-links') return 'organizer.share-links';
+
         // Organizer documents endpoint - extract event ID or document ID
         const organizerDocumentForEventMatch = endpoint.match(/\/organizer\/documents\/event\/(\d+)$/);
         if (organizerDocumentForEventMatch) {
@@ -505,6 +514,12 @@ const AmbiletAPI = {
         const organizerDocumentViewMatch = endpoint.match(/\/organizer\/documents\/(\d+)\/view$/);
         if (organizerDocumentViewMatch) {
             return `document_id=${encodeURIComponent(organizerDocumentViewMatch[1])}`;
+        }
+
+        // Organizer share link code extraction
+        const shareLinkCodeMatch = endpoint.match(/\/organizer\/share-links\/([A-Za-z0-9]+)$/);
+        if (shareLinkCodeMatch) {
+            return `code=${encodeURIComponent(shareLinkCodeMatch[1])}`;
         }
 
         // Pass through query params

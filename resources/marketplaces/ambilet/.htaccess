@@ -421,6 +421,13 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^cauta/?$ cauta.php [L,QSA]
 
 # ============================================
+# SHARE LINK VIEW - /view/{code}
+# ============================================
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^view/([A-Za-z0-9]{6,20})/?$ view.php?code=$1 [L,QSA]
+
+# ============================================
 # API PASSTHROUGH - Exclude API folder from rewrites
 # ============================================
 RewriteCond %{REQUEST_URI} ^/api/ [NC]

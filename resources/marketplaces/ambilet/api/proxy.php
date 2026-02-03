@@ -174,6 +174,137 @@ class ApiCache {
 
 ApiCache::init();
 
+// ==================== SHARE LINK LOCAL STORAGE ====================
+
+function shareLinksFile() {
+    $dir = dirname(__DIR__) . '/data';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $file = $dir . '/share-links.json';
+    if (!file_exists($file)) {
+        file_put_contents($file, '{}', LOCK_EX);
+    }
+    return $file;
+}
+
+function loadShareLinks() {
+    $file = shareLinksFile();
+    $data = @json_decode(file_get_contents($file), true);
+    return is_array($data) ? $data : [];
+}
+
+function saveShareLinks($links) {
+    $file = shareLinksFile();
+    file_put_contents($file, json_encode($links, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+}
+
+function generateShareCode($length = 10) {
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    $code = '';
+    for ($i = 0; $i < $length; $i++) {
+        $code .= $chars[random_int(0, strlen($chars) - 1)];
+    }
+    return $code;
+}
+
+function authenticateOrganizer() {
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    if (!$authHeader && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    }
+    if (!$authHeader) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Authentication required']);
+        exit;
+    }
+
+    // Validate token against core API
+    $url = API_BASE_URL . '/organizer/me';
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => implode("\r\n", [
+                'Content-Type: application/json',
+                'X-API-Key: ' . API_KEY,
+                'Accept: application/json',
+                'Authorization: ' . $authHeader
+            ]),
+            'timeout' => 10,
+            'ignore_errors' => true
+        ]
+    ]);
+    $response = @file_get_contents($url, false, $context);
+    if (!$response) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Authentication failed']);
+        exit;
+    }
+    $data = json_decode($response, true);
+    $orgId = $data['data']['id'] ?? $data['data']['organizer']['id'] ?? $data['id'] ?? null;
+    if (!$orgId) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Invalid token']);
+        exit;
+    }
+    return (int)$orgId;
+}
+
+function fetchEventsForShareLink($eventIds) {
+    $results = [];
+    foreach ($eventIds as $eventId) {
+        $id = (int)$eventId;
+        if ($id <= 0) continue;
+
+        // Fetch from core API using marketplace API key
+        $url = API_BASE_URL . '/events/' . $id;
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'header' => implode("\r\n", [
+                    'Content-Type: application/json',
+                    'X-API-Key: ' . API_KEY,
+                    'Accept: application/json'
+                ]),
+                'timeout' => 10,
+                'ignore_errors' => true
+            ]
+        ]);
+        $response = @file_get_contents($url, false, $context);
+        if (!$response) continue;
+
+        $eventData = json_decode($response, true);
+        $event = $eventData['data'] ?? $eventData;
+        if (!$event || (!isset($event['title']) && !isset($event['name']))) continue;
+
+        // Extract only safe public fields
+        $ticketTypes = $event['ticket_types'] ?? $event['tickets'] ?? [];
+        $results[] = [
+            'id' => $event['id'] ?? $id,
+            'title' => $event['title'] ?? $event['name'] ?? '',
+            'venue_name' => $event['venue']['name'] ?? $event['venue_name'] ?? '',
+            'city' => $event['venue']['city'] ?? $event['city'] ?? '',
+            'start_date' => $event['start_date'] ?? $event['date'] ?? '',
+            'start_time' => $event['start_time'] ?? '',
+            'end_date' => $event['end_date'] ?? '',
+            'end_time' => $event['end_time'] ?? '',
+            'status' => $event['status'] ?? '',
+            'ticket_types' => array_map(function($tt) {
+                return [
+                    'name' => $tt['name'] ?? $tt['title'] ?? '',
+                    'total' => (int)($tt['quantity'] ?? $tt['total'] ?? 0),
+                    'sold' => (int)($tt['sold'] ?? $tt['tickets_sold'] ?? 0),
+                    'available' => (int)($tt['available'] ?? max(0, ($tt['quantity'] ?? $tt['total'] ?? 0) - ($tt['sold'] ?? $tt['tickets_sold'] ?? 0))),
+                    'price' => (float)($tt['price'] ?? 0),
+                ];
+            }, $ticketTypes),
+            'tickets_total' => (int)($event['tickets_total'] ?? array_sum(array_column($ticketTypes, 'quantity')) ?: array_sum(array_column($ticketTypes, 'total'))),
+            'tickets_sold' => (int)($event['tickets_sold'] ?? array_sum(array_column($ticketTypes, 'sold'))),
+        ];
+    }
+    return $results;
+}
+
 // Rate limiting (simple IP-based)
 session_start();
 $ip = $_SERVER['REMOTE_ADDR'];
@@ -1943,6 +2074,180 @@ switch ($action) {
         $endpoint = '/organizer/services/orders/' . $uuid . '/pay';
         $requiresAuth = true;
         break;
+
+    // ==================== ORGANIZER SHARE LINKS (LOCAL) ====================
+
+    case 'organizer.share-links':
+        $orgId = authenticateOrganizer();
+        $allLinks = loadShareLinks();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Create new share link
+            $input = json_decode(file_get_contents('php://input'), true);
+            if (!$input || empty($input['event_ids'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'event_ids is required']);
+                exit;
+            }
+
+            // Validate event_ids - must be array of positive integers
+            $eventIds = [];
+            foreach ((array)$input['event_ids'] as $eid) {
+                $parsed = (int)$eid;
+                if ($parsed > 0) $eventIds[] = $parsed;
+            }
+            if (empty($eventIds)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid event_ids']);
+                exit;
+            }
+            if (count($eventIds) > 20) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Maximum 20 events per share link']);
+                exit;
+            }
+
+            // Limit share links per organizer
+            $orgLinks = array_filter($allLinks, fn($l) => ($l['organizer_id'] ?? 0) === $orgId);
+            if (count($orgLinks) >= 50) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Maximum 50 share links per organizer']);
+                exit;
+            }
+
+            // Generate unique code
+            $code = generateShareCode();
+            $attempts = 0;
+            while (isset($allLinks[$code]) && $attempts < 10) {
+                $code = generateShareCode();
+                $attempts++;
+            }
+
+            $name = trim(strip_tags($input['name'] ?? ''));
+            if (mb_strlen($name) > 100) $name = mb_substr($name, 0, 100);
+
+            $link = [
+                'code' => $code,
+                'organizer_id' => $orgId,
+                'name' => $name ?: 'Link #' . (count($orgLinks) + 1),
+                'event_ids' => array_values(array_unique($eventIds)),
+                'is_active' => true,
+                'created_at' => date('c'),
+                'access_count' => 0,
+                'last_accessed_at' => null,
+            ];
+
+            $allLinks[$code] = $link;
+            saveShareLinks($allLinks);
+
+            echo json_encode([
+                'success' => true,
+                'data' => $link,
+                'url' => SITE_URL . '/view/' . $code
+            ]);
+        } else {
+            // List organizer's share links
+            $orgLinks = array_values(array_filter($allLinks, fn($l) => ($l['organizer_id'] ?? 0) === $orgId));
+            // Sort by created_at descending
+            usort($orgLinks, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+            echo json_encode(['success' => true, 'data' => ['links' => $orgLinks]]);
+        }
+        exit;
+
+    case 'organizer.share-link':
+        $orgId = authenticateOrganizer();
+        $code = $_GET['code'] ?? '';
+
+        if (!$code || !preg_match('/^[A-Za-z0-9]{6,20}$/', $code)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid share link code']);
+            exit;
+        }
+
+        $allLinks = loadShareLinks();
+
+        if (!isset($allLinks[$code]) || ($allLinks[$code]['organizer_id'] ?? 0) !== $orgId) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Share link not found']);
+            exit;
+        }
+
+        $method = $_SERVER['REQUEST_METHOD'];
+
+        if ($method === 'DELETE') {
+            unset($allLinks[$code]);
+            saveShareLinks($allLinks);
+            echo json_encode(['success' => true, 'message' => 'Share link deleted']);
+        } elseif ($method === 'PUT') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            if (isset($input['name'])) {
+                $name = trim(strip_tags($input['name']));
+                if (mb_strlen($name) > 100) $name = mb_substr($name, 0, 100);
+                $allLinks[$code]['name'] = $name;
+            }
+            if (isset($input['event_ids'])) {
+                $eventIds = [];
+                foreach ((array)$input['event_ids'] as $eid) {
+                    $parsed = (int)$eid;
+                    if ($parsed > 0) $eventIds[] = $parsed;
+                }
+                if (!empty($eventIds) && count($eventIds) <= 20) {
+                    $allLinks[$code]['event_ids'] = array_values(array_unique($eventIds));
+                }
+            }
+            if (isset($input['is_active'])) {
+                $allLinks[$code]['is_active'] = (bool)$input['is_active'];
+            }
+            saveShareLinks($allLinks);
+            echo json_encode(['success' => true, 'data' => $allLinks[$code]]);
+        } else {
+            echo json_encode(['success' => true, 'data' => $allLinks[$code]]);
+        }
+        exit;
+
+    case 'share-link.data':
+        // Public endpoint - no auth required
+        $code = $_GET['code'] ?? '';
+
+        if (!$code || !preg_match('/^[A-Za-z0-9]{6,20}$/', $code)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid code']);
+            exit;
+        }
+
+        $allLinks = loadShareLinks();
+
+        if (!isset($allLinks[$code])) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Link not found']);
+            exit;
+        }
+
+        $link = $allLinks[$code];
+
+        if (!($link['is_active'] ?? true)) {
+            http_response_code(410);
+            echo json_encode(['error' => 'This link is no longer active']);
+            exit;
+        }
+
+        // Update access stats
+        $allLinks[$code]['access_count'] = ($allLinks[$code]['access_count'] ?? 0) + 1;
+        $allLinks[$code]['last_accessed_at'] = date('c');
+        saveShareLinks($allLinks);
+
+        // Fetch event data from core API
+        $events = fetchEventsForShareLink($link['event_ids'] ?? []);
+
+        echo json_encode([
+            'success' => true,
+            'data' => [
+                'name' => $link['name'] ?? '',
+                'events' => $events,
+                'updated_at' => date('c'),
+            ]
+        ]);
+        exit;
 
     default:
         http_response_code(400);
