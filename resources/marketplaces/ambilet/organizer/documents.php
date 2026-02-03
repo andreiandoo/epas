@@ -23,9 +23,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- Event Selector -->
             <div class="bg-white rounded-2xl border border-border p-6 mb-6">
                 <label class="label mb-2 block">Selecteaza evenimentul</label>
-                <select id="event-selector" class="input w-full max-w-lg" onchange="onEventSelected()">
-                    <option value="">-- Alege un eveniment --</option>
-                </select>
+                <div class="relative w-full max-w-lg" id="event-dropdown-wrapper">
+                    <input type="text" id="event-search-input" class="input w-full pr-10" placeholder="Cauta eveniment..." autocomplete="off"
+                           onfocus="openEventDropdown()" oninput="filterEventDropdown()">
+                    <input type="hidden" id="event-selector" value="">
+                    <svg class="w-5 h-5 text-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    <div id="event-dropdown-list" class="hidden absolute z-50 mt-1 w-full max-h-64 overflow-y-auto bg-white border border-border rounded-xl shadow-lg"></div>
+                </div>
                 <div id="events-loading" class="text-sm text-muted mt-2">Se incarca evenimentele...</div>
             </div>
 
@@ -124,10 +128,20 @@ $scriptsExtra = <<<'JS'
 <script>
 AmbiletAuth.requireOrganizerAuth();
 let eventsData = {};
+let eventsList = [];
 let selectedEventId = null;
+let dropdownOpen = false;
 
 document.addEventListener('DOMContentLoaded', function() {
     loadEvents();
+
+    // Close dropdown on outside click
+    document.addEventListener('click', function(e) {
+        const wrapper = document.getElementById('event-dropdown-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            closeEventDropdown();
+        }
+    });
 });
 
 function escapeHtml(str) {
@@ -154,15 +168,10 @@ async function loadEvents() {
         const response = await AmbiletAPI.get('/organizer/documents/events');
         if (response.success && response.data.events) {
             const events = response.data.events;
-            const selector = document.getElementById('event-selector');
-
             events.forEach(e => {
                 eventsData[e.id] = e;
-                const opt = document.createElement('option');
-                opt.value = e.id;
                 const dateStr = e.starts_at ? ' — ' + formatDateShort(e.starts_at) : '';
-                opt.textContent = (e.name || 'Eveniment') + dateStr;
-                selector.appendChild(opt);
+                eventsList.push({ id: e.id, label: (e.name || 'Eveniment') + dateStr });
             });
 
             document.getElementById('events-loading').classList.add('hidden');
@@ -171,8 +180,7 @@ async function loadEvents() {
             const params = new URLSearchParams(window.location.search);
             const preselect = params.get('event');
             if (preselect && eventsData[preselect]) {
-                selector.value = preselect;
-                onEventSelected();
+                selectEvent(preselect);
             }
         } else {
             document.getElementById('events-loading').textContent = 'Nu ai evenimente.';
@@ -181,6 +189,51 @@ async function loadEvents() {
         console.error('Error loading events:', error);
         document.getElementById('events-loading').textContent = 'Eroare la incarcarea evenimentelor.';
     }
+}
+
+function openEventDropdown() {
+    dropdownOpen = true;
+    renderEventDropdown(eventsList);
+    document.getElementById('event-dropdown-list').classList.remove('hidden');
+}
+
+function closeEventDropdown() {
+    dropdownOpen = false;
+    document.getElementById('event-dropdown-list').classList.add('hidden');
+}
+
+function filterEventDropdown() {
+    const query = document.getElementById('event-search-input').value.toLowerCase().trim();
+    if (!query) {
+        renderEventDropdown(eventsList);
+    } else {
+        const filtered = eventsList.filter(e => e.label.toLowerCase().includes(query));
+        renderEventDropdown(filtered);
+    }
+    document.getElementById('event-dropdown-list').classList.remove('hidden');
+}
+
+function renderEventDropdown(items) {
+    const list = document.getElementById('event-dropdown-list');
+    if (!items.length) {
+        list.innerHTML = '<div class="px-4 py-3 text-sm text-muted">Niciun rezultat</div>';
+        return;
+    }
+    list.innerHTML = items.map(item =>
+        '<div class="px-4 py-3 text-sm cursor-pointer hover:bg-primary/5 transition-colors ' +
+        (String(item.id) === String(selectedEventId) ? 'bg-primary/10 font-semibold text-primary' : 'text-secondary') +
+        '" onclick="selectEvent(\'' + item.id + '\')">' + escapeHtml(item.label) + '</div>'
+    ).join('');
+}
+
+function selectEvent(id) {
+    document.getElementById('event-selector').value = id;
+    const item = eventsList.find(e => String(e.id) === String(id));
+    if (item) {
+        document.getElementById('event-search-input').value = item.label;
+    }
+    closeEventDropdown();
+    onEventSelected();
 }
 
 function onEventSelected() {
