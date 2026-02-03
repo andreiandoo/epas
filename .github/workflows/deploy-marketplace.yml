@@ -1,0 +1,119 @@
+name: Deploy Marketplace
+
+on:
+  # Manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      commit_message:
+        description: 'Commit message for deployment'
+        required: false
+        default: 'Deploy marketplace updates'
+
+  # Automatic trigger on push to main/master when ambilet folder changes
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'epas/resources/marketplaces/ambilet/**'
+
+env:
+  SOURCE_PATH: epas/resources/marketplaces/ambilet
+  TARGET_BRANCH: marketplace
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+      - name: Check for changes
+        id: check
+        run: |
+          if [ ! -d "${{ env.SOURCE_PATH }}" ]; then
+            echo "Source path does not exist: ${{ env.SOURCE_PATH }}"
+            exit 1
+          fi
+          echo "source_exists=true" >> $GITHUB_OUTPUT
+
+      - name: Prepare marketplace branch
+        run: |
+          # Create a temporary directory for the marketplace content
+          mkdir -p /tmp/marketplace-content
+
+          # Copy all files from ambilet to temp directory
+          cp -r ${{ env.SOURCE_PATH }}/* /tmp/marketplace-content/
+
+          # Check if marketplace branch exists
+          if git ls-remote --heads origin ${{ env.TARGET_BRANCH }} | grep -q ${{ env.TARGET_BRANCH }}; then
+            echo "Branch exists, checking out..."
+            git fetch origin ${{ env.TARGET_BRANCH }}
+            git checkout ${{ env.TARGET_BRANCH }}
+
+            # Remove all files except .git and data/ (preserves runtime data like share-links.json)
+            find . -maxdepth 1 ! -name '.git' ! -name '.' ! -name 'data' -exec rm -rf {} +
+          else
+            echo "Creating orphan branch..."
+            git checkout --orphan ${{ env.TARGET_BRANCH }}
+            git rm -rf . || true
+          fi
+
+          # Copy marketplace content to root (data/.htaccess and .gitignore will be updated, runtime files preserved)
+          cp -r /tmp/marketplace-content/* .
+
+          # Stage all changes
+          git add -A
+
+      - name: Check for actual changes
+        id: changes
+        run: |
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes to deploy"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected:"
+            git diff --cached --stat
+          fi
+
+      - name: Commit and push
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          # Determine commit message
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.commit_message }}" ]; then
+            COMMIT_MSG="${{ github.event.inputs.commit_message }}"
+          else
+            COMMIT_MSG="Deploy marketplace $(date '+%Y-%m-%d %H:%M')"
+          fi
+
+          git commit -m "$COMMIT_MSG"
+          git push origin ${{ env.TARGET_BRANCH }} --force
+
+      - name: Deployment summary
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          echo "## Deployment Successful! :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** \`${{ env.TARGET_BRANCH }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source:** \`${{ env.SOURCE_PATH }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[View deployed branch](https://github.com/${{ github.repository }}/tree/${{ env.TARGET_BRANCH }})" >> $GITHUB_STEP_SUMMARY
+
+      - name: No changes summary
+        if: steps.changes.outputs.has_changes == 'false'
+        run: |
+          echo "## No Changes Detected :information_source:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The marketplace branch is already up to date with the source folder." >> $GITHUB_STEP_SUMMARY
