@@ -39,7 +39,7 @@ class DesignerSeatingLayout extends Page
     {
         $parts = [$this->seatingLayout->name];
         if ($this->seatingLayout->venue) {
-            $parts[] = $this->seatingLayout->venue->name;
+            $parts[] = $this->seatingLayout->venue->getTranslation('name');
         }
         return implode(' — ', $parts);
     }
