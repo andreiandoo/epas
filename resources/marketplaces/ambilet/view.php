@@ -118,6 +118,7 @@ require_once __DIR__ . '/includes/head.php';
     const REFRESH_INTERVAL = 30000; // 30 seconds
     let refreshTimer = null;
     let sharePassword = null;
+    let isFirstLoad = true;
 
     function escapeHtml(str) {
         const div = document.createElement('div');
@@ -174,16 +175,24 @@ require_once __DIR__ . '/includes/head.php';
 
     async function fetchShareData() {
         try {
+            const headers = {};
+            if (!isFirstLoad) {
+                headers['X-Auto-Refresh'] = '1';
+            }
+
             let response;
             if (sharePassword) {
                 // Send password via POST
+                headers['Content-Type'] = 'application/json';
                 response = await fetch(`${API_URL}?action=share-link.data&code=${encodeURIComponent(SHARE_CODE)}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify({ password: sharePassword })
                 });
             } else {
-                response = await fetch(`${API_URL}?action=share-link.data&code=${encodeURIComponent(SHARE_CODE)}`);
+                response = await fetch(`${API_URL}?action=share-link.data&code=${encodeURIComponent(SHARE_CODE)}`, {
+                    headers: headers
+                });
             }
             const data = await response.json();
 
@@ -196,6 +205,14 @@ require_once __DIR__ . '/includes/head.php';
                     document.getElementById('password-submit-btn').disabled = false;
                     document.getElementById('password-submit-btn').textContent = 'Acceseaza';
                     return;
+                } else if (response.status === 429) {
+                    if (data.error === 'too_many_attempts') {
+                        document.getElementById('password-error').textContent = 'Prea multe incercari. Incearca mai tarziu.';
+                        document.getElementById('password-error').classList.remove('hidden');
+                        document.getElementById('password-submit-btn').disabled = false;
+                        document.getElementById('password-submit-btn').textContent = 'Acceseaza';
+                    }
+                    return;
                 } else if (response.status === 410) {
                     showError('Link dezactivat', 'Organizatorul a dezactivat acest link de monitorizare.');
                 } else if (response.status === 404) {
@@ -207,6 +224,7 @@ require_once __DIR__ . '/includes/head.php';
                 return;
             }
 
+            isFirstLoad = false;
             renderData(data.data);
             showContent();
             updateLastUpdated();

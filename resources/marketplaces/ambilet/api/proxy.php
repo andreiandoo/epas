@@ -30,7 +30,7 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Session-ID');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Session-ID, X-Auto-Refresh');
 
 // Handle preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -206,6 +206,107 @@ function generateShareCode($length = 10) {
         $code .= $chars[random_int(0, strlen($chars) - 1)];
     }
     return $code;
+}
+
+// ==================== RATE LIMITING ====================
+
+function getRateLimitDir() {
+    $dir = dirname(__DIR__) . '/data/rate-limits';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    return $dir;
+}
+
+/**
+ * Simple file-based rate limiter.
+ * Returns true if the request is allowed, false if rate limit exceeded.
+ */
+function checkRateLimit($key, $maxRequests = 30, $windowSeconds = 60) {
+    $dir = getRateLimitDir();
+    $file = $dir . '/' . md5($key) . '.json';
+
+    $now = time();
+    $data = [];
+
+    if (file_exists($file)) {
+        $data = @json_decode(@file_get_contents($file), true) ?: [];
+    }
+
+    // Remove expired entries
+    $data = array_filter($data, fn($ts) => $ts > ($now - $windowSeconds));
+
+    if (count($data) >= $maxRequests) {
+        return false;
+    }
+
+    $data[] = $now;
+    @file_put_contents($file, json_encode(array_values($data)), LOCK_EX);
+    return true;
+}
+
+/**
+ * Brute-force protection for password attempts.
+ * Returns true if attempt is allowed, false if locked out.
+ * Locks out for $lockoutSeconds after $maxAttempts failures within $windowSeconds.
+ */
+function checkBruteForce($code, $maxAttempts = 5, $windowSeconds = 300, $lockoutSeconds = 600) {
+    $dir = getRateLimitDir();
+    $file = $dir . '/bf_' . md5($code) . '.json';
+
+    $now = time();
+    $data = ['attempts' => [], 'locked_until' => 0];
+
+    if (file_exists($file)) {
+        $data = @json_decode(@file_get_contents($file), true) ?: $data;
+    }
+
+    // Check if currently locked out
+    if (($data['locked_until'] ?? 0) > $now) {
+        return false;
+    }
+
+    // Clean expired attempts
+    $data['attempts'] = array_filter($data['attempts'] ?? [], fn($ts) => $ts > ($now - $windowSeconds));
+
+    if (count($data['attempts']) >= $maxAttempts) {
+        // Trigger lockout
+        $data['locked_until'] = $now + $lockoutSeconds;
+        @file_put_contents($file, json_encode($data), LOCK_EX);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Record a failed password attempt.
+ */
+function recordFailedAttempt($code, $windowSeconds = 300) {
+    $dir = getRateLimitDir();
+    $file = $dir . '/bf_' . md5($code) . '.json';
+
+    $now = time();
+    $data = ['attempts' => [], 'locked_until' => 0];
+
+    if (file_exists($file)) {
+        $data = @json_decode(@file_get_contents($file), true) ?: $data;
+    }
+
+    $data['attempts'] = array_filter($data['attempts'] ?? [], fn($ts) => $ts > ($now - $windowSeconds));
+    $data['attempts'][] = $now;
+    @file_put_contents($file, json_encode($data), LOCK_EX);
+}
+
+/**
+ * Clear failed attempts after successful auth.
+ */
+function clearFailedAttempts($code) {
+    $dir = getRateLimitDir();
+    $file = $dir . '/bf_' . md5($code) . '.json';
+    if (file_exists($file)) {
+        @unlink($file);
+    }
 }
 
 function authenticateOrganizer() {
@@ -2234,9 +2335,12 @@ switch ($action) {
             $allLinks[$code] = $link;
             saveShareLinks($allLinks);
 
+            // Strip sensitive data before returning
+            $safeLink = $link;
+            unset($safeLink['password_hash'], $safeLink['ticket_data']);
             echo json_encode([
                 'success' => true,
-                'data' => $link,
+                'data' => $safeLink,
                 'url' => SITE_URL . '/view/' . $code
             ]);
         } else {
@@ -2315,9 +2419,13 @@ switch ($action) {
                 }
             }
             saveShareLinks($allLinks);
-            echo json_encode(['success' => true, 'data' => $allLinks[$code]]);
+            $safeLink = $allLinks[$code];
+            unset($safeLink['password_hash'], $safeLink['ticket_data']);
+            echo json_encode(['success' => true, 'data' => $safeLink]);
         } else {
-            echo json_encode(['success' => true, 'data' => $allLinks[$code]]);
+            $safeLink = $allLinks[$code];
+            unset($safeLink['password_hash'], $safeLink['ticket_data']);
+            echo json_encode(['success' => true, 'data' => $safeLink]);
         }
         exit;
 
@@ -2328,6 +2436,15 @@ switch ($action) {
         if (!$code || !preg_match('/^[A-Za-z0-9]{6,20}$/', $code)) {
             http_response_code(400);
             echo json_encode(['error' => 'Invalid code']);
+            exit;
+        }
+
+        // Rate limit: 30 requests per minute per IP
+        $clientIp = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $clientIp = explode(',', $clientIp)[0]; // Take first IP if multiple
+        if (!checkRateLimit('share_' . $clientIp, 30, 60)) {
+            http_response_code(429);
+            echo json_encode(['error' => 'Too many requests. Please try again later.']);
             exit;
         }
 
@@ -2349,9 +2466,16 @@ switch ($action) {
 
         // Password protection check
         if (!empty($link['password_hash'])) {
-            // Accept password via POST body or query param
+            // Brute-force protection: max 5 failed attempts per 5 minutes, lockout for 10 minutes
+            if (!checkBruteForce($code)) {
+                http_response_code(429);
+                echo json_encode(['error' => 'too_many_attempts', 'message' => 'Prea multe incercari. Incearca din nou mai tarziu.']);
+                exit;
+            }
+
+            // Accept password via POST body only (not GET to avoid logging passwords in URLs)
             $inputData = json_decode(file_get_contents('php://input'), true);
-            $providedPassword = $inputData['password'] ?? $_GET['password'] ?? '';
+            $providedPassword = $inputData['password'] ?? '';
 
             if (!$providedPassword) {
                 http_response_code(401);
@@ -2360,16 +2484,23 @@ switch ($action) {
             }
 
             if (!password_verify($providedPassword, $link['password_hash'])) {
+                recordFailedAttempt($code);
                 http_response_code(403);
                 echo json_encode(['error' => 'invalid_password', 'message' => 'Parola introdusa este incorecta']);
                 exit;
             }
+
+            // Successful auth — clear failed attempts
+            clearFailedAttempts($code);
         }
 
-        // Update access stats
-        $allLinks[$code]['access_count'] = ($allLinks[$code]['access_count'] ?? 0) + 1;
-        $allLinks[$code]['last_accessed_at'] = date('c');
-        saveShareLinks($allLinks);
+        // Update access stats (only on first load, not auto-refresh — check header)
+        $isAutoRefresh = ($_SERVER['HTTP_X_AUTO_REFRESH'] ?? '') === '1';
+        if (!$isAutoRefresh) {
+            $allLinks[$code]['access_count'] = ($allLinks[$code]['access_count'] ?? 0) + 1;
+            $allLinks[$code]['last_accessed_at'] = date('c');
+            saveShareLinks($allLinks);
+        }
 
         // Fetch event data from core API, merging stored ticket totals
         $storedTicketData = $link['ticket_data'] ?? [];
