@@ -38,7 +38,8 @@ class EuplatescProcessor implements PaymentProcessorInterface
             'order_desc' => $data['description'] ?? 'Payment',
             'merch_id' => $this->keys['merchant_id'],
             'timestamp' => time(),
-            'nonce' => md5(uniqid(rand(), true)),
+            // SECURITY FIX: Use cryptographically secure random nonce
+            'nonce' => bin2hex(random_bytes(16)),
             'billing_email' => $data['customer_email'] ?? '',
             'billing_name' => $data['customer_name'] ?? '',
             'ExtraData[successurl]' => $data['success_url'],
@@ -152,7 +153,8 @@ class EuplatescProcessor implements PaymentProcessorInterface
                 'merch_id' => $this->keys['merchant_id'],
                 'invoice_id' => $paymentId,
                 'timestamp' => time(),
-                'nonce' => md5(uniqid(rand(), true)),
+                // SECURITY FIX: Use cryptographically secure random nonce
+            'nonce' => bin2hex(random_bytes(16)),
             ];
 
             $params['fp_hash'] = $this->generateSignature($params);
@@ -163,7 +165,9 @@ class EuplatescProcessor implements PaymentProcessorInterface
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $this->config->mode === 'live');
+            // SECURITY FIX: Always verify SSL to prevent MITM attacks
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
             $response = curl_exec($ch);
             curl_close($ch);
 
@@ -209,7 +213,8 @@ class EuplatescProcessor implements PaymentProcessorInterface
                 'invoice_id' => $paymentId,
                 'amount' => $amount ? number_format($amount, 2, '.', '') : '',
                 'timestamp' => time(),
-                'nonce' => md5(uniqid(rand(), true)),
+                // SECURITY FIX: Use cryptographically secure random nonce
+            'nonce' => bin2hex(random_bytes(16)),
             ];
 
             if ($reason) {
@@ -226,7 +231,9 @@ class EuplatescProcessor implements PaymentProcessorInterface
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $this->config->mode === 'live');
+            // SECURITY FIX: Always verify SSL to prevent MITM attacks
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
             $response = curl_exec($ch);
             curl_close($ch);
 

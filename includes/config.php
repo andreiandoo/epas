@@ -32,7 +32,8 @@ define('SUPPORT_PHONE', '+40 21 XXX XXXX'); // Replace with actual phone number
 // BREVO (Sendinblue) Email Configuration
 // ===========================================
 // Get your API key from: https://app.brevo.com/settings/keys/api
-define('BREVO_API_KEY', 'xkeysib-YOUR-API-KEY-HERE'); // Replace with actual Brevo API key
+// SECURITY FIX: API key must come from environment variable, not hardcoded
+define('BREVO_API_KEY', getenv('BREVO_API_KEY') ?: 'MISSING_BREVO_KEY_SET_ENV_VAR');
 define('BREVO_SENDER_NAME', SITE_NAME);
 define('BREVO_SENDER_EMAIL', 'noreply@bilete.online'); // Must be verified in Brevo
 

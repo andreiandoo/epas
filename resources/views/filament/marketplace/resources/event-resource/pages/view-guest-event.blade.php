@@ -124,7 +124,8 @@
                     @if($eventData['description'])
                         <div class="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                             <div class="prose dark:prose-invert max-w-none">
-                                {!! $eventData['description'] !!}
+                                {{-- SECURITY FIX: Sanitize HTML to prevent XSS --}}
+                                {!! \App\Helpers\HtmlSanitizer::sanitize($eventData['description']) !!}
                             </div>
                         </div>
                     @endif

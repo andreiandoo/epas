@@ -171,7 +171,8 @@
 
                     @if($event['description'])
                         <div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
-                            {!! $event['description'] !!}
+                            {{-- SECURITY FIX: Sanitize HTML to prevent XSS --}}
+                            {!! \App\Helpers\HtmlSanitizer::sanitize($event['description']) !!}
                         </div>
                     @endif
 

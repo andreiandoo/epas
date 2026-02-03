@@ -199,7 +199,8 @@ canvas{width:100% !important; height:240px !important;}
         @if($bioHtml)
             <div class="" style="margin-top:20px;margin-bottom:20px">
                 <div class="av-card-body">
-                    <div style="line-height:1.7; color:#dbe6ff">{!! $bioHtml !!}</div>
+                    {{-- SECURITY FIX: Sanitize HTML to prevent XSS --}}
+                    <div style="line-height:1.7; color:#dbe6ff">{!! \App\Helpers\HtmlSanitizer::sanitize($bioHtml) !!}</div>
                 </div>
             </div>
         @endif
