@@ -75,7 +75,7 @@ class PartnerVenues extends Page implements HasForms, HasTable
                     ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF'),
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
-                    ->formatStateUsing(fn ($record) => static::getVenueName($record))
+                    ->getStateUsing(fn ($record) => static::getVenueName($record))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('city')
                     ->label('Oraș')

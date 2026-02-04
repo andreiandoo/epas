@@ -27,12 +27,10 @@ class ListEvents extends ListRecords
             if (!window.__eventsTabsMover) {
                 window.__eventsTabsMover = true;
                 const moveTabs = () => {
-                    const page = document.querySelector('.fi-page');
-                    if (!page) return;
-                    const header = page.querySelector(':scope > header');
-                    const tabs = page.querySelector(':scope > nav');
+                    const header = document.querySelector('.fi-header');
+                    const tabs = document.querySelector('.fi-page-main > nav.fi-tabs');
                     if (!header || !tabs) return;
-                    const actions = header.querySelector('.fi-ac');
+                    const actions = header.querySelector('.fi-header-actions-ctn');
                     if (actions) header.insertBefore(tabs, actions);
                     else header.appendChild(tabs);
                     tabs.style.flex = '1';
@@ -40,8 +38,8 @@ class ListEvents extends ListRecords
                     tabs.style.marginBottom = '0';
                 };
                 requestAnimationFrame(moveTabs);
-                const page = document.querySelector('.fi-page');
-                if (page) new MutationObserver(() => requestAnimationFrame(moveTabs)).observe(page, { childList: true });
+                const main = document.querySelector('.fi-page-main');
+                if (main) new MutationObserver(() => requestAnimationFrame(moveTabs)).observe(main, { childList: true });
             }
         ");
     }
