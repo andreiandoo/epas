@@ -657,15 +657,17 @@ class VenueResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $marketplace = static::getMarketplaceClient();
+        $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
+
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('image_url')
                     ->label('Imagine')
                     ->circular()
                     ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF'),
-                Tables\Columns\TextColumn::make('name')
+                Tables\Columns\TextColumn::make("name.{$lang}")
                     ->label('Nume')
-                    ->formatStateUsing(fn ($record) => $record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en'))
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('city')
@@ -679,7 +681,7 @@ class VenueResource extends Resource
                     ->label('Categorii')
                     ->badge()
                     ->separator(',')
-                    ->formatStateUsing(fn ($state, $record) => $record->venueCategories->map(fn ($c) => $c->icon . ' ' . ($c->getTranslation('name', 'ro') ?? $c->getTranslation('name', 'en')))->join(', '))
+                    ->getStateUsing(fn ($record) => $record->venueCategories->map(fn ($c) => $c->icon . ' ' . ($c->getTranslation('name', 'ro') ?? $c->getTranslation('name', 'en')))->join(', '))
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('is_partner')
                     ->label('Partener')

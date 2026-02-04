@@ -246,11 +246,12 @@ class CityResource extends Resource
 
                 Tables\Columns\TextColumn::make('region.name')
                     ->label('Region')
-                    ->formatStateUsing(function ($state) use ($marketplaceLanguage) {
-                        if (is_array($state)) {
-                            return $state[$marketplaceLanguage] ?? $state['ro'] ?? '-';
+                    ->getStateUsing(function ($record) use ($marketplaceLanguage) {
+                        $name = $record->region?->name;
+                        if (is_array($name)) {
+                            return $name[$marketplaceLanguage] ?? $name['ro'] ?? '-';
                         }
-                        return $state ?? '-';
+                        return $name ?? '-';
                     }),
 
                 Tables\Columns\TextColumn::make('country')

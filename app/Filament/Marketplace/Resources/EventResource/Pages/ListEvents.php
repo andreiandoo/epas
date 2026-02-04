@@ -21,6 +21,29 @@ class ListEvents extends ListRecords
         if ($organizerId) {
             $this->tableFilters['marketplace_organizer_id']['value'] = $organizerId;
         }
+
+        // Move tabs inline with header (next to "New Event" button)
+        $this->js("
+            if (!window.__eventsTabsMover) {
+                window.__eventsTabsMover = true;
+                const moveTabs = () => {
+                    const page = document.querySelector('.fi-page');
+                    if (!page) return;
+                    const header = page.querySelector(':scope > header');
+                    const tabs = page.querySelector(':scope > nav');
+                    if (!header || !tabs) return;
+                    const actions = header.querySelector('.fi-ac');
+                    if (actions) header.insertBefore(tabs, actions);
+                    else header.appendChild(tabs);
+                    tabs.style.flex = '1';
+                    tabs.style.minWidth = '0';
+                    tabs.style.marginBottom = '0';
+                };
+                requestAnimationFrame(moveTabs);
+                const page = document.querySelector('.fi-page');
+                if (page) new MutationObserver(() => requestAnimationFrame(moveTabs)).observe(page, { childList: true });
+            }
+        ");
     }
 
     protected function getHeaderActions(): array

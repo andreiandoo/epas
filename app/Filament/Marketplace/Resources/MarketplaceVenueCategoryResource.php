@@ -139,14 +139,16 @@ class MarketplaceVenueCategoryResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $marketplace = static::getMarketplaceClient();
+        $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
+
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('icon')
                     ->label('')
                     ->alignCenter(),
-                Tables\Columns\TextColumn::make('name')
+                Tables\Columns\TextColumn::make("name.{$lang}")
                     ->label('Nume')
-                    ->formatStateUsing(fn ($record) => $record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en'))
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\ColorColumn::make('color')
