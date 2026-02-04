@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Models\Venue;
+use App\Models\MarketplaceAdmin;
 use Illuminate\Contracts\Auth\Authenticatable;
 
 /**
@@ -17,6 +18,11 @@ class VenuePolicy
      */
     protected function isAdmin(Authenticatable $user): bool
     {
+        // Marketplace admin users — always allowed (scoped by marketplace_client_id in resource)
+        if ($user instanceof MarketplaceAdmin) {
+            return true;
+        }
+
         return in_array($user->role ?? '', ['super-admin', 'admin', 'editor']);
     }
 
@@ -25,6 +31,11 @@ class VenuePolicy
      */
     protected function belongsToTenant(Authenticatable $user, Venue $venue): bool
     {
+        // Marketplace admin — scoped by marketplace_client_id in the resource query
+        if ($user instanceof MarketplaceAdmin) {
+            return !$venue->marketplace_client_id || $venue->marketplace_client_id === $user->marketplace_client_id;
+        }
+
         // If user has tenant_id, check if it matches venue's tenant_id
         if (isset($user->tenant_id) && isset($venue->tenant_id)) {
             return $user->tenant_id === $venue->tenant_id;

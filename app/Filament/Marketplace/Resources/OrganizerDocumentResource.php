@@ -113,7 +113,13 @@ class OrganizerDocumentResource extends Resource
                                 $venueAddress = htmlspecialchars((string) $venueAddress);
                                 $venueCity = htmlspecialchars((string) $venueCity);
                                 $eventName = htmlspecialchars((string) $eventName);
-                                $eventDate = $event->starts_at ? $event->starts_at->format('d.m.Y H:i') : '-';
+                                $eventDate = '-';
+                                if ($event->event_date) {
+                                    $eventDate = $event->event_date->format('d.m.Y');
+                                    if ($event->start_time) {
+                                        $eventDate .= ' ' . $event->start_time;
+                                    }
+                                }
 
                                 return new HtmlString("
                                     <div class='space-y-2 text-sm'>
@@ -181,13 +187,21 @@ class OrganizerDocumentResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('event.name')
+                Tables\Columns\TextColumn::make('event.title')
                     ->label('Event')
-                    ->searchable()
-                    ->sortable()
+                    ->formatStateUsing(function ($state) {
+                        if (is_array($state)) {
+                            return $state['ro'] ?? $state['en'] ?? reset($state) ?: '-';
+                        }
+                        return $state ?? '-';
+                    })
                     ->limit(40)
                     ->tooltip(function ($record) {
-                        return $record->event?->name;
+                        $title = $record->event?->title;
+                        if (is_array($title)) {
+                            return $title['ro'] ?? $title['en'] ?? reset($title) ?: null;
+                        }
+                        return $title;
                     }),
 
                 Tables\Columns\TextColumn::make('issued_at')
