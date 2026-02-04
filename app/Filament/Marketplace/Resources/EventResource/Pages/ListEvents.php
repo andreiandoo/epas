@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 use App\Filament\Marketplace\Resources\EventResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -21,27 +22,20 @@ class ListEvents extends ListRecords
         if ($organizerId) {
             $this->tableFilters['marketplace_organizer_id']['value'] = $organizerId;
         }
+    }
 
-        // Move tabs inline with header (next to "New Event" button)
-        // Filament 4 renders getTabs() as: fi-page-content > div.fi-sc-tabs > nav.fi-tabs
-        $this->js("
-            if (!window.__eventsTabsMover) {
-                window.__eventsTabsMover = true;
-                const moveTabs = () => {
-                    const header = document.querySelector('.fi-header');
-                    const tabsWrapper = document.querySelector('.fi-page-content > .fi-sc-tabs');
-                    if (!header || !tabsWrapper || tabsWrapper.closest('.fi-header')) return;
-                    const actions = header.querySelector('.fi-header-actions-ctn');
-                    if (actions) header.insertBefore(tabsWrapper, actions);
-                    else header.appendChild(tabsWrapper);
-                    tabsWrapper.style.flex = '1';
-                    tabsWrapper.style.minWidth = '0';
-                };
-                requestAnimationFrame(moveTabs);
-                const content = document.querySelector('.fi-page-content');
-                if (content) new MutationObserver(() => requestAnimationFrame(moveTabs)).observe(content, { childList: true });
-            }
-        ");
+    /**
+     * Override tabs component to move it inline with the page header.
+     * Adds x-init Alpine directive on the wrapper div.fi-sc-tabs
+     * which physically moves itself into the fi-header element.
+     */
+    public function getTabsContentComponent(): Component
+    {
+        return parent::getTabsContentComponent()
+            ->extraAttributes([
+                'x-data' => '{}',
+                'x-init' => "\$nextTick(() => { const header = document.querySelector('.fi-header'); if (!header) return; const actions = header.querySelector('.fi-header-actions-ctn'); if (actions) header.insertBefore(\$el, actions); else header.appendChild(\$el); \$el.style.flex = '1'; \$el.style.minWidth = '0'; })",
+            ]);
     }
 
     protected function getHeaderActions(): array
