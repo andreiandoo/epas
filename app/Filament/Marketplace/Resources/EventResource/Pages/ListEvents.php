@@ -23,23 +23,23 @@ class ListEvents extends ListRecords
         }
 
         // Move tabs inline with header (next to "New Event" button)
+        // Filament 4 renders getTabs() as: fi-page-content > div.fi-sc-tabs > nav.fi-tabs
         $this->js("
             if (!window.__eventsTabsMover) {
                 window.__eventsTabsMover = true;
                 const moveTabs = () => {
                     const header = document.querySelector('.fi-header');
-                    const tabs = document.querySelector('.fi-page-main > nav.fi-tabs');
-                    if (!header || !tabs) return;
+                    const tabsWrapper = document.querySelector('.fi-page-content > .fi-sc-tabs');
+                    if (!header || !tabsWrapper || tabsWrapper.closest('.fi-header')) return;
                     const actions = header.querySelector('.fi-header-actions-ctn');
-                    if (actions) header.insertBefore(tabs, actions);
-                    else header.appendChild(tabs);
-                    tabs.style.flex = '1';
-                    tabs.style.minWidth = '0';
-                    tabs.style.marginBottom = '0';
+                    if (actions) header.insertBefore(tabsWrapper, actions);
+                    else header.appendChild(tabsWrapper);
+                    tabsWrapper.style.flex = '1';
+                    tabsWrapper.style.minWidth = '0';
                 };
                 requestAnimationFrame(moveTabs);
-                const main = document.querySelector('.fi-page-main');
-                if (main) new MutationObserver(() => requestAnimationFrame(moveTabs)).observe(main, { childList: true });
+                const content = document.querySelector('.fi-page-content');
+                if (content) new MutationObserver(() => requestAnimationFrame(moveTabs)).observe(content, { childList: true });
             }
         ");
     }
