@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Resources\PayoutResource\Pages;
 
 use App\Filament\Marketplace\Resources\PayoutResource;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -14,6 +15,15 @@ class ListPayouts extends ListRecords
     protected function getHeaderActions(): array
     {
         return [];
+    }
+
+    public function getTabsContentComponent(): Component
+    {
+        return parent::getTabsContentComponent()
+            ->extraAttributes([
+                'x-data' => '{}',
+                'x-init' => "\$nextTick(() => { const header = document.querySelector('.fi-header'); if (!header) return; const actions = header.querySelector('.fi-header-actions-ctn'); if (actions) header.insertBefore(\$el, actions); else header.appendChild(\$el); \$el.style.flex = '1'; \$el.style.minWidth = '0'; })",
+            ]);
     }
 
     public function getTabs(): array
