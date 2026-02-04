@@ -105,7 +105,9 @@ class OrganizerDocumentResource extends Resource
                                 $venueAddress = $venue?->address ?? $event->venue_address ?? '-';
                                 $venueCity = $venue?->city ?? $event->venue_city ?? '-';
 
-                                $eventName = $event->name ?? '-';
+                                $eventName = is_array($event->title)
+                                    ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title) ?: '-')
+                                    : ($event->title ?? $event->name ?? '-');
                                 // Escape HTML to prevent XSS
                                 $venueName = htmlspecialchars((string) $venueName);
                                 $venueAddress = htmlspecialchars((string) $venueAddress);

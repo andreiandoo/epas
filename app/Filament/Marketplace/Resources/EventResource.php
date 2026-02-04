@@ -20,6 +20,7 @@ use App\Models\Seating\SeatingSection;
 use App\Rules\UniqueSeatingSectionPerEvent;
 use App\Models\MarketplaceTaxTemplate;
 use App\Models\EventGeneratedDocument;
+use App\Models\OrganizerDocument;
 use App\Models\MarketplaceEvent;
 use Illuminate\Support\Facades\Storage;
 use Filament\Forms;
@@ -2387,11 +2388,16 @@ class EventResource extends Resource
                                         ->modalContent(function (?Event $record) {
                                             if (!$record) return new HtmlString('<p>Nu există documente.</p>');
 
-                                            $documents = EventGeneratedDocument::where('event_id', $record->id)
+                                            // Fetch both document types for this event
+                                            $generatedDocs = EventGeneratedDocument::where('event_id', $record->id)
                                                 ->orderByDesc('created_at')
                                                 ->get();
 
-                                            if ($documents->isEmpty()) {
+                                            $organizerDocs = OrganizerDocument::where('event_id', $record->id)
+                                                ->orderByDesc('created_at')
+                                                ->get();
+
+                                            if ($generatedDocs->isEmpty() && $organizerDocs->isEmpty()) {
                                                 return new HtmlString('
                                                     <div class="text-center py-8">
                                                         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2403,45 +2409,94 @@ class EventResource extends Resource
                                                 ');
                                             }
 
-                                            $html = '<div class="divide-y divide-gray-200 dark:divide-gray-700">';
-                                            foreach ($documents as $doc) {
-                                                $downloadUrl = Storage::disk('public')->url($doc->file_path);
-                                                $templateName = $doc->template?->name ?? $doc->meta['template_name'] ?? 'Unknown';
-                                                $templateType = $doc->template?->type ?? $doc->meta['template_type'] ?? '';
-                                                $typeLabel = MarketplaceTaxTemplate::TYPES[$templateType] ?? ucfirst($templateType);
-                                                $generatedBy = $doc->generated_by_name ?? 'System';
-                                                $createdAt = $doc->created_at->format('d M Y, H:i');
-                                                $fileSize = $doc->file_size_formatted;
+                                            $html = '';
 
-                                                $html .= "
-                                                    <div class='py-3 flex items-center justify-between gap-4'>
-                                                        <div class='flex items-center gap-3 min-w-0'>
-                                                            <div class='flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center'>
-                                                                <svg class='w-5 h-5 text-red-600 dark:text-red-400' fill='currentColor' viewBox='0 0 20 20'>
-                                                                    <path fill-rule='evenodd' d='M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z' clip-rule='evenodd'/>
+                                            // Organizer documents (cerere avizare, declaratie impozite)
+                                            if ($organizerDocs->isNotEmpty()) {
+                                                $html .= '<div class="mb-4"><h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Documente organizator</h4>';
+                                                $html .= '<div class="divide-y divide-gray-200 dark:divide-gray-700">';
+                                                foreach ($organizerDocs as $doc) {
+                                                    $typeLabel = OrganizerDocument::TYPES[$doc->document_type] ?? ucfirst($doc->document_type ?? '');
+                                                    $title = e($doc->title ?: $typeLabel);
+                                                    $createdAt = $doc->created_at?->format('d M Y, H:i') ?? '-';
+                                                    $fileSize = $doc->formatted_file_size ?? '';
+                                                    $downloadUrl = $doc->file_path ? Storage::disk('public')->url($doc->file_path) : '#';
+
+                                                    $html .= "
+                                                        <div class='py-3 flex items-center justify-between gap-4'>
+                                                            <div class='flex items-center gap-3 min-w-0'>
+                                                                <div class='flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center'>
+                                                                    <svg class='w-5 h-5 text-blue-600 dark:text-blue-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                                                                        <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/>
+                                                                    </svg>
+                                                                </div>
+                                                                <div class='min-w-0'>
+                                                                    <div class='text-sm font-medium text-gray-900 dark:text-white truncate'>{$title}</div>
+                                                                    <div class='text-xs text-gray-500 dark:text-gray-400'>
+                                                                        <span class='inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300 mr-1'>{$typeLabel}</span>
+                                                                    </div>
+                                                                    <div class='text-xs text-gray-400 dark:text-gray-500 mt-0.5'>
+                                                                        {$createdAt}" . ($fileSize ? " · {$fileSize}" : "") . "
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <a href='{$downloadUrl}' target='_blank' class='flex-shrink-0 inline-flex items-center px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-xs font-medium rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'>
+                                                                <svg class='w-4 h-4 mr-1' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                                                                    <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4'/>
                                                                 </svg>
-                                                            </div>
-                                                            <div class='min-w-0'>
-                                                                <div class='text-sm font-medium text-gray-900 dark:text-white truncate'>{$doc->filename}</div>
-                                                                <div class='text-xs text-gray-500 dark:text-gray-400'>
-                                                                    <span class='inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 mr-1'>{$typeLabel}</span>
-                                                                    {$templateName}
-                                                                </div>
-                                                                <div class='text-xs text-gray-400 dark:text-gray-500 mt-0.5'>
-                                                                    {$generatedBy} · {$createdAt} · {$fileSize}
-                                                                </div>
-                                                            </div>
+                                                                Descarcă
+                                                            </a>
                                                         </div>
-                                                        <a href='{$downloadUrl}' target='_blank' class='flex-shrink-0 inline-flex items-center px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-xs font-medium rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500'>
-                                                            <svg class='w-4 h-4 mr-1' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                                                                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4'/>
-                                                            </svg>
-                                                            Descarcă
-                                                        </a>
-                                                    </div>
-                                                ";
+                                                    ";
+                                                }
+                                                $html .= '</div></div>';
                                             }
-                                            $html .= '</div>';
+
+                                            // Tax template generated documents
+                                            if ($generatedDocs->isNotEmpty()) {
+                                                if ($organizerDocs->isNotEmpty()) {
+                                                    $html .= '<h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Documente fiscale</h4>';
+                                                }
+                                                $html .= '<div class="divide-y divide-gray-200 dark:divide-gray-700">';
+                                                foreach ($generatedDocs as $doc) {
+                                                    $downloadUrl = Storage::disk('public')->url($doc->file_path);
+                                                    $templateName = e($doc->template?->name ?? $doc->meta['template_name'] ?? 'Unknown');
+                                                    $templateType = $doc->template?->type ?? $doc->meta['template_type'] ?? '';
+                                                    $typeLabel = MarketplaceTaxTemplate::TYPES[$templateType] ?? ucfirst($templateType);
+                                                    $generatedBy = e($doc->generated_by_name ?? 'System');
+                                                    $createdAt = $doc->created_at->format('d M Y, H:i');
+                                                    $fileSize = $doc->file_size_formatted;
+
+                                                    $html .= "
+                                                        <div class='py-3 flex items-center justify-between gap-4'>
+                                                            <div class='flex items-center gap-3 min-w-0'>
+                                                                <div class='flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center'>
+                                                                    <svg class='w-5 h-5 text-red-600 dark:text-red-400' fill='currentColor' viewBox='0 0 20 20'>
+                                                                        <path fill-rule='evenodd' d='M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z' clip-rule='evenodd'/>
+                                                                    </svg>
+                                                                </div>
+                                                                <div class='min-w-0'>
+                                                                    <div class='text-sm font-medium text-gray-900 dark:text-white truncate'>{$doc->filename}</div>
+                                                                    <div class='text-xs text-gray-500 dark:text-gray-400'>
+                                                                        <span class='inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 mr-1'>{$typeLabel}</span>
+                                                                        {$templateName}
+                                                                    </div>
+                                                                    <div class='text-xs text-gray-400 dark:text-gray-500 mt-0.5'>
+                                                                        {$generatedBy} · {$createdAt} · {$fileSize}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <a href='{$downloadUrl}' target='_blank' class='flex-shrink-0 inline-flex items-center px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-xs font-medium rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'>
+                                                                <svg class='w-4 h-4 mr-1' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                                                                    <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4'/>
+                                                                </svg>
+                                                                Descarcă
+                                                            </a>
+                                                        </div>
+                                                    ";
+                                                }
+                                                $html .= '</div>';
+                                            }
 
                                             return new HtmlString($html);
                                         }),
