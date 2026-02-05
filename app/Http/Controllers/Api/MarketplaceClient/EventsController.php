@@ -32,8 +32,10 @@ class EventsController extends BaseController
                 $q->where('is_public', true)->orWhereNull('is_public');
             })
             // Filter by time scope: upcoming (default) or past
+            // Priority: use event_date if set, otherwise use starts_at
             ->when($request->get('time_scope') === 'past', function ($q) {
                 $q->where(function ($sq) {
+                    // Past: event_date < today (if set), or starts_at < now (if event_date not set)
                     $sq->where(function ($inner) {
                         $inner->whereNotNull('event_date')->where('event_date', '<', now()->toDateString());
                     })->orWhere(function ($inner) {
@@ -41,9 +43,13 @@ class EventsController extends BaseController
                     });
                 });
             }, function ($q) {
+                // Upcoming: event_date >= today (if set), or starts_at >= now (if event_date not set)
                 $q->where(function ($sq) {
-                    $sq->where('event_date', '>=', now()->toDateString())
-                      ->orWhere('starts_at', '>=', now());
+                    $sq->where(function ($inner) {
+                        $inner->whereNotNull('event_date')->where('event_date', '>=', now()->toDateString());
+                    })->orWhere(function ($inner) {
+                        $inner->whereNull('event_date')->where('starts_at', '>=', now());
+                    });
                 });
             })
             // Exclude cancelled events

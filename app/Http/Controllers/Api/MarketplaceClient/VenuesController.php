@@ -261,13 +261,16 @@ class VenuesController extends BaseController
 
     /**
      * Count upcoming published events for a venue
-     * Counts events by venue_id OR by matching venue_name/city (for events without venue_id)
+     * Counts events from both Event and MarketplaceEvent tables
+     * Events are matched by venue_id OR by matching venue_name/city (for events without venue_id)
      */
     protected function countVenueEvents(Venue $venue): int
     {
         $venueName = $venue->getTranslation('name', 'ro') ?: $venue->name;
+        $count = 0;
 
-        return \App\Models\MarketplaceEvent::where('marketplace_client_id', $venue->marketplace_client_id)
+        // Count from MarketplaceEvent table (legacy)
+        $count += \App\Models\MarketplaceEvent::where('marketplace_client_id', $venue->marketplace_client_id)
             ->where('status', 'published')
             ->where('starts_at', '>=', now())
             ->where(function ($query) use ($venue, $venueName) {
@@ -279,6 +282,25 @@ class VenuesController extends BaseController
                     });
             })
             ->count();
+
+        // Count from Event table (marketplace events stored here)
+        $count += \App\Models\Event::where('marketplace_client_id', $venue->marketplace_client_id)
+            ->where('status', 'published')
+            ->where('venue_id', $venue->id)
+            ->where(function ($q) {
+                // Check upcoming using event_date or starts_at
+                $q->where(function ($inner) {
+                    $inner->whereNotNull('event_date')->where('event_date', '>=', now()->toDateString());
+                })->orWhere(function ($inner) {
+                    $inner->whereNull('event_date')->where('starts_at', '>=', now());
+                });
+            })
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->count();
+
+        return $count;
     }
 
     /**

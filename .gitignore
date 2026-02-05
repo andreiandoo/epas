@@ -30,3 +30,8 @@ resources/tenant-client/package-lock.json
 
 # Generated tenant packages (server-side only)
 /storage/app/private/packages/
+
+# Marketplace runtime data (created on server, must persist across deployments)
+resources/marketplaces/ambilet/data/share-links.json
+resources/marketplaces/ambilet/data/rate-limits/
+resources/marketplaces/ambilet/includes/cache/*.json
