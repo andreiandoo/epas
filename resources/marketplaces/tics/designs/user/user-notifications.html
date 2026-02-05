@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notificări — TICS.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen" style="font-family:'Inter',sans-serif">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="tics-homepage.html" class="flex items-center gap-2"><div class="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center"><span class="text-white font-bold">T</span></div><span class="font-bold text-xl">TICS</span></a>
+            <a href="user-profile.html" class="text-sm text-indigo-600">← Înapoi</a>
+        </div>
+    </header>
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <h1 class="text-2xl font-bold text-gray-900 mb-8">Setări notificări</h1>
+        <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">Email</h2>
+            <div class="space-y-4">
+                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer"><div><p class="font-medium">Confirmare comandă</p><p class="text-sm text-gray-500">Primești email cu biletele după cumpărare</p></div><input type="checkbox" checked class="w-5 h-5 rounded text-indigo-600"></label>
+                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer"><div><p class="font-medium">Reminder eveniment</p><p class="text-sm text-gray-500">Cu 24h și 2h înainte de eveniment</p></div><input type="checkbox" checked class="w-5 h-5 rounded text-indigo-600"></label>
+                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer"><div><p class="font-medium">Evenimente noi de la artiștii urmăriți</p><p class="text-sm text-gray-500">Fii primul care află de bilete noi</p></div><input type="checkbox" checked class="w-5 h-5 rounded text-indigo-600"></label>
+                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer"><div><p class="font-medium">Newsletter TICS</p><p class="text-sm text-gray-500">Recomandări săptămânale personalizate</p></div><input type="checkbox" class="w-5 h-5 rounded text-indigo-600"></label>
+                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer"><div><p class="font-medium">Oferte și promoții</p><p class="text-sm text-gray-500">Reduceri exclusive pentru membri</p></div><input type="checkbox" class="w-5 h-5 rounded text-indigo-600"></label>
+            </div>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">Push notifications</h2>
+            <div class="space-y-4">
+                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer"><div><p class="font-medium">Activează push notifications</p><p class="text-sm text-gray-500">Notificări în browser sau pe telefon</p></div><input type="checkbox" class="w-5 h-5 rounded text-indigo-600"></label>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setări — TICS Organizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{'sans':['Inter','system-ui','sans-serif']}}}}</script>
+    <style>*{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}.sidebar-link{transition:all 0.2s}.sidebar-link:hover{background:rgba(99,102,241,0.1);color:#6366f1}.sidebar-link.active{background:rgba(99,102,241,0.1);color:#6366f1;border-right:3px solid #6366f1}.tab-btn.active{border-color:#6366f1;color:#6366f1}</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside class="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200 z-40 flex flex-col">
+            <div class="p-5 border-b border-gray-100"><a href="tics-org-dashboard.html" class="flex items-center gap-2"><div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center"><span class="text-white font-bold">T</span></div><div><span class="font-bold text-lg">TICS</span><span class="text-xs text-gray-400 block -mt-1">Organizer</span></div></a></div>
+            <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+                <a href="tics-org-dashboard.html" class="sidebar-link flex items-center gap-3 px-4 py-3 text-sm text-gray-600 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>Dashboard</a>
+                <a href="tics-org-events.html" class="sidebar-link flex items-center gap-3 px-4 py-3 text-sm text-gray-600 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Evenimente</a>
+                <div class="pt-4 mt-4 border-t border-gray-100">
+                    <a href="tics-org-team.html" class="sidebar-link flex items-center gap-3 px-4 py-3 text-sm text-gray-600 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1z"/></svg>Echipă</a>
+                    <a href="tics-org-settings.html" class="sidebar-link active flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Setări</a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main -->
+        <main class="flex-1 ml-64">
+            <header class="sticky top-0 z-30 bg-white border-b border-gray-200">
+                <div class="px-8 py-4"><h1 class="text-2xl font-bold text-gray-900">Setări</h1><p class="text-sm text-gray-500">Configurează contul și organizația</p></div>
+                <!-- Tabs -->
+                <div class="px-8 flex gap-6 border-t border-gray-100">
+                    <button class="tab-btn active py-4 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700">Profil organizație</button>
+                    <button class="tab-btn py-4 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700">Cont bancar</button>
+                    <button class="tab-btn py-4 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700">Notificări</button>
+                    <button class="tab-btn py-4 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700">Integrări</button>
+                </div>
+            </header>
+
+            <div class="p-8 max-w-3xl">
+                <!-- Organization Profile -->
+                <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">Informații organizație</h2>
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-20 h-20 bg-gray-200 rounded-xl flex items-center justify-center"><svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+                            <div><button class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700">Schimbă logo</button><p class="text-xs text-gray-500 mt-1">PNG, JPG până la 2MB</p></div>
+                        </div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Nume organizație *</label><input type="text" value="Live Events SRL" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500"></div>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">CUI / CIF</label><input type="text" value="RO12345678" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Nr. Reg. Com.</label><input type="text" value="J40/1234/2020" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500"></div>
+                        </div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Adresă sediu</label><input type="text" value="Str. Exemplu nr. 10, București" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500"></div>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Email contact</label><input type="email" value="contact@liveevents.ro" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Telefon</label><input type="tel" value="+40 721 234 567" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500"></div>
+                        </div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Website</label><input type="url" value="https://liveevents.ro" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500"></div>
+                    </div>
+                    <div class="flex justify-end mt-6"><button class="px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700">Salvează modificările</button></div>
+                </div>
+
+                <!-- Branding -->
+                <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">Personalizare pagini</h2>
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Culoare principală</label><div class="flex items-center gap-3"><input type="color" value="#6366f1" class="w-12 h-12 rounded-lg cursor-pointer"><span class="text-sm text-gray-500">#6366F1</span></div></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Subdomeniu personalizat</label><div class="flex"><span class="px-4 py-3 bg-gray-100 border border-r-0 border-gray-200 rounded-l-xl text-gray-500">https://</span><input type="text" value="liveevents" class="flex-1 px-4 py-3 border border-gray-200 focus:outline-none focus:border-indigo-500"><span class="px-4 py-3 bg-gray-100 border border-l-0 border-gray-200 rounded-r-xl text-gray-500">.tics.ro</span></div></div>
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="bg-white rounded-2xl border border-red-200 p-6">
+                    <h2 class="text-lg font-bold text-red-600 mb-2">Zona periculoasă</h2>
+                    <p class="text-sm text-gray-500 mb-4">Aceste acțiuni sunt ireversibile</p>
+                    <button class="px-4 py-2 border border-red-300 text-red-600 text-sm font-medium rounded-xl hover:bg-red-50">Dezactivează contul de organizator</button>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

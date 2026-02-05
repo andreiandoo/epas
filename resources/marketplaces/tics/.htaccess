@@ -1,0 +1,41 @@
+# Enable URL rewriting
+RewriteEngine On
+
+# Handle favicon requests
+RewriteRule ^favicon\.ico$ - [L]
+
+# Handle static assets (don't rewrite)
+RewriteCond %{REQUEST_URI} ^/assets/ [OR]
+RewriteCond %{REQUEST_URI} ^/data/ [OR]
+RewriteCond %{REQUEST_URI} \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$
+RewriteRule ^ - [L]
+
+# Clean URLs for events listing
+# /evenimente -> events.php
+# /evenimente/{category} -> events.php?categorie=slug
+RewriteRule ^evenimente/?$ events.php [L,QSA]
+RewriteRule ^evenimente/([a-z0-9-]+)/?$ events.php?categorie=$1 [L,QSA]
+
+# Clean URLs for single event
+# /bilete/{slug} -> event.php?slug=slug
+RewriteRule ^bilete/([a-z0-9-]+)/?$ event.php?slug=$1 [L,QSA]
+
+# Clean URLs for event category page
+# /categorie/{slug} -> event-category.php?categorie=slug
+RewriteRule ^categorie/([a-z0-9-]+)/?$ event-category.php?categorie=$1 [L,QSA]
+
+# API proxy
+RewriteRule ^api/(.*)$ api/proxy.php?endpoint=$1 [L,QSA]
+
+# Default: remove .php extension
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}\.php -f
+RewriteRule ^(.*)$ $1.php [L]
+
+# Handle trailing slashes
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.+)/$ /$1 [R=301,L]
+
+# Error pages
+ErrorDocument 404 /404.php

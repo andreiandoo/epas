@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evenimente în București — TICS.ro | Descoperă ce e în trend</title>
+    <meta name="description" content="Găsește cele mai bune evenimente din București. Concerte, festivaluri, stand-up, teatru și multe altele.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        * { -webkit-font-smoothing: antialiased; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        .event-card { transition: all 0.25s ease; }
+        .event-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -12px rgba(0,0,0,0.12); }
+        .event-card:hover .event-img { transform: scale(1.05); }
+        .event-img { transition: transform 0.5s ease; }
+
+        .venue-card { transition: all 0.2s ease; }
+        .venue-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1); }
+
+        .chip-active { background: #111827 !important; color: white !important; }
+
+        .cb { appearance: none; width: 18px; height: 18px; border: 2px solid #d1d5db; border-radius: 4px; cursor: pointer; flex-shrink: 0; }
+        .cb:checked { background: #111827; border-color: #111827; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3E%3C/svg%3E"); }
+
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: #e5e7eb; border-radius: 2px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: #111827; border-radius: 50%; cursor: pointer; }
+
+        .drawer { transform: translateX(-100%); transition: transform 0.3s ease; }
+        .drawer.open { transform: translateX(0); }
+        .overlay { opacity: 0; visibility: hidden; transition: all 0.3s ease; }
+        .overlay.open { opacity: 1; visibility: visible; }
+
+        .pulse { animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .trending-badge { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); }
+        .early-badge { background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); }
+        .vip-badge { background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); }
+        .new-badge { background: linear-gradient(135deg, #0984e3 0%, #74b9ff 100%); }
+        .local-badge { background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%); }
+
+        .hero-gradient { background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #3d7ab5 100%); }
+        
+        .stat-card { backdrop-filter: blur(10px); background: rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white border-b border-gray-200">
+        <div class="max-w-[1600px] mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="tics-homepage.html" class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-sm">T</span>
+                    </div>
+                    <span class="font-bold text-lg hidden sm:block">TICS</span>
+                </a>
+
+                <div class="hidden md:flex flex-1 max-w-xl mx-6 relative">
+                    <div class="w-full flex items-center bg-gray-100 rounded-full px-4 py-2.5 focus-within:ring-2 focus-within:ring-gray-900 focus-within:bg-white transition-all">
+                        <svg class="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <input type="text" placeholder="Caută evenimente în București..." class="flex-1 bg-transparent outline-none text-gray-900 placeholder:text-gray-400">
+                        <kbd class="hidden lg:inline-flex px-2 py-1 bg-gray-200 rounded text-xs text-gray-500 ml-2">⌘K</kbd>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1">
+                    <button class="md:hidden p-2.5 hover:bg-gray-100 rounded-full">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </button>
+                    <a href="#" class="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                        </svg>
+                        <span class="hidden lg:inline">Favorite</span>
+                    </a>
+                    <a href="#" class="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                        </svg>
+                        <span class="hidden lg:inline">Coș</span>
+                        <span class="w-5 h-5 bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center">2</span>
+                    </a>
+                    <div class="w-px h-6 bg-gray-200 mx-2 hidden sm:block"></div>
+                    <a href="tics-login.html" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Conectare</a>
+                    <a href="tics-register.html" class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800">Înregistrare</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section - City -->
+    <section class="hero-gradient text-white relative overflow-hidden">
+        <div class="absolute inset-0">
+            <img src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=1600&h=500&fit=crop" alt="București" class="w-full h-full object-cover opacity-30">
+        </div>
+        <div class="absolute inset-0 bg-gradient-to-r from-gray-900/80 via-gray-900/60 to-transparent"></div>
+        
+        <div class="max-w-[1600px] mx-auto px-4 lg:px-8 py-12 lg:py-20 relative">
+            <div class="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8">
+                <div class="max-w-2xl">
+                    <!-- Breadcrumb -->
+                    <div class="flex items-center gap-2 text-sm text-white/60 mb-4">
+                        <a href="tics-homepage.html" class="hover:text-white transition-colors">Acasă</a>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        <a href="#" class="hover:text-white transition-colors">Orașe</a>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        <span class="text-white">București</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-16 h-16 bg-white/10 backdrop-blur rounded-2xl flex items-center justify-center border border-white/20">
+                            <span class="text-4xl">🏛️</span>
+                        </div>
+                        <div>
+                            <h1 class="text-4xl lg:text-5xl font-bold">București</h1>
+                            <p class="text-white/80">Capitala României • 1.8M locuitori</p>
+                        </div>
+                    </div>
+                    
+                    <p class="text-lg text-white/90 mb-6">Centrul cultural și artistic al României. Descoperă concerte legendare, festivaluri de renume mondial, spectacole de teatru și stand-up comedy în inima orașului.</p>
+                    
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur rounded-full border border-white/20">
+                            <span class="w-2 h-2 bg-green-400 rounded-full pulse"></span>
+                            <span class="text-sm font-medium">324 evenimente active</span>
+                        </div>
+                        <div class="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur rounded-full border border-white/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                            <span class="text-sm font-medium">87 locații</span>
+                        </div>
+                        <div class="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur rounded-full border border-white/20">
+                            <span class="text-sm font-medium">⚡ 45 evenimente săptămâna asta</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-3 gap-3 w-full lg:w-auto">
+                    <div class="stat-card rounded-2xl p-4 text-center border border-white/20">
+                        <p class="text-2xl lg:text-3xl font-bold">124K</p>
+                        <p class="text-xs text-white/70">Bilete vândute<br>luna asta</p>
+                    </div>
+                    <div class="stat-card rounded-2xl p-4 text-center border border-white/20">
+                        <p class="text-2xl lg:text-3xl font-bold">4.8★</p>
+                        <p class="text-xs text-white/70">Rating mediu<br>evenimente</p>
+                    </div>
+                    <div class="stat-card rounded-2xl p-4 text-center border border-white/20">
+                        <p class="text-2xl lg:text-3xl font-bold">#1</p>
+                        <p class="text-xs text-white/70">Oraș<br>în România</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories Bar -->
+    <div class="sticky top-16 z-30 bg-white border-b border-gray-200">
+        <div class="max-w-[1600px] mx-auto px-4 lg:px-8">
+            <div class="flex items-center gap-2 py-3 overflow-x-auto no-scrollbar">
+                <button class="chip-active px-4 py-2 rounded-full border border-gray-200 text-sm font-medium whitespace-nowrap transition-colors">Toate</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">🎸 Concerte</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">🎪 Festivaluri</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">😂 Stand-up</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">🎭 Teatru</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">⚽ Sport</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">🎨 Artă & Muzee</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">👨‍👩‍👧 Familie</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popular Venues Section -->
+    <section class="max-w-[1600px] mx-auto px-4 lg:px-8 py-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-900">Locații populare în București</h2>
+                <p class="text-sm text-gray-500">Cele mai căutate săli și arene</p>
+            </div>
+            <a href="#" class="text-sm font-medium text-indigo-600 hover:underline">Vezi toate (87) →</a>
+        </div>
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <a href="tics-venue.html" class="venue-card bg-white rounded-2xl p-4 border border-gray-200 text-center group">
+                <div class="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                    <span class="text-2xl">🏟️</span>
+                </div>
+                <h3 class="font-semibold text-gray-900 text-sm mb-1">Arena Națională</h3>
+                <p class="text-xs text-gray-500">55.000 locuri</p>
+                <p class="text-xs text-indigo-600 font-medium mt-1">12 evenimente</p>
+            </a>
+            <a href="tics-venue.html" class="venue-card bg-white rounded-2xl p-4 border border-gray-200 text-center group">
+                <div class="w-16 h-16 bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                    <span class="text-2xl">🎭</span>
+                </div>
+                <h3 class="font-semibold text-gray-900 text-sm mb-1">Sala Palatului</h3>
+                <p class="text-xs text-gray-500">4.000 locuri</p>
+                <p class="text-xs text-indigo-600 font-medium mt-1">28 evenimente</p>
+            </a>
+            <a href="tics-venue.html" class="venue-card bg-white rounded-2xl p-4 border border-gray-200 text-center group">
+                <div class="w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                    <span class="text-2xl">🎪</span>
+                </div>
+                <h3 class="font-semibold text-gray-900 text-sm mb-1">Romexpo</h3>
+                <p class="text-xs text-gray-500">10.000 locuri</p>
+                <p class="text-xs text-indigo-600 font-medium mt-1">8 evenimente</p>
+            </a>
+            <a href="tics-venue.html" class="venue-card bg-white rounded-2xl p-4 border border-gray-200 text-center group">
+                <div class="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                    <span class="text-2xl">🎭</span>
+                </div>
+                <h3 class="font-semibold text-gray-900 text-sm mb-1">TNB</h3>
+                <p class="text-xs text-gray-500">1.200 locuri</p>
+                <p class="text-xs text-indigo-600 font-medium mt-1">45 evenimente</p>
+            </a>
+            <a href="tics-venue.html" class="venue-card bg-white rounded-2xl p-4 border border-gray-200 text-center group">
+                <div class="w-16 h-16 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                    <span class="text-2xl">🎸</span>
+                </div>
+                <h3 class="font-semibold text-gray-900 text-sm mb-1">Arenele Romane</h3>
+                <p class="text-xs text-gray-500">5.000 locuri</p>
+                <p class="text-xs text-indigo-600 font-medium mt-1">6 evenimente</p>
+            </a>
+            <a href="tics-venue.html" class="venue-card bg-white rounded-2xl p-4 border border-gray-200 text-center group">
+                <div class="w-16 h-16 bg-gradient-to-br from-purple-100 to-violet-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                    <span class="text-2xl">🎤</span>
+                </div>
+                <h3 class="font-semibold text-gray-900 text-sm mb-1">Berăria H</h3>
+                <p class="text-xs text-gray-500">2.500 locuri</p>
+                <p class="text-xs text-indigo-600 font-medium mt-1">34 evenimente</p>
+            </a>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="max-w-[1600px] mx-auto px-4 lg:px-8 py-6">
+        <div class="flex gap-8">
+            <!-- Sidebar Filters - Desktop -->
+            <aside class="hidden lg:block w-72 flex-shrink-0">
+                <div class="sticky top-40 bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                    <div class="p-5 border-b border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <h2 class="font-semibold text-gray-900">Filtre</h2>
+                            <button class="text-sm text-indigo-600 font-medium hover:underline">Resetează</button>
+                        </div>
+                    </div>
+                    
+                    <div class="p-5 max-h-[calc(100vh-220px)] overflow-y-auto">
+                        <!-- AI Toggle -->
+                        <div class="pb-5 mb-5 border-b border-gray-100">
+                            <div class="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900 text-sm">AI Suggestions</p>
+                                        <p class="text-xs text-gray-500">Recomandări personalizate</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Date -->
+                        <div class="pb-5 mb-5 border-b border-gray-100">
+                            <h3 class="font-medium text-gray-900 mb-3 text-sm">Când</h3>
+                            <div class="space-y-2.5">
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb">
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">Astăzi</span>
+                                    <span class="ml-auto text-xs text-gray-400">24</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb">
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">Mâine</span>
+                                    <span class="ml-auto text-xs text-gray-400">18</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb" checked>
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">Weekendul acesta</span>
+                                    <span class="ml-auto text-xs text-gray-400">67</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb">
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">Săptămâna viitoare</span>
+                                    <span class="ml-auto text-xs text-gray-400">89</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb">
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">Luna aceasta</span>
+                                    <span class="ml-auto text-xs text-gray-400">156</span>
+                                </label>
+                            </div>
+                            <button class="mt-3 text-sm text-indigo-600 font-medium hover:underline flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                Alege interval
+                            </button>
+                        </div>
+
+                        <!-- Price -->
+                        <div class="pb-5 mb-5 border-b border-gray-100">
+                            <h3 class="font-medium text-gray-900 mb-3 text-sm">Preț</h3>
+                            <input type="range" min="0" max="1000" value="500" class="w-full mb-2">
+                            <div class="flex justify-between text-xs text-gray-500 mb-3">
+                                <span>0 RON</span>
+                                <span class="font-medium text-gray-900">până la 500 RON</span>
+                                <span>1000+</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="flex-1 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Gratuit</button>
+                                <button class="flex-1 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">&lt;100</button>
+                                <button class="flex-1 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">&lt;300</button>
+                            </div>
+                        </div>
+
+                        <!-- Neighborhoods -->
+                        <div class="pb-5 mb-5 border-b border-gray-100">
+                            <h3 class="font-medium text-gray-900 mb-3 text-sm">Zonă</h3>
+                            <div class="space-y-2.5">
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb" checked>
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">Centru</span>
+                                    <span class="ml-auto text-xs text-gray-400">89</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb">
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">Pipera / Aviatorilor</span>
+                                    <span class="ml-auto text-xs text-gray-400">34</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb">
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">Herăstrău</span>
+                                    <span class="ml-auto text-xs text-gray-400">28</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb">
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">Băneasa</span>
+                                    <span class="ml-auto text-xs text-gray-400">15</span>
+                                </label>
+                            </div>
+                            <button class="mt-3 text-sm text-indigo-600 font-medium hover:underline">Vezi toate zonele</button>
+                        </div>
+
+                        <!-- Features -->
+                        <div class="pb-5 mb-5 border-b border-gray-100">
+                            <h3 class="font-medium text-gray-900 mb-3 text-sm">Caracteristici</h3>
+                            <div class="space-y-2.5">
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb">
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">Sold out aproape</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb">
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">Early Bird activ</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb">
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">VIP disponibil</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" class="cb">
+                                    <span class="text-sm text-gray-600 group-hover:text-gray-900">Parcare gratuită</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- AI Match -->
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <h3 class="font-medium text-gray-900 text-sm">AI Match minim</h3>
+                                <span class="w-2 h-2 bg-green-500 rounded-full pulse"></span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="flex-1 px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Orice</button>
+                                <button class="flex-1 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg">80%+</button>
+                                <button class="flex-1 px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">90%+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Events -->
+            <div class="flex-1 min-w-0">
+                <!-- Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">324 evenimente în București</h2>
+                        <p class="text-sm text-gray-500">Weekendul acesta • Centru</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button id="filterBtn" class="lg:hidden flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-full text-sm font-medium hover:border-gray-300 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                            </svg>
+                            Filtre
+                            <span class="w-5 h-5 bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center">3</span>
+                        </button>
+                        <select class="bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm font-medium cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-colors">
+                            <option>Recomandate pentru tine</option>
+                            <option>Data: cele mai apropiate</option>
+                            <option>Preț: mic - mare</option>
+                            <option>Preț: mare - mic</option>
+                            <option>Cele mai populare</option>
+                            <option>Recent adăugate</option>
+                        </select>
+                        <div class="hidden sm:flex items-center border border-gray-200 rounded-full p-1">
+                            <button class="p-2 rounded-full bg-gray-900 text-white">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                                </svg>
+                            </button>
+                            <button class="p-2 rounded-full text-gray-400 hover:text-gray-600 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Filters -->
+                <div class="flex items-center gap-2 mb-6 overflow-x-auto no-scrollbar pb-1">
+                    <span class="text-xs text-gray-500 whitespace-nowrap">Filtre active:</span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded-full text-xs font-medium whitespace-nowrap">
+                        București
+                        <button class="hover:bg-white/20 rounded-full"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded-full text-xs font-medium whitespace-nowrap">
+                        Weekend
+                        <button class="hover:bg-white/20 rounded-full"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded-full text-xs font-medium whitespace-nowrap">
+                        Centru
+                        <button class="hover:bg-white/20 rounded-full"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                    </span>
+                    <button class="text-xs text-indigo-600 font-medium hover:underline whitespace-nowrap">Șterge toate</button>
+                </div>
+
+                <!-- AI Banner -->
+                <div class="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-5 mb-6 border border-indigo-100">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h3 class="font-semibold text-gray-900">AI a găsit 18 evenimente perfecte pentru tine în București</h3>
+                                <span class="w-2 h-2 bg-green-500 rounded-full pulse"></span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-3">Bazat pe preferințele tale pentru stand-up comedy, concerte rock și locații în centru.</p>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-2.5 py-1 bg-white/80 rounded-full text-xs font-medium text-gray-700">😂 Stand-up</span>
+                                <span class="px-2.5 py-1 bg-white/80 rounded-full text-xs font-medium text-gray-700">🎸 Rock</span>
+                                <span class="px-2.5 py-1 bg-white/80 rounded-full text-xs font-medium text-gray-700">📍 Centru</span>
+                            </div>
+                        </div>
+                        <button class="text-sm font-medium text-indigo-600 hover:underline whitespace-nowrap hidden sm:block">Editează preferințe</button>
+                    </div>
+                </div>
+
+                <!-- Grid -->
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    
+                    <!-- Card 1 - Featured -->
+                    <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 sm:col-span-2 sm:row-span-2 group">
+                        <div class="relative aspect-[16/10] sm:aspect-[16/12] overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=600&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover event-img">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                            <div class="absolute top-4 left-4 flex items-center gap-2">
+                                <div class="flex items-center gap-1.5 bg-white/95 px-2.5 py-1 rounded-full">
+                                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                    <span class="text-xs font-semibold">98% match</span>
+                                </div>
+                                <span class="trending-badge px-2.5 py-1 rounded-full text-xs font-semibold text-white">🔥 Trending</span>
+                            </div>
+                            <button class="absolute top-4 right-4 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+                                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                </svg>
+                            </button>
+                            <div class="absolute bottom-4 left-4 right-4">
+                                <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur text-white text-xs font-medium rounded-full mb-2">Concert</span>
+                                <h3 class="text-xl sm:text-2xl font-bold text-white mb-1 group-hover:underline">Coldplay: Music of the Spheres World Tour</h3>
+                                <p class="text-white/80 text-sm flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                                    Arena Națională, București
+                                </p>
+                            </div>
+                        </div>
+                        <div class="p-5">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-500 mb-1">14 Feb 2026 • 20:00</p>
+                                    <p class="text-lg font-bold text-gray-900">de la 349 RON</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-red-500 font-medium mb-1">⚡ 78% sold</p>
+                                    <p class="text-xs text-gray-400">12.4k interesați</p>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Card 2 -->
+                    <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                        <div class="relative aspect-[4/3] overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover event-img">
+                            <div class="absolute top-3 left-3 flex items-center gap-1.5 bg-white/95 px-2.5 py-1 rounded-full">
+                                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                <span class="text-xs font-semibold">94%</span>
+                            </div>
+                            <span class="absolute top-3 right-12 local-badge px-2 py-1 rounded-full text-xs font-semibold text-white">Local</span>
+                            <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                </svg>
+                            </button>
+                            <span class="absolute bottom-3 left-3 px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Stand-up</span>
+                        </div>
+                        <div class="p-4">
+                            <p class="text-xs text-gray-500 mb-1">22 Ian • 19:30</p>
+                            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">Micutzu - Sold Out Tour</h3>
+                            <p class="text-sm text-gray-500 mb-3">Sala Palatului</p>
+                            <div class="flex items-center justify-between">
+                                <span class="font-semibold">89 RON</span>
+                                <span class="text-xs text-amber-600 font-medium">⚡ Ultimele locuri</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Card 3 -->
+                    <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                        <div class="relative aspect-[4/3] overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover event-img">
+                            <div class="absolute top-3 left-3 flex items-center gap-1.5 bg-white/95 px-2.5 py-1 rounded-full">
+                                <span class="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                                <span class="text-xs font-semibold">89%</span>
+                            </div>
+                            <span class="absolute top-3 right-12 early-badge px-2 py-1 rounded-full text-xs font-semibold text-white">Early Bird</span>
+                            <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+                                <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                </svg>
+                            </button>
+                            <span class="absolute bottom-3 left-3 px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Festival</span>
+                        </div>
+                        <div class="p-4">
+                            <p class="text-xs text-gray-500 mb-1">1-4 Aug • 4 zile</p>
+                            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">Summer Well 2026</h3>
+                            <p class="text-sm text-gray-500 mb-3">Domeniul Știrbey, Buftea</p>
+                            <div class="flex items-center justify-between">
+                                <span class="font-semibold">399 RON</span>
+                                <span class="text-xs text-green-600 font-medium">✓ -20% Early</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Card 4 -->
+                    <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                        <div class="relative aspect-[4/3] overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover event-img">
+                            <div class="absolute top-3 left-3 flex items-center gap-1.5 bg-white/95 px-2.5 py-1 rounded-full">
+                                <span class="w-2 h-2 bg-amber-500 rounded-full"></span>
+                                <span class="text-xs font-semibold">76%</span>
+                            </div>
+                            <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                </svg>
+                            </button>
+                            <span class="absolute bottom-3 left-3 px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Teatru</span>
+                        </div>
+                        <div class="p-4">
+                            <p class="text-xs text-gray-500 mb-1">15 Feb • 19:00</p>
+                            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">Hamlet - Teatrul Național</h3>
+                            <p class="text-sm text-gray-500 mb-3">TNB</p>
+                            <div class="flex items-center justify-between">
+                                <span class="font-semibold">120 RON</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- AD Card -->
+                    <div class="rounded-2xl overflow-hidden relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white p-5 flex flex-col justify-between min-h-[320px]">
+                        <div>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 text-xs font-medium rounded-full mb-4">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                Promovat
+                            </span>
+                            <h3 class="text-xl font-bold mb-2">Electric Castle 2026</h3>
+                            <p class="text-sm text-white/80 mb-2">Cel mai așteptat festival al verii te cheamă la Bonțida!</p>
+                            <p class="text-xs text-white/60">17-20 Iulie • Bonțida, Cluj</p>
+                        </div>
+                        <button class="w-full py-3 bg-white text-indigo-600 font-semibold rounded-xl mt-4 hover:bg-white/90 transition-colors">
+                            Bilete de la 599 RON →
+                        </button>
+                    </div>
+
+                    <!-- Card 5 -->
+                    <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                        <div class="relative aspect-[4/3] overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover event-img">
+                            <div class="absolute top-3 left-3 flex items-center gap-1.5 bg-white/95 px-2.5 py-1 rounded-full">
+                                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                <span class="text-xs font-semibold">95%</span>
+                            </div>
+                            <span class="absolute top-3 right-12 trending-badge px-2 py-1 rounded-full text-xs font-semibold text-white">🔥 Hot</span>
+                            <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                </svg>
+                            </button>
+                            <span class="absolute bottom-3 left-3 px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Club</span>
+                        </div>
+                        <div class="p-4">
+                            <p class="text-xs text-gray-500 mb-1">25 Ian • 23:00</p>
+                            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">Solomun at Kristal</h3>
+                            <p class="text-sm text-gray-500 mb-3">Kristal Glam Club</p>
+                            <div class="flex items-center justify-between">
+                                <span class="font-semibold">150 RON</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Card 6 -->
+                    <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                        <div class="relative aspect-[4/3] overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover event-img">
+                            <div class="absolute top-3 left-3 flex items-center gap-1.5 bg-white/95 px-2.5 py-1 rounded-full">
+                                <span class="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                                <span class="text-xs font-semibold">87%</span>
+                            </div>
+                            <span class="absolute top-3 right-12 vip-badge px-2 py-1 rounded-full text-xs font-semibold text-white">VIP</span>
+                            <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                </svg>
+                            </button>
+                            <span class="absolute bottom-3 left-3 px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Concert</span>
+                        </div>
+                        <div class="p-4">
+                            <p class="text-xs text-gray-500 mb-1">8 Mar • 20:30</p>
+                            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">Dua Lipa - Future Nostalgia</h3>
+                            <p class="text-sm text-gray-500 mb-3">Romexpo</p>
+                            <div class="flex items-center justify-between">
+                                <span class="font-semibold">299 RON</span>
+                            </div>
+                        </div>
+                    </a>
+
+                </div>
+
+                <!-- Load More -->
+                <div class="text-center mt-10">
+                    <button class="px-8 py-3 bg-gray-900 text-white font-medium rounded-full hover:bg-gray-800 transition-colors">
+                        Încarcă mai multe evenimente
+                    </button>
+                    <p class="text-sm text-gray-400 mt-3">Afișezi 12 din 324 evenimente</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white mt-16">
+        <div class="max-w-[1600px] mx-auto px-4 lg:px-8 py-12">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
+                <div class="col-span-2 lg:col-span-1">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                            <span class="text-gray-900 font-bold text-sm">T</span>
+                        </div>
+                        <span class="font-bold text-lg">TICS</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-4">Descoperă evenimente unice cu ajutorul AI. Doar 1% comision.</p>
+                    <div class="flex gap-3">
+                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg>
+                        </a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Evenimente</h4>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="tics-category.html" class="hover:text-white transition-colors">Concerte</a></li>
+                        <li><a href="tics-category.html" class="hover:text-white transition-colors">Festivaluri</a></li>
+                        <li><a href="tics-category.html" class="hover:text-white transition-colors">Stand-up</a></li>
+                        <li><a href="tics-category.html" class="hover:text-white transition-colors">Teatru</a></li>
+                        <li><a href="tics-category.html" class="hover:text-white transition-colors">Sport</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Orașe</h4>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="tics-city.html" class="hover:text-white transition-colors">București</a></li>
+                        <li><a href="tics-city.html" class="hover:text-white transition-colors">Cluj-Napoca</a></li>
+                        <li><a href="tics-city.html" class="hover:text-white transition-colors">Timișoara</a></li>
+                        <li><a href="tics-city.html" class="hover:text-white transition-colors">Iași</a></li>
+                        <li><a href="tics-city.html" class="hover:text-white transition-colors">Constanța</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Companie</h4>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="tics-about.html" class="hover:text-white transition-colors">Despre noi</a></li>
+                        <li><a href="tics-contact.html" class="hover:text-white transition-colors">Contact</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Cariere</a></li>
+                        <li><a href="blog.html" class="hover:text-white transition-colors">Blog</a></li>
+                        <li><a href="tics-org-landing.html" class="hover:text-white transition-colors">Organizatori</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Suport</h4>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="tics-faq.html" class="hover:text-white transition-colors">Ajutor</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Termeni și condiții</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Politica de confidențialitate</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Retur bilete</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="text-gray-400 text-sm">© 2026 TICS.ro. Toate drepturile rezervate. Powered by Tixello.</p>
+                <div class="flex items-center gap-4">
+                    <span class="text-gray-500 text-sm">Visa</span>
+                    <span class="text-gray-500 text-sm">Mastercard</span>
+                    <span class="text-gray-500 text-sm">Apple Pay</span>
+                    <span class="text-gray-500 text-sm">Google Pay</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Mobile Filter Drawer -->
+    <div id="overlay" class="overlay fixed inset-0 bg-black/50 z-50 lg:hidden"></div>
+    <div id="drawer" class="drawer fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-white z-50 overflow-y-auto lg:hidden">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-5 py-4 flex items-center justify-between">
+            <h2 class="font-semibold text-lg">Filtre</h2>
+            <button id="closeBtn" class="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-5">
+            <!-- Mobile filters same as desktop -->
+            <div class="pb-5 mb-5 border-b border-gray-100">
+                <div class="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        </div>
+                        <span class="font-medium text-sm">AI Suggestions</span>
+                    </div>
+                    <label class="relative inline-flex cursor-pointer">
+                        <input type="checkbox" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="pb-5 mb-5 border-b border-gray-100">
+                <h3 class="font-medium text-sm mb-3">Când</h3>
+                <div class="space-y-2.5">
+                    <label class="flex items-center gap-3"><input type="checkbox" class="cb"><span class="text-sm text-gray-600">Astăzi</span></label>
+                    <label class="flex items-center gap-3"><input type="checkbox" class="cb"><span class="text-sm text-gray-600">Mâine</span></label>
+                    <label class="flex items-center gap-3"><input type="checkbox" class="cb" checked><span class="text-sm text-gray-600">Weekend</span></label>
+                    <label class="flex items-center gap-3"><input type="checkbox" class="cb"><span class="text-sm text-gray-600">Luna aceasta</span></label>
+                </div>
+            </div>
+
+            <div class="pb-5 mb-5 border-b border-gray-100">
+                <h3 class="font-medium text-sm mb-3">Preț maxim</h3>
+                <input type="range" min="0" max="1000" value="500" class="w-full mb-2">
+                <div class="flex justify-between text-xs text-gray-500">
+                    <span>0</span><span class="font-medium text-gray-900">500 RON</span><span>1000+</span>
+                </div>
+            </div>
+
+            <div class="pb-5 mb-5 border-b border-gray-100">
+                <h3 class="font-medium text-sm mb-3">Zonă</h3>
+                <div class="space-y-2.5">
+                    <label class="flex items-center gap-3"><input type="checkbox" class="cb" checked><span class="text-sm text-gray-600">Centru</span></label>
+                    <label class="flex items-center gap-3"><input type="checkbox" class="cb"><span class="text-sm text-gray-600">Pipera</span></label>
+                    <label class="flex items-center gap-3"><input type="checkbox" class="cb"><span class="text-sm text-gray-600">Herăstrău</span></label>
+                </div>
+            </div>
+
+            <div>
+                <div class="flex items-center gap-2 mb-3">
+                    <h3 class="font-medium text-sm">AI Match minim</h3>
+                    <span class="w-2 h-2 bg-green-500 rounded-full pulse"></span>
+                </div>
+                <div class="flex gap-2">
+                    <button class="flex-1 px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg">Orice</button>
+                    <button class="flex-1 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg">80%+</button>
+                    <button class="flex-1 px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg">90%+</button>
+                </div>
+            </div>
+        </div>
+        <div class="sticky bottom-0 bg-white border-t border-gray-200 p-5 flex gap-3">
+            <button class="flex-1 py-3 border border-gray-200 rounded-xl font-medium hover:bg-gray-50 transition-colors">Resetează</button>
+            <button class="flex-1 py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition-colors">Aplică (324)</button>
+        </div>
+    </div>
+
+    <script>
+        // Mobile filter drawer
+        const filterBtn = document.getElementById('filterBtn');
+        const overlay = document.getElementById('overlay');
+        const drawer = document.getElementById('drawer');
+        const closeBtn = document.getElementById('closeBtn');
+
+        function openDrawer() {
+            overlay.classList.add('open');
+            drawer.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeDrawer() {
+            overlay.classList.remove('open');
+            drawer.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        filterBtn?.addEventListener('click', openDrawer);
+        overlay?.addEventListener('click', closeDrawer);
+        closeBtn?.addEventListener('click', closeDrawer);
+
+        // Category chips
+        document.querySelectorAll('.no-scrollbar button').forEach(chip => {
+            chip.addEventListener('click', function() {
+                this.parentElement.querySelectorAll('button').forEach(c => c.classList.remove('chip-active'));
+                this.classList.add('chip-active');
+            });
+        });
+    </script>
+</body>
+</html>

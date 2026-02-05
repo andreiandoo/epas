@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setări cont — TICS.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen" style="font-family:'Inter',sans-serif">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="tics-homepage.html" class="flex items-center gap-2"><div class="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center"><span class="text-white font-bold">T</span></div><span class="font-bold text-xl">TICS</span></a>
+            <a href="tics-user-profile.html" class="text-sm text-indigo-600">← Înapoi la profil</a>
+        </div>
+    </header>
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <h1 class="text-2xl font-bold text-gray-900 mb-8">Setări cont</h1>
+        <!-- Password -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">Schimbă parola</h2>
+            <div class="space-y-4 max-w-md">
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Parola curentă</label><input type="password" class="w-full px-4 py-3 border border-gray-200 rounded-xl"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Parola nouă</label><input type="password" class="w-full px-4 py-3 border border-gray-200 rounded-xl"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Confirmă parola nouă</label><input type="password" class="w-full px-4 py-3 border border-gray-200 rounded-xl"></div>
+                <button class="px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700">Schimbă parola</button>
+            </div>
+        </div>
+        <!-- Two Factor -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">Autentificare în doi pași (2FA)</h2>
+            <p class="text-gray-500 mb-4">Adaugă un nivel extra de securitate contului tău.</p>
+            <button class="px-6 py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700">Activează 2FA</button>
+        </div>
+        <!-- Language -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">Preferințe</h2>
+            <div class="space-y-4 max-w-md">
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Limba</label><select class="w-full px-4 py-3 border border-gray-200 rounded-xl"><option selected>Română</option><option>English</option></select></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Moneda</label><select class="w-full px-4 py-3 border border-gray-200 rounded-xl"><option selected>RON</option><option>EUR</option></select></div>
+            </div>
+        </div>
+        <!-- Danger Zone -->
+        <div class="bg-white rounded-2xl border border-red-200 p-6">
+            <h2 class="text-lg font-bold text-red-600 mb-2">Zona periculoasă</h2>
+            <p class="text-sm text-gray-500 mb-4">Aceste acțiuni sunt permanente și nu pot fi anulate.</p>
+            <a href="account-delete.html" class="inline-block px-4 py-2 border border-red-300 text-red-600 text-sm font-medium rounded-xl hover:bg-red-50">Șterge contul meu</a>
+        </div>
+    </div>
+</body>
+</html>

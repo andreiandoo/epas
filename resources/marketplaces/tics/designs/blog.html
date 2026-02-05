@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog — TICS.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen" style="font-family:'Inter',sans-serif">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="tics-homepage.html" class="flex items-center gap-2"><div class="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center"><span class="text-white font-bold">T</span></div><span class="font-bold text-xl">TICS</span></a>
+            <a href="tics-login.html" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl">Intră în cont</a>
+        </div>
+    </header>
+    <div class="max-w-7xl mx-auto px-4 py-12">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">Blog TICS</h1>
+            <p class="text-xl text-gray-500">Noutăți, ghiduri și povești din lumea evenimentelor</p>
+        </div>
+        <div class="flex flex-wrap gap-3 justify-center mb-10">
+            <button class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-full">Toate</button>
+            <button class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-50">Ghiduri</button>
+            <button class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-50">Noutăți</button>
+            <button class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-50">Interviuri</button>
+            <button class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-50">Pentru organizatori</button>
+        </div>
+        <!-- Featured -->
+        <a href="blog-article.html" class="block bg-white rounded-2xl border border-gray-200 overflow-hidden mb-10 hover:shadow-lg transition-shadow">
+            <div class="grid md:grid-cols-2">
+                <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&h=400&fit=crop" class="w-full h-64 md:h-full object-cover">
+                <div class="p-8">
+                    <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">FEATURED</span>
+                    <h2 class="text-2xl font-bold text-gray-900 mt-4 mb-3">Cum să organizezi un eveniment de succes în 2026</h2>
+                    <p class="text-gray-600 mb-4">Ghid complet pentru organizatori: de la planificare până la execuție, cu sfaturi de la experți din industrie.</p>
+                    <div class="flex items-center gap-3 text-sm text-gray-500"><span>15 min read</span><span>•</span><span>12 Jan 2026</span></div>
+                </div>
+            </div>
+        </a>
+        <!-- Grid -->
+        <div class="grid md:grid-cols-3 gap-6">
+            <a href="blog-article.html" class="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+                <img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=250&fit=crop" class="w-full h-48 object-cover">
+                <div class="p-5"><span class="text-xs text-indigo-600 font-medium">GHID</span><h3 class="font-bold text-gray-900 mt-2 mb-2">5 strategii de marketing pentru evenimente</h3><p class="text-sm text-gray-500">8 min • 10 Jan 2026</p></div>
+            </a>
+            <a href="blog-article.html" class="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+                <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=250&fit=crop" class="w-full h-48 object-cover">
+                <div class="p-5"><span class="text-xs text-purple-600 font-medium">INTERVIU</span><h3 class="font-bold text-gray-900 mt-2 mb-2">Discuție cu fondatorii Electric Castle</h3><p class="text-sm text-gray-500">12 min • 8 Jan 2026</p></div>
+            </a>
+            <a href="blog-article.html" class="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+                <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=250&fit=crop" class="w-full h-48 object-cover">
+                <div class="p-5"><span class="text-xs text-green-600 font-medium">NOUTĂȚI</span><h3 class="font-bold text-gray-900 mt-2 mb-2">TICS lansează funcția de Gift Cards</h3><p class="text-sm text-gray-500">3 min • 5 Jan 2026</p></div>
+            </a>
+        </div>
+    </div>
+    <footer class="bg-gray-900 text-white py-8 mt-12"><div class="max-w-7xl mx-auto px-4 text-center"><p class="text-gray-400">© 2026 TICS.ro</p></div></footer>
+</body>
+</html>

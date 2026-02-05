@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget TICS — Exemplu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8" style="font-family:'Inter',sans-serif">
+    <div class="max-w-4xl mx-auto">
+        <div class="mb-8">
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Widget TICS - Demo</h1>
+            <p class="text-gray-500">Acesta este un exemplu de widget pe care organizatorii îl pot adăuga pe site-ul lor.</p>
+        </div>
+        
+        <!-- Widget Example -->
+        <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden max-w-md">
+            <div class="p-1 bg-gradient-to-r from-indigo-600 to-purple-600"></div>
+            <div class="p-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-6 h-6 bg-indigo-600 rounded flex items-center justify-center"><span class="text-white text-xs font-bold">T</span></div>
+                    <span class="text-xs text-gray-400">Powered by TICS</span>
+                </div>
+                <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=200&fit=crop" class="w-full h-40 object-cover rounded-xl mb-4">
+                <h3 class="font-bold text-gray-900 text-lg mb-1">Coldplay: Music of the Spheres</h3>
+                <p class="text-sm text-gray-500 mb-4">14 Feb 2026 • Arena Națională, București</p>
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <p class="text-xs text-gray-500">de la</p>
+                        <p class="text-xl font-bold text-indigo-600">149 RON</p>
+                    </div>
+                    <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Disponibil</span>
+                </div>
+                <button class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700">Cumpără bilete</button>
+            </div>
+        </div>
+
+        <!-- Code Example -->
+        <div class="mt-12 bg-white rounded-2xl border border-gray-200 p-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">Cod de integrare</h2>
+            <p class="text-sm text-gray-500 mb-4">Copiază acest cod și adaugă-l pe site-ul tău:</p>
+            <pre class="bg-gray-900 text-green-400 p-4 rounded-xl text-sm overflow-x-auto"><code>&lt;iframe 
+  src="https://tics.ro/widget/coldplay-2026"
+  width="400" 
+  height="500" 
+  frameborder="0"
+&gt;&lt;/iframe&gt;</code></pre>
+            <button class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">📋 Copiază codul</button>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editează eveniment — TICS Organizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{'sans':['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}
+        body{font-family:'Inter',system-ui,sans-serif}
+        .input-field:focus{border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,0.1)}
+        .tab-btn.active{border-color:#6366f1;color:#6366f1;background:rgba(99,102,241,0.05)}
+        .tab-content{display:none}
+        .tab-content.active{display:block}
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="tics-org-events.html" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                </a>
+                <div>
+                    <h1 class="text-lg font-bold text-gray-900">Editează eveniment</h1>
+                    <p class="text-sm text-gray-500">Coldplay: Music of the Spheres</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">Publicat</span>
+                <a href="tics-event.html" target="_blank" class="px-4 py-2 text-gray-600 text-sm font-medium hover:bg-gray-100 rounded-xl">Previzualizare</a>
+                <button onclick="saveChanges()" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700">Salvează</button>
+            </div>
+        </div>
+        <!-- Tabs -->
+        <div class="max-w-6xl mx-auto px-4 flex gap-2">
+            <button onclick="switchTab('details')" class="tab-btn active px-4 py-3 text-sm font-medium rounded-t-xl border-b-2 border-transparent" data-tab="details">Detalii</button>
+            <button onclick="switchTab('tickets')" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 rounded-t-xl border-b-2 border-transparent hover:text-gray-700" data-tab="tickets">Bilete</button>
+            <button onclick="switchTab('marketing')" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 rounded-t-xl border-b-2 border-transparent hover:text-gray-700" data-tab="marketing">Marketing</button>
+            <button onclick="switchTab('settings')" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 rounded-t-xl border-b-2 border-transparent hover:text-gray-700" data-tab="settings">Setări</button>
+        </div>
+    </header>
+
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <!-- TAB 1: DETALII -->
+        <div id="tab-details" class="tab-content active">
+            <div class="grid lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Informații de bază</h2>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Numele evenimentului *</label><input type="text" value="Coldplay: Music of the Spheres" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Descriere scurtă *</label><input type="text" value="Cel mai așteptat concert al anului vine în București!" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"><p class="text-xs text-gray-500 mt-1">51/150 caractere</p></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Descriere completă</label><textarea rows="6" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none resize-none">Coldplay revine în România cu turneul mondial "Music of the Spheres"!
+
+Program:
+• 18:00 - Deschidere porți
+• 19:30 - Artist invitat
+• 21:00 - Coldplay
+
+Inclus în bilet: acces concert, brățară LED interactivă.</textarea></div>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Categorie</label><select class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"><option selected>Concert</option><option>Festival</option><option>Stand-up Comedy</option><option>Teatru</option></select></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Tip eveniment</label><select class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"><option selected>Fizic (cu locație)</option><option>Online</option><option>Hibrid</option></select></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Data și ora</h2>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Data început *</label><input type="date" value="2026-02-14" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Ora început *</label><input type="time" value="18:00" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Data sfârșit</label><input type="date" value="2026-02-14" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Ora sfârșit</label><input type="time" value="23:30" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Locație</h2>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Nume locație *</label><input type="text" value="Arena Națională" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Adresă *</label><input type="text" value="Bulevardul Basarabia 37-39, Sector 2" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Oraș *</label><input type="text" value="București" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Cod poștal</label><input type="text" value="022103" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Imagini</h2>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Imagine principală</label><div class="relative"><img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=400&fit=crop" class="w-full h-48 object-cover rounded-xl"><button class="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-lg hover:bg-black/70"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button></div></div>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h3 class="font-semibold text-gray-900 mb-4">Status</h3>
+                        <label class="flex items-center gap-3 p-3 border border-green-200 bg-green-50 rounded-xl cursor-pointer"><input type="radio" name="status" checked class="w-4 h-4 text-indigo-600"><div><p class="text-sm font-medium text-gray-900">Publicat</p><p class="text-xs text-gray-500">Vizibil public</p></div></label>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h3 class="font-semibold text-gray-900 mb-4">Statistici</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between"><span class="text-sm text-gray-500">Bilete vândute</span><span class="font-bold">1.245 / 5.000</span></div>
+                            <div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-indigo-600 h-2 rounded-full" style="width:25%"></div></div>
+                            <div class="flex justify-between pt-2"><span class="text-sm text-gray-500">Venituri</span><span class="font-bold text-green-600">87.150 RON</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: BILETE -->
+        <div id="tab-tickets" class="tab-content">
+            <div class="space-y-6">
+                <div class="grid sm:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-xl border border-gray-200 p-4"><p class="text-sm text-gray-500">Total</p><p class="text-2xl font-bold">5.000</p></div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-4"><p class="text-sm text-gray-500">Vândute</p><p class="text-2xl font-bold text-green-600">1.245</p></div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-4"><p class="text-sm text-gray-500">Disponibile</p><p class="text-2xl font-bold text-indigo-600">3.755</p></div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-4"><p class="text-sm text-gray-500">Rezervate</p><p class="text-2xl font-bold text-amber-600">50</p></div>
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-200">
+                    <div class="flex items-center justify-between p-6 border-b border-gray-100">
+                        <h2 class="text-lg font-bold text-gray-900">Categorii de bilete</h2>
+                        <button onclick="document.getElementById('addTicketModal').classList.remove('hidden')" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Adaugă</button>
+                    </div>
+                    <div class="divide-y divide-gray-100">
+                        <div class="p-6 hover:bg-gray-50 flex items-start justify-between">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center"><svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg></div>
+                                <div><h3 class="font-semibold text-gray-900">General Admission</h3><p class="text-sm text-gray-500 mt-1">Acces zona generală</p><div class="flex items-center gap-4 mt-2"><span class="text-lg font-bold">149 RON</span><span class="text-sm text-green-600">892 vândute</span><span class="text-sm text-gray-500">2.108 disponibile</span></div></div>
+                            </div>
+                            <div class="flex items-center gap-2"><span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Activ</span><button class="p-2 text-gray-400 hover:text-gray-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button></div>
+                        </div>
+                        <div class="p-6 hover:bg-gray-50 flex items-start justify-between">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center"><svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg></div>
+                                <div><h3 class="font-semibold text-gray-900">VIP Experience</h3><p class="text-sm text-gray-500 mt-1">Loc rezervat, meet & greet</p><div class="flex items-center gap-4 mt-2"><span class="text-lg font-bold">499 RON</span><span class="text-sm text-green-600">253 vândute</span><span class="text-sm text-gray-500">247 disponibile</span></div></div>
+                            </div>
+                            <div class="flex items-center gap-2"><span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Activ</span><button class="p-2 text-gray-400 hover:text-gray-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button></div>
+                        </div>
+                        <div class="p-6 hover:bg-gray-50 flex items-start justify-between">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center"><svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                                <div><h3 class="font-semibold text-gray-900">Early Bird</h3><p class="text-sm text-gray-500 mt-1">Preț redus (limitat)</p><div class="flex items-center gap-4 mt-2"><span class="text-lg font-bold">99 RON</span><span class="text-sm text-red-600">100 vândute (SOLD OUT)</span></div></div>
+                            </div>
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">Sold Out</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">Coduri promoționale</h2>
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                        <div><p class="font-mono font-bold text-gray-900">WELCOME10</p><p class="text-sm text-gray-500">10% reducere • 45 utilizări</p></div>
+                        <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Activ</span>
+                    </div>
+                    <button class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 text-gray-600 rounded-xl hover:border-indigo-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Adaugă cod promoțional</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: MARKETING -->
+        <div id="tab-marketing" class="tab-content">
+            <div class="grid lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">SEO & Meta Tags</h2>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Titlu SEO</label><input type="text" value="Coldplay Concert București 2026 - Bilete | TICS" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"><p class="text-xs text-gray-500 mt-1">52/60 caractere</p></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Meta descriere</label><textarea rows="3" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none resize-none">Cumpără bilete pentru concertul Coldplay din București, 14 februarie 2026. Music of the Spheres World Tour la Arena Națională. Bilete de la 149 RON.</textarea><p class="text-xs text-gray-500 mt-1">148/160 caractere</p></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">URL personalizat</label><div class="flex"><span class="px-4 py-3 bg-gray-100 border border-r-0 border-gray-200 rounded-l-xl text-gray-500 text-sm">tics.ro/e/</span><input type="text" value="coldplay-bucuresti-2026" class="flex-1 px-4 py-3 border border-gray-200 rounded-r-xl outline-none"></div></div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Partajare Social Media</h2>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Imagine social (1200x630px)</label><div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-indigo-400 cursor-pointer"><p class="text-sm text-gray-500">Click pentru upload</p></div></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Text pentru partajare</label><textarea rows="3" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none resize-none">🎤 Coldplay vine la București! Nu rata Music of the Spheres World Tour pe 14 februarie 2026. Ia-ți biletul! 🎫</textarea></div>
+                        </div>
+                        <div class="flex items-center gap-3 mt-4">
+                            <button class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>Facebook</button>
+                            <button class="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white text-sm font-medium rounded-xl hover:bg-sky-600">Twitter</button>
+                            <button class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-xl hover:bg-green-700">WhatsApp</button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Campanii Email</h2>
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl"><div><p class="font-medium text-gray-900">Anunț eveniment</p><p class="text-sm text-gray-500">Trimis la 1.234 abonați • 45% deschideri</p></div><span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Trimis</span></div>
+                        <button class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 text-gray-600 rounded-xl hover:border-indigo-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Creează campanie nouă</button>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-white">
+                        <h3 class="font-bold mb-2">📊 Performanță</h3>
+                        <div class="space-y-3 mt-4"><div class="flex justify-between"><span class="text-indigo-100">Vizite din social</span><span class="font-bold">3.245</span></div><div class="flex justify-between"><span class="text-indigo-100">Conversii</span><span class="font-bold">12%</span></div><div class="flex justify-between"><span class="text-indigo-100">Top sursă</span><span class="font-bold">Facebook</span></div></div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h3 class="font-semibold text-gray-900 mb-4">Widget embed</h3>
+                        <p class="text-sm text-gray-500 mb-3">Adaugă pe site-ul tău:</p>
+                        <div class="p-3 bg-gray-100 rounded-lg"><code class="text-xs text-gray-600 break-all">&lt;iframe src="https://tics.ro/widget/coldplay"&gt;&lt;/iframe&gt;</code></div>
+                        <button class="mt-3 text-sm text-indigo-600 font-medium hover:underline">Copiază codul</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: SETĂRI -->
+        <div id="tab-settings" class="tab-content">
+            <div class="max-w-3xl space-y-6">
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">Setări vânzări</h2>
+                    <div class="space-y-4">
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Început vânzări</label><input type="datetime-local" value="2025-12-01T10:00" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Sfârșit vânzări</label><input type="datetime-local" value="2026-02-14T17:00" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                        </div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Limită bilete/comandă</label><select class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"><option>Fără limită</option><option>2 bilete</option><option>4 bilete</option><option selected>6 bilete</option><option>10 bilete</option></select></div>
+                        <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked class="w-5 h-5 rounded border-gray-300 text-indigo-600"><span class="text-sm text-gray-700">Permite cumpărarea fără cont</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-indigo-600"><span class="text-sm text-gray-700">Ascunde biletele rămase</span></label>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">Setări check-in</h2>
+                    <div class="space-y-4">
+                        <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked class="w-5 h-5 rounded border-gray-300 text-indigo-600"><span class="text-sm text-gray-700">Permite check-in multiplu (re-entry)</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked class="w-5 h-5 rounded border-gray-300 text-indigo-600"><span class="text-sm text-gray-700">Trimite notificare la check-in</span></label>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Mesaj la scanare</label><input type="text" value="Bine ai venit la concert! 🎵" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">Notificări</h2>
+                    <div class="space-y-4">
+                        <label class="flex items-center justify-between"><div><p class="text-sm font-medium text-gray-900">Email la fiecare vânzare</p><p class="text-xs text-gray-500">Notificare pentru fiecare bilet</p></div><input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-indigo-600"></label>
+                        <label class="flex items-center justify-between"><div><p class="text-sm font-medium text-gray-900">Raport zilnic</p><p class="text-xs text-gray-500">Sumar zilnic cu vânzările</p></div><input type="checkbox" checked class="w-5 h-5 rounded border-gray-300 text-indigo-600"></label>
+                        <label class="flex items-center justify-between"><div><p class="text-sm font-medium text-gray-900">Alertă sold out</p><p class="text-xs text-gray-500">Când o categorie e sold out</p></div><input type="checkbox" checked class="w-5 h-5 rounded border-gray-300 text-indigo-600"></label>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">Politică rambursare</h2>
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Permite rambursări</label><select class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"><option>Nu permite</option><option selected>Până la 7 zile înainte</option><option>Până la 14 zile înainte</option><option>Oricând</option></select></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Termeni suplimentari</label><textarea rows="3" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none resize-none" placeholder="Termeni specifici pentru acest eveniment..."></textarea></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl border border-red-200 p-6">
+                    <h2 class="text-lg font-bold text-red-600 mb-2">Zona periculoasă</h2>
+                    <p class="text-sm text-gray-500 mb-4">Aceste acțiuni sunt ireversibile.</p>
+                    <div class="flex flex-wrap gap-3">
+                        <button class="px-4 py-2 border border-amber-300 text-amber-700 text-sm font-medium rounded-xl hover:bg-amber-50">Anulează evenimentul</button>
+                        <button class="px-4 py-2 border border-red-300 text-red-600 text-sm font-medium rounded-xl hover:bg-red-50">Șterge definitiv</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Ticket Modal -->
+    <div id="addTicketModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-lg mx-4">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Adaugă categorie bilete</h3>
+            <div class="space-y-4">
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Nume *</label><input type="text" placeholder="ex: Standard, VIP" class="w-full px-4 py-3 border border-gray-200 rounded-xl"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Descriere</label><textarea rows="2" placeholder="Ce include..." class="w-full px-4 py-3 border border-gray-200 rounded-xl resize-none"></textarea></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Preț (RON) *</label><input type="number" placeholder="149" class="w-full px-4 py-3 border border-gray-200 rounded-xl"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Cantitate *</label><input type="number" placeholder="1000" class="w-full px-4 py-3 border border-gray-200 rounded-xl"></div>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="document.getElementById('addTicketModal').classList.add('hidden')" class="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200">Anulează</button>
+                <button class="flex-1 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700">Adaugă</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.classList.add('text-gray-500'); });
+            document.getElementById('tab-' + tabName).classList.add('active');
+            document.querySelector('.tab-btn[data-tab="' + tabName + '"]').classList.add('active');
+            document.querySelector('.tab-btn[data-tab="' + tabName + '"]').classList.remove('text-gray-500');
+        }
+        function saveChanges() {
+            const btn = event.target;
+            btn.innerHTML = '<svg class="animate-spin w-4 h-4 inline mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>Se salvează...';
+            setTimeout(() => { btn.innerHTML = '✓ Salvat!'; btn.classList.replace('bg-indigo-600','bg-green-600'); setTimeout(() => { btn.innerHTML = 'Salvează'; btn.classList.replace('bg-green-600','bg-indigo-600'); }, 2000); }, 1000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concerte — TICS.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{'sans':['Inter','system-ui','sans-serif']}}}}</script>
+    <style>*{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}.event-card:hover{transform:translateY(-4px);box-shadow:0 20px 40px -15px rgba(0,0,0,0.15)}.event-card:hover img{transform:scale(1.05)}</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="tics-homepage.html" class="flex items-center gap-2">
+                <div class="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center"><span class="text-white font-bold text-lg">T</span></div>
+                <span class="font-bold text-xl">TICS</span>
+            </a>
+            <nav class="hidden md:flex items-center gap-6">
+                <a href="tics-category.html" class="text-sm font-medium text-indigo-600">Concerte</a>
+                <a href="#" class="text-sm text-gray-600 hover:text-gray-900">Festivaluri</a>
+                <a href="#" class="text-sm text-gray-600 hover:text-gray-900">Stand-up</a>
+                <a href="#" class="text-sm text-gray-600 hover:text-gray-900">Teatru</a>
+            </nav>
+            <div class="flex items-center gap-3">
+                <a href="tics-search.html" class="p-2 text-gray-600 hover:bg-gray-100 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></a>
+                <a href="tics-login.html" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl">Intră în cont</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-16">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center gap-2 text-purple-200 text-sm mb-4">
+                <a href="tics-homepage.html" class="hover:text-white">Acasă</a>
+                <span>/</span>
+                <span>Concerte</span>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">Concerte</h1>
+            <p class="text-xl text-purple-100 max-w-2xl">Descoperă cele mai tari concerte din România. De la artiști internaționali la trupe locale.</p>
+            <div class="flex items-center gap-4 mt-6">
+                <span class="px-4 py-2 bg-white/20 rounded-full text-sm">🎸 245 evenimente</span>
+                <span class="px-4 py-2 bg-white/20 rounded-full text-sm">📍 32 orașe</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Filters -->
+    <section class="bg-white border-b border-gray-200 py-4 sticky top-[73px] z-40">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex flex-wrap items-center gap-3">
+                <select class="border border-gray-200 rounded-xl px-4 py-2 text-sm"><option>Toate orașele</option><option>București</option><option>Cluj-Napoca</option><option>Timișoara</option><option>Iași</option></select>
+                <select class="border border-gray-200 rounded-xl px-4 py-2 text-sm"><option>Oricând</option><option>Săptămâna asta</option><option>Luna asta</option><option>Următoarele 3 luni</option></select>
+                <select class="border border-gray-200 rounded-xl px-4 py-2 text-sm"><option>Orice preț</option><option>Sub 100 RON</option><option>100-200 RON</option><option>Peste 200 RON</option></select>
+                <div class="flex items-center gap-2 ml-auto">
+                    <span class="text-sm text-gray-500">Sortare:</span>
+                    <select class="border border-gray-200 rounded-xl px-4 py-2 text-sm"><option>Dată (apropiate)</option><option>Preț (mic-mare)</option><option>Popularitate</option></select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Events Grid -->
+    <section class="py-12">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Event Card 1 -->
+                <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 transition-all duration-300">
+                    <div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=250&fit=crop" class="w-full h-48 object-cover transition-transform duration-300"><span class="absolute top-3 left-3 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">HOT</span></div>
+                    <div class="p-4">
+                        <div class="flex items-center gap-2 text-sm text-gray-500 mb-2"><span>14 Feb</span><span>•</span><span>București</span></div>
+                        <h3 class="font-bold text-gray-900 mb-2">Coldplay: Music of the Spheres</h3>
+                        <p class="text-sm text-gray-500 mb-3">Arena Națională</p>
+                        <div class="flex items-center justify-between"><span class="text-lg font-bold text-indigo-600">de la 149 RON</span><span class="text-xs text-gray-400">1.245 bilete</span></div>
+                    </div>
+                </a>
+                <!-- Event Card 2 -->
+                <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 transition-all duration-300">
+                    <div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=250&fit=crop" class="w-full h-48 object-cover transition-transform duration-300"></div>
+                    <div class="p-4">
+                        <div class="flex items-center gap-2 text-sm text-gray-500 mb-2"><span>28 Feb</span><span>•</span><span>Cluj-Napoca</span></div>
+                        <h3 class="font-bold text-gray-900 mb-2">Ed Sheeran - Mathematics Tour</h3>
+                        <p class="text-sm text-gray-500 mb-3">BT Arena</p>
+                        <div class="flex items-center justify-between"><span class="text-lg font-bold text-indigo-600">de la 199 RON</span><span class="text-xs text-gray-400">892 bilete</span></div>
+                    </div>
+                </a>
+                <!-- Event Card 3 -->
+                <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 transition-all duration-300">
+                    <div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=250&fit=crop" class="w-full h-48 object-cover transition-transform duration-300"><span class="absolute top-3 left-3 px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">SOLD OUT</span></div>
+                    <div class="p-4">
+                        <div class="flex items-center gap-2 text-sm text-gray-500 mb-2"><span>5 Mar</span><span>•</span><span>Timișoara</span></div>
+                        <h3 class="font-bold text-gray-900 mb-2">The Weeknd - After Hours Tour</h3>
+                        <p class="text-sm text-gray-500 mb-3">Stadion Dan Păltinișanu</p>
+                        <div class="flex items-center justify-between"><span class="text-lg font-bold text-gray-400 line-through">SOLD OUT</span></div>
+                    </div>
+                </a>
+                <!-- Event Card 4 -->
+                <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 transition-all duration-300">
+                    <div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=250&fit=crop" class="w-full h-48 object-cover transition-transform duration-300"></div>
+                    <div class="p-4">
+                        <div class="flex items-center gap-2 text-sm text-gray-500 mb-2"><span>12 Mar</span><span>•</span><span>Iași</span></div>
+                        <h3 class="font-bold text-gray-900 mb-2">Carla's Dreams - Concert Aniversar</h3>
+                        <p class="text-sm text-gray-500 mb-3">Sala Polivalentă</p>
+                        <div class="flex items-center justify-between"><span class="text-lg font-bold text-indigo-600">de la 89 RON</span><span class="text-xs text-gray-400">2.100 bilete</span></div>
+                    </div>
+                </a>
+                <!-- Event Card 5 -->
+                <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 transition-all duration-300">
+                    <div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400&h=250&fit=crop" class="w-full h-48 object-cover transition-transform duration-300"></div>
+                    <div class="p-4">
+                        <div class="flex items-center gap-2 text-sm text-gray-500 mb-2"><span>20 Mar</span><span>•</span><span>București</span></div>
+                        <h3 class="font-bold text-gray-900 mb-2">Dua Lipa - Future Nostalgia</h3>
+                        <p class="text-sm text-gray-500 mb-3">Romexpo</p>
+                        <div class="flex items-center justify-between"><span class="text-lg font-bold text-indigo-600">de la 249 RON</span><span class="text-xs text-gray-400">500 bilete</span></div>
+                    </div>
+                </a>
+                <!-- Event Card 6 -->
+                <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 transition-all duration-300">
+                    <div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&h=250&fit=crop" class="w-full h-48 object-cover transition-transform duration-300"></div>
+                    <div class="p-4">
+                        <div class="flex items-center gap-2 text-sm text-gray-500 mb-2"><span>2 Apr</span><span>•</span><span>Brașov</span></div>
+                        <h3 class="font-bold text-gray-900 mb-2">Subcarpați - Turneu Național</h3>
+                        <p class="text-sm text-gray-500 mb-3">Piața Sfatului</p>
+                        <div class="flex items-center justify-between"><span class="text-lg font-bold text-indigo-600">de la 69 RON</span><span class="text-xs text-gray-400">3.500 bilete</span></div>
+                    </div>
+                </a>
+                <!-- Event Card 7 -->
+                <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 transition-all duration-300">
+                    <div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=250&fit=crop" class="w-full h-48 object-cover transition-transform duration-300"></div>
+                    <div class="p-4">
+                        <div class="flex items-center gap-2 text-sm text-gray-500 mb-2"><span>15 Apr</span><span>•</span><span>Constanța</span></div>
+                        <h3 class="font-bold text-gray-900 mb-2">Imagine Dragons - Mercury Tour</h3>
+                        <p class="text-sm text-gray-500 mb-3">Sala Sporturilor</p>
+                        <div class="flex items-center justify-between"><span class="text-lg font-bold text-indigo-600">de la 179 RON</span><span class="text-xs text-gray-400">1.800 bilete</span></div>
+                    </div>
+                </a>
+                <!-- Event Card 8 -->
+                <a href="tics-event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 transition-all duration-300">
+                    <div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1549834125-82d3c48159a3?w=400&h=250&fit=crop" class="w-full h-48 object-cover transition-transform duration-300"><span class="absolute top-3 left-3 px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">NOU</span></div>
+                    <div class="p-4">
+                        <div class="flex items-center gap-2 text-sm text-gray-500 mb-2"><span>1 Mai</span><span>•</span><span>București</span></div>
+                        <h3 class="font-bold text-gray-900 mb-2">Arctic Monkeys - The Car Tour</h3>
+                        <p class="text-sm text-gray-500 mb-3">Arena Națională</p>
+                        <div class="flex items-center justify-between"><span class="text-lg font-bold text-indigo-600">de la 159 RON</span><span class="text-xs text-gray-400">5.000 bilete</span></div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex items-center justify-center gap-2 mt-12">
+                <button class="w-10 h-10 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                <button class="w-10 h-10 bg-indigo-600 text-white font-medium rounded-lg">1</button>
+                <button class="w-10 h-10 text-gray-600 hover:bg-gray-100 rounded-lg">2</button>
+                <button class="w-10 h-10 text-gray-600 hover:bg-gray-100 rounded-lg">3</button>
+                <span class="text-gray-400">...</span>
+                <button class="w-10 h-10 text-gray-600 hover:bg-gray-100 rounded-lg">12</button>
+                <button class="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-gray-400">© 2026 TICS.ro — Toate drepturile rezervate</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Termeni și condiții — TICS.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { 'sans': ['Inter', 'system-ui', 'sans-serif'] } } }
+        }
+    </script>
+    <style>
+        * { -webkit-font-smoothing: antialiased; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        html { scroll-behavior: smooth; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeInUp { animation: fadeInUp 0.5s ease forwards; }
+        .toc-link { transition: all 0.2s ease; }
+        .toc-link:hover { color: #4f46e5; padding-left: 8px; }
+        .content-section { scroll-margin-top: 100px; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="tics-homepage.html" class="flex items-center gap-2 group">
+                    <div class="w-9 h-9 bg-gray-900 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <span class="text-white font-bold">T</span>
+                    </div>
+                    <span class="font-bold text-xl">TICS</span>
+                </a>
+                <a href="tics-login.html" class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors">Contul meu</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <div class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-16">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8 text-center">
+            <h1 class="text-4xl font-bold text-white mb-3 animate-fadeInUp">Termeni și condiții</h1>
+            <p class="text-gray-400 text-lg animate-fadeInUp" style="animation-delay: 0.1s">Ultima actualizare: 15 Ianuarie 2026</p>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 lg:px-8 py-12">
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- TOC Sidebar -->
+            <aside class="lg:w-64 flex-shrink-0">
+                <div class="lg:sticky lg:top-24 bg-white rounded-2xl border border-gray-200 p-5">
+                    <h3 class="font-semibold text-gray-900 mb-4">Cuprins</h3>
+                    <nav class="space-y-2 text-sm">
+                        <a href="#general" class="toc-link block text-gray-600 py-1 pl-3 border-l-2 border-transparent">1. Dispoziții generale</a>
+                        <a href="#cont" class="toc-link block text-gray-600 py-1 pl-3 border-l-2 border-transparent">2. Contul de utilizator</a>
+                        <a href="#achizitie" class="toc-link block text-gray-600 py-1 pl-3 border-l-2 border-transparent">3. Achiziția biletelor</a>
+                        <a href="#plata" class="toc-link block text-gray-600 py-1 pl-3 border-l-2 border-transparent">4. Plăți și prețuri</a>
+                        <a href="#livrare" class="toc-link block text-gray-600 py-1 pl-3 border-l-2 border-transparent">5. Livrarea biletelor</a>
+                        <a href="#anulare" class="toc-link block text-gray-600 py-1 pl-3 border-l-2 border-transparent">6. Anulări și modificări</a>
+                        <a href="#responsabilitate" class="toc-link block text-gray-600 py-1 pl-3 border-l-2 border-transparent">7. Responsabilitate</a>
+                        <a href="#proprietate" class="toc-link block text-gray-600 py-1 pl-3 border-l-2 border-transparent">8. Proprietate intelectuală</a>
+                        <a href="#final" class="toc-link block text-gray-600 py-1 pl-3 border-l-2 border-transparent">9. Dispoziții finale</a>
+                    </nav>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 min-w-0">
+                <div class="bg-white rounded-2xl border border-gray-200 p-8 lg:p-10">
+                    <div class="prose prose-gray max-w-none">
+                        <section id="general" class="content-section mb-10">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-4">1. Dispoziții generale</h2>
+                            <p class="text-gray-600 leading-relaxed mb-4">
+                                Prezentele Termeni și Condiții („Termenii") reglementează relația dintre TICS SRL, cu sediul în București, România („TICS", „noi", „platforma") și utilizatorii platformei TICS.ro („utilizator", „dumneavoastră").
+                            </p>
+                            <p class="text-gray-600 leading-relaxed mb-4">
+                                Prin accesarea și utilizarea platformei TICS.ro, confirmați că ați citit, înțeles și sunteți de acord cu acești Termeni. Dacă nu sunteți de acord cu oricare dintre aceștia, vă rugăm să nu utilizați serviciile noastre.
+                            </p>
+                            <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                                <p class="text-sm text-amber-800"><strong>Important:</strong> TICS acționează ca intermediar între organizatorii de evenimente și cumpărători. Nu suntem organizatorii evenimentelor listate pe platformă.</p>
+                            </div>
+                        </section>
+
+                        <section id="cont" class="content-section mb-10">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-4">2. Contul de utilizator</h2>
+                            <p class="text-gray-600 leading-relaxed mb-4">Pentru a achiziționa bilete, trebuie să vă creați un cont. Sunteți responsabil pentru:</p>
+                            <ul class="space-y-2 text-gray-600 mb-4">
+                                <li class="flex items-start gap-2"><span class="text-indigo-600">•</span> Furnizarea de informații corecte și actualizate</li>
+                                <li class="flex items-start gap-2"><span class="text-indigo-600">•</span> Păstrarea confidențialității credențialelor de acces</li>
+                                <li class="flex items-start gap-2"><span class="text-indigo-600">•</span> Toate activitățile desfășurate prin contul dumneavoastră</li>
+                                <li class="flex items-start gap-2"><span class="text-indigo-600">•</span> Notificarea imediată a oricărui acces neautorizat</li>
+                            </ul>
+                            <p class="text-gray-600 leading-relaxed">Ne rezervăm dreptul de a suspenda sau închide conturile care încalcă acești Termeni.</p>
+                        </section>
+
+                        <section id="achizitie" class="content-section mb-10">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-4">3. Achiziția biletelor</h2>
+                            <p class="text-gray-600 leading-relaxed mb-4">Procesul de achiziție:</p>
+                            <div class="space-y-3 mb-4">
+                                <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                    <span class="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">1</span>
+                                    <span class="text-gray-700">Selectați evenimentul și tipul de bilet dorit</span>
+                                </div>
+                                <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                    <span class="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">2</span>
+                                    <span class="text-gray-700">Adăugați în coș și completați datele necesare</span>
+                                </div>
+                                <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                    <span class="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">3</span>
+                                    <span class="text-gray-700">Efectuați plata prin metodele disponibile</span>
+                                </div>
+                                <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                    <span class="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">4</span>
+                                    <span class="text-gray-700">Primiți biletele electronic în cont și pe email</span>
+                                </div>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed">Contractul de vânzare se consideră încheiat la momentul confirmării plății.</p>
+                        </section>
+
+                        <section id="plata" class="content-section mb-10">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-4">4. Plăți și prețuri</h2>
+                            <p class="text-gray-600 leading-relaxed mb-4">Prețurile afișate includ TVA și toate taxele aplicabile. Metodele de plată acceptate:</p>
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="px-3 py-1.5 bg-gray-100 rounded-full text-sm text-gray-700">💳 Card bancar</span>
+                                <span class="px-3 py-1.5 bg-gray-100 rounded-full text-sm text-gray-700">🏦 Transfer bancar</span>
+                                <span class="px-3 py-1.5 bg-gray-100 rounded-full text-sm text-gray-700">📱 Apple Pay</span>
+                                <span class="px-3 py-1.5 bg-gray-100 rounded-full text-sm text-gray-700">📱 Google Pay</span>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed">Comisionul de serviciu (1%) este afișat separat înainte de finalizarea comenzii.</p>
+                        </section>
+
+                        <section id="livrare" class="content-section mb-10">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-4">5. Livrarea biletelor</h2>
+                            <p class="text-gray-600 leading-relaxed mb-4">Biletele sunt livrate exclusiv în format electronic:</p>
+                            <ul class="space-y-2 text-gray-600">
+                                <li class="flex items-start gap-2"><span class="text-green-600">✓</span> Instant în contul dumneavoastră TICS</li>
+                                <li class="flex items-start gap-2"><span class="text-green-600">✓</span> Pe email ca atașament PDF</li>
+                                <li class="flex items-start gap-2"><span class="text-green-600">✓</span> Disponibile în aplicația mobilă (QR code)</li>
+                            </ul>
+                        </section>
+
+                        <section id="anulare" class="content-section mb-10">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-4">6. Anulări și modificări</h2>
+                            <div class="space-y-4">
+                                <div class="p-4 border-l-4 border-amber-500 bg-amber-50 rounded-r-xl">
+                                    <h4 class="font-semibold text-gray-900 mb-1">Eveniment anulat de organizator</h4>
+                                    <p class="text-sm text-gray-600">Veți primi rambursare integrală în 14 zile lucrătoare</p>
+                                </div>
+                                <div class="p-4 border-l-4 border-blue-500 bg-blue-50 rounded-r-xl">
+                                    <h4 class="font-semibold text-gray-900 mb-1">Eveniment reprogramat</h4>
+                                    <p class="text-sm text-gray-600">Biletele rămân valabile sau puteți solicita rambursare</p>
+                                </div>
+                                <div class="p-4 border-l-4 border-red-500 bg-red-50 rounded-r-xl">
+                                    <h4 class="font-semibold text-gray-900 mb-1">Renunțare din partea clientului</h4>
+                                    <p class="text-sm text-gray-600">Consultați <a href="tics-refund.html" class="text-indigo-600 underline">Politica de rambursare</a></p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section id="responsabilitate" class="content-section mb-10">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-4">7. Limitarea responsabilității</h2>
+                            <p class="text-gray-600 leading-relaxed mb-4">TICS nu este responsabilă pentru:</p>
+                            <ul class="space-y-2 text-gray-600">
+                                <li class="flex items-start gap-2"><span class="text-gray-400">—</span> Conținutul sau calitatea evenimentelor</li>
+                                <li class="flex items-start gap-2"><span class="text-gray-400">—</span> Modificări aduse de organizatori fără notificare</li>
+                                <li class="flex items-start gap-2"><span class="text-gray-400">—</span> Pierderea sau furtul biletelor după livrare</li>
+                                <li class="flex items-start gap-2"><span class="text-gray-400">—</span> Utilizarea neautorizată a contului dumneavoastră</li>
+                            </ul>
+                        </section>
+
+                        <section id="proprietate" class="content-section mb-10">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-4">8. Proprietate intelectuală</h2>
+                            <p class="text-gray-600 leading-relaxed">
+                                Tot conținutul platformei (logo, design, texte, imagini, cod sursă) este proprietatea TICS SRL și este protejat de legile privind drepturile de autor. Este interzisă reproducerea fără acordul scris.
+                            </p>
+                        </section>
+
+                        <section id="final" class="content-section">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-4">9. Dispoziții finale</h2>
+                            <p class="text-gray-600 leading-relaxed mb-4">
+                                Acești Termeni sunt guvernați de legislația română. Orice litigiu va fi soluționat de instanțele competente din București.
+                            </p>
+                            <p class="text-gray-600 leading-relaxed">
+                                Pentru întrebări: <a href="mailto:legal@tics.ro" class="text-indigo-600 underline">legal@tics.ro</a>
+                            </p>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- Related -->
+                <div class="mt-8 flex flex-wrap gap-4">
+                    <a href="tics-privacy.html" class="flex-1 min-w-[200px] p-5 bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all">
+                        <h4 class="font-semibold text-gray-900 mb-1">Confidențialitate →</h4>
+                        <p class="text-sm text-gray-500">Cum protejăm datele tale</p>
+                    </a>
+                    <a href="tics-refund.html" class="flex-1 min-w-[200px] p-5 bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all">
+                        <h4 class="font-semibold text-gray-900 mb-1">Rambursări →</h4>
+                        <p class="text-sm text-gray-500">Politica de returnare</p>
+                    </a>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-6 mt-8">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">T</span></div>
+                    <span class="text-sm text-gray-500">© 2026 TICS. Powered by Tixello.</span>
+                </div>
+                <div class="flex items-center gap-6 text-sm text-gray-500">
+                    <a href="tics-privacy.html" class="hover:text-gray-700">Confidențialitate</a>
+                    <a href="tics-terms.html" class="text-indigo-600 font-medium">Termeni</a>
+                    <a href="tics-refund.html" class="hover:text-gray-700">Rambursări</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

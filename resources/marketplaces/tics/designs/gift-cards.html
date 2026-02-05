@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gift Cards — TICS.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen" style="font-family:'Inter',sans-serif">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="tics-homepage.html" class="flex items-center gap-2"><div class="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center"><span class="text-white font-bold">T</span></div><span class="font-bold text-xl">TICS</span></a>
+            <a href="tics-login.html" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl">Intră în cont</a>
+        </div>
+    </header>
+    <div class="max-w-6xl mx-auto px-4 py-12">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">🎁 Gift Cards TICS</h1>
+            <p class="text-xl text-gray-500">Oferă cadou experiențe de neuitat</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-8 text-white">
+                <p class="text-indigo-200 mb-2">Gift Card TICS</p>
+                <p class="text-4xl font-bold mb-4">100 RON</p>
+                <p class="text-indigo-100 text-sm">Valabil 12 luni • Pentru orice eveniment</p>
+            </div>
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Alege valoarea</h2>
+                <div class="grid grid-cols-3 gap-3 mb-6">
+                    <button class="py-4 border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:border-indigo-500 hover:text-indigo-600">50 RON</button>
+                    <button class="py-4 border-2 border-indigo-500 bg-indigo-50 rounded-xl font-bold text-indigo-600">100 RON</button>
+                    <button class="py-4 border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:border-indigo-500 hover:text-indigo-600">200 RON</button>
+                    <button class="py-4 border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:border-indigo-500 hover:text-indigo-600">300 RON</button>
+                    <button class="py-4 border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:border-indigo-500 hover:text-indigo-600">500 RON</button>
+                    <button class="py-4 border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:border-indigo-500 hover:text-indigo-600">Altă sumă</button>
+                </div>
+                <div class="space-y-4">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Numele destinatarului</label><input type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl" placeholder="Ex: Maria"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Email destinatar</label><input type="email" class="w-full px-4 py-3 border border-gray-200 rounded-xl" placeholder="email@exemplu.com"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Mesaj personalizat (opțional)</label><textarea class="w-full px-4 py-3 border border-gray-200 rounded-xl resize-none" rows="3" placeholder="La mulți ani! Distracție plăcută..."></textarea></div>
+                    <button class="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700">Cumpără Gift Card - 100 RON</button>
+                </div>
+            </div>
+        </div>
+        <!-- Redeem -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Ai un Gift Card?</h2>
+            <p class="text-gray-500 mb-6">Introdu codul pentru a-l activa în contul tău</p>
+            <div class="max-w-md mx-auto flex gap-3">
+                <input type="text" class="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-mono text-center uppercase" placeholder="XXXX-XXXX-XXXX">
+                <button class="px-6 py-3 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800">Activează</button>
+            </div>
+        </div>
+    </div>
+    <footer class="bg-gray-900 text-white py-8 mt-12"><div class="max-w-7xl mx-auto px-4 text-center"><p class="text-gray-400">© 2026 TICS.ro</p></div></footer>
+</body>
+</html>
