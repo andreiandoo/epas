@@ -56,13 +56,17 @@
       "slug": "electric-castle-2026",
       "name": "Electric Castle 2026",
       "short_description": "Festivalul unic în inima Transilvaniei",
+      "description": "4 zile de muzică, artă și magie în jurul celui mai frumos castel din Transilvania. Line-up internațional, instalații de artă și experiențe unice.",
       "image_url": "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=600&fit=crop",
       "starts_at": "2026-07-17T12:00:00",
       "ends_at": "2026-07-20T12:00:00",
       "price_from": 599,
       "category": {"name": "Festival", "slug": "festivaluri"},
       "venue": {"name": "Castelul Bonțida", "city": "Cluj-Napoca"},
-      "ai_match": 91
+      "ai_match": 91,
+      "category_featured": true,
+      "promo_background": "from-amber-500 via-orange-500 to-red-500",
+      "promo_message": "🏰 Festivalul anului în Transilvania! Bilete limitate!"
     },
     {
       "id": 5,

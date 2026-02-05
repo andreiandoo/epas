@@ -24,6 +24,19 @@ RewriteRule ^bilete/([a-z0-9-]+)/?$ event.php?slug=$1 [L,QSA]
 # /categorie/{slug} -> event-category.php?categorie=slug
 RewriteRule ^categorie/([a-z0-9-]+)/?$ event-category.php?categorie=$1 [L,QSA]
 
+# Clean URLs for city page
+# /oras/{city} -> city.php?city=slug
+RewriteRule ^oras/([a-z0-9-]+)/?$ city.php?city=$1 [L,QSA]
+
+# Auth pages (Romanian URLs -> English PHP files)
+RewriteRule ^conectare/?$ login.php [L,QSA]
+RewriteRule ^inregistrare/?$ register.php [L,QSA]
+RewriteRule ^parola-uitata/?$ forgot-password.php [L,QSA]
+
+# Cart & Checkout
+RewriteRule ^cos/?$ cart.php [L,QSA]
+RewriteRule ^checkout/?$ checkout.php [L,QSA]
+
 # API proxy
 RewriteRule ^api/(.*)$ api/proxy.php?endpoint=$1 [L,QSA]
 

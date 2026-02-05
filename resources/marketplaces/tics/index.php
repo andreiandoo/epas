@@ -5,5 +5,5 @@
  */
 
 // For now, redirect to events
-header('Location: events.php');
+header('Location: /evenimente');
 exit;
