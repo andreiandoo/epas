@@ -521,13 +521,15 @@ function fetchParticipantsWithAuth($eventIds, $authHeader) {
         if (!is_array($participants)) continue;
 
         $result[$id] = array_map(function($p) {
+            // API returns customer data nested under 'customer' key
+            $customer = $p['customer'] ?? [];
             return [
-                'name' => $p['name'] ?? '',
-                'phone' => $p['phone'] ?? '',
+                'name' => $customer['name'] ?? $p['name'] ?? '',
+                'phone' => $customer['phone'] ?? $p['phone'] ?? '',
                 'ticket_type' => $p['ticket_type'] ?? '',
                 'seat_label' => $p['seat_label'] ?? null,
-                'checked_in' => $p['checked_in'] ?? false,
-                'order_date' => $p['order_date'] ?? '',
+                'checked_in' => !empty($p['checked_in_at']),
+                'order_date' => $p['purchased_at'] ?? $p['order_date'] ?? '',
             ];
         }, $participants);
     }
