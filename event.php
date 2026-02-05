@@ -263,10 +263,6 @@ require_once __DIR__ . '/includes/head.php';
 
                                 <!-- Summary -->
                                 <div class="mb-4 space-y-2">
-                                    <div class="flex justify-between text-sm">
-                                        <span class="text-muted">Subtotal:</span>
-                                        <span id="subtotal" class="font-medium">0 lei</span>
-                                    </div>
                                     <!-- Dynamic taxes container -->
                                     <div id="taxesContainer" class="space-y-1">
                                         <!-- Taxes will be rendered here dynamically -->
@@ -276,6 +272,8 @@ require_once __DIR__ . '/includes/head.php';
                                         <span id="totalPrice" class="text-primary">0 lei</span>
                                     </div>
                                 </div>
+                                <!-- Hidden subtotal for JavaScript calculations -->
+                                <span id="subtotal" class="hidden">0 lei</span>
 
                                 <button id="checkoutBtn" onclick="EventPage.handleCheckout()" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl">
                                     <svg id="checkoutBtnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
