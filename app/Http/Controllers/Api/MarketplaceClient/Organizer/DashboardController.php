@@ -163,7 +163,11 @@ class DashboardController extends BaseController
         $limit = min((int) $request->get('limit', 10), 50);
 
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
-            ->with(['marketplaceEvent:id,name', 'marketplaceCustomer:id,first_name,last_name,email'])
+            ->with([
+                'event:id,name',
+                'marketplaceEvent:id,name',
+                'marketplaceCustomer:id,first_name,last_name,email',
+            ])
             ->orderByDesc('created_at')
             ->limit($limit)
             ->get()
@@ -173,7 +177,7 @@ class DashboardController extends BaseController
                     'order_number' => $order->order_number,
                     'status' => $order->status,
                     'total' => (float) $order->total,
-                    'event' => $order->marketplaceEvent?->name,
+                    'event' => $order->event?->name ?? $order->marketplaceEvent?->name,
                     'customer' => $order->marketplaceCustomer
                         ? $order->marketplaceCustomer->full_name
                         : $order->customer_name,
@@ -195,7 +199,11 @@ class DashboardController extends BaseController
         $organizer = $this->requireOrganizer($request);
 
         $query = Order::where('marketplace_organizer_id', $organizer->id)
-            ->with(['marketplaceEvent:id,name', 'marketplaceCustomer:id,first_name,last_name,email']);
+            ->with([
+                'event:id,name',
+                'marketplaceEvent:id,name',
+                'marketplaceCustomer:id,first_name,last_name,email',
+            ]);
 
         // Filters
         if ($request->has('status')) {
@@ -203,7 +211,12 @@ class DashboardController extends BaseController
         }
 
         if ($request->has('event_id')) {
-            $query->where('marketplace_event_id', $request->event_id);
+            // Filter by either event_id or marketplace_event_id
+            $eventId = $request->event_id;
+            $query->where(function ($q) use ($eventId) {
+                $q->where('event_id', $eventId)
+                    ->orWhere('marketplace_event_id', $eventId);
+            });
         }
 
         if ($request->has('from_date')) {
@@ -229,14 +242,18 @@ class DashboardController extends BaseController
         $orders = $query->paginate($perPage);
 
         return $this->paginated($orders, function ($order) {
+            // Use event name from either relationship (event or marketplaceEvent)
+            $eventName = $order->event?->name ?? $order->marketplaceEvent?->name;
+            $eventId = $order->event_id ?? $order->marketplace_event_id;
+
             return [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
                 'status' => $order->status,
                 'payment_status' => $order->payment_status,
                 'total' => (float) $order->total,
-                'event' => $order->marketplaceEvent?->name,
-                'event_id' => $order->marketplace_event_id,
+                'event' => $eventName,
+                'event_id' => $eventId,
                 'customer' => $order->marketplaceCustomer
                     ? $order->marketplaceCustomer->full_name
                     : $order->customer_name,

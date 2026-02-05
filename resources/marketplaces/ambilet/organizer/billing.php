@@ -253,15 +253,10 @@ const BillingManager = {
     },
 
     /**
-     * Update stats
+     * Update stats (stats cards removed, but keeping method for future use)
      */
     updateStats(stats) {
-        if (!stats) return;
-
-        document.getElementById('stat-total-paid').textContent = this.formatCurrency(stats.total_paid || 0);
-        document.getElementById('stat-total-invoices').textContent = stats.total_invoices || 0;
-        document.getElementById('stat-pending').textContent = this.formatCurrency(stats.pending_amount || 0);
-        document.getElementById('stat-commission').textContent = `${stats.avg_commission || 0}%`;
+        // Stats cards were removed from the UI
     },
 
     /**
