@@ -62,12 +62,12 @@ class BillingController extends BaseController
 
         return $this->success([
             'company_name' => $organizer->company_name ?? $organizer->name,
-            'cui' => $organizer->cui,
-            'reg_number' => $organizer->reg_number,
+            'cui' => $organizer->company_tax_id,
+            'reg_number' => $organizer->company_registration,
             'address' => $this->formatAddress($organizer),
             'email' => $organizer->billing_email ?? $organizer->email,
             'phone' => $organizer->phone,
-            'vat_payer' => $organizer->vat_payer ?? false,
+            'vat_payer' => $organizer->company_vat_payer ?? false,
         ]);
     }
 
@@ -278,10 +278,9 @@ class BillingController extends BaseController
     protected function formatAddress(MarketplaceOrganizer $organizer): string
     {
         $parts = array_filter([
-            $organizer->address,
-            $organizer->city,
-            $organizer->county,
-            $organizer->country_code,
+            $organizer->company_address,
+            $organizer->company_city,
+            $organizer->company_county,
         ]);
 
         return implode(', ', $parts) ?: '-';

@@ -247,14 +247,16 @@ class DocumentController extends BaseController
 
         $pdfContent = $pdf->output();
 
-        // Generate unique filename
-        $fileName = sprintf(
-            '%s_%s_%s_%s.pdf',
-            $validated['document_type'],
-            $organizer->id,
-            $event->id,
-            now()->format('YmdHis')
-        );
+        // Generate human-readable filename
+        $eventDate = $event->event_date ? $event->event_date->format('d.m.Y') : '';
+        $venueName = $event->venue_name ?? '';
+        $venueCity = $event->venue?->city ?? '';
+        $fileDetails = array_filter([$eventDate, $venueName, $venueCity]);
+        $fileName = $template->name . ' - ' . $event->name;
+        if (!empty($fileDetails)) {
+            $fileName .= ' (' . implode(', ', $fileDetails) . ')';
+        }
+        $fileName = preg_replace('/[\/\\\\:*?"<>|]/', '_', $fileName) . '.pdf';
 
         $filePath = sprintf(
             'organizer-documents/%d/%s',
@@ -530,14 +532,16 @@ class DocumentController extends BaseController
             Storage::disk('public')->delete($existingDoc->file_path);
         }
 
-        // Generate new filename
-        $fileName = sprintf(
-            '%s_%s_%s_%s.pdf',
-            $existingDoc->document_type,
-            $organizer->id,
-            $event->id,
-            now()->format('YmdHis')
-        );
+        // Generate human-readable filename
+        $eventDate = $event->event_date ? $event->event_date->format('d.m.Y') : '';
+        $venueName = $event->venue_name ?? '';
+        $venueCity = $event->venue?->city ?? '';
+        $fileDetails = array_filter([$eventDate, $venueName, $venueCity]);
+        $fileName = $template->name . ' - ' . $event->name;
+        if (!empty($fileDetails)) {
+            $fileName .= ' (' . implode(', ', $fileDetails) . ')';
+        }
+        $fileName = preg_replace('/[\/\\\\:*?"<>|]/', '_', $fileName) . '.pdf';
         $filePath = sprintf(
             'organizer-documents/%d/%s',
             $organizer->id,

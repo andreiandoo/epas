@@ -248,22 +248,66 @@ require_once __DIR__ . '/includes/head.php';
         fetchShareData();
     };
 
+    let showParticipants = false;
+    let participantsData = {};
+    let openAccordions = {};
+
+    function toggleAccordion(evId) {
+        const body = document.getElementById('accordion-body-' + evId);
+        const icon = document.getElementById('accordion-icon-' + evId);
+        if (!body) return;
+        if (body.classList.contains('hidden')) {
+            body.classList.remove('hidden');
+            icon.classList.add('rotate-180');
+            openAccordions[evId] = true;
+        } else {
+            body.classList.add('hidden');
+            icon.classList.remove('rotate-180');
+            delete openAccordions[evId];
+        }
+    }
+    // Expose globally for onclick
+    window._toggleAccordion = toggleAccordion;
+
+    function switchTab(evId, tab) {
+        const ticketsTab = document.getElementById('tab-tickets-' + evId);
+        const participantsTab = document.getElementById('tab-participants-' + evId);
+        const ticketsBtn = document.getElementById('tab-btn-tickets-' + evId);
+        const participantsBtn = document.getElementById('tab-btn-participants-' + evId);
+        if (!ticketsTab) return;
+
+        if (tab === 'participants') {
+            ticketsTab.classList.add('hidden');
+            participantsTab && participantsTab.classList.remove('hidden');
+            ticketsBtn.classList.remove('bg-primary', 'text-white');
+            ticketsBtn.classList.add('text-muted', 'hover:bg-surface');
+            participantsBtn.classList.add('bg-primary', 'text-white');
+            participantsBtn.classList.remove('text-muted', 'hover:bg-surface');
+        } else {
+            ticketsTab.classList.remove('hidden');
+            participantsTab && participantsTab.classList.add('hidden');
+            ticketsBtn.classList.add('bg-primary', 'text-white');
+            ticketsBtn.classList.remove('text-muted', 'hover:bg-surface');
+            participantsBtn.classList.remove('bg-primary', 'text-white');
+            participantsBtn.classList.add('text-muted', 'hover:bg-surface');
+        }
+    }
+    window._switchTab = switchTab;
+
     function renderData(data) {
-        // Subtitle only (no link name shown publicly)
         document.getElementById('share-subtitle').textContent = (data.events || []).length + ' eveniment' + ((data.events || []).length !== 1 ? 'e' : '') + ' monitorizate';
 
         const events = data.events || [];
+        showParticipants = !!data.show_participants;
+        participantsData = data.participants || {};
 
         // Calculate totals
-        let totalTickets = 0, totalSold = 0, totalRevenue = 0, totalEvents = events.length;
+        let totalTickets = 0, totalSold = 0, totalEvents = events.length;
         events.forEach(ev => {
             const evTotal = (ev.ticket_types || []).reduce((s, tt) => s + (tt.total || 0), 0) || ev.tickets_total || 0;
             const evSold = (ev.ticket_types || []).reduce((s, tt) => s + (tt.sold || 0), 0) || ev.tickets_sold || 0;
             totalTickets += evTotal;
             totalSold += evSold;
-            (ev.ticket_types || []).forEach(tt => {
-                totalRevenue += (tt.sold || 0) * (tt.price || 0);
-            });
         });
 
         // Summary cards
@@ -288,7 +332,7 @@ require_once __DIR__ . '/includes/head.php';
             </div>
         `;
 
-        // Events
+        // Events as accordions
         const eventsEl = document.getElementById('events-container');
         if (!events.length) {
             eventsEl.innerHTML = '<div class="text-center py-12 text-muted">Nu sunt evenimente in acest link.</div>';
@@ -296,76 +340,113 @@ require_once __DIR__ . '/includes/head.php';
         }
 
         eventsEl.innerHTML = events.map(ev => {
+            const evId = ev.id || 0;
             const evTotal = (ev.ticket_types || []).reduce((s, tt) => s + (tt.total || 0), 0) || ev.tickets_total || 0;
             const evSold = (ev.ticket_types || []).reduce((s, tt) => s + (tt.sold || 0), 0) || ev.tickets_sold || 0;
-            const evAvailable = evTotal - evSold;
             const evPct = evTotal > 0 ? Math.round((evSold / evTotal) * 100) : 0;
+            const isOpen = !!openAccordions[evId];
 
-            let ticketTypesHtml = '';
+            // Ticket types tab content
+            let ticketTypesHtml = '<p class="text-sm text-muted py-4">Nu sunt categorii de bilete.</p>';
             if (ev.ticket_types && ev.ticket_types.length > 0) {
-                ticketTypesHtml = `
-                    <div class="mt-4 border-t border-border pt-4">
-                        <h4 class="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Categorii bilete</h4>
-                        <div class="space-y-2">
-                            ${ev.ticket_types.map(tt => {
-                                const ttPct = tt.total > 0 ? Math.round((tt.sold / tt.total) * 100) : 0;
-                                return `
-                                    <div class="flex items-center gap-3">
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center justify-between mb-1">
-                                                <span class="text-sm font-medium text-secondary truncate">${escapeHtml(tt.name)}</span>
-                                                <span class="text-sm text-muted">${formatNumber(tt.sold)} / ${formatNumber(tt.total)}</span>
-                                            </div>
-                                            <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                                <div class="h-full rounded-full transition-all duration-500 ${ttPct >= 90 ? 'bg-red-500' : ttPct >= 70 ? 'bg-yellow-500' : 'bg-primary'}" style="width: ${ttPct}%"></div>
-                                            </div>
-                                        </div>
-                                        <span class="text-xs font-semibold w-10 text-right ${ttPct >= 90 ? 'text-red-600' : 'text-muted'}">${ttPct}%</span>
-                                    </div>
-                                `;
-                            }).join('')}
+                ticketTypesHtml = `<div class="space-y-2">${ev.ticket_types.map(tt => {
+                    const ttPct = tt.total > 0 ? Math.round((tt.sold / tt.total) * 100) : 0;
+                    return `<div class="flex items-center gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm font-medium text-secondary truncate">${escapeHtml(tt.name)}</span>
+                                <span class="text-sm text-muted">${formatNumber(tt.sold)} / ${formatNumber(tt.total)}</span>
+                            </div>
+                            <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-500 ${ttPct >= 90 ? 'bg-red-500' : ttPct >= 70 ? 'bg-yellow-500' : 'bg-primary'}" style="width: ${ttPct}%"></div>
+                            </div>
                         </div>
+                        <span class="text-xs font-semibold w-10 text-right ${ttPct >= 90 ? 'text-red-600' : 'text-muted'}">${ttPct}%</span>
+                    </div>`;
+                }).join('')}</div>`;
+            }
+
+            // Participants tab content
+            let participantsHtml = '';
+            if (showParticipants) {
+                const evParticipants = participantsData[evId] || participantsData[String(evId)] || [];
+                if (evParticipants.length > 0) {
+                    participantsHtml = `<div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead><tr class="border-b border-border text-left">
+                                <th class="pb-2 font-medium text-muted">Nume</th>
+                                <th class="pb-2 font-medium text-muted">Telefon</th>
+                                <th class="pb-2 font-medium text-muted">Tip bilet</th>
+                                ${evParticipants.some(p => p.seat_label) ? '<th class="pb-2 font-medium text-muted">Loc</th>' : ''}
+                            </tr></thead>
+                            <tbody>${evParticipants.map(p => `<tr class="border-b border-border/50">
+                                <td class="py-2 text-secondary">${escapeHtml(p.name)}</td>
+                                <td class="py-2 text-muted">${escapeHtml(p.phone)}</td>
+                                <td class="py-2 text-muted">${escapeHtml(p.ticket_type)}</td>
+                                ${evParticipants.some(pp => pp.seat_label) ? '<td class="py-2 text-muted">' + escapeHtml(p.seat_label || '-') + '</td>' : ''}
+                            </tr>`).join('')}</tbody>
+                        </table>
+                    </div>`;
+                } else {
+                    participantsHtml = '<p class="text-sm text-muted py-4">Nu sunt participanti inregistrati.</p>';
+                }
+            }
+
+            // Tabs (only show if participants enabled)
+            let tabsHtml = '';
+            if (showParticipants) {
+                tabsHtml = `
+                    <div class="flex gap-1 mb-4">
+                        <button id="tab-btn-tickets-${evId}" onclick="_switchTab(${evId}, 'tickets')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-white transition-colors">Tipuri Bilete</button>
+                        <button id="tab-btn-participants-${evId}" onclick="_switchTab(${evId}, 'participants')" class="px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-surface transition-colors">Participanti</button>
                     </div>
+                    <div id="tab-tickets-${evId}">${ticketTypesHtml}</div>
+                    <div id="tab-participants-${evId}" class="hidden">${participantsHtml}</div>
                 `;
+            } else {
+                tabsHtml = ticketTypesHtml;
             }
 
             return `
                 <div class="bg-white rounded-2xl border border-border overflow-hidden">
-                    <div class="p-5 lg:p-6">
-                        <div class="flex flex-col lg:flex-row lg:items-start lg:gap-6">
-                            <div class="flex-1 min-w-0">
-                                <h3 class="text-lg font-bold text-secondary mb-2">${escapeHtml(ev.title)}</h3>
-                                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted mb-3">
-                                    ${ev.venue_name ? `<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>${escapeHtml(ev.venue_name)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</span>` : ''}
-                                    ${ev.start_date ? `<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${formatDate(ev.start_date)}${ev.start_time ? ' ' + formatTime(ev.start_time) : ''}</span>` : ''}
+                    <!-- Accordion Header -->
+                    <button onclick="_toggleAccordion(${evId})" class="w-full p-5 lg:p-6 text-left hover:bg-slate-50/50 transition-colors">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:gap-6">
+                            <div class="flex-1 min-w-0 flex items-start gap-3">
+                                <svg id="accordion-icon-${evId}" class="w-5 h-5 text-muted flex-shrink-0 mt-0.5 transition-transform ${isOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                <div class="min-w-0">
+                                    <h3 class="text-lg font-bold text-secondary mb-1">${escapeHtml(ev.title)}</h3>
+                                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+                                        ${ev.venue_name ? `<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>${escapeHtml(ev.venue_name)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</span>` : ''}
+                                        ${ev.start_date ? `<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${formatDate(ev.start_date)}${ev.start_time ? ' ' + formatTime(ev.start_time) : ''}</span>` : ''}
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-4 lg:gap-6 mt-3 lg:mt-0 flex-shrink-0">
+                            <div class="flex items-center gap-4 lg:gap-6 mt-3 lg:mt-0 flex-shrink-0 pl-8 lg:pl-0">
                                 <div class="text-center">
-                                    <p class="text-2xl font-bold text-primary">${formatNumber(evSold)}</p>
+                                    <p class="text-xl font-bold text-primary">${formatNumber(evSold)}</p>
                                     <p class="text-xs text-muted">Vandute</p>
                                 </div>
                                 <div class="text-center">
-                                    <p class="text-2xl font-bold text-secondary">${formatNumber(evTotal)}</p>
+                                    <p class="text-xl font-bold text-secondary">${formatNumber(evTotal)}</p>
                                     <p class="text-xs text-muted">Total</p>
                                 </div>
-                                <div class="text-center">
-                                    <p class="text-2xl font-bold ${evAvailable <= 0 ? 'text-red-600' : evAvailable < evTotal * 0.1 ? 'text-yellow-600' : 'text-green-600'}">${formatNumber(evAvailable)}</p>
-                                    <p class="text-xs text-muted">Disponibile</p>
+                                <div class="min-w-[60px]">
+                                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full ${evPct >= 90 ? 'bg-red-500' : evPct >= 70 ? 'bg-yellow-500' : 'bg-primary'}" style="width: ${evPct}%"></div>
+                                    </div>
+                                    <p class="text-xs font-semibold text-center mt-1 ${evPct >= 90 ? 'text-red-600' : 'text-muted'}">${evPct}%</p>
                                 </div>
                             </div>
                         </div>
-                        <!-- Overall progress bar -->
-                        <div class="mt-4">
-                            <div class="flex items-center justify-between mb-1.5">
-                                <span class="text-xs text-muted">Grad ocupare</span>
-                                <span class="text-xs font-semibold ${evPct >= 90 ? 'text-red-600' : evPct >= 70 ? 'text-yellow-600' : 'text-primary'}">${evPct}%</span>
-                            </div>
-                            <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
-                                <div class="h-full rounded-full transition-all duration-500 ${evPct >= 90 ? 'bg-red-500' : evPct >= 70 ? 'bg-yellow-500' : 'bg-primary'}" style="width: ${evPct}%"></div>
+                    </button>
+                    <!-- Accordion Body -->
+                    <div id="accordion-body-${evId}" class="${isOpen ? '' : 'hidden'}">
+                        <div class="px-5 lg:px-6 pb-5 lg:pb-6 pt-0 border-t border-border">
+                            <div class="pt-4">
+                                ${tabsHtml}
                             </div>
                         </div>
-                        ${ticketTypesHtml}
                     </div>
                 </div>
             `;

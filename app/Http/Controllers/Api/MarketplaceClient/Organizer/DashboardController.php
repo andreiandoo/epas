@@ -236,10 +236,14 @@ class DashboardController extends BaseController
                 'payment_status' => $order->payment_status,
                 'total' => (float) $order->total,
                 'event' => $order->marketplaceEvent?->name,
+                'event_id' => $order->marketplace_event_id,
                 'customer' => $order->marketplaceCustomer
                     ? $order->marketplaceCustomer->full_name
                     : $order->customer_name,
                 'customer_email' => $order->marketplaceCustomer?->email ?? $order->customer_email,
+                'customer_phone' => $order->marketplaceCustomer?->phone ?? $order->customer_phone ?? '',
+                'customer_city' => $order->marketplaceCustomer?->city ?? '',
+                'source' => $order->source ?? 'marketplace',
                 'tickets_count' => $order->tickets_count ?? $order->tickets()->count(),
                 'created_at' => $order->created_at->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),

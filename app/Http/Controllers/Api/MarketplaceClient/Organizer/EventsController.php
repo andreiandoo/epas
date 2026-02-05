@@ -826,16 +826,20 @@ class EventsController extends BaseController
                     ?: 'Unknown Event';
             }
 
+            $phone = $customer?->phone ?? $ticket->order->customer_phone ?? '';
+
             return [
                 'id' => $ticket->id,
                 'ticket_id' => $ticket->id,
-                'name' => $this->maskName($rawName),
+                'name' => $rawName,
                 'email' => $this->maskEmail($rawEmail),
+                'phone' => $phone,
                 'event' => $eventTitle,
                 'event_id' => $event?->id,
                 'ticket_type' => $ticket->ticketType?->name ?? 'Standard',
                 'ticket_code' => $ticket->barcode,
                 'control_code' => $ticket->code,
+                'seat_label' => $ticket->seat_label ?? null,
                 'checked_in' => $ticket->checked_in_at !== null,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
                 'order_id' => $ticket->order->id,
