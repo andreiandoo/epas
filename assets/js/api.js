@@ -238,9 +238,11 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/bank-accounts\/\d+\/primary$/)) return 'organizer.bank-account.primary';
 
         // Organizer notifications
+        if (endpoint.includes('/organizer/notifications/types')) return 'organizer.notifications.types';
         if (endpoint.includes('/organizer/notifications/unread-count')) return 'organizer.notifications.unread-count';
         if (endpoint.includes('/organizer/notifications/mark-read')) return 'organizer.notifications.mark-read';
         if (endpoint.includes('/organizer/notifications/mark-all-read')) return 'organizer.notifications.mark-all-read';
+        if (endpoint.match(/\/organizer\/notifications\/\d+\/read$/)) return 'organizer.notifications.read';
         if (endpoint === '/organizer/notifications' || endpoint.includes('/organizer/notifications?')) return 'organizer.notifications';
 
         // Organizer dashboard
@@ -503,6 +505,12 @@ const AmbiletAPI = {
         const organizerInvoiceMatch = endpoint.match(/\/organizer\/invoices\/(\d+)$/);
         if (organizerInvoiceMatch) {
             return `invoice_id=${encodeURIComponent(organizerInvoiceMatch[1])}`;
+        }
+
+        // Organizer notification read - extract notification ID
+        const organizerNotificationReadMatch = endpoint.match(/\/organizer\/notifications\/(\d+)\/read$/);
+        if (organizerNotificationReadMatch) {
+            return `id=${encodeURIComponent(organizerNotificationReadMatch[1])}`;
         }
 
         // Organizer share links - extract code parameter

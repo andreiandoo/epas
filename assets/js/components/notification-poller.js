@@ -76,7 +76,7 @@ const AmbiletNotificationPoller = (function() {
                 const colorClass = colorClasses[n.color] || colorClasses.primary;
 
                 return `
-                    <a href="${n.action_url || '/organizator/notifications'}" class="flex items-start gap-3 p-4 hover:bg-surface border-b border-border last:border-0 transition-colors ${n.is_read ? 'opacity-60' : ''}">
+                    <a href="${n.action_url || '/organizator/notifications'}" onclick="AmbiletNotificationPoller.markAsRead(${n.id})" class="flex items-start gap-3 p-4 hover:bg-surface border-b border-border last:border-0 transition-colors ${n.is_read ? 'opacity-60' : ''}">
                         <div class="w-8 h-8 ${colorClass} rounded-full flex items-center justify-center flex-shrink-0">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${getNotificationIcon(n.type)}"/>
@@ -196,12 +196,23 @@ const AmbiletNotificationPoller = (function() {
         return pollingInterval !== null;
     }
 
+    // Mark a notification as read (fire-and-forget)
+    function markAsRead(notificationId) {
+        if (!notificationId || typeof AmbiletAPI === 'undefined') return;
+        try {
+            AmbiletAPI.post('/organizer/notifications/' + notificationId + '/read', {});
+        } catch (e) {
+            // Silently fail - non-critical
+        }
+    }
+
     // Public API
     return {
         start: start,
         stop: stop,
         refresh: refresh,
-        isActive: isActive
+        isActive: isActive,
+        markAsRead: markAsRead
     };
 })();
 

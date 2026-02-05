@@ -312,6 +312,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div id="share-events-list" class="hidden max-h-60 overflow-y-auto border border-border rounded-xl divide-y divide-border"></div>
                     <p id="share-events-empty" class="hidden text-sm text-muted py-2">Nu ai evenimente active.</p>
                 </div>
+                <div>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="share-link-show-participants" class="rounded border-border text-primary focus:ring-primary">
+                        <div>
+                            <p class="text-sm font-medium text-secondary">Afiseaza participanti</p>
+                            <p class="text-xs text-muted">Numele si telefonul participantilor vor fi vizibile in pagina link-ului</p>
+                        </div>
+                    </label>
+                </div>
                 <div class="flex gap-3 pt-2">
                     <button type="button" onclick="closeShareLinkModal()" class="btn btn-secondary flex-1">Anuleaza</button>
                     <button type="submit" id="create-share-btn" class="btn btn-primary flex-1" disabled>Genereaza Link</button>
@@ -749,6 +758,7 @@ function renderShareLinks() {
                     <div class="flex items-center gap-2 mb-1">
                         <h3 class="font-semibold text-secondary truncate">${slEscapeHtml(link.name || 'Link')}</h3>
                         ${link.has_password ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full flex-shrink-0 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>Parola</span>' : ''}
+                        ${link.show_participants ? '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full flex-shrink-0">Participanti</span>' : ''}
                         ${!isActive ? '<span class="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full flex-shrink-0">Inactiv</span>' : '<span class="px-2 py-0.5 bg-green-100 text-green-600 text-xs rounded-full flex-shrink-0">Activ</span>'}
                     </div>
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
@@ -769,6 +779,9 @@ function renderShareLinks() {
                     <button onclick="window.open('/view/${link.code}', '_blank')" class="p-2 text-muted hover:text-primary rounded-lg hover:bg-white" title="Deschide link">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                     </button>
+                    <button onclick="refreshShareLink('${link.code}')" class="p-2 text-muted hover:text-green-600 rounded-lg hover:bg-white" title="Actualizeaza datele">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </button>
                     <button onclick="toggleShareLink('${link.code}', ${isActive ? 'false' : 'true'})" class="p-2 text-muted hover:text-yellow-600 rounded-lg hover:bg-white" title="${isActive ? 'Dezactiveaza' : 'Activeaza'}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isActive ? 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636' : 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'}"/></svg>
                     </button>
@@ -786,6 +799,7 @@ async function openShareLinkModal() {
     document.getElementById('share-link-modal').classList.add('flex');
     document.getElementById('share-link-name').value = '';
     document.getElementById('share-link-password').value = '';
+    document.getElementById('share-link-show-participants').checked = false;
     document.getElementById('create-share-btn').disabled = true;
 
     // Load events
@@ -861,6 +875,7 @@ async function createShareLink(e) {
     try {
         const payload = { event_ids: eventIds, name: name };
         if (password) payload.password = password;
+        if (document.getElementById('share-link-show-participants').checked) payload.show_participants = true;
         const response = await AmbiletAPI.post('/organizer/share-links', payload);
 
         if (response.success) {
@@ -929,6 +944,20 @@ async function deleteShareLink(code) {
         }
     } catch (error) {
         AmbiletNotifications.error(error.message || 'Eroare la stergere');
+    }
+}
+
+async function refreshShareLink(code) {
+    try {
+        const response = await AmbiletAPI.put('/organizer/share-links/' + code, { refresh_data: true });
+        if (response.success) {
+            AmbiletNotifications.success('Datele au fost actualizate');
+            loadShareLinks();
+        } else {
+            AmbiletNotifications.error(response.message || response.error || 'Eroare la actualizare');
+        }
+    } catch (error) {
+        AmbiletNotifications.error(error.message || 'Eroare la actualizare');
     }
 }
 

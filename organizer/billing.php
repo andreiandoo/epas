@@ -34,38 +34,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
-            <div class="p-4 bg-white border rounded-xl border-border">
-                <div class="flex items-center justify-center w-10 h-10 mb-3 rounded-lg bg-green-50">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
-                <p id="stat-total-paid" class="text-2xl font-bold text-secondary">0 RON</p>
-                <p class="text-sm text-muted">Total încasat</p>
-            </div>
-            <div class="p-4 bg-white border rounded-xl border-border">
-                <div class="flex items-center justify-center w-10 h-10 mb-3 rounded-lg bg-blue-50">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                </div>
-                <p id="stat-total-invoices" class="text-2xl font-bold text-secondary">0</p>
-                <p class="text-sm text-muted">Facturi emise</p>
-            </div>
-            <div class="p-4 bg-white border rounded-xl border-border">
-                <div class="flex items-center justify-center w-10 h-10 mb-3 rounded-lg bg-yellow-50">
-                    <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
-                <p id="stat-pending" class="text-2xl font-bold text-secondary">0 RON</p>
-                <p class="text-sm text-muted">În așteptare</p>
-            </div>
-            <div class="p-4 bg-white border rounded-xl border-border">
-                <div class="flex items-center justify-center w-10 h-10 mb-3 rounded-lg bg-red-50">
-                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
-                <p id="stat-commission" class="text-2xl font-bold text-secondary">0%</p>
-                <p class="text-sm text-muted">Comision mediu</p>
-            </div>
-        </div>
-
         <!-- Main Grid -->
         <div class="grid gap-6 lg:grid-cols-3">
             <!-- Invoices Table -->
@@ -161,29 +129,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </div>
 
-                <!-- Payment Methods -->
-                <div class="overflow-hidden bg-white border rounded-xl border-border">
-                    <div class="p-4 border-b border-border">
-                        <h2 class="text-base font-semibold text-secondary">Metode de plată</h2>
-                    </div>
-                    <div class="p-4 space-y-3">
-                        <div id="payment-methods-list">
-                            <!-- Loaded via JavaScript -->
-                        </div>
-
-                        <button onclick="BillingManager.addPaymentMethod()" class="flex items-center justify-center w-full gap-2 p-3 text-sm font-medium transition-colors border-2 border-dashed rounded-lg border-border text-muted hover:border-primary hover:text-primary">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-                            Adaugă metodă de plată
-                        </button>
-
-                        <!-- Next Invoice -->
-                        <div id="next-invoice" class="hidden p-4 mt-4 text-white rounded-xl bg-gradient-to-br from-secondary to-slate-900">
-                            <h4 class="text-sm font-semibold">Următoarea factură</h4>
-                            <p id="next-invoice-amount" class="text-2xl font-bold">0,00 RON</p>
-                            <p id="next-invoice-date" class="text-sm text-slate-400">Scadentă pe -</p>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </main>
@@ -241,8 +186,7 @@ const BillingManager = {
     async init() {
         await Promise.all([
             this.loadInvoices(),
-            this.loadBillingInfo(),
-            this.loadPaymentMethods()
+            this.loadBillingInfo()
         ]);
     },
 
@@ -687,7 +631,7 @@ const BillingManager = {
      * Edit billing info
      */
     editBillingInfo() {
-        window.location.href = '/organizator/settings#billing';
+        window.location.href = '/organizator/setari#company';
     },
 
     /**

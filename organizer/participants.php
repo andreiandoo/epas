@@ -92,6 +92,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <thead class="bg-surface">
                             <tr>
                                 <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Participant</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Telefon</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Bilet</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Tip Bilet</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Comanda</th>
@@ -287,7 +288,7 @@ function filterAndRenderParticipants() {
 function renderParticipants(participants) {
     const container = document.getElementById('participants-list');
     if (!participants.length) {
-        container.innerHTML = '<tr><td colspan="6" class="px-6 py-12 text-center text-muted">Nu exista participanti pentru acest eveniment</td></tr>';
+        container.innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-muted">Nu exista participanti pentru acest eveniment</td></tr>';
         return;
     }
 
@@ -298,6 +299,8 @@ function renderParticipants(participants) {
         const spoofedEmail = spoofEmail(p.email);
         // Format order date
         const orderDate = p.order_date ? AmbiletUtils.formatDate(p.order_date) : (p.created_at ? AmbiletUtils.formatDate(p.created_at) : '-');
+        // Seat info
+        const seatInfo = p.seat_label ? `<div class="text-xs text-muted mt-1">${escapeHtmlP(p.seat_label)}</div>` : '';
 
         return `
         <tr class="hover:bg-surface/50">
@@ -307,10 +310,13 @@ function renderParticipants(participants) {
                         <span class="text-sm font-semibold text-primary">${initials || '?'}</span>
                     </div>
                     <div>
-                        <p class="font-medium text-secondary">${p.name || '-'}</p>
+                        <p class="font-medium text-secondary">${escapeHtmlP(p.name) || '-'}</p>
                         <p class="text-sm text-muted">${spoofedEmail}</p>
                     </div>
                 </div>
+            </td>
+            <td class="px-6 py-4">
+                <span class="text-sm text-secondary">${escapeHtmlP(p.phone) || '-'}</span>
             </td>
             <td class="px-6 py-4">
                 <div>
@@ -319,7 +325,8 @@ function renderParticipants(participants) {
                 <div class="text-xs text-muted mt-1">#${p.ticket_id || p.id || '-'}</div>
             </td>
             <td class="px-6 py-4">
-                <span class="px-2.5 py-1 bg-primary/10 text-primary text-sm font-medium rounded-lg">${p.ticket_type || '-'}</span>
+                <span class="px-2.5 py-1 bg-primary/10 text-primary text-sm font-medium rounded-lg">${escapeHtmlP(p.ticket_type) || '-'}</span>
+                ${seatInfo}
             </td>
             <td class="px-6 py-4">
                 <div class="text-sm font-medium text-secondary">${p.order_number || '#' + (p.order_id || '-')}</div>

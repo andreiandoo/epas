@@ -488,6 +488,52 @@ function fetchTicketTotalsWithAuth($eventIds, $authHeader) {
     return $result;
 }
 
+/**
+ * Fetch participants for events using organizer auth.
+ * Returns array keyed by event ID with participant lists.
+ */
+function fetchParticipantsWithAuth($eventIds, $authHeader) {
+    $result = [];
+    foreach ($eventIds as $eventId) {
+        $id = (int)$eventId;
+        if ($id <= 0) continue;
+
+        $url = API_BASE_URL . '/organizer/events/' . $id . '/participants?per_page=100';
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'header' => implode("\r\n", [
+                    'Content-Type: application/json',
+                    'X-API-Key: ' . API_KEY,
+                    'Accept: application/json',
+                    'Authorization: ' . $authHeader
+                ]),
+                'timeout' => 15,
+                'ignore_errors' => true
+            ]
+        ]);
+        $response = @file_get_contents($url, false, $context);
+        if (!$response) continue;
+
+        $responseData = json_decode($response, true);
+        $participants = $responseData['data']['participants'] ?? $responseData['data'] ?? [];
+
+        if (!is_array($participants)) continue;
+
+        $result[$id] = array_map(function($p) {
+            return [
+                'name' => $p['name'] ?? '',
+                'phone' => $p['phone'] ?? '',
+                'ticket_type' => $p['ticket_type'] ?? '',
+                'seat_label' => $p['seat_label'] ?? null,
+                'checked_in' => $p['checked_in'] ?? false,
+                'order_date' => $p['order_date'] ?? '',
+            ];
+        }, $participants);
+    }
+    return $result;
+}
+
 // Rate limiting (simple IP-based)
 session_start();
 $ip = $_SERVER['REMOTE_ADDR'];
@@ -1580,6 +1626,12 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.notifications.types':
+        $method = 'GET';
+        $endpoint = '/organizer/notifications/types';
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER DASHBOARD ====================
 
     case 'organizer.dashboard':
@@ -1841,8 +1893,11 @@ switch ($action) {
         $params = [];
         if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
         if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['from_date'])) $params['from_date'] = $_GET['from_date'];
+        if (isset($_GET['to_date'])) $params['to_date'] = $_GET['to_date'];
         if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
-        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 100);
         $endpoint = '/organizer/orders' . ($params ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;
@@ -2378,6 +2433,13 @@ switch ($action) {
             $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
             $ticketData = $authHeader ? fetchTicketTotalsWithAuth($eventIds, $authHeader) : [];
 
+            // Show participants flag
+            $showParticipants = !empty($input['show_participants']);
+            $participantsData = [];
+            if ($showParticipants && $authHeader) {
+                $participantsData = fetchParticipantsWithAuth($eventIds, $authHeader);
+            }
+
             $link = [
                 'code' => $code,
                 'organizer_id' => $orgId,
@@ -2389,7 +2451,9 @@ switch ($action) {
                 'last_accessed_at' => null,
                 'password_hash' => $passwordHash,
                 'has_password' => !empty($passwordHash),
+                'show_participants' => $showParticipants,
                 'ticket_data' => $ticketData,
+                'participants_data' => $participantsData,
                 'ticket_data_updated_at' => date('c'),
             ];
 
@@ -2479,13 +2543,28 @@ switch ($action) {
                     $allLinks[$code]['has_password'] = true;
                 }
             }
+            if (isset($input['show_participants'])) {
+                $allLinks[$code]['show_participants'] = (bool)$input['show_participants'];
+            }
+            // Refresh participant + ticket data on demand
+            if (!empty($input['refresh_data'])) {
+                $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+                $evIds = $allLinks[$code]['event_ids'] ?? [];
+                if ($authHeader && !empty($evIds)) {
+                    $allLinks[$code]['ticket_data'] = fetchTicketTotalsWithAuth($evIds, $authHeader);
+                    if (!empty($allLinks[$code]['show_participants'])) {
+                        $allLinks[$code]['participants_data'] = fetchParticipantsWithAuth($evIds, $authHeader);
+                    }
+                    $allLinks[$code]['ticket_data_updated_at'] = date('c');
+                }
+            }
             saveShareLinks($allLinks);
             $safeLink = $allLinks[$code];
-            unset($safeLink['password_hash'], $safeLink['ticket_data']);
+            unset($safeLink['password_hash'], $safeLink['ticket_data'], $safeLink['participants_data']);
             echo json_encode(['success' => true, 'data' => $safeLink]);
         } else {
             $safeLink = $allLinks[$code];
-            unset($safeLink['password_hash'], $safeLink['ticket_data']);
+            unset($safeLink['password_hash'], $safeLink['ticket_data'], $safeLink['participants_data']);
             echo json_encode(['success' => true, 'data' => $safeLink]);
         }
         exit;
@@ -2567,12 +2646,20 @@ switch ($action) {
         $storedTicketData = $link['ticket_data'] ?? [];
         $events = fetchEventsForShareLink($link['event_ids'] ?? [], $storedTicketData);
 
+        $responseData = [
+            'events' => $events,
+            'show_participants' => !empty($link['show_participants']),
+            'updated_at' => date('c'),
+        ];
+
+        // Include cached participant data if enabled
+        if (!empty($link['show_participants']) && !empty($link['participants_data'])) {
+            $responseData['participants'] = $link['participants_data'];
+        }
+
         echo json_encode([
             'success' => true,
-            'data' => [
-                'events' => $events,
-                'updated_at' => date('c'),
-            ]
+            'data' => $responseData,
         ]);
         exit;
 
