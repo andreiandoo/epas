@@ -2249,16 +2249,12 @@ class EventResource extends Resource
                                             }
                                             $newEvent->title = $titleArray;
 
-                                            // Generate unique slug from title
-                                            $baseTitle = is_array($titleArray) ? ($titleArray['ro'] ?? $titleArray['en'] ?? reset($titleArray)) : $titleArray;
+                                            // Generate base slug from original title (without [Duplicat] prefix)
+                                            $originalTitle = $record->title ?? [];
+                                            $baseTitle = is_array($originalTitle) ? ($originalTitle['ro'] ?? $originalTitle['en'] ?? reset($originalTitle)) : $originalTitle;
                                             $baseSlug = \Illuminate\Support\Str::slug($baseTitle ?: 'eveniment');
-                                            $slug = $baseSlug;
-                                            $counter = 1;
-                                            while (Event::where('slug', $slug)->exists()) {
-                                                $slug = $baseSlug . '-' . $counter;
-                                                $counter++;
-                                            }
-                                            $newEvent->slug = $slug;
+                                            // Temporary slug - will be updated with actual ID after save
+                                            $newEvent->slug = $baseSlug . '-temp-' . time();
 
                                             // Reset fields for the duplicate
                                             $newEvent->is_featured = false;
@@ -2270,13 +2266,34 @@ class EventResource extends Resource
                                             $newEvent->interested_count = 0;
                                             $newEvent->save();
 
-                                            // Duplicate ticket types
+                                            // Update slug with actual event ID
+                                            $newEvent->slug = $baseSlug . '-' . $newEvent->id;
+                                            $newEvent->save();
+
+                                            // Copy event types relationship
+                                            if ($record->eventTypes && $record->eventTypes->count() > 0) {
+                                                $newEvent->eventTypes()->sync($record->eventTypes->pluck('id'));
+                                            }
+
+                                            // Copy event genres relationship
+                                            if ($record->eventGenres && $record->eventGenres->count() > 0) {
+                                                $newEvent->eventGenres()->sync($record->eventGenres->pluck('id'));
+                                            }
+
+                                            // Copy artists relationship
+                                            if ($record->artists && $record->artists->count() > 0) {
+                                                $newEvent->artists()->sync($record->artists->pluck('id'));
+                                            }
+
+                                            // Duplicate ticket types (without series_start and series_end - they'll be regenerated on save)
                                             foreach ($record->ticketTypes as $ticketType) {
                                                 $newTicketType = $ticketType->replicate([
-                                                    'id', 'created_at', 'updated_at',
+                                                    'id', 'created_at', 'updated_at', 'series_start', 'series_end',
                                                 ]);
                                                 $newTicketType->event_id = $newEvent->id;
                                                 $newTicketType->quota_sold = 0;
+                                                $newTicketType->series_start = null;
+                                                $newTicketType->series_end = null;
                                                 $newTicketType->save();
                                             }
 
