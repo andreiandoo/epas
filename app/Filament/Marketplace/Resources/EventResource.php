@@ -1490,48 +1490,48 @@ class EventResource extends Resource
                                             ->visible(fn (SGet $get) => $get('has_sale'))
                                             ->columnSpan(6),
 
-                                        // Activ, Returnabil, Serie start, Serie end - all on same row with flex justify-between
-                                        SC\Group::make([
-                                            Forms\Components\Toggle::make('is_active')
-                                                ->label($t('Activ', 'Active'))
-                                                ->default(true)
-                                                ->live(),
-                                            Forms\Components\Toggle::make('is_refundable')
-                                                ->label($t('Returnabil', 'Refundable'))
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet', 'If the event is cancelled or postponed, customers can request a refund for this ticket type'))
-                                                ->default(false),
-                                            Forms\Components\TextInput::make('series_start')
-                                                ->label($t('Serie start', 'Series start'))
-                                                ->placeholder($t('Ex: AMB-5-00001', 'E.g. AMB-5-00001'))
-                                                ->maxLength(50)
-                                                ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                    if (!$state) {
-                                                        $eventSeries = $get('../../event_series');
-                                                        $capacity = $get('capacity');
-                                                        $ticketTypeIdentifier = $get('id') ?: $get('sku');
-                                                        if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
-                                                            $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
-                                                        }
+                                        // Activ, Returnabil, Serie start, Serie end - all on same row with unequal columns
+                                        Forms\Components\Toggle::make('is_active')
+                                            ->label($t('Activ', 'Active'))
+                                            ->default(true)
+                                            ->live()
+                                            ->columnSpan(2),
+                                        Forms\Components\Toggle::make('is_refundable')
+                                            ->label($t('Returnabil', 'Refundable'))
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet', 'If the event is cancelled or postponed, customers can request a refund for this ticket type'))
+                                            ->default(false)
+                                            ->columnSpan(2),
+                                        Forms\Components\TextInput::make('series_start')
+                                            ->label($t('Serie start', 'Series start'))
+                                            ->placeholder($t('Ex: AMB-5-00001', 'E.g. AMB-5-00001'))
+                                            ->maxLength(50)
+                                            ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                if (!$state) {
+                                                    $eventSeries = $get('../../event_series');
+                                                    $capacity = $get('capacity');
+                                                    $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                    if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
+                                                        $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
                                                     }
-                                                }),
-                                            Forms\Components\TextInput::make('series_end')
-                                                ->label($t('Serie end', 'Series end'))
-                                                ->placeholder($t('Ex: AMB-5-00500', 'E.g. AMB-5-00500'))
-                                                ->maxLength(50)
-                                                ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                    if (!$state) {
-                                                        $eventSeries = $get('../../event_series');
-                                                        $capacity = $get('capacity');
-                                                        $ticketTypeIdentifier = $get('id') ?: $get('sku');
-                                                        if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
-                                                            $endNumber = (int)$capacity;
-                                                            $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
-                                                        }
+                                                }
+                                            })
+                                            ->columnSpan(4),
+                                        Forms\Components\TextInput::make('series_end')
+                                            ->label($t('Serie end', 'Series end'))
+                                            ->placeholder($t('Ex: AMB-5-00500', 'E.g. AMB-5-00500'))
+                                            ->maxLength(50)
+                                            ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                if (!$state) {
+                                                    $eventSeries = $get('../../event_series');
+                                                    $capacity = $get('capacity');
+                                                    $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                    if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
+                                                        $endNumber = (int)$capacity;
+                                                        $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
                                                     }
-                                                }),
-                                        ])
-                                            ->extraAttributes(['class' => 'flex items-center gap-4 justify-between [&>div]:flex-none [&>div:nth-child(3)]:flex-1 [&>div:nth-child(4)]:flex-1'])
-                                            ->columnSpan(12),
+                                                }
+                                            })
+                                            ->columnSpan(4),
 
                                         Forms\Components\DateTimePicker::make('active_until')
                                             ->label($t('Activ până la', 'Active until'))
