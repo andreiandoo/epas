@@ -606,13 +606,17 @@ class EventResource extends Resource
                                 Forms\Components\FileUpload::make('poster_url')
                                     ->label('Poster (vertical)')
                                     ->image()
+                                    ->disk('public')
                                     ->directory('events/posters')
-                                    ->disk('public'),
+                                    ->visibility('public')
+                                    ->imagePreviewHeight('200'),
                                 Forms\Components\FileUpload::make('hero_image_url')
                                     ->label('Hero image (horizontal)')
                                     ->image()
+                                    ->disk('public')
                                     ->directory('events/hero')
-                                    ->disk('public'),
+                                    ->visibility('public')
+                                    ->imagePreviewHeight('200'),
                             ])->columns(2),
 
                         // CONTENT - Single Language
@@ -1088,10 +1092,11 @@ class EventResource extends Resource
                                                 }),
                                             Forms\Components\TextInput::make('capacity')
                                                 ->label('Stoc bilete')
-                                                ->placeholder('Leave empty for unlimited')
+                                                ->placeholder('Necompletat = 0 bilete')
                                                 ->numeric()
                                                 ->minValue(0)
                                                 ->nullable()
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Dacă lași necompletat, stocul va fi 0.')
                                                 ->hint(fn ($record) => $record && $record->quota_sold > 0
                                                     ? "Vândute: {$record->quota_sold}"
                                                     : null)
