@@ -47,20 +47,26 @@ class CreateEvent extends CreateRecord
 
     protected function afterCreate(): void
     {
-        // Fix slug to include the actual event ID (since we couldn't know it before save)
+        // Fix slug and event_series to include the actual event ID
+        // The form may have predicted a different ID if concurrent creates happened
         $record = $this->record;
-        $slug = $record->slug;
         $needsSave = false;
 
-        // If slug doesn't already end with the ID, append it
-        if ($slug && !str_ends_with($slug, '-' . $record->id)) {
-            $record->slug = $slug . '-' . $record->id;
-            $needsSave = true;
+        // Fix slug: remove any predicted ID suffix and add the correct one
+        if ($record->slug) {
+            // Remove trailing -NUMBER if present (predicted ID)
+            $baseSlug = preg_replace('/-\d+$/', '', $record->slug);
+            $correctSlug = $baseSlug . '-' . $record->id;
+            if ($record->slug !== $correctSlug) {
+                $record->slug = $correctSlug;
+                $needsSave = true;
+            }
         }
 
-        // Auto-generate event_series if not set or if it's the placeholder "AMB-"
-        if (!$record->event_series || $record->event_series === 'AMB-') {
-            $record->event_series = 'AMB-' . $record->id;
+        // Fix event_series: ensure it has the correct ID
+        $correctSeries = 'AMB-' . $record->id;
+        if ($record->event_series !== $correctSeries) {
+            $record->event_series = $correctSeries;
             $needsSave = true;
         }
 

@@ -138,11 +138,11 @@ class EventResource extends Resource
                                                             $set('event_series', 'AMB-' . $record->id);
                                                         }
                                                     } else {
-                                                        // On CREATE: show slug without ID (will be added after save)
-                                                        $set('slug', $baseSlug);
-                                                        // On CREATE: show placeholder event_series (will be completed after save with actual ID)
+                                                        // On CREATE: get next expected ID from database
+                                                        $nextId = (Event::max('id') ?? 0) + 1;
+                                                        $set('slug', $baseSlug . '-' . $nextId);
                                                         if (!$get('event_series')) {
-                                                            $set('event_series', 'AMB-');
+                                                            $set('event_series', 'AMB-' . $nextId);
                                                         }
                                                     }
                                                 }
@@ -151,17 +151,17 @@ class EventResource extends Resource
                                             ->label('Slug')
                                             ->maxLength(190)
                                             ->rule('alpha_dash')
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('ID-ul evenimentului va fi adăugat automat la salvare', 'Event ID will be added automatically on save')),
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('ID-ul se generează automat din titlu', 'ID is auto-generated from title')),
                                         Forms\Components\TextInput::make('event_series')
                                             ->label($t('Serie eveniment', 'Event series'))
                                             ->placeholder($t('Se generează automat: AMB-[ID]', 'Auto-generated: AMB-[ID]'))
                                             ->maxLength(50)
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Codul unic al seriei de bilete pentru acest eveniment. Se generează automat la salvare.', 'Unique ticket series code for this event. Auto-generated on save.'))
-                                            ->disabled(fn (?Event $record) => $record && $record->exists && $record->event_series && $record->event_series !== 'AMB-')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Codul unic al seriei de bilete pentru acest eveniment', 'Unique ticket series code for this event'))
+                                            ->disabled(fn (?Event $record) => $record && $record->exists && $record->event_series)
                                             ->dehydrated(true)
                                             ->afterStateHydrated(function ($state, SSet $set, ?Event $record) {
-                                                // Auto-generate event_series if not set (or incomplete placeholder) and record exists
-                                                if ((!$state || $state === 'AMB-') && $record && $record->exists && $record->id) {
+                                                // Auto-generate event_series if not set and record exists
+                                                if (!$state && $record && $record->exists && $record->id) {
                                                     $set('event_series', 'AMB-' . $record->id);
                                                 }
                                             }),
