@@ -621,8 +621,9 @@ class EventResource extends Resource
                                     ->placeholder($t('ex: 500', 'e.g. 500')),
                             ])->columns(2),
 
-                        // MEDIA
+                        // MEDIA - wrapped in wire:ignore to prevent FilePond destruction during Livewire re-renders
                         SC\Section::make('Media')
+                            ->extraAttributes(['wire:ignore' => true])
                             ->schema([
                                 Forms\Components\FileUpload::make('poster_url')
                                     ->label($t('Poster (vertical)', 'Poster (vertical)'))
