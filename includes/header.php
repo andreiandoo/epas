@@ -1408,20 +1408,36 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     window.closeCartDrawer = closeCartDrawer;
 
     // ==================== GLOBAL CART TIMER BAR ====================
-    // Show timer bar on all pages except cart/checkout when cart has items
+    // Show timer bar on all pages except homepage when cart has items
     (function initGlobalTimerBar() {
         const timerBar = document.getElementById('global-timer-bar');
         const countdownEl = document.getElementById('global-countdown');
         if (!timerBar || !countdownEl) return;
 
-        // Skip cart and checkout pages
+        // Skip homepage only
         const currentPath = window.location.pathname;
-        if (currentPath === '/cos' || currentPath === '/checkout') return;
+        if (currentPath === '/' || currentPath === '') return;
 
         let timerInterval = null;
+        let isRed = false; // Track if bar is already red
 
         function updateGlobalTimer() {
-            const cart = getCart();
+            // Try to get cart from AmbiletCart or localStorage directly
+            let cart = [];
+            try {
+                if (typeof AmbiletCart !== 'undefined' && AmbiletCart.getItems) {
+                    cart = AmbiletCart.getItems() || [];
+                } else {
+                    // Fallback: read directly from localStorage
+                    const stored = localStorage.getItem('ambilet_cart');
+                    if (stored) {
+                        cart = JSON.parse(stored) || [];
+                    }
+                }
+            } catch (e) {
+                cart = [];
+            }
+
             const savedEndTime = localStorage.getItem('cart_end_time');
 
             // Check if cart has items and timer is active
@@ -1437,15 +1453,28 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     const seconds = Math.floor((remaining % 60000) / 1000);
                     countdownEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-                    // Under 5 minutes - make bar red
-                    if (remaining < 5 * 60 * 1000) {
+                    // Under 5 minutes - make bar red (only update styles once)
+                    if (remaining < 5 * 60 * 1000 && !isRed) {
+                        isRed = true;
                         timerBar.classList.remove('bg-warning/10', 'border-warning/20');
                         timerBar.classList.add('bg-primary', 'border-primary');
                         countdownEl.classList.remove('text-warning');
                         countdownEl.classList.add('text-white');
-                        timerBar.querySelector('span.text-secondary')?.classList.replace('text-secondary', 'text-white/90');
-                        timerBar.querySelector('svg')?.classList.replace('text-warning', 'text-white');
-                        timerBar.querySelector('a')?.classList.replace('text-primary', 'text-white');
+                        const textSpan = timerBar.querySelector('span.text-secondary');
+                        if (textSpan) {
+                            textSpan.classList.remove('text-secondary');
+                            textSpan.classList.add('text-white/90');
+                        }
+                        const svg = timerBar.querySelector('svg.text-warning');
+                        if (svg) {
+                            svg.classList.remove('text-warning');
+                            svg.classList.add('text-white');
+                        }
+                        const link = timerBar.querySelector('a.text-primary');
+                        if (link) {
+                            link.classList.remove('text-primary');
+                            link.classList.add('text-white');
+                        }
                     }
                 } else {
                     // Timer expired
@@ -1465,21 +1494,37 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             }
         }
 
-        // Initial check
-        updateGlobalTimer();
+        // Delayed initial check to ensure cart.js has loaded
+        setTimeout(function() {
+            updateGlobalTimer();
 
-        // Start interval if cart has items
-        const cart = getCart();
-        if (cart && cart.length > 0 && localStorage.getItem('cart_end_time')) {
-            timerInterval = setInterval(updateGlobalTimer, 1000);
-        }
+            // Start interval if cart has items
+            const savedEndTime = localStorage.getItem('cart_end_time');
+            const storedCart = localStorage.getItem('ambilet_cart');
+            if (storedCart && savedEndTime) {
+                try {
+                    const cart = JSON.parse(storedCart);
+                    if (cart && cart.length > 0) {
+                        timerInterval = setInterval(updateGlobalTimer, 1000);
+                    }
+                } catch (e) {}
+            }
+        }, 100);
 
         // Listen for cart updates
         window.addEventListener('ambilet:cart:update', function() {
             updateGlobalTimer();
             // Start interval if not running
-            if (!timerInterval && getCart()?.length > 0) {
-                timerInterval = setInterval(updateGlobalTimer, 1000);
+            if (!timerInterval) {
+                const storedCart = localStorage.getItem('ambilet_cart');
+                if (storedCart) {
+                    try {
+                        const cart = JSON.parse(storedCart);
+                        if (cart && cart.length > 0) {
+                            timerInterval = setInterval(updateGlobalTimer, 1000);
+                        }
+                    } catch (e) {}
+                }
             }
         });
 
