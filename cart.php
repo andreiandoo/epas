@@ -599,10 +599,16 @@ const CartPage = {
         items.forEach(item => {
             const eventId = item.eventId || item.event?.id || 'unknown';
             const eventTitle = item.event?.title || item.event?.name || 'Eveniment';
+            const eventDate = item.event?.date || item.event_date || '';
+            const venueName = item.event?.venue?.name || (typeof item.event?.venue === 'string' ? item.event.venue : '') || item.venue_name || '';
+            const cityName = item.event?.city?.name || item.event?.city || item.event?.venue?.city || '';
 
             if (!eventGroups[eventId]) {
                 eventGroups[eventId] = {
                     title: eventTitle,
+                    date: eventDate,
+                    venue: venueName,
+                    city: cityName,
                     tickets: [],
                     subtotal: 0,
                     commission: 0
@@ -675,7 +681,16 @@ const CartPage = {
                     if (eventIndex > 0) {
                         breakdownHtml += '<div class="pt-3 mt-3 border-t border-border"></div>';
                     }
-                    breakdownHtml += '<div class="mb-2 text-xs font-semibold text-secondary">' + group.title + '</div>';
+                    // Build event info string: title (date, venue, city)
+                    var eventInfo = group.title;
+                    var details = [];
+                    if (group.date) details.push(AmbiletUtils.formatDate(group.date, 'short'));
+                    if (group.venue) details.push(group.venue);
+                    if (group.city && group.city !== group.venue) details.push(group.city);
+                    if (details.length > 0) {
+                        eventInfo += ' <span class="font-normal text-muted">(' + details.join(', ') + ')</span>';
+                    }
+                    breakdownHtml += '<div class="mb-2 text-xs font-semibold text-secondary">' + eventInfo + '</div>';
                 }
 
                 // Show each ticket type
