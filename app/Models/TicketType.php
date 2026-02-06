@@ -44,6 +44,8 @@ class TicketType extends Model
         'series_start',
         'series_end',
         'event_series',
+        // Sort order for drag & drop reordering
+        'sort_order',
     ];
 
     protected $casts = [

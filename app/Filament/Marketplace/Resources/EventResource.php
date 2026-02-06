@@ -612,6 +612,13 @@ class EventResource extends Resource
                                     ->label($t('Website Eveniment', 'Event Website'))
                                     ->url()
                                     ->maxLength(255),
+                                Forms\Components\TextInput::make('general_stock')
+                                    ->label($t('Stoc general', 'General Stock'))
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->nullable()
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Stoc implicit folosit pentru seria de bilete când un tip de bilet nu are stoc setat.', 'Default stock used for ticket series when a ticket type has no stock set.'))
+                                    ->placeholder($t('ex: 500', 'e.g. 500')),
                             ])->columns(2),
 
                         // MEDIA
@@ -626,9 +633,7 @@ class EventResource extends Resource
                                     ->imagePreviewHeight('200')
                                     ->maxSize(10240)
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                    ->downloadable()
-                                    ->openable()
-                                    ->preserveFilenames(),
+                                    ->reactive(),
                                 Forms\Components\FileUpload::make('hero_image_url')
                                     ->label($t('Imagine hero (orizontală)', 'Hero image (horizontal)'))
                                     ->image()
@@ -638,9 +643,7 @@ class EventResource extends Resource
                                     ->imagePreviewHeight('200')
                                     ->maxSize(10240)
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                    ->downloadable()
-                                    ->openable()
-                                    ->preserveFilenames(),
+                                    ->reactive(),
                             ])->columns(2),
 
                         // CONTENT - Single Language
@@ -1060,6 +1063,9 @@ class EventResource extends Resource
                                     ->relationship()
                                     ->label($t('Tipuri de bilete', 'Ticket types'))
                                     ->collapsible()
+                                    ->reorderable()
+                                    ->reorderableWithDragAndDrop()
+                                    ->orderColumn('sort_order')
                                     ->addActionLabel($t('Adaugă tip bilet', 'Add ticket type'))
                                     ->itemLabel(fn (array $state) => ($state['is_active'] ?? true)
                                         ? '✓ ' . ($state['name'] ?? $t('Bilet', 'Ticket'))
@@ -1116,11 +1122,12 @@ class EventResource extends Resource
                                                 }),
                                             Forms\Components\TextInput::make('capacity')
                                                 ->label($t('Stoc bilete', 'Ticket stock'))
-                                                ->placeholder($t('Necompletat = 0 bilete', 'Empty = 0 tickets'))
+                                                ->placeholder($t('Necompletat = folosește stoc general', 'Empty = use general stock'))
                                                 ->numeric()
                                                 ->minValue(0)
                                                 ->nullable()
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă lași necompletat, stocul va fi 0.', 'If left empty, stock will be 0.'))
+                                                ->dehydrateStateUsing(fn ($state) => $state === '' || $state === null ? null : (int) $state)
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă lași necompletat, se va folosi stocul general pentru seria de bilete.', 'If left empty, general stock will be used for ticket series.'))
                                                 ->hint(function ($record) use ($t) {
                                                     return $record && $record->quota_sold > 0
                                                         ? $t('Vândute', 'Sold') . ": {$record->quota_sold}"
@@ -1129,19 +1136,23 @@ class EventResource extends Resource
                                                 ->live(onBlur: true)
                                                 ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                     // Auto-generate series_end based on quantity if not already set
+                                                    // Use capacity if set, otherwise use general_stock
                                                     $seriesEnd = $get('series_end');
-                                                    if (!$seriesEnd && $state && (int)$state > 0) {
+                                                    $capacity = $state && (int)$state > 0 ? (int)$state : null;
+                                                    $generalStock = $get('../../general_stock');
+                                                    $stockToUse = $capacity ?? ($generalStock ? (int)$generalStock : null);
+
+                                                    if (!$seriesEnd && $stockToUse) {
                                                         $eventSeries = $get('../../event_series');
                                                         // Use ticket type ID if available, otherwise use SKU
                                                         $ticketTypeIdentifier = $get('id') ?: $get('sku');
                                                         if ($eventSeries && $ticketTypeIdentifier) {
-                                                            $endNumber = (int)$state;
-                                                            $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
+                                                            $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($stockToUse, 5, '0', STR_PAD_LEFT));
                                                         }
                                                     }
                                                     // Auto-generate series_start if not already set
                                                     $seriesStart = $get('series_start');
-                                                    if (!$seriesStart && $state && (int)$state > 0) {
+                                                    if (!$seriesStart && $stockToUse) {
                                                         $eventSeries = $get('../../event_series');
                                                         // Use ticket type ID if available, otherwise use SKU
                                                         $ticketTypeIdentifier = $get('id') ?: $get('sku');

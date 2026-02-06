@@ -77,6 +77,7 @@ class Event extends Model
 
         // marketplace pricing & tracking
         'target_price',
+        'general_stock',
         'views_count',
         'interested_count',
     ];
