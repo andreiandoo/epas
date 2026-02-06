@@ -19,6 +19,53 @@ const EventPage = {
     seatSelectionModal: null,
     sectionToTicketTypeMap: {},  // sectionId -> [ticketType, ...]
 
+    /**
+     * Calculate commission for a ticket type
+     * @param {Object} ticketType - The ticket type object
+     * @param {number} basePrice - The base price of the ticket
+     * @returns {Object} { amount: number, rate: number|null, fixed: number|null, mode: string, type: string }
+     */
+    calculateTicketCommission(ticketType, basePrice) {
+        // Check if ticket has custom commission settings
+        if (ticketType.commission && ticketType.commission.type) {
+            const comm = ticketType.commission;
+            let amount = 0;
+
+            switch (comm.type) {
+                case 'percentage':
+                    amount = basePrice * (comm.rate / 100);
+                    break;
+                case 'fixed':
+                    amount = comm.fixed || 0;
+                    break;
+                case 'both':
+                    amount = (basePrice * (comm.rate / 100)) + (comm.fixed || 0);
+                    break;
+            }
+
+            return {
+                amount: Math.round(amount * 100) / 100,
+                rate: comm.rate || null,
+                fixed: comm.fixed || null,
+                mode: comm.mode || this.event.commission_mode || 'included',
+                type: comm.type
+            };
+        }
+
+        // Fall back to event-level commission (percentage only)
+        const rate = this.event.commission_rate || 5;
+        const mode = this.event.commission_mode || 'included';
+        const amount = basePrice * (rate / 100);
+
+        return {
+            amount: Math.round(amount * 100) / 100,
+            rate: rate,
+            fixed: null,
+            mode: mode,
+            type: 'percentage'
+        };
+    },
+
     // DOM element IDs
     elements: {
         loadingState: 'loading-state',
@@ -1095,8 +1142,6 @@ const EventPage = {
     renderTicketTypes() {
         const container = document.getElementById(this.elements.ticketTypes);
         var self = this;
-        var commissionRate = this.event.commission_rate || 5;
-        var commissionMode = this.event.commission_mode || 'included';
         var targetPrice = this.event.target_price ? parseFloat(this.event.target_price) : null;
 
         // Check if event is cancelled, postponed, or sold out - disable all ticket purchasing
@@ -1164,28 +1209,47 @@ const EventPage = {
                 availabilityHtml = '<span class="text-xs font-semibold text-success"></span>';
             }
 
-            // Calculate commission for tooltip (displayPrice already calculated above)
-            var basePrice, commissionAmount;
-            if (commissionMode === 'included') {
-                basePrice = tt.price / (1 + commissionRate / 100);
-                commissionAmount = tt.price - basePrice;
+            // Calculate commission for tooltip using per-ticket commission
+            var ticketComm = self.calculateTicketCommission(tt, tt.price);
+            var basePrice, commissionAmount, totalPrice;
+            var commissionLabel = '';
+
+            if (ticketComm.type === 'fixed') {
+                commissionLabel = ticketComm.fixed.toFixed(2) + ' lei';
+            } else if (ticketComm.type === 'both') {
+                commissionLabel = ticketComm.rate + '% + ' + ticketComm.fixed.toFixed(2) + ' lei';
             } else {
+                commissionLabel = ticketComm.rate + '%';
+            }
+
+            if (ticketComm.mode === 'included') {
+                // Commission is included - calculate base price from display price
+                if (ticketComm.type === 'fixed') {
+                    basePrice = tt.price - ticketComm.fixed;
+                } else if (ticketComm.type === 'both') {
+                    basePrice = (tt.price - ticketComm.fixed) / (1 + ticketComm.rate / 100);
+                } else {
+                    basePrice = tt.price / (1 + ticketComm.rate / 100);
+                }
+                commissionAmount = tt.price - basePrice;
+                totalPrice = tt.price;
+            } else {
+                // Commission added on top
                 basePrice = tt.price;
-                commissionAmount = tt.price * (commissionRate / 100);
+                commissionAmount = ticketComm.amount;
+                totalPrice = tt.price + commissionAmount;
             }
 
             // Tooltip HTML - show commission as "Taxe procesare"
             var tooltipHtml = '<p class="mb-2 text-sm font-semibold">Detalii pret bilet:</p><div class="space-y-1 text-xs">';
-            if (commissionMode === 'included') {
+            if (ticketComm.mode === 'included') {
                 tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Pret bilet:</span><span>' + basePrice.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionRate + '%):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + tt.price.toFixed(2) + ' lei</span></div>';
+                    '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionLabel + '):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                    '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + totalPrice.toFixed(2) + ' lei</span></div>';
             } else {
-                // Commission added on top - show base price first, then processing fees
-                var totalWithCommission = tt.price + commissionAmount;
                 tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Pret bilet:</span><span>' + tt.price.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionRate + '%):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total la plata:</span><span class="font-semibold">' + totalWithCommission.toFixed(2) + ' lei</span></div>';
+                    '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionLabel + '):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                    '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total la plata:</span><span class="font-semibold">' + totalPrice.toFixed(2) + ' lei</span></div>';
             }
             tooltipHtml += '</div>';
 
@@ -1314,8 +1378,6 @@ const EventPage = {
         const totalTickets = Object.values(this.quantities).reduce(function(a, b) { return a + b; }, 0);
         let baseSubtotal = 0;  // Subtotal without commission
         let totalCommission = 0;  // Total commission amount
-        var commissionRate = this.event.commission_rate || 5;
-        var commissionMode = this.event.commission_mode || 'included';
         var self = this;
         var ticketBreakdown = [];  // For showing individual ticket lines
 
@@ -1326,10 +1388,13 @@ const EventPage = {
             var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketId); });
             if (tt) {
                 var ticketBasePrice = tt.price;
+                // Calculate per-ticket commission
+                var ticketComm = self.calculateTicketCommission(tt, ticketBasePrice);
                 var ticketCommission = 0;
 
-                if (commissionMode === 'added_on_top') {
-                    ticketCommission = ticketBasePrice * commissionRate / 100;
+                // Only add commission if it's "added_on_top" mode
+                if (ticketComm.mode === 'added_on_top') {
+                    ticketCommission = ticketComm.amount;
                 }
 
                 baseSubtotal += qty * ticketBasePrice;
@@ -1339,7 +1404,8 @@ const EventPage = {
                     name: tt.name,
                     qty: qty,
                     basePrice: ticketBasePrice,
-                    lineTotal: qty * ticketBasePrice
+                    lineTotal: qty * ticketBasePrice,
+                    commission: ticketComm
                 });
             }
         }
@@ -1374,10 +1440,10 @@ const EventPage = {
                     '</div>';
                 });
 
-                // Show commission as "Taxe procesare" only if on top
-                if (commissionMode === 'added_on_top' && totalCommission > 0) {
+                // Show commission as "Taxe procesare" only if on top and has value
+                if (totalCommission > 0) {
                     breakdownHtml += '<div class="flex justify-between text-sm pt-2 mt-2 border-t border-border">' +
-                        '<span class="text-muted">Taxe procesare (' + commissionRate + '%)</span>' +
+                        '<span class="text-muted">Taxe procesare</span>' +
                         '<span class="font-medium">' + totalCommission.toFixed(2) + ' lei</span>' +
                     '</div>';
                 }
@@ -1475,8 +1541,9 @@ const EventPage = {
     addToCart() {
         var addedAny = false;
         var self = this;
-        var commissionRate = this.event.commission_rate || 5;
-        var commissionMode = this.event.commission_mode || 'included';
+        // Keep event-level defaults for fallback
+        var defaultCommissionRate = this.event.commission_rate || 5;
+        var defaultCommissionMode = this.event.commission_mode || 'included';
 
         console.log('[EventPage] addToCart called');
         console.log('[EventPage] Event taxes to add:', self.event.taxes);
@@ -1498,8 +1565,8 @@ const EventPage = {
                         venue: self.event.venue,
                         taxes: self.event.taxes || [],
                         target_price: targetPrice,
-                        commission_rate: commissionRate,
-                        commission_mode: commissionMode
+                        commission_rate: defaultCommissionRate,
+                        commission_mode: defaultCommissionMode
                     };
                     console.log('[EventPage] eventData for cart:', eventData);
 
@@ -1513,6 +1580,7 @@ const EventPage = {
                         baseOriginalPrice = targetPrice;
                     }
 
+                    // Include per-ticket commission settings if present
                     var ticketTypeData = {
                         id: tt.id,
                         name: tt.name,
@@ -1520,7 +1588,9 @@ const EventPage = {
                         original_price: baseOriginalPrice,
                         description: tt.description,
                         min_per_order: tt.min_per_order || 1,
-                        max_per_order: tt.max_per_order || 10
+                        max_per_order: tt.max_per_order || 10,
+                        // Per-ticket commission (null means use event defaults)
+                        commission: tt.commission || null
                     };
                     AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty);
                     addedAny = true;
