@@ -340,6 +340,28 @@ class EditEvent extends EditRecord
         \App\Models\TicketType::where('id', $ticketType->id)->update(['quota_total' => $newTotal]);
     }
 
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        // Ensure translatable fields are properly populated for nested form fields
+        // The form uses title.{language} syntax, so we need to ensure title is an array
+        $translatableFields = ['title', 'subtitle', 'short_description', 'description', 'ticket_terms'];
+
+        foreach ($translatableFields as $field) {
+            if (isset($this->record->$field)) {
+                $value = $this->record->$field;
+                // Ensure it's an array (JSON decoded)
+                if (is_string($value)) {
+                    $decoded = json_decode($value, true);
+                    $data[$field] = is_array($decoded) ? $decoded : [$value];
+                } elseif (is_array($value)) {
+                    $data[$field] = $value;
+                }
+            }
+        }
+
+        return $data;
+    }
+
     protected function afterSave(): void
     {
         // Only sync child events if this is a parent event (not a child)

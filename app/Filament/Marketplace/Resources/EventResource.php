@@ -623,14 +623,24 @@ class EventResource extends Resource
                                     ->disk('public')
                                     ->directory('events/posters')
                                     ->visibility('public')
-                                    ->imagePreviewHeight('200'),
+                                    ->imagePreviewHeight('200')
+                                    ->maxSize(10240)
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                                    ->downloadable()
+                                    ->openable()
+                                    ->preserveFilenames(),
                                 Forms\Components\FileUpload::make('hero_image_url')
                                     ->label($t('Imagine hero (orizontală)', 'Hero image (horizontal)'))
                                     ->image()
                                     ->disk('public')
                                     ->directory('events/hero')
                                     ->visibility('public')
-                                    ->imagePreviewHeight('200'),
+                                    ->imagePreviewHeight('200')
+                                    ->maxSize(10240)
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                                    ->downloadable()
+                                    ->openable()
+                                    ->preserveFilenames(),
                             ])->columns(2),
 
                         // CONTENT - Single Language
