@@ -1198,16 +1198,52 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         document.body.style.overflow = '';
     }
 
+    // Helper to calculate per-ticket commission (mirrors AmbiletCart.calculateItemCommission)
+    function calculateItemCommission(item) {
+        const basePrice = item.ticketType?.price || item.price || 0;
+        const commission = item.ticketType?.commission;
+
+        // If ticket has per-ticket commission settings
+        if (commission && commission.type) {
+            let amount = 0;
+            switch (commission.type) {
+                case 'percentage':
+                    amount = basePrice * ((commission.rate || 0) / 100);
+                    break;
+                case 'fixed':
+                    amount = commission.fixed || 0;
+                    break;
+                case 'both':
+                    amount = (basePrice * ((commission.rate || 0) / 100)) + (commission.fixed || 0);
+                    break;
+            }
+            return {
+                amount: amount,
+                rate: commission.rate || 0,
+                fixed: commission.fixed || 0,
+                mode: commission.mode || 'included',
+                type: commission.type
+            };
+        }
+
+        // Fall back to event-level commission
+        const eventRate = item.event?.commission_rate || 5;
+        const eventMode = item.event?.commission_mode || 'included';
+        return {
+            amount: basePrice * (eventRate / 100),
+            rate: eventRate,
+            fixed: 0,
+            mode: eventMode,
+            type: 'percentage'
+        };
+    }
+
     function updateCartUI() {
         const cart = getCart();
         const items = cart.items || [];
         const itemCount = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
-        // Get commission info from first item (same logic as cart.php and checkout.php)
-        const commissionRate = items[0]?.event?.commission_rate || 5;
-        const commissionMode = items[0]?.event?.commission_mode || 'included';
-
-        // Calculate base subtotal and commission
+        // Calculate base subtotal and commission using per-ticket settings
         let baseSubtotal = 0;
         let totalCommission = 0;
 
@@ -1216,9 +1252,10 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             const qty = item.quantity || 1;
             baseSubtotal += price * qty;
 
-            // Add commission if mode is 'added_on_top'
-            if (commissionMode === 'added_on_top') {
-                totalCommission += (price * commissionRate / 100) * qty;
+            // Calculate per-ticket commission
+            const commission = calculateItemCommission(item);
+            if (commission.mode === 'added_on_top') {
+                totalCommission += commission.amount * qty;
             }
         });
 
@@ -1259,10 +1296,6 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     }
 
     function renderCartItems(items) {
-        // Get commission info from first item
-        const commissionRate = items[0]?.event?.commission_rate || 5;
-        const commissionMode = items[0]?.event?.commission_mode || 'included';
-
         cartItems.innerHTML = items.map((item, index) => {
             // Handle both AmbiletCart format and legacy format
             const image = item.event?.image || item.image || '';
@@ -1275,10 +1308,11 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             const quantity = item.quantity || 1;
             const itemKey = item.key || index;
 
-            // Calculate price with commission if on top
+            // Calculate per-ticket commission
+            const commission = calculateItemCommission(item);
             let displayPrice = basePrice;
-            if (commissionMode === 'added_on_top') {
-                displayPrice = basePrice + (basePrice * commissionRate / 100);
+            if (commission.mode === 'added_on_top') {
+                displayPrice = basePrice + commission.amount;
             }
 
             return '<div class="p-3 bg-white border border-gray-200 rounded-xl" data-cart-item="' + index + '" data-item-key="' + escapeHtml(String(itemKey)) + '">' +
