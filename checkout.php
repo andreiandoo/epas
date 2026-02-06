@@ -66,7 +66,7 @@ require_once __DIR__ . '/includes/header.php';
                                 Datele tale
                             </h2>
                             <!-- Login button for guests -->
-                            <button type="button" id="guest-login-btn" onclick="CheckoutPage.showLoginModal()" class="hidden items-center gap-2 px-4 py-2 text-sm font-medium transition-all border-2 rounded-xl text-primary border-primary hover:bg-primary hover:text-white">
+                            <button type="button" id="guest-login-btn" onclick="CheckoutPage.showLoginModal()" class="items-center hidden gap-2 px-4 py-2 text-sm font-medium transition-all border-2 rounded-xl text-primary border-primary hover:bg-primary hover:text-white">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
                                 Intră în cont
                             </button>
@@ -122,6 +122,30 @@ require_once __DIR__ . '/includes/header.php';
 
                         <!-- Beneficiaries List (hidden by default) -->
                         <div id="beneficiariesList" class="hidden mt-6 space-y-4"></div>
+                    </div>
+
+                    <!-- Ticket Insurance (shown dynamically if enabled) -->
+                    <div id="insurance-section" class="hidden p-6 mb-6 bg-white border rounded-2xl border-border">
+                        <h2 class="flex items-center gap-2 mb-4 text-lg font-bold text-secondary">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-success/10">
+                                <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            </span>
+                            <span id="insurance-label">Taxa de retur</span>
+                        </h2>
+
+                        <div class="flex items-start gap-4">
+                            <label class="flex items-start flex-1 gap-3 p-4 transition-all border-2 cursor-pointer rounded-xl hover:border-success" id="insurance-option">
+                                <input type="checkbox" id="insuranceCheckbox" class="checkbox-custom mt-0.5">
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="font-medium text-secondary" id="insurance-title">Protecție returnare bilete</span>
+                                        <span class="font-bold text-success" id="insurance-price">+5.00 lei</span>
+                                    </div>
+                                    <p class="text-sm text-muted" id="insurance-description">Poți solicita returnarea biletelor în cazul în care evenimentul este amânat sau anulat.</p>
+                                    <a href="#" id="insurance-terms-link" class="hidden mt-2 text-xs text-primary hover:underline">Vezi termeni și condiții</a>
+                                </div>
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Payment Method -->
@@ -203,30 +227,6 @@ require_once __DIR__ . '/includes/header.php';
                                 <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                                 Plățile sunt procesate securizat
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Ticket Insurance (shown dynamically if enabled) -->
-                    <div id="insurance-section" class="hidden p-6 mb-6 bg-white border rounded-2xl border-border">
-                        <h2 class="flex items-center gap-2 mb-4 text-lg font-bold text-secondary">
-                            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-success/10">
-                                <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                            </span>
-                            <span id="insurance-label">Taxa de retur</span>
-                        </h2>
-
-                        <div class="flex items-start gap-4">
-                            <label class="flex items-start flex-1 gap-3 p-4 transition-all border-2 cursor-pointer rounded-xl hover:border-success" id="insurance-option">
-                                <input type="checkbox" id="insuranceCheckbox" class="checkbox-custom mt-0.5">
-                                <div class="flex-1">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="font-medium text-secondary" id="insurance-title">Protecție returnare bilete</span>
-                                        <span class="font-bold text-success" id="insurance-price">+5.00 lei</span>
-                                    </div>
-                                    <p class="text-sm text-muted" id="insurance-description">Poți solicita returnarea biletelor în cazul în care evenimentul este amânat sau anulat.</p>
-                                    <a href="#" id="insurance-terms-link" class="hidden mt-2 text-xs text-primary hover:underline">Vezi termeni și condiții</a>
-                                </div>
-                            </label>
                         </div>
                     </div>
 
@@ -921,7 +921,7 @@ const CheckoutPage = {
                 const city = group.city || '';
                 if (city && city !== group.venue) eventDetails.push(city);
                 const detailsStr = eventDetails.length > 0 ? ` <span class="font-normal text-muted">(${eventDetails.join(', ')})</span>` : '';
-                itemsHtml += `<div class="mb-2 text-xs font-semibold text-secondary">${group.title}${detailsStr}</div>`;
+                itemsHtml += `<div class="mb-2 text-sm font-bold text-secondary">${group.title}${detailsStr}</div>`;
             }
 
             // Show tickets for this event

@@ -690,7 +690,7 @@ const CartPage = {
                     if (details.length > 0) {
                         eventInfo += ' <span class="font-normal text-muted">(' + details.join(', ') + ')</span>';
                     }
-                    breakdownHtml += '<div class="mb-2 text-xs font-semibold text-secondary">' + eventInfo + '</div>';
+                    breakdownHtml += '<div class="mb-2 text-sm font-bold text-secondary">' + eventInfo + '</div>';
                 }
 
                 // Show each ticket type
