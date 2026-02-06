@@ -592,10 +592,23 @@ const CartPage = {
         let totalItems = 0;
         let savings = 0;
         const savingsTickets = [];
-        const ticketBreakdown = [];
         let hasAddedOnTopCommission = false;
 
+        // Group items by event
+        const eventGroups = {};
         items.forEach(item => {
+            const eventId = item.eventId || item.event?.id || 'unknown';
+            const eventTitle = item.event?.title || item.event?.name || 'Eveniment';
+
+            if (!eventGroups[eventId]) {
+                eventGroups[eventId] = {
+                    title: eventTitle,
+                    tickets: [],
+                    subtotal: 0,
+                    commission: 0
+                };
+            }
+
             const price = item.ticketType?.price || item.price || 0;
             const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
             const ticketName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
@@ -609,17 +622,24 @@ const CartPage = {
                 hasAddedOnTopCommission = true;
             }
 
-            baseSubtotal += price * quantity;
-            totalCommission += itemCommission * quantity;
-            totalItems += quantity;
+            const lineTotal = price * quantity;
+            const commissionTotal = itemCommission * quantity;
 
-            ticketBreakdown.push({
+            baseSubtotal += lineTotal;
+            totalCommission += commissionTotal;
+            totalItems += quantity;
+            eventGroups[eventId].subtotal += lineTotal;
+            eventGroups[eventId].commission += commissionTotal;
+
+            eventGroups[eventId].tickets.push({
                 name: ticketName,
                 qty: quantity,
                 basePrice: price,
-                lineTotal: price * quantity,
+                lineTotal: lineTotal,
                 commission: commission,
-                commissionTotal: itemCommission * quantity
+                commissionTotal: commissionTotal,
+                hasDiscount: originalPrice && originalPrice > price,
+                originalPrice: originalPrice
             });
 
             // Calculate savings for discounted items
@@ -640,22 +660,36 @@ const CartPage = {
         document.getElementById('summaryItems').textContent = totalItems;
         document.getElementById('subtotal').textContent = AmbiletUtils.formatCurrency(subtotalWithCommission);
 
-        // Render breakdown in taxes container
+        // Render breakdown in taxes container - grouped by event
         const taxesContainer = document.getElementById('taxesContainer');
         if (taxesContainer) {
             let breakdownHtml = '';
+            const eventIds = Object.keys(eventGroups);
+            const hasMultipleEvents = eventIds.length > 1;
 
-            // Show each ticket type with base price
-            ticketBreakdown.forEach(function(item) {
-                breakdownHtml += '<div class="flex justify-between text-sm">' +
-                    '<span class="text-muted">' + item.qty + 'x ' + item.name + '</span>' +
-                    '<span class="font-medium">' + AmbiletUtils.formatCurrency(item.lineTotal) + '</span>' +
-                '</div>';
+            eventIds.forEach(function(eventId, eventIndex) {
+                const group = eventGroups[eventId];
+
+                // Show event title only if multiple events
+                if (hasMultipleEvents) {
+                    if (eventIndex > 0) {
+                        breakdownHtml += '<div class="pt-3 mt-3 border-t border-border"></div>';
+                    }
+                    breakdownHtml += '<div class="mb-2 text-xs font-semibold text-secondary">' + group.title + '</div>';
+                }
+
+                // Show each ticket type
+                group.tickets.forEach(function(ticket) {
+                    breakdownHtml += '<div class="flex justify-between text-sm">' +
+                        '<span class="text-muted">' + ticket.qty + 'x ' + ticket.name + '</span>' +
+                        '<span class="font-medium">' + AmbiletUtils.formatCurrency(ticket.lineTotal) + '</span>' +
+                    '</div>';
+                });
             });
 
             // Show commission as "Taxe procesare" only if on top and has commission
             if (hasAddedOnTopCommission && totalCommission > 0) {
-                breakdownHtml += '<div class="flex justify-between pt-2 mt-2 text-sm border-t border-border">' +
+                breakdownHtml += '<div class="flex justify-between pt-3 mt-3 text-sm border-t border-border">' +
                     '<span class="text-muted">Taxe procesare</span>' +
                     '<span class="font-medium">' + AmbiletUtils.formatCurrency(totalCommission) + '</span>' +
                 '</div>';
