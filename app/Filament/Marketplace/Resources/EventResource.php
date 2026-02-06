@@ -647,7 +647,7 @@ class EventResource extends Resource
                                         $color = $remaining < 0 ? 'text-danger-500' : ($remaining < 20 ? 'text-warning-500' : 'text-gray-500');
                                         return new \Illuminate\Support\HtmlString(
                                             "<span class='{$color}'>{$wordCount}/120 " . $t('cuvinte', 'words') . "</span>" .
-                                            ($remaining < 0 ? " <span class='text-danger-500 font-semibold'>(" . $t('depășit cu', 'exceeded by') . " " . abs($remaining) . " " . $t('cuvinte', 'words') . ")</span>" : '')
+                                            ($remaining < 0 ? " <span class='font-semibold text-danger-500'>(" . $t('depășit cu', 'exceeded by') . " " . abs($remaining) . " " . $t('cuvinte', 'words') . ")</span>" : '')
                                         );
                                     })
                                     ->rules([
@@ -985,8 +985,8 @@ class EventResource extends Resource
                                     Forms\Components\Select::make('commission_mode')
                                         ->label($t('Mod comision', 'Commission Mode'))
                                         ->options([
-                                            'included' => $t('Inclus în preț (organizatorul primește mai puțin)', 'Include in price (organizer receives less)'),
-                                            'added_on_top' => $t('Adăugat la preț (clientul plătește mai mult)', 'Add on top (customer pays more)'),
+                                            'included' => $t('Inclus în preț', 'Include in price'),
+                                            'added_on_top' => $t('Adăugat la preț', 'Add on top'),
                                         ])
                                         ->placeholder(function (SGet $get) use ($marketplace, $t) {
                                             $organizerId = $get('marketplace_organizer_id');
@@ -1008,14 +1008,14 @@ class EventResource extends Resource
                                     Forms\Components\Toggle::make('use_fixed_commission')
                                         ->label('Comision Fix')
                                         ->helperText(fn () => $marketplace->fixed_commission
-                                            ? "Folosește comision fix: {$marketplace->fixed_commission} LEI per bilet"
+                                            ? "{$marketplace->fixed_commission} LEI per bilet"
                                             : 'Nu este setat un comision fix în setările marketplace')
                                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Când este activat, se va folosi comisionul fix din setările marketplace în loc de comisionul procentual.')
                                         ->live()
                                         ->default(false),
 
                                     Forms\Components\TextInput::make('commission_rate')
-                                        ->label($t('Rată comision personalizată (%)', 'Custom Commission Rate (%)'))
+                                        ->label($t('Comision personalizat (%)', 'Custom Commission (%)'))
                                         ->numeric()
                                         ->minValue(0)
                                         ->maxValue(50)
@@ -1270,15 +1270,15 @@ class EventResource extends Resource
                                                 $heightClass = $aspectRatio > 0.7 ? 'h-72' : 'h-48';
 
                                                 return new \Illuminate\Support\HtmlString("
-                                                    <div class='p-3 bg-gray-900 rounded-lg border border-gray-700'>
+                                                    <div class='p-3 bg-gray-900 border border-gray-700 rounded-lg'>
                                                         <div class='flex items-center justify-between mb-2'>
                                                             <span class='text-sm font-medium text-gray-300'>
-                                                                Secțiuni selectate: <span class='text-green-400 font-bold'>{$selectedCount}</span>
+                                                                Secțiuni selectate: <span class='font-bold text-green-400'>{$selectedCount}</span>
                                                                 <span class='text-gray-500'>({$totalSeats} locuri)</span>
                                                             </span>
                                                             <div class='flex items-center gap-3 text-xs text-gray-500'>
-                                                                <span class='flex items-center gap-1'><span class='w-3 h-3 rounded bg-green-500'></span> Selectate</span>
-                                                                <span class='flex items-center gap-1'><span class='w-3 h-3 rounded bg-gray-600'></span> Disponibile</span>
+                                                                <span class='flex items-center gap-1'><span class='w-3 h-3 bg-green-500 rounded'></span> Selectate</span>
+                                                                <span class='flex items-center gap-1'><span class='w-3 h-3 bg-gray-600 rounded'></span> Disponibile</span>
                                                             </div>
                                                         </div>
                                                         <svg viewBox=\"0 0 {$canvasW} {$canvasH}\" preserveAspectRatio=\"xMidYMid meet\" class='w-full {$heightClass} bg-gray-950 rounded border border-gray-800'>
@@ -1335,7 +1335,7 @@ class EventResource extends Resource
 
                                                 // Group by section and row
                                                 $grouped = $blockedSeats->groupBy('section_name');
-                                                $html = "<div class='p-3 bg-red-950/30 rounded-lg border border-red-800/50 mt-2'>";
+                                                $html = "<div class='p-3 mt-2 border rounded-lg bg-red-950/30 border-red-800/50'>";
                                                 $html .= "<div class='flex items-center gap-2 mb-2'>";
                                                 $html .= "<svg class='w-4 h-4 text-red-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'/></svg>";
                                                 $html .= "<span class='text-sm font-medium text-red-400'>Locuri blocate: " . $blockedSeats->count() . "</span>";
@@ -1345,7 +1345,7 @@ class EventResource extends Resource
                                                     $byRow = $seats->groupBy('row_label');
                                                     foreach ($byRow as $rowLabel => $rowSeats) {
                                                         $seatLabels = $rowSeats->pluck('seat_label')->sort(fn($a, $b) => (int)$a - (int)$b)->values()->implode(', ');
-                                                        $html .= "<div class='text-xs text-gray-300 ml-6'>";
+                                                        $html .= "<div class='ml-6 text-xs text-gray-300'>";
                                                         $html .= "<span class='text-gray-500'>{$sectionName} / Rând {$rowLabel}:</span> ";
                                                         $html .= "<span class='text-red-300'>{$seatLabels}</span>";
                                                         $html .= "</div>";
@@ -1874,7 +1874,7 @@ class EventResource extends Resource
                                             '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>' .
                                             $t('Vezi pe site', 'View on site') .
                                         '</a>' .
-                                        (!$record->is_published ? '<br><a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-warning-600 hover:underline text-sm">' .
+                                        (!$record->is_published ? '<br><a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-sm text-warning-600 hover:underline">' .
                                             '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' .
                                             $t('Previzualizare (doar admin)', 'Preview (admin only)') .
                                         '</a>' : '') .
@@ -1895,7 +1895,7 @@ class EventResource extends Resource
                                 // Check if cancelled
                                 if ($record->is_cancelled) {
                                     return new HtmlString('
-                                        <div class="flex items-center justify-center p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+                                        <div class="flex items-center justify-center p-3 border rounded-lg bg-red-500/10 border-red-500/20">
                                             <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold bg-red-500/20 text-red-400 ring-1 ring-inset ring-red-500/30">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                 ANULAT
@@ -1907,7 +1907,7 @@ class EventResource extends Resource
                                 // Check if postponed
                                 if ($record->is_postponed) {
                                     return new HtmlString('
-                                        <div class="flex items-center justify-center p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                                        <div class="flex items-center justify-center p-3 border rounded-lg bg-amber-500/10 border-amber-500/20">
                                             <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold bg-amber-500/20 text-amber-400 ring-1 ring-inset ring-amber-500/30">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                                 AMÂNAT
@@ -1935,7 +1935,7 @@ class EventResource extends Resource
 
                                 if ($eventEndDateTime && $eventEndDateTime->isPast()) {
                                     return new HtmlString('
-                                        <div class="flex items-center justify-center p-3 bg-gray-500/10 rounded-lg border border-gray-500/20">
+                                        <div class="flex items-center justify-center p-3 border rounded-lg bg-gray-500/10 border-gray-500/20">
                                             <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold bg-gray-500/20 text-gray-400 ring-1 ring-inset ring-gray-500/30">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                                 ÎNCHEIAT
@@ -1984,29 +1984,29 @@ class EventResource extends Resource
 
                                         return new HtmlString("
                                             <div class='grid grid-cols-2 gap-3'>
-                                                <div class='bg-gray-800 rounded-lg p-3 text-center'>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-white'>" . number_format($ticketsSold) . "</div>
                                                     <div class='text-xs text-gray-400'>{$ticketsLabel}</div>
                                                 </div>
-                                                <div class='bg-gray-800 rounded-lg p-3 text-center'>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-emerald-400'>{$revenueFormatted}</div>
                                                     <div class='text-xs text-gray-400'>{$revenueLabel}</div>
                                                 </div>
                                             </div>
                                             <div class='mt-3'>
-                                                <div class='flex justify-between text-xs text-gray-400 mb-1'>
+                                                <div class='flex justify-between mb-1 text-xs text-gray-400'>
                                                     <span>{$capacityLabel}</span>
                                                     <span>" . number_format($ticketsSold) . " / " . number_format($totalCapacity) . " ({$percentSold}%)</span>
                                                 </div>
-                                                <div class='h-2 bg-gray-700 rounded-full overflow-hidden'>
-                                                    <div class='h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full transition-all' style='width: {$percentSold}%'></div>
+                                                <div class='h-2 overflow-hidden bg-gray-700 rounded-full'>
+                                                    <div class='h-full transition-all rounded-full bg-gradient-to-r from-primary-500 to-primary-400' style='width: {$percentSold}%'></div>
                                                 </div>
                                             </div>
-                                            <div class='mt-3 flex justify-between text-xs'>
+                                            <div class='flex justify-between mt-3 text-xs'>
                                                 <span class='text-gray-400'>{$conversionLabel}</span>
-                                                <span class='text-primary-400 font-semibold'>{$conversion}%</span>
+                                                <span class='font-semibold text-primary-400'>{$conversion}%</span>
                                             </div>
-                                            <div class='flex justify-between text-xs mt-1'>
+                                            <div class='flex justify-between mt-1 text-xs'>
                                                 <span class='text-gray-400'>{$viewsLabel}</span>
                                                 <span class='text-white'>" . number_format($views) . "</span>
                                             </div>
@@ -2078,11 +2078,11 @@ class EventResource extends Resource
                                         $grouped = $blockedSeats->groupBy('section_name');
                                         foreach ($grouped as $sectionName => $sectionSeats) {
                                             $html .= "<div class='mt-2'>";
-                                            $html .= "<div class='text-xs font-medium text-gray-300 mb-1'>" . e($sectionName) . "</div>";
+                                            $html .= "<div class='mb-1 text-xs font-medium text-gray-300'>" . e($sectionName) . "</div>";
 
                                             $byRow = $sectionSeats->groupBy('row_label');
                                             foreach ($byRow as $rowLabel => $rowSeats) {
-                                                $html .= "<div class='ml-3 text-xs text-gray-400 flex flex-wrap items-center gap-1 mb-1'>";
+                                                $html .= "<div class='flex flex-wrap items-center gap-1 mb-1 ml-3 text-xs text-gray-400'>";
                                                 $html .= "<span class='text-gray-500 shrink-0'>R{$rowLabel}:</span> ";
 
                                                 foreach ($rowSeats->sortBy(fn($s) => (int)$s->seat_label) as $seat) {
@@ -2104,13 +2104,13 @@ class EventResource extends Resource
                                         }
 
                                         // Legend
-                                        $html .= "<div class='mt-3 pt-2 border-t border-gray-700/50 flex flex-wrap gap-3 text-xs'>";
+                                        $html .= "<div class='flex flex-wrap gap-3 pt-2 mt-3 text-xs border-t border-gray-700/50'>";
                                         $html .= "<span class='flex items-center gap-1'><span class='w-3 h-3 rounded bg-red-900/40 ring-1 ring-red-800/50'></span> Blocat</span>";
                                         $html .= "<span class='flex items-center gap-1'><span class='w-3 h-3 rounded bg-purple-900/50 ring-1 ring-purple-700/50'></span> Cu invitație</span>";
                                         $html .= "</div>";
 
                                         if ($totalWithInvite > 0) {
-                                            $html .= "<div class='text-xs text-purple-400 mt-1'>{$totalWithInvite} din {$totalBlocked} au invitații</div>";
+                                            $html .= "<div class='mt-1 text-xs text-purple-400'>{$totalWithInvite} din {$totalBlocked} au invitații</div>";
                                         }
 
                                         $html .= "</div>";
@@ -2197,8 +2197,8 @@ class EventResource extends Resource
 
                                         return new HtmlString("
                                             <div class='text-sm'>
-                                                <div class='pb-2 flex items-center gap-2'>
-                                                    <div class='w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-xs font-bold'>
+                                                <div class='flex items-center gap-2 pb-2'>
+                                                    <div class='flex items-center justify-center w-8 h-8 text-xs font-bold text-white rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600'>
                                                         " . strtoupper(substr($organizer->name, 0, 2)) . "
                                                     </div>
                                                     <div>
@@ -2208,19 +2208,19 @@ class EventResource extends Resource
                                                 </div>
                                                 <div class='flex justify-between py-1 border-t border-gray-700'>
                                                     <span class='text-gray-400'>{$statusLabel}</span>
-                                                    <span class='text-white font-medium'>{$status} | {$verified}</span>
+                                                    <span class='font-medium text-white'>{$status} | {$verified}</span>
                                                 </div>
                                                 <div class='flex justify-between py-1 border-t border-gray-700'>
                                                     <span class='text-gray-400'>{$commissionLabel} ({$commissionModeLabel})</span>
-                                                    <span class='text-white font-medium'>{$commissionRate}%</span>
+                                                    <span class='font-medium text-white'>{$commissionRate}%</span>
                                                 </div>
                                                 <div class='flex justify-between py-1 border-t border-gray-700'>
                                                     <span class='text-gray-400'>{$eventsLabel}</span>
-                                                    <span class='text-white font-medium'>{$organizer->total_events}</span>
+                                                    <span class='font-medium text-white'>{$organizer->total_events}</span>
                                                 </div>
                                                 <div class='flex justify-between py-1 border-t border-gray-700'>
                                                     <span class='text-gray-400'>{$revenueLabel}</span>
-                                                    <span class='text-white font-medium'>" . number_format($organizer->total_revenue, 2) . " RON</span>
+                                                    <span class='font-medium text-white'>" . number_format($organizer->total_revenue, 2) . " RON</span>
                                                 </div>
                                             </div>
                                         ");
@@ -2461,15 +2461,15 @@ class EventResource extends Resource
                                                     $downloadUrl = $doc->file_path ? Storage::disk('public')->url($doc->file_path) : '#';
 
                                                     $html .= "
-                                                        <div class='py-3 flex items-center justify-between gap-4'>
-                                                            <div class='flex items-center gap-3 min-w-0'>
-                                                                <div class='flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center'>
+                                                        <div class='flex items-center justify-between gap-4 py-3'>
+                                                            <div class='flex items-center min-w-0 gap-3'>
+                                                                <div class='flex items-center justify-center flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg dark:bg-blue-900/30'>
                                                                     <svg class='w-5 h-5 text-blue-600 dark:text-blue-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                                                                         <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/>
                                                                     </svg>
                                                                 </div>
                                                                 <div class='min-w-0'>
-                                                                    <div class='text-sm font-medium text-gray-900 dark:text-white truncate'>{$title}</div>
+                                                                    <div class='text-sm font-medium text-gray-900 truncate dark:text-white'>{$title}</div>
                                                                     <div class='text-xs text-gray-500 dark:text-gray-400'>
                                                                         <span class='inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300 mr-1'>{$typeLabel}</span>
                                                                     </div>
@@ -2506,15 +2506,15 @@ class EventResource extends Resource
                                                     $fileSize = $doc->file_size_formatted;
 
                                                     $html .= "
-                                                        <div class='py-3 flex items-center justify-between gap-4'>
-                                                            <div class='flex items-center gap-3 min-w-0'>
-                                                                <div class='flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center'>
+                                                        <div class='flex items-center justify-between gap-4 py-3'>
+                                                            <div class='flex items-center min-w-0 gap-3'>
+                                                                <div class='flex items-center justify-center flex-shrink-0 w-10 h-10 bg-red-100 rounded-lg dark:bg-red-900/30'>
                                                                     <svg class='w-5 h-5 text-red-600 dark:text-red-400' fill='currentColor' viewBox='0 0 20 20'>
                                                                         <path fill-rule='evenodd' d='M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z' clip-rule='evenodd'/>
                                                                     </svg>
                                                                 </div>
                                                                 <div class='min-w-0'>
-                                                                    <div class='text-sm font-medium text-gray-900 dark:text-white truncate'>{$doc->filename}</div>
+                                                                    <div class='text-sm font-medium text-gray-900 truncate dark:text-white'>{$doc->filename}</div>
                                                                     <div class='text-xs text-gray-500 dark:text-gray-400'>
                                                                         <span class='inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 mr-1'>{$typeLabel}</span>
                                                                         {$templateName}
@@ -2615,7 +2615,7 @@ class EventResource extends Resource
                                             $createdLabel = $t('Creat', 'Created');
                                             $html .= "
                                                 <div class='flex gap-2'>
-                                                    <div class='w-6 h-6 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0'>
+                                                    <div class='flex items-center justify-center flex-shrink-0 w-6 h-6 bg-gray-700 rounded-full'>
                                                         <svg class='w-3 h-3 text-gray-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'/></svg>
                                                     </div>
                                                     <div>
@@ -2624,7 +2624,7 @@ class EventResource extends Resource
                                                     </div>
                                                 </div>
                                                 <div class='flex gap-2'>
-                                                    <div class='w-6 h-6 bg-emerald-900 rounded-full flex items-center justify-center flex-shrink-0'>
+                                                    <div class='flex items-center justify-center flex-shrink-0 w-6 h-6 rounded-full bg-emerald-900'>
                                                         <svg class='w-3 h-3 text-emerald-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 6v6m0 0v6m0-6h6m-6 0H6'/></svg>
                                                     </div>
                                                     <div>
@@ -2639,7 +2639,7 @@ class EventResource extends Resource
 
                                         // Link to full activity log page
                                         $viewHistoryLabel = $t('Vezi tot istoricul →', 'View full history →');
-                                        $html .= "<a href='" . static::getUrl('activity-log', ['record' => $record]) . "' class='mt-3 block text-xs text-primary-400 hover:text-primary-300 transition-colors'>{$viewHistoryLabel}</a>";
+                                        $html .= "<a href='" . static::getUrl('activity-log', ['record' => $record]) . "' class='block mt-3 text-xs transition-colors text-primary-400 hover:text-primary-300'>{$viewHistoryLabel}</a>";
 
                                         return new HtmlString($html);
                                     }),
@@ -2700,7 +2700,7 @@ class EventResource extends Resource
                                         $statusColor = $isReady ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400';
                                         $statusText = $isReady ? $t('Gata pentru publicare', 'Ready to publish') : $t('Incomplet', 'Incomplete');
                                         $completedLabel = $t('completate', 'completed');
-                                        $html .= "<div class='mt-3 flex items-center justify-between'>";
+                                        $html .= "<div class='flex items-center justify-between mt-3'>";
                                         $html .= "<span class='text-xs text-gray-400'>{$completed}/{$total} {$completedLabel}</span>";
                                         $html .= "<span class='px-2 py-0.5 text-[10px] font-bold rounded {$statusColor}'>{$statusText}</span>";
                                         $html .= "</div>";
