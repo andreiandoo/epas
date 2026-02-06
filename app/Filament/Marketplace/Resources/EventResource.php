@@ -2673,7 +2673,7 @@ class EventResource extends Resource
                             ->schema([
                                 Forms\Components\Placeholder::make('publish_checklist')
                                     ->hiddenLabel()
-                                    ->live()
+                                    ->live(onBlur: true)
                                     ->content(function (SGet $get, ?Event $record) use ($marketplaceLanguage, $t) {
                                         // Check ticket types from form state or database
                                         $ticketTypesData = $get('ticketTypes') ?? [];
@@ -2692,9 +2692,12 @@ class EventResource extends Resource
                                             $hasTicketTypes = $record->ticketTypes()->count() > 0;
                                         }
 
+                                        // For images, check record directly to avoid triggering re-renders during upload
+                                        $hasImages = ($record && (!empty($record->poster_url) || !empty($record->hero_image_url)));
+
                                         $checks = [
                                             ['done' => !empty($get("title.{$marketplaceLanguage}")), 'label' => $t('Titlu eveniment', 'Event title'), 'icon' => 'text'],
-                                            ['done' => !empty($get('poster_url')) || !empty($get('hero_image_url')), 'label' => $t('Imagini încărcate', 'Images uploaded'), 'icon' => 'image'],
+                                            ['done' => $hasImages, 'label' => $t('Imagini încărcate', 'Images uploaded'), 'icon' => 'image'],
                                             ['done' => !empty($get('venue_id')) || !empty($get('venue_name')), 'label' => $t('Locație setată', 'Location set'), 'icon' => 'location'],
                                             ['done' => !empty($get('event_date')) || !empty($get('range_start_date')), 'label' => $t('Date setate', 'Dates set'), 'icon' => 'calendar'],
                                             ['done' => !empty($get('marketplace_organizer_id')), 'label' => $t('Organizator selectat', 'Organizer selected'), 'icon' => 'user'],
