@@ -1527,11 +1527,10 @@ class EventResource extends Resource
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul de bilete disponibile la preț redus. Când se consumă stocul, oferta se închide automat.', 'Number of tickets available at discounted price. When stock runs out, the offer closes automatically.'))
                                                     ->visible(fn (SGet $get) => $get('has_sale')),
                                             ])
-                                            ->collapsible()
-                                            ->collapsed()
+                                            ->columns(12)
                                             ->columnSpan(12),
 
-                                        // Serie bilet fieldset - collapsed
+                                        // Serie bilet fieldset
                                         SC\Fieldset::make($t('Serie bilet', 'Ticket series'))
                                             ->schema([
                                                 SC\Grid::make(3)->schema([
@@ -1570,11 +1569,9 @@ class EventResource extends Resource
                                                         ->default(false),
                                                 ]),
                                             ])
-                                            ->collapsible()
-                                            ->collapsed()
                                             ->columnSpan(12),
 
-                                        // Disponibilitate fieldset - collapsed
+                                        // Disponibilitate fieldset
                                         SC\Fieldset::make($t('Disponibilitate', 'Availability'))
                                             ->schema([
                                                 SC\Grid::make(12)->schema([
@@ -1609,11 +1606,9 @@ class EventResource extends Resource
                                                         ->columnSpan(6),
                                                 ]),
                                             ])
-                                            ->collapsible()
-                                            ->collapsed()
                                             ->columnSpan(12),
 
-                                        // Bulk discounts - wrapped in a subtle fieldset style
+                                        // Bulk discounts fieldset
                                         SC\Fieldset::make($t('Reduceri la cantitate', 'Bulk discounts'))
                                             ->schema([
                                                 Forms\Components\Repeater::make('bulk_discounts')
