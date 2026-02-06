@@ -2330,6 +2330,9 @@ class EventResource extends Resource
                                                 $newTicketType->quota_sold = 0;
                                                 $newTicketType->series_start = null;
                                                 $newTicketType->series_end = null;
+                                                // Ensure min/max per order have default values
+                                                $newTicketType->min_per_order = $ticketType->min_per_order ?? 1;
+                                                $newTicketType->max_per_order = $ticketType->max_per_order ?? 10;
                                                 $newTicketType->save();
                                             }
 
