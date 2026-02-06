@@ -54,7 +54,10 @@ class ListMediaLibrary extends ListRecords
                             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                         ])
                         ->helperText('Încarcă imagini, video-uri, PDF-uri sau documente (max 10MB fiecare)')
+                        ->storeFileNamesIn('original_filenames')
                         ->required(),
+
+                    \Filament\Forms\Components\Hidden::make('original_filenames'),
 
                     \Filament\Forms\Components\Select::make('collection')
                         ->label('Colecție')
@@ -85,19 +88,30 @@ class ListMediaLibrary extends ListRecords
                     }
 
                     $files = $data['files'] ?? [];
+                    $originalFilenames = $data['original_filenames'] ?? [];
                     $collection = $data['collection'] ?? 'uploads';
                     $uploaded = 0;
                     $errors = [];
 
                     foreach ($files as $filePath) {
                         try {
-                            MediaLibrary::createFromPath(
+                            // Get original filename if available
+                            // storeFileNamesIn stores as [generated_path => original_name]
+                            $originalFilename = $originalFilenames[$filePath] ?? null;
+
+                            $media = MediaLibrary::createFromPath(
                                 path: $filePath,
                                 disk: 'public',
                                 collection: $collection,
                                 marketplaceClientId: $marketplaceId,
                                 uploadedBy: $uploadedBy
                             );
+
+                            // Update with original filename if available
+                            if ($originalFilename && $media) {
+                                $media->update(['original_filename' => $originalFilename]);
+                            }
+
                             $uploaded++;
                         } catch (\Throwable $e) {
                             $errors[] = basename($filePath) . ': ' . $e->getMessage();
