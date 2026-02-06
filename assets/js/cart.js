@@ -367,6 +367,9 @@ const AmbiletCart = {
         const expiresAt = new Date(Date.now() + AMBILET_CONFIG.CART_RESERVATION_MINUTES * 60 * 1000);
         localStorage.setItem(this.RESERVATION_KEY, expiresAt.toISOString());
 
+        // Also set cart_end_time for global timer bar compatibility
+        localStorage.setItem('cart_end_time', expiresAt.getTime().toString());
+
         window.dispatchEvent(new CustomEvent('ambilet:cart:reservation', {
             detail: { expiresAt: expiresAt.toISOString() }
         }));
