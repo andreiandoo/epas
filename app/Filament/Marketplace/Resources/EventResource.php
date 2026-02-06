@@ -621,9 +621,8 @@ class EventResource extends Resource
                                     ->placeholder($t('ex: 500', 'e.g. 500')),
                             ])->columns(2),
 
-                        // MEDIA - wrapped in wire:ignore to prevent FilePond destruction during Livewire re-renders
+                        // MEDIA
                         SC\Section::make('Media')
-                            ->extraAttributes(['wire:ignore' => true])
                             ->schema([
                                 Forms\Components\FileUpload::make('poster_url')
                                     ->label($t('Poster (vertical)', 'Poster (vertical)'))
@@ -631,18 +630,22 @@ class EventResource extends Resource
                                     ->disk('public')
                                     ->directory('events/posters')
                                     ->visibility('public')
-                                    ->imagePreviewHeight('200')
                                     ->maxSize(10240)
-                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp']),
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                                    ->imageEditor(false)
+                                    ->imagePreviewHeight('200')
+                                    ->panelLayout('grid'),
                                 Forms\Components\FileUpload::make('hero_image_url')
                                     ->label($t('Imagine hero (orizontală)', 'Hero image (horizontal)'))
                                     ->image()
                                     ->disk('public')
                                     ->directory('events/hero')
                                     ->visibility('public')
-                                    ->imagePreviewHeight('200')
                                     ->maxSize(10240)
-                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp']),
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                                    ->imageEditor(false)
+                                    ->imagePreviewHeight('200')
+                                    ->panelLayout('grid'),
                             ])->columns(2),
 
                         // CONTENT - Single Language
