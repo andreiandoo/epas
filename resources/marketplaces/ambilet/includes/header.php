@@ -180,7 +180,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 
 <!-- Header -->
 <header class="fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 <?= $transparentHeader ? 'header-transparent bg-transparent border-transparent' : 'bg-white border-b border-gray-200' ?>" id="header" data-transparent="<?= $transparentHeader ? 'true' : 'false' ?>">
-    <!-- Top Bar -->
+    <!-- Top Bar (default) -->
     <div class="mobile:hidden bg-secondary text-white text-sm py-2.5 transition-all duration-200 ease-in-out <?= $transparentHeader ? 'hidden' : '' ?>" id="headerTopBar">
         <div class="flex items-center justify-between px-4 mx-auto max-w-7xl">
             <p class="items-center hidden gap-2 sm:flex">
@@ -203,6 +203,15 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     Organizatori
                 </a>
             </div>
+        </div>
+    </div>
+    <!-- Top Bar (cart timer - replaces default when cart has items) -->
+    <div class="mobile:hidden hidden text-sm py-2.5 transition-all duration-200 ease-in-out bg-warning/10 border-b border-warning/20" id="headerTimerBar">
+        <div class="flex items-center justify-center gap-3 px-4 mx-auto max-w-7xl">
+            <svg class="w-5 h-5 text-warning" id="headerTimerIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-secondary" id="headerTimerText">Rezervare expiră în</span>
+            <span class="font-bold text-warning tabular-nums" id="headerTimerCountdown">--:--</span>
+            <a href="/cos" class="ml-2 font-medium text-primary hover:underline">Vezi coșul →</a>
         </div>
     </div>
     <div class="px-6 mx-auto max-w-7xl mobile:px-4">
@@ -533,18 +542,6 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         </div>
     </div>
 </header>
-
-<!-- Global Cart Timer Bar (shown on all pages except cart/checkout when cart has items) -->
-<div id="global-timer-bar" class="hidden border-b bg-warning/10 border-warning/20">
-    <div class="px-4 py-2 mx-auto max-w-7xl">
-        <div class="flex items-center justify-center gap-2 text-sm">
-            <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span class="text-secondary">Rezervare expiră în</span>
-            <span id="global-countdown" class="font-bold text-warning tabular-nums">--:--</span>
-            <a href="/cos" class="ml-2 text-primary hover:underline font-medium">Vezi coșul →</a>
-        </div>
-    </div>
-</div>
 
 <!-- Mobile Menu -->
 <div class="hidden fixed top-[72px] left-0 right-0 bottom-0 bg-white z-[999] overflow-y-auto lg:hidden" id="mobileMenu">
@@ -1407,32 +1404,45 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     window.openCartDrawer = openCartDrawer;
     window.closeCartDrawer = closeCartDrawer;
 
-    // ==================== GLOBAL CART TIMER BAR ====================
-    // Show timer bar on all pages except homepage when cart has items
-    (function initGlobalTimerBar() {
-        const timerBar = document.getElementById('global-timer-bar');
-        const countdownEl = document.getElementById('global-countdown');
-        if (!timerBar || !countdownEl) return;
+    // ==================== HEADER CART TIMER BAR ====================
+    // Replace headerTopBar with timer bar when cart has items (except on cart/checkout pages)
+    (function initHeaderTimerBar() {
+        const headerTopBar = document.getElementById('headerTopBar');
+        const headerTimerBar = document.getElementById('headerTimerBar');
+        const countdownEl = document.getElementById('headerTimerCountdown');
 
-        // Skip homepage only
+        if (!headerTopBar || !headerTimerBar || !countdownEl) return;
+
+        // Skip cart and checkout pages - they have their own timer
         const currentPath = window.location.pathname;
-        if (currentPath === '/' || currentPath === '') return;
+        if (currentPath === '/cos' || currentPath === '/checkout') return;
 
         let timerInterval = null;
-        let isRed = false; // Track if bar is already red
+        let isRed = false;
 
-        function updateGlobalTimer() {
-            // Try to get cart from AmbiletCart or localStorage directly
+        function showTimerBar() {
+            headerTopBar.classList.add('hidden');
+            headerTimerBar.classList.remove('hidden');
+        }
+
+        function showDefaultBar() {
+            headerTimerBar.classList.add('hidden');
+            // Only show headerTopBar if not scrolled and not transparent mode
+            const isScrolled = window.scrollY > 50;
+            const isTransparent = document.getElementById('header')?.dataset.transparent === 'true';
+            if (!isScrolled && !isTransparent) {
+                headerTopBar.classList.remove('hidden');
+            }
+        }
+
+        function updateHeaderTimer() {
+            // Get cart from localStorage
             let cart = [];
             try {
-                if (typeof AmbiletCart !== 'undefined' && AmbiletCart.getItems) {
-                    cart = AmbiletCart.getItems() || [];
-                } else {
-                    // Fallback: read directly from localStorage
-                    const stored = localStorage.getItem('ambilet_cart');
-                    if (stored) {
-                        cart = JSON.parse(stored) || [];
-                    }
+                const stored = localStorage.getItem('ambilet_cart');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    cart = parsed.items || parsed || [];
                 }
             } catch (e) {
                 cart = [];
@@ -1446,31 +1456,30 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                 const remaining = Math.max(0, endTime - Date.now());
 
                 if (remaining > 0) {
-                    // Show timer bar
-                    timerBar.classList.remove('hidden');
+                    showTimerBar();
 
                     const minutes = Math.floor(remaining / 60000);
                     const seconds = Math.floor((remaining % 60000) / 1000);
                     countdownEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-                    // Under 5 minutes - make bar red (only update styles once)
+                    // Under 5 minutes - make bar red
                     if (remaining < 5 * 60 * 1000 && !isRed) {
                         isRed = true;
-                        timerBar.classList.remove('bg-warning/10', 'border-warning/20');
-                        timerBar.classList.add('bg-primary', 'border-primary');
+                        headerTimerBar.classList.remove('bg-warning/10', 'border-warning/20');
+                        headerTimerBar.classList.add('bg-primary', 'border-primary');
                         countdownEl.classList.remove('text-warning');
                         countdownEl.classList.add('text-white');
-                        const textSpan = timerBar.querySelector('span.text-secondary');
+                        const textSpan = document.getElementById('headerTimerText');
                         if (textSpan) {
                             textSpan.classList.remove('text-secondary');
                             textSpan.classList.add('text-white/90');
                         }
-                        const svg = timerBar.querySelector('svg.text-warning');
-                        if (svg) {
-                            svg.classList.remove('text-warning');
-                            svg.classList.add('text-white');
+                        const icon = document.getElementById('headerTimerIcon');
+                        if (icon) {
+                            icon.classList.remove('text-warning');
+                            icon.classList.add('text-white');
                         }
-                        const link = timerBar.querySelector('a.text-primary');
+                        const link = headerTimerBar.querySelector('a.text-primary');
                         if (link) {
                             link.classList.remove('text-primary');
                             link.classList.add('text-white');
@@ -1478,7 +1487,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     }
                 } else {
                     // Timer expired
-                    timerBar.classList.add('hidden');
+                    showDefaultBar();
                     if (timerInterval) {
                         clearInterval(timerInterval);
                         timerInterval = null;
@@ -1486,7 +1495,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                 }
             } else {
                 // No items or no timer
-                timerBar.classList.add('hidden');
+                showDefaultBar();
                 if (timerInterval) {
                     clearInterval(timerInterval);
                     timerInterval = null;
@@ -1494,18 +1503,18 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             }
         }
 
-        // Delayed initial check to ensure cart.js has loaded
+        // Delayed initial check
         setTimeout(function() {
-            updateGlobalTimer();
+            updateHeaderTimer();
 
-            // Start interval if cart has items
             const savedEndTime = localStorage.getItem('cart_end_time');
             const storedCart = localStorage.getItem('ambilet_cart');
             if (storedCart && savedEndTime) {
                 try {
-                    const cart = JSON.parse(storedCart);
+                    const parsed = JSON.parse(storedCart);
+                    const cart = parsed.items || parsed || [];
                     if (cart && cart.length > 0) {
-                        timerInterval = setInterval(updateGlobalTimer, 1000);
+                        timerInterval = setInterval(updateHeaderTimer, 1000);
                     }
                 } catch (e) {}
             }
@@ -1513,15 +1522,15 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 
         // Listen for cart updates
         window.addEventListener('ambilet:cart:update', function() {
-            updateGlobalTimer();
-            // Start interval if not running
+            updateHeaderTimer();
             if (!timerInterval) {
                 const storedCart = localStorage.getItem('ambilet_cart');
                 if (storedCart) {
                     try {
-                        const cart = JSON.parse(storedCart);
+                        const parsed = JSON.parse(storedCart);
+                        const cart = parsed.items || parsed || [];
                         if (cart && cart.length > 0) {
-                            timerInterval = setInterval(updateGlobalTimer, 1000);
+                            timerInterval = setInterval(updateHeaderTimer, 1000);
                         }
                     } catch (e) {}
                 }
@@ -1530,7 +1539,13 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 
         // Listen for cart clear/expire
         window.addEventListener('ambilet:cart:clear', function() {
-            timerBar.classList.add('hidden');
+            showDefaultBar();
+            isRed = false;
+            // Reset timer bar styles
+            headerTimerBar.classList.remove('bg-primary', 'border-primary');
+            headerTimerBar.classList.add('bg-warning/10', 'border-warning/20');
+            countdownEl.classList.remove('text-white');
+            countdownEl.classList.add('text-warning');
             if (timerInterval) {
                 clearInterval(timerInterval);
                 timerInterval = null;
@@ -1538,7 +1553,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         });
 
         window.addEventListener('ambilet:cart:expired', function() {
-            timerBar.classList.add('hidden');
+            showDefaultBar();
+            isRed = false;
             if (timerInterval) {
                 clearInterval(timerInterval);
                 timerInterval = null;
