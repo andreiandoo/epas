@@ -11,15 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Add general_stock to events table
-        Schema::table('events', function (Blueprint $table) {
-            $table->unsignedInteger('general_stock')->nullable()->after('target_price');
-        });
+        // Add general_stock to events table (if not exists)
+        if (!Schema::hasColumn('events', 'general_stock')) {
+            Schema::table('events', function (Blueprint $table) {
+                $table->unsignedInteger('general_stock')->nullable()->after('target_price');
+            });
+        }
 
-        // Add sort_order to ticket_types table
-        Schema::table('ticket_types', function (Blueprint $table) {
-            $table->unsignedInteger('sort_order')->default(0);
-        });
+        // Add sort_order to ticket_types table (if not exists)
+        if (!Schema::hasColumn('ticket_types', 'sort_order')) {
+            Schema::table('ticket_types', function (Blueprint $table) {
+                $table->unsignedInteger('sort_order')->default(0);
+            });
+        }
     }
 
     /**
