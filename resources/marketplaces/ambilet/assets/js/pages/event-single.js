@@ -689,8 +689,10 @@ const EventPage = {
         document.getElementById(this.elements.eventTime).textContent = 'Acces: ' + (e.start_time || '20:00');
         document.getElementById(this.elements.eventDoors).textContent = 'Doors: ' + (e.doors_time || '19:00');
 
-        // Venue
-        document.getElementById(this.elements.venueName).textContent = e.venue?.name || e.location || 'Locație TBA';
+        // Venue (with city)
+        var venueName = e.venue?.name || e.location || 'Locație TBA';
+        var venueCity = e.venue?.city || e.city || '';
+        document.getElementById(this.elements.venueName).textContent = venueCity ? venueName + ', ' + venueCity : venueName;
         document.getElementById(this.elements.venueAddress).textContent = e.venue?.address || '';
 
         var venueLink = document.getElementById(this.elements.venueLink);
