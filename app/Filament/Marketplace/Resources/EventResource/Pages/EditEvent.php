@@ -8,6 +8,7 @@ use App\Services\Seating\MarketplaceEventSeatingService;
 use App\Models\Seating\EventSeatingLayout;
 use Filament\Actions;
 use Filament\Forms;
+use Filament\Schemas\Components as SC;
 use Filament\Schemas\Components\Utilities\Get as SGet;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
@@ -109,7 +110,7 @@ class EditEvent extends EditRecord
             ])
             ->form([
                 // Poster Section
-                Forms\Components\Section::make($t('Poster (vertical)', 'Poster (vertical)'))
+                SC\Section::make($t('Poster (vertical)', 'Poster (vertical)'))
                     ->schema([
                         Forms\Components\ToggleButtons::make('poster_mode')
                             ->label($t('Mod selectare', 'Selection mode'))
@@ -202,7 +203,7 @@ class EditEvent extends EditRecord
                     ->columns(1),
 
                 // Hero Image Section
-                Forms\Components\Section::make($t('Imagine hero (orizontală)', 'Hero image (horizontal)'))
+                SC\Section::make($t('Imagine hero (orizontală)', 'Hero image (horizontal)'))
                     ->schema([
                         Forms\Components\ToggleButtons::make('hero_mode')
                             ->label($t('Mod selectare', 'Selection mode'))
