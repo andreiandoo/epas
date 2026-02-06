@@ -250,6 +250,10 @@ include __DIR__ . '/../includes/organizer-head.php';
                                     <div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
                                     <span class="text-xs font-medium text-blue-600">Bilete</span>
                                 </button>
+                                <button onclick="toggleChartMetric('refunds')" class="chart-metric-btn flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 transition-all" data-metric="refunds">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                                    <span class="text-xs font-medium text-gray-500">Rambursari</span>
+                                </button>
                                 <button onclick="toggleChartMetric('views')" class="chart-metric-btn flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 transition-all" data-metric="views">
                                     <div class="w-2.5 h-2.5 rounded-full bg-cyan-500"></div>
                                     <span class="text-xs font-medium text-gray-500">Vizualizari</span>
@@ -970,43 +974,17 @@ include __DIR__ . '/../includes/organizer-head.php';
         const goalsData = <?= json_encode($goals) ?>;
         const salesData = <?= json_encode($recentSales) ?>;
 
-        // Helper to generate daily dates
-        function generateDailyDates(startDate, days) {
-            const dates = [];
-            const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const start = new Date(startDate);
-            for (let i = 0; i < days; i++) {
-                const d = new Date(start);
-                d.setDate(start.getDate() + i);
-                dates.push(d.getDate() + ' ' + months[d.getMonth()]);
-            }
-            return dates;
-        }
-
-        // Helper to generate progressive daily data
-        function generateDailyData(startVal, endVal, days, variance = 0.15) {
-            const data = [];
-            const dailyGrowth = (endVal - startVal) / days;
-            for (let i = 0; i < days; i++) {
-                const baseVal = startVal + (dailyGrowth * i);
-                const randomFactor = 1 + (Math.random() - 0.5) * variance;
-                data.push(Math.round(baseVal * randomFactor));
-            }
-            // Ensure last value matches target
-            data[data.length - 1] = endVal;
-            return data;
-        }
-
-        // Chart data with daily points
+        // Pre-defined static chart data (fast load, no random generation)
         const chartData = {
-            dates: generateDailyDates('2026-01-01', 31),
-            revenue: generateDailyData(85000, 847650, 31, 0.12),
-            tickets: generateDailyData(450, 5782, 31, 0.15),
-            views: generateDailyData(8500, 62850, 31, 0.18)
+            dates: ['1 Ian','2 Ian','3 Ian','4 Ian','5 Ian','6 Ian','7 Ian','8 Ian','9 Ian','10 Ian','11 Ian','12 Ian','13 Ian','14 Ian','15 Ian','16 Ian','17 Ian','18 Ian','19 Ian','20 Ian','21 Ian','22 Ian','23 Ian','24 Ian','25 Ian','26 Ian','27 Ian','28 Ian','29 Ian','30 Ian','31 Ian'],
+            revenue: [18200,22400,19800,28500,32100,25600,21300,24800,27900,23100,31200,35800,29400,26700,22100,28900,33400,38200,31500,27800,24600,29100,34700,41200,36800,32400,28100,25900,30200,35600,38900],
+            tickets: [95,128,112,158,182,145,118,138,156,130,175,198,165,148,124,160,186,212,176,154,138,162,192,228,204,180,156,144,168,198,216],
+            refunds: [0,420,0,0,850,0,180,0,0,520,0,0,380,0,0,640,0,280,0,0,450,0,0,720,0,0,380,0,0,560,0],
+            views: [1850,2240,1980,2650,3120,2560,2130,2480,2790,2310,2920,3380,2940,2670,2210,2890,3340,3820,3150,2780,2460,2910,3470,4120,3680,3240,2810,2590,3020,3560,3890]
         };
 
         let mainChart;
-        let chartMetrics = { revenue: true, tickets: true, views: false };
+        let chartMetrics = { revenue: true, tickets: true, refunds: false, views: false };
 
         // Generate campaign annotations for chart
         function getCampaignAnnotations() {
@@ -1050,8 +1028,9 @@ include __DIR__ . '/../includes/organizer-head.php';
         function initChart() {
             const options = {
                 chart: {
-                    type: 'area',
+                    type: 'bar',
                     height: 300,
+                    stacked: true,
                     toolbar: {
                         show: true,
                         tools: {
@@ -1096,6 +1075,14 @@ include __DIR__ . '/../includes/organizer-head.php';
                 annotations: {
                     xaxis: getCampaignAnnotations()
                 },
+                plotOptions: {
+                    bar: {
+                        columnWidth: '70%',
+                        borderRadius: 3,
+                        borderRadiusApplication: 'end',
+                        borderRadiusWhenStacked: 'last'
+                    }
+                },
                 xaxis: {
                     categories: chartData.dates,
                     labels: {
@@ -1113,26 +1100,30 @@ include __DIR__ . '/../includes/organizer-head.php';
                 },
                 yaxis: [
                     {
-                        title: { text: 'Venituri (RON)', style: { color: '#10b981', fontSize: '11px' } },
+                        title: { text: 'RON', style: { color: '#6b7280', fontSize: '11px' } },
+                        labels: {
+                            style: { colors: '#9ca3af', fontSize: '11px' },
+                            formatter: (val) => (val / 1000).toFixed(0) + 'K'
+                        }
+                    },
+                    {
+                        opposite: true,
+                        title: { text: 'Vizualizari', style: { color: '#06b6d4', fontSize: '11px' } },
                         labels: {
                             style: { colors: '#9ca3af', fontSize: '11px' },
                             formatter: (val) => (val / 1000).toFixed(0) + 'K'
                         },
-                        show: chartMetrics.revenue
-                    },
-                    {
-                        opposite: true,
-                        title: { text: 'Bilete', style: { color: '#3b82f6', fontSize: '11px' } },
-                        labels: { style: { colors: '#9ca3af', fontSize: '11px' } },
-                        show: chartMetrics.tickets
+                        show: chartMetrics.views
                     }
                 ],
-                stroke: { curve: 'smooth', width: 2 },
-                fill: {
-                    type: 'gradient',
-                    gradient: { opacityFrom: 0.4, opacityTo: 0.05 }
+                stroke: {
+                    width: [0, 0, 0, 3],
+                    curve: 'smooth'
                 },
-                colors: ['#10b981', '#3b82f6', '#06b6d4'],
+                fill: {
+                    opacity: [1, 1, 1, 1]
+                },
+                colors: ['#10b981', '#3b82f6', '#ef4444', '#06b6d4'],
                 legend: { show: false },
                 grid: {
                     borderColor: '#f3f4f6',
@@ -1140,9 +1131,13 @@ include __DIR__ . '/../includes/organizer-head.php';
                 },
                 tooltip: {
                     shared: true,
+                    intersect: false,
                     y: {
-                        formatter: function(val, { seriesIndex }) {
-                            if (seriesIndex === 0) return val.toLocaleString() + ' RON';
+                        formatter: function(val, { seriesIndex, w }) {
+                            const seriesName = w.config.series[seriesIndex]?.name || '';
+                            if (seriesName === 'Venituri' || seriesName === 'Rambursari') {
+                                return val.toLocaleString() + ' RON';
+                            }
                             return val.toLocaleString();
                         }
                     }
@@ -1155,14 +1150,19 @@ include __DIR__ . '/../includes/organizer-head.php';
 
         function getSeries() {
             const series = [];
+            // Stacked bars: Revenue, Tickets, Refunds
             if (chartMetrics.revenue) {
-                series.push({ name: 'Venituri', type: 'area', data: chartData.revenue });
+                series.push({ name: 'Venituri', type: 'bar', data: chartData.revenue });
             }
             if (chartMetrics.tickets) {
-                series.push({ name: 'Bilete', type: 'area', data: chartData.tickets });
+                series.push({ name: 'Bilete', type: 'bar', data: chartData.tickets });
             }
+            if (chartMetrics.refunds) {
+                series.push({ name: 'Rambursari', type: 'bar', data: chartData.refunds });
+            }
+            // Line: Views
             if (chartMetrics.views) {
-                series.push({ name: 'Vizualizari', type: 'area', data: chartData.views });
+                series.push({ name: 'Vizualizari', type: 'line', data: chartData.views });
             }
             return series;
         }
@@ -1174,20 +1174,40 @@ include __DIR__ . '/../includes/organizer-head.php';
             const btn = document.querySelector(`[data-metric="${metric}"]`);
             if (chartMetrics[metric]) {
                 btn.classList.add('active');
-                const colors = { revenue: 'green', tickets: 'blue', views: 'cyan' };
+                const colors = { revenue: 'green', tickets: 'blue', refunds: 'red', views: 'cyan' };
                 btn.classList.add(`border-${colors[metric]}-200`, `bg-${colors[metric]}-50`);
                 btn.classList.remove('border-gray-200');
                 btn.querySelector('span').classList.remove('text-gray-500');
                 btn.querySelector('span').classList.add(`text-${colors[metric]}-600`);
             } else {
                 btn.classList.remove('active');
-                btn.classList.remove('border-green-200', 'bg-green-50', 'border-blue-200', 'bg-blue-50', 'border-cyan-200', 'bg-cyan-50');
+                btn.classList.remove('border-green-200', 'bg-green-50', 'border-blue-200', 'bg-blue-50', 'border-red-200', 'bg-red-50', 'border-cyan-200', 'bg-cyan-50');
                 btn.classList.add('border-gray-200');
                 btn.querySelector('span').classList.add('text-gray-500');
-                btn.querySelector('span').classList.remove('text-green-600', 'text-blue-600', 'text-cyan-600');
+                btn.querySelector('span').classList.remove('text-green-600', 'text-blue-600', 'text-red-600', 'text-cyan-600');
             }
 
-            // Update chart
+            // Update chart with new series and y-axis visibility
+            mainChart.updateOptions({
+                yaxis: [
+                    {
+                        title: { text: 'RON', style: { color: '#6b7280', fontSize: '11px' } },
+                        labels: {
+                            style: { colors: '#9ca3af', fontSize: '11px' },
+                            formatter: (val) => (val / 1000).toFixed(0) + 'K'
+                        }
+                    },
+                    {
+                        opposite: true,
+                        title: { text: 'Vizualizari', style: { color: '#06b6d4', fontSize: '11px' } },
+                        labels: {
+                            style: { colors: '#9ca3af', fontSize: '11px' },
+                            formatter: (val) => (val / 1000).toFixed(0) + 'K'
+                        },
+                        show: chartMetrics.views
+                    }
+                ]
+            });
             mainChart.updateSeries(getSeries());
         }
 
@@ -1195,31 +1215,35 @@ include __DIR__ . '/../includes/organizer-head.php';
         let currentPeriod = '30d';
         const eventPublishDate = new Date('2025-12-01'); // Event publish date
 
-        // Generate daily data for different periods
+        // Generate daily data for different periods (per-day values, not cumulative)
         const periodData = {
             '7d': {
                 dates: generateDailyDates('2026-01-25', 7),
-                revenue: generateDailyData(520000, 847650, 7, 0.08),
-                tickets: generateDailyData(3520, 5782, 7, 0.10),
-                views: generateDailyData(42000, 62850, 7, 0.12)
+                revenue: generateDailyValues(20000, 55000, 7, 0.35),
+                tickets: generateDailyValues(120, 350, 7, 0.35),
+                refunds: generateRefundData(7, 5000),
+                views: generateDailyValues(1500, 4500, 7, 0.4)
             },
             '30d': {
                 dates: generateDailyDates('2026-01-01', 31),
-                revenue: generateDailyData(85000, 847650, 31, 0.12),
-                tickets: generateDailyData(450, 5782, 31, 0.15),
-                views: generateDailyData(8500, 62850, 31, 0.18)
+                revenue: generateDailyValues(15000, 45000, 31, 0.4),
+                tickets: generateDailyValues(80, 280, 31, 0.4),
+                refunds: generateRefundData(31, 4000),
+                views: generateDailyValues(1200, 3800, 31, 0.45)
             },
             '90d': {
                 dates: generateDailyDates('2025-11-03', 90),
-                revenue: generateDailyData(0, 847650, 90, 0.15),
-                tickets: generateDailyData(0, 5782, 90, 0.18),
-                views: generateDailyData(2000, 142850, 90, 0.20)
+                revenue: generateDailyValues(8000, 50000, 90, 0.5),
+                tickets: generateDailyValues(40, 300, 90, 0.5),
+                refunds: generateRefundData(90, 4500),
+                views: generateDailyValues(800, 4200, 90, 0.5)
             },
             'all': {
                 dates: generateDailyDates('2025-12-01', 62),
-                revenue: generateDailyData(25000, 847650, 62, 0.12),
-                tickets: generateDailyData(120, 5782, 62, 0.15),
-                views: generateDailyData(5000, 142850, 62, 0.18)
+                revenue: generateDailyValues(10000, 48000, 62, 0.45),
+                tickets: generateDailyValues(60, 290, 62, 0.45),
+                refunds: generateRefundData(62, 4200),
+                views: generateDailyValues(1000, 4000, 62, 0.45)
             }
         };
 
@@ -1239,6 +1263,7 @@ include __DIR__ . '/../includes/organizer-head.php';
                 chartData.dates = data.dates;
                 chartData.revenue = data.revenue;
                 chartData.tickets = data.tickets;
+                chartData.refunds = data.refunds;
                 chartData.views = data.views;
 
                 // Update chart with new data and annotations

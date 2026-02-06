@@ -1037,6 +1037,20 @@ const EventPage = {
             var artistImage = artist.image_url || artist.image || '/assets/images/default-artist.png';
             var artistLink = artist.slug ? '/artist/' + artist.slug : '#';
             var artistDescription = artist.bio || artist.description || '';
+            var isHeadliner = artist.is_headliner === true;
+            var isCoHeadliner = artist.is_co_headliner === true;
+
+            // Build status badge HTML
+            var statusBadgeHtml = '';
+            if (isHeadliner) {
+                statusBadgeHtml = '<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold text-white rounded-full bg-gradient-to-r from-amber-500 to-amber-600 shadow-sm">' +
+                    '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' +
+                    'HEADLINER</span>';
+            } else if (isCoHeadliner) {
+                statusBadgeHtml = '<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full bg-secondary/10 text-secondary">' +
+                    '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' +
+                    'CO-HEADLINER</span>';
+            }
 
             var socialLinksHtml = '';
             var socialLinks = artist.social_links || {};
@@ -1050,15 +1064,23 @@ const EventPage = {
                 socialLinksHtml += '</div>';
             }
 
-            allHtml += '<div class="flex flex-col gap-6 md:flex-row' + (i > 0 ? ' pt-6 mt-6 border-t border-border' : '') + '">' +
-                '<div class="md:w-1/3">' +
-                    '<a href="' + artistLink + '">' +
+            // Headliners get larger display
+            var imageColClass = isHeadliner ? 'md:w-2/5' : 'md:w-1/3';
+            var contentColClass = isHeadliner ? 'md:w-3/5' : 'md:w-2/3';
+            var nameClass = isHeadliner ? 'text-3xl' : 'text-2xl';
+            var containerClass = isHeadliner ? 'p-4 -m-4 rounded-2xl bg-gradient-to-r from-amber-50 to-transparent border border-amber-100' : '';
+
+            allHtml += '<div class="flex flex-col gap-6 md:flex-row ' + containerClass + (i > 0 ? ' pt-6 mt-6' + (isHeadliner ? '' : ' border-t border-border') : '') + '">' +
+                '<div class="' + imageColClass + '">' +
+                    '<a href="' + artistLink + '" class="relative block">' +
                         '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105" loading="lazy">' +
+                        (isHeadliner ? '<div class="absolute px-2 py-1 text-xs font-bold text-white rounded-lg shadow-lg top-3 left-3 bg-gradient-to-r from-amber-500 to-amber-600">★ HEADLINER</div>' : '') +
                     '</a>' +
                 '</div>' +
-                '<div class="md:w-2/3">' +
-                    '<div class="flex items-center gap-3 mb-4 mobile:justify-between">' +
-                        '<a href="' + artistLink + '" class="text-2xl font-bold text-secondary hover:text-primary">' + artist.name + '</a>' +
+                '<div class="' + contentColClass + '">' +
+                    '<div class="flex flex-wrap items-center gap-3 mb-4 mobile:justify-between">' +
+                        '<a href="' + artistLink + '" class="' + nameClass + ' font-bold text-secondary hover:text-primary">' + artist.name + '</a>' +
+                        statusBadgeHtml +
                         (artist.verified ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary">Verified</span>' : '') +
                     '</div>' +
                     (artistDescription ? '<p class="mb-4 leading-relaxed text-muted">' + artistDescription + '</p>' : '<p class="mb-4 leading-relaxed text-muted">Detalii despre artist vor fi disponibile în curând.</p>') +

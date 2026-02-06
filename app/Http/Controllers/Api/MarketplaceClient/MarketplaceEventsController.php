@@ -572,8 +572,9 @@ class MarketplaceEventsController extends BaseController
                     'image_url' => $artist->main_image_full_url ?? $artist->image_url,
                     'bio' => $truncatedBio,
                     'social_links' => $socialLinks,
-                    'is_headliner' => $artist->pivot->is_headliner ?? false,
-                    'is_co_headliner' => $artist->pivot->is_co_headliner ?? false,
+                    'sort_order' => $artist->pivot->sort_order ?? 0,
+                    'is_headliner' => (bool) ($artist->pivot->is_headliner ?? false),
+                    'is_co_headliner' => (bool) ($artist->pivot->is_co_headliner ?? false),
                 ];
             })->values(),
             'commission_mode' => $commissionMode,

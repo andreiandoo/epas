@@ -116,6 +116,14 @@ class EventResource extends Resource
                 SC\Group::make()
                     ->columnSpan(3)
                     ->schema([
+                        SC\Tabs::make('EventTabs')
+                            ->extraAttributes(['class' => 'sticky top-0 z-20 bg-gray-900 -mx-6 px-6 pt-2 pb-0 -mt-6 mb-4 border-b border-gray-700/50'])
+                            ->persistTabInQueryString()
+                            ->tabs([
+                                // ========== TAB 1: DETALII ==========
+                                SC\Tabs\Tab::make($t('Detalii', 'Details'))
+                                    ->icon('heroicon-o-document-text')
+                                    ->schema([
                         // BASICS - Single Language based on Tenant setting
                         SC\Section::make($t('Detalii eveniment', 'Event Details'))
                             ->schema([
@@ -350,7 +358,12 @@ class EventResource extends Resource
                                         ->columnSpanFull(),
                                 ]),
                             ])->columns(1),
+                                    ]), // End Tab 1: Detalii
 
+                                // ========== TAB 2: PROGRAM ==========
+                                SC\Tabs\Tab::make($t('Program', 'Schedule'))
+                                    ->icon('heroicon-o-calendar')
+                                    ->schema([
                         // SCHEDULE
                         SC\Section::make($t('Program', 'Schedule'))
                             ->schema([
@@ -650,7 +663,12 @@ class EventResource extends Resource
                                         );
                                     }),
                             ])->columns(2),
+                                    ]), // End Tab 2: Program
 
+                                // ========== TAB 3: CONȚINUT ==========
+                                SC\Tabs\Tab::make($t('Conținut', 'Content'))
+                                    ->icon('heroicon-o-pencil-square')
+                                    ->schema([
                         // CONTENT - Single Language
                         SC\Section::make($t('Conținut', 'Content'))
                             ->schema([
@@ -973,7 +991,12 @@ class EventResource extends Resource
                                         return new HtmlString($html);
                                     }),
                             ])->columns(3),
+                                    ]), // End Tab 3: Conținut
 
+                                // ========== TAB 4: BILETE ==========
+                                SC\Tabs\Tab::make($t('Bilete', 'Tickets'))
+                                    ->icon('heroicon-o-ticket')
+                                    ->schema([
                         // TICKETS
                         SC\Section::make($t('Bilete', 'Tickets'))
                             ->schema([
@@ -1680,7 +1703,12 @@ class EventResource extends Resource
                                             ->columnSpan(12),
                                     ]),
                             ])->collapsible(),
+                                    ]), // End Tab 4: Bilete
 
+                                // ========== TAB 5: SEO ==========
+                                SC\Tabs\Tab::make('SEO')
+                                    ->icon('heroicon-o-globe-alt')
+                                    ->schema([
                         // SEO Section
                         SC\Section::make('SEO')
                 ->collapsed()
@@ -1880,6 +1908,8 @@ class EventResource extends Resource
                         ])
                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Adaugă tag-uri meta SEO personalizate. Folosește șabloanele de mai sus pentru a adăuga rapid seturi comune.', 'Add custom SEO meta tags. Use templates above to quickly add common sets.')),
                 ]),
+                                    ]), // End Tab 5: SEO
+                            ]), // End Tabs component
                     ]),
                 // ========== COLOANA DREAPTĂ - SIDEBAR (1/4) ==========
                 SC\Group::make()
