@@ -98,7 +98,13 @@ class EventResource extends Resource
         $marketplace = static::getMarketplaceClient();
 
         // Get tenant's language (check both 'language' and 'locale' columns)
-        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
+        // Default to 'ro' (Romanian) for this marketplace
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'ro';
+
+        // Translation helper for labels
+        $t = function (string $ro, string $en) use ($marketplaceLanguage): string {
+            return $marketplaceLanguage === 'ro' ? $ro : $en;
+        };
 
         return $schema->schema([
             // Hidden marketplace_client_id field
@@ -111,12 +117,12 @@ class EventResource extends Resource
                     ->columnSpan(3)
                     ->schema([
                         // BASICS - Single Language based on Tenant setting
-                        SC\Section::make('Event Details')
+                        SC\Section::make($t('Detalii eveniment', 'Event Details'))
                             ->schema([
                                 SC\Group::make()
                                     ->schema([
                                         Forms\Components\TextInput::make("title.{$marketplaceLanguage}")
-                                            ->label($marketplaceLanguage === 'ro' ? 'Titlu eveniment' : 'Event title')
+                                            ->label($t('Titlu eveniment', 'Event title'))
                                             ->required()
                                             ->maxLength(190)
                                             ->live(onBlur: true)
@@ -136,12 +142,12 @@ class EventResource extends Resource
                                             ->label('Slug')
                                             ->maxLength(190)
                                             ->rule('alpha_dash')
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'ID-ul evenimentului va fi adăugat automat la salvare'),
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('ID-ul evenimentului va fi adăugat automat la salvare', 'Event ID will be added automatically on save')),
                                         Forms\Components\TextInput::make('event_series')
-                                            ->label('Serie eveniment')
-                                            ->placeholder('Se generează automat: AMB-[ID]')
+                                            ->label($t('Serie eveniment', 'Event series'))
+                                            ->placeholder($t('Se generează automat: AMB-[ID]', 'Auto-generated: AMB-[ID]'))
                                             ->maxLength(50)
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Codul unic al seriei de bilete pentru acest eveniment. Se generează automat la salvare.')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Codul unic al seriei de bilete pentru acest eveniment. Se generează automat la salvare.', 'Unique ticket series code for this event. Auto-generated on save.'))
                                             ->disabled(fn (?Event $record) => $record && $record->exists && $record->event_series)
                                             ->dehydrated(true)
                                             ->afterStateHydrated(function ($state, SSet $set, ?Event $record) {
@@ -159,7 +165,7 @@ class EventResource extends Resource
                             ->schema([
                                 SC\Grid::make(5)->schema([
                                     Forms\Components\Toggle::make('is_sold_out')
-                                        ->label('Sold out')
+                                        ->label($t('Sold out', 'Sold out'))
                                         ->onIcon('heroicon-m-lock-closed')
                                         ->offIcon('heroicon-m-lock-open')
                                         ->live()
@@ -170,12 +176,12 @@ class EventResource extends Resource
                                         })
                                         ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
                                     Forms\Components\Toggle::make('door_sales_only')
-                                        ->label('Door sales only')
+                                        ->label($t('Doar la intrare', 'Door sales only'))
                                         ->onIcon('heroicon-m-key')
                                         ->offIcon('heroicon-m-key')
                                         ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
                                     Forms\Components\Toggle::make('is_cancelled')
-                                        ->label('Cancelled')
+                                        ->label($t('Anulat', 'Cancelled'))
                                         ->onIcon('heroicon-m-x-circle')
                                         ->offIcon('heroicon-m-x-circle')
                                         ->live()
@@ -188,7 +194,7 @@ class EventResource extends Resource
                                             }
                                         }),
                                     Forms\Components\Toggle::make('is_postponed')
-                                        ->label('Postponed')
+                                        ->label($t('Amânat', 'Postponed'))
                                         ->onIcon('heroicon-m-clock')
                                         ->offIcon('heroicon-m-clock')
                                         ->live()
@@ -205,7 +211,7 @@ class EventResource extends Resource
                                         })
                                         ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
                                     Forms\Components\Toggle::make('is_promoted')
-                                        ->label('Promoted')
+                                        ->label($t('Promovat', 'Promoted'))
                                         ->onIcon('heroicon-m-sparkles')
                                         ->offIcon('heroicon-m-sparkles')
                                         ->live()
@@ -216,61 +222,61 @@ class EventResource extends Resource
                                 ]),
 
                                 Forms\Components\Textarea::make('cancel_reason')
-                                    ->label('Cancellation reason')
+                                    ->label($t('Motivul anulării', 'Cancellation reason'))
                                     ->rows(2)
                                     ->visible(fn (SGet $get) => (bool) $get('is_cancelled')),
 
                                 SC\Grid::make(4)->schema([
                                     Forms\Components\DatePicker::make('postponed_date')
-                                        ->label('New date')
+                                        ->label($t('Data nouă', 'New date'))
                                         ->minDate($today)
                                         ->native(false),
                                     Forms\Components\TimePicker::make('postponed_start_time')
-                                        ->label('Start time')
+                                        ->label($t('Ora start', 'Start time'))
                                         ->seconds(false)
                                         ->native(true),
                                     Forms\Components\TimePicker::make('postponed_door_time')
-                                        ->label('Door time')
+                                        ->label($t('Ora acces', 'Door time'))
                                         ->seconds(false)
                                         ->native(true),
                                     Forms\Components\TimePicker::make('postponed_end_time')
-                                        ->label('End time')
+                                        ->label($t('Ora final', 'End time'))
                                         ->seconds(false)
                                         ->native(true),
                                 ])->visible(fn (SGet $get) => (bool) $get('is_postponed')),
 
                                 Forms\Components\Textarea::make('postponed_reason')
-                                    ->label('Postponement reason')
+                                    ->label($t('Motivul amânării', 'Postponement reason'))
                                     ->rows(2)
                                     ->visible(fn (SGet $get) => (bool) $get('is_postponed')),
 
                                 Forms\Components\DatePicker::make('promoted_until')
-                                    ->label('Promoted until')
+                                    ->label($t('Promovat până la', 'Promoted until'))
                                     ->minDate($today)
                                     ->native(false)
                                     ->visible(fn (SGet $get) => (bool) $get('is_promoted')),
                             ])->columns(1),
 
                         // FEATURED SETTINGS (Marketplace only)
-                        SC\Section::make('Featured Settings')
-                            ->description('Control where this event appears as featured on the marketplace website')
+                        SC\Section::make($t('Setări Featured', 'Featured Settings'))
+                            ->description($t('Controlează unde apare acest eveniment ca featured pe site', 'Control where this event appears as featured on the marketplace website'))
                             ->schema([
                                 SC\Grid::make(3)->schema([
                                     Forms\Components\Toggle::make('is_homepage_featured')
-                                        ->label('Homepage Featured')
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Show on homepage hero/featured section')
+                                        ->label($t('Featured pe Homepage', 'Homepage Featured'))
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Afișează în secțiunea hero/featured de pe homepage', 'Show on homepage hero/featured section'))
                                         ->onIcon('heroicon-m-home')
                                         ->offIcon('heroicon-m-home')
                                         ->live(),
                                     Forms\Components\Toggle::make('is_general_featured')
-                                        ->label('General Featured')
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Show in general featured events lists')
+                                        ->label($t('Featured General', 'General Featured'))
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Afișează în listele generale de evenimente featured', 'Show in general featured events lists'))
                                         ->onIcon('heroicon-m-star')
                                         ->offIcon('heroicon-m-star')
                                         ->live(),
                                     Forms\Components\Toggle::make('is_category_featured')
-                                        ->label('Category Featured')
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Show as featured in its category page')
+                                        ->label($t('Featured în Categorie', 'Category Featured'))
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Afișează ca featured pe pagina categoriei sale', 'Show as featured in its category page'))
                                         ->onIcon('heroicon-m-tag')
                                         ->offIcon('heroicon-m-tag')
                                         ->live(),
@@ -278,11 +284,12 @@ class EventResource extends Resource
 
                                 // Homepage Featured Image - only shown when Homepage Featured is enabled
                                 Forms\Components\FileUpload::make('homepage_featured_image')
-                                    ->label('Homepage Featured Image')
-                                    ->helperText('Special image for homepage featured section (recommended: 1920x600px)')
+                                    ->label($t('Imagine Featured Homepage', 'Homepage Featured Image'))
+                                    ->helperText($t('Imagine specială pentru secțiunea featured de pe homepage (recomandat: 1920x600px)', 'Special image for homepage featured section (recommended: 1920x600px)'))
                                     ->image()
                                     ->directory('events/featured/homepage')
                                     ->disk('public')
+                                    ->visibility('public')
                                     ->imageResizeMode('cover')
                                     ->imagePreviewHeight('150')
                                     ->visible(fn (SGet $get) => (bool) $get('is_homepage_featured'))
@@ -290,11 +297,12 @@ class EventResource extends Resource
 
                                 // General/Category Featured Image (shared) - only shown when General or Category Featured is enabled
                                 Forms\Components\FileUpload::make('featured_image')
-                                    ->label('Featured Image (General/Category)')
-                                    ->helperText('Image for general and category featured sections (recommended: 800x450px)')
+                                    ->label($t('Imagine Featured (General/Categorie)', 'Featured Image (General/Category)'))
+                                    ->helperText($t('Imagine pentru secțiunile featured generale și de categorie (recomandat: 800x450px)', 'Image for general and category featured sections (recommended: 800x450px)'))
                                     ->image()
                                     ->directory('events/featured')
                                     ->disk('public')
+                                    ->visibility('public')
                                     ->imageResizeMode('cover')
                                     ->imagePreviewHeight('150')
                                     ->visible(fn (SGet $get) => (bool) $get('is_general_featured') || (bool) $get('is_category_featured'))
@@ -303,15 +311,15 @@ class EventResource extends Resource
                                 // Custom Related Events
                                 SC\Grid::make(1)->schema([
                                     Forms\Components\Toggle::make('has_custom_related')
-                                        ->label('Custom Related Events')
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Manually select which events to show in the "Îți recomandăm" section')
+                                        ->label($t('Evenimente Conexe Personalizate', 'Custom Related Events'))
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează manual ce evenimente să apară în secțiunea "Îți recomandăm"', 'Manually select which events to show in the "Îți recomandăm" section'))
                                         ->onIcon('heroicon-m-queue-list')
                                         ->offIcon('heroicon-m-queue-list')
                                         ->live(),
 
                                     Forms\Components\Select::make('custom_related_event_ids')
-                                        ->label('Select Related Events')
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Choose events to display in the "Îți recomandăm" section (max 8)')
+                                        ->label($t('Selectează Evenimente Conexe', 'Select Related Events'))
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Alege evenimentele de afișat în secțiunea "Îți recomandăm" (max 8)', 'Choose events to display in the "Îți recomandăm" section (max 8)'))
                                         ->multiple()
                                         ->searchable()
                                         ->preload()
@@ -335,15 +343,15 @@ class EventResource extends Resource
                             ])->columns(1),
 
                         // SCHEDULE
-                        SC\Section::make('Schedule')
+                        SC\Section::make($t('Program', 'Schedule'))
                             ->schema([
                                 Forms\Components\Radio::make('duration_mode')
-                                    ->label('Duration')
+                                    ->label($t('Durată', 'Duration'))
                                     ->options([
-                                        'single_day' => 'Single day',
-                                        'range' => 'Range',
-                                        'multi_day' => 'Multiple days',
-                                        'recurring' => 'Recurring',
+                                        'single_day' => $t('O singură zi', 'Single day'),
+                                        'range' => $t('Interval', 'Range'),
+                                        'multi_day' => $t('Mai multe zile', 'Multiple days'),
+                                        'recurring' => $t('Recurent', 'Recurring'),
                                     ])
                                     ->inline()
                                     ->default('single_day')
@@ -353,20 +361,20 @@ class EventResource extends Resource
                                 // Single day
                                 SC\Grid::make(4)->schema([
                                     Forms\Components\DatePicker::make('event_date')
-                                        ->label('Date')
+                                        ->label($t('Data', 'Date'))
                                         ->minDate($today)
                                         ->native(false),
                                     Forms\Components\TimePicker::make('start_time')
-                                        ->label('Start time')
+                                        ->label($t('Ora start', 'Start time'))
                                         ->seconds(false)
                                         ->native(true)
                                         ->required(fn (SGet $get) => $get('duration_mode') === 'single_day'),
                                     Forms\Components\TimePicker::make('door_time')
-                                        ->label('Door time')
+                                        ->label($t('Ora acces', 'Door time'))
                                         ->seconds(false)
                                         ->native(true),
                                     Forms\Components\TimePicker::make('end_time')
-                                        ->label('End time')
+                                        ->label($t('Ora final', 'End time'))
                                         ->seconds(false)
                                         ->native(true),
                                 ])->visible(fn (SGet $get) => $get('duration_mode') === 'single_day'),
@@ -374,45 +382,45 @@ class EventResource extends Resource
                                 // Range
                                 SC\Grid::make(4)->schema([
                                     Forms\Components\DatePicker::make('range_start_date')
-                                        ->label('Start date')
+                                        ->label($t('Data început', 'Start date'))
                                         ->minDate($today)
                                         ->native(false),
                                     Forms\Components\DatePicker::make('range_end_date')
-                                        ->label('End date')
+                                        ->label($t('Data final', 'End date'))
                                         ->native(false),
                                     Forms\Components\TimePicker::make('range_start_time')
-                                        ->label('Start time')
+                                        ->label($t('Ora start', 'Start time'))
                                         ->seconds(false)
                                         ->native(true),
                                     Forms\Components\TimePicker::make('range_end_time')
-                                        ->label('End time')
+                                        ->label($t('Ora final', 'End time'))
                                         ->seconds(false)
                                         ->native(true),
                                 ])->visible(fn (SGet $get) => $get('duration_mode') === 'range'),
 
                                 // Multi day
                                 Forms\Components\Repeater::make('multi_slots')
-                                    ->label('Days & times')
+                                    ->label($t('Zile și ore', 'Days & times'))
                                     ->schema([
                                         Forms\Components\DatePicker::make('date')
-                                            ->label('Date')
+                                            ->label($t('Data', 'Date'))
                                             ->minDate($today)
                                             ->native(false)
                                             ->required(),
                                         Forms\Components\TimePicker::make('start_time')
-                                            ->label('Start')
+                                            ->label($t('Start', 'Start'))
                                             ->seconds(false)
                                             ->native(true),
                                         Forms\Components\TimePicker::make('door_time')
-                                            ->label('Door')
+                                            ->label($t('Acces', 'Door'))
                                             ->seconds(false)
                                             ->native(true),
                                         Forms\Components\TimePicker::make('end_time')
-                                            ->label('End')
+                                            ->label($t('Final', 'End'))
                                             ->seconds(false)
                                             ->native(true),
                                     ])
-                                    ->addActionLabel('Add another date')
+                                    ->addActionLabel($t('Adaugă altă dată', 'Add another date'))
                                     ->default([])
                                     ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
                                     ->columns(4),
@@ -423,7 +431,7 @@ class EventResource extends Resource
                                     ->schema([
                                         SC\Grid::make(4)->schema([
                                             Forms\Components\DatePicker::make('recurring_start_date')
-                                                ->label('Initial date')
+                                                ->label($t('Data inițială', 'Initial date'))
                                                 ->minDate(now()->startOfDay())
                                                 ->native(false)
                                                 ->live()
@@ -433,23 +441,25 @@ class EventResource extends Resource
                                                     $set('recurring_weekday', $w);
                                                 }),
                                             Forms\Components\TextInput::make('recurring_weekday')
-                                                ->label('Weekday')
+                                                ->label($t('Ziua săptămânii', 'Weekday'))
                                                 ->disabled()
                                                 ->dehydrated(false)
-                                                ->formatStateUsing(function (SGet $get) {
-                                                    $map = [1=>'Mon',2=>'Tue',3=>'Wed',4=>'Thu',5=>'Fri',6=>'Sat',7=>'Sun'];
+                                                ->formatStateUsing(function (SGet $get) use ($t) {
+                                                    $mapRo = [1=>'Lun',2=>'Mar',3=>'Mie',4=>'Joi',5=>'Vin',6=>'Sâm',7=>'Dum'];
+                                                    $mapEn = [1=>'Mon',2=>'Tue',3=>'Wed',4=>'Thu',5=>'Fri',6=>'Sat',7=>'Sun'];
+                                                    $map = $t('ro', 'en') === 'ro' ? $mapRo : $mapEn;
                                                     return $map[$get('recurring_weekday')] ?? '';
                                                 }),
                                             Forms\Components\Select::make('recurring_frequency')
-                                                ->label('Recurrence')
+                                                ->label($t('Recurență', 'Recurrence'))
                                                 ->options([
-                                                    'weekly' => 'Weekly',
-                                                    'monthly_nth' => 'Monthly (Nth weekday)',
+                                                    'weekly' => $t('Săptămânal', 'Weekly'),
+                                                    'monthly_nth' => $t('Lunar (a N-a zi)', 'Monthly (Nth weekday)'),
                                                 ])
                                                 ->required()
                                                 ->live(),
                                             Forms\Components\TextInput::make('recurring_count')
-                                                ->label('Occurrences')
+                                                ->label($t('Ocurențe', 'Occurrences'))
                                                 ->numeric()
                                                 ->minValue(1),
                                         ]),
@@ -457,32 +467,36 @@ class EventResource extends Resource
                                             ->visible(fn (SGet $get) => $get('recurring_frequency') === 'monthly_nth')
                                             ->schema([
                                                 Forms\Components\Select::make('recurring_week_of_month')
-                                                    ->label('Week of month')
+                                                    ->label($t('Săptămâna din lună', 'Week of month'))
                                                     ->options([
-                                                        1 => 'First', 2 => 'Second', 3 => 'Third', 4 => 'Fourth', -1 => 'Last',
+                                                        1 => $t('Prima', 'First'),
+                                                        2 => $t('A doua', 'Second'),
+                                                        3 => $t('A treia', 'Third'),
+                                                        4 => $t('A patra', 'Fourth'),
+                                                        -1 => $t('Ultima', 'Last'),
                                                     ])
                                                     ->required(),
                                             ]),
                                         SC\Grid::make(3)->schema([
                                             Forms\Components\TimePicker::make('recurring_start_time')
-                                                ->label('Start time')
+                                                ->label($t('Ora start', 'Start time'))
                                                 ->seconds(false)->native(true)
                                                 ->required(),
                                             Forms\Components\TimePicker::make('recurring_door_time')
-                                                ->label('Door time')
+                                                ->label($t('Ora acces', 'Door time'))
                                                 ->seconds(false)->native(true),
                                             Forms\Components\TimePicker::make('recurring_end_time')
-                                                ->label('End time')
+                                                ->label($t('Ora final', 'End time'))
                                                 ->seconds(false)->native(true),
                                         ]),
                                     ]),
                             ])->columns(1),
 
                         // LOCATION & LINKS
-                        SC\Section::make('Location & Links')
+                        SC\Section::make($t('Locație și Link-uri', 'Location & Links'))
                             ->schema([
                                 Forms\Components\Select::make('venue_id')
-                                    ->label('Venue')
+                                    ->label($t('Locație', 'Venue'))
                                     ->searchable()
                                     ->preload()
                                     ->live()
@@ -538,7 +552,7 @@ class EventResource extends Resource
                                     )
                                     ->nullable(),
                                 Forms\Components\Select::make('seating_layout_id')
-                                    ->label('Seating Layout')
+                                    ->label($t('Harta de locuri', 'Seating Layout'))
                                     ->searchable()
                                     ->preload()
                                     ->live()
@@ -562,10 +576,10 @@ class EventResource extends Resource
                                                 $layout->id => $layout->name . ' (' . $layout->sections()->count() . ' sections)'
                                             ]);
                                     })
-                                    ->helperText('Select a seating layout for assigned seating. Leave empty for general admission.')
+                                    ->helperText($t('Selectează o hartă de locuri pentru locuri numerotate. Lasă gol pentru acces general.', 'Select a seating layout for assigned seating. Leave empty for general admission.'))
                                     ->nullable(),
                                 Forms\Components\Select::make('marketplace_city_id')
-                                    ->label('City')
+                                    ->label($t('Oraș', 'City'))
                                     ->options(function () use ($marketplace, $marketplaceLanguage) {
                                         return MarketplaceCity::query()
                                             ->where('marketplace_client_id', $marketplace?->id)
@@ -580,22 +594,22 @@ class EventResource extends Resource
                                     })
                                     ->searchable()
                                     ->preload()
-                                    ->placeholder('Select a city')
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Filter events by city on the website')
+                                    ->placeholder($t('Selectează un oraș', 'Select a city'))
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Filtrează evenimentele pe site după oraș', 'Filter events by city on the website'))
                                     ->nullable(),
                                 Forms\Components\TextInput::make('address')
-                                    ->label('Address')
+                                    ->label($t('Adresă', 'Address'))
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('website_url')
                                     ->label('Website')
                                     ->url()
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('facebook_url')
-                                    ->label('Facebook Event')
+                                    ->label($t('Eveniment Facebook', 'Facebook Event'))
                                     ->url()
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('event_website_url')
-                                    ->label('Event Website')
+                                    ->label($t('Website Eveniment', 'Event Website'))
                                     ->url()
                                     ->maxLength(255),
                             ])->columns(2),
@@ -604,14 +618,14 @@ class EventResource extends Resource
                         SC\Section::make('Media')
                             ->schema([
                                 Forms\Components\FileUpload::make('poster_url')
-                                    ->label('Poster (vertical)')
+                                    ->label($t('Poster (vertical)', 'Poster (vertical)'))
                                     ->image()
                                     ->disk('public')
                                     ->directory('events/posters')
                                     ->visibility('public')
                                     ->imagePreviewHeight('200'),
                                 Forms\Components\FileUpload::make('hero_image_url')
-                                    ->label('Hero image (horizontal)')
+                                    ->label($t('Imagine hero (orizontală)', 'Hero image (horizontal)'))
                                     ->image()
                                     ->disk('public')
                                     ->directory('events/hero')
@@ -620,50 +634,50 @@ class EventResource extends Resource
                             ])->columns(2),
 
                         // CONTENT - Single Language
-                        SC\Section::make('Content')
+                        SC\Section::make($t('Conținut', 'Content'))
                             ->schema([
                                 Forms\Components\Textarea::make("short_description.{$marketplaceLanguage}")
-                                    ->label($marketplaceLanguage === 'ro' ? 'Descriere scurtă' : 'Short description')
+                                    ->label($t('Descriere scurtă', 'Short description'))
                                     ->rows(3)
                                     ->maxLength(1000)
                                     ->live(debounce: 300)
-                                    ->helperText(function ($state) {
+                                    ->helperText(function ($state) use ($t) {
                                         $wordCount = $state ? str_word_count(strip_tags($state)) : 0;
                                         $remaining = 120 - $wordCount;
                                         $color = $remaining < 0 ? 'text-danger-500' : ($remaining < 20 ? 'text-warning-500' : 'text-gray-500');
                                         return new \Illuminate\Support\HtmlString(
-                                            "<span class='{$color}'>{$wordCount}/120 cuvinte</span>" .
-                                            ($remaining < 0 ? " <span class='text-danger-500 font-semibold'>(depășit cu " . abs($remaining) . " cuvinte)</span>" : '')
+                                            "<span class='{$color}'>{$wordCount}/120 " . $t('cuvinte', 'words') . "</span>" .
+                                            ($remaining < 0 ? " <span class='text-danger-500 font-semibold'>(" . $t('depășit cu', 'exceeded by') . " " . abs($remaining) . " " . $t('cuvinte', 'words') . ")</span>" : '')
                                         );
                                     })
                                     ->rules([
-                                        function () {
-                                            return function (string $attribute, $value, \Closure $fail) {
+                                        function () use ($t) {
+                                            return function (string $attribute, $value, \Closure $fail) use ($t) {
                                                 $wordCount = str_word_count(strip_tags($value ?? ''));
                                                 if ($wordCount > 120) {
-                                                    $fail("Descrierea scurtă nu poate depăși 120 de cuvinte. Ai {$wordCount} cuvinte.");
+                                                    $fail($t("Descrierea scurtă nu poate depăși 120 de cuvinte. Ai {$wordCount} cuvinte.", "Short description cannot exceed 120 words. You have {$wordCount} words."));
                                                 }
                                             };
                                         },
                                     ])
                                     ->columnSpanFull(),
                                 Forms\Components\RichEditor::make("description.{$marketplaceLanguage}")
-                                    ->label($marketplaceLanguage === 'ro' ? 'Descriere' : 'Description')
+                                    ->label($t('Descriere', 'Description'))
                                     ->columnSpanFull()
                                     ->fileAttachmentsDisk('public')
                                     ->fileAttachmentsDirectory('event-descriptions')
                                     ->fileAttachmentsVisibility('public'),
                                 Forms\Components\RichEditor::make("ticket_terms.{$marketplaceLanguage}")
-                                    ->label($marketplaceLanguage === 'ro' ? 'Termeni bilete' : 'Ticket terms')
+                                    ->label($t('Termeni bilete', 'Ticket terms'))
                                     ->columnSpanFull()
                                     ->default($marketplace?->ticket_terms ?? null),
                             ])->columns(1),
 
                         // TAXONOMIES
-                        SC\Section::make('Taxonomies & Relations')
+                        SC\Section::make($t('Taxonomii și Relații', 'Taxonomies & Relations'))
                             ->schema([
                                 Forms\Components\Select::make('marketplace_event_category_id')
-                                    ->label('Event Category')
+                                    ->label($t('Categorie eveniment', 'Event Category'))
                                     ->options(function () use ($marketplace, $marketplaceLanguage) {
                                         return MarketplaceEventCategory::query()
                                             ->where('marketplace_client_id', $marketplace?->id)
@@ -679,8 +693,8 @@ class EventResource extends Resource
                                     })
                                     ->searchable()
                                     ->preload()
-                                    ->placeholder('Select a category')
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Custom marketplace event category')
+                                    ->placeholder($t('Selectează o categorie', 'Select a category'))
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Categorie personalizată de eveniment marketplace', 'Custom marketplace event category'))
                                     ->live()
                                     ->afterStateUpdated(function ($state, SSet $set) {
                                         // Auto-fill eventTypes from the category's linked event types
@@ -694,7 +708,7 @@ class EventResource extends Resource
                                     ->nullable(),
 
                                 Forms\Components\Select::make('eventTypes')
-                                    ->label('Event types')
+                                    ->label($t('Tipuri eveniment', 'Event types'))
                                     ->relationship(
                                         name: 'eventTypes',
                                         modifyQueryUsing: fn (Builder $query) => $query->whereNotNull('parent_id')->orderBy('name')
@@ -728,7 +742,7 @@ class EventResource extends Resource
                                     }),
 
                                 Forms\Components\Select::make('eventGenres')
-                                    ->label('Event genres')
+                                    ->label($t('Genuri eveniment', 'Event genres'))
                                     ->relationship(
                                         name: 'eventGenres',
                                         modifyQueryUsing: function (Builder $query, SGet $get) {
@@ -753,7 +767,7 @@ class EventResource extends Resource
                                     ->maxItems(5),
 
                                 Forms\Components\Select::make('artists')
-                                    ->label('Artists')
+                                    ->label($t('Artiști', 'Artists'))
                                     ->relationship('artists', 'name')
                                     ->multiple()
                                     ->preload()
@@ -762,20 +776,20 @@ class EventResource extends Resource
                                     ->suffixAction(
                                         Action::make('create_artist')
                                             ->icon('heroicon-o-plus-circle')
-                                            ->tooltip('Adaugă artist nou')
+                                            ->tooltip($t('Adaugă artist nou', 'Add new artist'))
                                             ->url(fn () => ArtistResource::getUrl('create'))
                                             ->openUrlInNewTab()
                                     ),
 
                                 Forms\Components\Select::make('tags')
-                                    ->label('Event tags')
+                                    ->label($t('Tag-uri eveniment', 'Event tags'))
                                     ->relationship('tags', 'name')
                                     ->multiple()
                                     ->preload()
                                     ->searchable()
                                     ->createOptionForm([
                                         Forms\Components\TextInput::make('name')
-                                            ->label('Tag name')
+                                            ->label($t('Nume tag', 'Tag name'))
                                             ->required()
                                             ->maxLength(100)
                                             ->live(onBlur: true)
@@ -799,13 +813,13 @@ class EventResource extends Resource
                                     }),
 
                                 // Artist ordering and headliner settings (visible when >2 artists)
-                                SC\Section::make('Artist Display Settings')
-                                    ->description('Configure display order and headliner status for artists')
+                                SC\Section::make($t('Setări afișare artiști', 'Artist Display Settings'))
+                                    ->description($t('Configurează ordinea afișării și statusul de headliner pentru artiști', 'Configure display order and headliner status for artists'))
                                     ->visible(fn (SGet $get) => count($get('artists') ?? []) > 2)
                                     ->collapsed()
                                     ->schema([
                                         Forms\Components\Repeater::make('artist_settings')
-                                            ->label('Artist Order & Status')
+                                            ->label($t('Ordine și status artiști', 'Artist Order & Status'))
                                             ->hiddenLabel()
                                             ->default([])
                                             ->reorderable()
@@ -815,7 +829,7 @@ class EventResource extends Resource
                                             ->deletable(false)
                                             ->schema([
                                                 Forms\Components\Select::make('artist_id')
-                                                    ->label('Artist')
+                                                    ->label($t('Artist', 'Artist'))
                                                     ->options(function () use ($marketplace) {
                                                         return \App\Models\Artist::query()
                                                             ->orderBy('name')
@@ -824,11 +838,11 @@ class EventResource extends Resource
                                                     ->disabled()
                                                     ->columnSpan(5),
                                                 Forms\Components\Toggle::make('is_headliner')
-                                                    ->label('Headliner')
+                                                    ->label($t('Headliner', 'Headliner'))
                                                     ->inline(false)
                                                     ->columnSpan(3),
                                                 Forms\Components\Toggle::make('is_co_headliner')
-                                                    ->label('Co-Headliner')
+                                                    ->label($t('Co-Headliner', 'Co-Headliner'))
                                                     ->inline(false)
                                                     ->columnSpan(3),
                                                 Forms\Components\Hidden::make('sort_order'),
@@ -943,11 +957,11 @@ class EventResource extends Resource
                             ])->columns(3),
 
                         // TICKETS
-                        SC\Section::make('Tickets')
+                        SC\Section::make($t('Bilete', 'Tickets'))
                             ->schema([
                                 // Ticket Template selector
                                 Forms\Components\Select::make('ticket_template_id')
-                                    ->label('Ticket Template')
+                                    ->label($t('Șablon bilet', 'Ticket Template'))
                                     ->relationship(
                                         name: 'ticketTemplate',
                                         modifyQueryUsing: fn (Builder $query) => $query
@@ -956,8 +970,8 @@ class EventResource extends Resource
                                             ->orderBy('name')
                                     )
                                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
-                                    ->placeholder('Use default template')
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Select a template for tickets generated for this event. Leave empty to use the default template.')
+                                    ->placeholder($t('Folosește șablonul implicit', 'Use default template'))
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează un șablon pentru biletele generate pentru acest eveniment. Lasă gol pentru a folosi șablonul implicit.', 'Select a template for tickets generated for this event. Leave empty to use the default template.'))
                                     ->searchable()
                                     ->preload()
                                     ->nullable()
@@ -969,25 +983,25 @@ class EventResource extends Resource
                                 // Commission Mode and Rate for event
                                 SC\Grid::make(4)->schema([
                                     Forms\Components\Select::make('commission_mode')
-                                        ->label('Commission Mode')
+                                        ->label($t('Mod comision', 'Commission Mode'))
                                         ->options([
-                                            'included' => 'Include in price (organizer receives less)',
-                                            'added_on_top' => 'Add on top (customer pays more)',
+                                            'included' => $t('Inclus în preț (organizatorul primește mai puțin)', 'Include in price (organizer receives less)'),
+                                            'added_on_top' => $t('Adăugat la preț (clientul plătește mai mult)', 'Add on top (customer pays more)'),
                                         ])
-                                        ->placeholder(function (SGet $get) use ($marketplace) {
+                                        ->placeholder(function (SGet $get) use ($marketplace, $t) {
                                             $organizerId = $get('marketplace_organizer_id');
                                             if ($organizerId) {
                                                 $organizer = MarketplaceOrganizer::find($organizerId);
                                                 if ($organizer && $organizer->default_commission_mode) {
-                                                    $modeText = $organizer->default_commission_mode === 'included' ? 'Included' : 'Added on top';
-                                                    return "{$modeText} (organizer default)";
+                                                    $modeText = $organizer->default_commission_mode === 'included' ? $t('Inclus', 'Included') : $t('Adăugat', 'Added on top');
+                                                    return "{$modeText} " . $t('(implicit organizator)', '(organizer default)');
                                                 }
                                             }
                                             $mode = $marketplace->commission_mode ?? 'included';
-                                            $modeText = $mode === 'included' ? 'Included' : 'Added on top';
-                                            return "{$modeText} (marketplace default)";
+                                            $modeText = $mode === 'included' ? $t('Inclus', 'Included') : $t('Adăugat', 'Added on top');
+                                            return "{$modeText} " . $t('(implicit marketplace)', '(marketplace default)');
                                         })
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty to use organizer\'s or marketplace default mode')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Lasă gol pentru a folosi modul implicit al organizatorului sau marketplace-ului', 'Leave empty to use organizer\'s or marketplace default mode'))
                                         ->live()
                                         ->nullable(),
 
@@ -1001,50 +1015,50 @@ class EventResource extends Resource
                                         ->default(false),
 
                                     Forms\Components\TextInput::make('commission_rate')
-                                        ->label('Custom Commission Rate (%)')
+                                        ->label($t('Rată comision personalizată (%)', 'Custom Commission Rate (%)'))
                                         ->numeric()
                                         ->minValue(0)
                                         ->maxValue(50)
                                         ->step(0.5)
                                         ->suffix('%')
-                                        ->placeholder(function (SGet $get) use ($marketplace) {
+                                        ->placeholder(function (SGet $get) use ($marketplace, $t) {
                                             $organizerId = $get('marketplace_organizer_id');
                                             if ($organizerId) {
                                                 $organizer = MarketplaceOrganizer::find($organizerId);
                                                 if ($organizer && $organizer->commission_rate !== null) {
-                                                    return $organizer->commission_rate . '% (organizer default)';
+                                                    return $organizer->commission_rate . '% ' . $t('(implicit organizator)', '(organizer default)');
                                                 }
                                             }
-                                            return ($marketplace->commission_rate ?? 5) . '% (marketplace default)';
+                                            return ($marketplace->commission_rate ?? 5) . '% ' . $t('(implicit marketplace)', '(marketplace default)');
                                         })
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty to use organizer\'s or marketplace default rate')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Lasă gol pentru a folosi rata implicită a organizatorului sau marketplace-ului', 'Leave empty to use organizer\'s or marketplace default rate'))
                                         ->live()
                                         ->nullable()
                                         ->visible(fn (SGet $get) => !$get('use_fixed_commission')),
 
                                     Forms\Components\TextInput::make('target_price')
-                                        ->label('Door Price')
+                                        ->label($t('Preț la intrare', 'Door Price'))
                                         ->numeric()
                                         ->minValue(0)
                                         ->step(0.01)
                                         ->suffix($marketplace?->currency ?? 'RON')
-                                        ->placeholder('e.g. 100.00')
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Reference price for planning and negotiations. Not displayed publicly.'),
+                                        ->placeholder($t('ex: 100.00', 'e.g. 100.00'))
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Preț de referință pentru planificare și negocieri. Nu este afișat public.', 'Reference price for planning and negotiations. Not displayed publicly.')),
                                 ]),
 
                                 Forms\Components\Repeater::make('ticketTypes')
                                     ->relationship()
-                                    ->label('Ticket types')
+                                    ->label($t('Tipuri de bilete', 'Ticket types'))
                                     ->collapsible()
-                                    ->addActionLabel('Add ticket type')
+                                    ->addActionLabel($t('Adaugă tip bilet', 'Add ticket type'))
                                     ->itemLabel(fn (array $state) => ($state['is_active'] ?? true)
-                                        ? '✓ ' . ($state['name'] ?? 'Ticket')
-                                        : '○ ' . ($state['name'] ?? 'Ticket'))
+                                        ? '✓ ' . ($state['name'] ?? $t('Bilet', 'Ticket'))
+                                        : '○ ' . ($state['name'] ?? $t('Bilet', 'Ticket')))
                                     ->columns(12)
                                     ->schema([
                                         Forms\Components\TextInput::make('name')
-                                            ->label('Name')
-                                            ->placeholder('e.g. Early Bird, Standard, VIP')
+                                            ->label($t('Nume', 'Name'))
+                                            ->placeholder($t('ex: Early Bird, Standard, VIP', 'e.g. Early Bird, Standard, VIP'))
                                             ->datalist(['Early Bird','Standard','VIP','Backstage','Student','Senior','Child'])
                                             ->required()
                                             ->columnSpan(6)
@@ -1055,24 +1069,24 @@ class EventResource extends Resource
                                             }),
                                         Forms\Components\TextInput::make('sku')
                                             ->label('SKU')
-                                            ->placeholder('AUTO-GEN if left empty')
+                                            ->placeholder($t('Se generează automat dacă lași gol', 'AUTO-GEN if left empty'))
                                             ->columnSpan(6),
 
                                         Forms\Components\Textarea::make('description')
-                                            ->label('Description')
-                                            ->placeholder('Optional ticket type description (e.g. "Includes backstage access and meet & greet")')
+                                            ->label($t('Descriere', 'Description'))
+                                            ->placeholder($t('Descriere opțională tip bilet (ex: "Include acces backstage și meet & greet")', 'Optional ticket type description (e.g. "Includes backstage access and meet & greet")'))
                                             ->rows(2)
                                             ->columnSpan(12),
 
                                         SC\Grid::make(3)->schema([
                                             Forms\Components\TextInput::make('currency')
-                                                ->label('Currency')
+                                                ->label($t('Monedă', 'Currency'))
                                                 ->default($marketplace?->currency ?? 'RON')
                                                 ->disabled()
                                                 ->dehydrated(true),
                                             Forms\Components\TextInput::make('price_max')
-                                                ->label('Price')
-                                                ->placeholder('e.g. 120.00')
+                                                ->label($t('Preț', 'Price'))
+                                                ->placeholder($t('ex: 120.00', 'e.g. 120.00'))
                                                 ->numeric()
                                                 ->minValue(0)
                                                 ->required()
@@ -1091,15 +1105,17 @@ class EventResource extends Resource
                                                     }
                                                 }),
                                             Forms\Components\TextInput::make('capacity')
-                                                ->label('Stoc bilete')
-                                                ->placeholder('Necompletat = 0 bilete')
+                                                ->label($t('Stoc bilete', 'Ticket stock'))
+                                                ->placeholder($t('Necompletat = 0 bilete', 'Empty = 0 tickets'))
                                                 ->numeric()
                                                 ->minValue(0)
                                                 ->nullable()
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Dacă lași necompletat, stocul va fi 0.')
-                                                ->hint(fn ($record) => $record && $record->quota_sold > 0
-                                                    ? "Vândute: {$record->quota_sold}"
-                                                    : null)
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă lași necompletat, stocul va fi 0.', 'If left empty, stock will be 0.'))
+                                                ->hint(function ($record) use ($t) {
+                                                    return $record && $record->quota_sold > 0
+                                                        ? $t('Vândute', 'Sold') . ": {$record->quota_sold}"
+                                                        : null;
+                                                })
                                                 ->live(onBlur: true)
                                                 ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                     // Auto-generate series_end based on quantity if not already set
@@ -1128,7 +1144,7 @@ class EventResource extends Resource
 
                                         // Seating Sections selector (visible when event has a seating layout)
                                         Forms\Components\Select::make('seatingSections')
-                                            ->label('Assigned Seating Sections')
+                                            ->label($t('Secțiuni locuri asignate', 'Assigned Seating Sections'))
                                             ->relationship('seatingSections', 'name')
                                             ->multiple()
                                             ->preload()
@@ -1172,7 +1188,7 @@ class EventResource extends Resource
                                                     $set('capacity', $totalSeats);
                                                 }
                                             })
-                                            ->helperText('Assign seating sections to this ticket type. Sections already assigned to other ticket types are disabled.')
+                                            ->helperText($t('Atribuie secțiuni de locuri acestui tip de bilet. Secțiunile deja atribuite altor tipuri de bilete sunt dezactivate.', 'Assign seating sections to this ticket type. Sections already assigned to other ticket types are disabled.'))
                                             ->columnSpan(12),
 
                                         // Visual preview of selected sections
@@ -1380,7 +1396,7 @@ class EventResource extends Resource
 
                                         // Sale toggle - controls visibility of sale fields
                                         Forms\Components\Toggle::make('has_sale')
-                                            ->label('Enable Sale Discount')
+                                            ->label($t('Activează reducere', 'Enable Sale Discount'))
                                             ->live()
                                             ->default(false)
                                             ->dehydrated(false)
@@ -1395,8 +1411,8 @@ class EventResource extends Resource
 
                                         SC\Grid::make(4)->schema([
                                             Forms\Components\TextInput::make('price')
-                                                ->label('Sale price')
-                                                ->placeholder('leave empty if no sale')
+                                                ->label($t('Preț promoțional', 'Sale price'))
+                                                ->placeholder($t('lasă gol dacă nu e reducere', 'leave empty if no sale'))
                                                 ->numeric()
                                                 ->minValue(0)
                                                 ->live(debounce: 300)
@@ -1411,8 +1427,8 @@ class EventResource extends Resource
                                                     }
                                                 }),
                                             Forms\Components\TextInput::make('discount_percent')
-                                                ->label('Discount %')
-                                                ->placeholder('e.g. 20')
+                                                ->label($t('Reducere %', 'Discount %'))
+                                                ->placeholder($t('ex: 20', 'e.g. 20'))
                                                 ->numeric()
                                                 ->minValue(0)
                                                 ->maxValue(100)
@@ -1441,7 +1457,7 @@ class EventResource extends Resource
                                                     $set('price', round($price * (1 - $disc/100), 2));
                                                 }),
                                             Forms\Components\DateTimePicker::make('sales_start_at')
-                                                ->label('Sale starts')
+                                                ->label($t('Început reducere', 'Sale starts'))
                                                 ->native(false)
                                                 ->seconds(false)
                                                 ->displayFormat('Y-m-d H:i')
@@ -1466,7 +1482,7 @@ class EventResource extends Resource
                                                     }
                                                 }),
                                             Forms\Components\DateTimePicker::make('sales_end_at')
-                                                ->label('Sale ends')
+                                                ->label($t('Sfârșit reducere', 'Sale ends'))
                                                 ->native(false)
                                                 ->seconds(false)
                                                 ->displayFormat('Y-m-d H:i'),
@@ -1476,22 +1492,22 @@ class EventResource extends Resource
 
                                         // Sale stock - limit how many tickets can be sold at sale price
                                         Forms\Components\TextInput::make('sale_stock')
-                                            ->label('Sale stoc')
-                                            ->placeholder('Nelimitat')
+                                            ->label($t('Stoc reducere', 'Sale stock'))
+                                            ->placeholder($t('Nelimitat', 'Unlimited'))
                                             ->numeric()
                                             ->minValue(0)
                                             ->nullable()
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de bilete disponibile la preț redus. Când se consumă stocul, oferta se închide automat.')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul de bilete disponibile la preț redus. Când se consumă stocul, oferta se închide automat.', 'Number of tickets available at discounted price. When stock runs out, the offer closes automatically.'))
                                             ->visible(fn (SGet $get) => $get('has_sale'))
                                             ->columnSpan(6),
 
                                         // Ticket Series Fields
                                         SC\Grid::make(2)->schema([
                                             Forms\Components\TextInput::make('series_start')
-                                                ->label('Serie start bilete')
-                                                ->placeholder('Ex: AMB-5-00001 sau AMB-SKU-00001')
+                                                ->label($t('Serie start bilete', 'Ticket series start'))
+                                                ->placeholder($t('Ex: AMB-5-00001 sau AMB-SKU-00001', 'E.g. AMB-5-00001 or AMB-SKU-00001'))
                                                 ->maxLength(50)
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de start al seriei de bilete. Se generează automat folosind ID-ul tipului de bilet sau SKU.')
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul de start al seriei de bilete. Se generează automat folosind ID-ul tipului de bilet sau SKU.', 'Ticket series start number. Auto-generated using the ticket type ID or SKU.'))
                                                 ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
                                                     // Auto-generate if not set and capacity exists
                                                     if (!$state) {
@@ -1505,10 +1521,10 @@ class EventResource extends Resource
                                                     }
                                                 }),
                                             Forms\Components\TextInput::make('series_end')
-                                                ->label('Serie end bilete')
-                                                ->placeholder('Ex: AMB-5-00500 sau AMB-SKU-00500')
+                                                ->label($t('Serie end bilete', 'Ticket series end'))
+                                                ->placeholder($t('Ex: AMB-5-00500 sau AMB-SKU-00500', 'E.g. AMB-5-00500 or AMB-SKU-00500'))
                                                 ->maxLength(50)
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de final al seriei de bilete. Se generează automat din capacitate.')
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul de final al seriei de bilete. Se generează automat din capacitate.', 'Ticket series end number. Auto-generated from capacity.'))
                                                 ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
                                                     // Auto-generate if not set and capacity exists
                                                     if (!$state) {
@@ -1525,31 +1541,31 @@ class EventResource extends Resource
                                         ])->columnSpan(12),
 
                                         Forms\Components\Toggle::make('is_active')
-                                            ->label('Active?')
+                                            ->label($t('Activ?', 'Active?'))
                                             ->default(true)
                                             ->live()
                                             ->columnSpan(3),
 
                                         Forms\Components\DateTimePicker::make('active_until')
-                                            ->label('Active until')
+                                            ->label($t('Activ până la', 'Active until'))
                                             ->native(false)
                                             ->seconds(false)
                                             ->displayFormat('Y-m-d H:i')
                                             ->minDate(now())
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
                                             ->visible(fn (SGet $get) => $get('is_active'))
                                             ->columnSpan(5),
 
                                         Forms\Components\Toggle::make('is_refundable')
-                                            ->label('Returnabil')
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet')
+                                            ->label($t('Returnabil', 'Refundable'))
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet', 'If the event is cancelled or postponed, customers can request a refund for this ticket type'))
                                             ->default(false)
                                             ->columnSpan(4),
 
                                         // Scheduling fields - shown when ticket is NOT active
                                         Forms\Components\DateTimePicker::make('scheduled_at')
-                                            ->label('Schedule Activation')
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'When this ticket type should automatically become active')
+                                            ->label($t('Programează activare', 'Schedule Activation'))
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când acest tip de bilet ar trebui să devină automat activ', 'When this ticket type should automatically become active'))
                                             ->native(false)
                                             ->seconds(false)
                                             ->displayFormat('Y-m-d H:i')
@@ -1558,58 +1574,58 @@ class EventResource extends Resource
                                             ->columnSpan(4),
 
                                         Forms\Components\Toggle::make('autostart_when_previous_sold_out')
-                                            ->label('Autostart when previous sold out')
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Activate automatically when previous ticket types reach 0 capacity')
+                                            ->label($t('Autostart când precedentul e sold out', 'Autostart when previous sold out'))
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Activează automat când tipurile de bilete anterioare ajung la capacitate 0', 'Activate automatically when previous ticket types reach 0 capacity'))
                                             ->visible(fn (SGet $get) => !$get('is_active'))
                                             ->columnSpan(4),
 
                                         // Bulk discounts
                                         Forms\Components\Repeater::make('bulk_discounts')
-                                            ->label('Bulk discounts')
+                                            ->label($t('Reduceri la cantitate', 'Bulk discounts'))
                                             ->collapsed()
                                             ->default([])
-                                            ->addActionLabel('Add bulk rule')
-                                            ->itemLabel(fn (array $state) => $state['rule_type'] ?? 'Rule')
+                                            ->addActionLabel($t('Adaugă regulă', 'Add bulk rule'))
+                                            ->itemLabel(fn (array $state) => $state['rule_type'] ?? $t('Regulă', 'Rule'))
                                             ->columns(12)
                                             ->schema([
                                                 Forms\Components\Select::make('rule_type')
-                                                    ->label('Rule type')
+                                                    ->label($t('Tip regulă', 'Rule type'))
                                                     ->options([
-                                                        'buy_x_get_y' => 'Buy X get Y free',
-                                                        'buy_x_percent_off' => 'Buy X tickets → % off',
-                                                        'amount_off_per_ticket' => 'Amount off per ticket (min qty)',
-                                                        'bundle_price' => 'Bundle price (X tickets for total)',
+                                                        'buy_x_get_y' => $t('Cumperi X primești Y gratis', 'Buy X get Y free'),
+                                                        'buy_x_percent_off' => $t('Cumperi X bilete → % reducere', 'Buy X tickets → % off'),
+                                                        'amount_off_per_ticket' => $t('Reducere pe bilet (min cantitate)', 'Amount off per ticket (min qty)'),
+                                                        'bundle_price' => $t('Preț pachet (X bilete la preț total)', 'Bundle price (X tickets for total)'),
                                                     ])
                                                     ->required()
                                                     ->columnSpan(3)
                                                     ->live(),
                                                 Forms\Components\TextInput::make('buy_qty')
-                                                    ->label('Buy X')
+                                                    ->label($t('Cumperi X', 'Buy X'))
                                                     ->numeric()->minValue(1)
                                                     ->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('get_qty')
-                                                    ->label('Get Y free')
+                                                    ->label($t('Primești Y gratis', 'Get Y free'))
                                                     ->numeric()->minValue(1)
                                                     ->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('min_qty')
-                                                    ->label('Min qty')
+                                                    ->label($t('Cantitate min', 'Min qty'))
                                                     ->numeric()->minValue(1)
                                                     ->visible(fn ($get) => in_array($get('rule_type'), ['buy_x_percent_off','amount_off_per_ticket','bundle_price']))
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('percent_off')
-                                                    ->label('% off')
+                                                    ->label($t('% reducere', '% off'))
                                                     ->numeric()->minValue(1)->maxValue(100)
                                                     ->visible(fn ($get) => $get('rule_type') === 'buy_x_percent_off')
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('amount_off')
-                                                    ->label('Amount off')
+                                                    ->label($t('Reducere sumă', 'Amount off'))
                                                     ->numeric()->minValue(0.01)
                                                     ->visible(fn ($get) => $get('rule_type') === 'amount_off_per_ticket')
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('bundle_total_price')
-                                                    ->label('Bundle total')
+                                                    ->label($t('Total pachet', 'Bundle total'))
                                                     ->numeric()->minValue(0.01)
                                                     ->visible(fn ($get) => $get('rule_type') === 'bundle_price')
                                                     ->columnSpan(3),
@@ -1623,22 +1639,22 @@ class EventResource extends Resource
                 ->collapsed()
                 ->schema([
                     Forms\Components\Select::make('seo_presets')
-                        ->label('Add SEO keys from template')
+                        ->label($t('Adaugă chei SEO din șablon', 'Add SEO keys from template'))
                         ->multiple()
                         ->dehydrated(false)
                         ->options([
-                            'core'        => 'Core (title/description/canonical/robots)',
-                            'intl'        => 'International (hreflang, og:locale)',
+                            'core'        => $t('De bază (title/description/canonical/robots)', 'Core (title/description/canonical/robots)'),
+                            'intl'        => $t('Internațional (hreflang, og:locale)', 'International (hreflang, og:locale)'),
                             'open_graph'  => 'Open Graph (og:*)',
-                            'article'     => 'OG Article extras',
-                            'product'     => 'OG Product extras',
+                            'article'     => $t('OG Articol extras', 'OG Article extras'),
+                            'product'     => $t('OG Produs extras', 'OG Product extras'),
                             'twitter'     => 'Twitter Cards',
-                            'jsonld'      => 'Structured Data (JSON-LD)',
-                            'robots_adv'  => 'Robots advanced',
-                            'verify'      => 'Verification (Google/Bing/etc.)',
+                            'jsonld'      => $t('Date structurate (JSON-LD)', 'Structured Data (JSON-LD)'),
+                            'robots_adv'  => $t('Robots avansat', 'Robots advanced'),
+                            'verify'      => $t('Verificare (Google/Bing/etc.)', 'Verification (Google/Bing/etc.)'),
                             'feeds'       => 'Feeds (RSS/Atom/oEmbed)',
                         ])
-                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Select templates to add keys. Values will be pre-filled from event data where available.')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează șabloane pentru a adăuga chei. Valorile vor fi pre-completate din datele evenimentului unde este disponibil.', 'Select templates to add keys. Values will be pre-filled from event data where available.'))
                         ->live()
                         ->afterStateUpdated(function ($state, SSet $set, SGet $get) use ($marketplaceLanguage, $marketplace) {
                             $seo = (array) ($get('seo') ?? []);
@@ -1803,8 +1819,8 @@ class EventResource extends Resource
                         }),
 
                     Forms\Components\KeyValue::make('seo')
-                        ->keyLabel('Meta key')
-                        ->valueLabel('Meta value')
+                        ->keyLabel($t('Cheie meta', 'Meta key'))
+                        ->valueLabel($t('Valoare meta', 'Meta value'))
                         ->addable()
                         ->deletable()
                         ->reorderable()
@@ -1815,7 +1831,7 @@ class EventResource extends Resource
                             'canonical_url'    => '',
                             'robots'           => 'index,follow',
                         ])
-                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Add custom SEO meta tags. Use templates above to quickly add common sets.'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Adaugă tag-uri meta SEO personalizate. Folosește șabloanele de mai sus pentru a adăuga rapid seturi comune.', 'Add custom SEO meta tags. Use templates above to quickly add common sets.')),
                 ]),
                     ]),
                 // ========== COLOANA DREAPTĂ - SIDEBAR (1/4) ==========
@@ -1824,26 +1840,26 @@ class EventResource extends Resource
                     ->schema([
                         SC\Grid::make(1)->schema([
                             Forms\Components\Toggle::make('is_published')
-                                ->label('Publicat')
-                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Când este activat, evenimentul va fi vizibil pe site-ul marketplace. Când este dezactivat, evenimentul nu va apărea nicăieri.')
+                                ->label($t('Publicat', 'Published'))
+                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când este activat, evenimentul va fi vizibil pe site-ul marketplace. Când este dezactivat, evenimentul nu va apărea nicăieri.', 'When enabled, the event will be visible on the marketplace site. When disabled, the event will not appear anywhere.'))
                                 ->onIcon('heroicon-m-eye')
                                 ->offIcon('heroicon-m-eye-slash')
                                 ->default(true)
                                 ->live(),
                             Forms\Components\Placeholder::make('preview_link')
-                                ->content(function (?Event $record) use ($marketplace) {
+                                ->content(function (?Event $record) use ($marketplace, $t) {
                                     if (!$record || !$record->exists) {
-                                        return new \Illuminate\Support\HtmlString('<span class="text-gray-500">Salvați evenimentul pentru a genera link-ul de previzualizare</span>');
+                                        return new \Illuminate\Support\HtmlString('<span class="text-gray-500">' . $t('Salvați evenimentul pentru a genera link-ul de previzualizare', 'Save the event to generate the preview link') . '</span>');
                                     }
                                     // Use the marketplace from form context (not from record) for consistency
                                     $eventMarketplace = $record->marketplaceClient ?? $marketplace;
                                     if (!$eventMarketplace) {
-                                        return new \Illuminate\Support\HtmlString('<span class="text-warning-600">Niciun marketplace configurat</span>');
+                                        return new \Illuminate\Support\HtmlString('<span class="text-warning-600">' . $t('Niciun marketplace configurat', 'No marketplace configured') . '</span>');
                                     }
                                     // MarketplaceClient has a single 'domain' field, not a 'domains' relationship
                                     $domain = $eventMarketplace->domain;
                                     if (!$domain) {
-                                        return new \Illuminate\Support\HtmlString('<span class="text-warning-600">Niciun domeniu configurat pentru marketplace</span>');
+                                        return new \Illuminate\Support\HtmlString('<span class="text-warning-600">' . $t('Niciun domeniu configurat pentru marketplace', 'No domain configured for marketplace') . '</span>');
                                     }
                                     // Strip any existing protocol from domain (handle various formats)
                                     $domain = preg_replace('#^(https?:?/?/?|//)#i', '', $domain);
@@ -1856,11 +1872,11 @@ class EventResource extends Resource
                                         '<div class="space-y-2">' .
                                         '<a href="' . e($eventUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-primary-600 hover:underline">' .
                                             '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>' .
-                                            'Vezi pe site' .
+                                            $t('Vezi pe site', 'View on site') .
                                         '</a>' .
                                         (!$record->is_published ? '<br><a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-warning-600 hover:underline text-sm">' .
                                             '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' .
-                                            'Previzualizare (doar admin)' .
+                                            $t('Previzualizare (doar admin)', 'Preview (admin only)') .
                                         '</a>' : '') .
                                         '</div>'
                                     );
@@ -1932,16 +1948,16 @@ class EventResource extends Resource
                             }),
 
                         // 1. Quick Stats Card - Vânzări LIVE
-                        SC\Section::make(fn () => new HtmlString('Vânzări <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 ring-1 ring-inset ring-green-500/30">LIVE</span>'))
+                        SC\Section::make(fn () => new HtmlString($t('Vânzări', 'Sales') . ' <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 ring-1 ring-inset ring-green-500/30">LIVE</span>'))
                             ->icon('heroicon-o-chart-bar')
                             ->compact()
                             ->extraAttributes(['class' => 'fi-section-sales-live'])
                             ->schema([
                                 Forms\Components\Placeholder::make('stats_overview')
                                     ->hiddenLabel()
-                                    ->content(function (?Event $record) {
+                                    ->content(function (?Event $record) use ($t) {
                                         if (!$record || !$record->exists) {
-                                            return new HtmlString('<div class="text-sm text-gray-500">Salvează evenimentul pentru a vedea statisticile.</div>');
+                                            return new HtmlString('<div class="text-sm text-gray-500">' . $t('Salvează evenimentul pentru a vedea statisticile.', 'Save the event to see statistics.') . '</div>');
                                         }
 
                                         // Get stats from the event or calculate from ticket types
@@ -1960,20 +1976,26 @@ class EventResource extends Resource
                                             ? number_format($totalRevenue / 1000, 1) . 'K'
                                             : number_format($totalRevenue, 0);
 
+                                        $ticketsLabel = $t('Bilete', 'Tickets');
+                                        $revenueLabel = $t('Venituri (RON)', 'Revenue (RON)');
+                                        $capacityLabel = $t('Capacitate totală', 'Total capacity');
+                                        $conversionLabel = $t('Conversie', 'Conversion');
+                                        $viewsLabel = $t('Vizualizări', 'Views');
+
                                         return new HtmlString("
                                             <div class='grid grid-cols-2 gap-3'>
                                                 <div class='bg-gray-800 rounded-lg p-3 text-center'>
                                                     <div class='text-2xl font-bold text-white'>" . number_format($ticketsSold) . "</div>
-                                                    <div class='text-xs text-gray-400'>Bilete</div>
+                                                    <div class='text-xs text-gray-400'>{$ticketsLabel}</div>
                                                 </div>
                                                 <div class='bg-gray-800 rounded-lg p-3 text-center'>
                                                     <div class='text-2xl font-bold text-emerald-400'>{$revenueFormatted}</div>
-                                                    <div class='text-xs text-gray-400'>Venituri (RON)</div>
+                                                    <div class='text-xs text-gray-400'>{$revenueLabel}</div>
                                                 </div>
                                             </div>
                                             <div class='mt-3'>
                                                 <div class='flex justify-between text-xs text-gray-400 mb-1'>
-                                                    <span>Capacitate totală</span>
+                                                    <span>{$capacityLabel}</span>
                                                     <span>" . number_format($ticketsSold) . " / " . number_format($totalCapacity) . " ({$percentSold}%)</span>
                                                 </div>
                                                 <div class='h-2 bg-gray-700 rounded-full overflow-hidden'>
@@ -1981,11 +2003,11 @@ class EventResource extends Resource
                                                 </div>
                                             </div>
                                             <div class='mt-3 flex justify-between text-xs'>
-                                                <span class='text-gray-400'>Conversie</span>
+                                                <span class='text-gray-400'>{$conversionLabel}</span>
                                                 <span class='text-primary-400 font-semibold'>{$conversion}%</span>
                                             </div>
                                             <div class='flex justify-between text-xs mt-1'>
-                                                <span class='text-gray-400'>Vizualizări</span>
+                                                <span class='text-gray-400'>{$viewsLabel}</span>
                                                 <span class='text-white'>" . number_format($views) . "</span>
                                             </div>
                                         ");
@@ -1993,14 +2015,14 @@ class EventResource extends Resource
                             ]),
 
                         // Blocked Seats Overview
-                        SC\Section::make('Locuri Blocate')
+                        SC\Section::make($t('Locuri Blocate', 'Blocked Seats'))
                             ->icon('heroicon-o-lock-closed')
                             ->compact()
                             ->visible(fn (?Event $record) => $record && $record->exists && $record->venue?->seatingLayouts()->withoutGlobalScopes()->where('status', 'published')->exists())
                             ->schema([
                                 Forms\Components\Placeholder::make('blocked_seats_overview')
                                     ->hiddenLabel()
-                                    ->content(function (?Event $record) {
+                                    ->content(function (?Event $record) use ($t) {
                                         if (!$record || !$record->exists) {
                                             return '';
                                         }
@@ -2011,7 +2033,7 @@ class EventResource extends Resource
                                             ->first();
 
                                         if (!$eventSeating) {
-                                            return new HtmlString('<div class="text-xs text-gray-500">Nu există layout de locuri activ.</div>');
+                                            return new HtmlString('<div class="text-xs text-gray-500">' . $t('Nu există layout de locuri activ.', 'No active seating layout.') . '</div>');
                                         }
 
                                         // Get all blocked seats
@@ -2023,7 +2045,7 @@ class EventResource extends Resource
                                             ->get();
 
                                         if ($blockedSeats->isEmpty()) {
-                                            return new HtmlString('<div class="text-xs text-gray-500">Nu există locuri blocate.</div>');
+                                            return new HtmlString('<div class="text-xs text-gray-500">' . $t('Nu există locuri blocate.', 'No blocked seats.') . '</div>');
                                         }
 
                                         // Get invitations for this event that have seat_ref
@@ -2097,7 +2119,7 @@ class EventResource extends Resource
                             ]),
 
                             // 2. Organizer Quick Info
-                        SC\Section::make('Organizator')
+                        SC\Section::make($t('Organizator', 'Organizer'))
                             ->icon('heroicon-o-building-office-2')
                             ->compact()
                             ->schema([
@@ -2113,7 +2135,7 @@ class EventResource extends Resource
                                     ->searchable()
                                     ->preload()
                                     ->live()
-                                    ->placeholder('Selecteaza organizator...')
+                                    ->placeholder($t('Selectează organizator...', 'Select organizer...'))
                                     ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
                                         // When organizer changes, update commission info and ticket terms
                                         if ($state) {
@@ -2135,13 +2157,13 @@ class EventResource extends Resource
                                             }
                                         }
                                     })
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'The selected organizer will receive payouts for this event')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Organizatorul selectat va primi plățile pentru acest eveniment', 'The selected organizer will receive payouts for this event'))
                                     ->prefixIcon('heroicon-m-building-office-2'),
 
                                 Forms\Components\Placeholder::make('organizer_quick_info')
                                     ->hiddenLabel()
                                     ->visible(fn (SGet $get) => (bool) $get('marketplace_organizer_id'))
-                                    ->content(function (SGet $get) use ($marketplace) {
+                                    ->content(function (SGet $get) use ($marketplace, $t) {
                                         $organizerId = $get('marketplace_organizer_id');
                                         if (!$organizerId) return '';
                                         
@@ -2154,20 +2176,25 @@ class EventResource extends Resource
                                         if (!$organizerId) return '';
 
                                         $status = match($organizer->status) {
-                                            'active' => '<span class="text-green-600">Activ</span>',
-                                            'pending' => '<span class="text-yellow-600">În așteptare</span>',
-                                            'suspended' => '<span class="text-red-600">Suspendat</span>',
+                                            'active' => '<span class="text-green-600">' . $t('Activ', 'Active') . '</span>',
+                                            'pending' => '<span class="text-yellow-600">' . $t('În așteptare', 'Pending') . '</span>',
+                                            'suspended' => '<span class="text-red-600">' . $t('Suspendat', 'Suspended') . '</span>',
                                             default => $organizer->status,
                                         };
 
                                         $verified = $organizer->verified_at
-                                            ? '<span class="text-green-600">✓ Verificat</span>'
-                                            : '<span class="text-gray-500">Neverificat</span>';
+                                            ? '<span class="text-green-600">✓ ' . $t('Verificat', 'Verified') . '</span>'
+                                            : '<span class="text-gray-500">' . $t('Neverificat', 'Unverified') . '</span>';
 
                                         $commissionRate = $organizer->commission_rate ?? $marketplace?->commission_rate ?? 5;
                                         $commissionMode = $organizer->default_commission_mode ?? $marketplace->commission_mode ?? 'included';
-                                        $commissionModeLabel = $commissionMode === 'included' ? 'inclus' : 'peste';
-                                        
+                                        $commissionModeLabel = $commissionMode === 'included' ? $t('inclus', 'included') : $t('peste', 'on top');
+
+                                        $statusLabel = 'Status';
+                                        $commissionLabel = $t('Comision', 'Commission');
+                                        $eventsLabel = $t('Evenimente', 'Events');
+                                        $revenueLabel = $t('Venit', 'Revenue');
+
                                         return new HtmlString("
                                             <div class='text-sm'>
                                                 <div class='pb-2 flex items-center gap-2'>
@@ -2180,19 +2207,19 @@ class EventResource extends Resource
                                                     </div>
                                                 </div>
                                                 <div class='flex justify-between py-1 border-t border-gray-700'>
-                                                    <span class='text-gray-400'>Status</span>
+                                                    <span class='text-gray-400'>{$statusLabel}</span>
                                                     <span class='text-white font-medium'>{$status} | {$verified}</span>
                                                 </div>
                                                 <div class='flex justify-between py-1 border-t border-gray-700'>
-                                                    <span class='text-gray-400'>Comision ({$commissionModeLabel})</span>
+                                                    <span class='text-gray-400'>{$commissionLabel} ({$commissionModeLabel})</span>
                                                     <span class='text-white font-medium'>{$commissionRate}%</span>
                                                 </div>
                                                 <div class='flex justify-between py-1 border-t border-gray-700'>
-                                                    <span class='text-gray-400'>Evenimente</span>
+                                                    <span class='text-gray-400'>{$eventsLabel}</span>
                                                     <span class='text-white font-medium'>{$organizer->total_events}</span>
                                                 </div>
                                                 <div class='flex justify-between py-1 border-t border-gray-700'>
-                                                    <span class='text-gray-400'>Venit</span>
+                                                    <span class='text-gray-400'>{$revenueLabel}</span>
                                                     <span class='text-white font-medium'>" . number_format($organizer->total_revenue, 2) . " RON</span>
                                                 </div>
                                             </div>
@@ -2201,22 +2228,22 @@ class EventResource extends Resource
                             ]),
 
                         // 4. Quick Actions
-                        SC\Section::make('Acțiuni rapide')
+                        SC\Section::make($t('Acțiuni rapide', 'Quick Actions'))
                             ->icon('heroicon-o-bolt')
                             ->compact()
                             ->collapsed()
                             ->schema([
                                 SC\Actions::make([
                                     Action::make('duplicate')
-                                        ->label('Duplică')
+                                        ->label($t('Duplică', 'Duplicate'))
                                         ->icon('heroicon-o-document-duplicate')
                                         ->color('gray')
                                         ->size('sm')
                                         ->visible(fn (?Event $record) => $record && $record->exists)
                                         ->requiresConfirmation()
-                                        ->modalHeading('Duplică evenimentul')
-                                        ->modalDescription('Sigur vrei să duplici acest eveniment? Se va crea o copie draft fără bilete vândute.')
-                                        ->modalSubmitActionLabel('Duplică')
+                                        ->modalHeading($t('Duplică evenimentul', 'Duplicate event'))
+                                        ->modalDescription($t('Sigur vrei să duplici acest eveniment? Se va crea o copie draft fără bilete vândute.', 'Are you sure you want to duplicate this event? A draft copy will be created without sold tickets.'))
+                                        ->modalSubmitActionLabel($t('Duplică', 'Duplicate'))
                                         ->action(function (?Event $record) {
                                             if (!$record) return;
 
@@ -2259,8 +2286,8 @@ class EventResource extends Resource
                                             $displayTitle = $newEvent->getTranslation('title') ?? 'Eveniment';
 
                                             \Filament\Notifications\Notification::make()
-                                                ->title('Eveniment duplicat')
-                                                ->body("Evenimentul \"{$displayTitle}\" a fost creat.")
+                                                ->title($t('Eveniment duplicat', 'Event duplicated'))
+                                                ->body($t('Evenimentul', 'Event') . " \"{$displayTitle}\" " . $t('a fost creat.', 'has been created.'))
                                                 ->success()
                                                 ->send();
 
@@ -2308,7 +2335,7 @@ class EventResource extends Resource
                                             ]);
                                         }),
                                     Action::make('statistics')
-                                        ->label('Statistici')
+                                        ->label($t('Statistici', 'Statistics'))
                                         ->icon('heroicon-o-chart-pie')
                                         ->color('gray')
                                         ->size('sm')
@@ -2317,12 +2344,12 @@ class EventResource extends Resource
                                 ])->fullWidth(),
                                 SC\Actions::make([
                                     Action::make('generate_document')
-                                        ->label('Generează')
+                                        ->label($t('Generează', 'Generate'))
                                         ->icon('heroicon-o-document-plus')
                                         ->color('gray')
                                         ->size('sm')
                                         ->visible(fn (?Event $record) => $record && $record->exists)
-                                        ->form(function () use ($marketplace) {
+                                        ->form(function () use ($marketplace, $t) {
                                             $templates = MarketplaceTaxTemplate::where('marketplace_client_id', $marketplace?->id)
                                                 ->where('is_active', true)
                                                 ->orderBy('name')
@@ -2331,24 +2358,24 @@ class EventResource extends Resource
 
                                             return [
                                                 Forms\Components\Select::make('template_id')
-                                                    ->label('Selectează template')
+                                                    ->label($t('Selectează template', 'Select template'))
                                                     ->options($templates)
                                                     ->required()
                                                     ->searchable()
-                                                    ->helperText('Alege un template de document pentru a genera PDF-ul.'),
+                                                    ->helperText($t('Alege un template de document pentru a genera PDF-ul.', 'Choose a document template to generate the PDF.')),
                                             ];
                                         })
-                                        ->modalHeading('Generează documente')
-                                        ->modalDescription('Selectează un template pentru a genera documentul PDF pentru acest eveniment.')
-                                        ->modalSubmitActionLabel('Generează')
+                                        ->modalHeading($t('Generează documente', 'Generate documents'))
+                                        ->modalDescription($t('Selectează un template pentru a genera documentul PDF pentru acest eveniment.', 'Select a template to generate the PDF document for this event.'))
+                                        ->modalSubmitActionLabel($t('Generează', 'Generate'))
                                         ->action(function (array $data, ?Event $record) {
                                             if (!$record) return;
 
                                             $template = MarketplaceTaxTemplate::find($data['template_id']);
                                             if (!$template) {
                                                 \Filament\Notifications\Notification::make()
-                                                    ->title('Eroare')
-                                                    ->body('Template-ul selectat nu a fost găsit.')
+                                                    ->title($t('Eroare', 'Error'))
+                                                    ->body($t('Template-ul selectat nu a fost găsit.', 'Selected template was not found.'))
                                                     ->danger()
                                                     ->send();
                                                 return;
@@ -2363,35 +2390,35 @@ class EventResource extends Resource
                                                 );
 
                                                 \Filament\Notifications\Notification::make()
-                                                    ->title('Document generat')
-                                                    ->body("Documentul \"{$document->filename}\" a fost generat cu succes.")
+                                                    ->title($t('Document generat', 'Document generated'))
+                                                    ->body($t('Documentul', 'Document') . " \"{$document->filename}\" " . $t('a fost generat cu succes.', 'was generated successfully.'))
                                                     ->success()
                                                     ->actions([
                                                         \Filament\Notifications\Actions\Action::make('download')
-                                                            ->label('Descarcă')
+                                                            ->label($t('Descarcă', 'Download'))
                                                             ->url(Storage::disk('public')->url($document->file_path))
                                                             ->openUrlInNewTab(),
                                                     ])
                                                     ->send();
                                             } catch (\Exception $e) {
                                                 \Filament\Notifications\Notification::make()
-                                                    ->title('Eroare la generare')
+                                                    ->title($t('Eroare la generare', 'Generation error'))
                                                     ->body($e->getMessage())
                                                     ->danger()
                                                     ->send();
                                             }
                                         }),
                                     Action::make('view_documents')
-                                        ->label('Documente')
+                                        ->label($t('Documente', 'Documents'))
                                         ->icon('heroicon-o-folder-open')
                                         ->color('gray')
                                         ->size('sm')
                                         ->visible(fn (?Event $record) => $record && $record->exists)
-                                        ->modalHeading('Documente generate')
+                                        ->modalHeading($t('Documente generate', 'Generated documents'))
                                         ->modalSubmitAction(false)
-                                        ->modalCancelActionLabel('Închide')
-                                        ->modalContent(function (?Event $record) {
-                                            if (!$record) return new HtmlString('<p>Nu există documente.</p>');
+                                        ->modalCancelActionLabel($t('Închide', 'Close'))
+                                        ->modalContent(function (?Event $record) use ($t) {
+                                            if (!$record) return new HtmlString('<p>' . $t('Nu există documente.', 'No documents.') . '</p>');
 
                                             // Fetch both document types for this event
                                             $generatedDocs = EventGeneratedDocument::where('event_id', $record->id)
@@ -2402,23 +2429,29 @@ class EventResource extends Resource
                                                 ->orderByDesc('created_at')
                                                 ->get();
 
+                                            $noDocsMsg = $t('Nu există documente generate pentru acest eveniment.', 'No documents generated for this event.');
+                                            $generateHint = $t('Folosește butonul "Generează" pentru a crea un nou document.', 'Use the "Generate" button to create a new document.');
+
                                             if ($generatedDocs->isEmpty() && $organizerDocs->isEmpty()) {
-                                                return new HtmlString('
-                                                    <div class="text-center py-8">
-                                                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                return new HtmlString("
+                                                    <div class=\"text-center py-8\">
+                                                        <svg class=\"mx-auto h-12 w-12 text-gray-400\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">
+                                                            <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z\"/>
                                                         </svg>
-                                                        <p class="mt-2 text-sm text-gray-500">Nu există documente generate pentru acest eveniment.</p>
-                                                        <p class="text-xs text-gray-400">Folosește butonul "Generează" pentru a crea un nou document.</p>
+                                                        <p class=\"mt-2 text-sm text-gray-500\">{$noDocsMsg}</p>
+                                                        <p class=\"text-xs text-gray-400\">{$generateHint}</p>
                                                     </div>
-                                                ');
+                                                ");
                                             }
 
                                             $html = '';
+                                            $organizerDocsLabel = $t('Documente organizator', 'Organizer documents');
+                                            $taxDocsLabel = $t('Documente fiscale', 'Tax documents');
+                                            $downloadLabel = $t('Descarcă', 'Download');
 
                                             // Organizer documents (cerere avizare, declaratie impozite)
                                             if ($organizerDocs->isNotEmpty()) {
-                                                $html .= '<div class="mb-4"><h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Documente organizator</h4>';
+                                                $html .= "<div class=\"mb-4\"><h4 class=\"text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2\">{$organizerDocsLabel}</h4>";
                                                 $html .= '<div class="divide-y divide-gray-200 dark:divide-gray-700">';
                                                 foreach ($organizerDocs as $doc) {
                                                     $typeLabel = OrganizerDocument::TYPES[$doc->document_type] ?? ucfirst($doc->document_type ?? '');
@@ -2449,7 +2482,7 @@ class EventResource extends Resource
                                                                 <svg class='w-4 h-4 mr-1' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                                                                     <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4'/>
                                                                 </svg>
-                                                                Descarcă
+                                                                {$downloadLabel}
                                                             </a>
                                                         </div>
                                                     ";
@@ -2460,7 +2493,7 @@ class EventResource extends Resource
                                             // Tax template generated documents
                                             if ($generatedDocs->isNotEmpty()) {
                                                 if ($organizerDocs->isNotEmpty()) {
-                                                    $html .= '<h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Documente fiscale</h4>';
+                                                    $html .= "<h4 class=\"text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2\">{$taxDocsLabel}</h4>";
                                                 }
                                                 $html .= '<div class="divide-y divide-gray-200 dark:divide-gray-700">';
                                                 foreach ($generatedDocs as $doc) {
@@ -2495,7 +2528,7 @@ class EventResource extends Resource
                                                                 <svg class='w-4 h-4 mr-1' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                                                                     <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4'/>
                                                                 </svg>
-                                                                Descarcă
+                                                                {$downloadLabel}
                                                             </a>
                                                         </div>
                                                     ";
@@ -2509,7 +2542,7 @@ class EventResource extends Resource
                             ]),
 
                         // 5. Activity Log (doar pentru edit)
-                        SC\Section::make('Activitate recentă')
+                        SC\Section::make($t('Activitate recentă', 'Recent activity'))
                             ->icon('heroicon-o-clock')
                             ->compact()
                             ->collapsed()
@@ -2517,7 +2550,7 @@ class EventResource extends Resource
                             ->schema([
                                 Forms\Components\Placeholder::make('recent_activity')
                                     ->hiddenLabel()
-                                    ->content(function (?Event $record) {
+                                    ->content(function (?Event $record) use ($t) {
                                         if (!$record) return '';
 
                                         $html = "<div class='space-y-3 text-sm'>";
@@ -2534,12 +2567,12 @@ class EventResource extends Resource
                                             if ($activities->isNotEmpty()) {
                                                 foreach ($activities as $activity) {
                                                     $eventName = match ($activity->event ?? $activity->description) {
-                                                        'created' => 'Creat',
-                                                        'updated' => 'Modificat',
-                                                        'deleted' => 'Șters',
-                                                        'published' => 'Publicat',
-                                                        'unpublished' => 'Nepublicat',
-                                                        default => ucfirst($activity->event ?? $activity->description ?? 'Acțiune'),
+                                                        'created' => $t('Creat', 'Created'),
+                                                        'updated' => $t('Modificat', 'Modified'),
+                                                        'deleted' => $t('Șters', 'Deleted'),
+                                                        'published' => $t('Publicat', 'Published'),
+                                                        'unpublished' => $t('Nepublicat', 'Unpublished'),
+                                                        default => ucfirst($activity->event ?? $activity->description ?? $t('Acțiune', 'Action')),
                                                     };
 
                                                     $iconBg = match ($activity->event ?? $activity->description) {
@@ -2578,13 +2611,15 @@ class EventResource extends Resource
                                             }
                                         } catch (\Exception $e) {
                                             // Fallback to basic info from timestamps
+                                            $lastModLabel = $t('Ultima modificare', 'Last modified');
+                                            $createdLabel = $t('Creat', 'Created');
                                             $html .= "
                                                 <div class='flex gap-2'>
                                                     <div class='w-6 h-6 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0'>
                                                         <svg class='w-3 h-3 text-gray-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'/></svg>
                                                     </div>
                                                     <div>
-                                                        <div class='text-gray-300'>Ultima modificare</div>
+                                                        <div class='text-gray-300'>{$lastModLabel}</div>
                                                         <div class='text-xs text-gray-500'>" . $record->updated_at->diffForHumans() . "</div>
                                                     </div>
                                                 </div>
@@ -2593,7 +2628,7 @@ class EventResource extends Resource
                                                         <svg class='w-3 h-3 text-emerald-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 6v6m0 0v6m0-6h6m-6 0H6'/></svg>
                                                     </div>
                                                     <div>
-                                                        <div class='text-gray-300'>Creat</div>
+                                                        <div class='text-gray-300'>{$createdLabel}</div>
                                                         <div class='text-xs text-gray-500'>" . $record->created_at->format('d M Y, H:i') . "</div>
                                                     </div>
                                                 </div>
@@ -2603,14 +2638,15 @@ class EventResource extends Resource
                                         $html .= "</div>";
 
                                         // Link to full activity log page
-                                        $html .= "<a href='" . static::getUrl('activity-log', ['record' => $record]) . "' class='mt-3 block text-xs text-primary-400 hover:text-primary-300 transition-colors'>Vezi tot istoricul →</a>";
+                                        $viewHistoryLabel = $t('Vezi tot istoricul →', 'View full history →');
+                                        $html .= "<a href='" . static::getUrl('activity-log', ['record' => $record]) . "' class='mt-3 block text-xs text-primary-400 hover:text-primary-300 transition-colors'>{$viewHistoryLabel}</a>";
 
                                         return new HtmlString($html);
                                     }),
                             ]),
 
                         // 6. Publish Checklist (sticky)
-                        SC\Section::make('Checklist publicare')
+                        SC\Section::make($t('Checklist publicare', 'Publish Checklist'))
                             ->icon('heroicon-o-clipboard-document-check')
                             ->compact()
                             ->collapsible()
@@ -2619,7 +2655,7 @@ class EventResource extends Resource
                                 Forms\Components\Placeholder::make('publish_checklist')
                                     ->hiddenLabel()
                                     ->live()
-                                    ->content(function (SGet $get, ?Event $record) use ($marketplaceLanguage) {
+                                    ->content(function (SGet $get, ?Event $record) use ($marketplaceLanguage, $t) {
                                         // Check ticket types from form state or database
                                         $ticketTypesData = $get('ticketTypes') ?? [];
                                         $hasTicketTypes = false;
@@ -2638,12 +2674,12 @@ class EventResource extends Resource
                                         }
 
                                         $checks = [
-                                            ['done' => !empty($get("title.{$marketplaceLanguage}")), 'label' => 'Titlu eveniment', 'icon' => 'text'],
-                                            ['done' => !empty($get('poster_url')) || !empty($get('hero_image_url')), 'label' => 'Imagini încărcate', 'icon' => 'image'],
-                                            ['done' => !empty($get('venue_id')) || !empty($get('venue_name')), 'label' => 'Locație setată', 'icon' => 'location'],
-                                            ['done' => !empty($get('event_date')) || !empty($get('range_start_date')), 'label' => 'Date setate', 'icon' => 'calendar'],
-                                            ['done' => !empty($get('marketplace_organizer_id')), 'label' => 'Organizator selectat', 'icon' => 'user'],
-                                            ['done' => $hasTicketTypes, 'label' => 'Tipuri de bilete', 'icon' => 'ticket'],
+                                            ['done' => !empty($get("title.{$marketplaceLanguage}")), 'label' => $t('Titlu eveniment', 'Event title'), 'icon' => 'text'],
+                                            ['done' => !empty($get('poster_url')) || !empty($get('hero_image_url')), 'label' => $t('Imagini încărcate', 'Images uploaded'), 'icon' => 'image'],
+                                            ['done' => !empty($get('venue_id')) || !empty($get('venue_name')), 'label' => $t('Locație setată', 'Location set'), 'icon' => 'location'],
+                                            ['done' => !empty($get('event_date')) || !empty($get('range_start_date')), 'label' => $t('Date setate', 'Dates set'), 'icon' => 'calendar'],
+                                            ['done' => !empty($get('marketplace_organizer_id')), 'label' => $t('Organizator selectat', 'Organizer selected'), 'icon' => 'user'],
+                                            ['done' => $hasTicketTypes, 'label' => $t('Tipuri de bilete', 'Ticket types'), 'icon' => 'ticket'],
                                         ];
 
                                         $completed = collect($checks)->where('done', true)->count();
@@ -2662,9 +2698,10 @@ class EventResource extends Resource
 
                                         // Status badge
                                         $statusColor = $isReady ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400';
-                                        $statusText = $isReady ? 'Gata pentru publicare' : 'Incomplet';
+                                        $statusText = $isReady ? $t('Gata pentru publicare', 'Ready to publish') : $t('Incomplet', 'Incomplete');
+                                        $completedLabel = $t('completate', 'completed');
                                         $html .= "<div class='mt-3 flex items-center justify-between'>";
-                                        $html .= "<span class='text-xs text-gray-400'>{$completed}/{$total} completate</span>";
+                                        $html .= "<span class='text-xs text-gray-400'>{$completed}/{$total} {$completedLabel}</span>";
                                         $html .= "<span class='px-2 py-0.5 text-[10px] font-bold rounded {$statusColor}'>{$statusText}</span>";
                                         $html .= "</div>";
 
