@@ -632,8 +632,7 @@ class EventResource extends Resource
                                     ->visibility('public')
                                     ->imagePreviewHeight('200')
                                     ->maxSize(10240)
-                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                    ->reactive(),
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp']),
                                 Forms\Components\FileUpload::make('hero_image_url')
                                     ->label($t('Imagine hero (orizontală)', 'Hero image (horizontal)'))
                                     ->image()
@@ -642,8 +641,7 @@ class EventResource extends Resource
                                     ->visibility('public')
                                     ->imagePreviewHeight('200')
                                     ->maxSize(10240)
-                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                    ->reactive(),
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp']),
                             ])->columns(2),
 
                         // CONTENT - Single Language
