@@ -847,10 +847,7 @@ const CheckoutPage = {
         let totalCommission = 0;  // Total commission
         let savings = 0;
         let totalQty = 0;
-
-        // Get commission info from first item
-        const commissionRate = this.items[0]?.event?.commission_rate || 5;
-        const commissionMode = this.items[0]?.event?.commission_mode || 'included';
+        let hasAddedOnTopCommission = false;
 
         this.items.forEach(item => {
             const price = item.ticketType?.price || item.price || 0;
@@ -858,10 +855,12 @@ const CheckoutPage = {
             const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
             const qty = item.quantity || 1;
 
-            // Calculate commission for this item
+            // Calculate per-ticket commission using cart helper
+            const commission = AmbiletCart.calculateItemCommission(item);
             let itemCommission = 0;
-            if (commissionMode === 'added_on_top') {
-                itemCommission = price * commissionRate / 100;
+            if (commission.mode === 'added_on_top') {
+                itemCommission = commission.amount;
+                hasAddedOnTopCommission = true;
             }
 
             const itemTotal = price * qty;
@@ -907,9 +906,9 @@ const CheckoutPage = {
         // Render commission as "Taxe procesare" in taxes container
         const taxesContainer = document.getElementById('taxes-container');
         if (taxesContainer) {
-            if (commissionMode === 'added_on_top' && totalCommission > 0) {
+            if (hasAddedOnTopCommission && totalCommission > 0) {
                 taxesContainer.innerHTML = '<div class="flex justify-between text-sm">' +
-                    '<span class="text-muted">Taxe procesare (' + commissionRate + '%)</span>' +
+                    '<span class="text-muted">Taxe procesare</span>' +
                     '<span class="font-medium">' + AmbiletUtils.formatCurrency(totalCommission) + '</span>' +
                 '</div>';
             } else {

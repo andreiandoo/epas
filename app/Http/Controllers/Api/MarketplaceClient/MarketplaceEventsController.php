@@ -514,6 +514,18 @@ class MarketplaceEventsController extends BaseController
                     ])->values()->toArray();
                 }
 
+                // Get effective commission for this ticket type
+                // If ticket has custom commission, use it; otherwise use event/organizer defaults
+                $ticketCommission = null;
+                if ($tt->commission_type) {
+                    $ticketCommission = [
+                        'type' => $tt->commission_type,
+                        'rate' => (float) ($tt->commission_rate ?? 0),
+                        'fixed' => (float) ($tt->commission_fixed ?? 0),
+                        'mode' => $tt->commission_mode ?? $commissionMode,
+                    ];
+                }
+
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
@@ -528,6 +540,8 @@ class MarketplaceEventsController extends BaseController
                     'is_sold_out' => $available <= 0,
                     'has_seating' => !empty($seatingSections),
                     'seating_sections' => $seatingSections,
+                    // Per-ticket commission (null = use event defaults)
+                    'commission' => $ticketCommission,
                 ];
             })->values(),
             'artists' => $event->artists->map(function ($artist) use ($language) {
@@ -627,6 +641,18 @@ class MarketplaceEventsController extends BaseController
             ->map(function ($tt) {
                 $available = max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
                 $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
+
+                // Per-ticket commission if set
+                $ticketCommission = null;
+                if ($tt->commission_type) {
+                    $ticketCommission = [
+                        'type' => $tt->commission_type,
+                        'rate' => (float) ($tt->commission_rate ?? 0),
+                        'fixed' => (float) ($tt->commission_fixed ?? 0),
+                        'mode' => $tt->commission_mode,
+                    ];
+                }
+
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
@@ -635,6 +661,7 @@ class MarketplaceEventsController extends BaseController
                     'min_per_order' => $tt->min_per_order ?? 1,
                     'max_per_order' => $tt->max_per_order ?? 10,
                     'status' => $available <= 0 ? 'sold_out' : 'available',
+                    'commission' => $ticketCommission,
                 ];
             });
 

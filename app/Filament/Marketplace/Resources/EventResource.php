@@ -1193,6 +1193,52 @@ class EventResource extends Resource
                                                 ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul maxim de bilete care pot fi cumpărate într-o comandă', 'Maximum tickets that can be purchased in a single order')),
                                         ])->columnSpan(12),
 
+                                        // Per-ticket commission settings (override organizer/marketplace defaults)
+                                        SC\Fieldset::make($t('Comision personalizat', 'Custom commission'))
+                                            ->schema([
+                                                Forms\Components\Select::make('commission_type')
+                                                    ->label($t('Tip comision', 'Commission type'))
+                                                    ->options([
+                                                        '' => $t('Moștenește setările', 'Inherit settings'),
+                                                        'percentage' => $t('Procentual', 'Percentage'),
+                                                        'fixed' => $t('Fix', 'Fixed'),
+                                                        'both' => $t('Procentual + Fix', 'Percentage + Fixed'),
+                                                    ])
+                                                    ->default('')
+                                                    ->live()
+                                                    ->columnSpan(3),
+                                                Forms\Components\TextInput::make('commission_rate')
+                                                    ->label($t('Procent %', 'Rate %'))
+                                                    ->numeric()
+                                                    ->minValue(0)
+                                                    ->maxValue(100)
+                                                    ->step(0.01)
+                                                    ->placeholder('5')
+                                                    ->visible(fn (SGet $get) => in_array($get('commission_type'), ['percentage', 'both']))
+                                                    ->columnSpan(3),
+                                                Forms\Components\TextInput::make('commission_fixed')
+                                                    ->label($t('Sumă fixă', 'Fixed amount'))
+                                                    ->numeric()
+                                                    ->minValue(0)
+                                                    ->step(0.01)
+                                                    ->placeholder('2.00')
+                                                    ->suffix($marketplace?->currency ?? 'RON')
+                                                    ->visible(fn (SGet $get) => in_array($get('commission_type'), ['fixed', 'both']))
+                                                    ->columnSpan(3),
+                                                Forms\Components\Select::make('commission_mode')
+                                                    ->label($t('Mod comision', 'Commission mode'))
+                                                    ->options([
+                                                        '' => $t('Moștenește', 'Inherit'),
+                                                        'included' => $t('Inclus în preț', 'Included in price'),
+                                                        'added_on_top' => $t('Adăugat la preț', 'Added on top'),
+                                                    ])
+                                                    ->default('')
+                                                    ->visible(fn (SGet $get) => !empty($get('commission_type')))
+                                                    ->columnSpan(3),
+                                            ])
+                                            ->columns(12)
+                                            ->columnSpan(12),
+
                                         // Seating Sections selector (visible when event has a seating layout)
                                         Forms\Components\Select::make('seatingSections')
                                             ->label($t('Secțiuni locuri asignate', 'Assigned Seating Sections'))
@@ -2333,6 +2379,11 @@ class EventResource extends Resource
                                                 // Ensure min/max per order have default values
                                                 $newTicketType->min_per_order = $ticketType->min_per_order ?? 1;
                                                 $newTicketType->max_per_order = $ticketType->max_per_order ?? 10;
+                                                // Copy commission settings
+                                                $newTicketType->commission_type = $ticketType->commission_type;
+                                                $newTicketType->commission_rate = $ticketType->commission_rate;
+                                                $newTicketType->commission_fixed = $ticketType->commission_fixed;
+                                                $newTicketType->commission_mode = $ticketType->commission_mode;
                                                 $newTicketType->save();
                                             }
 

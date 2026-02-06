@@ -424,9 +424,9 @@ const CartPage = {
         const quantity = item.quantity || 1;
         const seats = item.seats || [];
 
-        // Get commission info from event data
-        const commissionRate = item.event?.commission_rate || 5;
-        const commissionMode = item.event?.commission_mode || 'included';
+        // Get per-ticket commission or fall back to event-level
+        const commission = AmbiletCart.calculateItemCommission(item);
+        const commissionMode = commission.mode || 'included';
 
         const hasDiscount = originalPrice && originalPrice > price;
         const discountPercent = hasDiscount ? Math.round((1 - price / originalPrice) * 100) : 0;
@@ -435,7 +435,7 @@ const CartPage = {
         // Calculate commission - price is always base price
         let commissionAmount = 0;
         if (commissionMode === 'added_on_top') {
-            commissionAmount = price * commissionRate / 100;
+            commissionAmount = commission.amount;
         }
         const totalWithCommission = price + commissionAmount;
 
@@ -445,7 +445,16 @@ const CartPage = {
                 '<div class="flex justify-between"><span class="text-white/70">Preț bilet:</span><span>' + price.toFixed(2) + ' lei</span></div>';
 
         if (commissionMode === 'added_on_top' && commissionAmount > 0) {
-            tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionRate + '%):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+            // Build commission description based on type
+            let commissionLabel = 'Taxe procesare';
+            if (commission.type === 'percentage') {
+                commissionLabel += ' (' + commission.rate + '%)';
+            } else if (commission.type === 'fixed') {
+                commissionLabel += ' (fix)';
+            } else if (commission.type === 'both') {
+                commissionLabel += ' (' + commission.rate + '% + ' + commission.fixed.toFixed(2) + ' lei)';
+            }
+            tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">' + commissionLabel + ':</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
                 '<div class="flex justify-between pt-2 mt-2 border-t border-white/20"><span class="font-semibold">Total la plată:</span><span class="font-semibold">' + totalWithCommission.toFixed(2) + ' lei</span></div>';
         }
 
@@ -584,10 +593,7 @@ const CartPage = {
         let savings = 0;
         const savingsTickets = [];
         const ticketBreakdown = [];
-
-        // Get commission info from first item
-        const commissionRate = items[0]?.event?.commission_rate || 5;
-        const commissionMode = items[0]?.event?.commission_mode || 'included';
+        let hasAddedOnTopCommission = false;
 
         items.forEach(item => {
             const price = item.ticketType?.price || item.price || 0;
@@ -595,10 +601,12 @@ const CartPage = {
             const ticketName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
             const quantity = item.quantity || 1;
 
-            // Calculate commission for this item
+            // Calculate per-ticket commission using cart helper
+            const commission = AmbiletCart.calculateItemCommission(item);
             let itemCommission = 0;
-            if (commissionMode === 'added_on_top') {
-                itemCommission = price * commissionRate / 100;
+            if (commission.mode === 'added_on_top') {
+                itemCommission = commission.amount;
+                hasAddedOnTopCommission = true;
             }
 
             baseSubtotal += price * quantity;
@@ -609,7 +617,9 @@ const CartPage = {
                 name: ticketName,
                 qty: quantity,
                 basePrice: price,
-                lineTotal: price * quantity
+                lineTotal: price * quantity,
+                commission: commission,
+                commissionTotal: itemCommission * quantity
             });
 
             // Calculate savings for discounted items
@@ -643,10 +653,10 @@ const CartPage = {
                 '</div>';
             });
 
-            // Show commission as "Taxe procesare" only if on top
-            if (commissionMode === 'added_on_top' && totalCommission > 0) {
+            // Show commission as "Taxe procesare" only if on top and has commission
+            if (hasAddedOnTopCommission && totalCommission > 0) {
                 breakdownHtml += '<div class="flex justify-between pt-2 mt-2 text-sm border-t border-border">' +
-                    '<span class="text-muted">Taxe procesare (' + commissionRate + '%)</span>' +
+                    '<span class="text-muted">Taxe procesare</span>' +
                     '<span class="font-medium">' + AmbiletUtils.formatCurrency(totalCommission) + '</span>' +
                 '</div>';
             }
