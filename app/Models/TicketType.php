@@ -21,6 +21,9 @@ class TicketType extends Model
         'description',
         'currency',
         'quota_sold',
+        // Order quantity limits
+        'min_per_order',
+        'max_per_order',
         'bulk_discounts',
         'meta',
         // Real database columns
@@ -57,6 +60,8 @@ class TicketType extends Model
         'active_until'   => 'datetime',
         'autostart_when_previous_sold_out' => 'boolean',
         'is_refundable'  => 'boolean',
+        'min_per_order'  => 'integer',
+        'max_per_order'  => 'integer',
     ];
 
     protected $appends = [

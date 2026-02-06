@@ -1177,6 +1177,22 @@ class EventResource extends Resource
                                                 }),
                                         ])->columnSpan(12),
 
+                                        // Order quantity limits
+                                        SC\Grid::make(2)->schema([
+                                            Forms\Components\TextInput::make('min_per_order')
+                                                ->label($t('Min bilete/comandă', 'Min tickets/order'))
+                                                ->numeric()
+                                                ->minValue(1)
+                                                ->default(1)
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul minim de bilete care pot fi cumpărate într-o comandă', 'Minimum tickets that can be purchased in a single order')),
+                                            Forms\Components\TextInput::make('max_per_order')
+                                                ->label($t('Max bilete/comandă', 'Max tickets/order'))
+                                                ->numeric()
+                                                ->minValue(1)
+                                                ->default(10)
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul maxim de bilete care pot fi cumpărate într-o comandă', 'Maximum tickets that can be purchased in a single order')),
+                                        ])->columnSpan(12),
+
                                         // Seating Sections selector (visible when event has a seating layout)
                                         Forms\Components\Select::make('seatingSections')
                                             ->label($t('Secțiuni locuri asignate', 'Assigned Seating Sections'))
@@ -1569,56 +1585,67 @@ class EventResource extends Resource
                                             ->visible(fn (SGet $get) => !$get('is_active'))
                                             ->columnSpan(4),
 
-                                        // Bulk discounts
-                                        Forms\Components\Repeater::make('bulk_discounts')
-                                            ->label($t('Reduceri la cantitate', 'Bulk discounts'))
-                                            ->collapsed()
-                                            ->default([])
-                                            ->addActionLabel($t('Adaugă regulă', 'Add bulk rule'))
-                                            ->itemLabel(fn (array $state) => $state['rule_type'] ?? $t('Regulă', 'Rule'))
-                                            ->columns(12)
+                                        // Bulk discounts - wrapped in a subtle fieldset style
+                                        SC\Fieldset::make($t('Reduceri la cantitate', 'Bulk discounts'))
                                             ->schema([
-                                                Forms\Components\Select::make('rule_type')
-                                                    ->label($t('Tip regulă', 'Rule type'))
-                                                    ->options([
-                                                        'buy_x_get_y' => $t('Cumperi X primești Y gratis', 'Buy X get Y free'),
-                                                        'buy_x_percent_off' => $t('Cumperi X bilete → % reducere', 'Buy X tickets → % off'),
-                                                        'amount_off_per_ticket' => $t('Reducere pe bilet (min cantitate)', 'Amount off per ticket (min qty)'),
-                                                        'bundle_price' => $t('Preț pachet (X bilete la preț total)', 'Bundle price (X tickets for total)'),
-                                                    ])
-                                                    ->required()
-                                                    ->columnSpan(3)
-                                                    ->live(),
-                                                Forms\Components\TextInput::make('buy_qty')
-                                                    ->label($t('Cumperi X', 'Buy X'))
-                                                    ->numeric()->minValue(1)
-                                                    ->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')
-                                                    ->columnSpan(3),
-                                                Forms\Components\TextInput::make('get_qty')
-                                                    ->label($t('Primești Y gratis', 'Get Y free'))
-                                                    ->numeric()->minValue(1)
-                                                    ->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')
-                                                    ->columnSpan(3),
-                                                Forms\Components\TextInput::make('min_qty')
-                                                    ->label($t('Cantitate min', 'Min qty'))
-                                                    ->numeric()->minValue(1)
-                                                    ->visible(fn ($get) => in_array($get('rule_type'), ['buy_x_percent_off','amount_off_per_ticket','bundle_price']))
-                                                    ->columnSpan(3),
-                                                Forms\Components\TextInput::make('percent_off')
-                                                    ->label($t('% reducere', '% off'))
-                                                    ->numeric()->minValue(1)->maxValue(100)
-                                                    ->visible(fn ($get) => $get('rule_type') === 'buy_x_percent_off')
-                                                    ->columnSpan(3),
-                                                Forms\Components\TextInput::make('amount_off')
-                                                    ->label($t('Reducere sumă', 'Amount off'))
-                                                    ->numeric()->minValue(0.01)
-                                                    ->visible(fn ($get) => $get('rule_type') === 'amount_off_per_ticket')
-                                                    ->columnSpan(3),
-                                                Forms\Components\TextInput::make('bundle_total_price')
-                                                    ->label($t('Total pachet', 'Bundle total'))
-                                                    ->numeric()->minValue(0.01)
-                                                    ->visible(fn ($get) => $get('rule_type') === 'bundle_price')
-                                                    ->columnSpan(3),
+                                                Forms\Components\Repeater::make('bulk_discounts')
+                                                    ->label('')
+                                                    ->hiddenLabel()
+                                                    ->default([])
+                                                    ->addActionLabel($t('+ Adaugă reducere', '+ Add discount'))
+                                                    ->itemLabel(fn (array $state) => match($state['rule_type'] ?? null) {
+                                                        'buy_x_get_y' => $t('Cumperi', 'Buy') . ' ' . ($state['buy_qty'] ?? '?') . ' → ' . $t('primești', 'get') . ' ' . ($state['get_qty'] ?? '?') . ' ' . $t('gratis', 'free'),
+                                                        'buy_x_percent_off' => $t('Min', 'Min') . ' ' . ($state['min_qty'] ?? '?') . ' → ' . ($state['percent_off'] ?? '?') . '% off',
+                                                        'amount_off_per_ticket' => $t('Min', 'Min') . ' ' . ($state['min_qty'] ?? '?') . ' → -' . ($state['amount_off'] ?? '?') . '/bilet',
+                                                        'bundle_price' => ($state['min_qty'] ?? '?') . ' ' . $t('bilete', 'tickets') . ' = ' . ($state['bundle_total_price'] ?? '?'),
+                                                        default => $t('Regulă nouă', 'New rule'),
+                                                    })
+                                                    ->collapsible()
+                                                    ->collapsed()
+                                                    ->columns(12)
+                                                    ->schema([
+                                                        Forms\Components\Select::make('rule_type')
+                                                            ->label($t('Tip regulă', 'Rule type'))
+                                                            ->options([
+                                                                'buy_x_get_y' => $t('Cumperi X primești Y gratis', 'Buy X get Y free'),
+                                                                'buy_x_percent_off' => $t('Cumperi X bilete → % reducere', 'Buy X tickets → % off'),
+                                                                'amount_off_per_ticket' => $t('Reducere pe bilet (min cantitate)', 'Amount off per ticket (min qty)'),
+                                                                'bundle_price' => $t('Preț pachet (X bilete la preț total)', 'Bundle price (X tickets for total)'),
+                                                            ])
+                                                            ->required()
+                                                            ->columnSpan(4)
+                                                            ->live(),
+                                                        Forms\Components\TextInput::make('buy_qty')
+                                                            ->label($t('Cumperi', 'Buy'))
+                                                            ->numeric()->minValue(1)
+                                                            ->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')
+                                                            ->columnSpan(4),
+                                                        Forms\Components\TextInput::make('get_qty')
+                                                            ->label($t('Primești gratis', 'Get free'))
+                                                            ->numeric()->minValue(1)
+                                                            ->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')
+                                                            ->columnSpan(4),
+                                                        Forms\Components\TextInput::make('min_qty')
+                                                            ->label($t('Cantitate min', 'Min qty'))
+                                                            ->numeric()->minValue(1)
+                                                            ->visible(fn ($get) => in_array($get('rule_type'), ['buy_x_percent_off','amount_off_per_ticket','bundle_price']))
+                                                            ->columnSpan(4),
+                                                        Forms\Components\TextInput::make('percent_off')
+                                                            ->label($t('% reducere', '% off'))
+                                                            ->numeric()->minValue(1)->maxValue(100)
+                                                            ->visible(fn ($get) => $get('rule_type') === 'buy_x_percent_off')
+                                                            ->columnSpan(4),
+                                                        Forms\Components\TextInput::make('amount_off')
+                                                            ->label($t('Reducere/bilet', 'Amount off/ticket'))
+                                                            ->numeric()->minValue(0.01)
+                                                            ->visible(fn ($get) => $get('rule_type') === 'amount_off_per_ticket')
+                                                            ->columnSpan(4),
+                                                        Forms\Components\TextInput::make('bundle_total_price')
+                                                            ->label($t('Preț total pachet', 'Bundle total price'))
+                                                            ->numeric()->minValue(0.01)
+                                                            ->visible(fn ($get) => $get('rule_type') === 'bundle_price')
+                                                            ->columnSpan(4),
+                                                    ]),
                                             ])
                                             ->columnSpan(12),
                                     ]),

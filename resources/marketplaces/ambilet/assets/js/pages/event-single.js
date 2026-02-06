@@ -1263,8 +1263,40 @@ const EventPage = {
         const tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketId); });
         if (!tt) return;
 
-        const newQty = (this.quantities[ticketId] || 0) + delta;
-        if (newQty >= 0 && newQty <= tt.available) {
+        const currentQty = this.quantities[ticketId] || 0;
+        let newQty = currentQty + delta;
+        const minPerOrder = tt.min_per_order || 1;
+        const maxPerOrder = Math.min(tt.max_per_order || 10, tt.available);
+
+        // Handle min/max per order limits
+        if (delta > 0) {
+            // Increasing - check max limit
+            if (newQty > maxPerOrder) {
+                if (typeof AmbiletNotifications !== 'undefined') {
+                    AmbiletNotifications.warning('Maxim ' + maxPerOrder + ' bilete de acest tip per comandă');
+                }
+                return;
+            }
+            // If going from 0, jump to min_per_order
+            if (currentQty === 0 && newQty < minPerOrder) {
+                newQty = minPerOrder;
+            }
+        } else if (delta < 0) {
+            // Decreasing - if would go below min but not to 0, stop at min
+            if (newQty > 0 && newQty < minPerOrder) {
+                newQty = 0; // Allow removing completely
+            }
+            if (newQty < 0) {
+                newQty = 0;
+            }
+        }
+
+        // Final check for available stock
+        if (newQty > tt.available) {
+            newQty = tt.available;
+        }
+
+        if (newQty !== currentQty) {
             this.quantities[ticketId] = newQty;
             document.getElementById('qty-' + ticketId).textContent = newQty;
 
@@ -1486,7 +1518,9 @@ const EventPage = {
                         name: tt.name,
                         price: basePrice,
                         original_price: baseOriginalPrice,
-                        description: tt.description
+                        description: tt.description,
+                        min_per_order: tt.min_per_order || 1,
+                        max_per_order: tt.max_per_order || 10
                     };
                     AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty);
                     addedAny = true;

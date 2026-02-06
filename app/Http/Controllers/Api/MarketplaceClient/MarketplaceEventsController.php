@@ -29,8 +29,10 @@ class MarketplaceEventsController extends BaseController
         $language = $client->language ?? 'ro';
 
         $query = Event::where('marketplace_client_id', $client->id)
-            ->whereNull('is_cancelled')
-            ->orWhere('is_cancelled', false)
+            ->where('is_published', true)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
             ->with([
                 'marketplaceOrganizer:id,name,slug,logo,verified_at,default_commission_mode,commission_rate',
                 'marketplaceEventCategory',
@@ -252,6 +254,7 @@ class MarketplaceEventsController extends BaseController
         $language = $client->language ?? 'ro';
 
         $query = Event::where('marketplace_client_id', $client->id)
+            ->where('is_published', true)
             ->where(function ($q) {
                 $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
             });
@@ -336,6 +339,14 @@ class MarketplaceEventsController extends BaseController
             $query->where('id', $identifier);
         } else {
             $query->where('slug', $identifier);
+        }
+
+        // Only show published events unless preview mode is enabled
+        if (!$request->boolean('preview')) {
+            $query->where('is_published', true)
+                ->where(function ($q) {
+                    $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+                });
         }
 
         $event = $query->with([
@@ -621,6 +632,8 @@ class MarketplaceEventsController extends BaseController
                     'name' => $tt->name,
                     'price' => (float) $displayPrice,
                     'available' => $available,
+                    'min_per_order' => $tt->min_per_order ?? 1,
+                    'max_per_order' => $tt->max_per_order ?? 10,
                     'status' => $available <= 0 ? 'sold_out' : 'available',
                 ];
             });
@@ -640,8 +653,9 @@ class MarketplaceEventsController extends BaseController
         $client = $this->requireClient($request);
         $language = $client->language ?? 'ro';
 
-        // Get categories that have events
+        // Get categories that have published events
         $catQuery = Event::where('marketplace_client_id', $client->id)
+            ->where('is_published', true)
             ->where(function ($q) {
                 $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
             });
