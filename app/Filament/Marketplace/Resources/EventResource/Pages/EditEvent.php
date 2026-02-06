@@ -192,13 +192,23 @@ class EditEvent extends EditRecord
             return;
         }
 
+        // Check if authenticated user exists in the users table
+        // Marketplace users might not be in the main users table
+        $uploadedBy = null;
+        if (auth()->id()) {
+            $userExists = \App\Models\User::where('id', auth()->id())->exists();
+            if ($userExists) {
+                $uploadedBy = auth()->id();
+            }
+        }
+
         try {
             $media = \App\Models\MediaLibrary::createFromPath(
                 $path,
                 'public',
                 $collection,
                 $marketplaceClientId,
-                auth()->id()
+                $uploadedBy
             );
 
             // Update with original filename if provided

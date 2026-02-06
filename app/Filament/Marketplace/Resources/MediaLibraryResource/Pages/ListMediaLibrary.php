@@ -74,6 +74,16 @@ class ListMediaLibrary extends ListRecords
                     $marketplace = static::getMarketplaceClient();
                     $marketplaceId = $marketplace?->id;
 
+                    // Check if authenticated user exists in the users table
+                    // Marketplace users might not be in the main users table
+                    $uploadedBy = null;
+                    if (auth()->id()) {
+                        $userExists = \App\Models\User::where('id', auth()->id())->exists();
+                        if ($userExists) {
+                            $uploadedBy = auth()->id();
+                        }
+                    }
+
                     $files = $data['files'] ?? [];
                     $collection = $data['collection'] ?? 'uploads';
                     $uploaded = 0;
@@ -86,7 +96,7 @@ class ListMediaLibrary extends ListRecords
                                 disk: 'public',
                                 collection: $collection,
                                 marketplaceClientId: $marketplaceId,
-                                uploadedBy: auth()->id()
+                                uploadedBy: $uploadedBy
                             );
                             $uploaded++;
                         } catch (\Throwable $e) {
