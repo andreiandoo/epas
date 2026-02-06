@@ -41,11 +41,11 @@
             <div>
                 <h4 class="font-semibold mb-4">Orașe</h4>
                 <ul class="space-y-2 text-gray-400 text-sm">
-                    <li><a href="/oras/bucuresti" class="hover:text-white transition-colors">București</a></li>
-                    <li><a href="/oras/cluj-napoca" class="hover:text-white transition-colors">Cluj-Napoca</a></li>
-                    <li><a href="/oras/timisoara" class="hover:text-white transition-colors">Timișoara</a></li>
-                    <li><a href="/oras/iasi" class="hover:text-white transition-colors">Iași</a></li>
-                    <li><a href="/oras/constanta" class="hover:text-white transition-colors">Constanța</a></li>
+                    <li><a href="<?= cityUrl('bucuresti') ?>" class="hover:text-white transition-colors">București</a></li>
+                    <li><a href="<?= cityUrl('cluj-napoca') ?>" class="hover:text-white transition-colors">Cluj-Napoca</a></li>
+                    <li><a href="<?= cityUrl('timisoara') ?>" class="hover:text-white transition-colors">Timișoara</a></li>
+                    <li><a href="<?= cityUrl('iasi') ?>" class="hover:text-white transition-colors">Iași</a></li>
+                    <li><a href="<?= cityUrl('constanta') ?>" class="hover:text-white transition-colors">Constanța</a></li>
                 </ul>
             </div>
             <div>
@@ -79,3 +79,5 @@
         </div>
     </div>
 </footer>
+
+<?php include __DIR__ . '/accessibility.php'; ?>

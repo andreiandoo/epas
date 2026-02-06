@@ -10,23 +10,33 @@ RewriteCond %{REQUEST_URI} ^/data/ [OR]
 RewriteCond %{REQUEST_URI} \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$
 RewriteRule ^ - [L]
 
+# Clean URLs for city page (must come BEFORE /evenimente rules)
+# /evenimente-{city-slug} -> city.php?city=slug
+# Example: /evenimente-bucuresti, /evenimente-cluj-napoca
+RewriteRule ^evenimente-([a-z0-9-]+)/?$ city.php?city=$1 [L,QSA]
+
+# Redirect old city URLs to new format
+RewriteRule ^oras/([a-z0-9-]+)/?$ /evenimente-$1 [R=301,L]
+
 # Clean URLs for events listing
 # /evenimente -> events.php
 # /evenimente/{category} -> events.php?categorie=slug
 RewriteRule ^evenimente/?$ events.php [L,QSA]
 RewriteRule ^evenimente/([a-z0-9-]+)/?$ events.php?categorie=$1 [L,QSA]
 
+# Clean URLs for venue page
+# /bilete-{venue-slug} -> venue.php?venue=slug
+# Example: /bilete-arena-nationala, /bilete-sala-palatului
+RewriteRule ^bilete-([a-z0-9-]+)/?$ venue.php?venue=$1 [L,QSA]
+
 # Clean URLs for single event
-# /bilete/{slug} -> event.php?slug=slug
-RewriteRule ^bilete/([a-z0-9-]+)/?$ event.php?slug=$1 [L,QSA]
+# /bilete/{event-slug}-{city-slug} -> event.php?fullslug=xxx
+# Example: /bilete/concert-coldplay-world-tour-bucuresti
+RewriteRule ^bilete/([a-z0-9-]+)/?$ event.php?fullslug=$1 [L,QSA]
 
 # Clean URLs for event category page
 # /categorie/{slug} -> event-category.php?categorie=slug
 RewriteRule ^categorie/([a-z0-9-]+)/?$ event-category.php?categorie=$1 [L,QSA]
-
-# Clean URLs for city page
-# /oras/{city} -> city.php?city=slug
-RewriteRule ^oras/([a-z0-9-]+)/?$ city.php?city=$1 [L,QSA]
 
 # Auth pages (Romanian URLs -> English PHP files)
 RewriteRule ^conectare/?$ login.php [L,QSA]
@@ -36,6 +46,34 @@ RewriteRule ^parola-uitata/?$ forgot-password.php [L,QSA]
 # Cart & Checkout
 RewriteRule ^cos/?$ cart.php [L,QSA]
 RewriteRule ^checkout/?$ checkout.php [L,QSA]
+
+# User Account Pages
+# /cont -> user/dashboard.php
+RewriteRule ^cont/?$ user/dashboard.php [L,QSA]
+RewriteRule ^cont/bilete/?$ user/tickets.php [L,QSA]
+RewriteRule ^cont/comenzi/?$ user/orders.php [L,QSA]
+RewriteRule ^cont/favorite/?$ user/favorites.php [L,QSA]
+RewriteRule ^cont/puncte/?$ user/rewards.php [L,QSA]
+RewriteRule ^cont/setari/?$ user/settings.php [L,QSA]
+
+# Organizer Pages
+# /organizator -> organizer/dashboard.php
+RewriteRule ^organizator/?$ organizer/dashboard.php [L,QSA]
+RewriteRule ^organizator/evenimente/?$ organizer/events.php [L,QSA]
+RewriteRule ^organizator/eveniment-nou/?$ organizer/create-event.php [L,QSA]
+RewriteRule ^organizator/eveniment/([a-z0-9-]+)/?$ organizer/event-edit.php?slug=$1 [L,QSA]
+RewriteRule ^organizator/plati/?$ organizer/payouts.php [L,QSA]
+RewriteRule ^organizator/scanner/?$ organizer/scanner.php [L,QSA]
+RewriteRule ^organizator/echipa/?$ organizer/team.php [L,QSA]
+RewriteRule ^organizator/widget/?$ organizer/widget.php [L,QSA]
+RewriteRule ^organizator/setari/?$ organizer/settings.php [L,QSA]
+
+# Organizer Auth
+RewriteRule ^organizator/conectare/?$ organizer/login.php [L,QSA]
+RewriteRule ^organizator/inregistrare/?$ organizer/register.php [L,QSA]
+
+# User Logout
+RewriteRule ^deconectare/?$ logout.php [L,QSA]
 
 # API proxy
 RewriteRule ^api/(.*)$ api/proxy.php?endpoint=$1 [L,QSA]

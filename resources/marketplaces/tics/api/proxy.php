@@ -151,8 +151,10 @@ function filterAndPaginate($data) {
     if ($city) {
         $events = array_filter($events, function($e) use ($city) {
             $venueCity = strtolower($e['venue']['city'] ?? '');
+            $venueCity = removeDiacritics($venueCity);
             $venueCity = str_replace([' ', '-'], '', $venueCity);
-            $searchCity = str_replace([' ', '-'], '', strtolower($city));
+            $searchCity = removeDiacritics(strtolower($city));
+            $searchCity = str_replace([' ', '-'], '', $searchCity);
             return strpos($venueCity, $searchCity) !== false;
         });
     }
@@ -330,6 +332,21 @@ function searchDemoData($query) {
             'locations' => $locations
         ]
     ];
+}
+
+/**
+ * Remove diacritics from string (Romanian accents, etc.)
+ */
+function removeDiacritics($str) {
+    $diacritics = [
+        'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ț' => 't',
+        'Ă' => 'A', 'Â' => 'A', 'Î' => 'I', 'Ș' => 'S', 'Ț' => 'T',
+        'ş' => 's', 'ţ' => 't', 'Ş' => 'S', 'Ţ' => 'T', // cedilla variants
+        'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u',
+        'à' => 'a', 'è' => 'e', 'ì' => 'i', 'ò' => 'o', 'ù' => 'u',
+        'ä' => 'a', 'ë' => 'e', 'ï' => 'i', 'ö' => 'o', 'ü' => 'u',
+    ];
+    return strtr($str, $diacritics);
 }
 
 /**

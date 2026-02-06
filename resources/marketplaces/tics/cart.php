@@ -125,9 +125,10 @@ include __DIR__ . '/includes/head.php';
                 </div>
             </div>
 
-            <!-- AI Suggestions -->
+            <!-- Suggestions Section - Changes based on login status -->
             <div class="mt-10 animate-fadeInUp" style="animation-delay: 0.4s" id="suggestionsSection">
-                <div class="flex items-center gap-2 mb-4">
+                <!-- AI Suggestions Header (shown when logged in) -->
+                <div id="aiSuggestionsHeader" class="flex items-center gap-2 mb-4 hidden">
                     <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -135,6 +136,15 @@ include __DIR__ . '/includes/head.php';
                     </div>
                     <h3 class="font-bold text-gray-900">Ți-ar putea plăcea</h3>
                     <span class="px-2 py-0.5 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 text-xs font-medium rounded-full">AI</span>
+                </div>
+                <!-- Generic Suggestions Header (shown when not logged in) -->
+                <div id="genericSuggestionsHeader" class="flex items-center gap-2 mb-4">
+                    <div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="font-bold text-gray-900">Îți recomandăm și următoarele evenimente</h3>
                 </div>
                 <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" id="suggestionsList">
                     <!-- Suggestions loaded dynamically -->
@@ -426,14 +436,44 @@ include __DIR__ . '/includes/head.php';
         updateTotals();
     }
 
-    // Quantity change
+    // Quantity change - updates UI without full re-render for smooth UX
     function changeQty(itemId, delta) {
         const item = state.items.find(i => i.id === itemId);
         if (!item) return;
 
-        item.quantity = Math.max(1, Math.min(10, item.quantity + delta));
+        const newQty = Math.max(1, Math.min(10, item.quantity + delta));
+        if (newQty === item.quantity) return; // No change
+
+        item.quantity = newQty;
         saveCart();
-        renderCartItems();
+
+        // Update UI elements directly for this item
+        const itemEl = document.querySelector(`[data-id="${itemId}"]`);
+        if (itemEl) {
+            // Update badge
+            const badge = itemEl.querySelector('.item-badge');
+            if (badge) badge.textContent = newQty;
+
+            // Update quantity display
+            const qtyValue = itemEl.querySelector('.qty-value');
+            if (qtyValue) qtyValue.textContent = newQty;
+
+            // Update price detail (price × qty)
+            const priceDetail = itemEl.querySelector('.price-detail');
+            if (priceDetail) priceDetail.textContent = `${item.price} RON × ${newQty}`;
+
+            // Update item total with animation
+            const itemTotal = itemEl.querySelector('.item-total');
+            if (itemTotal) {
+                const total = item.price * newQty;
+                itemTotal.textContent = total.toLocaleString() + ' RON';
+                itemTotal.classList.add('animate-scaleIn');
+                setTimeout(() => itemTotal.classList.remove('animate-scaleIn'), 300);
+            }
+        }
+
+        // Recalculate totals
+        recalculateSubtotal();
     }
 
     // Remove item
@@ -539,18 +579,59 @@ include __DIR__ . '/includes/head.php';
         document.getElementById('monthlyPrice').textContent = monthly.toLocaleString();
     }
 
-    // Load AI suggestions
+    // Check if user is logged in
+    function isLoggedIn() {
+        return localStorage.getItem('tics_user') !== null || localStorage.getItem('tics_token') !== null;
+    }
+
+    // Get city from cart items for nearby suggestions
+    function getCartCity() {
+        if (state.items.length === 0) return 'bucuresti';
+        // Extract city from first cart item venue (format: "Venue Name, City")
+        const venue = state.items[0].venue || '';
+        const parts = venue.split(',');
+        if (parts.length > 1) {
+            return parts[parts.length - 1].trim().toLowerCase()
+                .replace('bucurești', 'bucuresti')
+                .replace(/\s+/g, '-');
+        }
+        return 'bucuresti';
+    }
+
+    // Load suggestions based on login status
     async function loadSuggestions() {
         const container = document.getElementById('suggestionsList');
+        const aiHeader = document.getElementById('aiSuggestionsHeader');
+        const genericHeader = document.getElementById('genericSuggestionsHeader');
+        const loggedIn = isLoggedIn();
+
+        // Toggle headers based on login status
+        if (loggedIn) {
+            aiHeader.classList.remove('hidden');
+            aiHeader.classList.add('flex');
+            genericHeader.classList.add('hidden');
+        } else {
+            genericHeader.classList.remove('hidden');
+            genericHeader.classList.add('flex');
+            aiHeader.classList.add('hidden');
+        }
+
         try {
-            const response = await TicsAPI.getEvents({ per_page: 3 });
+            // Build query params based on login status
+            const params = { per_page: 3 };
+            if (!loggedIn) {
+                // For non-logged users, get events near the cart items' city
+                params.city = getCartCity();
+            }
+
+            const response = await TicsAPI.getEvents(params);
             if (response.success && response.data) {
                 const events = response.data.slice(0, 3);
                 container.innerHTML = events.map(event => `
                     <a href="/bilete/${event.slug}" class="suggestion-card bg-white rounded-xl border border-gray-200 overflow-hidden">
                         <div class="aspect-video relative">
                             <img src="${event.image || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=200&fit=crop'}" class="w-full h-full object-cover">
-                            <span class="absolute top-2 left-2 px-2 py-1 bg-green-500 text-white text-xs font-bold rounded">${event.ai_match || 90}% Match</span>
+                            ${loggedIn ? `<span class="absolute top-2 left-2 px-2 py-1 bg-green-500 text-white text-xs font-bold rounded">${event.ai_match || 90}% Match</span>` : ''}
                         </div>
                         <div class="p-4">
                             <p class="text-xs text-gray-500 mb-1">${TicsUtils?.formatDate ? TicsUtils.formatDate(event.starts_at) : event.starts_at}</p>

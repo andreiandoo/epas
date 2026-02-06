@@ -270,6 +270,9 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>">
 
+    <!-- Accessibility CSS -->
+    <link rel="stylesheet" href="<?= asset('assets/css/accessibility.css') ?>">
+
     <!-- Page-specific head content -->
     <?php if (isset($headExtra)) echo $headExtra; ?>
 </head>

@@ -177,3 +177,79 @@ function formatDate($date, $format = 'd M Y') {
 function e($text) {
     return htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
 }
+
+/**
+ * Generate URL for city page
+ * @param string $citySlug - City slug (e.g., 'bucuresti', 'cluj-napoca')
+ * @return string URL like /evenimente-bucuresti
+ */
+function cityUrl($citySlug) {
+    return '/evenimente-' . $citySlug;
+}
+
+/**
+ * Generate URL for venue page
+ * @param string $venueSlug - Venue slug (e.g., 'arena-nationala')
+ * @return string URL like /bilete-arena-nationala
+ */
+function venueUrl($venueSlug) {
+    return '/bilete-' . $venueSlug;
+}
+
+/**
+ * Generate URL for event page
+ * @param string $eventSlug - Event slug
+ * @param string $citySlug - City slug
+ * @return string URL like /bilete/concert-coldplay-bucuresti
+ */
+function eventUrl($eventSlug, $citySlug = '') {
+    $url = '/bilete/' . $eventSlug;
+    if ($citySlug) {
+        $url .= '-' . $citySlug;
+    }
+    return $url;
+}
+
+/**
+ * Generate slug from text
+ * @param string $text - Text to convert to slug
+ * @return string URL-friendly slug
+ */
+function slugify($text) {
+    // Replace Romanian diacritics
+    $diacritics = [
+        'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ț' => 't',
+        'Ă' => 'a', 'Â' => 'a', 'Î' => 'i', 'Ș' => 's', 'Ț' => 't',
+        'ş' => 's', 'ţ' => 't', 'Ş' => 's', 'Ţ' => 't',
+    ];
+    $text = strtr($text, $diacritics);
+    $text = strtolower($text);
+    $text = preg_replace('/[^a-z0-9]+/', '-', $text);
+    $text = trim($text, '-');
+    return $text;
+}
+
+/**
+ * Get city slug from city name
+ * @param string $cityName - City name with diacritics
+ * @return string Slug without diacritics
+ */
+function getCitySlug($cityName) {
+    return slugify($cityName);
+}
+
+/**
+ * Get city name from slug
+ * @param string $slug - City slug
+ * @return string|null City name or null if not found
+ */
+function getCityName($slug) {
+    global $FEATURED_CITIES;
+    foreach ($FEATURED_CITIES as $city) {
+        if ($city['slug'] === $slug) {
+            return $city['name'];
+        }
+    }
+    // Fallback: capitalize slug
+    return ucfirst(str_replace('-', ' ', $slug));
+}

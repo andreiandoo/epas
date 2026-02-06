@@ -216,6 +216,28 @@ const TicsUtils = {
     },
 
     /**
+     * Convert text to URL-friendly slug
+     * @param {string} text - Text to convert
+     * @returns {string} URL-friendly slug
+     */
+    slugify(text) {
+        if (!text) return '';
+        // Romanian diacritics mapping
+        const diacritics = {
+            'ă': 'a', 'â': 'a', 'î': 'i', 'ș': 's', 'ț': 't',
+            'Ă': 'a', 'Â': 'a', 'Î': 'i', 'Ș': 's', 'Ț': 't',
+            'ş': 's', 'ţ': 't', 'Ş': 's', 'Ţ': 't'
+        };
+        return text
+            .split('')
+            .map(char => diacritics[char] || char)
+            .join('')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+    },
+
+    /**
      * Generate skeleton HTML for loading states
      * @param {number} count - Number of skeletons
      * @returns {string} HTML string

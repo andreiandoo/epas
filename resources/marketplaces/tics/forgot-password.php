@@ -1,6 +1,7 @@
 <?php
 /**
  * TICS.ro - Forgot Password Page
+ * Split-screen design matching forgot-password.html
  */
 
 require_once __DIR__ . '/includes/config.php';
@@ -8,147 +9,319 @@ require_once __DIR__ . '/includes/config.php';
 // Page configuration
 $pageTitle = 'Resetare parolă';
 $pageDescription = 'Resetează-ți parola contului TICS.';
-$hideCategoriesBar = true;
-$bodyClass = 'bg-gray-50';
 
 $headExtra = <<<HTML
 <style>
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .animate-fadeInUp { animation: fadeInUp 0.5s ease forwards; }
-    .form-input { transition: all 0.2s ease; }
-    .form-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(5deg); }
+    }
+    @keyframes scaleIn {
+        from { transform: scale(0.8); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+
+    .animate-fadeInUp { animation: fadeInUp 0.6s ease forwards; }
+    .animate-float { animation: float 6s ease-in-out infinite; }
+    .animate-scaleIn { animation: scaleIn 0.5s ease forwards; }
+
+    .input-field {
+        transition: all 0.3s ease;
+    }
+    .input-field:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .submit-btn {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    .submit-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: width 0.6s ease, height 0.6s ease;
+    }
+    .submit-btn:active::before {
+        width: 400px;
+        height: 400px;
+    }
+
+    .floating-shape {
+        position: absolute;
+        border-radius: 50%;
+        opacity: 0.5;
+    }
 </style>
 HTML;
 
 include __DIR__ . '/includes/head.php';
-
-// Get step from query (for demo)
-$step = $_GET['step'] ?? 1;
 ?>
 
-<!-- Minimal Header -->
-<header class="bg-white border-b border-gray-200">
-    <div class="max-w-7xl mx-auto px-4 lg:px-8">
-        <div class="flex items-center justify-between h-16">
-            <a href="/" class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
-                    <span class="text-white font-bold text-sm">T</span>
-                </div>
-                <span class="font-bold text-lg">TICS</span>
-            </a>
-            <a href="/conectare" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">← Înapoi la conectare</a>
-        </div>
-    </div>
-</header>
+<body class="min-h-screen bg-gray-50">
+    <div class="min-h-screen flex">
+        <!-- Left Side - Form -->
+        <div class="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24">
+            <div class="mx-auto w-full max-w-sm">
+                <!-- Logo -->
+                <a href="/" class="flex items-center gap-2 mb-8 group animate-fadeInUp">
+                    <div class="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <span class="text-white font-bold text-lg">T</span>
+                    </div>
+                    <span class="font-bold text-2xl">TICS</span>
+                </a>
 
-<main class="min-h-[calc(100vh-180px)] flex items-center justify-center py-12 px-4">
-    <div class="w-full max-w-md">
-        <?php if ($step == 1): ?>
-        <!-- Step 1: Email -->
-        <div class="bg-white rounded-2xl border border-gray-200 p-8 shadow-lg animate-fadeInUp">
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                <!-- Back Link -->
+                <a href="/conectare" class="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6 animate-fadeInUp" style="animation-delay: 0.05s">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
+                    Înapoi la autentificare
+                </a>
+
+                <!-- Initial State -->
+                <div id="resetForm" class="animate-fadeInUp" style="animation-delay: 0.1s">
+                    <!-- Icon -->
+                    <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/30">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                        </svg>
+                    </div>
+
+                    <h1 class="text-3xl font-bold text-gray-900">Ai uitat parola?</h1>
+                    <p class="mt-2 text-gray-500">Nu-ți face griji! Introdu adresa de email și îți vom trimite instrucțiunile de resetare.</p>
+
+                    <!-- Form -->
+                    <form id="forgotForm" class="mt-8 space-y-5">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Adresa de email</label>
+                            <div class="relative">
+                                <input type="email" id="email" name="email" required
+                                    class="input-field w-full px-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none"
+                                    placeholder="nume@email.com">
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-4">
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Error Message (hidden by default) -->
+                        <div id="errorMessage" class="hidden p-4 bg-red-50 border border-red-200 rounded-xl">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </div>
+                                <p class="text-sm text-red-700">Nu am găsit niciun cont cu această adresă de email.</p>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="submit-btn w-full py-4 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
+                            <span>Trimite link de resetare</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                            </svg>
+                        </button>
+                    </form>
+
+                    <!-- Help Text -->
+                    <div class="mt-8 p-4 bg-gray-100 rounded-xl">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">
+                                    Dacă nu primești email-ul în câteva minute, verifică folderul de spam sau
+                                    <a href="/contact" class="text-indigo-600 hover:underline">contactează-ne</a>.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-900 mb-2">Ai uitat parola?</h1>
-                <p class="text-gray-500">Introdu emailul și îți trimitem un link de resetare.</p>
+
+                <!-- Success State (hidden by default) -->
+                <div id="successState" class="hidden text-center">
+                    <!-- Success Icon -->
+                    <div class="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-6 animate-scaleIn">
+                        <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+
+                    <h2 class="text-2xl font-bold text-gray-900 animate-fadeInUp">Verifică-ți email-ul!</h2>
+                    <p class="mt-3 text-gray-500 animate-fadeInUp" style="animation-delay: 0.1s">
+                        Am trimis instrucțiunile de resetare a parolei la adresa:
+                    </p>
+                    <p class="mt-2 font-semibold text-gray-900 animate-fadeInUp" style="animation-delay: 0.15s" id="sentEmail">email@example.com</p>
+
+                    <div class="mt-8 p-5 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 animate-fadeInUp" style="animation-delay: 0.2s">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <p class="font-medium text-gray-900">Link-ul expiră în 24 de ore</p>
+                                <p class="text-sm text-gray-500">Verifică inbox-ul sau spam-ul</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 space-y-3 animate-fadeInUp" style="animation-delay: 0.25s">
+                        <button onclick="resendEmail(this)" class="w-full py-3 bg-white border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors">
+                            Nu ai primit? Retrimite email-ul
+                        </button>
+                        <a href="/conectare" class="block w-full py-3 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors text-center">
+                            Înapoi la autentificare
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Footer Links -->
+                <p class="mt-8 text-center text-sm text-gray-500 animate-fadeInUp" style="animation-delay: 0.3s">
+                    Ți-ai amintit parola?
+                    <a href="/conectare" class="font-semibold text-indigo-600 hover:text-indigo-500">Autentifică-te</a>
+                </p>
             </div>
-
-            <form action="?step=2" method="GET" class="space-y-4">
-                <input type="hidden" name="step" value="2">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                    <input type="email" required class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="email@exemplu.com">
-                </div>
-
-                <button type="submit" class="w-full py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors">
-                    Trimite link de resetare
-                </button>
-            </form>
-
-            <p class="mt-6 text-center text-sm text-gray-500">
-                Ți-ai amintit parola? <a href="/conectare" class="text-indigo-600 font-medium hover:underline">Conectează-te</a>
-            </p>
         </div>
 
-        <?php elseif ($step == 2): ?>
-        <!-- Step 2: Email Sent -->
-        <div class="bg-white rounded-2xl border border-gray-200 p-8 shadow-lg animate-fadeInUp text-center">
-            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                </svg>
-            </div>
-            <h1 class="text-2xl font-bold text-gray-900 mb-2">Verifică-ți emailul</h1>
-            <p class="text-gray-500 mb-6">Am trimis un link de resetare a parolei la adresa ta de email. Verifică și folderul Spam.</p>
+        <!-- Right Side - Visual -->
+        <div class="hidden lg:flex lg:flex-1 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 relative overflow-hidden">
+            <!-- Floating Shapes -->
+            <div class="floating-shape w-64 h-64 bg-white/10 top-20 -left-20 animate-float"></div>
+            <div class="floating-shape w-96 h-96 bg-white/5 bottom-20 -right-40 animate-float" style="animation-delay: 2s"></div>
+            <div class="floating-shape w-32 h-32 bg-white/10 top-1/2 left-1/4 animate-float" style="animation-delay: 1s"></div>
 
-            <div class="p-4 bg-gray-50 rounded-xl mb-6">
-                <p class="text-sm text-gray-600">Nu ai primit emailul?</p>
-                <a href="?step=1" class="text-sm text-indigo-600 font-medium hover:underline">Trimite din nou</a>
-            </div>
+            <!-- Content -->
+            <div class="relative z-10 flex flex-col justify-center px-12 xl:px-20">
+                <div class="text-white">
+                    <h2 class="text-4xl font-bold mb-4 animate-fadeInUp">Securitate<br>garantată</h2>
+                    <p class="text-white/80 text-lg mb-8 animate-fadeInUp" style="animation-delay: 0.1s">
+                        Contul tău este în siguranță. Folosim cele mai avansate metode de criptare pentru a-ți proteja datele.
+                    </p>
 
-            <a href="/conectare" class="block w-full py-3 border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors">
-                Înapoi la conectare
-            </a>
-        </div>
+                    <!-- Security Features -->
+                    <div class="space-y-4 animate-fadeInUp" style="animation-delay: 0.2s">
+                        <div class="flex items-center gap-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-white">Criptare SSL/TLS</h4>
+                                <p class="text-sm text-white/60">Conexiune securizată 256-bit</p>
+                            </div>
+                        </div>
 
-        <?php elseif ($step == 3): ?>
-        <!-- Step 3: Reset Password -->
-        <div class="bg-white rounded-2xl border border-gray-200 p-8 shadow-lg animate-fadeInUp">
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                    </svg>
+                        <div class="flex items-center gap-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-white">GDPR Compliant</h4>
+                                <p class="text-sm text-white/60">Datele tale sunt protejate</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-white">Notificări de securitate</h4>
+                                <p class="text-sm text-white/60">Alerte pentru activități suspecte</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-900 mb-2">Setează parolă nouă</h1>
-                <p class="text-gray-500">Alege o parolă puternică pentru contul tău.</p>
             </div>
-
-            <form action="?step=4" method="GET" class="space-y-4">
-                <input type="hidden" name="step" value="4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Parolă nouă</label>
-                    <input type="password" required class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="Minim 8 caractere">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Confirmă parola</label>
-                    <input type="password" required class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="Repetă parola">
-                </div>
-
-                <button type="submit" class="w-full py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors">
-                    Resetează parola
-                </button>
-            </form>
         </div>
-
-        <?php else: ?>
-        <!-- Step 4: Success -->
-        <div class="bg-white rounded-2xl border border-gray-200 p-8 shadow-lg animate-fadeInUp text-center">
-            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                </svg>
-            </div>
-            <h1 class="text-2xl font-bold text-gray-900 mb-2">Parolă resetată!</h1>
-            <p class="text-gray-500 mb-6">Parola ta a fost schimbată cu succes. Acum te poți conecta.</p>
-
-            <a href="/conectare" class="block w-full py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors">
-                Conectează-te
-            </a>
-        </div>
-        <?php endif; ?>
     </div>
-</main>
 
-<!-- Footer Mini -->
-<footer class="bg-white border-t border-gray-200 py-6">
-    <div class="max-w-7xl mx-auto px-4 lg:px-8 text-center text-sm text-gray-500">
-        © <?= date('Y') ?> TICS.ro • <a href="/termeni" class="hover:text-gray-900">Termeni</a> • <a href="/confidentialitate" class="hover:text-gray-900">Confidențialitate</a>
-    </div>
-</footer>
+    <script>
+        // Form Submission
+        document.getElementById('forgotForm').addEventListener('submit', function(e) {
+            e.preventDefault();
 
+            const email = document.getElementById('email').value;
+            const btn = this.querySelector('button[type="submit"]');
+
+            // Loading state
+            btn.innerHTML = `
+                <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Se trimite...</span>
+            `;
+            btn.disabled = true;
+
+            // Simulate API call
+            setTimeout(() => {
+                // Show success state
+                document.getElementById('resetForm').classList.add('hidden');
+                document.getElementById('successState').classList.remove('hidden');
+                document.getElementById('sentEmail').textContent = email;
+            }, 1500);
+        });
+
+        // Resend Email
+        let resendCount = 0;
+        function resendEmail(btn) {
+            resendCount++;
+            if (resendCount >= 3) {
+                alert('Ai atins limita de retrimiteri. Te rugăm să contactezi suportul.');
+                return;
+            }
+
+            btn.innerHTML = `
+                <svg class="animate-spin w-5 h-5 inline mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                Se retrimite...
+            `;
+            btn.disabled = true;
+
+            setTimeout(() => {
+                btn.innerHTML = 'Email retrimis! ✓';
+                btn.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+                setTimeout(() => {
+                    btn.innerHTML = 'Nu ai primit? Retrimite email-ul';
+                    btn.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+                    btn.disabled = false;
+                }, 3000);
+            }, 1500);
+        }
+
+        // Hide error on input
+        document.getElementById('email').addEventListener('input', function() {
+            document.getElementById('errorMessage').classList.add('hidden');
+        });
+    </script>
 </body>
 </html>

@@ -1,0 +1,269 @@
+/**
+ * TICS.ro - Accessibility Styles
+ *
+ * CSS classes applied by the accessibility widget
+ */
+
+/* =============================================================================
+   UNDERLINE LINKS
+   ============================================================================= */
+.a11y-underline-links a:not(.no-underline):not([class*="btn"]):not([class*="button"]):not([class*="rounded"]) {
+    text-decoration: underline !important;
+    text-underline-offset: 2px !important;
+}
+
+/* =============================================================================
+   UNDERLINE HEADINGS
+   ============================================================================= */
+.a11y-underline-headings h1,
+.a11y-underline-headings h2,
+.a11y-underline-headings h3,
+.a11y-underline-headings h4,
+.a11y-underline-headings h5,
+.a11y-underline-headings h6 {
+    text-decoration: underline !important;
+    text-underline-offset: 4px !important;
+}
+
+/* =============================================================================
+   DISABLE ANIMATIONS
+   ============================================================================= */
+.a11y-no-animations *,
+.a11y-no-animations *::before,
+.a11y-no-animations *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+}
+
+/* =============================================================================
+   GRAYSCALE MODE (Alb-Negru)
+   ============================================================================= */
+.a11y-grayscale {
+    filter: grayscale(100%) !important;
+}
+
+.a11y-grayscale img,
+.a11y-grayscale video,
+.a11y-grayscale iframe {
+    filter: grayscale(100%) !important;
+}
+
+/* =============================================================================
+   HIGH CONTRAST MODE
+   ============================================================================= */
+.a11y-high-contrast {
+    filter: contrast(1.5) !important;
+}
+
+.a11y-high-contrast * {
+    border-color: currentColor !important;
+}
+
+.a11y-high-contrast a {
+    color: #0000EE !important;
+}
+
+.a11y-high-contrast a:visited {
+    color: #551A8B !important;
+}
+
+.a11y-high-contrast button,
+.a11y-high-contrast [role="button"],
+.a11y-high-contrast input[type="submit"],
+.a11y-high-contrast input[type="button"] {
+    border: 2px solid currentColor !important;
+}
+
+/* =============================================================================
+   INVERT COLORS MODE
+   ============================================================================= */
+.a11y-invert {
+    filter: invert(100%) hue-rotate(180deg) !important;
+    background-color: #000 !important;
+}
+
+.a11y-invert img,
+.a11y-invert video,
+.a11y-invert iframe,
+.a11y-invert svg,
+.a11y-invert [style*="background-image"] {
+    filter: invert(100%) hue-rotate(180deg) !important;
+}
+
+/* =============================================================================
+   CURSOR SIZE - LARGE
+   ============================================================================= */
+.a11y-cursor-large,
+.a11y-cursor-large * {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path fill="%23000" stroke="%23fff" stroke-width="1" d="M4 4 L4 28 L12 20 L20 28 L24 24 L16 16 L24 16 Z"/></svg>') 4 4, auto !important;
+}
+
+.a11y-cursor-large a,
+.a11y-cursor-large button,
+.a11y-cursor-large [role="button"],
+.a11y-cursor-large input[type="submit"],
+.a11y-cursor-large input[type="button"],
+.a11y-cursor-large [onclick],
+.a11y-cursor-large label[for] {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path fill="%23000" stroke="%23fff" stroke-width="1" d="M10 4 C6 4 4 8 4 12 L4 20 C4 24 6 28 10 28 L22 28 C26 28 28 24 28 20 L28 12 C28 8 26 4 22 4 Z"/><circle cx="12" cy="14" r="2" fill="%23fff"/><circle cx="20" cy="14" r="2" fill="%23fff"/></svg>') 16 16, pointer !important;
+}
+
+/* =============================================================================
+   CURSOR SIZE - EXTRA LARGE
+   ============================================================================= */
+.a11y-cursor-xlarge,
+.a11y-cursor-xlarge * {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><path fill="%23000" stroke="%23fff" stroke-width="2" d="M6 6 L6 42 L18 30 L30 42 L36 36 L24 24 L36 24 Z"/></svg>') 6 6, auto !important;
+}
+
+.a11y-cursor-xlarge a,
+.a11y-cursor-xlarge button,
+.a11y-cursor-xlarge [role="button"],
+.a11y-cursor-xlarge input[type="submit"],
+.a11y-cursor-xlarge input[type="button"],
+.a11y-cursor-xlarge [onclick],
+.a11y-cursor-xlarge label[for] {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><path fill="%23000" stroke="%23fff" stroke-width="2" d="M15 6 C9 6 6 12 6 18 L6 30 C6 36 9 42 15 42 L33 42 C39 42 42 36 42 30 L42 18 C42 12 39 6 33 6 Z"/><circle cx="18" cy="21" r="3" fill="%23fff"/><circle cx="30" cy="21" r="3" fill="%23fff"/></svg>') 24 24, pointer !important;
+}
+
+/* =============================================================================
+   CURSOR COLORS
+   ============================================================================= */
+
+/* Black cursor */
+.a11y-cursor-black,
+.a11y-cursor-black * {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23000" stroke="%23fff" stroke-width="1" d="M3 3 L3 21 L9 15 L15 21 L18 18 L12 12 L18 12 Z"/></svg>') 3 3, auto !important;
+}
+
+.a11y-cursor-black a,
+.a11y-cursor-black button,
+.a11y-cursor-black [role="button"] {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="%23000" stroke="%23fff" stroke-width="1"/><circle cx="9" cy="10" r="1.5" fill="%23fff"/><circle cx="15" cy="10" r="1.5" fill="%23fff"/></svg>') 12 12, pointer !important;
+}
+
+/* White cursor */
+.a11y-cursor-white,
+.a11y-cursor-white * {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23fff" stroke="%23000" stroke-width="1" d="M3 3 L3 21 L9 15 L15 21 L18 18 L12 12 L18 12 Z"/></svg>') 3 3, auto !important;
+}
+
+.a11y-cursor-white a,
+.a11y-cursor-white button,
+.a11y-cursor-white [role="button"] {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="%23fff" stroke="%23000" stroke-width="1"/><circle cx="9" cy="10" r="1.5" fill="%23000"/><circle cx="15" cy="10" r="1.5" fill="%23000"/></svg>') 12 12, pointer !important;
+}
+
+/* Yellow cursor */
+.a11y-cursor-yellow,
+.a11y-cursor-yellow * {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23FACC15" stroke="%23000" stroke-width="1" d="M3 3 L3 21 L9 15 L15 21 L18 18 L12 12 L18 12 Z"/></svg>') 3 3, auto !important;
+}
+
+.a11y-cursor-yellow a,
+.a11y-cursor-yellow button,
+.a11y-cursor-yellow [role="button"] {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="%23FACC15" stroke="%23000" stroke-width="1"/><circle cx="9" cy="10" r="1.5" fill="%23000"/><circle cx="15" cy="10" r="1.5" fill="%23000"/></svg>') 12 12, pointer !important;
+}
+
+/* Blue cursor */
+.a11y-cursor-blue,
+.a11y-cursor-blue * {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%233B82F6" stroke="%23fff" stroke-width="1" d="M3 3 L3 21 L9 15 L15 21 L18 18 L12 12 L18 12 Z"/></svg>') 3 3, auto !important;
+}
+
+.a11y-cursor-blue a,
+.a11y-cursor-blue button,
+.a11y-cursor-blue [role="button"] {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="%233B82F6" stroke="%23fff" stroke-width="1"/><circle cx="9" cy="10" r="1.5" fill="%23fff"/><circle cx="15" cy="10" r="1.5" fill="%23fff"/></svg>') 12 12, pointer !important;
+}
+
+/* Red cursor */
+.a11y-cursor-red,
+.a11y-cursor-red * {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23EF4444" stroke="%23fff" stroke-width="1" d="M3 3 L3 21 L9 15 L15 21 L18 18 L12 12 L18 12 Z"/></svg>') 3 3, auto !important;
+}
+
+.a11y-cursor-red a,
+.a11y-cursor-red button,
+.a11y-cursor-red [role="button"] {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="%23EF4444" stroke="%23fff" stroke-width="1"/><circle cx="9" cy="10" r="1.5" fill="%23fff"/><circle cx="15" cy="10" r="1.5" fill="%23fff"/></svg>') 12 12, pointer !important;
+}
+
+/* =============================================================================
+   COMBINED CURSOR SIZE + COLOR
+   ============================================================================= */
+
+/* Large + Black */
+.a11y-cursor-large.a11y-cursor-black,
+.a11y-cursor-large.a11y-cursor-black * {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path fill="%23000" stroke="%23fff" stroke-width="1" d="M4 4 L4 28 L12 20 L20 28 L24 24 L16 16 L24 16 Z"/></svg>') 4 4, auto !important;
+}
+
+/* Large + Yellow */
+.a11y-cursor-large.a11y-cursor-yellow,
+.a11y-cursor-large.a11y-cursor-yellow * {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path fill="%23FACC15" stroke="%23000" stroke-width="1" d="M4 4 L4 28 L12 20 L20 28 L24 24 L16 16 L24 16 Z"/></svg>') 4 4, auto !important;
+}
+
+/* XLarge + Black */
+.a11y-cursor-xlarge.a11y-cursor-black,
+.a11y-cursor-xlarge.a11y-cursor-black * {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><path fill="%23000" stroke="%23fff" stroke-width="2" d="M6 6 L6 42 L18 30 L30 42 L36 36 L24 24 L36 24 Z"/></svg>') 6 6, auto !important;
+}
+
+/* XLarge + Yellow */
+.a11y-cursor-xlarge.a11y-cursor-yellow,
+.a11y-cursor-xlarge.a11y-cursor-yellow * {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><path fill="%23FACC15" stroke="%23000" stroke-width="2" d="M6 6 L6 42 L18 30 L30 42 L36 36 L24 24 L36 24 Z"/></svg>') 6 6, auto !important;
+}
+
+/* =============================================================================
+   ACCESSIBILITY WIDGET STYLES
+   ============================================================================= */
+
+/* Ensure widget is always visible regardless of color modes */
+#accessibilityToggle,
+#accessibilityModal,
+#accessibilityPanel {
+    filter: none !important;
+}
+
+.a11y-grayscale #accessibilityToggle,
+.a11y-grayscale #accessibilityModal,
+.a11y-grayscale #accessibilityPanel,
+.a11y-invert #accessibilityToggle,
+.a11y-invert #accessibilityModal,
+.a11y-invert #accessibilityPanel {
+    filter: none !important;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+    #accessibilityToggle {
+        bottom: 80px; /* Above mobile navigation */
+        right: 16px;
+        width: 48px;
+        height: 48px;
+    }
+
+    #accessibilityPanel {
+        max-width: 100%;
+    }
+}
+
+/* Focus styles for accessibility */
+#accessibilityPanel button:focus,
+#accessibilityPanel input:focus {
+    outline: 2px solid #111827;
+    outline-offset: 2px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    #accessibilityPanel {
+        transition: none !important;
+    }
+}

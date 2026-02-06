@@ -32,8 +32,14 @@ const TicsEventCard = {
         const data = this.normalizeEvent(event);
         if (!data) return '';
 
-        // Build event URL - ensure we have a valid slug
-        const eventUrl = data.slug ? (urlPrefix + data.slug) : `/event/${data.id}`;
+        // Build event URL - format: /bilete/[event-slug]-[city-slug]
+        let eventUrl = `/event/${data.id}`;
+        if (data.slug) {
+            eventUrl = urlPrefix + data.slug;
+            if (data.citySlug) {
+                eventUrl += '-' + data.citySlug;
+            }
+        }
 
         // AI Match badge
         const matchBadge = showMatch && data.aiMatch ? `
@@ -107,7 +113,14 @@ const TicsEventCard = {
         const data = this.normalizeEvent(event);
         if (!data) return '';
 
-        const eventUrl = data.slug ? ('/bilete/' + data.slug) : `/event/${data.id}`;
+        // Build event URL - format: /bilete/[event-slug]-[city-slug]
+        let eventUrl = `/event/${data.id}`;
+        if (data.slug) {
+            eventUrl = '/bilete/' + data.slug;
+            if (data.citySlug) {
+                eventUrl += '-' + data.citySlug;
+            }
+        }
 
         return `
             <a href="${eventUrl}" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 sm:col-span-2 sm:row-span-2 group">
@@ -161,7 +174,14 @@ const TicsEventCard = {
         const data = this.normalizeEvent(event);
         if (!data) return '';
 
-        const eventUrl = data.slug ? ('/bilete/' + data.slug) : `/event/${data.id}`;
+        // Build event URL - format: /bilete/[event-slug]-[city-slug]
+        let eventUrl = `/event/${data.id}`;
+        if (data.slug) {
+            eventUrl = '/bilete/' + data.slug;
+            if (data.citySlug) {
+                eventUrl += '-' + data.citySlug;
+            }
+        }
 
         return `
             <a href="${eventUrl}" class="event-card flex bg-white rounded-2xl overflow-hidden border border-gray-200 group">
@@ -197,7 +217,14 @@ const TicsEventCard = {
         const data = this.normalizeEvent(event);
         if (!data) return '';
 
-        const eventUrl = data.slug ? ('/bilete/' + data.slug) : `/event/${data.id}`;
+        // Build event URL - format: /bilete/[event-slug]-[city-slug]
+        let eventUrl = `/event/${data.id}`;
+        if (data.slug) {
+            eventUrl = '/bilete/' + data.slug;
+            if (data.citySlug) {
+                eventUrl += '-' + data.citySlug;
+            }
+        }
 
         return `
             <a href="${eventUrl}" class="flex gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
@@ -289,7 +316,7 @@ const TicsEventCard = {
         const date = rawDate ? new Date(rawDate) : null;
 
         // Get venue info
-        let venueName = '', venueCity = '';
+        let venueName = '', venueCity = '', citySlug = '';
         if (typeof apiEvent.venue === 'string') {
             venueName = apiEvent.venue;
         } else if (apiEvent.venue && typeof apiEvent.venue === 'object') {
@@ -299,6 +326,11 @@ const TicsEventCard = {
         if (!venueName && apiEvent.venue_name) venueName = apiEvent.venue_name;
         if (!venueCity && apiEvent.venue_city) venueCity = apiEvent.venue_city;
         if (!venueCity && apiEvent.city) venueCity = apiEvent.city;
+
+        // Generate city slug for URL
+        if (venueCity) {
+            citySlug = TicsUtils.slugify(venueCity);
+        }
 
         // Get category
         let categoryName = '';
@@ -320,6 +352,7 @@ const TicsEventCard = {
         return {
             id: apiEvent.id,
             slug: apiEvent.slug || '',
+            citySlug: citySlug,
             title: apiEvent.name || apiEvent.title || 'Eveniment',
             image: image,
             date: date,

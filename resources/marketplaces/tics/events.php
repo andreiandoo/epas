@@ -52,6 +52,9 @@ require_once __DIR__ . '/includes/head.php';
 
 // Include header
 require_once __DIR__ . '/includes/header.php';
+
+// Include categories bar
+require_once __DIR__ . '/includes/categories-bar.php';
 ?>
 
     <!-- Main -->

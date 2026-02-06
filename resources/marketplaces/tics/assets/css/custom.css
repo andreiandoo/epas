@@ -356,6 +356,9 @@ input[type="range"]::-moz-range-thumb {
 
 .ticket-card {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: visible;
+    z-index: 1;
 }
 
 .ticket-card:hover {
@@ -367,6 +370,46 @@ input[type="range"]::-moz-range-thumb {
     border-color: #111827;
     background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
     box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
+}
+
+/* Ticket Tooltip */
+.ticket-tooltip-container {
+    position: relative;
+    z-index: 10;
+}
+
+.ticket-tooltip-container:hover .ticket-tooltip,
+.ticket-info-btn:focus + .ticket-tooltip {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Tooltip positioning - default to left */
+.ticket-tooltip {
+    left: auto;
+    right: 0;
+    z-index: 9999 !important;
+}
+
+.ticket-tooltip.tooltip-left {
+    left: auto;
+    right: 0;
+}
+
+.ticket-tooltip.tooltip-left .ticket-tooltip-arrow {
+    right: 4px;
+    left: auto;
+}
+
+.ticket-tooltip.tooltip-right {
+    left: 0;
+    right: auto;
+}
+
+.ticket-tooltip.tooltip-right .ticket-tooltip-arrow {
+    left: 4px;
+    right: auto;
 }
 
 /* ===========================================

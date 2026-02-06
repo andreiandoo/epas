@@ -14,6 +14,10 @@ const TicsEventsPage = {
     view: 'grid',
     isLoggedIn: false, // User login state
     aiEnabled: true,   // AI suggestions toggle state
+    isLoading: false,  // Loading state for infinite scroll
+    hasMore: true,     // Whether more events are available
+    infiniteScrollEnabled: true, // Enable infinite scroll
+    scrollObserver: null, // IntersectionObserver for infinite scroll
     filters: {
         category: '',
         city: '',
@@ -79,6 +83,11 @@ const TicsEventsPage = {
         this.updateActiveFilters();
         this.setView(this.view);
         this.bindEvents();
+
+        // Setup infinite scroll
+        if (this.infiniteScrollEnabled) {
+            this.setupInfiniteScroll();
+        }
     },
 
     /**
@@ -108,6 +117,41 @@ const TicsEventsPage = {
             if (aiBanner) aiBanner.classList.add('hidden');
             if (ctaBanner) ctaBanner.classList.remove('hidden');
         }
+    },
+
+    /**
+     * Setup infinite scroll using IntersectionObserver
+     */
+    setupInfiniteScroll() {
+        // Create a sentinel element to observe
+        const pagination = document.getElementById(this.elements.pagination);
+        if (!pagination) return;
+
+        // Transform pagination into a "Load more" trigger that auto-fires
+        this.scrollObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !this.isLoading && this.hasMore) {
+                    this.loadMoreEvents();
+                }
+            });
+        }, {
+            root: null,
+            rootMargin: '200px', // Start loading 200px before reaching the element
+            threshold: 0
+        });
+
+        // Observe the pagination container
+        this.scrollObserver.observe(pagination);
+    },
+
+    /**
+     * Load more events (for infinite scroll)
+     */
+    async loadMoreEvents() {
+        if (this.isLoading || !this.hasMore) return;
+
+        this.page++;
+        await this.loadEvents(true); // Append mode
     },
 
     /**
@@ -193,18 +237,36 @@ const TicsEventsPage = {
 
     /**
      * Load events from API
+     * @param {boolean} append - If true, append events instead of replacing
      */
-    async loadEvents() {
+    async loadEvents(append = false) {
+        if (this.isLoading) return;
+        this.isLoading = true;
+
         const loadingEl = document.getElementById(this.elements.loadingState);
         const gridEl = document.getElementById(this.elements.eventsGrid);
         const emptyEl = document.getElementById(this.elements.emptyState);
+        const paginationEl = document.getElementById(this.elements.pagination);
 
-        if (loadingEl) loadingEl.classList.remove('hidden');
-        if (gridEl) {
-            gridEl.classList.add('hidden');
-            gridEl.innerHTML = TicsEventCard.renderSkeletons(8);
+        if (!append) {
+            if (loadingEl) loadingEl.classList.remove('hidden');
+            if (gridEl) {
+                gridEl.classList.add('hidden');
+                gridEl.innerHTML = TicsEventCard.renderSkeletons(8);
+            }
+            if (emptyEl) emptyEl.classList.add('hidden');
+            this.events = []; // Reset events for fresh load
+        } else {
+            // Show loading spinner in pagination area for infinite scroll
+            if (paginationEl) {
+                paginationEl.innerHTML = `
+                    <div class="flex items-center justify-center gap-3 py-4">
+                        <div class="loading-spinner w-6 h-6 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin"></div>
+                        <span class="text-sm text-gray-500">Se încarcă mai multe evenimente...</span>
+                    </div>
+                `;
+            }
         }
-        if (emptyEl) emptyEl.classList.add('hidden');
 
         try {
             const params = {
@@ -238,22 +300,117 @@ const TicsEventsPage = {
             }
 
             if (eventsData && eventsData.length > 0) {
-                this.events = eventsData;
+                if (append) {
+                    this.events = [...this.events, ...eventsData];
+                } else {
+                    this.events = eventsData;
+                }
                 this.totalPages = meta?.last_page || 1;
                 this.totalCount = meta?.total || this.events.length;
+                this.hasMore = this.page < this.totalPages;
 
                 this.updateResultsCount();
-                this.renderEvents();
+
+                if (append) {
+                    this.appendEvents(eventsData);
+                } else {
+                    this.renderEvents();
+                }
                 this.renderPagination();
             } else {
-                this.totalCount = 0;
-                this.updateResultsCount();
-                this.showEmpty();
+                if (!append) {
+                    this.totalCount = 0;
+                    this.hasMore = false;
+                    this.updateResultsCount();
+                    this.showEmpty();
+                } else {
+                    this.hasMore = false;
+                    this.renderPagination();
+                }
             }
         } catch (error) {
             console.error('Error loading events:', error);
-            this.showEmpty();
+            if (!append) {
+                this.showEmpty();
+            }
+            this.hasMore = false;
         }
+
+        this.isLoading = false;
+    },
+
+    /**
+     * Append events to existing grid (for infinite scroll)
+     */
+    appendEvents(newEvents) {
+        const grid = document.getElementById(this.elements.eventsGrid);
+        if (!grid) return;
+
+        const showAI = this.isLoggedIn && this.aiEnabled;
+        const cardOptions = { showMatch: showAI };
+
+        // Group new events by month
+        const monthGroups = this.groupEventsByMonth(newEvents);
+
+        monthGroups.forEach(group => {
+            // Check if this month group already exists
+            const existingGroup = grid.querySelector(`[data-month="${group.key}"]`);
+
+            if (existingGroup) {
+                // Append to existing month's grid
+                const existingGrid = existingGroup.querySelector('.events-grid');
+                if (existingGrid) {
+                    let html = '';
+                    group.events.forEach(event => {
+                        if (this.view === 'list') {
+                            html += TicsEventCard.renderHorizontal(event, cardOptions);
+                        } else {
+                            html += TicsEventCard.render(event, cardOptions);
+                        }
+                    });
+                    existingGrid.insertAdjacentHTML('beforeend', html);
+
+                    // Update event count
+                    const countEl = existingGroup.querySelector('.event-count');
+                    if (countEl) {
+                        const currentCount = parseInt(countEl.dataset.count || 0) + group.events.length;
+                        countEl.dataset.count = currentCount;
+                        countEl.textContent = `${currentCount} ${currentCount === 1 ? 'eveniment' : 'evenimente'}`;
+                    }
+                }
+            } else {
+                // Create new month group
+                const gridClass = this.view === 'grid'
+                    ? 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                    : 'flex flex-col gap-4';
+
+                let eventsHtml = '';
+                group.events.forEach(event => {
+                    if (this.view === 'list') {
+                        eventsHtml += TicsEventCard.renderHorizontal(event, cardOptions);
+                    } else {
+                        eventsHtml += TicsEventCard.render(event, cardOptions);
+                    }
+                });
+
+                const groupHtml = `
+                    <div class="month-group reveal" data-month="${group.key}">
+                        <div class="flex items-center gap-4 mb-6">
+                            <h2 class="text-2xl font-bold text-gray-900">${group.label}</h2>
+                            <span class="event-count px-3 py-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-full" data-count="${group.events.length}">
+                                ${group.events.length} ${group.events.length === 1 ? 'eveniment' : 'evenimente'}
+                            </span>
+                            <div class="flex-1 h-px bg-gray-200"></div>
+                        </div>
+                        <div class="events-grid ${gridClass}">${eventsHtml}</div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', groupHtml);
+            }
+        });
+
+        // Initialize reveal animations for new cards
+        this.initRevealAnimations();
     },
 
     /**
@@ -435,15 +592,15 @@ const TicsEventsPage = {
             : 'flex flex-col gap-4';
 
         return `
-            <div class="month-group reveal">
+            <div class="month-group reveal" data-month="${group.key}">
                 <div class="flex items-center gap-4 mb-6">
                     <h2 class="text-2xl font-bold text-gray-900">${group.label}</h2>
-                    <span class="px-3 py-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-full">
+                    <span class="event-count px-3 py-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-full" data-count="${group.events.length}">
                         ${group.events.length} ${group.events.length === 1 ? 'eveniment' : 'evenimente'}
                     </span>
                     <div class="flex-1 h-px bg-gray-200"></div>
                 </div>
-                <div class="${gridClass}">${eventsHtml}</div>
+                <div class="events-grid ${gridClass}">${eventsHtml}</div>
             </div>
         `;
     },
@@ -474,52 +631,85 @@ const TicsEventsPage = {
     },
 
     /**
-     * Render pagination
+     * Render pagination / infinite scroll status
      */
     renderPagination() {
         const container = document.getElementById(this.elements.pagination);
-        if (!container || this.totalPages <= 1) {
-            if (container) container.innerHTML = '';
+        const summaryEl = document.getElementById('resultsSummary');
+
+        if (!container) return;
+
+        // Update results summary
+        const shown = Math.min(this.events.length, this.totalCount);
+        if (summaryEl) {
+            summaryEl.textContent = `Afișezi ${shown} din ${this.totalCount} evenimente`;
+        }
+
+        if (!this.hasMore) {
+            // All events loaded
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <p class="text-sm text-gray-400">
+                        ${this.events.length > 0 ? '✓ Ai văzut toate evenimentele' : ''}
+                    </p>
+                </div>
+            `;
             return;
         }
 
-        let html = '';
-        const maxVisible = 5;
-        const start = Math.max(1, this.page - Math.floor(maxVisible / 2));
-        const end = Math.min(this.totalPages, start + maxVisible - 1);
+        if (this.infiniteScrollEnabled) {
+            // Show loading indicator for infinite scroll (will auto-trigger)
+            container.innerHTML = `
+                <div class="flex flex-col items-center gap-4 py-4">
+                    <button onclick="TicsEventsPage.loadMoreEvents()" class="px-8 py-3 bg-gray-900 text-white font-medium rounded-full hover:bg-gray-800 transition-colors">
+                        Încarcă mai multe evenimente
+                    </button>
+                    <p class="text-sm text-gray-400">
+                        sau derulează în jos pentru încărcare automată
+                    </p>
+                </div>
+            `;
+        } else {
+            // Traditional pagination (fallback)
+            let html = '';
+            const maxVisible = 5;
+            const start = Math.max(1, this.page - Math.floor(maxVisible / 2));
+            const end = Math.min(this.totalPages, start + maxVisible - 1);
 
-        // Previous button
-        if (this.page > 1) {
-            html += `<button onclick="TicsEventsPage.goToPage(${this.page - 1})" class="p-2 rounded-lg border border-gray-200 hover:bg-gray-50">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-            </button>`;
-        }
-
-        // Page numbers
-        for (let i = start; i <= end; i++) {
-            if (i === this.page) {
-                html += `<button class="w-10 h-10 rounded-lg bg-gray-900 text-white font-medium">${i}</button>`;
-            } else {
-                html += `<button onclick="TicsEventsPage.goToPage(${i})" class="w-10 h-10 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium">${i}</button>`;
+            // Previous button
+            if (this.page > 1) {
+                html += `<button onclick="TicsEventsPage.goToPage(${this.page - 1})" class="p-2 rounded-lg border border-gray-200 hover:bg-gray-50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </button>`;
             }
-        }
 
-        // Next button
-        if (this.page < this.totalPages) {
-            html += `<button onclick="TicsEventsPage.goToPage(${this.page + 1})" class="p-2 rounded-lg border border-gray-200 hover:bg-gray-50">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </button>`;
-        }
+            // Page numbers
+            for (let i = start; i <= end; i++) {
+                if (i === this.page) {
+                    html += `<button class="w-10 h-10 rounded-lg bg-gray-900 text-white font-medium">${i}</button>`;
+                } else {
+                    html += `<button onclick="TicsEventsPage.goToPage(${i})" class="w-10 h-10 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium">${i}</button>`;
+                }
+            }
 
-        container.innerHTML = html;
+            // Next button
+            if (this.page < this.totalPages) {
+                html += `<button onclick="TicsEventsPage.goToPage(${this.page + 1})" class="p-2 rounded-lg border border-gray-200 hover:bg-gray-50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>`;
+            }
+
+            container.innerHTML = html;
+        }
     },
 
     /**
-     * Navigate to page
+     * Navigate to page (resets infinite scroll state)
      */
     goToPage(page) {
         this.page = page;
-        this.loadEvents();
+        this.hasMore = true;
+        this.loadEvents(false);
         TicsUtils.scrollTo('#eventsGrid', 120);
     },
 
@@ -545,9 +735,10 @@ const TicsEventsPage = {
         this.filters.features = features;
 
         this.page = 1;
+        this.hasMore = true;
         this.updateURL();
         this.updateActiveFilters();
-        this.loadEvents();
+        this.loadEvents(false);
     },
 
     /**
@@ -567,9 +758,10 @@ const TicsEventsPage = {
         });
 
         this.page = 1;
+        this.hasMore = true;
         this.updateURL();
         this.updateActiveFilters();
-        this.loadEvents();
+        this.loadEvents(false);
     },
 
     /**
@@ -591,7 +783,8 @@ const TicsEventsPage = {
         });
 
         this.page = 1;
-        this.loadEvents();
+        this.hasMore = true;
+        this.loadEvents(false);
     },
 
     /**
@@ -676,9 +869,10 @@ const TicsEventsPage = {
 
         this.updateMobileFilterCount();
         this.page = 1;
+        this.hasMore = true;
         this.updateURL();
         this.updateActiveFilters();
-        this.loadEvents();
+        this.loadEvents(false);
     },
 
     /**
@@ -756,9 +950,10 @@ const TicsEventsPage = {
         }
 
         this.page = 1;
+        this.hasMore = true;
         this.updateURL();
         this.updateActiveFilters();
-        this.loadEvents();
+        this.loadEvents(false);
     },
 
     /**
