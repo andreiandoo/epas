@@ -2225,7 +2225,7 @@ class EventResource extends Resource
                                         ->modalHeading($t('Duplică evenimentul', 'Duplicate event'))
                                         ->modalDescription($t('Sigur vrei să duplici acest eveniment? Se va crea o copie draft fără bilete vândute.', 'Are you sure you want to duplicate this event? A draft copy will be created without sold tickets.'))
                                         ->modalSubmitActionLabel($t('Duplică', 'Duplicate'))
-                                        ->action(function (?Event $record) {
+                                        ->action(function (?Event $record) use ($t) {
                                             if (!$record) return;
 
                                             // Explicitly copy only fillable attributes that exist
