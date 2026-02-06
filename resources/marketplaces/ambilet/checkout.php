@@ -835,12 +835,15 @@ const CheckoutPage = {
             const eventDate = item.event?.date || item.event_date || '';
             const venueName = item.event?.venue?.name || (typeof item.event?.venue === 'string' ? item.event.venue : '') || item.venue_name || '';
 
+            const cityName = item.event?.city?.name || item.event?.city || item.event?.venue?.city || '';
+
             if (!eventGroups[eventId]) {
                 eventGroups[eventId] = {
                     title: eventTitle,
                     image: eventImage,
                     date: eventDate,
                     venue: venueName,
+                    city: cityName,
                     tickets: [],
                     subtotal: 0,
                     commission: 0
@@ -887,29 +890,17 @@ const CheckoutPage = {
         const eventIds = Object.keys(eventGroups);
         const hasMultipleEvents = eventIds.length > 1;
 
-        // Event info - show first event or multiple events indicator
+        // Event info - show first event (even if multiple)
         const eventInfo = document.getElementById('event-info');
-        if (hasMultipleEvents) {
-            eventInfo.innerHTML = `
-                <div class="flex items-center justify-center w-20 h-20 rounded-xl bg-primary/10">
-                    <span class="text-2xl font-bold text-primary">${eventIds.length}</span>
-                </div>
-                <div>
-                    <h3 class="font-bold text-secondary">${eventIds.length} evenimente</h3>
-                    <p class="text-sm text-muted">${totalQty} bilete în total</p>
-                </div>
-            `;
-        } else {
-            const firstGroup = eventGroups[eventIds[0]];
-            eventInfo.innerHTML = `
-                <img src="${firstGroup.image}" alt="Event" class="object-cover w-20 h-20 rounded-xl" loading="lazy">
-                <div>
-                    <h3 class="font-bold text-secondary">${firstGroup.title}</h3>
-                    <p class="text-sm text-muted">${firstGroup.date ? AmbiletUtils.formatDate(firstGroup.date) : ''}</p>
-                    <p class="text-sm text-muted">${firstGroup.venue}</p>
-                </div>
-            `;
-        }
+        const firstGroup = eventGroups[eventIds[0]];
+        eventInfo.innerHTML = `
+            <img src="${firstGroup.image}" alt="Event" class="object-cover w-20 h-20 rounded-xl" loading="lazy">
+            <div>
+                <h3 class="font-bold text-secondary">${firstGroup.title}</h3>
+                <p class="text-sm text-muted">${firstGroup.date ? AmbiletUtils.formatDate(firstGroup.date) : ''}</p>
+                <p class="text-sm text-muted">${firstGroup.venue}</p>
+            </div>
+        `;
 
         // Items summary - grouped by event
         const itemsSummary = document.getElementById('items-summary');
@@ -923,7 +914,14 @@ const CheckoutPage = {
                 if (eventIndex > 0) {
                     itemsHtml += '<div class="pt-3 mt-3 border-t border-border"></div>';
                 }
-                itemsHtml += `<div class="mb-2 text-xs font-semibold text-secondary">${group.title}</div>`;
+                // Build event info string: title (date, venue, city)
+                let eventDetails = [];
+                if (group.date) eventDetails.push(AmbiletUtils.formatDate(group.date, 'short'));
+                if (group.venue) eventDetails.push(group.venue);
+                const city = group.city || '';
+                if (city && city !== group.venue) eventDetails.push(city);
+                const detailsStr = eventDetails.length > 0 ? ` <span class="font-normal text-muted">(${eventDetails.join(', ')})</span>` : '';
+                itemsHtml += `<div class="mb-2 text-xs font-semibold text-secondary">${group.title}${detailsStr}</div>`;
             }
 
             // Show tickets for this event
