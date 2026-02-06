@@ -170,12 +170,23 @@ class MediaLibraryResource extends Resource
                                         ? "<span style='padding: 2px 8px; background: rgba(16, 185, 129, 0.2); color: #10b981; border-radius: 4px; font-size: 12px;'>✓ Există</span>"
                                         : "<span style='padding: 2px 8px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border-radius: 4px; font-size: 12px;'>✗ Lipsă</span>";
 
+                                    $originalFilenameRow = '';
+                                    if (!empty($record->original_filename)) {
+                                        $originalFilenameRow = "
+                                            <div style='display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                                                <span style='color: #64748b;'>Nume Original</span>
+                                                <span style='color: #10b981; font-size: 12px; word-break: break-all;'>" . e($record->original_filename) . "</span>
+                                            </div>
+                                        ";
+                                    }
+
                                     return new HtmlString("
                                         <div>
                                             <div style='display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
                                                 <span style='color: #64748b;'>Nume Fișier</span>
                                                 <span style='color: #e2e8f0; font-size: 12px; word-break: break-all;'>" . e($record->filename) . "</span>
                                             </div>
+                                            {$originalFilenameRow}
                                             <div style='display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
                                                 <span style='color: #64748b;'>Tip</span>
                                                 <span style='color: #e2e8f0;'>{$record->mime_type}</span>

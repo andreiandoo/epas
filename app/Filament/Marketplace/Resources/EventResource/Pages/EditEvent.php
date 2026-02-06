@@ -100,61 +100,262 @@ class EditEvent extends EditRecord
             ->icon('heroicon-o-photo')
             ->color('primary')
             ->modalHeading($t('Încarcă Imagini Eveniment', 'Upload Event Images'))
-            ->modalWidth('lg')
+            ->modalWidth('4xl')
             ->fillForm(fn () => [
                 'poster_url' => $this->record->poster_url,
                 'hero_image_url' => $this->record->hero_image_url,
+                'poster_mode' => 'upload',
+                'hero_mode' => 'upload',
             ])
             ->form([
-                Forms\Components\FileUpload::make('poster_url')
-                    ->label($t('Poster (vertical)', 'Poster (vertical)'))
-                    ->image()
-                    ->disk('public')
-                    ->directory('events/posters')
-                    ->visibility('public')
-                    ->imagePreviewHeight('200')
-                    ->maxSize(10240)
-                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                    ->storeFileNamesIn('poster_original_filename'),
-                Forms\Components\FileUpload::make('hero_image_url')
-                    ->label($t('Imagine hero (orizontală)', 'Hero image (horizontal)'))
-                    ->image()
-                    ->disk('public')
-                    ->directory('events/hero')
-                    ->visibility('public')
-                    ->imagePreviewHeight('200')
-                    ->maxSize(10240)
-                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                    ->storeFileNamesIn('hero_image_original_filename'),
+                // Poster Section
+                Forms\Components\Section::make($t('Poster (vertical)', 'Poster (vertical)'))
+                    ->schema([
+                        Forms\Components\ToggleButtons::make('poster_mode')
+                            ->label($t('Mod selectare', 'Selection mode'))
+                            ->options([
+                                'upload' => $t('Încarcă fișier nou', 'Upload new file'),
+                                'library' => $t('Selectează din bibliotecă', 'Select from library'),
+                            ])
+                            ->icons([
+                                'upload' => 'heroicon-o-arrow-up-tray',
+                                'library' => 'heroicon-o-photo',
+                            ])
+                            ->default('upload')
+                            ->inline()
+                            ->live(),
+
+                        Forms\Components\FileUpload::make('poster_url')
+                            ->label('')
+                            ->image()
+                            ->disk('public')
+                            ->directory('events/posters')
+                            ->visibility('public')
+                            ->imagePreviewHeight('200')
+                            ->maxSize(10240)
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                            ->storeFileNamesIn('poster_original_filename')
+                            ->visible(fn (SGet $get) => $get('poster_mode') === 'upload'),
+
+                        Forms\Components\Select::make('poster_from_library')
+                            ->label($t('Caută în bibliotecă', 'Search in library'))
+                            ->placeholder($t('Caută după numele original...', 'Search by original name...'))
+                            ->searchable()
+                            ->getSearchResultsUsing(function (string $search) use ($marketplace): array {
+                                return \App\Models\MediaLibrary::query()
+                                    ->where('marketplace_client_id', $marketplace?->id)
+                                    ->where('mime_type', 'LIKE', 'image/%')
+                                    ->where(function ($q) use ($search) {
+                                        $q->where('original_filename', 'LIKE', "%{$search}%")
+                                          ->orWhere('filename', 'LIKE', "%{$search}%")
+                                          ->orWhere('title', 'LIKE', "%{$search}%");
+                                    })
+                                    ->orderBy('created_at', 'desc')
+                                    ->limit(20)
+                                    ->get()
+                                    ->mapWithKeys(fn ($media) => [
+                                        $media->path => $media->original_filename ?: $media->filename
+                                    ])
+                                    ->toArray();
+                            })
+                            ->getOptionLabelUsing(function ($value) use ($marketplace): ?string {
+                                $media = \App\Models\MediaLibrary::where('path', $value)
+                                    ->where('marketplace_client_id', $marketplace?->id)
+                                    ->first();
+                                return $media ? ($media->original_filename ?: $media->filename) : $value;
+                            })
+                            ->live()
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
+                                if ($state) {
+                                    $set('poster_url', $state);
+                                }
+                            })
+                            ->visible(fn (SGet $get) => $get('poster_mode') === 'library'),
+
+                        // Show preview when library mode and image selected
+                        Forms\Components\Placeholder::make('poster_library_preview')
+                            ->label('')
+                            ->content(function (SGet $get) use ($marketplace) {
+                                $path = $get('poster_from_library');
+                                if (!$path) {
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<div class="text-gray-500 text-sm">' .
+                                        'Caută și selectează o imagine din bibliotecă' .
+                                        '</div>'
+                                    );
+                                }
+                                $media = \App\Models\MediaLibrary::where('path', $path)
+                                    ->where('marketplace_client_id', $marketplace?->id)
+                                    ->first();
+                                if (!$media) return '';
+
+                                $url = $media->url;
+                                return new \Illuminate\Support\HtmlString(
+                                    "<div class='mt-2'>
+                                        <img src='{$url}' alt='' style='max-height: 200px; border-radius: 8px;'>
+                                        <div class='text-xs text-gray-500 mt-1'>{$media->human_readable_size} • {$media->width}×{$media->height}</div>
+                                    </div>"
+                                );
+                            })
+                            ->visible(fn (SGet $get) => $get('poster_mode') === 'library'),
+                    ])
+                    ->columns(1),
+
+                // Hero Image Section
+                Forms\Components\Section::make($t('Imagine hero (orizontală)', 'Hero image (horizontal)'))
+                    ->schema([
+                        Forms\Components\ToggleButtons::make('hero_mode')
+                            ->label($t('Mod selectare', 'Selection mode'))
+                            ->options([
+                                'upload' => $t('Încarcă fișier nou', 'Upload new file'),
+                                'library' => $t('Selectează din bibliotecă', 'Select from library'),
+                            ])
+                            ->icons([
+                                'upload' => 'heroicon-o-arrow-up-tray',
+                                'library' => 'heroicon-o-photo',
+                            ])
+                            ->default('upload')
+                            ->inline()
+                            ->live(),
+
+                        Forms\Components\FileUpload::make('hero_image_url')
+                            ->label('')
+                            ->image()
+                            ->disk('public')
+                            ->directory('events/hero')
+                            ->visibility('public')
+                            ->imagePreviewHeight('200')
+                            ->maxSize(10240)
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                            ->storeFileNamesIn('hero_image_original_filename')
+                            ->visible(fn (SGet $get) => $get('hero_mode') === 'upload'),
+
+                        Forms\Components\Select::make('hero_from_library')
+                            ->label($t('Caută în bibliotecă', 'Search in library'))
+                            ->placeholder($t('Caută după numele original...', 'Search by original name...'))
+                            ->searchable()
+                            ->getSearchResultsUsing(function (string $search) use ($marketplace): array {
+                                return \App\Models\MediaLibrary::query()
+                                    ->where('marketplace_client_id', $marketplace?->id)
+                                    ->where('mime_type', 'LIKE', 'image/%')
+                                    ->where(function ($q) use ($search) {
+                                        $q->where('original_filename', 'LIKE', "%{$search}%")
+                                          ->orWhere('filename', 'LIKE', "%{$search}%")
+                                          ->orWhere('title', 'LIKE', "%{$search}%");
+                                    })
+                                    ->orderBy('created_at', 'desc')
+                                    ->limit(20)
+                                    ->get()
+                                    ->mapWithKeys(fn ($media) => [
+                                        $media->path => $media->original_filename ?: $media->filename
+                                    ])
+                                    ->toArray();
+                            })
+                            ->getOptionLabelUsing(function ($value) use ($marketplace): ?string {
+                                $media = \App\Models\MediaLibrary::where('path', $value)
+                                    ->where('marketplace_client_id', $marketplace?->id)
+                                    ->first();
+                                return $media ? ($media->original_filename ?: $media->filename) : $value;
+                            })
+                            ->live()
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
+                                if ($state) {
+                                    $set('hero_image_url', $state);
+                                }
+                            })
+                            ->visible(fn (SGet $get) => $get('hero_mode') === 'library'),
+
+                        // Show preview when library mode and image selected
+                        Forms\Components\Placeholder::make('hero_library_preview')
+                            ->label('')
+                            ->content(function (SGet $get) use ($marketplace) {
+                                $path = $get('hero_from_library');
+                                if (!$path) {
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<div class="text-gray-500 text-sm">' .
+                                        'Caută și selectează o imagine din bibliotecă' .
+                                        '</div>'
+                                    );
+                                }
+                                $media = \App\Models\MediaLibrary::where('path', $path)
+                                    ->where('marketplace_client_id', $marketplace?->id)
+                                    ->first();
+                                if (!$media) return '';
+
+                                $url = $media->url;
+                                return new \Illuminate\Support\HtmlString(
+                                    "<div class='mt-2'>
+                                        <img src='{$url}' alt='' style='max-height: 200px; border-radius: 8px;'>
+                                        <div class='text-xs text-gray-500 mt-1'>{$media->human_readable_size} • {$media->width}×{$media->height}</div>
+                                    </div>"
+                                );
+                            })
+                            ->visible(fn (SGet $get) => $get('hero_mode') === 'library'),
+                    ])
+                    ->columns(1),
+
                 Forms\Components\Hidden::make('poster_original_filename'),
                 Forms\Components\Hidden::make('hero_image_original_filename'),
             ])
             ->action(function (array $data): void {
                 $marketplace = static::getMarketplaceClient();
 
+                // Determine poster URL - from upload or library selection
+                $posterUrl = $data['poster_mode'] === 'library'
+                    ? ($data['poster_from_library'] ?? $data['poster_url'] ?? null)
+                    : ($data['poster_url'] ?? null);
+
+                // Determine hero URL - from upload or library selection
+                $heroUrl = $data['hero_mode'] === 'library'
+                    ? ($data['hero_from_library'] ?? $data['hero_image_url'] ?? null)
+                    : ($data['hero_image_url'] ?? null);
+
+                // Get original filenames
+                $posterOriginalFilename = $data['poster_original_filename'] ?? null;
+                $heroOriginalFilename = $data['hero_image_original_filename'] ?? null;
+
+                // If from library, get original filename from MediaLibrary
+                if ($data['poster_mode'] === 'library' && $posterUrl) {
+                    $media = \App\Models\MediaLibrary::where('path', $posterUrl)
+                        ->where('marketplace_client_id', $marketplace?->id)
+                        ->first();
+                    if ($media) {
+                        $posterOriginalFilename = $media->original_filename;
+                    }
+                }
+
+                if ($data['hero_mode'] === 'library' && $heroUrl) {
+                    $media = \App\Models\MediaLibrary::where('path', $heroUrl)
+                        ->where('marketplace_client_id', $marketplace?->id)
+                        ->first();
+                    if ($media) {
+                        $heroOriginalFilename = $media->original_filename;
+                    }
+                }
+
                 $updateData = [
-                    'poster_url' => $data['poster_url'] ?? null,
-                    'hero_image_url' => $data['hero_image_url'] ?? null,
-                    'poster_original_filename' => $data['poster_original_filename'] ?? null,
-                    'hero_image_original_filename' => $data['hero_image_original_filename'] ?? null,
+                    'poster_url' => $posterUrl,
+                    'hero_image_url' => $heroUrl,
+                    'poster_original_filename' => $posterOriginalFilename,
+                    'hero_image_original_filename' => $heroOriginalFilename,
                 ];
 
                 $this->record->update($updateData);
 
-                // Create MediaLibrary entries for searchability
-                if (!empty($data['poster_url'])) {
+                // Create MediaLibrary entries for searchability (only for new uploads)
+                if ($data['poster_mode'] === 'upload' && !empty($posterUrl)) {
                     $this->createMediaLibraryEntry(
-                        $data['poster_url'],
-                        $data['poster_original_filename'] ?? null,
+                        $posterUrl,
+                        $posterOriginalFilename,
                         'events',
                         $marketplace?->id
                     );
                 }
 
-                if (!empty($data['hero_image_url'])) {
+                if ($data['hero_mode'] === 'upload' && !empty($heroUrl)) {
                     $this->createMediaLibraryEntry(
-                        $data['hero_image_url'],
-                        $data['hero_image_original_filename'] ?? null,
+                        $heroUrl,
+                        $heroOriginalFilename,
                         'events',
                         $marketplace?->id
                     );

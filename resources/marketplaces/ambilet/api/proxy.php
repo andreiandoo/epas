@@ -72,11 +72,13 @@ class ApiCache {
         'events' => 180,
         'venues' => 180,
         'artists' => 180,
-        'event' => 180,
-        'venue' => 180,
-        'artist' => 180,
         'organizers' => 180,
         'organizer' => 180,
+
+        // Very short cache (10 seconds) - single item views need quick updates
+        'event' => 10,
+        'venue' => 10,
+        'artist' => 10,
 
         // Very short cache (1 minute) - search results
         'search' => 60,
