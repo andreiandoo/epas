@@ -121,6 +121,7 @@ class EventResource extends Resource
                             ->tabs([
                                 // ========== TAB 1: DETALII ==========
                                 SC\Tabs\Tab::make($t('Detalii', 'Details'))
+                                    ->id('detalii')
                                     ->icon('heroicon-o-document-text')
                                     ->schema([
                         // BASICS - Single Language based on Tenant setting
@@ -361,6 +362,7 @@ class EventResource extends Resource
 
                                 // ========== TAB 2: PROGRAM ==========
                                 SC\Tabs\Tab::make($t('Program', 'Schedule'))
+                                    ->id('program')
                                     ->icon('heroicon-o-calendar')
                                     ->schema([
                         // SCHEDULE
@@ -666,6 +668,7 @@ class EventResource extends Resource
 
                                 // ========== TAB 3: CONȚINUT ==========
                                 SC\Tabs\Tab::make($t('Conținut', 'Content'))
+                                    ->id('continut')
                                     ->icon('heroicon-o-pencil-square')
                                     ->schema([
                         // CONTENT - Single Language
@@ -994,6 +997,7 @@ class EventResource extends Resource
 
                                 // ========== TAB 4: BILETE ==========
                                 SC\Tabs\Tab::make($t('Bilete', 'Tickets'))
+                                    ->id('bilete')
                                     ->icon('heroicon-o-ticket')
                                     ->schema([
                         // TICKETS
@@ -1706,6 +1710,7 @@ class EventResource extends Resource
 
                                 // ========== TAB 5: SEO ==========
                                 SC\Tabs\Tab::make('SEO')
+                                    ->id('seo')
                                     ->icon('heroicon-o-globe-alt')
                                     ->schema([
                         // SEO Section
