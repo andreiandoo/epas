@@ -18,7 +18,7 @@ return new class extends Migration
 
         // Add sort_order to ticket_types table
         Schema::table('ticket_types', function (Blueprint $table) {
-            $table->unsignedInteger('sort_order')->default(0)->after('is_active');
+            $table->unsignedInteger('sort_order')->default(0);
         });
     }
 
