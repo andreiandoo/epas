@@ -3971,11 +3971,11 @@ html.dark {
 	width: 100% !important;
 }
 
-.dark .fi-form-actions,
+/* .dark .fi-form-actions,
 .dark .fi-fo-actions,
 .dark .fi-ac {
 	background-color: var(--metro-bg-secondary) !important;
-}
+} */
 
 .fi-sidebar-nav-groups {
 	row-gap: 0 !important;

@@ -612,13 +612,6 @@ class EventResource extends Resource
                                     ->label($t('Website Eveniment', 'Event Website'))
                                     ->url()
                                     ->maxLength(255),
-                                Forms\Components\TextInput::make('general_stock')
-                                    ->label($t('Stoc general', 'General Stock'))
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->nullable()
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Stoc implicit folosit pentru seria de bilete când un tip de bilet nu are stoc setat.', 'Default stock used for ticket series when a ticket type has no stock set.'))
-                                    ->placeholder($t('ex: 500', 'e.g. 500')),
                             ])->columns(2),
 
                         // MEDIA - only visible when at least one image is uploaded (use header action to upload)
@@ -975,26 +968,35 @@ class EventResource extends Resource
                         // TICKETS
                         SC\Section::make($t('Bilete', 'Tickets'))
                             ->schema([
-                                // Ticket Template selector
-                                Forms\Components\Select::make('ticket_template_id')
-                                    ->label($t('Șablon bilet', 'Ticket Template'))
-                                    ->relationship(
-                                        name: 'ticketTemplate',
-                                        modifyQueryUsing: fn (Builder $query) => $query
-                                            ->where('marketplace_client_id', static::getMarketplaceClient()?->id)
-                                            ->where('status', 'active')
-                                            ->orderBy('name')
-                                    )
-                                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
-                                    ->placeholder($t('Folosește șablonul implicit', 'Use default template'))
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează un șablon pentru biletele generate pentru acest eveniment. Lasă gol pentru a folosi șablonul implicit.', 'Select a template for tickets generated for this event. Leave empty to use the default template.'))
-                                    ->searchable()
-                                    ->preload()
-                                    ->nullable()
-                                    ->visible(fn () => static::getMarketplaceClient()?->microservices()
-                                        ->where('slug', 'ticket-customizer')
-                                        ->wherePivot('is_active', true)
-                                        ->exists() ?? false),
+                                // Ticket Template and General Stock row
+                                SC\Grid::make(2)->schema([
+                                    Forms\Components\Select::make('ticket_template_id')
+                                        ->label($t('Șablon bilet', 'Ticket Template'))
+                                        ->relationship(
+                                            name: 'ticketTemplate',
+                                            modifyQueryUsing: fn (Builder $query) => $query
+                                                ->where('marketplace_client_id', static::getMarketplaceClient()?->id)
+                                                ->where('status', 'active')
+                                                ->orderBy('name')
+                                        )
+                                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
+                                        ->placeholder($t('Folosește șablonul implicit', 'Use default template'))
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează un șablon pentru biletele generate pentru acest eveniment. Lasă gol pentru a folosi șablonul implicit.', 'Select a template for tickets generated for this event. Leave empty to use the default template.'))
+                                        ->searchable()
+                                        ->preload()
+                                        ->nullable()
+                                        ->visible(fn () => static::getMarketplaceClient()?->microservices()
+                                            ->where('slug', 'ticket-customizer')
+                                            ->wherePivot('is_active', true)
+                                            ->exists() ?? false),
+                                    Forms\Components\TextInput::make('general_stock')
+                                        ->label($t('Stoc general', 'General Stock'))
+                                        ->numeric()
+                                        ->minValue(0)
+                                        ->nullable()
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Stoc implicit folosit pentru seria de bilete când un tip de bilet nu are stoc setat.', 'Default stock used for ticket series when a ticket type has no stock set.'))
+                                        ->placeholder($t('ex: 500', 'e.g. 500')),
+                                ]),
 
                                 // Commission Mode and Rate for event
                                 SC\Grid::make(4)->schema([
@@ -1381,43 +1383,6 @@ class EventResource extends Resource
                                             })
                                             ->columnSpan(12),
 
-                                        // Commission calculation for this ticket
-                                        Forms\Components\Placeholder::make('ticket_commission_calc')
-                                            ->live()
-                                            ->content(function (SGet $get) use ($marketplace) {
-                                                $price = (float) ($get('price') ?: $get('price_max') ?: 0);
-
-                                                $eventMode = $get('../../commission_mode');
-                                                $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
-
-                                                // Get effective commission rate: event custom > organizer > marketplace
-                                                $eventRate = $get('../../commission_rate');
-                                                if ($eventRate !== null && $eventRate !== '') {
-                                                    $rate = (float) $eventRate;
-                                                } else {
-                                                    $organizerId = $get('../../marketplace_organizer_id');
-                                                    if ($organizerId) {
-                                                        $organizer = MarketplaceOrganizer::find($organizerId);
-                                                        $rate = $organizer?->commission_rate ?? $marketplace->commission_rate ?? 5.00;
-                                                    } else {
-                                                        $rate = $marketplace->commission_rate ?? 5.00;
-                                                    }
-                                                }
-
-                                                $commission = round($price * ($rate / 100), 2);
-                                                $currency = $get('currency') ?: 'RON';
-                                                $marketplaceName = $marketplace->name ?? 'Marketplace';
-
-                                                if ($mode === 'included') {
-                                                    $revenue = round($price - $commission, 2);
-                                                    return "Customer pays: **{$price} {$currency}** → Organizer receives: **{$revenue} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
-                                                } else {
-                                                    $total = round($price + $commission, 2);
-                                                    return "Customer pays: **{$total} {$currency}** → Organizer receives: **{$price} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
-                                                }
-                                            })
-                                            ->columnSpan(12),
-
                                         // Sale toggle - controls visibility of sale fields
                                         Forms\Components\Toggle::make('has_sale')
                                             ->label($t('Activează reducere', 'Enable Sale Discount'))
@@ -1525,19 +1490,24 @@ class EventResource extends Resource
                                             ->visible(fn (SGet $get) => $get('has_sale'))
                                             ->columnSpan(6),
 
-                                        // Ticket Series Fields
-                                        SC\Grid::make(2)->schema([
+                                        // Activ, Returnabil, Serie start, Serie end - all on same row with flex justify-between
+                                        SC\Group::make([
+                                            Forms\Components\Toggle::make('is_active')
+                                                ->label($t('Activ', 'Active'))
+                                                ->default(true)
+                                                ->live(),
+                                            Forms\Components\Toggle::make('is_refundable')
+                                                ->label($t('Returnabil', 'Refundable'))
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet', 'If the event is cancelled or postponed, customers can request a refund for this ticket type'))
+                                                ->default(false),
                                             Forms\Components\TextInput::make('series_start')
-                                                ->label($t('Serie start bilete', 'Ticket series start'))
-                                                ->placeholder($t('Ex: AMB-5-00001 sau AMB-SKU-00001', 'E.g. AMB-5-00001 or AMB-SKU-00001'))
+                                                ->label($t('Serie start', 'Series start'))
+                                                ->placeholder($t('Ex: AMB-5-00001', 'E.g. AMB-5-00001'))
                                                 ->maxLength(50)
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul de start al seriei de bilete. Se generează automat folosind ID-ul tipului de bilet sau SKU.', 'Ticket series start number. Auto-generated using the ticket type ID or SKU.'))
                                                 ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                    // Auto-generate if not set and capacity exists
                                                     if (!$state) {
                                                         $eventSeries = $get('../../event_series');
                                                         $capacity = $get('capacity');
-                                                        // Use ticket type ID if available, otherwise use SKU
                                                         $ticketTypeIdentifier = $get('id') ?: $get('sku');
                                                         if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
                                                             $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
@@ -1545,16 +1515,13 @@ class EventResource extends Resource
                                                     }
                                                 }),
                                             Forms\Components\TextInput::make('series_end')
-                                                ->label($t('Serie end bilete', 'Ticket series end'))
-                                                ->placeholder($t('Ex: AMB-5-00500 sau AMB-SKU-00500', 'E.g. AMB-5-00500 or AMB-SKU-00500'))
+                                                ->label($t('Serie end', 'Series end'))
+                                                ->placeholder($t('Ex: AMB-5-00500', 'E.g. AMB-5-00500'))
                                                 ->maxLength(50)
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul de final al seriei de bilete. Se generează automat din capacitate.', 'Ticket series end number. Auto-generated from capacity.'))
                                                 ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                    // Auto-generate if not set and capacity exists
                                                     if (!$state) {
                                                         $eventSeries = $get('../../event_series');
                                                         $capacity = $get('capacity');
-                                                        // Use ticket type ID if available, otherwise use SKU
                                                         $ticketTypeIdentifier = $get('id') ?: $get('sku');
                                                         if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
                                                             $endNumber = (int)$capacity;
@@ -1562,13 +1529,9 @@ class EventResource extends Resource
                                                         }
                                                     }
                                                 }),
-                                        ])->columnSpan(12),
-
-                                        Forms\Components\Toggle::make('is_active')
-                                            ->label($t('Activ?', 'Active?'))
-                                            ->default(true)
-                                            ->live()
-                                            ->columnSpan(3),
+                                        ])
+                                            ->extraAttributes(['class' => 'flex items-center gap-4 justify-between [&>div]:flex-none [&>div:nth-child(3)]:flex-1 [&>div:nth-child(4)]:flex-1'])
+                                            ->columnSpan(12),
 
                                         Forms\Components\DateTimePicker::make('active_until')
                                             ->label($t('Activ până la', 'Active until'))
@@ -1578,13 +1541,7 @@ class EventResource extends Resource
                                             ->minDate(now())
                                             ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
                                             ->visible(fn (SGet $get) => $get('is_active'))
-                                            ->columnSpan(5),
-
-                                        Forms\Components\Toggle::make('is_refundable')
-                                            ->label($t('Returnabil', 'Refundable'))
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet', 'If the event is cancelled or postponed, customers can request a refund for this ticket type'))
-                                            ->default(false)
-                                            ->columnSpan(4),
+                                            ->columnSpan(6),
 
                                         // Scheduling fields - shown when ticket is NOT active
                                         Forms\Components\DateTimePicker::make('scheduled_at')

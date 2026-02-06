@@ -43,25 +43,36 @@ $ticketTypes = [
 ];
 
 $trafficSources = [
-    ['source' => 'Facebook Ads', 'visits' => 45230, 'conversions' => 2847, 'icon' => 'facebook'],
-    ['source' => 'Google Search', 'visits' => 38420, 'conversions' => 1921, 'icon' => 'google'],
-    ['source' => 'Direct', 'visits' => 28950, 'conversions' => 1738, 'icon' => 'direct'],
-    ['source' => 'Instagram', 'visits' => 18200, 'conversions' => 728, 'icon' => 'instagram'],
+    ['source' => 'Facebook Ads', 'visits' => 45230, 'conversions' => 2847, 'revenue' => 845000, 'icon' => 'facebook'],
+    ['source' => 'Google Search', 'visits' => 38420, 'conversions' => 1921, 'revenue' => 523000, 'icon' => 'google'],
+    ['source' => 'Direct', 'visits' => 28950, 'conversions' => 1738, 'revenue' => 567000, 'icon' => 'direct'],
+    ['source' => 'Instagram', 'visits' => 18200, 'conversions' => 728, 'revenue' => 312000, 'icon' => 'instagram'],
 ];
 
 $topLocations = [
-    ['city' => 'Bucuresti', 'country' => 'RO', 'visitors' => 45820, 'percentage' => 32],
-    ['city' => 'Cluj-Napoca', 'country' => 'RO', 'visitors' => 18340, 'percentage' => 13],
-    ['city' => 'Timisoara', 'country' => 'RO', 'visitors' => 12450, 'percentage' => 9],
-    ['city' => 'Iasi', 'country' => 'RO', 'visitors' => 9870, 'percentage' => 7],
-    ['city' => 'Constanta', 'country' => 'RO', 'visitors' => 8230, 'percentage' => 6],
+    ['city' => 'Bucuresti', 'country' => 'RO', 'visitors' => 45820, 'percentage' => 32, 'tickets' => 12450, 'revenue' => 745000],
+    ['city' => 'Cluj-Napoca', 'country' => 'RO', 'visitors' => 18340, 'percentage' => 13, 'tickets' => 8920, 'revenue' => 534000],
+    ['city' => 'Timisoara', 'country' => 'RO', 'visitors' => 12450, 'percentage' => 9, 'tickets' => 4560, 'revenue' => 273000],
+    ['city' => 'Iasi', 'country' => 'RO', 'visitors' => 9870, 'percentage' => 7, 'tickets' => 3200, 'revenue' => 192000],
+    ['city' => 'Constanta', 'country' => 'RO', 'visitors' => 8230, 'percentage' => 6, 'tickets' => 2100, 'revenue' => 126000],
+];
+
+$campaignsROI = [
+    ['id' => 1, 'name' => 'Facebook Ads', 'type' => 'facebook', 'spend' => 2400, 'revenue' => 8840, 'cac' => 28, 'roi' => 285, 'status' => 'active', 'startDate' => '2026-01-05', 'endDate' => '2026-01-20', 'targeting' => '18-35, Music Lovers, Romania'],
+    ['id' => 2, 'name' => 'Google Ads', 'type' => 'google', 'spend' => 1850, 'revenue' => 4480, 'cac' => 35, 'roi' => 142, 'status' => 'active', 'startDate' => '2026-01-03', 'endDate' => '2026-01-25', 'targeting' => 'Concert Romania, Festival Bucuresti'],
+    ['id' => 3, 'name' => 'Instagram Story', 'type' => 'instagram', 'spend' => 800, 'revenue' => 1584, 'cac' => 45, 'roi' => 98, 'status' => 'ended', 'startDate' => '2025-12-28', 'endDate' => '2026-01-05', 'targeting' => '18-25, Music, Events'],
+];
+
+$goals = [
+    ['id' => 1, 'name' => 'Vanzari Luna Ianuarie', 'type' => 'revenue', 'current' => 2800000, 'target' => 4000000, 'deadline' => '2026-01-31', 'status' => 'in_progress'],
+    ['id' => 2, 'name' => '15.000 bilete', 'type' => 'tickets', 'current' => 18432, 'target' => 15000, 'deadline' => '2026-01-15', 'status' => 'completed'],
 ];
 
 $recentSales = [
-    ['buyer' => 'Maria P.', 'ticket' => 'VIP Experience', 'quantity' => 2, 'total' => 998, 'time' => '2 min'],
-    ['buyer' => 'Ion A.', 'ticket' => 'General Admission', 'quantity' => 4, 'total' => 596, 'time' => '5 min'],
-    ['buyer' => 'Elena M.', 'ticket' => 'Golden Circle', 'quantity' => 2, 'total' => 698, 'time' => '8 min'],
-    ['buyer' => 'Andrei D.', 'ticket' => 'General Admission', 'quantity' => 1, 'total' => 149, 'time' => '12 min'],
+    ['id' => 1, 'buyer' => 'Maria P.', 'email' => 'm***@gmail.com', 'initials' => 'MP', 'ticket' => 'VIP Experience', 'quantity' => 2, 'total' => 998, 'time' => '2 min', 'date' => '31 Ian 2026, 14:36', 'source' => 'Facebook', 'payment' => 'Visa •••• 4242', 'paymentIcon' => '💳', 'isReturning' => true, 'location' => 'Bucuresti', 'device' => 'Desktop', 'browser' => 'Chrome'],
+    ['id' => 2, 'buyer' => 'Ion A.', 'email' => 'i***@yahoo.com', 'initials' => 'IA', 'ticket' => 'General Admission', 'quantity' => 4, 'total' => 596, 'time' => '5 min', 'date' => '31 Ian 2026, 14:33', 'source' => 'Google', 'payment' => 'Mastercard •••• 8888', 'paymentIcon' => '💳', 'isReturning' => false, 'location' => 'Cluj-Napoca', 'device' => 'iPhone 14', 'browser' => 'Safari'],
+    ['id' => 3, 'buyer' => 'Elena M.', 'email' => 'e***@gmail.com', 'initials' => 'EM', 'ticket' => 'Golden Circle', 'quantity' => 2, 'total' => 698, 'time' => '8 min', 'date' => '31 Ian 2026, 14:21', 'source' => 'Direct', 'payment' => 'Apple Pay', 'paymentIcon' => '🍎', 'isReturning' => true, 'location' => 'Timisoara', 'device' => 'MacBook', 'browser' => 'Safari'],
+    ['id' => 4, 'buyer' => 'Andrei D.', 'email' => 'a***@outlook.com', 'initials' => 'AD', 'ticket' => 'General Admission', 'quantity' => 1, 'total' => 149, 'time' => '12 min', 'date' => '31 Ian 2026, 14:11', 'source' => 'Instagram', 'payment' => 'Google Pay', 'paymentIcon' => '🔵', 'isReturning' => false, 'location' => 'Iasi', 'device' => 'Samsung S23', 'browser' => 'Chrome'],
 ];
 
 // Current page for sidebar
@@ -366,27 +377,31 @@ include __DIR__ . '/../includes/organizer-head.php';
                             <button onclick="showAddMilestoneModal()" class="text-sm font-medium text-indigo-600 hover:underline">+ Adauga</button>
                         </div>
                         <div class="space-y-3">
-                            <div class="p-4 bg-green-50 border border-green-200 rounded-xl">
+                            <?php foreach ($campaignsROI as $campaign): ?>
+                            <div onclick="showCampaignDetail(<?= $campaign['id'] ?>)" class="p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md <?= $campaign['status'] === 'active' ? 'border-green-200 bg-green-50 hover:border-green-300' : 'border-gray-200 bg-gray-50 hover:border-gray-300' ?>">
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-medium text-gray-900">Facebook Ads</span>
-                                    <span class="text-sm font-bold text-green-600">+285% ROI</span>
+                                    <div class="flex items-center gap-2">
+                                        <?php if ($campaign['type'] === 'facebook'): ?>
+                                        <span class="text-lg">📘</span>
+                                        <?php elseif ($campaign['type'] === 'google'): ?>
+                                        <span class="text-lg">🔍</span>
+                                        <?php else: ?>
+                                        <span class="text-lg">📸</span>
+                                        <?php endif; ?>
+                                        <span class="text-sm font-medium text-gray-900"><?= htmlspecialchars($campaign['name']) ?></span>
+                                    </div>
+                                    <span class="text-xs px-2 py-0.5 rounded-full <?= $campaign['status'] === 'active' ? 'bg-green-200 text-green-700' : 'bg-gray-200 text-gray-600' ?>">
+                                        <?= $campaign['status'] === 'active' ? 'Activ' : 'Finalizat' ?>
+                                    </span>
                                 </div>
-                                <div class="text-xs text-gray-500">Cost: 2.400 RON → Venit: 8.840 RON</div>
-                            </div>
-                            <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-medium text-gray-900">Google Ads</span>
-                                    <span class="text-sm font-bold text-blue-600">+142% ROI</span>
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div><span class="text-gray-500">Spend:</span> <span class="font-medium"><?= number_format($campaign['spend']) ?> RON</span></div>
+                                    <div><span class="text-gray-500">Revenue:</span> <span class="font-medium text-green-600"><?= number_format($campaign['revenue']) ?> RON</span></div>
+                                    <div><span class="text-gray-500">CAC:</span> <span class="font-medium"><?= $campaign['cac'] ?> RON</span></div>
+                                    <div><span class="text-gray-500">ROI:</span> <span class="font-bold <?= $campaign['roi'] >= 0 ? 'text-green-600' : 'text-red-600' ?>">+<?= $campaign['roi'] ?>%</span></div>
                                 </div>
-                                <div class="text-xs text-gray-500">Cost: 1.850 RON → Venit: 4.480 RON</div>
                             </div>
-                            <div class="p-4 bg-purple-50 border border-purple-200 rounded-xl">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-medium text-gray-900">Instagram Story</span>
-                                    <span class="text-sm font-bold text-purple-600">+98% ROI</span>
-                                </div>
-                                <div class="text-xs text-gray-500">Cost: 800 RON → Venit: 1.584 RON</div>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
@@ -398,8 +413,13 @@ include __DIR__ . '/../includes/organizer-head.php';
                         <h2 class="text-lg font-bold text-gray-900 mb-4">Surse de trafic</h2>
                         <div class="space-y-3">
                             <?php foreach ($trafficSources as $source): ?>
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+                            <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center <?php
+                                    if ($source['icon'] === 'facebook') echo 'bg-blue-100';
+                                    elseif ($source['icon'] === 'google') echo 'bg-red-50';
+                                    elseif ($source['icon'] === 'instagram') echo 'bg-pink-100';
+                                    else echo 'bg-gray-100';
+                                ?>">
                                     <?php if ($source['icon'] === 'facebook'): ?>
                                     <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                                     <?php elseif ($source['icon'] === 'google'): ?>
@@ -413,14 +433,18 @@ include __DIR__ . '/../includes/organizer-head.php';
                                 <div class="flex-1">
                                     <div class="flex items-center justify-between mb-1">
                                         <span class="text-sm font-medium text-gray-900"><?= htmlspecialchars($source['source']) ?></span>
-                                        <span class="text-sm text-gray-500"><?= number_format($source['visits']) ?></span>
+                                        <span class="text-sm font-semibold text-gray-900"><?= number_format($source['visits']) ?></span>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                                             <div class="h-full bg-indigo-500 rounded-full" style="width: <?= round(($source['visits'] / $trafficSources[0]['visits']) * 100) ?>%"></div>
                                         </div>
-                                        <span class="text-xs text-green-600"><?= number_format($source['conversions']) ?> conv.</span>
+                                        <span class="text-xs text-gray-400 w-10"><?= round(($source['visits'] / array_sum(array_column($trafficSources, 'visits'))) * 100) ?>%</span>
                                     </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm font-medium text-gray-700"><?= number_format($source['revenue'] / 1000) ?>K RON</div>
+                                    <div class="text-xs text-gray-400"><?= number_format($source['conversions']) ?> vanzari</div>
                                 </div>
                             </div>
                             <?php endforeach; ?>
@@ -435,21 +459,17 @@ include __DIR__ . '/../includes/organizer-head.php';
                         </div>
                         <div class="space-y-3">
                             <?php foreach ($topLocations as $location): ?>
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-lg">
+                            <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                                <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-lg">
                                     <?= $location['country'] === 'RO' ? '🇷🇴' : '🌍' ?>
                                 </div>
                                 <div class="flex-1">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="text-sm font-medium text-gray-900"><?= htmlspecialchars($location['city']) ?></span>
-                                        <span class="text-sm text-gray-500"><?= number_format($location['visitors']) ?></span>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                            <div class="h-full bg-indigo-500 rounded-full" style="width: <?= $location['percentage'] ?>%"></div>
-                                        </div>
-                                        <span class="text-xs text-gray-400"><?= $location['percentage'] ?>%</span>
-                                    </div>
+                                    <div class="text-sm font-medium text-gray-800"><?= htmlspecialchars($location['city']) ?></div>
+                                    <div class="text-xs text-gray-400"><?= $location['country'] ?></div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm font-semibold text-gray-900"><?= number_format($location['tickets']) ?> bilete</div>
+                                    <div class="text-xs text-gray-400"><?= number_format($location['revenue'] / 1000) ?>K RON</div>
                                 </div>
                             </div>
                             <?php endforeach; ?>
@@ -462,28 +482,63 @@ include __DIR__ . '/../includes/organizer-head.php';
                     <!-- Recent Sales -->
                     <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-6">
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-lg font-bold text-gray-900">Vanzari recente</h2>
+                            <div>
+                                <h2 class="text-lg font-bold text-gray-900">Vanzari recente</h2>
+                                <p class="text-xs text-gray-500">Click pe cumparator pentru detalii</p>
+                            </div>
                             <a href="/organizator/participanti" class="text-sm font-medium text-indigo-600 hover:underline">Vezi toate →</a>
                         </div>
-                        <div class="space-y-3">
-                            <?php foreach ($recentSales as $sale): ?>
-                            <div class="flex items-center gap-4 p-3 bg-gray-50 rounded-xl">
-                                <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                                    <span class="text-sm font-bold text-indigo-600"><?= strtoupper(substr($sale['buyer'], 0, 1)) ?></span>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-sm font-medium text-gray-900"><?= htmlspecialchars($sale['buyer']) ?></span>
-                                        <span class="text-sm font-bold text-gray-900"><?= number_format($sale['total']) ?> RON</span>
-                                    </div>
-                                    <div class="flex items-center justify-between text-xs text-gray-500">
-                                        <span><?= $sale['quantity'] ?>x <?= htmlspecialchars($sale['ticket']) ?></span>
-                                        <span>acum <?= $sale['time'] ?></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-100">
+                                    <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">Cumparator</th>
+                                    <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                                    <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">Bilete</th>
+                                    <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">Sursa</th>
+                                    <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">Plata</th>
+                                    <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($recentSales as $sale): ?>
+                                <tr onclick="showBuyerDetail(<?= $sale['id'] ?>)" class="border-b border-gray-50 hover:bg-indigo-50/50 cursor-pointer transition-colors">
+                                    <td class="py-3">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-200 to-purple-300 flex items-center justify-center text-xs font-semibold text-indigo-700">
+                                                <?= $sale['initials'] ?>
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-sm font-medium text-gray-800"><?= htmlspecialchars($sale['buyer']) ?></span>
+                                                    <?php if ($sale['isReturning']): ?>
+                                                    <span class="px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 rounded-full">Returning</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="text-xs text-gray-400"><?= $sale['email'] ?></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 text-sm text-gray-600"><?= $sale['date'] ?></td>
+                                    <td class="py-3 text-sm text-gray-700"><?= $sale['quantity'] ?>x <?= htmlspecialchars($sale['ticket']) ?></td>
+                                    <td class="py-3">
+                                        <span class="text-xs px-2 py-1 rounded-full <?php
+                                            if ($sale['source'] === 'Facebook') echo 'bg-blue-100 text-blue-700';
+                                            elseif ($sale['source'] === 'Google') echo 'bg-red-100 text-red-700';
+                                            elseif ($sale['source'] === 'Instagram') echo 'bg-pink-100 text-pink-700';
+                                            else echo 'bg-gray-100 text-gray-700';
+                                        ?>"><?= $sale['source'] ?></span>
+                                    </td>
+                                    <td class="py-3">
+                                        <div class="flex items-center gap-1.5">
+                                            <span><?= $sale['paymentIcon'] ?></span>
+                                            <span class="text-xs text-gray-600"><?= $sale['payment'] ?></span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 text-right text-sm font-semibold text-gray-900"><?= number_format($sale['total']) ?> RON</td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     </div>
 
                     <!-- Goals -->
@@ -493,41 +548,41 @@ include __DIR__ . '/../includes/organizer-head.php';
                             <button onclick="showAddGoalModal()" class="text-sm font-medium text-indigo-600 hover:underline">+ Adauga</button>
                         </div>
                         <div class="space-y-4">
-                            <!-- Goal 1 -->
-                            <div class="p-4 border border-gray-200 rounded-xl">
+                            <?php foreach ($goals as $goal):
+                                $progress = min(round(($goal['current'] / $goal['target']) * 100), 100);
+                                $isCompleted = $goal['status'] === 'completed';
+                            ?>
+                            <div onclick="showGoalDetail(<?= $goal['id'] ?>)" class="p-4 border rounded-xl cursor-pointer transition-all hover:shadow-md <?= $isCompleted ? 'border-green-200 bg-green-50 hover:border-green-300' : 'border-gray-200 hover:border-gray-300' ?>">
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-medium text-gray-900">Vanzari Luna Ianuarie</span>
-                                    <span class="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">In progres</span>
+                                    <span class="text-sm font-medium text-gray-900"><?= htmlspecialchars($goal['name']) ?></span>
+                                    <span class="text-xs px-2 py-0.5 rounded-full <?= $isCompleted ? 'bg-green-200 text-green-700' : 'bg-amber-100 text-amber-700' ?>">
+                                        <?= $isCompleted ? 'Atins!' : 'In progres' ?>
+                                    </span>
                                 </div>
                                 <div class="mb-2">
                                     <div class="flex justify-between text-xs text-gray-500 mb-1">
-                                        <span>2.8M / 4M RON</span>
-                                        <span>70%</span>
+                                        <span><?php
+                                            if ($goal['type'] === 'revenue') {
+                                                echo number_format($goal['current'] / 1000000, 1) . 'M / ' . number_format($goal['target'] / 1000000, 0) . 'M RON';
+                                            } else {
+                                                echo number_format($goal['current']) . ' / ' . number_format($goal['target']);
+                                            }
+                                        ?></span>
+                                        <span><?= round(($goal['current'] / $goal['target']) * 100) ?>%</span>
                                     </div>
-                                    <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                        <div class="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full" style="width: 70%"></div>
+                                    <div class="h-2 rounded-full overflow-hidden <?= $isCompleted ? 'bg-green-100' : 'bg-gray-100' ?>">
+                                        <div class="h-full rounded-full <?= $isCompleted ? 'bg-gradient-to-r from-green-400 to-green-500' : 'bg-gradient-to-r from-amber-400 to-amber-500' ?>" style="width: <?= $progress ?>%"></div>
                                     </div>
                                 </div>
-                                <div class="text-xs text-gray-400">Deadline: 31 Ian 2026</div>
+                                <div class="text-xs <?= $isCompleted ? 'text-green-600' : 'text-gray-400' ?>">
+                                    <?php if ($isCompleted): ?>
+                                        Obiectiv depasit cu <?= round((($goal['current'] / $goal['target']) - 1) * 100) ?>%!
+                                    <?php else: ?>
+                                        Deadline: <?= date('d M Y', strtotime($goal['deadline'])) ?>
+                                    <?php endif; ?>
+                                </div>
                             </div>
-
-                            <!-- Goal 2 -->
-                            <div class="p-4 border border-green-200 bg-green-50 rounded-xl">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-medium text-gray-900">15.000 bilete</span>
-                                    <span class="text-xs px-2 py-0.5 bg-green-200 text-green-700 rounded-full">Atins!</span>
-                                </div>
-                                <div class="mb-2">
-                                    <div class="flex justify-between text-xs text-gray-500 mb-1">
-                                        <span>18.432 / 15.000</span>
-                                        <span>122%</span>
-                                    </div>
-                                    <div class="h-2 bg-green-100 rounded-full overflow-hidden">
-                                        <div class="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full" style="width: 100%"></div>
-                                    </div>
-                                </div>
-                                <div class="text-xs text-green-600">Obiectiv depasit cu 23%!</div>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
@@ -748,7 +803,173 @@ include __DIR__ . '/../includes/organizer-head.php';
         </div>
     </div>
 
+    <!-- Campaign Detail Modal -->
+    <div id="campaign-detail-modal" class="fixed inset-0 z-50 hidden">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeCampaignDetailModal()"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-white shadow-2xl rounded-2xl" onclick="event.stopPropagation()">
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div id="campaign-detail-icon" class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-2xl">📘</div>
+                        <div>
+                            <div id="campaign-detail-name" class="text-lg font-semibold text-gray-900">Campanie</div>
+                            <div id="campaign-detail-dates" class="text-sm text-gray-500">Date campanie</div>
+                        </div>
+                    </div>
+                    <div id="campaign-detail-targeting" class="mb-4 p-3 bg-gray-50 rounded-xl text-sm text-gray-600"></div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-500">Buget</span>
+                            <span id="campaign-detail-spend" class="text-sm font-semibold">0 RON</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-500">Venituri generate</span>
+                            <span id="campaign-detail-revenue" class="text-sm font-semibold text-green-600">0 RON</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-gray-100">
+                            <span class="text-sm text-gray-500">CAC (Cost per achizitie)</span>
+                            <span id="campaign-detail-cac" class="text-sm font-semibold">0 RON</span>
+                        </div>
+                        <div class="flex justify-between py-2">
+                            <span class="text-sm text-gray-500">ROI</span>
+                            <span id="campaign-detail-roi" class="text-sm font-bold text-green-600">+0%</span>
+                        </div>
+                    </div>
+                    <div id="campaign-detail-status" class="p-3 bg-green-50 rounded-xl flex items-center gap-2 text-green-700">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                        <span class="text-sm font-medium">Campanie activa</span>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-gray-100 flex justify-end">
+                    <button onclick="closeCampaignDetailModal()" class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl">Inchide</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goal Detail Modal -->
+    <div id="goal-detail-modal" class="fixed inset-0 z-50 hidden">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeGoalDetailModal()"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-white shadow-2xl rounded-2xl" onclick="event.stopPropagation()">
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div id="goal-detail-icon" class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <div>
+                            <div id="goal-detail-name" class="text-lg font-semibold text-gray-900">Obiectiv</div>
+                            <div id="goal-detail-type" class="text-sm text-gray-500">Tip obiectiv</div>
+                        </div>
+                    </div>
+                    <div class="space-y-4 mb-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-2">
+                                <span class="text-gray-500">Progres</span>
+                                <span id="goal-detail-progress" class="font-semibold">0%</span>
+                            </div>
+                            <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
+                                <div id="goal-detail-progress-bar" class="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-3 bg-gray-50 rounded-xl">
+                                <div class="text-xs text-gray-500">Actual</div>
+                                <div id="goal-detail-current" class="text-lg font-bold text-gray-900">0</div>
+                            </div>
+                            <div class="p-3 bg-gray-50 rounded-xl">
+                                <div class="text-xs text-gray-500">Tinta</div>
+                                <div id="goal-detail-target" class="text-lg font-bold text-gray-900">0</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between py-2 border-t border-gray-100">
+                            <span class="text-sm text-gray-500">Deadline</span>
+                            <span id="goal-detail-deadline" class="text-sm font-semibold">-</span>
+                        </div>
+                    </div>
+                    <div id="goal-detail-status" class="p-3 bg-amber-50 rounded-xl text-amber-700 text-sm font-medium text-center">In progres</div>
+                </div>
+                <div class="p-6 border-t border-gray-100 flex justify-end">
+                    <button onclick="closeGoalDetailModal()" class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl">Inchide</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Buyer Detail Modal -->
+    <div id="buyer-detail-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeBuyerDetailModal()"></div>
+        <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div class="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden" onclick="event.stopPropagation()">
+                <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div id="buyer-avatar" class="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-200 to-purple-300 flex items-center justify-center text-lg font-semibold text-indigo-700">MP</div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span id="buyer-name" class="text-lg font-semibold text-gray-900">Nume</span>
+                                <span id="buyer-returning-badge" class="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full hidden">🔄 Returning</span>
+                            </div>
+                            <div id="buyer-email" class="text-sm text-gray-500">email@example.com</div>
+                        </div>
+                    </div>
+                    <button onclick="closeBuyerDetailModal()" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="flex max-h-[60vh]">
+                    <div class="w-72 border-r border-gray-100 p-6 bg-gray-50 overflow-y-auto">
+                        <div class="space-y-4">
+                            <div>
+                                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Data achizitie</div>
+                                <div id="buyer-date" class="text-sm font-medium text-gray-800">-</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Locatie</div>
+                                <div id="buyer-location" class="text-sm text-gray-800">-</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Dispozitiv</div>
+                                <div id="buyer-device" class="text-sm text-gray-800">-</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Browser</div>
+                                <div id="buyer-browser" class="text-sm text-gray-800">-</div>
+                            </div>
+                            <div class="pt-4 border-t border-gray-200">
+                                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Total comanda</div>
+                                <div id="buyer-total" class="text-xl font-bold text-gray-900">0 RON</div>
+                                <div id="buyer-tickets" class="text-sm text-gray-500">-</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Metoda plata</div>
+                                <div id="buyer-payment" class="text-sm text-gray-800">-</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Sursa</div>
+                                <div id="buyer-source" class="text-sm text-gray-800">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 p-6 overflow-y-auto">
+                        <div class="text-sm font-medium text-gray-700 mb-4">Activitate cumparator</div>
+                        <div class="relative">
+                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                            <div id="buyer-journey" class="space-y-4">
+                                <!-- Journey events will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Demo data for modals
+        const campaignsData = <?= json_encode($campaignsROI) ?>;
+        const goalsData = <?= json_encode($goals) ?>;
+        const salesData = <?= json_encode($recentSales) ?>;
+
         // Chart data
         const chartData = {
             dates: ['1 Ian', '5 Ian', '10 Ian', '15 Ian', '20 Ian', '25 Ian', '30 Ian'],
@@ -766,7 +987,24 @@ include __DIR__ . '/../includes/organizer-head.php';
                 chart: {
                     type: 'area',
                     height: 300,
-                    toolbar: { show: false },
+                    toolbar: {
+                        show: true,
+                        tools: {
+                            download: false,
+                            selection: true,
+                            zoom: true,
+                            zoomin: true,
+                            zoomout: true,
+                            pan: true,
+                            reset: true
+                        },
+                        autoSelected: 'zoom'
+                    },
+                    zoom: {
+                        enabled: true,
+                        type: 'x',
+                        autoScaleYaxis: true
+                    },
                     animations: { enabled: true, speed: 500 },
                     fontFamily: 'Inter, sans-serif',
                 },
@@ -992,6 +1230,143 @@ include __DIR__ . '/../includes/organizer-head.php';
             setTimeout(() => notification.remove(), 2000);
 
             closeMilestoneModal();
+        }
+
+        // ============ CAMPAIGN DETAIL MODAL ============
+        function showCampaignDetail(id) {
+            const campaign = campaignsData.find(c => c.id === id);
+            if (!campaign) return;
+
+            const icons = { facebook: '📘', google: '🔍', instagram: '📸' };
+            document.getElementById('campaign-detail-icon').textContent = icons[campaign.type] || '📣';
+            document.getElementById('campaign-detail-name').textContent = campaign.name;
+            document.getElementById('campaign-detail-dates').textContent = campaign.startDate + ' → ' + (campaign.endDate || 'In curs');
+            document.getElementById('campaign-detail-targeting').textContent = 'Targeting: ' + campaign.targeting;
+            document.getElementById('campaign-detail-spend').textContent = campaign.spend.toLocaleString() + ' RON';
+            document.getElementById('campaign-detail-revenue').textContent = campaign.revenue.toLocaleString() + ' RON';
+            document.getElementById('campaign-detail-cac').textContent = campaign.cac + ' RON';
+            document.getElementById('campaign-detail-roi').textContent = '+' + campaign.roi + '%';
+            document.getElementById('campaign-detail-roi').className = 'text-sm font-bold ' + (campaign.roi >= 0 ? 'text-green-600' : 'text-red-600');
+
+            const statusEl = document.getElementById('campaign-detail-status');
+            if (campaign.status === 'active') {
+                statusEl.className = 'p-3 bg-green-50 rounded-xl flex items-center gap-2 text-green-700';
+                statusEl.querySelector('span').textContent = 'Campanie activa';
+            } else {
+                statusEl.className = 'p-3 bg-gray-50 rounded-xl flex items-center gap-2 text-gray-600';
+                statusEl.querySelector('span').textContent = 'Campanie finalizata';
+            }
+
+            document.getElementById('campaign-detail-modal').classList.remove('hidden');
+        }
+
+        function closeCampaignDetailModal() {
+            document.getElementById('campaign-detail-modal').classList.add('hidden');
+        }
+
+        // ============ GOAL DETAIL MODAL ============
+        function showGoalDetail(id) {
+            const goal = goalsData.find(g => g.id === id);
+            if (!goal) return;
+
+            const progress = Math.round((goal.current / goal.target) * 100);
+            const isCompleted = goal.status === 'completed';
+
+            document.getElementById('goal-detail-name').textContent = goal.name;
+            document.getElementById('goal-detail-type').textContent = goal.type === 'revenue' ? 'Venituri' : goal.type === 'tickets' ? 'Bilete' : goal.type;
+            document.getElementById('goal-detail-progress').textContent = progress + '%';
+            document.getElementById('goal-detail-progress-bar').style.width = Math.min(progress, 100) + '%';
+
+            const iconEl = document.getElementById('goal-detail-icon');
+            const progressBar = document.getElementById('goal-detail-progress-bar');
+            const statusEl = document.getElementById('goal-detail-status');
+
+            if (isCompleted) {
+                iconEl.className = 'w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center';
+                progressBar.className = 'h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all';
+                statusEl.className = 'p-3 bg-green-50 rounded-xl text-green-700 text-sm font-medium text-center';
+                statusEl.textContent = 'Obiectiv atins! Depasit cu ' + (progress - 100) + '%';
+            } else {
+                iconEl.className = 'w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center';
+                progressBar.className = 'h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all';
+                statusEl.className = 'p-3 bg-amber-50 rounded-xl text-amber-700 text-sm font-medium text-center';
+                statusEl.textContent = 'In progres - mai sunt ' + (100 - progress) + '% pana la obiectiv';
+            }
+
+            if (goal.type === 'revenue') {
+                document.getElementById('goal-detail-current').textContent = (goal.current / 1000000).toFixed(1) + 'M RON';
+                document.getElementById('goal-detail-target').textContent = (goal.target / 1000000).toFixed(0) + 'M RON';
+            } else {
+                document.getElementById('goal-detail-current').textContent = goal.current.toLocaleString();
+                document.getElementById('goal-detail-target').textContent = goal.target.toLocaleString();
+            }
+
+            document.getElementById('goal-detail-deadline').textContent = goal.deadline ? new Date(goal.deadline).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+
+            document.getElementById('goal-detail-modal').classList.remove('hidden');
+        }
+
+        function closeGoalDetailModal() {
+            document.getElementById('goal-detail-modal').classList.add('hidden');
+        }
+
+        // ============ BUYER DETAIL MODAL ============
+        function showBuyerDetail(id) {
+            const sale = salesData.find(s => s.id === id);
+            if (!sale) return;
+
+            document.getElementById('buyer-avatar').textContent = sale.initials;
+            document.getElementById('buyer-name').textContent = sale.buyer;
+            document.getElementById('buyer-email').textContent = sale.email;
+
+            const returningBadge = document.getElementById('buyer-returning-badge');
+            if (sale.isReturning) {
+                returningBadge.classList.remove('hidden');
+            } else {
+                returningBadge.classList.add('hidden');
+            }
+
+            document.getElementById('buyer-date').textContent = sale.date;
+            document.getElementById('buyer-location').textContent = '🇷🇴 ' + sale.location;
+            document.getElementById('buyer-device').textContent = sale.device;
+            document.getElementById('buyer-browser').textContent = sale.browser;
+            document.getElementById('buyer-total').textContent = sale.total.toLocaleString() + ' RON';
+            document.getElementById('buyer-tickets').textContent = sale.quantity + 'x ' + sale.ticket;
+            document.getElementById('buyer-payment').textContent = sale.paymentIcon + ' ' + sale.payment;
+            document.getElementById('buyer-source').textContent = sale.source;
+
+            // Generate journey
+            const journeyEl = document.getElementById('buyer-journey');
+            const journeyEvents = [
+                { type: 'found', icon: '🔍', text: 'A descoperit evenimentul via <span class="font-medium text-indigo-600">' + sale.source + '</span>', time: 'acum ' + (parseInt(sale.time) + 5) + ' min' },
+                { type: 'pageview', icon: '👁', text: 'A vizualizat pagina evenimentului', time: 'acum ' + (parseInt(sale.time) + 4) + ' min' },
+                { type: 'event', icon: '⚡', text: 'A selectat bilete: <span class="text-gray-500">' + sale.quantity + 'x ' + sale.ticket + '</span>', time: 'acum ' + (parseInt(sale.time) + 2) + ' min' },
+                { type: 'pageview', icon: '👁', text: 'A accesat <span class="font-mono text-blue-600">/checkout</span>', time: 'acum ' + (parseInt(sale.time) + 1) + ' min' },
+                { type: 'purchase', icon: '✓', text: '<span class="font-semibold text-green-600">Achizitie finalizata</span>', time: 'acum ' + sale.time }
+            ];
+
+            journeyEl.innerHTML = journeyEvents.map(e => `
+                <div class="relative flex gap-4 pl-2">
+                    <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs z-10 flex-shrink-0 ${
+                        e.type === 'found' ? 'bg-purple-100' :
+                        e.type === 'pageview' ? 'bg-blue-100' :
+                        e.type === 'event' ? 'bg-amber-100' :
+                        'bg-green-100'
+                    }">${e.icon}</div>
+                    <div class="flex-1 pb-4">
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-gray-800">${e.text}</div>
+                            <span class="text-xs text-gray-400">${e.time}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('buyer-detail-modal').classList.remove('hidden');
+        }
+
+        function closeBuyerDetailModal() {
+            document.getElementById('buyer-detail-modal').classList.add('hidden');
         }
 
         // ============ GLOBE/MAP MODAL ============
