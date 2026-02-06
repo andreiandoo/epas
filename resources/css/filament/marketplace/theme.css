@@ -31,7 +31,7 @@ body {
 }
 
 /* Sticky tabs navigation for EventResource */
-.fi-tabs > nav.fi-tabs-nav {
+.fi-sc-tabs > nav.fi-tabs {
     position: sticky;
     top: 4.5rem;
     background: #111827 !important;
