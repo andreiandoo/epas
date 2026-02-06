@@ -63,7 +63,8 @@ class Event extends Model
         'recurring_week_of_month', 'recurring_count',
 
         // media
-        'poster_url', 'hero_image_url',
+        'poster_url', 'poster_original_filename',
+        'hero_image_url', 'hero_image_original_filename',
 
         // location & links
         'address', 'website_url', 'facebook_url', 'event_website_url',

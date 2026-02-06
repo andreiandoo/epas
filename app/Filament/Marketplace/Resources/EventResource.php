@@ -621,31 +621,32 @@ class EventResource extends Resource
                                     ->placeholder($t('ex: 500', 'e.g. 500')),
                             ])->columns(2),
 
-                        // MEDIA
+                        // MEDIA - only visible when at least one image is uploaded (use header action to upload)
                         SC\Section::make('Media')
+                            ->visible(fn (?Event $record) => $record && (!empty($record->poster_url) || !empty($record->hero_image_url)))
                             ->schema([
-                                Forms\Components\FileUpload::make('poster_url')
+                                Forms\Components\Placeholder::make('poster_preview')
                                     ->label($t('Poster (vertical)', 'Poster (vertical)'))
-                                    ->image()
-                                    ->disk('public')
-                                    ->directory('events/posters')
-                                    ->visibility('public')
-                                    ->maxSize(10240)
-                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                    ->imageEditor(false)
-                                    ->imagePreviewHeight('200')
-                                    ->panelLayout('grid'),
-                                Forms\Components\FileUpload::make('hero_image_url')
+                                    ->content(function (?Event $record) use ($t) {
+                                        if (!$record || empty($record->poster_url)) {
+                                            return $t('Nicio imagine', 'No image');
+                                        }
+                                        $url = \Illuminate\Support\Facades\Storage::disk('public')->url($record->poster_url);
+                                        return new \Illuminate\Support\HtmlString(
+                                            "<img src='{$url}' alt='Poster' class='max-h-48 rounded-lg shadow' />"
+                                        );
+                                    }),
+                                Forms\Components\Placeholder::make('hero_preview')
                                     ->label($t('Imagine hero (orizontală)', 'Hero image (horizontal)'))
-                                    ->image()
-                                    ->disk('public')
-                                    ->directory('events/hero')
-                                    ->visibility('public')
-                                    ->maxSize(10240)
-                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                                    ->imageEditor(false)
-                                    ->imagePreviewHeight('200')
-                                    ->panelLayout('grid'),
+                                    ->content(function (?Event $record) use ($t) {
+                                        if (!$record || empty($record->hero_image_url)) {
+                                            return $t('Nicio imagine', 'No image');
+                                        }
+                                        $url = \Illuminate\Support\Facades\Storage::disk('public')->url($record->hero_image_url);
+                                        return new \Illuminate\Support\HtmlString(
+                                            "<img src='{$url}' alt='Hero' class='max-h-48 rounded-lg shadow' />"
+                                        );
+                                    }),
                             ])->columns(2),
 
                         // CONTENT - Single Language

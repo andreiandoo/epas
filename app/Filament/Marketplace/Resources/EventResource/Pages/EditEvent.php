@@ -114,7 +114,8 @@ class EditEvent extends EditRecord
                     ->visibility('public')
                     ->imagePreviewHeight('200')
                     ->maxSize(10240)
-                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp']),
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                    ->storeFileNamesIn('poster_original_filename'),
                 Forms\Components\FileUpload::make('hero_image_url')
                     ->label($t('Imagine hero (orizontală)', 'Hero image (horizontal)'))
                     ->image()
@@ -123,13 +124,41 @@ class EditEvent extends EditRecord
                     ->visibility('public')
                     ->imagePreviewHeight('200')
                     ->maxSize(10240)
-                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp']),
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                    ->storeFileNamesIn('hero_image_original_filename'),
+                Forms\Components\Hidden::make('poster_original_filename'),
+                Forms\Components\Hidden::make('hero_image_original_filename'),
             ])
             ->action(function (array $data): void {
-                $this->record->update([
+                $marketplace = static::getMarketplaceClient();
+
+                $updateData = [
                     'poster_url' => $data['poster_url'] ?? null,
                     'hero_image_url' => $data['hero_image_url'] ?? null,
-                ]);
+                    'poster_original_filename' => $data['poster_original_filename'] ?? null,
+                    'hero_image_original_filename' => $data['hero_image_original_filename'] ?? null,
+                ];
+
+                $this->record->update($updateData);
+
+                // Create MediaLibrary entries for searchability
+                if (!empty($data['poster_url'])) {
+                    $this->createMediaLibraryEntry(
+                        $data['poster_url'],
+                        $data['poster_original_filename'] ?? null,
+                        'events',
+                        $marketplace?->id
+                    );
+                }
+
+                if (!empty($data['hero_image_url'])) {
+                    $this->createMediaLibraryEntry(
+                        $data['hero_image_url'],
+                        $data['hero_image_original_filename'] ?? null,
+                        'events',
+                        $marketplace?->id
+                    );
+                }
 
                 Notification::make()
                     ->success()
@@ -139,6 +168,47 @@ class EditEvent extends EditRecord
                 // Refresh the page to show updated images
                 $this->redirect(EventResource::getUrl('edit', ['record' => $this->record]));
             });
+    }
+
+    /**
+     * Create a MediaLibrary entry for an uploaded file
+     */
+    protected function createMediaLibraryEntry(
+        string $path,
+        ?string $originalFilename,
+        string $collection,
+        ?int $marketplaceClientId
+    ): void {
+        // Check if entry already exists for this path
+        $existing = \App\Models\MediaLibrary::where('path', $path)
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->first();
+
+        if ($existing) {
+            // Update original filename if provided and different
+            if ($originalFilename && $existing->original_filename !== $originalFilename) {
+                $existing->update(['original_filename' => $originalFilename]);
+            }
+            return;
+        }
+
+        try {
+            $media = \App\Models\MediaLibrary::createFromPath(
+                $path,
+                'public',
+                $collection,
+                $marketplaceClientId,
+                auth()->id()
+            );
+
+            // Update with original filename if provided
+            if ($originalFilename) {
+                $media->update(['original_filename' => $originalFilename]);
+            }
+        } catch (\Throwable $e) {
+            // Log error but don't fail the upload
+            \Illuminate\Support\Facades\Log::warning("Failed to create MediaLibrary entry: " . $e->getMessage());
+        }
     }
 
     /**

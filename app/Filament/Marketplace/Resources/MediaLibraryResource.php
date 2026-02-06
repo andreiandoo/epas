@@ -335,40 +335,38 @@ class MediaLibraryResource extends Resource
         $url = $media->url;
         $path = $media->path;
 
-        // Check Artist model
+        // Check Artist model (uses main_image_url, logo_url, portrait_url)
         if (class_exists(\App\Models\Artist::class)) {
-            $artistCount = \App\Models\Artist::where('image', $url)
-                ->orWhere('image', $path)
-                ->count();
+            $artistCount = \App\Models\Artist::where(function ($q) use ($url, $path) {
+                $q->where('main_image_url', $url)
+                    ->orWhere('main_image_url', $path)
+                    ->orWhere('logo_url', $url)
+                    ->orWhere('logo_url', $path)
+                    ->orWhere('portrait_url', $url)
+                    ->orWhere('portrait_url', $path);
+            })->count();
             if ($artistCount > 0) {
                 $usages[] = ['model' => 'Artiști', 'field' => 'imagine', 'count' => $artistCount];
             }
         }
 
-        // Check Event model
+        // Check Event model (uses poster_url, hero_image_url)
         if (class_exists(\App\Models\Event::class)) {
-            $eventCount = \App\Models\Event::where('cover_image', $url)
-                ->orWhere('cover_image', $path)
-                ->count();
+            $eventCount = \App\Models\Event::where(function ($q) use ($url, $path) {
+                $q->where('poster_url', $url)
+                    ->orWhere('poster_url', $path)
+                    ->orWhere('hero_image_url', $url)
+                    ->orWhere('hero_image_url', $path);
+            })->count();
             if ($eventCount > 0) {
-                $usages[] = ['model' => 'Evenimente', 'field' => 'cover_image', 'count' => $eventCount];
+                $usages[] = ['model' => 'Evenimente', 'field' => 'imagine', 'count' => $eventCount];
             }
         }
 
-        // Check Product model
-        if (class_exists(\App\Models\Product::class)) {
-            $productCount = \App\Models\Product::where('image', $url)
-                ->orWhere('image', $path)
-                ->count();
-            if ($productCount > 0) {
-                $usages[] = ['model' => 'Produse', 'field' => 'imagine', 'count' => $productCount];
-            }
-        }
-
-        // Check Venue model
+        // Check Venue model (uses image_url)
         if (class_exists(\App\Models\Venue::class)) {
-            $venueCount = \App\Models\Venue::where('image', $url)
-                ->orWhere('image', $path)
+            $venueCount = \App\Models\Venue::where('image_url', $url)
+                ->orWhere('image_url', $path)
                 ->count();
             if ($venueCount > 0) {
                 $usages[] = ['model' => 'Locații', 'field' => 'imagine', 'count' => $venueCount];
@@ -404,7 +402,16 @@ class MediaLibraryResource extends Resource
                     ->sortable()
                     ->limit(40)
                     ->tooltip(fn (?MediaLibrary $record) => $record?->filename)
-                    ->description(fn (?MediaLibrary $record) => $record?->directory),
+                    ->description(fn (?MediaLibrary $record) => $record?->original_filename
+                        ? "Original: {$record->original_filename}"
+                        : $record?->directory),
+
+                Tables\Columns\TextColumn::make('original_filename')
+                    ->label('Nume Original')
+                    ->searchable()
+                    ->sortable()
+                    ->limit(40)
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('collection')
                     ->label('Colecție')
