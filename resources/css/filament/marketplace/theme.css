@@ -30,6 +30,17 @@ body {
     margin-bottom: 1rem;
 }
 
+/* Sticky tabs navigation for EventResource */
+.fi-tabs > nav.fi-tabs-nav {
+    position: sticky;
+    top: 4.5rem;
+    background: #111827 !important;
+    z-index: 19;
+    border-radius: var(--radius-xl);
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
 /* Fix dropdown/select option styling */
 @layer components {
     /* Remove thick borders from select dropdown options */

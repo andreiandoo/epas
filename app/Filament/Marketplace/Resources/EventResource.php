@@ -117,7 +117,6 @@ class EventResource extends Resource
                     ->columnSpan(3)
                     ->schema([
                         SC\Tabs::make('EventTabs')
-                            ->extraAttributes(['class' => 'sticky top-0 z-20 bg-gray-900 -mx-6 px-6 pt-2 pb-0 -mt-6 mb-4 border-b border-gray-700/50'])
                             ->persistTabInQueryString()
                             ->tabs([
                                 // ========== TAB 1: DETALII ==========
