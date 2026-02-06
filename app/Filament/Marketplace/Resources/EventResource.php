@@ -977,8 +977,8 @@ class EventResource extends Resource
                         // TICKETS
                         SC\Section::make($t('Bilete', 'Tickets'))
                             ->schema([
-                                // Ticket Template and General Stock row
-                                SC\Grid::make(2)->schema([
+                                // Ticket Template, General Stock, and Door Price row
+                                SC\Grid::make(3)->schema([
                                     Forms\Components\Select::make('ticket_template_id')
                                         ->label($t('Șablon bilet', 'Ticket Template'))
                                         ->relationship(
@@ -1005,64 +1005,6 @@ class EventResource extends Resource
                                         ->nullable()
                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Stoc implicit folosit pentru seria de bilete când un tip de bilet nu are stoc setat.', 'Default stock used for ticket series when a ticket type has no stock set.'))
                                         ->placeholder($t('ex: 500', 'e.g. 500')),
-                                ]),
-
-                                // Commission Mode and Rate for event
-                                SC\Grid::make(4)->schema([
-                                    Forms\Components\Select::make('commission_mode')
-                                        ->label($t('Mod comision', 'Commission Mode'))
-                                        ->options([
-                                            'included' => $t('Inclus în preț', 'Include in price'),
-                                            'added_on_top' => $t('Adăugat la preț', 'Add on top'),
-                                        ])
-                                        ->placeholder(function (SGet $get) use ($marketplace, $t) {
-                                            $organizerId = $get('marketplace_organizer_id');
-                                            if ($organizerId) {
-                                                $organizer = MarketplaceOrganizer::find($organizerId);
-                                                if ($organizer && $organizer->default_commission_mode) {
-                                                    $modeText = $organizer->default_commission_mode === 'included' ? $t('Inclus', 'Included') : $t('Adăugat', 'Added on top');
-                                                    return "{$modeText} " . $t('(implicit organizator)', '(organizer default)');
-                                                }
-                                            }
-                                            $mode = $marketplace->commission_mode ?? 'included';
-                                            $modeText = $mode === 'included' ? $t('Inclus', 'Included') : $t('Adăugat', 'Added on top');
-                                            return "{$modeText} " . $t('(implicit marketplace)', '(marketplace default)');
-                                        })
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Lasă gol pentru a folosi modul implicit al organizatorului sau marketplace-ului', 'Leave empty to use organizer\'s or marketplace default mode'))
-                                        ->live()
-                                        ->nullable(),
-
-                                    Forms\Components\Toggle::make('use_fixed_commission')
-                                        ->label('Comision Fix')
-                                        ->helperText(fn () => $marketplace->fixed_commission
-                                            ? "{$marketplace->fixed_commission} LEI per bilet"
-                                            : 'Nu este setat un comision fix în setările marketplace')
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Când este activat, se va folosi comisionul fix din setările marketplace în loc de comisionul procentual.')
-                                        ->live()
-                                        ->default(false),
-
-                                    Forms\Components\TextInput::make('commission_rate')
-                                        ->label($t('Comision personalizat (%)', 'Custom Commission (%)'))
-                                        ->numeric()
-                                        ->minValue(0)
-                                        ->maxValue(50)
-                                        ->step(0.5)
-                                        ->suffix('%')
-                                        ->placeholder(function (SGet $get) use ($marketplace, $t) {
-                                            $organizerId = $get('marketplace_organizer_id');
-                                            if ($organizerId) {
-                                                $organizer = MarketplaceOrganizer::find($organizerId);
-                                                if ($organizer && $organizer->commission_rate !== null) {
-                                                    return $organizer->commission_rate . '% ' . $t('(implicit organizator)', '(organizer default)');
-                                                }
-                                            }
-                                            return ($marketplace->commission_rate ?? 5) . '% ' . $t('(implicit marketplace)', '(marketplace default)');
-                                        })
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Lasă gol pentru a folosi rata implicită a organizatorului sau marketplace-ului', 'Leave empty to use organizer\'s or marketplace default rate'))
-                                        ->live()
-                                        ->nullable()
-                                        ->visible(fn (SGet $get) => !$get('use_fixed_commission')),
-
                                     Forms\Components\TextInput::make('target_price')
                                         ->label($t('Preț la intrare', 'Door Price'))
                                         ->numeric()
@@ -1206,6 +1148,23 @@ class EventResource extends Resource
                                                     ])
                                                     ->default('')
                                                     ->live()
+                                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) use ($marketplace) {
+                                                        // Auto-populate organizer/marketplace defaults when type is selected
+                                                        if ($state === 'percentage' || $state === 'both') {
+                                                            $organizerId = $get('../../marketplace_organizer_id');
+                                                            $organizer = $organizerId ? MarketplaceOrganizer::find($organizerId) : null;
+                                                            $defaultRate = $organizer?->commission_rate ?? $marketplace?->commission_rate ?? 5;
+                                                            $defaultMode = $organizer?->default_commission_mode ?? $marketplace?->commission_mode ?? 'included';
+                                                            $set('commission_rate', $defaultRate);
+                                                            $set('commission_mode', $defaultMode);
+                                                        }
+                                                        if ($state === 'fixed' || $state === 'both') {
+                                                            $organizerId = $get('../../marketplace_organizer_id');
+                                                            $organizer = $organizerId ? MarketplaceOrganizer::find($organizerId) : null;
+                                                            $defaultMode = $organizer?->default_commission_mode ?? $marketplace?->commission_mode ?? 'included';
+                                                            $set('commission_mode', $defaultMode);
+                                                        }
+                                                    })
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('commission_rate')
                                                     ->label($t('Procent %', 'Rate %'))
@@ -1213,7 +1172,11 @@ class EventResource extends Resource
                                                     ->minValue(0)
                                                     ->maxValue(100)
                                                     ->step(0.01)
-                                                    ->placeholder('5')
+                                                    ->placeholder(function (SGet $get) use ($marketplace, $t) {
+                                                        $organizerId = $get('../../marketplace_organizer_id');
+                                                        $organizer = $organizerId ? MarketplaceOrganizer::find($organizerId) : null;
+                                                        return ($organizer?->commission_rate ?? $marketplace?->commission_rate ?? 5) . '%';
+                                                    })
                                                     ->visible(fn (SGet $get) => in_array($get('commission_type'), ['percentage', 'both']))
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('commission_fixed')
@@ -1228,11 +1191,15 @@ class EventResource extends Resource
                                                 Forms\Components\Select::make('commission_mode')
                                                     ->label($t('Mod comision', 'Commission mode'))
                                                     ->options([
-                                                        '' => $t('Moștenește', 'Inherit'),
                                                         'included' => $t('Inclus în preț', 'Included in price'),
                                                         'added_on_top' => $t('Adăugat la preț', 'Added on top'),
                                                     ])
-                                                    ->default('')
+                                                    ->placeholder(function (SGet $get) use ($marketplace, $t) {
+                                                        $organizerId = $get('../../marketplace_organizer_id');
+                                                        $organizer = $organizerId ? MarketplaceOrganizer::find($organizerId) : null;
+                                                        $mode = $organizer?->default_commission_mode ?? $marketplace?->commission_mode ?? 'included';
+                                                        return $mode === 'included' ? $t('Inclus', 'Included') : $t('Adăugat', 'Added');
+                                                    })
                                                     ->visible(fn (SGet $get) => !empty($get('commission_type')))
                                                     ->columnSpan(3),
                                             ])
@@ -1454,182 +1421,197 @@ class EventResource extends Resource
                                             })
                                             ->columnSpan(12),
 
-                                        // Sale toggle - controls visibility of sale fields
-                                        Forms\Components\Toggle::make('has_sale')
-                                            ->label($t('Activează reducere', 'Enable Sale Discount'))
-                                            ->live()
-                                            ->default(false)
-                                            ->dehydrated(false)
-                                            ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                // Auto-enable if there's existing sale data
-                                                $hasSaleData = $get('price') || $get('discount_percent') || $get('sales_start_at') || $get('sales_end_at') || $get('sale_stock');
-                                                if ($hasSaleData) {
-                                                    $set('has_sale', true);
-                                                }
-                                            })
+                                        // Reducere fieldset - collapsed
+                                        SC\Fieldset::make($t('Reducere', 'Discount'))
+                                            ->schema([
+                                                Forms\Components\Toggle::make('has_sale')
+                                                    ->label($t('Activează reducere', 'Enable Sale Discount'))
+                                                    ->live()
+                                                    ->default(false)
+                                                    ->dehydrated(false)
+                                                    ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                        // Auto-enable if there's existing sale data
+                                                        $hasSaleData = $get('price') || $get('discount_percent') || $get('sales_start_at') || $get('sales_end_at') || $get('sale_stock');
+                                                        if ($hasSaleData) {
+                                                            $set('has_sale', true);
+                                                        }
+                                                    }),
+
+                                                SC\Grid::make(4)->schema([
+                                                    Forms\Components\TextInput::make('price')
+                                                        ->label($t('Preț promoțional', 'Sale price'))
+                                                        ->placeholder($t('lasă gol dacă nu e reducere', 'leave empty if no sale'))
+                                                        ->numeric()
+                                                        ->minValue(0)
+                                                        ->live(debounce: 300)
+                                                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                            $price = (float) ($get('price_max') ?: 0);
+                                                            $sale = $state !== null && $state !== '' ? (float)$state : null;
+                                                            if ($price > 0 && $sale) {
+                                                                $d = round((1 - ($sale / $price)) * 100, 2);
+                                                                $set('discount_percent', max(0, min(100, $d)));
+                                                            } else {
+                                                                $set('discount_percent', null);
+                                                            }
+                                                        }),
+                                                    Forms\Components\TextInput::make('discount_percent')
+                                                        ->label($t('Reducere %', 'Discount %'))
+                                                        ->placeholder($t('ex: 20', 'e.g. 20'))
+                                                        ->numeric()
+                                                        ->minValue(0)
+                                                        ->maxValue(100)
+                                                        ->live(debounce: 300)
+                                                        ->formatStateUsing(function ($state, SGet $get) {
+                                                            // Calculate discount % on form load based on price_max and price
+                                                            if ($state !== null && $state !== '') {
+                                                                return $state;
+                                                            }
+                                                            $priceMax = (float) ($get('price_max') ?: 0);
+                                                            $salePrice = $get('price');
+                                                            if ($priceMax > 0 && $salePrice !== null && $salePrice !== '') {
+                                                                $sale = (float) $salePrice;
+                                                                return round((1 - ($sale / $priceMax)) * 100, 2);
+                                                            }
+                                                            return null;
+                                                        })
+                                                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                            $price = (float) ($get('price_max') ?: 0);
+                                                            if ($price <= 0) return;
+                                                            if ($state === null || $state === '') {
+                                                                $set('price', null);
+                                                                return;
+                                                            }
+                                                            $disc = max(0, min(100, (float)$state));
+                                                            $set('price', round($price * (1 - $disc/100), 2));
+                                                        }),
+                                                    Forms\Components\DateTimePicker::make('sales_start_at')
+                                                        ->label($t('Început reducere', 'Sale starts'))
+                                                        ->native(false)
+                                                        ->seconds(false)
+                                                        ->displayFormat('Y-m-d H:i')
+                                                        ->minDate(now())
+                                                        ->live(debounce: 500)
+                                                        ->afterStateUpdated(function ($state, SSet $set) {
+                                                            if (!$state) return;
+
+                                                            $selectedDate = Carbon::parse($state);
+                                                            $now = Carbon::now();
+
+                                                            // If the selected date is today and time is midnight (default), set current time
+                                                            if ($selectedDate->isToday() && $selectedDate->format('H:i') === '00:00') {
+                                                                // Set to current time, rounded up to next 5 minutes
+                                                                $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
+                                                                $set('sales_start_at', $newTime->format('Y-m-d H:i'));
+                                                            }
+                                                            // Ensure the datetime is not in the past
+                                                            elseif ($selectedDate->lt($now)) {
+                                                                $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
+                                                                $set('sales_start_at', $newTime->format('Y-m-d H:i'));
+                                                            }
+                                                        }),
+                                                    Forms\Components\DateTimePicker::make('sales_end_at')
+                                                        ->label($t('Sfârșit reducere', 'Sale ends'))
+                                                        ->native(false)
+                                                        ->seconds(false)
+                                                        ->displayFormat('Y-m-d H:i'),
+                                                ])
+                                                    ->visible(fn (SGet $get) => $get('has_sale')),
+
+                                                // Sale stock - limit how many tickets can be sold at sale price
+                                                Forms\Components\TextInput::make('sale_stock')
+                                                    ->label($t('Stoc reducere', 'Sale stock'))
+                                                    ->placeholder($t('Nelimitat', 'Unlimited'))
+                                                    ->numeric()
+                                                    ->minValue(0)
+                                                    ->nullable()
+                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul de bilete disponibile la preț redus. Când se consumă stocul, oferta se închide automat.', 'Number of tickets available at discounted price. When stock runs out, the offer closes automatically.'))
+                                                    ->visible(fn (SGet $get) => $get('has_sale')),
+                                            ])
+                                            ->collapsible()
+                                            ->collapsed()
                                             ->columnSpan(12),
 
-                                        SC\Grid::make(4)->schema([
-                                            Forms\Components\TextInput::make('price')
-                                                ->label($t('Preț promoțional', 'Sale price'))
-                                                ->placeholder($t('lasă gol dacă nu e reducere', 'leave empty if no sale'))
-                                                ->numeric()
-                                                ->minValue(0)
-                                                ->live(debounce: 300)
-                                                ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                                    $price = (float) ($get('price_max') ?: 0);
-                                                    $sale = $state !== null && $state !== '' ? (float)$state : null;
-                                                    if ($price > 0 && $sale) {
-                                                        $d = round((1 - ($sale / $price)) * 100, 2);
-                                                        $set('discount_percent', max(0, min(100, $d)));
-                                                    } else {
-                                                        $set('discount_percent', null);
-                                                    }
-                                                }),
-                                            Forms\Components\TextInput::make('discount_percent')
-                                                ->label($t('Reducere %', 'Discount %'))
-                                                ->placeholder($t('ex: 20', 'e.g. 20'))
-                                                ->numeric()
-                                                ->minValue(0)
-                                                ->maxValue(100)
-                                                ->live(debounce: 300)
-                                                ->formatStateUsing(function ($state, SGet $get) {
-                                                    // Calculate discount % on form load based on price_max and price
-                                                    if ($state !== null && $state !== '') {
-                                                        return $state;
-                                                    }
-                                                    $priceMax = (float) ($get('price_max') ?: 0);
-                                                    $salePrice = $get('price');
-                                                    if ($priceMax > 0 && $salePrice !== null && $salePrice !== '') {
-                                                        $sale = (float) $salePrice;
-                                                        return round((1 - ($sale / $priceMax)) * 100, 2);
-                                                    }
-                                                    return null;
-                                                })
-                                                ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                                    $price = (float) ($get('price_max') ?: 0);
-                                                    if ($price <= 0) return;
-                                                    if ($state === null || $state === '') {
-                                                        $set('price', null);
-                                                        return;
-                                                    }
-                                                    $disc = max(0, min(100, (float)$state));
-                                                    $set('price', round($price * (1 - $disc/100), 2));
-                                                }),
-                                            Forms\Components\DateTimePicker::make('sales_start_at')
-                                                ->label($t('Început reducere', 'Sale starts'))
-                                                ->native(false)
-                                                ->seconds(false)
-                                                ->displayFormat('Y-m-d H:i')
-                                                ->minDate(now())
-                                                ->live(debounce: 500)
-                                                ->afterStateUpdated(function ($state, SSet $set) {
-                                                    if (!$state) return;
-
-                                                    $selectedDate = Carbon::parse($state);
-                                                    $now = Carbon::now();
-
-                                                    // If the selected date is today and time is midnight (default), set current time
-                                                    if ($selectedDate->isToday() && $selectedDate->format('H:i') === '00:00') {
-                                                        // Set to current time, rounded up to next 5 minutes
-                                                        $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
-                                                        $set('sales_start_at', $newTime->format('Y-m-d H:i'));
-                                                    }
-                                                    // Ensure the datetime is not in the past
-                                                    elseif ($selectedDate->lt($now)) {
-                                                        $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
-                                                        $set('sales_start_at', $newTime->format('Y-m-d H:i'));
-                                                    }
-                                                }),
-                                            Forms\Components\DateTimePicker::make('sales_end_at')
-                                                ->label($t('Sfârșit reducere', 'Sale ends'))
-                                                ->native(false)
-                                                ->seconds(false)
-                                                ->displayFormat('Y-m-d H:i'),
-                                        ])
-                                            ->visible(fn (SGet $get) => $get('has_sale'))
+                                        // Serie bilet fieldset - collapsed
+                                        SC\Fieldset::make($t('Serie bilet', 'Ticket series'))
+                                            ->schema([
+                                                SC\Grid::make(3)->schema([
+                                                    Forms\Components\TextInput::make('series_start')
+                                                        ->label($t('Serie start', 'Series start'))
+                                                        ->placeholder($t('Ex: AMB-5-00001', 'E.g. AMB-5-00001'))
+                                                        ->maxLength(50)
+                                                        ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                            if (!$state) {
+                                                                $eventSeries = $get('../../event_series');
+                                                                $capacity = $get('capacity');
+                                                                $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                                if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
+                                                                    $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
+                                                                }
+                                                            }
+                                                        }),
+                                                    Forms\Components\TextInput::make('series_end')
+                                                        ->label($t('Serie end', 'Series end'))
+                                                        ->placeholder($t('Ex: AMB-5-00500', 'E.g. AMB-5-00500'))
+                                                        ->maxLength(50)
+                                                        ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                            if (!$state) {
+                                                                $eventSeries = $get('../../event_series');
+                                                                $capacity = $get('capacity');
+                                                                $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                                if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
+                                                                    $endNumber = (int)$capacity;
+                                                                    $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
+                                                                }
+                                                            }
+                                                        }),
+                                                    Forms\Components\Toggle::make('is_refundable')
+                                                        ->label($t('Returnabil', 'Refundable'))
+                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet', 'If the event is cancelled or postponed, customers can request a refund for this ticket type'))
+                                                        ->default(false),
+                                                ]),
+                                            ])
+                                            ->collapsible()
+                                            ->collapsed()
                                             ->columnSpan(12),
 
-                                        // Sale stock - limit how many tickets can be sold at sale price
-                                        Forms\Components\TextInput::make('sale_stock')
-                                            ->label($t('Stoc reducere', 'Sale stock'))
-                                            ->placeholder($t('Nelimitat', 'Unlimited'))
-                                            ->numeric()
-                                            ->minValue(0)
-                                            ->nullable()
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul de bilete disponibile la preț redus. Când se consumă stocul, oferta se închide automat.', 'Number of tickets available at discounted price. When stock runs out, the offer closes automatically.'))
-                                            ->visible(fn (SGet $get) => $get('has_sale'))
-                                            ->columnSpan(6),
-
-                                        // Activ, Returnabil, Serie start, Serie end - all on same row with unequal columns
-                                        Forms\Components\Toggle::make('is_active')
-                                            ->label($t('Activ', 'Active'))
-                                            ->default(true)
-                                            ->live()
-                                            ->columnSpan(2),
-                                        Forms\Components\Toggle::make('is_refundable')
-                                            ->label($t('Returnabil', 'Refundable'))
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet', 'If the event is cancelled or postponed, customers can request a refund for this ticket type'))
-                                            ->default(false)
-                                            ->columnSpan(2),
-                                        Forms\Components\TextInput::make('series_start')
-                                            ->label($t('Serie start', 'Series start'))
-                                            ->placeholder($t('Ex: AMB-5-00001', 'E.g. AMB-5-00001'))
-                                            ->maxLength(50)
-                                            ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                if (!$state) {
-                                                    $eventSeries = $get('../../event_series');
-                                                    $capacity = $get('capacity');
-                                                    $ticketTypeIdentifier = $get('id') ?: $get('sku');
-                                                    if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
-                                                        $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
-                                                    }
-                                                }
-                                            })
-                                            ->columnSpan(4),
-                                        Forms\Components\TextInput::make('series_end')
-                                            ->label($t('Serie end', 'Series end'))
-                                            ->placeholder($t('Ex: AMB-5-00500', 'E.g. AMB-5-00500'))
-                                            ->maxLength(50)
-                                            ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                if (!$state) {
-                                                    $eventSeries = $get('../../event_series');
-                                                    $capacity = $get('capacity');
-                                                    $ticketTypeIdentifier = $get('id') ?: $get('sku');
-                                                    if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
-                                                        $endNumber = (int)$capacity;
-                                                        $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
-                                                    }
-                                                }
-                                            })
-                                            ->columnSpan(4),
-
-                                        Forms\Components\DateTimePicker::make('active_until')
-                                            ->label($t('Activ până la', 'Active until'))
-                                            ->native(false)
-                                            ->seconds(false)
-                                            ->displayFormat('Y-m-d H:i')
-                                            ->minDate(now())
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
-                                            ->visible(fn (SGet $get) => $get('is_active'))
-                                            ->columnSpan(6),
-
-                                        // Scheduling fields - shown when ticket is NOT active
-                                        Forms\Components\DateTimePicker::make('scheduled_at')
-                                            ->label($t('Programează activare', 'Schedule Activation'))
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când acest tip de bilet ar trebui să devină automat activ', 'When this ticket type should automatically become active'))
-                                            ->native(false)
-                                            ->seconds(false)
-                                            ->displayFormat('Y-m-d H:i')
-                                            ->minDate(now())
-                                            ->visible(fn (SGet $get) => !$get('is_active'))
-                                            ->columnSpan(4),
-
-                                        Forms\Components\Toggle::make('autostart_when_previous_sold_out')
-                                            ->label($t('Autostart când precedentul e sold out', 'Autostart when previous sold out'))
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Activează automat când tipurile de bilete anterioare ajung la capacitate 0', 'Activate automatically when previous ticket types reach 0 capacity'))
-                                            ->visible(fn (SGet $get) => !$get('is_active'))
-                                            ->columnSpan(4),
+                                        // Disponibilitate fieldset - collapsed
+                                        SC\Fieldset::make($t('Disponibilitate', 'Availability'))
+                                            ->schema([
+                                                SC\Grid::make(12)->schema([
+                                                    Forms\Components\Toggle::make('is_active')
+                                                        ->label($t('Activ', 'Active'))
+                                                        ->default(true)
+                                                        ->live()
+                                                        ->columnSpan(3),
+                                                    Forms\Components\DateTimePicker::make('active_until')
+                                                        ->label($t('Activ până la', 'Active until'))
+                                                        ->native(false)
+                                                        ->seconds(false)
+                                                        ->displayFormat('Y-m-d H:i')
+                                                        ->minDate(now())
+                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
+                                                        ->visible(fn (SGet $get) => $get('is_active'))
+                                                        ->columnSpan(9),
+                                                    // Scheduling fields - shown when ticket is NOT active
+                                                    Forms\Components\DateTimePicker::make('scheduled_at')
+                                                        ->label($t('Programează activare', 'Schedule Activation'))
+                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când acest tip de bilet ar trebui să devină automat activ', 'When this ticket type should automatically become active'))
+                                                        ->native(false)
+                                                        ->seconds(false)
+                                                        ->displayFormat('Y-m-d H:i')
+                                                        ->minDate(now())
+                                                        ->visible(fn (SGet $get) => !$get('is_active'))
+                                                        ->columnSpan(6),
+                                                    Forms\Components\Toggle::make('autostart_when_previous_sold_out')
+                                                        ->label($t('Autostart când precedentul e sold out', 'Autostart when previous sold out'))
+                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Activează automat când tipurile de bilete anterioare ajung la capacitate 0', 'Activate automatically when previous ticket types reach 0 capacity'))
+                                                        ->visible(fn (SGet $get) => !$get('is_active'))
+                                                        ->columnSpan(6),
+                                                ]),
+                                            ])
+                                            ->collapsible()
+                                            ->collapsed()
+                                            ->columnSpan(12),
 
                                         // Bulk discounts - wrapped in a subtle fieldset style
                                         SC\Fieldset::make($t('Reduceri la cantitate', 'Bulk discounts'))
