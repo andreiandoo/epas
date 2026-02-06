@@ -206,11 +206,11 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         </div>
     </div>
     <!-- Top Bar (cart timer - replaces default when cart has items) -->
-    <div class="mobile:hidden hidden text-sm py-2.5 transition-all duration-200 ease-in-out bg-warning/10 border-b border-warning/20" id="headerTimerBar">
+    <div class="mobile:hidden hidden text-sm py-2.5 transition-all duration-200 ease-in-out bg-warning border-b border-warning/20" id="headerTimerBar">
         <div class="flex items-center justify-center gap-3 px-4 mx-auto max-w-7xl">
             <svg class="w-5 h-5 text-warning" id="headerTimerIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <span class="text-secondary" id="headerTimerText">Rezervare expiră în</span>
-            <span class="font-bold text-warning tabular-nums" id="headerTimerCountdown">--:--</span>
+            <span class="font-bold text-white tabular-nums" id="headerTimerCountdown">--:--</span>
             <a href="/cos" class="ml-2 font-medium text-primary hover:underline">Vezi coșul →</a>
         </div>
     </div>
@@ -730,6 +730,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     // ==================== SCROLL EFFECT ====================
     const isTransparentMode = header.dataset.transparent === 'true';
     const headerTopBar = document.getElementById('headerTopBar');
+    const headerTimerBarRef = document.getElementById('headerTimerBar');
     const headerLogo = document.querySelector('.header-logo');
     const logoTextAm = document.getElementById('logoTextAm');
     const logoTextBilet = document.getElementById('logoTextBilet');
@@ -780,7 +781,10 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                 // Transparent mode
                 header.classList.add('bg-transparent', 'border-transparent', 'header-transparent');
                 header.classList.remove('bg-white', 'border-b', 'border-gray-200', 'shadow-lg');
-                headerTopBar?.classList.remove('hidden');
+                // Only show headerTopBar if timer bar is not active
+                if (!headerTimerBarRef || headerTimerBarRef.classList.contains('hidden')) {
+                    headerTopBar?.classList.remove('hidden');
+                }
                 headerLogo?.classList.add('brightness-0', 'invert');
 
                 // Logo text colors
@@ -816,7 +820,13 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         } else {
             // Non-transparent mode - just add shadow on scroll
             header.classList.toggle('shadow-lg', isScrolled);
-            headerTopBar.classList.toggle('hidden', isScrolled);
+            // Only toggle headerTopBar if timer bar is not active
+            if (!headerTimerBarRef || headerTimerBarRef.classList.contains('hidden')) {
+                headerTopBar.classList.toggle('hidden', isScrolled);
+            } else {
+                // Keep headerTopBar hidden when timer bar is active
+                headerTopBar.classList.add('hidden');
+            }
         }
     }
 
