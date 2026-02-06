@@ -2271,7 +2271,15 @@ class EventResource extends Resource
                                         ->action(function (?Event $record) {
                                             if (!$record) return;
 
-                                            $newEvent = $record->replicate();
+                                            // Explicitly copy only fillable attributes that exist
+                                            $newEvent = $record->replicate([
+                                                // Exclude non-existent or auto-generated columns
+                                                'id', 'slug', 'event_series', 'created_at', 'updated_at',
+                                                // Exclude columns that don't exist in this schema
+                                                'status', 'is_public', 'submitted_at', 'approved_at', 'approved_by',
+                                                'venue_name', 'city', 'starts_at', 'ends_at',
+                                                'seo_title', 'seo_description', 'revenue_target', 'capacity', 'event_type',
+                                            ]);
 
                                             // Prepend "[Duplicat]" to all title translations
                                             $titleArray = $record->title ?? [];
@@ -2284,23 +2292,22 @@ class EventResource extends Resource
                                             }
                                             $newEvent->title = $titleArray;
 
+                                            // Reset fields for the duplicate
                                             $newEvent->slug = null; // Will be auto-generated
-                                            $newEvent->status = 'draft';
-                                            $newEvent->is_public = false;
                                             $newEvent->is_featured = false;
                                             $newEvent->is_homepage_featured = false;
                                             $newEvent->is_general_featured = false;
                                             $newEvent->is_category_featured = false;
+                                            $newEvent->is_published = false;
                                             $newEvent->views_count = 0;
                                             $newEvent->interested_count = 0;
-                                            $newEvent->submitted_at = null;
-                                            $newEvent->approved_at = null;
-                                            $newEvent->approved_by = null;
                                             $newEvent->save();
 
                                             // Duplicate ticket types
                                             foreach ($record->ticketTypes as $ticketType) {
-                                                $newTicketType = $ticketType->replicate();
+                                                $newTicketType = $ticketType->replicate([
+                                                    'id', 'created_at', 'updated_at',
+                                                ]);
                                                 $newTicketType->event_id = $newEvent->id;
                                                 $newTicketType->quota_sold = 0;
                                                 $newTicketType->save();
