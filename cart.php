@@ -510,19 +510,30 @@ const CartPage = {
         const items = AmbiletCart.getItems();
         if (!items[index]) return;
 
-        const newQty = items[index].quantity + delta;
-        const maxQty = items[index].max_quantity || 10;
+        const currentQty = items[index].quantity;
+        let newQty = currentQty + delta;
+        const minQty = items[index].ticketType?.min_per_order || items[index].min_per_order || 1;
+        const maxQty = items[index].ticketType?.max_per_order || items[index].max_per_order || items[index].max_quantity || 10;
 
-        if (newQty >= 1 && newQty <= maxQty) {
-            items[index].quantity = newQty;
-            AmbiletCart.save(items);
-            this.render();
-        } else if (newQty < 1) {
-            this.removeItem(index);
-        } else if (newQty > maxQty) {
+        if (delta > 0 && newQty > maxQty) {
             if (typeof AmbiletNotifications !== 'undefined') {
                 AmbiletNotifications.warning(`Poți cumpăra maximum ${maxQty} bilete de acest tip`);
             }
+            return;
+        }
+
+        if (delta < 0 && newQty < minQty && newQty > 0) {
+            // Going below min - remove entirely
+            this.removeItem(index);
+            return;
+        }
+
+        if (newQty < 1) {
+            this.removeItem(index);
+        } else {
+            items[index].quantity = newQty;
+            AmbiletCart.save(items);
+            this.render();
         }
     },
 

@@ -68,7 +68,9 @@ const AmbiletCart = {
                     name: ticketTypeData.name,
                     price: ticketTypeData.price,
                     originalPrice: ticketTypeData.original_price,
-                    description: ticketTypeData.description
+                    description: ticketTypeData.description,
+                    min_per_order: ticketTypeData.min_per_order || 1,
+                    max_per_order: ticketTypeData.max_per_order || 10
                 },
                 quantity,
                 addedAt: new Date().toISOString()
