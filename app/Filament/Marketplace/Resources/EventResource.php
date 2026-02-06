@@ -2249,8 +2249,18 @@ class EventResource extends Resource
                                             }
                                             $newEvent->title = $titleArray;
 
+                                            // Generate unique slug from title
+                                            $baseTitle = is_array($titleArray) ? ($titleArray['ro'] ?? $titleArray['en'] ?? reset($titleArray)) : $titleArray;
+                                            $baseSlug = \Illuminate\Support\Str::slug($baseTitle ?: 'eveniment');
+                                            $slug = $baseSlug;
+                                            $counter = 1;
+                                            while (Event::where('slug', $slug)->exists()) {
+                                                $slug = $baseSlug . '-' . $counter;
+                                                $counter++;
+                                            }
+                                            $newEvent->slug = $slug;
+
                                             // Reset fields for the duplicate
-                                            $newEvent->slug = null; // Will be auto-generated
                                             $newEvent->is_featured = false;
                                             $newEvent->is_homepage_featured = false;
                                             $newEvent->is_general_featured = false;
