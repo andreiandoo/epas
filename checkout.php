@@ -60,10 +60,17 @@ require_once __DIR__ . '/includes/header.php';
                 <div id="checkout-form" class="hidden">
                     <!-- Buyer Information -->
                     <div class="p-6 mb-6 bg-white border rounded-2xl border-border">
-                        <h2 class="flex items-center gap-2 mb-4 text-lg font-bold text-secondary">
-                            <span class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-lg bg-primary/10 text-primary">1</span>
-                            Datele tale
-                        </h2>
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="flex items-center gap-2 text-lg font-bold text-secondary">
+                                <span class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-lg bg-primary/10 text-primary">1</span>
+                                Datele tale
+                            </h2>
+                            <!-- Login button for guests -->
+                            <button type="button" id="guest-login-btn" onclick="CheckoutPage.showLoginModal()" class="hidden items-center gap-2 px-4 py-2 text-sm font-medium transition-all border-2 rounded-xl text-primary border-primary hover:bg-primary hover:text-white">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                                Intră în cont
+                            </button>
+                        </div>
 
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
@@ -80,7 +87,7 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                             <div>
                                 <label class="block mb-2 text-sm font-medium text-secondary">Confirmă email *</label>
-                                <input type="email" id="buyer-email-confirm" autocomplete="off" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
+                                <input type="email" id="buyer-email-confirm" autocomplete="new-password" onpaste="return false;" ondrop="return false;" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
                                 <p id="email-mismatch-error" class="hidden mt-1 text-sm text-primary">Adresele de email nu coincid</p>
                             </div>
                             <div class="md:col-span-2">
@@ -354,6 +361,39 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </main>
 
+    <!-- Login Modal -->
+    <div id="login-modal" class="fixed inset-0 z-50 items-center justify-center hidden bg-black/50 backdrop-blur-sm">
+        <div class="w-full max-w-md p-8 mx-4 bg-white shadow-2xl rounded-2xl">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-secondary">Conectează-te</h3>
+                <button type="button" onclick="CheckoutPage.hideLoginModal()" class="p-2 transition-colors rounded-lg hover:bg-surface">
+                    <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <p class="mb-6 text-sm text-muted">Conectează-te pentru a-ți precompletă datele și a finaliza comanda mai rapid.</p>
+
+            <form id="checkout-login-form" onsubmit="return CheckoutPage.handleLogin(event)">
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium text-secondary">Email</label>
+                    <input type="email" id="login-email" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" placeholder="email@exemplu.ro" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block mb-2 text-sm font-medium text-secondary">Parola</label>
+                    <input type="password" id="login-password" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" placeholder="••••••••" required>
+                </div>
+                <button type="submit" id="login-submit-btn" class="flex items-center justify-center w-full gap-2 py-3 font-bold text-white btn-primary rounded-xl">
+                    <span id="login-btn-text">Conectează-te</span>
+                </button>
+            </form>
+
+            <div class="flex items-center justify-between mt-4 text-sm">
+                <a href="/parola-uitata" target="_blank" class="text-primary hover:underline">Ai uitat parola?</a>
+                <a href="/inregistrare" target="_blank" class="text-primary hover:underline">Creează cont</a>
+            </div>
+        </div>
+    </div>
+
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <?php
@@ -612,18 +652,94 @@ const CheckoutPage = {
 
     prefillBuyerInfo() {
         const user = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getUser() : null;
+        const loginBtn = document.getElementById('guest-login-btn');
+
         if (user) {
+            // User is logged in - prefill fields
             document.getElementById('buyer-first-name').value = user.first_name || '';
             document.getElementById('buyer-last-name').value = user.last_name || user.name || '';
             document.getElementById('buyer-email').value = user.email || '';
             document.getElementById('buyer-email-confirm').value = user.email || '';
             document.getElementById('buyer-phone').value = user.phone || '';
+            // Hide login button
+            if (loginBtn) loginBtn.classList.add('hidden');
+            loginBtn?.classList.remove('flex');
+        } else {
+            // Guest - show login button
+            if (loginBtn) {
+                loginBtn.classList.remove('hidden');
+                loginBtn.classList.add('flex');
+            }
         }
 
         // Add email confirmation validation on blur
         const emailConfirm = document.getElementById('buyer-email-confirm');
         emailConfirm.addEventListener('blur', () => this.validateEmailMatch());
         document.getElementById('buyer-email').addEventListener('blur', () => this.validateEmailMatch());
+    },
+
+    showLoginModal() {
+        const modal = document.getElementById('login-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('login-email').focus();
+        }
+    },
+
+    hideLoginModal() {
+        const modal = document.getElementById('login-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    },
+
+    async handleLogin(event) {
+        event.preventDefault();
+
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        const submitBtn = document.getElementById('login-submit-btn');
+        const btnText = document.getElementById('login-btn-text');
+
+        // Disable button and show loading
+        submitBtn.disabled = true;
+        btnText.innerHTML = '<svg class="inline w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Se conectează...';
+
+        try {
+            const result = await AmbiletAuth.login(email, password, true);
+            if (result.success) {
+                AmbiletNotifications.success('Conectare reușită!');
+                this.hideLoginModal();
+
+                // Prefill buyer info with new user data
+                const user = AmbiletAuth.getUser();
+                if (user) {
+                    document.getElementById('buyer-first-name').value = user.first_name || '';
+                    document.getElementById('buyer-last-name').value = user.last_name || user.name || '';
+                    document.getElementById('buyer-email').value = user.email || '';
+                    document.getElementById('buyer-email-confirm').value = user.email || '';
+                    document.getElementById('buyer-phone').value = user.phone || '';
+                }
+
+                // Hide login button
+                const loginBtn = document.getElementById('guest-login-btn');
+                if (loginBtn) {
+                    loginBtn.classList.add('hidden');
+                    loginBtn.classList.remove('flex');
+                }
+            } else {
+                AmbiletNotifications.error(result.message || 'Email sau parola incorectă');
+            }
+        } catch (error) {
+            AmbiletNotifications.error('Eroare la conectare. Încearcă din nou.');
+        } finally {
+            submitBtn.disabled = false;
+            btnText.textContent = 'Conectează-te';
+        }
+
+        return false;
     },
 
     validateEmailMatch() {
