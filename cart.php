@@ -96,17 +96,18 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="p-3">
                             <!-- Order Lines -->
                             <div class="mb-3 space-y-3">
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-muted">Subtotal (<span id="summaryItems">0</span> bilete)</span>
-                                    <span id="subtotal" class="font-medium">0.00 lei</span>
-                                </div>
-                                <!-- Dynamic taxes container -->
+                                <!-- Dynamic taxes container (ticket breakdown) -->
                                 <div id="taxesContainer" class="space-y-2">
                                     <!-- Taxes will be rendered dynamically by JS -->
                                 </div>
                                 <div id="discountRow" class="flex justify-between hidden text-sm">
                                     <span class="text-success">Reducere aplicată</span>
                                     <span id="discountAmount" class="font-medium text-success">-0.00 lei</span>
+                                </div>
+                                <!-- Subtotal - last before total -->
+                                <div class="flex justify-between pt-2 text-sm border-t border-border">
+                                    <span class="text-muted">Subtotal (<span id="summaryItems">0</span> bilete)</span>
+                                    <span id="subtotal" class="font-medium">0.00 lei</span>
                                 </div>
                             </div>
 
@@ -117,7 +118,7 @@ require_once __DIR__ . '/includes/header.php';
                                         <span id="savingsText" class="text-sm font-medium text-success">Alegând [numebilet] economisești:</span>
                                         <span id="savings" class="flex-none font-bold text-success">0.00 lei</span>
                                     </div>
-                                    
+
                                 </div>
                             </div>
 
@@ -469,7 +470,7 @@ const CartPage = {
                                 '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>' +
                             '</svg>' +
                         '</button>' +
-                    '<div>' +
+                    '</div>' +
                     '<div class="flex items-center justify-between mt-3">' +
                         '<div class="relative inline-block tooltip-trigger">' +
                             '<div class="flex items-center gap-2">' +
