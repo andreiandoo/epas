@@ -820,36 +820,33 @@ const CheckoutPage = {
     },
 
     renderSummary() {
-        // Get first item for event info
-        const firstItem = this.items[0];
-
-        // Handle both AmbiletCart format and legacy format
-        const eventImage = firstItem.event?.image || firstItem.event_image || '/assets/images/default-event.png';
-        const eventTitle = firstItem.event?.title || firstItem.event_title || 'Eveniment';
-        const eventDate = firstItem.event?.date || firstItem.event_date || '';
-        const venueName = firstItem.event?.venue?.name || (typeof firstItem.event?.venue === 'string' ? firstItem.event.venue : '') || firstItem.venue_name || '';
-
-        // Event info
-        const eventInfo = document.getElementById('event-info');
-        eventInfo.innerHTML = `
-            <img src="${eventImage}" alt="Event" class="object-cover w-20 h-20 rounded-xl" loading="lazy">
-            <div>
-                <h3 class="font-bold text-secondary">${eventTitle}</h3>
-                <p class="text-sm text-muted">${eventDate ? AmbiletUtils.formatDate(eventDate) : ''}</p>
-                <p class="text-sm text-muted">${venueName}</p>
-            </div>
-        `;
-
-        // Items summary
-        const itemsSummary = document.getElementById('items-summary');
-        let itemsHtml = '';
-        let baseSubtotal = 0;  // Subtotal without commission
-        let totalCommission = 0;  // Total commission
+        // Group items by event
+        const eventGroups = {};
+        let baseSubtotal = 0;
+        let totalCommission = 0;
         let savings = 0;
         let totalQty = 0;
         let hasAddedOnTopCommission = false;
 
         this.items.forEach(item => {
+            const eventId = item.eventId || item.event?.id || 'unknown';
+            const eventTitle = item.event?.title || item.event?.name || item.event_title || 'Eveniment';
+            const eventImage = item.event?.image || item.event_image || '/assets/images/default-event.png';
+            const eventDate = item.event?.date || item.event_date || '';
+            const venueName = item.event?.venue?.name || (typeof item.event?.venue === 'string' ? item.event.venue : '') || item.venue_name || '';
+
+            if (!eventGroups[eventId]) {
+                eventGroups[eventId] = {
+                    title: eventTitle,
+                    image: eventImage,
+                    date: eventDate,
+                    venue: venueName,
+                    tickets: [],
+                    subtotal: 0,
+                    commission: 0
+                };
+            }
+
             const price = item.ticketType?.price || item.price || 0;
             const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
             const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
@@ -864,24 +861,83 @@ const CheckoutPage = {
             }
 
             const itemTotal = price * qty;
+            const commissionTotal = itemCommission * qty;
+
             baseSubtotal += itemTotal;
-            totalCommission += itemCommission * qty;
+            totalCommission += commissionTotal;
             totalQty += qty;
+            eventGroups[eventId].subtotal += itemTotal;
+            eventGroups[eventId].commission += commissionTotal;
 
             const hasDiscount = originalPrice && originalPrice > price;
             if (hasDiscount) {
                 savings += (originalPrice - price) * qty;
             }
 
-            itemsHtml += `
-                <div class="flex justify-between text-sm">
-                    <span class="text-muted">${qty}x ${ticketTypeName}</span>
-                    <div class="text-right">
-                        ${hasDiscount ? `<span class="mr-2 text-xs line-through text-muted">${AmbiletUtils.formatCurrency(originalPrice * qty)}</span>` : ''}
-                        <span class="font-medium">${AmbiletUtils.formatCurrency(itemTotal)}</span>
-                    </div>
+            eventGroups[eventId].tickets.push({
+                name: ticketTypeName,
+                qty: qty,
+                price: price,
+                lineTotal: itemTotal,
+                hasDiscount: hasDiscount,
+                originalPrice: originalPrice
+            });
+        });
+
+        const eventIds = Object.keys(eventGroups);
+        const hasMultipleEvents = eventIds.length > 1;
+
+        // Event info - show first event or multiple events indicator
+        const eventInfo = document.getElementById('event-info');
+        if (hasMultipleEvents) {
+            eventInfo.innerHTML = `
+                <div class="flex items-center justify-center w-20 h-20 rounded-xl bg-primary/10">
+                    <span class="text-2xl font-bold text-primary">${eventIds.length}</span>
+                </div>
+                <div>
+                    <h3 class="font-bold text-secondary">${eventIds.length} evenimente</h3>
+                    <p class="text-sm text-muted">${totalQty} bilete în total</p>
                 </div>
             `;
+        } else {
+            const firstGroup = eventGroups[eventIds[0]];
+            eventInfo.innerHTML = `
+                <img src="${firstGroup.image}" alt="Event" class="object-cover w-20 h-20 rounded-xl" loading="lazy">
+                <div>
+                    <h3 class="font-bold text-secondary">${firstGroup.title}</h3>
+                    <p class="text-sm text-muted">${firstGroup.date ? AmbiletUtils.formatDate(firstGroup.date) : ''}</p>
+                    <p class="text-sm text-muted">${firstGroup.venue}</p>
+                </div>
+            `;
+        }
+
+        // Items summary - grouped by event
+        const itemsSummary = document.getElementById('items-summary');
+        let itemsHtml = '';
+
+        eventIds.forEach((eventId, eventIndex) => {
+            const group = eventGroups[eventId];
+
+            // Show event title as header if multiple events
+            if (hasMultipleEvents) {
+                if (eventIndex > 0) {
+                    itemsHtml += '<div class="pt-3 mt-3 border-t border-border"></div>';
+                }
+                itemsHtml += `<div class="mb-2 text-xs font-semibold text-secondary">${group.title}</div>`;
+            }
+
+            // Show tickets for this event
+            group.tickets.forEach(ticket => {
+                itemsHtml += `
+                    <div class="flex justify-between text-sm">
+                        <span class="text-muted">${ticket.qty}x ${ticket.name}</span>
+                        <div class="text-right">
+                            ${ticket.hasDiscount ? `<span class="mr-2 text-xs line-through text-muted">${AmbiletUtils.formatCurrency(ticket.originalPrice * ticket.qty)}</span>` : ''}
+                            <span class="font-medium">${AmbiletUtils.formatCurrency(ticket.lineTotal)}</span>
+                        </div>
+                    </div>
+                `;
+            });
         });
 
         itemsSummary.innerHTML = itemsHtml;
