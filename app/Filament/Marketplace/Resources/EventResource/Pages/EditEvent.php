@@ -78,9 +78,67 @@ class EditEvent extends EditRecord
             $actions[] = $this->getBlockSeatsAction($hasInvitations);
         }
 
+        // Upload Images action - modal-based to avoid Livewire re-render issues
+        $actions[] = $this->getUploadImagesAction();
+
         $actions[] = Actions\DeleteAction::make();
 
         return $actions;
+    }
+
+    /**
+     * Get the Upload Images action for uploading poster and hero images via modal
+     */
+    protected function getUploadImagesAction(): Actions\Action
+    {
+        $marketplace = static::getMarketplaceClient();
+        $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
+        $t = fn($ro, $en) => $lang === 'ro' ? $ro : $en;
+
+        return Actions\Action::make('uploadImages')
+            ->label($t('Încarcă Imagini', 'Upload Images'))
+            ->icon('heroicon-o-photo')
+            ->color('primary')
+            ->modalHeading($t('Încarcă Imagini Eveniment', 'Upload Event Images'))
+            ->modalWidth('lg')
+            ->fillForm(fn () => [
+                'poster_url' => $this->record->poster_url,
+                'hero_image_url' => $this->record->hero_image_url,
+            ])
+            ->form([
+                Forms\Components\FileUpload::make('poster_url')
+                    ->label($t('Poster (vertical)', 'Poster (vertical)'))
+                    ->image()
+                    ->disk('public')
+                    ->directory('events/posters')
+                    ->visibility('public')
+                    ->imagePreviewHeight('200')
+                    ->maxSize(10240)
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp']),
+                Forms\Components\FileUpload::make('hero_image_url')
+                    ->label($t('Imagine hero (orizontală)', 'Hero image (horizontal)'))
+                    ->image()
+                    ->disk('public')
+                    ->directory('events/hero')
+                    ->visibility('public')
+                    ->imagePreviewHeight('200')
+                    ->maxSize(10240)
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp']),
+            ])
+            ->action(function (array $data): void {
+                $this->record->update([
+                    'poster_url' => $data['poster_url'] ?? null,
+                    'hero_image_url' => $data['hero_image_url'] ?? null,
+                ]);
+
+                Notification::make()
+                    ->success()
+                    ->title('Imaginile au fost salvate')
+                    ->send();
+
+                // Refresh the page to show updated images
+                $this->redirect(EventResource::getUrl('edit', ['record' => $this->record]));
+            });
     }
 
     /**
@@ -347,14 +405,21 @@ class EditEvent extends EditRecord
         $translatableFields = ['title', 'subtitle', 'short_description', 'description', 'ticket_terms'];
 
         foreach ($translatableFields as $field) {
-            if (isset($this->record->$field)) {
-                $value = $this->record->$field;
-                // Ensure it's an array (JSON decoded)
-                if (is_string($value)) {
-                    $decoded = json_decode($value, true);
-                    $data[$field] = is_array($decoded) ? $decoded : [$value];
-                } elseif (is_array($value)) {
-                    $data[$field] = $value;
+            // Get raw attribute from database (bypasses casts)
+            $rawValue = $this->record->getRawOriginal($field);
+
+            if ($rawValue !== null) {
+                // If it's a JSON string, decode it
+                if (is_string($rawValue)) {
+                    $decoded = json_decode($rawValue, true);
+                    if (is_array($decoded)) {
+                        $data[$field] = $decoded;
+                    } else {
+                        // Fallback: treat as simple string, wrap in array with 'ro' key
+                        $data[$field] = ['ro' => $rawValue];
+                    }
+                } elseif (is_array($rawValue)) {
+                    $data[$field] = $rawValue;
                 }
             }
         }
