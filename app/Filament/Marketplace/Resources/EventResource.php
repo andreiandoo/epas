@@ -126,15 +126,24 @@ class EventResource extends Resource
                                             ->required()
                                             ->maxLength(190)
                                             ->live(onBlur: true)
-                                            ->afterStateUpdated(function ($state, SSet $set, ?Event $record) {
+                                            ->afterStateUpdated(function ($state, SSet $set, SGet $get, ?Event $record) {
                                                 // Slug is NOT translatable - it's a plain string field
                                                 // Format: event-name-[id] (ID is appended after save if record exists)
                                                 if ($state) {
                                                     $baseSlug = Str::slug($state);
                                                     if ($record && $record->exists && $record->id) {
                                                         $set('slug', $baseSlug . '-' . $record->id);
+                                                        // Set event_series if not already set
+                                                        if (!$get('event_series')) {
+                                                            $set('event_series', 'AMB-' . $record->id);
+                                                        }
                                                     } else {
+                                                        // On CREATE: show slug without ID (will be added after save)
                                                         $set('slug', $baseSlug);
+                                                        // On CREATE: show placeholder event_series (will be completed after save with actual ID)
+                                                        if (!$get('event_series')) {
+                                                            $set('event_series', 'AMB-');
+                                                        }
                                                     }
                                                 }
                                             }),
@@ -148,11 +157,11 @@ class EventResource extends Resource
                                             ->placeholder($t('Se generează automat: AMB-[ID]', 'Auto-generated: AMB-[ID]'))
                                             ->maxLength(50)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: $t('Codul unic al seriei de bilete pentru acest eveniment. Se generează automat la salvare.', 'Unique ticket series code for this event. Auto-generated on save.'))
-                                            ->disabled(fn (?Event $record) => $record && $record->exists && $record->event_series)
+                                            ->disabled(fn (?Event $record) => $record && $record->exists && $record->event_series && $record->event_series !== 'AMB-')
                                             ->dehydrated(true)
                                             ->afterStateHydrated(function ($state, SSet $set, ?Event $record) {
-                                                // Auto-generate event_series if not set and record exists
-                                                if (!$state && $record && $record->exists && $record->id) {
+                                                // Auto-generate event_series if not set (or incomplete placeholder) and record exists
+                                                if ((!$state || $state === 'AMB-') && $record && $record->exists && $record->id) {
                                                     $set('event_series', 'AMB-' . $record->id);
                                                 }
                                             }),

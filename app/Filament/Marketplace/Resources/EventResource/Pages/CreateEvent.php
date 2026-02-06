@@ -50,16 +50,21 @@ class CreateEvent extends CreateRecord
         // Fix slug to include the actual event ID (since we couldn't know it before save)
         $record = $this->record;
         $slug = $record->slug;
+        $needsSave = false;
 
         // If slug doesn't already end with the ID, append it
         if ($slug && !str_ends_with($slug, '-' . $record->id)) {
             $record->slug = $slug . '-' . $record->id;
-            $record->saveQuietly();
+            $needsSave = true;
         }
 
-        // Auto-generate event_series if not set
-        if (!$record->event_series) {
+        // Auto-generate event_series if not set or if it's the placeholder "AMB-"
+        if (!$record->event_series || $record->event_series === 'AMB-') {
             $record->event_series = 'AMB-' . $record->id;
+            $needsSave = true;
+        }
+
+        if ($needsSave) {
             $record->saveQuietly();
         }
 

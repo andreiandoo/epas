@@ -970,16 +970,81 @@ include __DIR__ . '/../includes/organizer-head.php';
         const goalsData = <?= json_encode($goals) ?>;
         const salesData = <?= json_encode($recentSales) ?>;
 
-        // Chart data
+        // Helper to generate daily dates
+        function generateDailyDates(startDate, days) {
+            const dates = [];
+            const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const start = new Date(startDate);
+            for (let i = 0; i < days; i++) {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
+                dates.push(d.getDate() + ' ' + months[d.getMonth()]);
+            }
+            return dates;
+        }
+
+        // Helper to generate progressive daily data
+        function generateDailyData(startVal, endVal, days, variance = 0.15) {
+            const data = [];
+            const dailyGrowth = (endVal - startVal) / days;
+            for (let i = 0; i < days; i++) {
+                const baseVal = startVal + (dailyGrowth * i);
+                const randomFactor = 1 + (Math.random() - 0.5) * variance;
+                data.push(Math.round(baseVal * randomFactor));
+            }
+            // Ensure last value matches target
+            data[data.length - 1] = endVal;
+            return data;
+        }
+
+        // Chart data with daily points
         const chartData = {
-            dates: ['1 Ian', '5 Ian', '10 Ian', '15 Ian', '20 Ian', '25 Ian', '30 Ian'],
-            revenue: [185000, 245000, 312000, 425000, 520000, 680000, 847650],
-            tickets: [1250, 1680, 2150, 2890, 3520, 4580, 5782],
-            views: [12500, 18200, 24800, 32500, 42000, 52800, 62850]
+            dates: generateDailyDates('2026-01-01', 31),
+            revenue: generateDailyData(85000, 847650, 31, 0.12),
+            tickets: generateDailyData(450, 5782, 31, 0.15),
+            views: generateDailyData(8500, 62850, 31, 0.18)
         };
 
         let mainChart;
         let chartMetrics = { revenue: true, tickets: true, views: false };
+
+        // Generate campaign annotations for chart
+        function getCampaignAnnotations() {
+            const annotations = [];
+            const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+            campaignsData.forEach((campaign, idx) => {
+                const startDate = new Date(campaign.startDate);
+                const dateLabel = startDate.getDate() + ' ' + months[startDate.getMonth()];
+
+                // Only show if within current chart dates
+                if (chartData.dates.includes(dateLabel)) {
+                    const colors = {
+                        facebook: '#1877f2',
+                        google: '#ea4335',
+                        instagram: '#e4405f'
+                    };
+                    annotations.push({
+                        x: dateLabel,
+                        strokeDashArray: 4,
+                        borderColor: colors[campaign.type] || '#8b5cf6',
+                        label: {
+                            borderColor: colors[campaign.type] || '#8b5cf6',
+                            style: {
+                                color: '#fff',
+                                background: colors[campaign.type] || '#8b5cf6',
+                                fontSize: '10px',
+                                padding: { left: 6, right: 6, top: 3, bottom: 3 }
+                            },
+                            text: campaign.name,
+                            position: 'top',
+                            offsetY: -10 - (idx * 18) // Stagger labels vertically
+                        }
+                    });
+                }
+            });
+            return annotations;
+        }
 
         // Initialize chart
         function initChart() {
@@ -991,29 +1056,60 @@ include __DIR__ . '/../includes/organizer-head.php';
                         show: true,
                         tools: {
                             download: false,
-                            selection: true,
-                            zoom: true,
-                            zoomin: true,
-                            zoomout: true,
-                            pan: true,
+                            selection: false,
+                            zoom: false,
+                            zoomin: false,
+                            zoomout: false,
+                            pan: false,
                             reset: true
-                        },
-                        autoSelected: 'zoom'
+                        }
                     },
                     zoom: {
                         enabled: true,
                         type: 'x',
                         autoScaleYaxis: true
                     },
+                    events: {
+                        // Enable mouse wheel zoom
+                        mounted: function(chartContext) {
+                            const chartEl = document.querySelector('#mainChart');
+                            chartEl.addEventListener('wheel', function(e) {
+                                e.preventDefault();
+                                const chart = chartContext;
+                                if (e.deltaY < 0) {
+                                    // Zoom in
+                                    chart.zoomX(
+                                        chart.w.globals.minX + (chart.w.globals.maxX - chart.w.globals.minX) * 0.1,
+                                        chart.w.globals.maxX - (chart.w.globals.maxX - chart.w.globals.minX) * 0.1
+                                    );
+                                } else {
+                                    // Zoom out - reset to full range
+                                    chart.resetSeries();
+                                }
+                            }, { passive: false });
+                        }
+                    },
                     animations: { enabled: true, speed: 500 },
                     fontFamily: 'Inter, sans-serif',
                 },
                 series: getSeries(),
+                annotations: {
+                    xaxis: getCampaignAnnotations()
+                },
                 xaxis: {
                     categories: chartData.dates,
-                    labels: { style: { colors: '#9ca3af', fontSize: '11px' } },
+                    labels: {
+                        style: { colors: '#9ca3af', fontSize: '10px' },
+                        rotate: -45,
+                        rotateAlways: false,
+                        hideOverlappingLabels: true,
+                        showDuplicates: false,
+                        trim: true,
+                        maxHeight: 50
+                    },
                     axisBorder: { show: false },
                     axisTicks: { show: false },
+                    tickAmount: 10
                 },
                 yaxis: [
                     {
@@ -1099,31 +1195,31 @@ include __DIR__ . '/../includes/organizer-head.php';
         let currentPeriod = '30d';
         const eventPublishDate = new Date('2025-12-01'); // Event publish date
 
-        // Different demo data for different periods
+        // Generate daily data for different periods
         const periodData = {
             '7d': {
-                dates: ['25 Ian', '26 Ian', '27 Ian', '28 Ian', '29 Ian', '30 Ian', '31 Ian'],
-                revenue: [520000, 580000, 620000, 680000, 720000, 780000, 847650],
-                tickets: [3520, 3920, 4180, 4580, 4850, 5280, 5782],
-                views: [42000, 45800, 48200, 52800, 56000, 59400, 62850]
+                dates: generateDailyDates('2026-01-25', 7),
+                revenue: generateDailyData(520000, 847650, 7, 0.08),
+                tickets: generateDailyData(3520, 5782, 7, 0.10),
+                views: generateDailyData(42000, 62850, 7, 0.12)
             },
             '30d': {
-                dates: ['1 Ian', '5 Ian', '10 Ian', '15 Ian', '20 Ian', '25 Ian', '30 Ian'],
-                revenue: [185000, 245000, 312000, 425000, 520000, 680000, 847650],
-                tickets: [1250, 1680, 2150, 2890, 3520, 4580, 5782],
-                views: [12500, 18200, 24800, 32500, 42000, 52800, 62850]
+                dates: generateDailyDates('2026-01-01', 31),
+                revenue: generateDailyData(85000, 847650, 31, 0.12),
+                tickets: generateDailyData(450, 5782, 31, 0.15),
+                views: generateDailyData(8500, 62850, 31, 0.18)
             },
             '90d': {
-                dates: ['1 Nov', '15 Nov', '1 Dec', '15 Dec', '1 Ian', '15 Ian', '30 Ian'],
-                revenue: [0, 45000, 125000, 285000, 520000, 680000, 847650],
-                tickets: [0, 320, 850, 1890, 3520, 4580, 5782],
-                views: [5000, 12200, 24800, 45500, 78000, 102800, 142850]
+                dates: generateDailyDates('2025-11-03', 90),
+                revenue: generateDailyData(0, 847650, 90, 0.15),
+                tickets: generateDailyData(0, 5782, 90, 0.18),
+                views: generateDailyData(2000, 142850, 90, 0.20)
             },
             'all': {
-                dates: ['1 Dec', '15 Dec', '1 Ian', '10 Ian', '20 Ian', '25 Ian', '30 Ian'],
-                revenue: [125000, 285000, 420000, 520000, 680000, 780000, 847650],
-                tickets: [850, 1890, 2890, 3520, 4580, 5280, 5782],
-                views: [24800, 45500, 65000, 78000, 102800, 125000, 142850]
+                dates: generateDailyDates('2025-12-01', 62),
+                revenue: generateDailyData(25000, 847650, 62, 0.12),
+                tickets: generateDailyData(120, 5782, 62, 0.15),
+                views: generateDailyData(5000, 142850, 62, 0.18)
             }
         };
 
@@ -1145,10 +1241,11 @@ include __DIR__ . '/../includes/organizer-head.php';
                 chartData.tickets = data.tickets;
                 chartData.views = data.views;
 
-                // Update chart
+                // Update chart with new data and annotations
                 if (mainChart) {
                     mainChart.updateOptions({
-                        xaxis: { categories: chartData.dates }
+                        xaxis: { categories: chartData.dates },
+                        annotations: { xaxis: getCampaignAnnotations() }
                     });
                     mainChart.updateSeries(getSeries());
                 }
