@@ -1948,6 +1948,360 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Add a rectangle section directly from canvas drawing
+     */
+    public function addRectSection(array $data): void
+    {
+        // Generate section code from name or timestamp
+        $sectionCode = strtoupper(substr(str_replace(' ', '', $data['name'] ?? 'SECT'), 0, 5)) . '_' . time();
+
+        $section = SeatingSection::create([
+            'layout_id' => $this->seatingLayout->id,
+            'tenant_id' => $this->seatingLayout->tenant_id,
+            'name' => $data['name'] ?? 'New Section',
+            'section_code' => $sectionCode,
+            'section_type' => 'standard',
+            'x_position' => (int) ($data['x'] ?? 100),
+            'y_position' => (int) ($data['y'] ?? 100),
+            'width' => (int) ($data['width'] ?? 200),
+            'height' => (int) ($data['height'] ?? 150),
+            'rotation' => 0,
+            'color_hex' => $data['color'] ?? '#3B82F6',
+            'seat_color' => '#22C55E',
+            'display_order' => $this->seatingLayout->sections()->count(),
+            'metadata' => [
+                'seat_size' => 15,
+                'seat_spacing' => 20,
+                'row_spacing' => 20,
+                'seat_shape' => 'circle',
+            ],
+        ]);
+
+        $this->reloadSections();
+        $this->dispatch('section-added', section: $section->toArray());
+
+        Notification::make()
+            ->success()
+            ->title('Section created')
+            ->body("Section '{$section->name}' has been added")
+            ->send();
+    }
+
+    /**
+     * Add a single row with seats to an existing section
+     */
+    public function addRowWithSeats(int $sectionId, array $seats, array $settings = []): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Section not found')
+                ->send();
+            return;
+        }
+
+        // Get row numbering settings
+        $numberingMode = $settings['numberingMode'] ?? 'alpha';
+        $startNumber = $settings['startNumber'] ?? 1;
+        $existingRowCount = $section->rows()->count();
+
+        // Generate row label
+        if ($numberingMode === 'alpha') {
+            $rowLabel = chr(ord('A') + $existingRowCount);
+        } else {
+            $rowLabel = (string) ($startNumber + $existingRowCount);
+        }
+
+        // Calculate row Y position (average of seat Y positions)
+        $avgY = count($seats) > 0 ? array_sum(array_column($seats, 'y')) / count($seats) : 0;
+
+        $row = SeatingRow::create([
+            'section_id' => $section->id,
+            'label' => $rowLabel,
+            'y' => (int) $avgY,
+            'rotation' => 0,
+            'seat_count' => count($seats),
+        ]);
+
+        // Create seats
+        $seatNumberingType = $settings['seatNumberingType'] ?? 'numeric';
+        $seatNumberingDirection = $settings['seatNumberingDirection'] ?? 'ltr';
+
+        // Sort seats by X position
+        usort($seats, fn($a, $b) => $a['x'] <=> $b['x']);
+
+        if ($seatNumberingDirection === 'rtl') {
+            $seats = array_reverse($seats);
+        }
+
+        foreach ($seats as $index => $seatData) {
+            $seatIndex = $index + 1;
+            if ($seatNumberingType === 'alpha') {
+                $seatLabel = chr(ord('A') + $index);
+            } else {
+                $seatLabel = (string) $seatIndex;
+            }
+
+            SeatingSeat::create([
+                'row_id' => $row->id,
+                'label' => $seatLabel,
+                'display_name' => $section->generateSeatDisplayName($rowLabel, $seatLabel),
+                'x' => (int) $seatData['x'],
+                'y' => (int) $seatData['y'],
+                'angle' => 0,
+                'shape' => $seatData['shape'] ?? 'circle',
+                'seat_uid' => $section->generateSeatUid($rowLabel, $seatLabel),
+            ]);
+        }
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Row added')
+            ->body("Row '{$rowLabel}' with " . count($seats) . " seats added to '{$section->name}'")
+            ->send();
+    }
+
+    /**
+     * Add multiple rows with seats to an existing section
+     */
+    public function addMultipleRowsWithSeats(int $sectionId, array $rows, array $settings = []): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Section not found')
+                ->send();
+            return;
+        }
+
+        // Get row numbering settings
+        $numberingMode = $settings['numberingMode'] ?? 'alpha';
+        $startNumber = $settings['startNumber'] ?? 1;
+        $seatNumberingType = $settings['seatNumberingType'] ?? 'numeric';
+        $seatNumberingDirection = $settings['seatNumberingDirection'] ?? 'ltr';
+        $existingRowCount = $section->rows()->count();
+
+        $totalSeats = 0;
+        $rowsCreated = 0;
+
+        // Handle both formats:
+        // 1. Array of seat arrays: [[{x,y}, {x,y}], [{x,y}]]
+        // 2. Array of row objects: [{y, seats: [{x,y}]}]
+        $normalizedRows = [];
+        foreach ($rows as $rowData) {
+            if (isset($rowData['seats'])) {
+                // Object format with y and seats
+                $normalizedRows[] = $rowData;
+            } else {
+                // Array of seats - derive Y from first seat
+                $seats = $rowData;
+                $rowY = count($seats) > 0 ? ($seats[0]['y'] ?? 0) : 0;
+                $normalizedRows[] = ['y' => $rowY, 'seats' => $seats];
+            }
+        }
+
+        // Sort rows by Y position (top to bottom)
+        usort($normalizedRows, fn($a, $b) => $a['y'] <=> $b['y']);
+
+        foreach ($normalizedRows as $rowIndex => $rowData) {
+            // Generate row label
+            if ($numberingMode === 'alpha') {
+                $rowLabel = chr(ord('A') + $existingRowCount + $rowIndex);
+            } else {
+                $rowLabel = (string) ($startNumber + $existingRowCount + $rowIndex);
+            }
+
+            $seats = $rowData['seats'] ?? [];
+
+            $row = SeatingRow::create([
+                'section_id' => $section->id,
+                'label' => $rowLabel,
+                'y' => (int) $rowData['y'],
+                'rotation' => 0,
+                'seat_count' => count($seats),
+            ]);
+
+            // Sort seats by X position
+            usort($seats, fn($a, $b) => $a['x'] <=> $b['x']);
+
+            if ($seatNumberingDirection === 'rtl') {
+                $seats = array_reverse($seats);
+            }
+
+            foreach ($seats as $seatIndex => $seatData) {
+                $seatNum = $seatIndex + 1;
+                if ($seatNumberingType === 'alpha') {
+                    $seatLabel = chr(ord('A') + $seatIndex);
+                } else {
+                    $seatLabel = (string) $seatNum;
+                }
+
+                SeatingSeat::create([
+                    'row_id' => $row->id,
+                    'label' => $seatLabel,
+                    'display_name' => $section->generateSeatDisplayName($rowLabel, $seatLabel),
+                    'x' => (int) $seatData['x'],
+                    'y' => (int) $seatData['y'],
+                    'angle' => 0,
+                    'shape' => $seatData['shape'] ?? 'circle',
+                    'seat_uid' => $section->generateSeatUid($rowLabel, $seatLabel),
+                ]);
+
+                $totalSeats++;
+            }
+
+            $rowsCreated++;
+        }
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Rows added')
+            ->body("{$rowsCreated} rows with {$totalSeats} seats added to '{$section->name}'")
+            ->send();
+    }
+
+    /**
+     * Update section geometry (dimensions, position)
+     */
+    public function updateSectionGeometry(int $sectionId, array $data): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            return;
+        }
+
+        $updates = [];
+        if (isset($data['width'])) $updates['width'] = (int) $data['width'];
+        if (isset($data['height'])) $updates['height'] = (int) $data['height'];
+        if (isset($data['x'])) $updates['x_position'] = (int) $data['x'];
+        if (isset($data['y'])) $updates['y_position'] = (int) $data['y'];
+        if (isset($data['rotation'])) $updates['rotation'] = (int) $data['rotation'];
+
+        if (!empty($updates)) {
+            $section->update($updates);
+        }
+
+        // Update metadata if provided (handle both snake_case and camelCase)
+        $cornerRadius = $data['corner_radius'] ?? $data['cornerRadius'] ?? null;
+        $scale = $data['scale'] ?? null;
+
+        if ($cornerRadius !== null || $scale !== null) {
+            $metadata = $section->metadata ?? [];
+            if ($cornerRadius !== null) $metadata['corner_radius'] = (int) $cornerRadius;
+            if ($scale !== null) $metadata['scale'] = (float) $scale;
+            $section->update(['metadata' => $metadata]);
+        }
+
+        // Update local sections array
+        foreach ($this->sections as &$s) {
+            if ($s['id'] === $sectionId) {
+                if (isset($updates['width'])) $s['width'] = $updates['width'];
+                if (isset($updates['height'])) $s['height'] = $updates['height'];
+                if (isset($updates['x_position'])) $s['x_position'] = $updates['x_position'];
+                if (isset($updates['y_position'])) $s['y_position'] = $updates['y_position'];
+                if (isset($updates['rotation'])) $s['rotation'] = $updates['rotation'];
+                break;
+            }
+        }
+        unset($s);
+
+        $this->skipRender();
+    }
+
+    /**
+     * Update section name/label
+     */
+    public function updateSectionName(int $sectionId, string $name): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            return;
+        }
+
+        $section->update(['name' => $name]);
+
+        // Update local sections array
+        foreach ($this->sections as &$s) {
+            if ($s['id'] === $sectionId) {
+                $s['name'] = $name;
+                break;
+            }
+        }
+        unset($s);
+
+        $this->skipRender();
+    }
+
+    /**
+     * Update section metadata (curve, label settings, etc.)
+     */
+    public function updateSectionMetadata(int $sectionId, array $metadata): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            return;
+        }
+
+        $existingMetadata = $section->metadata ?? [];
+        $newMetadata = array_merge($existingMetadata, $metadata);
+        $section->update(['metadata' => $newMetadata]);
+
+        // Update local sections array
+        foreach ($this->sections as &$s) {
+            if ($s['id'] === $sectionId) {
+                $s['metadata'] = $newMetadata;
+                break;
+            }
+        }
+        unset($s);
+
+        $this->skipRender();
+    }
+
+    /**
+     * Update section color (individual field)
+     */
+    public function updateSectionColor(int $sectionId, string $field, string $color): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            return;
+        }
+
+        $allowedFields = ['color_hex', 'seat_color', 'background_color'];
+        if (!in_array($field, $allowedFields)) {
+            return;
+        }
+
+        $section->update([$field => $color]);
+
+        // Update local sections array
+        foreach ($this->sections as &$s) {
+            if ($s['id'] === $sectionId) {
+                $s[$field] = $color;
+                break;
+            }
+        }
+        unset($s);
+
+        $this->skipRender();
+    }
+
+    /**
      * Delete section (called from Konva.js)
      */
     public function deleteSection($sectionId): void
