@@ -143,12 +143,12 @@
             }
          }"
          x-init="init()"
-         @keydown.window="handleKeyDown && handleKeyDown($event)"
-         @section-deleted.window="handleSectionDeleted && handleSectionDeleted($event.detail)"
-         @section-added.window="handleSectionAdded && handleSectionAdded($event.detail)"
-         @seat-added.window="handleSeatAdded && handleSeatAdded($event.detail)"
-         @layout-imported.window="handleLayoutImported && handleLayoutImported($event.detail)"
-         @layout-updated.window="handleLayoutUpdated && handleLayoutUpdated($event.detail)">
+         x-on:keydown.window="handleKeyDown && handleKeyDown($event)"
+         x-on:section-deleted.window="handleSectionDeleted && handleSectionDeleted($event.detail)"
+         x-on:section-added.window="handleSectionAdded && handleSectionAdded($event.detail)"
+         x-on:seat-added.window="handleSeatAdded && handleSeatAdded($event.detail)"
+         x-on:layout-imported.window="handleLayoutImported && handleLayoutImported($event.detail)"
+         x-on:layout-updated.window="handleLayoutUpdated && handleLayoutUpdated($event.detail)">
         {{-- Main Designer Layout with Left Sidebar, Canvas, Right Sidebar --}}
         <div class="flex gap-4">
             {{-- ═══════════════════════════════════════════════════════════════════════ --}}
