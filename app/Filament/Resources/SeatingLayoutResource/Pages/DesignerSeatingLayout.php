@@ -2078,6 +2078,99 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Add a table with seats arranged around it
+     */
+    public function addTableWithSeats(int $sectionId, array $tableData): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Section not found')
+                ->send();
+            return;
+        }
+
+        $type = $tableData['type'] ?? 'round';
+        $seats = $tableData['seats'] ?? [];
+        $seatSize = $tableData['seatSize'] ?? 15;
+
+        if (empty($seats)) {
+            Notification::make()
+                ->warning()
+                ->title('No seats specified')
+                ->send();
+            return;
+        }
+
+        // Get row numbering settings
+        $existingRowCount = $section->rows()->count();
+        $rowLabel = 'T' . ($existingRowCount + 1); // Table rows get T prefix
+
+        // Convert absolute coordinates to section-relative
+        $sectionX = (int) $section->x_position;
+        $sectionY = (int) $section->y_position;
+
+        // Calculate row Y position (average of seat Y positions)
+        $avgY = count($seats) > 0 ? array_sum(array_column($seats, 'y')) / count($seats) : 0;
+
+        // Store table metadata
+        $metadata = [
+            'is_table' => true,
+            'table_type' => $type,
+            'center_x' => $tableData['centerX'] ?? 0,
+            'center_y' => $tableData['centerY'] ?? 0,
+        ];
+
+        if ($type === 'round') {
+            $metadata['radius'] = $tableData['radius'] ?? 30;
+        } else {
+            $metadata['width'] = $tableData['width'] ?? 80;
+            $metadata['height'] = $tableData['height'] ?? 30;
+        }
+
+        $row = SeatingRow::create([
+            'section_id' => $section->id,
+            'label' => $rowLabel,
+            'y' => (int) $avgY,
+            'rotation' => 0,
+            'seat_count' => count($seats),
+            'metadata' => $metadata,
+        ]);
+
+        // Create seats with relative coordinates
+        foreach ($seats as $index => $seatData) {
+            $seatLabel = (string) ($index + 1);
+
+            SeatingSeat::create([
+                'row_id' => $row->id,
+                'label' => $seatLabel,
+                'display_name' => $section->generateSeatDisplayName($rowLabel, $seatLabel),
+                'x' => (int) $seatData['x'] - $sectionX,
+                'y' => (int) $seatData['y'] - $sectionY,
+                'angle' => 0,
+                'shape' => $seatData['shape'] ?? 'circle',
+                'seat_uid' => $section->generateSeatUid($rowLabel, $seatLabel),
+            ]);
+        }
+
+        // Reload sections and update state
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        $tableTypeLabel = $type === 'round' ? 'rotundă' : 'dreptunghiulară';
+        Notification::make()
+            ->success()
+            ->title('Masă adăugată')
+            ->body("Masă {$tableTypeLabel} cu " . count($seats) . " locuri adăugată în '{$section->name}'")
+            ->send();
+
+        // Skip render to prevent Livewire from re-rendering
+        $this->skipRender();
+    }
+
+    /**
      * Add multiple rows with seats to an existing section
      */
     public function addMultipleRowsWithSeats(int $sectionId, array $rows, array $settings = []): void

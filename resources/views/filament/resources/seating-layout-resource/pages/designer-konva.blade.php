@@ -20,8 +20,8 @@
             <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-72">
                 <h4 class="pb-2 text-sm font-bold tracking-wide text-gray-700 uppercase border-b border-gray-200">Instrumente</h4>
 
-                {{-- Selection Tools --}}
-                <div class="space-y-2">
+                {{-- Selection Tools (hidden when in addSeats mode) --}}
+                <div class="space-y-2" x-show="!addSeatsMode" x-transition>
                     <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Selecție</div>
                     <div class="grid grid-cols-1 gap-1">
                         <button @click="setDrawMode('select')" type="button"
@@ -39,8 +39,8 @@
                     </div>
                 </div>
 
-                {{-- Section Tools --}}
-                <div class="space-y-2">
+                {{-- Section Tools (hidden when in addSeats mode) --}}
+                <div class="space-y-2" x-show="!addSeatsMode" x-transition>
                     <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Secțiuni</div>
                     <div class="grid grid-cols-1 gap-1">
                         <button @click="setDrawMode('drawRect')" type="button"
@@ -148,8 +148,8 @@
                     </div>
                 </div>
 
-                {{-- Other Drawing Tools --}}
-                <div class="space-y-2">
+                {{-- Other Drawing Tools (hidden when in addSeats mode) --}}
+                <div class="space-y-2" x-show="!addSeatsMode" x-transition>
                     <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Alte Instrumente</div>
                     <div class="grid grid-cols-2 gap-1">
                         <button @click="setDrawMode('text')" type="button"
@@ -339,9 +339,83 @@
             {{-- ═══════════════════════════════════════════════════════════════════════ --}}
             {{-- RIGHT SIDEBAR - Properties Panel --}}
             {{-- ═══════════════════════════════════════════════════════════════════════ --}}
-            <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-80" x-show="selectedSection || selectedDrawnRow" x-transition>
-                {{-- Section Properties --}}
-                <template x-if="selectedSection && !selectedDrawnRow">
+            <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-80" x-show="selectedSection || selectedDrawnRow || addSeatsMode" x-transition>
+                {{-- Add Seats Mode Panel --}}
+                <template x-if="addSeatsMode && selectedSection && !selectedDrawnRow">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between pb-2 border-b border-purple-200">
+                            <h4 class="text-sm font-bold tracking-wide text-purple-700 uppercase">Adaugă Locuri</h4>
+                            <button @click="addSeatsMode = false; setDrawMode('select')" class="text-purple-400 hover:text-purple-600">✕</button>
+                        </div>
+
+                        {{-- Selected Section Info --}}
+                        <div class="p-3 rounded-lg bg-purple-50">
+                            <div class="text-xs font-semibold text-purple-600">Secțiune selectată</div>
+                            <div class="text-sm font-medium text-purple-900" x-text="getSelectedSectionData()?.name || 'Necunoscut'"></div>
+                        </div>
+
+                        {{-- Row Settings --}}
+                        <div class="p-3 space-y-3 border border-purple-200 rounded-lg bg-purple-50">
+                            <div class="text-xs font-semibold text-purple-700 uppercase">Setări Rând</div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-purple-600">Dimensiune loc</label>
+                                    <input type="number" x-model="rowSeatSize" min="8" max="40" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-purple-600">Spațiu locuri</label>
+                                    <input type="number" x-model="rowSeatSpacing" min="0" max="50" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-purple-600">Spațiu între rânduri</label>
+                                <input type="number" x-model="rowSpacing" min="10" max="100" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                        </div>
+
+                        {{-- Table Settings --}}
+                        <div class="p-3 space-y-3 border border-amber-200 rounded-lg bg-amber-50" x-show="['drawRoundTable', 'drawRectTable'].includes(drawMode)">
+                            <div class="text-xs font-semibold text-amber-700 uppercase">Setări Masă</div>
+                            <div>
+                                <label class="block text-xs text-amber-600">Nr. locuri la masă</label>
+                                <input type="number" x-model="tableSeats" min="3" max="12" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                        </div>
+
+                        {{-- Numbering Settings --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-blue-50">
+                            <div class="text-xs font-semibold text-blue-700 uppercase">Numerotare</div>
+                            <div>
+                                <label class="block text-xs text-blue-600">Mod numerotare rând</label>
+                                <select x-model="rowNumberingMode" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <option value="numeric">Numere (1, 2, 3...)</option>
+                                    <option value="alpha">Litere (A, B, C...)</option>
+                                    <option value="roman">Romane (I, II, III...)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-blue-600">Direcție numerotare</label>
+                                <select x-model="rowNumberingDirection" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <option value="ltr">Stânga → Dreapta</option>
+                                    <option value="rtl">Dreapta → Stânga</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {{-- Instructions --}}
+                        <div class="p-3 text-xs text-gray-600 rounded-lg bg-gray-50">
+                            <p class="font-medium">Instrucțiuni:</p>
+                            <ul class="mt-1 ml-4 list-disc">
+                                <li>Selectează tipul de locuri din stânga</li>
+                                <li>Click pe canvas pentru a plasa</li>
+                                <li>Trage pentru a desena rânduri</li>
+                            </ul>
+                        </div>
+                    </div>
+                </template>
+
+                {{-- Section Properties (hidden when in addSeats mode) --}}
+                <template x-if="selectedSection && !selectedDrawnRow && !addSeatsMode">
                     <div class="space-y-4">
                         <div class="flex items-center justify-between pb-2 border-b border-gray-200">
                             <h4 class="text-sm font-bold tracking-wide text-gray-700 uppercase">Proprietăți Secțiune</h4>
@@ -1584,27 +1658,39 @@
                         return;
                     }
 
+                    const section = this.sections.find(s => s.id === this.selectedSection);
+                    if (!section) return;
+
                     const numSeats = parseInt(this.tableSeats) || 5;
-                    const tableRadius = Math.max(25, numSeats * 5); // Scale radius with seats
-                    const seatRadius = this.rowSeatSize / 2;
-                    const seatDistance = tableRadius + seatRadius + 5;
+                    const tableRadius = Math.max(20, numSeats * 4);
+                    const seatSize = parseInt(this.rowSeatSize) || 15;
+                    const seatDistance = tableRadius + seatSize / 2 + 3;
+
+                    // Calculate center position relative to click
+                    const centerX = pos.x;
+                    const centerY = pos.y;
 
                     const seats = [];
                     for (let i = 0; i < numSeats; i++) {
-                        const angle = (i * 2 * Math.PI / numSeats) - Math.PI / 2; // Start from top
+                        const angle = (i * 2 * Math.PI / numSeats) - Math.PI / 2;
                         seats.push({
-                            x: Math.round(pos.x + seatDistance * Math.cos(angle)),
-                            y: Math.round(pos.y + seatDistance * Math.sin(angle)),
+                            x: Math.round(centerX + seatDistance * Math.cos(angle)),
+                            y: Math.round(centerY + seatDistance * Math.sin(angle)),
                             shape: 'circle'
                         });
                     }
 
-                    // Save to backend
-                    @this.call('addRowWithSeats', this.selectedSection, seats, {
-                        seatSize: this.rowSeatSize,
-                        isTable: true,
-                        tableType: 'round',
-                        tableRadius: tableRadius
+                    // Draw table preview on canvas immediately
+                    this.drawTablePreview('round', centerX, centerY, tableRadius, null, null, section);
+
+                    // Save to backend with table info
+                    @this.call('addTableWithSeats', this.selectedSection, {
+                        type: 'round',
+                        centerX: Math.round(centerX),
+                        centerY: Math.round(centerY),
+                        radius: tableRadius,
+                        seats: seats,
+                        seatSize: seatSize
                     });
                 },
 
@@ -1615,40 +1701,88 @@
                         return;
                     }
 
+                    const section = this.sections.find(s => s.id === this.selectedSection);
+                    if (!section) return;
+
                     const numSeats = parseInt(this.tableSeats) || 6;
-                    const seatsPerSide = Math.floor(numSeats / 2);
-                    const tableWidth = Math.max(60, seatsPerSide * 30); // Scale with seats
-                    const tableHeight = 40;
-                    const seatSpacing = tableWidth / (seatsPerSide + 1);
+                    const seatsPerSide = Math.max(1, Math.floor(numSeats / 2));
+                    const seatSize = parseInt(this.rowSeatSize) || 15;
+                    const tableWidth = Math.max(50, seatsPerSide * (seatSize + 10));
+                    const tableHeight = 30;
+
+                    const centerX = pos.x;
+                    const centerY = pos.y;
 
                     const seats = [];
+                    const seatSpacing = tableWidth / (seatsPerSide + 1);
 
-                    // Top side seats
+                    // Top side seats (above table)
                     for (let i = 0; i < seatsPerSide; i++) {
                         seats.push({
-                            x: Math.round(pos.x - tableWidth / 2 + seatSpacing * (i + 1)),
-                            y: Math.round(pos.y - tableHeight / 2 - this.rowSeatSize / 2 - 5),
+                            x: Math.round(centerX - tableWidth / 2 + seatSpacing * (i + 1)),
+                            y: Math.round(centerY - tableHeight / 2 - seatSize / 2 - 3),
                             shape: 'circle'
                         });
                     }
 
-                    // Bottom side seats
+                    // Bottom side seats (below table)
                     for (let i = 0; i < seatsPerSide; i++) {
                         seats.push({
-                            x: Math.round(pos.x - tableWidth / 2 + seatSpacing * (i + 1)),
-                            y: Math.round(pos.y + tableHeight / 2 + this.rowSeatSize / 2 + 5),
+                            x: Math.round(centerX - tableWidth / 2 + seatSpacing * (i + 1)),
+                            y: Math.round(centerY + tableHeight / 2 + seatSize / 2 + 3),
                             shape: 'circle'
                         });
                     }
 
-                    // Save to backend
-                    @this.call('addRowWithSeats', this.selectedSection, seats, {
-                        seatSize: this.rowSeatSize,
-                        isTable: true,
-                        tableType: 'rect',
-                        tableWidth: tableWidth,
-                        tableHeight: tableHeight
+                    // Draw table preview on canvas immediately
+                    this.drawTablePreview('rect', centerX, centerY, null, tableWidth, tableHeight, section);
+
+                    // Save to backend with table info
+                    @this.call('addTableWithSeats', this.selectedSection, {
+                        type: 'rect',
+                        centerX: Math.round(centerX),
+                        centerY: Math.round(centerY),
+                        width: tableWidth,
+                        height: tableHeight,
+                        seats: seats,
+                        seatSize: seatSize
                     });
+                },
+
+                // Draw table shape preview on canvas
+                drawTablePreview(type, x, y, radius, width, height, section) {
+                    const sectionGroup = this.stage.findOne(`#section-${section.id}`);
+                    if (!sectionGroup) return;
+
+                    // Create table shape
+                    let tableShape;
+                    if (type === 'round') {
+                        tableShape = new Konva.Circle({
+                            x: x - section.x_position,
+                            y: y - section.y_position,
+                            radius: radius,
+                            fill: '#8B4513',
+                            stroke: '#5D3A1A',
+                            strokeWidth: 2,
+                            name: 'table'
+                        });
+                    } else {
+                        tableShape = new Konva.Rect({
+                            x: x - section.x_position - width / 2,
+                            y: y - section.y_position - height / 2,
+                            width: width,
+                            height: height,
+                            fill: '#8B4513',
+                            stroke: '#5D3A1A',
+                            strokeWidth: 2,
+                            cornerRadius: 5,
+                            name: 'table'
+                        });
+                    }
+
+                    sectionGroup.add(tableShape);
+                    tableShape.moveToBottom(); // Table behind seats
+                    this.layer.batchDraw();
                 },
 
                 // Zoom to fit all content
@@ -3046,6 +3180,47 @@
                         const sectionWidth = section.width || 200;
 
                         section.rows.forEach(row => {
+                            // Draw table shape if this is a table row
+                            const rowMetadata = row.metadata || {};
+                            if (rowMetadata.is_table) {
+                                const tableType = rowMetadata.table_type || 'round';
+                                // Table center is stored in absolute coords, convert to section-relative
+                                const tableCenterX = (rowMetadata.center_x || 0) - section.x_position;
+                                const tableCenterY = (rowMetadata.center_y || 0) - section.y_position;
+
+                                let tableShape;
+                                if (tableType === 'round') {
+                                    const radius = rowMetadata.radius || 30;
+                                    tableShape = new Konva.Circle({
+                                        x: tableCenterX,
+                                        y: tableCenterY,
+                                        radius: radius,
+                                        fill: '#8B4513',
+                                        stroke: '#5D3A1A',
+                                        strokeWidth: 2,
+                                        name: 'table',
+                                        listening: false
+                                    });
+                                } else {
+                                    const tableWidth = rowMetadata.width || 80;
+                                    const tableHeight = rowMetadata.height || 30;
+                                    tableShape = new Konva.Rect({
+                                        x: tableCenterX - tableWidth / 2,
+                                        y: tableCenterY - tableHeight / 2,
+                                        width: tableWidth,
+                                        height: tableHeight,
+                                        fill: '#8B4513',
+                                        stroke: '#5D3A1A',
+                                        strokeWidth: 2,
+                                        cornerRadius: 5,
+                                        name: 'table',
+                                        listening: false
+                                    });
+                                }
+                                group.add(tableShape);
+                                tableShape.moveToBottom(); // Table behind seats
+                            }
+
                             if (row.seats && row.seats.length > 0) {
                                 row.seats.forEach(seat => {
                                     // Calculate curve offset for this seat

@@ -17,6 +17,7 @@ class SeatingRow extends Model
         'y',
         'rotation',
         'seat_count',
+        'metadata',
     ];
 
     protected $casts = [
@@ -25,6 +26,7 @@ class SeatingRow extends Model
         'y' => 'decimal:2',
         'rotation' => 'decimal:2',
         'seat_count' => 'integer',
+        'metadata' => 'array',
     ];
 
     protected $attributes = [
