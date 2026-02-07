@@ -562,103 +562,105 @@
             </div>
         </div>
 
-        {{-- Sections List --}}
-        @if(count($sections) > 0)
-            <div class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-                <h3 class="mb-4 text-lg font-semibold text-gray-900">Sections</h3>
-                <div class="space-y-2">
-                    @foreach($sections as $section)
-                        <div x-data="{ expanded: false }" class="border rounded-lg">
-                            <div class="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
-                                 @click="selectSection({{ $section['id'] }})">
-                                <div class="flex items-center gap-3">
-                                    @if($section['section_type'] === 'standard' && count($section['rows'] ?? []) > 0)
+        {{-- Sections List (Alpine-driven) --}}
+        <div x-show="sections.length > 0" class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900">Sections</h3>
+            <div class="space-y-2">
+                <template x-for="section in sections" :key="section.id">
+                    <div x-data="{ expanded: false }" class="border rounded-lg">
+                        <div class="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
+                             @click="selectSection(section.id)">
+                            <div class="flex items-center gap-3">
+                                {{-- Expand button for standard sections with rows --}}
+                                <template x-if="section.section_type === 'standard' && (section.rows || []).length > 0">
                                     <button @click.stop="expanded = !expanded" class="p-1 text-gray-500 hover:text-gray-700">
                                         <svg class="w-4 h-4 transition-transform" :class="expanded ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                         </svg>
                                     </button>
-                                    @endif
-                                    @if($section['section_type'] === 'icon')
-                                        {{-- Icon display - use a simple marker since icons are full SVG strings --}}
-                                        <div class="flex items-center justify-center w-6 h-6 rounded" style="background-color: {{ $section['background_color'] ?? '#3B82F6' }}">
-                                            <svg class="w-4 h-4" fill="{{ $section['metadata']['icon_color'] ?? '#FFFFFF' }}" viewBox="0 0 24 24">
-                                                {{-- Generic map pin icon for sidebar display --}}
-                                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                                            </svg>
-                                        </div>
-                                    @else
-                                        <div class="flex gap-1">
-                                            <div class="w-4 h-4 border rounded" style="background-color: {{ $section['color_hex'] ?? '#3B82F6' }}" title="Section color"></div>
-                                            <div class="w-4 h-4 border rounded" style="background-color: {{ $section['seat_color'] ?? '#22C55E' }}" title="Seat color"></div>
-                                        </div>
-                                    @endif
-                                    <div>
-                                        <div class="font-medium">
-                                            @if($section['section_type'] === 'icon')
-                                                <span class="text-xs text-blue-600 uppercase">Icon:</span>
-                                            @endif
-                                            {{ $section['name'] }}
-                                        </div>
-                                        <div class="text-xs text-gray-500">
-                                            @if($section['section_type'] === 'icon')
-                                                {{ $iconDefinitions[$section['metadata']['icon_key'] ?? 'info_point']['label'] ?? 'Icon' }}
-                                            @else
-                                                {{ count($section['rows'] ?? []) }} rows •
-                                                {{ collect($section['rows'] ?? [])->sum(fn($row) => count($row['seats'] ?? [])) }} seats
-                                            @endif
-                                        </div>
+                                </template>
+                                {{-- Icon display for icon sections --}}
+                                <template x-if="section.section_type === 'icon'">
+                                    <div class="flex items-center justify-center w-6 h-6 rounded" :style="'background-color:' + (section.background_color || '#3B82F6')">
+                                        <svg class="w-4 h-4" :fill="(section.metadata && section.metadata.icon_color) || '#FFFFFF'" viewBox="0 0 24 24">
+                                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                        </svg>
+                                    </div>
+                                </template>
+                                {{-- Color squares for non-icon sections --}}
+                                <template x-if="section.section_type !== 'icon'">
+                                    <div class="flex gap-1">
+                                        <div class="w-4 h-4 border rounded" :style="'background-color:' + (section.color_hex || '#3B82F6')" title="Section color"></div>
+                                        <div class="w-4 h-4 border rounded" :style="'background-color:' + (section.seat_color || '#22C55E')" title="Seat color"></div>
+                                    </div>
+                                </template>
+                                <div>
+                                    <div class="font-medium">
+                                        <template x-if="section.section_type === 'icon'">
+                                            <span class="text-xs text-blue-600 uppercase">Icon:</span>
+                                        </template>
+                                        <span x-text="section.name"></span>
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        <template x-if="section.section_type === 'icon'">
+                                            <span x-text="getIconLabel(section)"></span>
+                                        </template>
+                                        <template x-if="section.section_type !== 'icon'">
+                                            <span x-text="getSectionStats(section)"></span>
+                                        </template>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <div class="text-xs text-gray-400">
-                                        ({{ $section['x_position'] }}, {{ $section['y_position'] }})
-                                        @if($section['section_type'] !== 'icon')
-                                            • {{ $section['width'] }}x{{ $section['height'] }}
-                                        @endif
-                                    </div>
-                                    @if($section['section_type'] !== 'icon')
-                                        <button @click.stop="editSectionColors({{ $section['id'] }}, '{{ $section['color_hex'] ?? '#3B82F6' }}', '{{ $section['seat_color'] ?? '#22C55E' }}')"
-                                                class="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200">
-                                            Edit Colors
-                                        </button>
-                                    @endif
-                                    @if($section['section_type'] === 'standard')
-                                    <button @click.stop="selectRowsBySection({{ $section['id'] }})"
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="text-xs text-gray-400">
+                                    <span x-text="'(' + section.x_position + ', ' + section.y_position + ')'"></span>
+                                    <template x-if="section.section_type !== 'icon'">
+                                        <span x-text="' • ' + section.width + 'x' + section.height"></span>
+                                    </template>
+                                </div>
+                                <template x-if="section.section_type !== 'icon'">
+                                    <button @click.stop="editSectionColors(section.id, section.color_hex || '#3B82F6', section.seat_color || '#22C55E')"
+                                            class="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200">
+                                        Edit Colors
+                                    </button>
+                                </template>
+                                <template x-if="section.section_type === 'standard'">
+                                    <button @click.stop="selectRowsBySection(section.id)"
                                             class="px-2 py-1 text-xs text-blue-700 bg-blue-100 rounded hover:bg-blue-200"
                                             title="Select all rows in this section">
                                         Select Rows
                                     </button>
-                                    <button @click.stop="recalculateRows({{ $section['id'] }})"
+                                </template>
+                                <template x-if="section.section_type === 'standard'">
+                                    <button @click.stop="recalculateRows(section.id)"
                                             class="px-2 py-1 text-xs text-orange-700 bg-orange-100 rounded hover:bg-orange-200"
                                             title="Re-group seats into rows based on Y position">
                                         Recalc Rows
                                     </button>
-                                    @endif
-                                </div>
+                                </template>
                             </div>
-                            {{-- Expandable rows list --}}
-                            @if($section['section_type'] === 'standard' && count($section['rows'] ?? []) > 0)
+                        </div>
+                        {{-- Expandable rows list --}}
+                        <template x-if="section.section_type === 'standard' && (section.rows || []).length > 0">
                             <div x-show="expanded" x-transition class="px-3 pb-3 ml-8 border-t">
                                 <div class="pt-2 space-y-1">
-                                    @foreach($section['rows'] ?? [] as $row)
-                                    <div class="flex items-center justify-between px-2 py-1 text-sm rounded hover:bg-gray-100"
-                                         :class="selectedRows.find(r => r.rowId === {{ $row['id'] }}) ? 'bg-blue-100' : ''">
-                                        <button @click.stop="selectRow({{ $section['id'] }}, {{ $row['id'] }})"
-                                                class="flex items-center flex-1 gap-2 text-left">
-                                            <span class="font-medium">Row {{ $row['label'] }}</span>
-                                            <span class="text-xs text-gray-500">{{ count($row['seats'] ?? []) }} seats</span>
-                                        </button>
-                                    </div>
-                                    @endforeach
+                                    <template x-for="row in (section.rows || [])" :key="row.id">
+                                        <div class="flex items-center justify-between px-2 py-1 text-sm rounded hover:bg-gray-100"
+                                             :class="selectedRows.find(r => r.rowId === row.id) ? 'bg-blue-100' : ''">
+                                            <button @click.stop="selectRow(section.id, row.id)"
+                                                    class="flex items-center flex-1 gap-2 text-left">
+                                                <span class="font-medium" x-text="'Row ' + row.label"></span>
+                                                <span class="text-xs text-gray-500" x-text="(row.seats || []).length + ' seats'"></span>
+                                            </button>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
+                        </template>
+                    </div>
+                </template>
             </div>
-        @endif
+        </div>
 
         {{-- Color Edit Modal --}}
         <div x-show="showColorModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -3650,6 +3652,21 @@
                         handle.visible(false);
                     });
                     this.layer.batchDraw();
+                },
+
+                // Helper method to get icon label for section list
+                getIconLabel(section) {
+                    const iconKey = section.metadata?.icon_key || 'info_point';
+                    const iconDef = this.iconDefinitions[iconKey];
+                    return iconDef?.label || 'Icon';
+                },
+
+                // Helper method to get section stats (rows and seats count)
+                getSectionStats(section) {
+                    const rows = section.rows || [];
+                    const rowCount = rows.length;
+                    const seatCount = rows.reduce((sum, row) => sum + (row.seats || []).length, 0);
+                    return `${rowCount} rows • ${seatCount} seats`;
                 },
 
                 selectSection(sectionId) {
