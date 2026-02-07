@@ -1,161 +1,173 @@
 <x-filament-panels::page>
-    {{-- Hide x-cloak elements until Alpine initializes --}}
-    <style>[x-cloak] { display: none !important; }</style>
+    {{-- SINGLE ROOT ELEMENT - Required by Livewire --}}
+    <div class="konva-designer-wrapper">
+        {{-- Inline styles for x-cloak --}}
+        <style>[x-cloak] { display: none !important; }</style>
 
-    {{-- Load Konva.js early --}}
-    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+        {{-- Konva.js library --}}
+        <script src="https://unpkg.com/konva@9/konva.min.js"></script>
 
-    {{-- Render action modals outside wire:ignore to ensure proper Livewire DOM updates --}}
-    <x-filament-actions::modals />
-
-    {{-- Define Alpine component data BEFORE the x-data div to prevent "not defined" errors --}}
-    <script>
-        // Register the Alpine component immediately when this script runs
-        // This MUST be before the x-data element
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('konvaDesigner', () => ({
-                // Canvas state
-                stage: null,
-                layer: null,
-                transformer: null,
-                backgroundLayer: null,
-                drawLayer: null,
-                seatsLayer: null,
-                zoom: 1,
-                showGrid: true,
-                snapToGrid: false,
-                gridSize: 20,
-                selectedSection: null,
-                sections: @json($sections),
-                iconDefinitions: @json($iconDefinitions ?? []),
-                canvasWidth: {{ $seatingLayout->canvas_w ?? 1200 }},
-                canvasHeight: {{ $seatingLayout->canvas_h ?? 800 }},
-                backgroundColor: '{{ $seatingLayout->background_color ?? "#f3f4f6" }}',
-                backgroundUrl: @json($seatingLayout->background_image_url),
-                backgroundVisible: true,
-                backgroundScale: {{ $seatingLayout->background_scale ?? 1 }},
-                backgroundX: {{ $seatingLayout->background_x ?? 0 }},
-                backgroundY: {{ $seatingLayout->background_y ?? 0 }},
-                backgroundOpacity: {{ $seatingLayout->background_opacity ?? 0.3 }},
-                showBackgroundControls: false,
-
-                // Drawing and mode state
-                drawMode: 'select',
-                polygonPoints: [],
-                tempPolygon: null,
-                lineStart: null,
-                tempLine: null,
-                circleStart: null,
-                tempCircle: null,
-
-                // Modal states
-                showExportModal: false,
-                showColorModal: false,
-                showShapeConfigModal: false,
-                showContextMenu: false,
-
-                // Color editing
-                editColorHex: '#3B82F6',
-                editSeatColor: '#22C55E',
-
-                // Shape config
-                shapeConfigType: null,
-                shapeConfigData: null,
-                shapeConfigText: '',
-                shapeConfigFontSize: 16,
-                shapeConfigFontFamily: 'Arial',
-                shapeConfigFontWeight: 'normal',
-                shapeConfigStrokeWidth: 2,
-                shapeConfigTension: 0,
-                shapeConfigColor: '#000000',
-                shapeConfigOpacity: 1,
-                shapeConfigLabel: '',
-
-                // Context menu
-                contextMenuX: 0,
-                contextMenuY: 0,
-                contextMenuSectionId: null,
-                contextMenuSectionType: null,
-
-                // Selection state
-                selectedSeats: [],
-                selectedRows: [],
-                assignToSectionId: '',
-                assignToRowLabel: '',
-                isBoxSelecting: false,
-                boxSelectStart: null,
-                boxSelectRect: null,
-
-                // Section editing
-                sectionWidth: 200,
-                sectionHeight: 150,
-                sectionRotation: 0,
-                sectionScale: 1,
-                sectionCurve: 0,
-                sectionCornerRadius: 0,
-                sectionLabel: '',
-                sectionFontSize: 14,
-
-                // Add Seats Mode
-                addSeatsMode: false,
-                savedViewState: null,
-
-                // Row drawing settings
-                rowSeatSize: 15,
-                rowSeatSpacing: 20,
-                rowSpacing: 20,
-
-                // Table settings
-                tableSeats: 5,
-                tableSeatsRect: 6,
-
-                // Rectangle drawing
-                tempDrawRect: null,
-                drawRectStart: null,
-
-                // Row drawing state
-                tempRowLine: null,
-                rowDrawStart: null,
-                tempRowSeats: [],
-
-                // Multi-row drawing
-                tempMultiRowRect: null,
-                multiRowStart: null,
-                tempMultiRowSeats: [],
-
-                // Row properties
-                selectedDrawnRow: null,
-                drawnRowSeats: 10,
-                drawnRowCurve: 0,
-                drawnRowSpacing: 20,
-                rowNumberingMode: 'alpha',
-                rowStartNumber: 1,
-                rowNumberingDirection: 'ltr',
-                seatNumberingType: 'numeric',
-
-                // Placeholder init - will wait for real methods and call them
-                init() {
-                    const self = this;
-                    // Wait for methods to be loaded from @push('scripts')
-                    const waitForMethods = setInterval(() => {
-                        if (window.konvaDesignerMethods && window.konvaDesignerMethods.init) {
-                            clearInterval(waitForMethods);
-                            // Merge all methods into this component
-                            Object.assign(self, window.konvaDesignerMethods);
-                            // Call the real init
-                            if (typeof self.realInit === 'function') {
-                                self.realInit();
-                            }
-                        }
-                    }, 50);
-                    // Timeout after 5 seconds
-                    setTimeout(() => clearInterval(waitForMethods), 5000);
+        {{-- Alpine component registration - must be before x-data element --}}
+        <script>
+            (function() {
+                // Register immediately if Alpine is already loaded
+                if (window.Alpine) {
+                    registerKonvaDesigner();
+                } else {
+                    // Otherwise wait for alpine:init
+                    document.addEventListener('alpine:init', registerKonvaDesigner);
                 }
-            }));
-        });
-    </script>
 
-    <div class="space-y-6"
+                function registerKonvaDesigner() {
+                    if (Alpine.Components && Alpine.Components.has && Alpine.Components.has('konvaDesigner')) return;
+
+                    Alpine.data('konvaDesigner', () => ({
+                        // Canvas state
+                        stage: null,
+                        layer: null,
+                        transformer: null,
+                        backgroundLayer: null,
+                        drawLayer: null,
+                        seatsLayer: null,
+                        zoom: 1,
+                        showGrid: true,
+                        snapToGrid: false,
+                        gridSize: 20,
+                        selectedSection: null,
+                        sections: @json($sections),
+                        iconDefinitions: @json($iconDefinitions ?? []),
+                        canvasWidth: {{ $seatingLayout->canvas_w ?? 1200 }},
+                        canvasHeight: {{ $seatingLayout->canvas_h ?? 800 }},
+                        backgroundColor: '{{ $seatingLayout->background_color ?? "#f3f4f6" }}',
+                        backgroundUrl: @json($seatingLayout->background_image_url),
+                        backgroundVisible: true,
+                        backgroundScale: {{ $seatingLayout->background_scale ?? 1 }},
+                        backgroundX: {{ $seatingLayout->background_x ?? 0 }},
+                        backgroundY: {{ $seatingLayout->background_y ?? 0 }},
+                        backgroundOpacity: {{ $seatingLayout->background_opacity ?? 0.3 }},
+                        showBackgroundControls: false,
+
+                        // Drawing and mode state
+                        drawMode: 'select',
+                        polygonPoints: [],
+                        tempPolygon: null,
+                        lineStart: null,
+                        tempLine: null,
+                        circleStart: null,
+                        tempCircle: null,
+
+                        // Modal states
+                        showExportModal: false,
+                        showColorModal: false,
+                        showShapeConfigModal: false,
+                        showContextMenu: false,
+
+                        // Color editing
+                        editColorHex: '#3B82F6',
+                        editSeatColor: '#22C55E',
+
+                        // Shape config
+                        shapeConfigType: null,
+                        shapeConfigData: null,
+                        shapeConfigText: '',
+                        shapeConfigFontSize: 16,
+                        shapeConfigFontFamily: 'Arial',
+                        shapeConfigFontWeight: 'normal',
+                        shapeConfigStrokeWidth: 2,
+                        shapeConfigTension: 0,
+                        shapeConfigColor: '#000000',
+                        shapeConfigOpacity: 1,
+                        shapeConfigLabel: '',
+
+                        // Context menu
+                        contextMenuX: 0,
+                        contextMenuY: 0,
+                        contextMenuSectionId: null,
+                        contextMenuSectionType: null,
+
+                        // Selection state
+                        selectedSeats: [],
+                        selectedRows: [],
+                        assignToSectionId: '',
+                        assignToRowLabel: '',
+                        isBoxSelecting: false,
+                        boxSelectStart: null,
+                        boxSelectRect: null,
+
+                        // Section editing
+                        sectionWidth: 200,
+                        sectionHeight: 150,
+                        sectionRotation: 0,
+                        sectionScale: 1,
+                        sectionCurve: 0,
+                        sectionCornerRadius: 0,
+                        sectionLabel: '',
+                        sectionFontSize: 14,
+
+                        // Add Seats Mode
+                        addSeatsMode: false,
+                        savedViewState: null,
+
+                        // Row drawing settings
+                        rowSeatSize: 15,
+                        rowSeatSpacing: 20,
+                        rowSpacing: 20,
+
+                        // Table settings
+                        tableSeats: 5,
+                        tableSeatsRect: 6,
+
+                        // Rectangle drawing
+                        tempDrawRect: null,
+                        drawRectStart: null,
+
+                        // Row drawing state
+                        tempRowLine: null,
+                        rowDrawStart: null,
+                        tempRowSeats: [],
+
+                        // Multi-row drawing
+                        tempMultiRowRect: null,
+                        multiRowStart: null,
+                        tempMultiRowSeats: [],
+
+                        // Row properties
+                        selectedDrawnRow: null,
+                        drawnRowSeats: 10,
+                        drawnRowCurve: 0,
+                        drawnRowSpacing: 20,
+                        rowNumberingMode: 'alpha',
+                        rowStartNumber: 1,
+                        rowNumberingDirection: 'ltr',
+                        seatNumberingType: 'numeric',
+
+                        // Placeholder init - will wait for real methods and call them
+                        init() {
+                            const self = this;
+                            // Wait for methods to be loaded from @push('scripts')
+                            const waitForMethods = setInterval(() => {
+                                if (window.konvaDesignerMethods && window.konvaDesignerMethods.init) {
+                                    clearInterval(waitForMethods);
+                                    // Merge all methods into this component
+                                    Object.assign(self, window.konvaDesignerMethods);
+                                    // Call the real init
+                                    if (typeof self.realInit === 'function') {
+                                        self.realInit();
+                                    }
+                                }
+                            }, 50);
+                            // Timeout after 5 seconds
+                            setTimeout(() => clearInterval(waitForMethods), 5000);
+                        }
+                    }));
+                }
+            })();
+        </script>
+
+        {{-- Render action modals --}}
+        <x-filament-actions::modals />
+
+        <div class="space-y-6"
          wire:ignore.self
          x-data="konvaDesigner()"
          x-init="init()"
@@ -1060,6 +1072,7 @@
             </div>
         </div>
     </div>
+    </div>{{-- Close konva-designer-wrapper --}}
 
     @push('styles')
     <style>
