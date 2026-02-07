@@ -842,9 +842,8 @@
     <script src="https://unpkg.com/konva@9/konva.min.js"></script>
 
     <script>
-        // Register Alpine component before Alpine initializes
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('konvaDesigner', () => ({
+        // Define the component data factory
+        const konvaDesignerData = () => ({
                 stage: null,
                 layer: null,
                 transformer: null,
@@ -4286,8 +4285,24 @@
                     this.drawLayer.batchDraw();
                     this.setDrawMode('select');
                 },
-            }));
-        });
+            });
+
+        // Register with Alpine and reinitialize the component
+        // Alpine is already loaded by Filament, so we register directly
+        if (window.Alpine) {
+            Alpine.data('konvaDesigner', konvaDesignerData);
+
+            // Find and reinitialize the component element
+            const el = document.querySelector('[x-data="konvaDesigner()"]');
+            if (el && !el._x_dataStack) {
+                Alpine.initTree(el);
+            }
+        } else {
+            // Fallback: wait for Alpine to load
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('konvaDesigner', konvaDesignerData);
+            });
+        }
     </script>
     @endpush
 </x-filament-panels::page>
