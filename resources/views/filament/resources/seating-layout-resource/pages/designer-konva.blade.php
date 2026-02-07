@@ -1,27 +1,5 @@
-@push('styles')
-<style>
-    /* Hide x-cloak elements until Alpine initializes */
-    [x-cloak] { display: none !important; }
-
-    /* Move header actions (Import Map, Add Section, etc.) below the page title */
-    .fi-header {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-    }
-    .fi-header .fi-header-actions {
-        width: 100%;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        padding-top: 0.75rem;
-        border-top: 1px solid #E5E7EB;
-        margin-top: 0.5rem;
-    }
-</style>
-@endpush
-
 <x-filament-panels::page>
-    <div class="space-y-6"
+    <div class="seating-designer-root space-y-6"
          wire:ignore.self
          x-cloak
          x-data="{
@@ -1064,14 +1042,18 @@
                 </button>
             </div>
         </div>
-    </div>
-</x-filament-panels::page>
 
-@push('scripts')
-    {{-- Load Konva.js library --}}
-    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+        {{-- Inline styles --}}
+        <style>
+            [x-cloak] { display: none !important; }
+            .fi-header { flex-direction: column !important; align-items: flex-start !important; }
+            .fi-header .fi-header-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.75rem; border-top: 1px solid #E5E7EB; margin-top: 0.5rem; }
+        </style>
 
-    <script>
+        {{-- Load Konva.js library --}}
+        <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+
+        <script>
         // Define all methods that will be merged into the Alpine component
         // The component DATA is already defined in the inline alpine:init script above
         window.konvaDesignerMethods = {
@@ -4739,5 +4721,6 @@
                 },
             };
         // Methods are now available globally - the init() in the Alpine component will poll for them
-    </script>
-@endpush
+        </script>
+    </div>
+</x-filament-panels::page>
