@@ -1,4 +1,7 @@
 <x-filament-panels::page>
+    {{-- Hide x-cloak elements until Alpine initializes --}}
+    <style>[x-cloak] { display: none !important; }</style>
+
     {{-- Render action modals outside wire:ignore to ensure proper Livewire DOM updates --}}
     <x-filament-actions::modals />
 
@@ -623,7 +626,7 @@
         </div>
 
         {{-- Export Modal --}}
-        <div x-show="showExportModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showExportModal = false" @keydown.escape.window="showExportModal = false">
+        <div x-cloak x-show="showExportModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showExportModal = false" @keydown.escape.window="showExportModal = false">
             <div x-show="showExportModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="w-full max-w-md p-6 bg-white rounded-lg shadow-xl">
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-lg font-semibold text-gray-900">Export Layout</h3>
@@ -753,7 +756,7 @@
         </div>
 
         {{-- Color Edit Modal --}}
-        <div x-show="showColorModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div x-cloak x-show="showColorModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div class="p-6 bg-white rounded-lg shadow-xl w-96" @click.away="showColorModal = false">
                 <h3 class="mb-4 text-lg font-semibold text-gray-900">Edit Section Colors</h3>
                 <div class="space-y-4">
@@ -774,7 +777,7 @@
         </div>
 
         {{-- Shape Config Modal (for drawn shapes: polygon, circle, text, line) --}}
-        <div x-show="showShapeConfigModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div x-cloak x-show="showShapeConfigModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div class="p-6 bg-white rounded-lg shadow-xl w-96" @click.away="showShapeConfigModal = false">
                 <h3 class="mb-4 text-lg font-semibold text-gray-900" x-text="'Add ' + (shapeConfigType || 'Shape')"></h3>
                 <div class="space-y-4">
