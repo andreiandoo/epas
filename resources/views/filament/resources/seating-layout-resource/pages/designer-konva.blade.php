@@ -130,6 +130,22 @@
                             <input type="number" x-model="rowSpacing" min="10" max="100" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
                         </div>
                     </div>
+
+                    {{-- Table Settings --}}
+                    <div x-show="['drawRoundTable', 'drawRectTable'].includes(drawMode)" x-transition class="p-3 mt-2 space-y-3 border border-amber-200 rounded-lg bg-amber-50">
+                        <div class="text-xs font-semibold text-amber-700">Setări Masă</div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs text-amber-600">Nr. locuri</label>
+                                <input type="number" x-model="tableSeats" min="3" max="12" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-amber-600">Dim. loc</label>
+                                <input type="number" x-model="rowSeatSize" min="8" max="40" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                        </div>
+                        <p class="text-xs text-amber-600">Click pe hartă pentru a plasa masa</p>
+                    </div>
                 </div>
 
                 {{-- Other Drawing Tools --}}
@@ -953,6 +969,10 @@
                 rowSeatSpacing: 20,
                 rowSpacing: 20,
 
+                // Table settings
+                tableSeats: 5, // Default seats for round table
+                tableSeatsRect: 6, // Default seats for rectangular table
+
                 // Rectangle drawing for sections
                 tempDrawRect: null,
                 drawRectStart: null,
@@ -1553,6 +1573,84 @@
                     }
                 },
 
+                // ═══════════════════════════════════════════════════════════════
+                // TABLE PLACEMENT - Direct click to place table with seats
+                // ═══════════════════════════════════════════════════════════════
+
+                // Place round table with seats arranged in a circle
+                placeRoundTable(pos) {
+                    if (!this.selectedSection) {
+                        alert('Selectează mai întâi o secțiune!');
+                        return;
+                    }
+
+                    const numSeats = parseInt(this.tableSeats) || 5;
+                    const tableRadius = Math.max(25, numSeats * 5); // Scale radius with seats
+                    const seatRadius = this.rowSeatSize / 2;
+                    const seatDistance = tableRadius + seatRadius + 5;
+
+                    const seats = [];
+                    for (let i = 0; i < numSeats; i++) {
+                        const angle = (i * 2 * Math.PI / numSeats) - Math.PI / 2; // Start from top
+                        seats.push({
+                            x: Math.round(pos.x + seatDistance * Math.cos(angle)),
+                            y: Math.round(pos.y + seatDistance * Math.sin(angle)),
+                            shape: 'circle'
+                        });
+                    }
+
+                    // Save to backend
+                    @this.call('addRowWithSeats', this.selectedSection, seats, {
+                        seatSize: this.rowSeatSize,
+                        isTable: true,
+                        tableType: 'round',
+                        tableRadius: tableRadius
+                    });
+                },
+
+                // Place rectangular table with seats on long sides
+                placeRectTable(pos) {
+                    if (!this.selectedSection) {
+                        alert('Selectează mai întâi o secțiune!');
+                        return;
+                    }
+
+                    const numSeats = parseInt(this.tableSeats) || 6;
+                    const seatsPerSide = Math.floor(numSeats / 2);
+                    const tableWidth = Math.max(60, seatsPerSide * 30); // Scale with seats
+                    const tableHeight = 40;
+                    const seatSpacing = tableWidth / (seatsPerSide + 1);
+
+                    const seats = [];
+
+                    // Top side seats
+                    for (let i = 0; i < seatsPerSide; i++) {
+                        seats.push({
+                            x: Math.round(pos.x - tableWidth / 2 + seatSpacing * (i + 1)),
+                            y: Math.round(pos.y - tableHeight / 2 - this.rowSeatSize / 2 - 5),
+                            shape: 'circle'
+                        });
+                    }
+
+                    // Bottom side seats
+                    for (let i = 0; i < seatsPerSide; i++) {
+                        seats.push({
+                            x: Math.round(pos.x - tableWidth / 2 + seatSpacing * (i + 1)),
+                            y: Math.round(pos.y + tableHeight / 2 + this.rowSeatSize / 2 + 5),
+                            shape: 'circle'
+                        });
+                    }
+
+                    // Save to backend
+                    @this.call('addRowWithSeats', this.selectedSection, seats, {
+                        seatSize: this.rowSeatSize,
+                        isTable: true,
+                        tableType: 'rect',
+                        tableWidth: tableWidth,
+                        tableHeight: tableHeight
+                    });
+                },
+
                 // Zoom to fit all content
                 zoomToFit() {
                     if (this.sections.length === 0) {
@@ -1853,6 +1951,18 @@
                         // Multiple rows drawing
                         if (this.drawMode === 'drawMultiRows') {
                             this.startMultiRowDraw(stagePos);
+                            return;
+                        }
+
+                        // Round table - place directly with click (5 seats default)
+                        if (this.drawMode === 'drawRoundTable') {
+                            this.placeRoundTable(stagePos);
+                            return;
+                        }
+
+                        // Rectangular table - place directly with click (6 seats default)
+                        if (this.drawMode === 'drawRectTable') {
+                            this.placeRectTable(stagePos);
                             return;
                         }
 
