@@ -842,8 +842,9 @@
     <script src="https://unpkg.com/konva@9/konva.min.js"></script>
 
     <script>
-        function konvaDesigner() {
-            return {
+        // Register Alpine component before Alpine initializes
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('konvaDesigner', () => ({
                 stage: null,
                 layer: null,
                 transformer: null,
@@ -4285,8 +4286,8 @@
                     this.drawLayer.batchDraw();
                     this.setDrawMode('select');
                 },
-            }
-        }
+            }));
+        });
     </script>
     @endpush
 </x-filament-panels::page>
