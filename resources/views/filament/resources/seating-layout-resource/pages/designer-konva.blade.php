@@ -127,7 +127,7 @@
             currentDrawingShape: null,
             selectedRowForDrag: null,
 
-            // Placeholder init - will be replaced by methods from @push
+            // Placeholder init - methods loaded async from scripts
             init() {
                 const self = this;
                 const waitForMethods = setInterval(() => {
