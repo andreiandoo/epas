@@ -1977,7 +1977,10 @@ class DesignerSeatingLayout extends Page
             ],
         ]);
 
-        $this->reloadSections();
+        // Update local sections array without full re-render
+        $this->sections[] = $section->toArray();
+
+        // Dispatch event for JavaScript to handle
         $this->dispatch('section-added', section: $section->toArray());
 
         Notification::make()
@@ -1985,6 +1988,10 @@ class DesignerSeatingLayout extends Page
             ->title('Section created')
             ->body("Section '{$section->name}' has been added")
             ->send();
+
+        // Skip render to prevent Livewire from re-rendering the component
+        // This avoids Alpine scope issues with the @foreach loops
+        $this->skipRender();
     }
 
     /**
@@ -2056,6 +2063,7 @@ class DesignerSeatingLayout extends Page
             ]);
         }
 
+        // Reload sections and update state
         $this->reloadSections();
         $this->dispatch('layout-updated', sections: $this->sections);
 
@@ -2064,6 +2072,9 @@ class DesignerSeatingLayout extends Page
             ->title('Row added')
             ->body("Row '{$rowLabel}' with " . count($seats) . " seats added to '{$section->name}'")
             ->send();
+
+        // Skip render to prevent Livewire from re-rendering
+        $this->skipRender();
     }
 
     /**
@@ -2168,6 +2179,9 @@ class DesignerSeatingLayout extends Page
             ->title('Rows added')
             ->body("{$rowsCreated} rows with {$totalSeats} seats added to '{$section->name}'")
             ->send();
+
+        // Skip render to prevent Livewire from re-rendering
+        $this->skipRender();
     }
 
     /**
