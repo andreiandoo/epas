@@ -20,8 +20,8 @@
             <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-72">
                 <h4 class="pb-2 text-sm font-bold tracking-wide text-gray-700 uppercase border-b border-gray-200">Instrumente</h4>
 
-                {{-- Selection Tools (hidden when in addSeats mode) --}}
-                <div class="space-y-2" x-show="!addSeatsMode" x-transition>
+                {{-- Selection Tools (always visible - Selectare button needed in addSeats mode too) --}}
+                <div class="space-y-2">
                     <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Selecție</div>
                     <div class="grid grid-cols-1 gap-1">
                         <button @click="setDrawMode('select')" type="button"
@@ -30,7 +30,7 @@
                             <svg viewBox="0 0 32 32" class="w-5 h-5"><path d="M31.371 17.433 10.308 9.008c-.775-.31-1.629.477-1.3 1.3l8.426 21.064c.346.866 1.633.797 1.89-.098l2.654-9.295 9.296-2.656c.895-.255.96-1.544.097-1.89z" fill="currentColor"></path></svg>
                             Selectare
                         </button>
-                        <button @click="setDrawMode('selectseats')" type="button"
+                        <button @click="setDrawMode('selectseats')" type="button" x-show="!addSeatsMode"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
                             :class="drawMode === 'selectseats' ? 'bg-pink-500 border-pink-500 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             <x-svg-icon name="konvaseats" class="w-5 h-5" />
@@ -64,7 +64,7 @@
                 <div x-show="addSeatsMode || (selectedSection && getSelectedSectionData()?.section_type === 'standard')" x-transition class="space-y-2">
                     <div class="flex items-center justify-between">
                         <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Adaugă Locuri</div>
-                        <button @click="addSeatsMode = false; setDrawMode('select')" x-show="addSeatsMode" type="button" class="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                        <button @click="exitAddSeatsMode()" x-show="addSeatsMode" type="button" class="text-xs text-gray-400 hover:text-gray-600">✕</button>
                     </div>
                     <div class="grid grid-cols-1 gap-1">
                         {{-- Single Row --}}
@@ -345,7 +345,7 @@
                     <div class="space-y-4">
                         <div class="flex items-center justify-between pb-2 border-b border-purple-200">
                             <h4 class="text-sm font-bold tracking-wide text-purple-700 uppercase">Adaugă Locuri</h4>
-                            <button @click="addSeatsMode = false; setDrawMode('select')" class="text-purple-400 hover:text-purple-600">✕</button>
+                            <button @click="exitAddSeatsMode()" class="text-purple-400 hover:text-purple-600">✕</button>
                         </div>
 
                         {{-- Selected Section Info --}}
@@ -429,7 +429,7 @@
                         </div>
 
                         {{-- Add Seats Button --}}
-                        <button @click="addSeatsMode = true" type="button"
+                        <button @click="enterAddSeatsMode()" type="button"
                             class="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md"
                             x-show="getSelectedSectionData()?.section_type === 'standard'">
                             <x-svg-icon name="konvaseats" class="w-5 h-5" />
@@ -1037,6 +1037,7 @@
                 // NEW: Add Seats Mode and Row Drawing State
                 // ═══════════════════════════════════════════════════════════════
                 addSeatsMode: false,
+                savedViewState: null, // Stores zoom/position before entering addSeats mode
 
                 // Row drawing settings
                 rowSeatSize: 15,
@@ -4133,6 +4134,103 @@
                     if (!selectModes.includes(mode) && !seatDrawModes.includes(mode)) {
                         this.clearSelection();
                     }
+                },
+
+                // Enter add seats mode - isolate the selected section
+                enterAddSeatsMode() {
+                    if (!this.selectedSection) return;
+
+                    // Store current view state for restoration
+                    this.savedViewState = {
+                        zoom: this.zoom,
+                        stageX: this.stage.x(),
+                        stageY: this.stage.y()
+                    };
+
+                    this.addSeatsMode = true;
+
+                    // Hide other sections, show only selected section
+                    this.isolateSection(this.selectedSection);
+
+                    // Zoom to fit the selected section
+                    this.zoomToSection(this.selectedSection);
+                },
+
+                // Exit add seats mode - restore full view
+                exitAddSeatsMode() {
+                    this.addSeatsMode = false;
+                    this.setDrawMode('select');
+
+                    // Show all sections again
+                    this.showAllSections();
+
+                    // Restore previous view state if saved
+                    if (this.savedViewState) {
+                        this.zoom = this.savedViewState.zoom;
+                        this.stage.scale({ x: this.zoom, y: this.zoom });
+                        this.stage.position({ x: this.savedViewState.stageX, y: this.savedViewState.stageY });
+                        this.stage.batchDraw();
+                        this.savedViewState = null;
+                    }
+                },
+
+                // Hide all sections except the specified one
+                isolateSection(sectionId) {
+                    this.sections.forEach(section => {
+                        const sectionNode = this.stage.findOne(`#section-${section.id}`);
+                        if (sectionNode) {
+                            if (section.id === sectionId) {
+                                sectionNode.visible(true);
+                                sectionNode.opacity(1);
+                            } else {
+                                sectionNode.visible(false);
+                            }
+                        }
+                    });
+                    this.layer.batchDraw();
+                },
+
+                // Show all sections
+                showAllSections() {
+                    this.sections.forEach(section => {
+                        const sectionNode = this.stage.findOne(`#section-${section.id}`);
+                        if (sectionNode) {
+                            sectionNode.visible(true);
+                            sectionNode.opacity(1);
+                        }
+                    });
+                    this.layer.batchDraw();
+                },
+
+                // Zoom to fit a specific section
+                zoomToSection(sectionId) {
+                    const section = this.sections.find(s => s.id === sectionId);
+                    if (!section) return;
+
+                    const padding = 50;
+                    const containerWidth = this.stage.width();
+                    const containerHeight = this.stage.height();
+
+                    const sectionWidth = section.width || 200;
+                    const sectionHeight = section.height || 150;
+
+                    // Calculate zoom to fit section with padding
+                    const scaleX = (containerWidth - padding * 2) / sectionWidth;
+                    const scaleY = (containerHeight - padding * 2) / sectionHeight;
+                    const newZoom = Math.min(scaleX, scaleY, 2); // Max 200% zoom
+
+                    this.zoom = newZoom;
+                    this.stage.scale({ x: newZoom, y: newZoom });
+
+                    // Center the section in view
+                    const sectionCenterX = section.x_position + sectionWidth / 2;
+                    const sectionCenterY = section.y_position + sectionHeight / 2;
+
+                    const newX = containerWidth / 2 - sectionCenterX * newZoom;
+                    const newY = containerHeight / 2 - sectionCenterY * newZoom;
+
+                    this.stage.position({ x: newX, y: newY });
+                    this.stage.batchDraw();
                 },
 
                 addPolygonPoint(pos) {
