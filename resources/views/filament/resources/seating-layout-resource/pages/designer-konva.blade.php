@@ -12,254 +12,491 @@
          @@seat-added.window="handleSeatAdded($event.detail)"
          @@layout-imported.window="handleLayoutImported($event.detail)"
          @@layout-updated.window="handleLayoutUpdated($event.detail)">
-        {{-- Canvas Container --}}
-        <div class="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div class="flex flex-col items-center justify-between mb-4 gap-y-4">
-                <div class="flex flex-row items-center gap-x-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Canvas Designer </h3>
-                    <p class="text-sm text-gray-500">Layout: {{ $canvasWidth }}x{{ $canvasHeight }}px</p>
+        {{-- Main Designer Layout with Left Sidebar, Canvas, Right Sidebar --}}
+        <div class="flex gap-4">
+            {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+            {{-- LEFT SIDEBAR - Tools Panel --}}
+            {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+            <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-72">
+                <h4 class="pb-2 text-sm font-bold tracking-wide text-gray-700 uppercase border-b border-gray-200">Instrumente</h4>
+
+                {{-- Selection Tools --}}
+                <div class="space-y-2">
+                    <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Selecție</div>
+                    <div class="grid grid-cols-1 gap-1">
+                        <button @click="setDrawMode('select')" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'select' ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <svg viewBox="0 0 32 32" class="w-5 h-5"><path d="M31.371 17.433 10.308 9.008c-.775-.31-1.629.477-1.3 1.3l8.426 21.064c.346.866 1.633.797 1.89-.098l2.654-9.295 9.296-2.656c.895-.255.96-1.544.097-1.89z" fill="currentColor"></path></svg>
+                            Selectare
+                        </button>
+                        <button @click="setDrawMode('selectseats')" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'selectseats' ? 'bg-pink-500 border-pink-500 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <x-svg-icon name="konvaseats" class="w-5 h-5" />
+                            Selectare Locuri
+                        </button>
+                    </div>
                 </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <button @click="zoomOut" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
-                        </svg>
-                    </button>
-                    <span class="px-2 text-sm font-medium" x-text="`${Math.round(zoom * 100)}%`"></span>
-                    <button @click="zoomIn" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                        </svg>
-                    </button>
-                    <button @click="resetView" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200">Reset</button>
-                    <button @click="zoomToFit" type="button" class="px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Fit all content in view">Fit</button>
-                    <button @click="toggleGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm rounded-md" :class="showGrid ? 'bg-blue-600 text-white' : 'bg-gray-100'">
-                        <x-svg-icon name="konvagrid" class="w-4 h-4 text-gray-100" />
-                        Grid
-                    </button>
-                    <button @click="toggleSnapToGrid" type="button" class="flex items-center gap-2 px-3 py-1 text-sm rounded-md" :class="snapToGrid ? 'bg-blue-600 text-white' : 'bg-gray-100'" title="Snap sections to grid when moving">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"></path>
-                        </svg>
-                        Snap
-                    </button>
 
-                    {{-- Background controls toggle button (always visible) --}}
-                    <div>
-                        <button @click="showBackgroundControls = !showBackgroundControls" type="button"
-                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg"
-                            :class="showBackgroundControls ? 'bg-blue-600 text-white' : 'text-gray-100 hover:bg-gray-200'"
-                            title="Background settings">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                {{-- Section Tools --}}
+                <div class="space-y-2">
+                    <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Secțiuni</div>
+                    <div class="grid grid-cols-1 gap-1">
+                        <button @click="setDrawMode('drawRect')" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'drawRect' ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"></path>
                             </svg>
-                            BG
+                            Dreptunghi
+                        </button>
+                        <button @click="setDrawMode('polygon')" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'polygon' ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <x-svg-icon name="konvapolygon" class="w-5 h-5" />
+                            Poligon
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Seats Tools (shown when in addSeats mode or when section selected) --}}
+                <div x-show="addSeatsMode || (selectedSection && getSelectedSectionData()?.section_type === 'standard')" x-transition class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Adaugă Locuri</div>
+                        <button @click="addSeatsMode = false; setDrawMode('select')" x-show="addSeatsMode" type="button" class="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                    </div>
+                    <div class="grid grid-cols-1 gap-1">
+                        {{-- Single Row --}}
+                        <button @click="setDrawMode('drawSingleRow')" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'drawSingleRow' ? 'bg-purple-600 border-purple-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <circle cx="4" cy="12" r="2.5"/><circle cx="9" cy="12" r="2.5"/><circle cx="14" cy="12" r="2.5"/><circle cx="19" cy="12" r="2.5"/>
+                            </svg>
+                            Un singur rând
+                        </button>
+                        {{-- Multiple Rows --}}
+                        <button @click="setDrawMode('drawMultiRows')" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'drawMultiRows' ? 'bg-purple-600 border-purple-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <circle cx="5" cy="6" r="2"/><circle cx="10" cy="6" r="2"/><circle cx="15" cy="6" r="2"/><circle cx="20" cy="6" r="2"/>
+                                <circle cx="5" cy="12" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="20" cy="12" r="2"/>
+                                <circle cx="5" cy="18" r="2"/><circle cx="10" cy="18" r="2"/><circle cx="15" cy="18" r="2"/><circle cx="20" cy="18" r="2"/>
+                            </svg>
+                            Multiple rânduri
+                        </button>
+                        {{-- Round Table --}}
+                        <button @click="setDrawMode('drawRoundTable')" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'drawRoundTable' ? 'bg-amber-600 border-amber-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="6" stroke-width="2"/>
+                                <circle cx="12" cy="4" r="1.5" fill="currentColor"/><circle cx="18" cy="8" r="1.5" fill="currentColor"/>
+                                <circle cx="18" cy="16" r="1.5" fill="currentColor"/><circle cx="12" cy="20" r="1.5" fill="currentColor"/>
+                                <circle cx="6" cy="16" r="1.5" fill="currentColor"/><circle cx="6" cy="8" r="1.5" fill="currentColor"/>
+                            </svg>
+                            Masă rotundă
+                        </button>
+                        {{-- Rectangular Table --}}
+                        <button @click="setDrawMode('drawRectTable')" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'drawRectTable' ? 'bg-amber-600 border-amber-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <rect x="6" y="8" width="12" height="8" stroke-width="2" rx="1"/>
+                                <circle cx="8" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="16" cy="5" r="1.5" fill="currentColor"/>
+                                <circle cx="8" cy="19" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/><circle cx="16" cy="19" r="1.5" fill="currentColor"/>
+                            </svg>
+                            Masă dreptunghiulară
                         </button>
                     </div>
 
-                    {{-- Drawing tools toggle button --}}
-                    <div>
-                        <button @click="showDrawingTools = !showDrawingTools" type="button"
-                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg"
-                            :class="showDrawingTools ? 'bg-green-600 text-white' : 'text-gray-100 hover:bg-gray-200'"
-                            title="Drawing tools (polygon, circle, text, line, seats)">
+                    {{-- Row/Seat Settings --}}
+                    <div x-show="['drawSingleRow', 'drawMultiRows'].includes(drawMode)" x-transition class="p-3 mt-2 space-y-3 border border-purple-200 rounded-lg bg-purple-50">
+                        <div class="text-xs font-semibold text-purple-700">Setări Rând</div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs text-purple-600">Dimensiune loc</label>
+                                <input type="number" x-model="rowSeatSize" min="8" max="40" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-purple-600">Spațiu locuri</label>
+                                <input type="number" x-model="rowSeatSpacing" min="0" max="50" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                        </div>
+                        <div x-show="drawMode === 'drawMultiRows'">
+                            <label class="block text-xs text-purple-600">Spațiu rânduri</label>
+                            <input type="number" x-model="rowSpacing" min="10" max="100" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Other Drawing Tools --}}
+                <div class="space-y-2">
+                    <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Alte Instrumente</div>
+                    <div class="grid grid-cols-2 gap-1">
+                        <button @click="setDrawMode('text')" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'text' ? 'bg-gray-700 border-gray-700 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M8 6v14m4-14v14"></path>
                             </svg>
-                            Tools
+                            Text
+                        </button>
+                        <button @click="setDrawMode('line')" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'line' ? 'bg-gray-700 border-gray-700 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 20L20 4"></path>
+                            </svg>
+                            Linie
                         </button>
                     </div>
+                </div>
 
-                    <div class="h-6 mx-1 border-l border-gray-300"></div>
-
-                    <button @click="setDrawMode('select')" type="button" class="flex items-center gap-2 px-3 py-2 text-sm border rounded-md border-slate-200" :class="drawMode === 'select' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-gray-100'">
-                        <svg viewBox="0 0 32 32" style="enable-background:new 0 0 512 512" class="w-5 h-5"><g><path d="M31.371 17.433 10.308 9.008c-.775-.31-1.629.477-1.3 1.3l8.426 21.064c.346.866 1.633.797 1.89-.098l2.654-9.295 9.296-2.656c.895-.255.96-1.544.097-1.89zM4.324 2.91A1 1 0 1 0 2.91 4.326L5.72 7.133c.195.195.45.293.706.293.875 0 1.328-1.088.708-1.707zM13.447 7.422a.998.998 0 0 0 .707-.29l2.809-2.807a1 1 0 1 0-1.414-1.414L12.74 5.719c-.616.616-.157 1.704.707 1.703zM5.719 12.74 2.91 15.548c-.612.612-.154 1.707.707 1.707a.997.997 0 0 0 .707-.293l2.809-2.808a1 1 0 1 0-1.414-1.414zM5.56 9.937a1 1 0 0 0-1-1H1a1 1 0 1 0 0 2h3.56a1 1 0 0 0 1-1zM9.937 5.56a1 1 0 0 0 1-1V1a1 1 0 1 0-2 0v3.56a1 1 0 0 0 1 1z" fill="currentColor" opacity="1" class=""></path></g></svg>
-                        Select
+                {{-- Drawing Controls --}}
+                <div x-show="['polygon', 'drawRect', 'drawSingleRow', 'drawMultiRows'].includes(drawMode)" x-transition class="pt-3 space-y-2 border-t border-gray-200">
+                    <button @click="finishDrawing" type="button" x-show="polygonPoints.length > 0 || tempDrawRect"
+                        class="flex items-center justify-center w-full gap-2 px-3 py-2 text-sm font-medium text-white transition-all bg-green-600 rounded-lg hover:bg-green-700">
+                        <x-svg-icon name="konvafinish" class="w-5 h-5" />
+                        Finalizează
                     </button>
-                    <button @click="setDrawMode('multiselect')" type="button" class="flex items-center gap-2 px-3 py-2 text-sm border rounded-md border-slate-200" :class="drawMode === 'multiselect' ? 'bg-orange-500 text-white' : 'bg-gray-100'">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
+                    <button @click="cancelDrawing" type="button"
+                        class="flex items-center justify-center w-full gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-all bg-gray-200 rounded-lg hover:bg-gray-300">
+                        <x-svg-icon name="konvacancel" class="w-5 h-5" />
+                        Anulează
+                    </button>
+                </div>
+
+                {{-- View Controls --}}
+                <div class="pt-3 space-y-2 border-t border-gray-200">
+                    <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Vedere</div>
+                    <div class="flex items-center gap-2">
+                        <button @click="zoomOut" type="button" class="p-2 text-sm bg-gray-100 rounded-md hover:bg-gray-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                            </svg>
+                        </button>
+                        <span class="flex-1 text-sm font-medium text-center" x-text="`${Math.round(zoom * 100)}%`"></span>
+                        <button @click="zoomIn" type="button" class="p-2 text-sm bg-gray-100 rounded-md hover:bg-gray-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1">
+                        <button @click="resetView" type="button" class="px-3 py-1 text-xs bg-gray-100 rounded-md hover:bg-gray-200">Reset</button>
+                        <button @click="zoomToFit" type="button" class="px-3 py-1 text-xs bg-gray-100 rounded-md hover:bg-gray-200">Fit</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <button @click="toggleGrid" type="button" class="flex items-center flex-1 gap-1 px-2 py-1 text-xs rounded-md" :class="showGrid ? 'bg-blue-600 text-white' : 'bg-gray-100'">
+                            <x-svg-icon name="konvagrid" class="w-3 h-3" /> Grid
+                        </button>
+                        <button @click="toggleSnapToGrid" type="button" class="flex items-center flex-1 gap-1 px-2 py-1 text-xs rounded-md" :class="snapToGrid ? 'bg-blue-600 text-white' : 'bg-gray-100'">
+                            Snap
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Actions --}}
+                <div class="pt-3 space-y-2 border-t border-gray-200">
+                    <button @click="showBackgroundControls = !showBackgroundControls" type="button"
+                        class="flex items-center w-full gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                        :class="showBackgroundControls ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                        Multi-Select
+                        Fundal
                     </button>
-                    <button @click="setDrawMode('selectseats')" type="button" class="flex items-center gap-2 px-3 py-2 text-sm border rounded-md border-slate-200" :class="drawMode === 'selectseats' ? 'bg-pink-500 text-white' : 'bg-gray-100'" title="Select individual seats - drag to select multiple">
-                        <svg viewBox="0 0 64 64" style="enable-background:new 0 0 512 512"  class="w-5 h-5"><g><path d="M17.5 36.944a8.257 8.257 0 0 1 7.25-4.316c.111 0 .22.012.33.017v-.343c0-.578-.077-1.132-.229-1.646a6.172 6.172 0 0 0-1.598-2.767 6.214 6.214 0 0 0-4.423-1.838c-.402 0-.78.037-1.124.109a6.227 6.227 0 0 0-5.126 6.141v.667a8.286 8.286 0 0 1 4.92 3.976zM45.5 24.41v-1.288a6.195 6.195 0 0 0-1.827-4.413 6.218 6.218 0 0 0-4.423-1.837 6.257 6.257 0 0 0-6.25 6.25v.945c.111-.004.217-.016.33-.016 2.201 0 4.274.861 5.837 2.423a8.152 8.152 0 0 1 1.417 1.93 8.232 8.232 0 0 1 4.916-3.995zM39.25 32.628c.111 0 .22.012.33.017v-.343c0-.578-.077-1.132-.229-1.646a6.172 6.172 0 0 0-1.598-2.767 6.214 6.214 0 0 0-4.423-1.838c-.402 0-.78.037-1.124.109a6.237 6.237 0 0 0-4.892 4.474 5.89 5.89 0 0 0-.234 1.667v.667A8.286 8.286 0 0 1 32 36.944a8.257 8.257 0 0 1 7.25-4.316zM24.75 34.628a6.257 6.257 0 0 0-6.25 6.25v6.25H31v-6.25a6.257 6.257 0 0 0-6.25-6.25zM60 40.878c0-3.446-2.804-6.25-6.25-6.25s-6.25 2.804-6.25 6.25v6.25H60zM46.5 36.944a8.257 8.257 0 0 1 7.25-4.316c.111 0 .22.012.33.017v-.343a6.199 6.199 0 0 0-1.827-4.413 6.217 6.217 0 0 0-4.423-1.837c-.402 0-.78.037-1.124.109a6.237 6.237 0 0 0-4.892 4.474 5.89 5.89 0 0 0-.234 1.667v.667a8.286 8.286 0 0 1 4.92 3.976zM31 24.41v-1.288a6.195 6.195 0 0 0-1.827-4.413 6.218 6.218 0 0 0-4.423-1.837 6.257 6.257 0 0 0-6.25 6.25v.945c.111-.004.217-.016.33-.016 2.201 0 4.274.861 5.837 2.423a8.152 8.152 0 0 1 1.417 1.93A8.232 8.232 0 0 1 31 24.409zM45.5 40.878c0-3.446-2.804-6.25-6.25-6.25S33 37.432 33 40.878v6.25h12.5zM16.5 40.878c0-3.446-2.804-6.25-6.25-6.25S4 37.432 4 40.878v6.25h12.5z" fill="currentColor" opacity="1"  class=""></path></g></svg>
-                        Select Seats
-                    </button>
-
-                    <div class="h-6 mx-1 border-l border-gray-300"></div>
-
-                    <button @click="deleteSelected" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-red-700 rounded-md hover:bg-red-800" x-show="selectedSection">
-                        <x-svg-icon name="konvadelete" class="w-5 h-5 text-white" />
-                        Delete
-                    </button>
-
-                    <button @click="showExportModal = true" type="button" class="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 rounded-md hover:bg-gray-200" title="Export layout">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button @click="showExportModal = true" type="button"
+                        class="flex items-center w-full gap-2 px-3 py-2 text-sm font-medium transition-all bg-gray-50 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                         </svg>
+                        Export
+                    </button>
+                    <button @click="deleteSelected" type="button" x-show="selectedSection"
+                        class="flex items-center w-full gap-2 px-3 py-2 text-sm font-medium text-white transition-all bg-red-600 rounded-lg hover:bg-red-700">
+                        <x-svg-icon name="konvadelete" class="w-4 h-4" />
+                        Șterge Secțiunea
                     </button>
                 </div>
             </div>
 
-            {{-- Seats selection toolbar --}}
-            <div x-show="selectedSeats.length > 0" x-transition class="flex items-center gap-4 p-3 mb-4 border border-orange-200 rounded-lg bg-orange-50">
-                <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-orange-800" x-text="`${selectedSeats.length} seats selected`"></span>
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <select x-model="assignToSectionId" class="text-sm text-gray-900 bg-white border-gray-300 rounded-md">
-                        <option value="">Select Section...</option>
-                        @foreach($sections as $section)
-                            @if($section['section_type'] === 'standard')
-                                <option value="{{ $section['id'] }}">{{ $section['name'] }}</option>
-                            @endif
-                        @endforeach
-                    </select>
-                    <input type="text" x-model="assignToRowLabel" placeholder="Row label (e.g., A, 1)" class="w-32 text-sm text-gray-900 placeholder-gray-400 bg-white border-gray-300 rounded-md">
-                    <button @click="assignSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-orange-600 rounded-md hover:bg-orange-700" :disabled="!assignToSectionId || !assignToRowLabel">
-                        Assign to Row
-                    </button>
-                    <button @click="deleteSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-red-600 rounded-md hover:bg-red-700">
-                        Delete Selected
-                    </button>
-                    <button @click="clearSelection" type="button" class="px-3 py-1 text-sm text-gray-800 bg-gray-200 rounded-md hover:bg-gray-300">
-                        Clear Selection
-                    </button>
-                </div>
-            </div>
+            {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+            {{-- CENTER - Canvas Area --}}
+            {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+            <div class="flex-1 min-w-0">
+                <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                    {{-- Top bar with title and quick actions --}}
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <h3 class="text-base font-semibold text-gray-900">Canvas</h3>
+                            <span class="px-2 py-0.5 text-xs bg-gray-100 rounded text-gray-600" x-text="`${canvasWidth}×${canvasHeight}px`"></span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                            <span x-text="`${sections.length} secțiuni`"></span>
+                            <span>•</span>
+                            <span x-text="`${getTotalSeats()} locuri`"></span>
+                        </div>
+                    </div>
 
-            {{-- Rows selection toolbar --}}
-            <div x-show="selectedRows.length > 0" x-transition class="flex items-center gap-4 p-3 mb-4 border border-blue-200 rounded-lg bg-blue-50">
-                <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-blue-800" x-text="`${selectedRows.length} rows selected`"></span>
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-xs text-blue-600">Align:</span>
-                    <button @click="alignSelectedRows('left')" type="button" class="px-3 py-1 text-sm text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200" title="Align left">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h14"></path>
-                        </svg>
-                    </button>
-                    <button @click="alignSelectedRows('center')" type="button" class="px-3 py-1 text-sm text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200" title="Align center">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M5 18h14"></path>
-                        </svg>
-                    </button>
-                    <button @click="alignSelectedRows('right')" type="button" class="px-3 py-1 text-sm text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200" title="Align right">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M6 18h14"></path>
-                        </svg>
-                    </button>
-                    <button @click="clearRowSelection" type="button" class="px-3 py-1 text-sm text-gray-800 bg-gray-200 rounded-md hover:bg-gray-300">
-                        Clear Selection
-                    </button>
-                </div>
-            </div>
+                    {{-- Seats selection toolbar --}}
+                    <div x-show="selectedSeats.length > 0" x-transition class="flex items-center gap-4 p-3 mb-3 border border-orange-200 rounded-lg bg-orange-50">
+                        <span class="text-sm font-medium text-orange-800" x-text="`${selectedSeats.length} locuri selectate`"></span>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <select x-model="assignToSectionId" class="text-sm text-gray-900 bg-white border-gray-300 rounded-md">
+                                <option value="">Alege secțiunea...</option>
+                                @foreach($sections as $section)
+                                    @if($section['section_type'] === 'standard')
+                                        <option value="{{ $section['id'] }}">{{ $section['name'] }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                            <input type="text" x-model="assignToRowLabel" placeholder="Rând (ex: A, 1)" class="w-24 text-sm text-gray-900 bg-white border-gray-300 rounded-md">
+                            <button @click="assignSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-orange-600 rounded-md hover:bg-orange-700">Atribuie</button>
+                            <button @click="deleteSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-red-600 rounded-md hover:bg-red-700">Șterge</button>
+                            <button @click="clearSelection" type="button" class="px-3 py-1 text-sm text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">Anulează</button>
+                        </div>
+                    </div>
 
-            {{-- Background controls (collapsible) --}}
-            <div x-show="showBackgroundControls" x-transition class="p-3 mb-4 border border-indigo-200 rounded-lg bg-indigo-50">
-                {{-- Background color (always visible) --}}
-                <div class="flex flex-wrap items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <label class="text-xs font-medium text-indigo-800">Background Color:</label>
-                        <input type="color" x-model="backgroundColor" @input="updateBackgroundColor()" class="w-8 h-8 border border-gray-300 rounded cursor-pointer">
+                    {{-- Rows selection toolbar --}}
+                    <div x-show="selectedRows.length > 0" x-transition class="flex items-center gap-4 p-3 mb-3 border border-blue-200 rounded-lg bg-blue-50">
+                        <span class="text-sm font-medium text-blue-800" x-text="`${selectedRows.length} rânduri selectate`"></span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-blue-600">Aliniere:</span>
+                            <button @click="alignSelectedRows('left')" type="button" class="p-1 text-blue-700 bg-blue-100 rounded hover:bg-blue-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h14"></path></svg>
+                            </button>
+                            <button @click="alignSelectedRows('center')" type="button" class="p-1 text-blue-700 bg-blue-100 rounded hover:bg-blue-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M5 18h14"></path></svg>
+                            </button>
+                            <button @click="alignSelectedRows('right')" type="button" class="p-1 text-blue-700 bg-blue-100 rounded hover:bg-blue-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M6 18h14"></path></svg>
+                            </button>
+                            <button @click="clearRowSelection" type="button" class="px-2 py-1 text-sm text-gray-700 bg-gray-200 rounded hover:bg-gray-300">Anulează</button>
+                        </div>
                     </div>
-                    <button @click="saveBackgroundColor" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Save Color</button>
-                </div>
 
-                {{-- Background image controls (only when image exists) --}}
-                <div x-show="backgroundUrl" class="flex flex-wrap items-center gap-4 pt-3 mt-3 border-t border-indigo-200">
-                    <div class="flex items-center gap-2">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" x-model="backgroundVisible" @change="toggleBackgroundVisibility()" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                            <span class="text-sm font-medium text-indigo-800">Show Image</span>
-                        </label>
+                    {{-- Background controls (collapsible) --}}
+                    <div x-show="showBackgroundControls" x-transition class="p-3 mb-3 border border-indigo-200 rounded-lg bg-indigo-50">
+                        <div class="flex flex-wrap items-center gap-4">
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs font-medium text-indigo-800">Culoare:</label>
+                                <input type="color" x-model="backgroundColor" @input="updateBackgroundColor()" class="w-8 h-8 border border-gray-300 rounded cursor-pointer">
+                                <button @click="saveBackgroundColor" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Salvează</button>
+                            </div>
+                            <div x-show="backgroundUrl" class="flex flex-wrap items-center gap-3">
+                                <label class="flex items-center gap-1 cursor-pointer">
+                                    <input type="checkbox" x-model="backgroundVisible" @change="toggleBackgroundVisibility()" class="w-4 h-4 text-indigo-600 border-gray-300 rounded">
+                                    <span class="text-xs text-indigo-800">Imagine</span>
+                                </label>
+                                <div class="flex items-center gap-1">
+                                    <label class="text-xs text-indigo-700">Scală:</label>
+                                    <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-16" :disabled="!backgroundVisible">
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <label class="text-xs text-indigo-700">Opacitate:</label>
+                                    <input type="range" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-16" :disabled="!backgroundVisible">
+                                </div>
+                                <button @click="saveBackgroundSettings" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Salvează</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="h-6 mx-1 border-l border-indigo-300"></div>
-                    <div class="flex items-center gap-1">
-                        <label class="text-xs text-indigo-700">Scale:</label>
-                        <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-20" :disabled="!backgroundVisible">
-                        <input type="number" x-model="backgroundScale" min="0.1" max="3" step="0.01" @input="updateBackgroundScale()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
+
+                    {{-- Canvas --}}
+                    <div class="overflow-hidden bg-gray-100 border-2 border-gray-300 rounded-lg">
+                        <div id="konva-container" wire:ignore></div>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <label class="text-xs text-indigo-700">X:</label>
-                        <input type="range" x-model="backgroundX" min="-1000" max="1000" step="1" @input="updateBackgroundPosition()" class="w-20" :disabled="!backgroundVisible">
-                        <input type="number" x-model="backgroundX" step="1" @input="updateBackgroundPosition()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
+
+                    {{-- Keyboard shortcuts --}}
+                    <div class="flex flex-wrap items-center justify-center gap-3 mt-2 text-xs text-gray-500">
+                        <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Del</kbd> Șterge</span>
+                        <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Esc</kbd> Anulează</span>
+                        <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Scroll</kbd> Zoom</span>
+                        <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Drag</kbd> Pan</span>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <label class="text-xs text-indigo-700">Y:</label>
-                        <input type="range" x-model="backgroundY" min="-1000" max="1000" step="1" @input="updateBackgroundPosition()" class="w-20" :disabled="!backgroundVisible">
-                        <input type="number" x-model="backgroundY" step="1" @input="updateBackgroundPosition()" class="w-16 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!backgroundVisible">
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <label class="text-xs text-indigo-700">Opacity:</label>
-                        <input type="range" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="w-16" :disabled="!backgroundVisible">
-                        <input type="number" x-model="backgroundOpacity" min="0" max="1" step="0.01" @input="updateBackgroundOpacity()" class="px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded w-14" :disabled="!backgroundVisible">
-                    </div>
-                    <button @click="resetBackgroundPosition" type="button" class="px-2 py-1 text-xs text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200">Reset</button>
-                    <button @click="saveBackgroundSettings" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Save Image Settings</button>
                 </div>
             </div>
 
-            {{-- Drawing tools panel (collapsible) --}}
-            <div x-show="showDrawingTools" x-transition class="p-3 mb-4 border border-green-200 rounded-lg bg-green-50">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="mr-1 text-xs font-medium text-green-800">Draw:</span>
-                    <button @click="setDrawMode('polygon')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'polygon' ? 'bg-green-500 text-white' : 'bg-white text-gray-700'">
-                        <x-svg-icon name="konvapolygon" class="w-4 h-4" />
-                        Polygon
-                    </button>
-                    <button @click="setDrawMode('circle')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'circle' ? 'bg-green-500 text-white' : 'bg-white text-gray-700'">
-                        <x-svg-icon name="konvacircle" class="w-4 h-4" />
-                        Circle
-                    </button>
-                    <button @click="setDrawMode('text')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'text' ? 'bg-green-500 text-white' : 'bg-white text-gray-700'" title="Add text label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M8 6v14m4-14v14"></path>
-                        </svg>
-                        Text
-                    </button>
-                    <button @click="setDrawMode('line')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'line' ? 'bg-green-500 text-white' : 'bg-white text-gray-700'" title="Draw a line (hold Shift for angle snap)">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 20L20 4"></path>
-                        </svg>
-                        Line
-                    </button>
+            {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+            {{-- RIGHT SIDEBAR - Properties Panel --}}
+            {{-- ═══════════════════════════════════════════════════════════════════════ --}}
+            <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-80" x-show="selectedSection || selectedDrawnRow" x-transition>
+                {{-- Section Properties --}}
+                <template x-if="selectedSection && !selectedDrawnRow">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between pb-2 border-b border-gray-200">
+                            <h4 class="text-sm font-bold tracking-wide text-gray-700 uppercase">Proprietăți Secțiune</h4>
+                            <button @click="selectedSection = null; transformer.nodes([]); layer.batchDraw()" class="text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
 
-                    <div class="h-6 mx-2 border-l border-green-300"></div>
+                        {{-- Section Name --}}
+                        <div>
+                            <label class="block mb-1 text-xs font-medium text-gray-600">Nume Secțiune</label>
+                            <div class="text-sm font-semibold text-gray-900" x-text="getSelectedSectionData()?.name || 'Fără nume'"></div>
+                        </div>
 
-                    <button @click="setDrawMode('seat')" type="button" class="flex items-center gap-2 px-3 py-1 text-sm border rounded-md border-slate-200" :class="drawMode === 'seat' ? 'bg-purple-500 text-white' : 'bg-white text-gray-700'">
-                        <x-svg-icon name="konvaseats" class="w-5 h-5" />
-                        Add Seats
-                    </button>
-                    <div x-show="drawMode === 'seat'" x-transition class="flex items-center gap-2 px-2 py-1 ml-1 border border-purple-200 rounded-md bg-purple-50">
-                        <label class="text-xs text-purple-700">Size:</label>
-                        <input type="number" x-model="seatSize" min="4" max="30" step="1" class="w-12 px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
-                        <select x-model="seatShape" class="px-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
-                            <option value="circle">Circle</option>
-                            <option value="rect">Square</option>
-                        </select>
+                        {{-- Add Seats Button --}}
+                        <button @click="addSeatsMode = true" type="button"
+                            class="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md"
+                            x-show="getSelectedSectionData()?.section_type === 'standard'">
+                            <x-svg-icon name="konvaseats" class="w-5 h-5" />
+                            Adaugă Locuri
+                        </button>
+
+                        {{-- Transform Section --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-gray-50">
+                            <div class="text-xs font-semibold text-gray-600 uppercase">Transformare</div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500">Lățime</label>
+                                    <input type="number" x-model="sectionWidth" @input="updateSectionDimensions()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500">Înălțime</label>
+                                    <input type="number" x-model="sectionHeight" @input="updateSectionDimensions()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500">Rotație (°)</label>
+                                <input type="range" x-model="sectionRotation" min="0" max="360" @input="updateSectionRotation()" class="w-full">
+                                <div class="text-xs text-center text-gray-500" x-text="sectionRotation + '°'"></div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500">Colțuri rotunjite</label>
+                                <input type="range" x-model="sectionCornerRadius" min="0" max="50" @input="updateSectionCornerRadius()" class="w-full">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500">Scalare</label>
+                                <input type="range" x-model="sectionScale" min="0.5" max="2" step="0.1" @input="updateSectionScale()" class="w-full">
+                                <div class="text-xs text-center text-gray-500" x-text="(sectionScale * 100).toFixed(0) + '%'"></div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500">Curbură</label>
+                                <input type="range" x-model="sectionCurve" min="-100" max="100" @input="updateSectionCurve()" class="w-full">
+                                <div class="text-xs text-center text-gray-500" x-text="sectionCurve"></div>
+                            </div>
+                        </div>
+
+                        {{-- Label Section --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-gray-50">
+                            <div class="text-xs font-semibold text-gray-600 uppercase">Etichetă</div>
+                            <div>
+                                <label class="block text-xs text-gray-500">Nume afișat</label>
+                                <input type="text" x-model="sectionLabel" @input="updateSectionLabel()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded" placeholder="Nume secțiune">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500">Dimensiune font</label>
+                                <input type="number" x-model="sectionFontSize" min="8" max="72" @input="updateSectionLabel()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                        </div>
+
+                        {{-- Colors --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-gray-50">
+                            <div class="text-xs font-semibold text-gray-600 uppercase">Culori</div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500">Fundal</label>
+                                    <input type="color" x-model="editColorHex" @input="previewSectionColor()" class="w-full h-8 border rounded cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500">Locuri</label>
+                                    <input type="color" x-model="editSeatColor" @input="previewSeatColor()" class="w-full h-8 border rounded cursor-pointer">
+                                </div>
+                            </div>
+                            <button @click="saveSectionColors()" type="button" class="w-full px-3 py-1 text-sm text-white bg-blue-600 rounded hover:bg-blue-700">Salvează Culorile</button>
+                        </div>
+
+                        {{-- Section Info --}}
+                        <div class="p-3 space-y-1 text-xs rounded-lg bg-gray-50">
+                            <div class="flex justify-between"><span class="text-gray-500">Rânduri:</span> <span class="font-medium" x-text="getSelectedSectionData()?.rows?.length || 0"></span></div>
+                            <div class="flex justify-between"><span class="text-gray-500">Locuri:</span> <span class="font-medium" x-text="getSelectedSectionSeatsCount()"></span></div>
+                            <div class="flex justify-between"><span class="text-gray-500">Poziție:</span> <span class="font-medium" x-text="`${Math.round(getSelectedSectionData()?.x_position || 0)}, ${Math.round(getSelectedSectionData()?.y_position || 0)}`"></span></div>
+                        </div>
                     </div>
+                </template>
 
-                    <div class="h-6 mx-2 border-l border-green-300"></div>
+                {{-- Row Properties (when a row is selected after drawing) --}}
+                <template x-if="selectedDrawnRow">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between pb-2 border-b border-gray-200">
+                            <h4 class="text-sm font-bold tracking-wide text-gray-700 uppercase">Proprietăți Rând</h4>
+                            <button @click="selectedDrawnRow = null" class="text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
 
-                    <button @click="finishDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-green-600 border rounded-md border-slate-200" x-show="['polygon', 'circle'].includes(drawMode) && polygonPoints.length > 0">
-                        <x-svg-icon name="konvafinish" class="w-5 h-5" />
-                        Finish
-                    </button>
-                    <button @click="cancelDrawing" type="button" class="flex items-center gap-2 px-3 py-1 text-sm text-white bg-gray-600 border rounded-md border-slate-200" x-show="!['select', 'multiselect', 'selectseats'].includes(drawMode)">
-                        <x-svg-icon name="konvacancel" class="w-5 h-5" />
-                        Cancel
-                    </button>
+                        {{-- Row Settings --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-purple-50">
+                            <div class="text-xs font-semibold text-purple-700 uppercase">Rând</div>
+                            <div>
+                                <label class="block text-xs text-purple-600">Număr locuri</label>
+                                <input type="number" x-model="drawnRowSeats" min="1" max="100" @input="updateDrawnRowSeats()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-purple-600">Curbură</label>
+                                <input type="range" x-model="drawnRowCurve" min="-50" max="50" @input="updateDrawnRowCurve()" class="w-full">
+                                <div class="text-xs text-center text-purple-500" x-text="drawnRowCurve"></div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-purple-600">Spațiu între locuri</label>
+                                <input type="number" x-model="drawnRowSpacing" min="0" max="50" @input="updateDrawnRowSpacing()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                        </div>
 
-                    <span class="ml-2 text-xs text-green-600" x-show="drawMode === 'line'">Hold <kbd class="px-1 py-0.5 bg-white border rounded shadow-sm text-xs">Shift</kbd> for angle snap</span>
+                        {{-- Numbering --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-blue-50">
+                            <div class="text-xs font-semibold text-blue-700 uppercase">Numerotare</div>
+                            <div>
+                                <label class="block text-xs text-blue-600">Mod numerotare rând</label>
+                                <select x-model="rowNumberingMode" @change="updateRowNumbering()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <option value="numeric">Numere (1, 2, 3...)</option>
+                                    <option value="alpha">Litere (A, B, C...)</option>
+                                    <option value="roman">Romane (I, II, III...)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-blue-600">Începe de la</label>
+                                <input type="number" x-model="rowStartNumber" min="1" @input="updateRowNumbering()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-blue-600">Direcție</label>
+                                <select x-model="rowNumberingDirection" @change="updateRowNumbering()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <option value="ltr">Stânga → Dreapta</option>
+                                    <option value="rtl">Dreapta → Stânga</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {{-- Seat Naming --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-green-50">
+                            <div class="text-xs font-semibold text-green-700 uppercase">Nume Loc</div>
+                            <div>
+                                <label class="block text-xs text-green-600">Tip numerotare</label>
+                                <select x-model="seatNumberingType" @change="updateSeatNumbering()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <option value="numeric">Numere (1, 2, 3...)</option>
+                                    <option value="alpha">Litere (A, B, C...)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {{-- Save Row --}}
+                        <button @click="saveDrawnRow()" type="button"
+                            class="w-full px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700">
+                            Salvează Rândul
+                        </button>
+                    </div>
+                </template>
+
+                {{-- Empty state when nothing selected --}}
+                <div x-show="!selectedSection && !selectedDrawnRow" class="py-8 text-center">
+                    <svg class="w-12 h-12 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-500">Selectează o secțiune pentru a vedea proprietățile</p>
                 </div>
             </div>
-
-            <div class="overflow-hidden bg-gray-100 border-2 border-gray-300 rounded-lg">
-                <div id="konva-container" wire:ignore></div>
-            </div>
+        </div>
 
             {{-- Statistics --}}
             <div class="grid grid-cols-4 gap-4 mt-4 text-sm">
@@ -704,6 +941,52 @@
                 lineStart: null,
                 tempLine: null,
 
+                // ═══════════════════════════════════════════════════════════════
+                // NEW: Add Seats Mode and Row Drawing State
+                // ═══════════════════════════════════════════════════════════════
+                addSeatsMode: false,
+
+                // Row drawing settings
+                rowSeatSize: 15,
+                rowSeatSpacing: 20,
+                rowSpacing: 20,
+
+                // Rectangle drawing for sections
+                tempDrawRect: null,
+                drawRectStart: null,
+
+                // Row drawing state
+                tempRowLine: null,
+                tempRowSeats: [],
+                rowDrawStart: null,
+
+                // Multi-row drawing state
+                tempMultiRowRect: null,
+                tempMultiRowSeats: [],
+                multiRowStart: null,
+
+                // Section properties (right sidebar)
+                sectionWidth: 200,
+                sectionHeight: 100,
+                sectionRotation: 0,
+                sectionCornerRadius: 0,
+                sectionScale: 1,
+                sectionCurve: 0,
+                sectionLabel: '',
+                sectionFontSize: 14,
+
+                // Drawn row selection and properties
+                selectedDrawnRow: null,
+                drawnRowSeats: 10,
+                drawnRowCurve: 0,
+                drawnRowSpacing: 20,
+
+                // Row numbering settings
+                rowNumberingMode: 'alpha',
+                rowStartNumber: 1,
+                rowNumberingDirection: 'ltr',
+                seatNumberingType: 'numeric',
+
                 init() {
                     this.createStage();
                     this.loadSections();
@@ -838,6 +1121,434 @@
                             return rowSum + (row.seats?.length || 0);
                         }, 0);
                     }, 0);
+                },
+
+                // ═══════════════════════════════════════════════════════════════
+                // NEW: Section Properties Helper Methods
+                // ═══════════════════════════════════════════════════════════════
+
+                // Get the data for the currently selected section
+                getSelectedSectionData() {
+                    if (!this.selectedSection) return null;
+                    return this.sections.find(s => s.id === this.selectedSection);
+                },
+
+                // Get total seats count for selected section
+                getSelectedSectionSeatsCount() {
+                    const section = this.getSelectedSectionData();
+                    if (!section) return 0;
+                    return (section.rows || []).reduce((sum, row) => sum + (row.seats?.length || 0), 0);
+                },
+
+                // Update section properties when selected
+                updateSectionPropertiesFromSelection() {
+                    const section = this.getSelectedSectionData();
+                    if (!section) return;
+
+                    this.sectionWidth = section.width || 200;
+                    this.sectionHeight = section.height || 100;
+                    this.sectionRotation = section.rotation || 0;
+                    this.sectionCornerRadius = section.corner_radius || 0;
+                    this.sectionLabel = section.name || '';
+                    this.sectionFontSize = section.metadata?.font_size || 14;
+                    this.sectionCurve = section.metadata?.curve_amount || 0;
+                    this.editColorHex = section.color_hex || '#3B82F6';
+                    this.editSeatColor = section.seat_color || '#22C55E';
+                },
+
+                // Update section dimensions
+                updateSectionDimensions() {
+                    if (!this.selectedSection) return;
+                    const node = this.stage.findOne(`#section-${this.selectedSection}`);
+                    if (node) {
+                        node.width(parseInt(this.sectionWidth));
+                        node.height(parseInt(this.sectionHeight));
+                        this.layer.batchDraw();
+                        @this.call('updateSectionGeometry', this.selectedSection, {
+                            width: parseInt(this.sectionWidth),
+                            height: parseInt(this.sectionHeight)
+                        });
+                    }
+                },
+
+                // Update section rotation
+                updateSectionRotation() {
+                    if (!this.selectedSection) return;
+                    const node = this.stage.findOne(`#section-${this.selectedSection}`);
+                    if (node) {
+                        node.rotation(parseInt(this.sectionRotation));
+                        this.layer.batchDraw();
+                        @this.call('updateSectionGeometry', this.selectedSection, {
+                            rotation: parseInt(this.sectionRotation)
+                        });
+                    }
+                },
+
+                // Update section corner radius
+                updateSectionCornerRadius() {
+                    if (!this.selectedSection) return;
+                    const outline = this.stage.findOne(`#section-${this.selectedSection}-outline`);
+                    if (outline) {
+                        outline.cornerRadius(parseInt(this.sectionCornerRadius));
+                        this.layer.batchDraw();
+                        @this.call('updateSectionGeometry', this.selectedSection, {
+                            corner_radius: parseInt(this.sectionCornerRadius)
+                        });
+                    }
+                },
+
+                // Update section scale
+                updateSectionScale() {
+                    if (!this.selectedSection) return;
+                    const node = this.stage.findOne(`#section-${this.selectedSection}`);
+                    if (node) {
+                        const scale = parseFloat(this.sectionScale);
+                        node.scaleX(scale);
+                        node.scaleY(scale);
+                        this.layer.batchDraw();
+                    }
+                },
+
+                // Update section curve
+                updateSectionCurve() {
+                    if (!this.selectedSection) return;
+                    // Store curve value for later use when rendering seats
+                    @this.call('updateSectionMetadata', this.selectedSection, {
+                        curve_amount: parseInt(this.sectionCurve)
+                    });
+                },
+
+                // Update section label
+                updateSectionLabel() {
+                    if (!this.selectedSection) return;
+                    const label = this.stage.findOne(`#section-${this.selectedSection}-label`);
+                    if (label) {
+                        label.text(this.sectionLabel);
+                        label.fontSize(parseInt(this.sectionFontSize));
+                        this.layer.batchDraw();
+                    }
+                    @this.call('updateSectionName', this.selectedSection, this.sectionLabel);
+                },
+
+                // Preview section color without saving
+                previewSectionColor() {
+                    const outline = this.stage.findOne(`#section-${this.selectedSection}-outline`);
+                    if (outline) {
+                        outline.fill(this.editColorHex);
+                        this.layer.batchDraw();
+                    }
+                },
+
+                // Preview seat color without saving
+                previewSeatColor() {
+                    // Preview on current section's seats
+                    const sectionGroup = this.stage.findOne(`#section-${this.selectedSection}`);
+                    if (sectionGroup) {
+                        sectionGroup.find('Circle, Rect').forEach(shape => {
+                            if (shape.name() === 'seat') {
+                                shape.fill(this.editSeatColor);
+                            }
+                        });
+                        this.layer.batchDraw();
+                    }
+                },
+
+                // ═══════════════════════════════════════════════════════════════
+                // NEW: Rectangle Section Drawing
+                // ═══════════════════════════════════════════════════════════════
+
+                startRectDraw(pos) {
+                    this.drawRectStart = pos;
+                    this.tempDrawRect = new Konva.Rect({
+                        x: pos.x,
+                        y: pos.y,
+                        width: 0,
+                        height: 0,
+                        fill: '#10B98133',
+                        stroke: '#10B981',
+                        strokeWidth: 2,
+                        dash: [5, 5],
+                        listening: false
+                    });
+                    this.drawLayer.add(this.tempDrawRect);
+                    this.drawLayer.batchDraw();
+                },
+
+                updateRectDraw(pos) {
+                    if (!this.tempDrawRect || !this.drawRectStart) return;
+
+                    const width = pos.x - this.drawRectStart.x;
+                    const height = pos.y - this.drawRectStart.y;
+
+                    // Handle negative dimensions (drawing from right to left or bottom to top)
+                    if (width < 0) {
+                        this.tempDrawRect.x(pos.x);
+                        this.tempDrawRect.width(Math.abs(width));
+                    } else {
+                        this.tempDrawRect.x(this.drawRectStart.x);
+                        this.tempDrawRect.width(width);
+                    }
+
+                    if (height < 0) {
+                        this.tempDrawRect.y(pos.y);
+                        this.tempDrawRect.height(Math.abs(height));
+                    } else {
+                        this.tempDrawRect.y(this.drawRectStart.y);
+                        this.tempDrawRect.height(height);
+                    }
+
+                    this.drawLayer.batchDraw();
+                },
+
+                finishRectDraw() {
+                    if (!this.tempDrawRect) return;
+
+                    const x = this.tempDrawRect.x();
+                    const y = this.tempDrawRect.y();
+                    const width = this.tempDrawRect.width();
+                    const height = this.tempDrawRect.height();
+
+                    // Clean up temp shape
+                    this.tempDrawRect.destroy();
+                    this.tempDrawRect = null;
+                    this.drawRectStart = null;
+                    this.drawLayer.batchDraw();
+
+                    // Only create if size is reasonable
+                    if (width < 20 || height < 20) return;
+
+                    // Create section via backend
+                    @this.call('addRectSection', {
+                        x: Math.round(x),
+                        y: Math.round(y),
+                        width: Math.round(width),
+                        height: Math.round(height)
+                    });
+
+                    this.setDrawMode('select');
+                },
+
+                // ═══════════════════════════════════════════════════════════════
+                // NEW: Single Row Drawing
+                // ═══════════════════════════════════════════════════════════════
+
+                startSingleRowDraw(pos) {
+                    if (!this.selectedSection) {
+                        alert('Selectează mai întâi o secțiune!');
+                        return;
+                    }
+
+                    this.rowDrawStart = pos;
+                    this.tempRowLine = new Konva.Line({
+                        points: [pos.x, pos.y, pos.x, pos.y],
+                        stroke: '#8B5CF6',
+                        strokeWidth: 2,
+                        dash: [5, 5],
+                        listening: false
+                    });
+                    this.drawLayer.add(this.tempRowLine);
+                    this.tempRowSeats = [];
+                    this.drawLayer.batchDraw();
+                },
+
+                updateSingleRowDraw(pos) {
+                    if (!this.tempRowLine || !this.rowDrawStart) return;
+
+                    // Update line
+                    this.tempRowLine.points([this.rowDrawStart.x, this.rowDrawStart.y, pos.x, pos.y]);
+
+                    // Calculate seats along the line
+                    const dx = pos.x - this.rowDrawStart.x;
+                    const dy = pos.y - this.rowDrawStart.y;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    const spacing = this.rowSeatSize + this.rowSeatSpacing;
+                    const numSeats = Math.floor(length / spacing);
+
+                    // Remove old temp seats
+                    this.tempRowSeats.forEach(s => s.destroy());
+                    this.tempRowSeats = [];
+
+                    // Create new temp seats
+                    for (let i = 0; i < numSeats; i++) {
+                        const t = (i * spacing + this.rowSeatSize / 2) / length;
+                        const seatX = this.rowDrawStart.x + dx * t;
+                        const seatY = this.rowDrawStart.y + dy * t;
+
+                        const seat = new Konva.Circle({
+                            x: seatX,
+                            y: seatY,
+                            radius: this.rowSeatSize / 2,
+                            fill: '#8B5CF666',
+                            stroke: '#8B5CF6',
+                            strokeWidth: 1,
+                            listening: false
+                        });
+                        this.drawLayer.add(seat);
+                        this.tempRowSeats.push(seat);
+                    }
+
+                    this.drawLayer.batchDraw();
+                },
+
+                finishSingleRowDraw() {
+                    if (!this.tempRowLine || !this.rowDrawStart) return;
+
+                    const points = this.tempRowLine.points();
+                    const endPos = { x: points[2], y: points[3] };
+
+                    // Calculate seats data for saving
+                    const dx = endPos.x - this.rowDrawStart.x;
+                    const dy = endPos.y - this.rowDrawStart.y;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    const spacing = this.rowSeatSize + this.rowSeatSpacing;
+                    const numSeats = Math.floor(length / spacing);
+
+                    const seats = [];
+                    for (let i = 0; i < numSeats; i++) {
+                        const t = (i * spacing + this.rowSeatSize / 2) / length;
+                        seats.push({
+                            x: Math.round(this.rowDrawStart.x + dx * t),
+                            y: Math.round(this.rowDrawStart.y + dy * t)
+                        });
+                    }
+
+                    // Clean up temp shapes
+                    this.tempRowLine.destroy();
+                    this.tempRowLine = null;
+                    this.rowDrawStart = null;
+                    this.tempRowSeats.forEach(s => s.destroy());
+                    this.tempRowSeats = [];
+                    this.drawLayer.batchDraw();
+
+                    if (seats.length > 0) {
+                        // Save row to backend
+                        @this.call('addRowWithSeats', this.selectedSection, seats, {
+                            seatSize: this.rowSeatSize,
+                            seatSpacing: this.rowSeatSpacing
+                        });
+                    }
+                },
+
+                // ═══════════════════════════════════════════════════════════════
+                // NEW: Multiple Rows Drawing
+                // ═══════════════════════════════════════════════════════════════
+
+                startMultiRowDraw(pos) {
+                    if (!this.selectedSection) {
+                        alert('Selectează mai întâi o secțiune!');
+                        return;
+                    }
+
+                    this.multiRowStart = pos;
+                    this.tempMultiRowRect = new Konva.Rect({
+                        x: pos.x,
+                        y: pos.y,
+                        width: 0,
+                        height: 0,
+                        fill: '#8B5CF622',
+                        stroke: '#8B5CF6',
+                        strokeWidth: 2,
+                        dash: [5, 5],
+                        listening: false
+                    });
+                    this.drawLayer.add(this.tempMultiRowRect);
+                    this.tempMultiRowSeats = [];
+                    this.drawLayer.batchDraw();
+                },
+
+                updateMultiRowDraw(pos) {
+                    if (!this.tempMultiRowRect || !this.multiRowStart) return;
+
+                    // Update rectangle
+                    const width = Math.abs(pos.x - this.multiRowStart.x);
+                    const height = Math.abs(pos.y - this.multiRowStart.y);
+                    const x = Math.min(pos.x, this.multiRowStart.x);
+                    const y = Math.min(pos.y, this.multiRowStart.y);
+
+                    this.tempMultiRowRect.x(x);
+                    this.tempMultiRowRect.y(y);
+                    this.tempMultiRowRect.width(width);
+                    this.tempMultiRowRect.height(height);
+
+                    // Remove old temp seats
+                    this.tempMultiRowSeats.forEach(s => s.destroy());
+                    this.tempMultiRowSeats = [];
+
+                    // Calculate grid of seats
+                    const seatSpacing = this.rowSeatSize + this.rowSeatSpacing;
+                    const rowHeight = this.rowSeatSize + this.rowSpacing;
+
+                    const numCols = Math.floor(width / seatSpacing);
+                    const numRows = Math.floor(height / rowHeight);
+
+                    // Create temp seats grid
+                    for (let row = 0; row < numRows; row++) {
+                        for (let col = 0; col < numCols; col++) {
+                            const seatX = x + col * seatSpacing + this.rowSeatSize / 2;
+                            const seatY = y + row * rowHeight + this.rowSeatSize / 2;
+
+                            const seat = new Konva.Circle({
+                                x: seatX,
+                                y: seatY,
+                                radius: this.rowSeatSize / 2,
+                                fill: '#8B5CF666',
+                                stroke: '#8B5CF6',
+                                strokeWidth: 1,
+                                listening: false
+                            });
+                            this.drawLayer.add(seat);
+                            this.tempMultiRowSeats.push(seat);
+                        }
+                    }
+
+                    this.drawLayer.batchDraw();
+                },
+
+                finishMultiRowDraw() {
+                    if (!this.tempMultiRowRect || !this.multiRowStart) return;
+
+                    const x = this.tempMultiRowRect.x();
+                    const y = this.tempMultiRowRect.y();
+                    const width = this.tempMultiRowRect.width();
+                    const height = this.tempMultiRowRect.height();
+
+                    // Calculate grid of seats
+                    const seatSpacing = this.rowSeatSize + this.rowSeatSpacing;
+                    const rowHeight = this.rowSeatSize + this.rowSpacing;
+
+                    const numCols = Math.floor(width / seatSpacing);
+                    const numRows = Math.floor(height / rowHeight);
+
+                    const rows = [];
+                    for (let row = 0; row < numRows; row++) {
+                        const seats = [];
+                        for (let col = 0; col < numCols; col++) {
+                            seats.push({
+                                x: Math.round(x + col * seatSpacing + this.rowSeatSize / 2),
+                                y: Math.round(y + row * rowHeight + this.rowSeatSize / 2)
+                            });
+                        }
+                        if (seats.length > 0) {
+                            rows.push(seats);
+                        }
+                    }
+
+                    // Clean up temp shapes
+                    this.tempMultiRowRect.destroy();
+                    this.tempMultiRowRect = null;
+                    this.multiRowStart = null;
+                    this.tempMultiRowSeats.forEach(s => s.destroy());
+                    this.tempMultiRowSeats = [];
+                    this.drawLayer.batchDraw();
+
+                    if (rows.length > 0) {
+                        // Save rows to backend
+                        @this.call('addMultipleRowsWithSeats', this.selectedSection, rows, {
+                            seatSize: this.rowSeatSize,
+                            seatSpacing: this.rowSeatSpacing,
+                            rowSpacing: this.rowSpacing
+                        });
+                    }
                 },
 
                 // Zoom to fit all content
@@ -1111,11 +1822,35 @@
                         }
                     });
 
-                    // Mouse down for box selection
+                    // Mouse down for box selection and new drawing modes
                     this.stage.on('mousedown', (e) => {
+                        const pos = this.stage.getPointerPosition();
+                        const stagePos = {
+                            x: (pos.x - this.stage.x()) / this.zoom,
+                            y: (pos.y - this.stage.y()) / this.zoom
+                        };
+
                         // Ctrl+drag for rectangle selection in any mode
                         if (e.evt.ctrlKey && (e.target === this.stage || e.target.getLayer() === this.backgroundLayer || e.target.getLayer() === this.layer)) {
                             this.startRectSelection(e);
+                            return;
+                        }
+
+                        // Rectangle section drawing
+                        if (this.drawMode === 'drawRect') {
+                            this.startRectDraw(stagePos);
+                            return;
+                        }
+
+                        // Single row drawing
+                        if (this.drawMode === 'drawSingleRow') {
+                            this.startSingleRowDraw(stagePos);
+                            return;
+                        }
+
+                        // Multiple rows drawing
+                        if (this.drawMode === 'drawMultiRows') {
+                            this.startMultiRowDraw(stagePos);
                             return;
                         }
 
@@ -1188,6 +1923,36 @@
                         if (this.isRectSelecting) {
                             this.updateRectSelection(e);
                         }
+
+                        // NEW: Rectangle section drawing
+                        if (this.drawMode === 'drawRect' && this.drawRectStart) {
+                            const pos = this.stage.getPointerPosition();
+                            const stagePos = {
+                                x: (pos.x - this.stage.x()) / this.zoom,
+                                y: (pos.y - this.stage.y()) / this.zoom
+                            };
+                            this.updateRectDraw(stagePos);
+                        }
+
+                        // NEW: Single row drawing
+                        if (this.drawMode === 'drawSingleRow' && this.rowDrawStart) {
+                            const pos = this.stage.getPointerPosition();
+                            const stagePos = {
+                                x: (pos.x - this.stage.x()) / this.zoom,
+                                y: (pos.y - this.stage.y()) / this.zoom
+                            };
+                            this.updateSingleRowDraw(stagePos);
+                        }
+
+                        // NEW: Multiple rows drawing
+                        if (this.drawMode === 'drawMultiRows' && this.multiRowStart) {
+                            const pos = this.stage.getPointerPosition();
+                            const stagePos = {
+                                x: (pos.x - this.stage.x()) / this.zoom,
+                                y: (pos.y - this.stage.y()) / this.zoom
+                            };
+                            this.updateMultiRowDraw(stagePos);
+                        }
                     });
 
                     // Mouse up handler for circle drawing and box selection
@@ -1249,6 +2014,21 @@
                             this.tempLine = null;
                             this.drawLayer.destroyChildren();
                             this.drawLayer.batchDraw();
+                        }
+
+                        // NEW: Finish rectangle section drawing
+                        if (this.drawMode === 'drawRect' && this.drawRectStart) {
+                            this.finishRectDraw();
+                        }
+
+                        // NEW: Finish single row drawing
+                        if (this.drawMode === 'drawSingleRow' && this.rowDrawStart) {
+                            this.finishSingleRowDraw();
+                        }
+
+                        // NEW: Finish multiple rows drawing
+                        if (this.drawMode === 'drawMultiRows' && this.multiRowStart) {
+                            this.finishMultiRowDraw();
                         }
 
                         // End rectangle selection for seats (works with Ctrl+drag in any mode)
@@ -2883,6 +3663,9 @@
                         // Show curve handle for selected section
                         this.showCurveHandle(sectionId, true);
                         this.layer.batchDraw();
+
+                        // Update right sidebar properties
+                        this.updateSectionPropertiesFromSelection();
                     }
                 },
 
@@ -3014,20 +3797,38 @@
                     this.tempLine = null;
                     this.circleStart = null;
                     this.tempCircle = null;
+
+                    // Clean up new drawing state
+                    this.tempDrawRect = null;
+                    this.drawRectStart = null;
+                    this.tempRowLine = null;
+                    this.rowDrawStart = null;
+                    this.tempRowSeats = [];
+                    this.tempMultiRowRect = null;
+                    this.multiRowStart = null;
+                    this.tempMultiRowSeats = [];
+
                     this.drawLayer.destroyChildren();
                     this.drawLayer.batchDraw();
 
                     // Enable stage dragging in select and multiselect modes
-                    this.stage.draggable(mode === 'select' || mode === 'multiselect');
+                    const selectModes = ['select', 'multiselect'];
+                    this.stage.draggable(selectModes.includes(mode));
 
-                    // Disable transformer in non-select modes
-                    if (mode !== 'select') {
+                    // Disable transformer in non-select modes (but keep selection when drawing in section)
+                    const seatDrawModes = ['drawSingleRow', 'drawMultiRows', 'drawRoundTable', 'drawRectTable'];
+                    if (mode !== 'select' && !seatDrawModes.includes(mode)) {
                         this.transformer.nodes([]);
                         this.selectedSection = null;
                     }
 
-                    // Clear selection when changing modes (except multiselect)
-                    if (mode !== 'multiselect' && mode !== 'select') {
+                    // Update section properties when selecting
+                    if (mode === 'select' && this.selectedSection) {
+                        this.updateSectionPropertiesFromSelection();
+                    }
+
+                    // Clear selection when changing modes (except multiselect and seat drawing modes)
+                    if (!selectModes.includes(mode) && !seatDrawModes.includes(mode)) {
                         this.clearSelection();
                     }
                 },

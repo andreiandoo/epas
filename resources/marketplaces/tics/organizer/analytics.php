@@ -979,7 +979,7 @@ include __DIR__ . '/../includes/organizer-head.php';
             dates: ['1 Ian','2 Ian','3 Ian','4 Ian','5 Ian','6 Ian','7 Ian','8 Ian','9 Ian','10 Ian','11 Ian','12 Ian','13 Ian','14 Ian','15 Ian','16 Ian','17 Ian','18 Ian','19 Ian','20 Ian','21 Ian','22 Ian','23 Ian','24 Ian','25 Ian','26 Ian','27 Ian','28 Ian','29 Ian','30 Ian','31 Ian'],
             revenue: [18200,22400,19800,28500,32100,25600,21300,24800,27900,23100,31200,35800,29400,26700,22100,28900,33400,38200,31500,27800,24600,29100,34700,41200,36800,32400,28100,25900,30200,35600,38900],
             tickets: [95,128,112,158,182,145,118,138,156,130,175,198,165,148,124,160,186,212,176,154,138,162,192,228,204,180,156,144,168,198,216],
-            refunds: [0,420,0,0,850,0,180,0,0,520,0,0,380,0,0,640,0,280,0,0,450,0,0,720,0,0,380,0,0,560,0],
+            refunds: [0,85,0,0,120,0,45,0,0,95,0,0,70,0,0,110,0,55,0,0,80,0,0,130,0,0,65,0,0,100,0],
             views: [1850,2240,1980,2650,3120,2560,2130,2480,2790,2310,2920,3380,2940,2670,2210,2890,3340,3820,3150,2780,2460,2910,3470,4120,3680,3240,2810,2590,3020,3560,3890]
         };
 
@@ -1083,6 +1083,9 @@ include __DIR__ . '/../includes/organizer-head.php';
                         borderRadiusWhenStacked: 'last'
                     }
                 },
+                dataLabels: {
+                    enabled: false
+                },
                 xaxis: {
                     categories: chartData.dates,
                     labels: {
@@ -1104,7 +1107,8 @@ include __DIR__ . '/../includes/organizer-head.php';
                         labels: {
                             style: { colors: '#9ca3af', fontSize: '11px' },
                             formatter: (val) => (val / 1000).toFixed(0) + 'K'
-                        }
+                        },
+                        max: 55000
                     },
                     {
                         opposite: true,
@@ -1113,7 +1117,8 @@ include __DIR__ . '/../includes/organizer-head.php';
                             style: { colors: '#9ca3af', fontSize: '11px' },
                             formatter: (val) => (val / 1000).toFixed(0) + 'K'
                         },
-                        show: chartMetrics.views
+                        show: chartMetrics.views,
+                        max: 5000
                     }
                 ],
                 stroke: {
@@ -1195,7 +1200,8 @@ include __DIR__ . '/../includes/organizer-head.php';
                         labels: {
                             style: { colors: '#9ca3af', fontSize: '11px' },
                             formatter: (val) => (val / 1000).toFixed(0) + 'K'
-                        }
+                        },
+                        max: 55000
                     },
                     {
                         opposite: true,
@@ -1204,7 +1210,8 @@ include __DIR__ . '/../includes/organizer-head.php';
                             style: { colors: '#9ca3af', fontSize: '11px' },
                             formatter: (val) => (val / 1000).toFixed(0) + 'K'
                         },
-                        show: chartMetrics.views
+                        show: chartMetrics.views,
+                        max: 5000
                     }
                 ]
             });
@@ -1215,35 +1222,35 @@ include __DIR__ . '/../includes/organizer-head.php';
         let currentPeriod = '30d';
         const eventPublishDate = new Date('2025-12-01'); // Event publish date
 
-        // Generate daily data for different periods (per-day values, not cumulative)
+        // Static pre-defined data for different periods (fast load)
         const periodData = {
             '7d': {
-                dates: generateDailyDates('2026-01-25', 7),
-                revenue: generateDailyValues(20000, 55000, 7, 0.35),
-                tickets: generateDailyValues(120, 350, 7, 0.35),
-                refunds: generateRefundData(7, 5000),
-                views: generateDailyValues(1500, 4500, 7, 0.4)
+                dates: ['25 Ian','26 Ian','27 Ian','28 Ian','29 Ian','30 Ian','31 Ian'],
+                revenue: [36800,32400,28100,25900,30200,35600,38900],
+                tickets: [204,180,156,144,168,198,216],
+                refunds: [0,0,65,0,0,100,0],
+                views: [3680,3240,2810,2590,3020,3560,3890]
             },
             '30d': {
-                dates: generateDailyDates('2026-01-01', 31),
-                revenue: generateDailyValues(15000, 45000, 31, 0.4),
-                tickets: generateDailyValues(80, 280, 31, 0.4),
-                refunds: generateRefundData(31, 4000),
-                views: generateDailyValues(1200, 3800, 31, 0.45)
+                dates: ['1 Ian','2 Ian','3 Ian','4 Ian','5 Ian','6 Ian','7 Ian','8 Ian','9 Ian','10 Ian','11 Ian','12 Ian','13 Ian','14 Ian','15 Ian','16 Ian','17 Ian','18 Ian','19 Ian','20 Ian','21 Ian','22 Ian','23 Ian','24 Ian','25 Ian','26 Ian','27 Ian','28 Ian','29 Ian','30 Ian','31 Ian'],
+                revenue: [18200,22400,19800,28500,32100,25600,21300,24800,27900,23100,31200,35800,29400,26700,22100,28900,33400,38200,31500,27800,24600,29100,34700,41200,36800,32400,28100,25900,30200,35600,38900],
+                tickets: [95,128,112,158,182,145,118,138,156,130,175,198,165,148,124,160,186,212,176,154,138,162,192,228,204,180,156,144,168,198,216],
+                refunds: [0,85,0,0,120,0,45,0,0,95,0,0,70,0,0,110,0,55,0,0,80,0,0,130,0,0,65,0,0,100,0],
+                views: [1850,2240,1980,2650,3120,2560,2130,2480,2790,2310,2920,3380,2940,2670,2210,2890,3340,3820,3150,2780,2460,2910,3470,4120,3680,3240,2810,2590,3020,3560,3890]
             },
             '90d': {
-                dates: generateDailyDates('2025-11-03', 90),
-                revenue: generateDailyValues(8000, 50000, 90, 0.5),
-                tickets: generateDailyValues(40, 300, 90, 0.5),
-                refunds: generateRefundData(90, 4500),
-                views: generateDailyValues(800, 4200, 90, 0.5)
+                dates: ['3 Nov','10 Nov','17 Nov','24 Nov','1 Dec','8 Dec','15 Dec','22 Dec','29 Dec','5 Ian','12 Ian','19 Ian','26 Ian','31 Ian'],
+                revenue: [8500,12400,15800,19200,22600,26800,31200,28400,25100,32100,35800,38200,32400,38900],
+                tickets: [45,68,85,102,124,148,172,156,138,182,198,212,180,216],
+                refunds: [0,35,0,60,0,0,90,0,0,120,0,55,0,0],
+                views: [980,1420,1850,2180,2560,2940,3280,2980,2640,3120,3380,3820,3240,3890]
             },
             'all': {
-                dates: generateDailyDates('2025-12-01', 62),
-                revenue: generateDailyValues(10000, 48000, 62, 0.45),
-                tickets: generateDailyValues(60, 290, 62, 0.45),
-                refunds: generateRefundData(62, 4200),
-                views: generateDailyValues(1000, 4000, 62, 0.45)
+                dates: ['1 Dec','8 Dec','15 Dec','22 Dec','29 Dec','5 Ian','12 Ian','19 Ian','26 Ian','31 Ian'],
+                revenue: [22600,26800,31200,28400,25100,32100,35800,38200,32400,38900],
+                tickets: [124,148,172,156,138,182,198,212,180,216],
+                refunds: [0,0,90,0,0,120,0,55,0,0],
+                views: [2560,2940,3280,2980,2640,3120,3380,3820,3240,3890]
             }
         };
 
