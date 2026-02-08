@@ -1,4 +1,5 @@
-<div class="seating-designer-root space-y-6"
+<x-filament-panels::page>
+    <div class="seating-designer-root space-y-6"
          wire:ignore.self
          x-cloak
          x-data="{
@@ -4721,4 +4722,5 @@
             };
         // Methods are now available globally - the init() in the Alpine component will poll for them
         </script>
-</div>
+    </div>
+</x-filament-panels::page>
