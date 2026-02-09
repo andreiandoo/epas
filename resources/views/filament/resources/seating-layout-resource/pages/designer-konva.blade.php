@@ -839,6 +839,10 @@
             setDrawMode(mode) {
                 this.drawMode = mode;
                 this.updateSectionsDraggable();
+                // Also update stage draggable - only allow panning in select mode
+                if (this.stage) {
+                    this.stage.draggable(mode === 'select');
+                }
             },
             addTextAtPosition(pos) {
                 this.shapeConfigType = 'text';
