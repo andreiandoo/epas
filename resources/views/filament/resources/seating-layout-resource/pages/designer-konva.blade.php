@@ -247,21 +247,93 @@
             {{-- CENTER - Canvas Area --}}
             <div class="flex-1 min-w-0">
                 <div class="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                    {{-- Top bar with title and quick actions --}}
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-3">
                             <h3 class="text-base font-semibold text-gray-900">Canvas</h3>
-                            <span class="px-2 py-0.5 text-xs bg-gray-100 rounded text-gray-600" x-text="`${canvasWidth} x ${canvasHeight}px`"></span>
+                            <span class="px-2 py-0.5 text-xs bg-gray-100 rounded text-gray-600" x-text="`${canvasWidth}×${canvasHeight}px`"></span>
                         </div>
                         <div class="flex items-center gap-2 text-xs text-gray-500">
-                            <span x-text="`${sections.length} sectiuni`"></span>
-                            <span>|</span>
+                            <span x-text="`${sections.length} secțiuni`"></span>
+                            <span>•</span>
                             <span x-text="`${getTotalSeats()} locuri`"></span>
                         </div>
                     </div>
 
-                    {{-- Canvas placeholder --}}
+                    {{-- Seats selection toolbar --}}
+                    <div x-show="selectedSeats.length > 0" x-transition class="flex items-center gap-4 p-3 mb-3 border border-orange-200 rounded-lg bg-orange-50">
+                        <span class="text-sm font-medium text-orange-800" x-text="`${selectedSeats.length} locuri selectate`"></span>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <select x-model="assignToSectionId" class="text-sm text-gray-900 bg-white border-gray-300 rounded-md">
+                                <option value="">Alege secțiunea...</option>
+                                @foreach($sections as $section)
+                                    @if($section['section_type'] === 'standard')
+                                        <option value="{{ $section['id'] }}">{{ $section['name'] }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                            <input type="text" x-model="assignToRowLabel" placeholder="Rând (ex: A, 1)" class="w-24 text-sm text-gray-900 bg-white border-gray-300 rounded-md">
+                            <button x-on:click="assignSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-orange-600 rounded-md hover:bg-orange-700">Atribuie</button>
+                            <button x-on:click="deleteSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-red-600 rounded-md hover:bg-red-700">Șterge</button>
+                            <button x-on:click="clearSelection" type="button" class="px-3 py-1 text-sm text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">Anulează</button>
+                        </div>
+                    </div>
+
+                    {{-- Rows selection toolbar --}}
+                    <div x-show="selectedRows.length > 0" x-transition class="flex items-center gap-4 p-3 mb-3 border border-blue-200 rounded-lg bg-blue-50">
+                        <span class="text-sm font-medium text-blue-800" x-text="`${selectedRows.length} rânduri selectate`"></span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-blue-600">Aliniere:</span>
+                            <button x-on:click="alignSelectedRows('left')" type="button" class="p-1 text-blue-700 bg-blue-100 rounded hover:bg-blue-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h14"></path></svg>
+                            </button>
+                            <button x-on:click="alignSelectedRows('center')" type="button" class="p-1 text-blue-700 bg-blue-100 rounded hover:bg-blue-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M5 18h14"></path></svg>
+                            </button>
+                            <button x-on:click="alignSelectedRows('right')" type="button" class="p-1 text-blue-700 bg-blue-100 rounded hover:bg-blue-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M6 18h14"></path></svg>
+                            </button>
+                            <button x-on:click="clearRowSelection" type="button" class="px-2 py-1 text-sm text-gray-700 bg-gray-200 rounded hover:bg-gray-300">Anulează</button>
+                        </div>
+                    </div>
+
+                    {{-- Background controls (collapsible) --}}
+                    <div x-show="showBackgroundControls" x-transition class="p-3 mb-3 border border-indigo-200 rounded-lg bg-indigo-50">
+                        <div class="flex flex-wrap items-center gap-4">
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs font-medium text-indigo-800">Culoare:</label>
+                                <input type="color" x-model="backgroundColor" x-on:input="updateBackgroundColor && updateBackgroundColor()" class="w-8 h-8 border border-gray-300 rounded cursor-pointer">
+                                <button x-on:click="saveBackgroundColor && saveBackgroundColor()" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Salvează</button>
+                            </div>
+                            <div x-show="backgroundUrl" class="flex flex-wrap items-center gap-3">
+                                <label class="flex items-center gap-1 cursor-pointer">
+                                    <input type="checkbox" x-model="backgroundVisible" x-on:change="toggleBackgroundVisibility && toggleBackgroundVisibility()" class="w-4 h-4 text-indigo-600 border-gray-300 rounded">
+                                    <span class="text-xs text-indigo-800">Imagine</span>
+                                </label>
+                                <div class="flex items-center gap-1">
+                                    <label class="text-xs text-indigo-700">Scală:</label>
+                                    <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.01" x-on:input="updateBackgroundScale && updateBackgroundScale()" class="w-16" :disabled="!backgroundVisible">
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <label class="text-xs text-indigo-700">Opacitate:</label>
+                                    <input type="range" x-model="backgroundOpacity" min="0" max="1" step="0.01" x-on:input="updateBackgroundOpacity && updateBackgroundOpacity()" class="w-16" :disabled="!backgroundVisible">
+                                </div>
+                                <button x-on:click="saveBackgroundSettings && saveBackgroundSettings()" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Salvează</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Canvas --}}
                     <div class="overflow-hidden bg-gray-100 border-2 border-gray-300 rounded-lg">
                         <div id="konva-container" wire:ignore style="width: 100%; height: 600px; background: #f3f4f6;"></div>
+                    </div>
+
+                    {{-- Keyboard shortcuts --}}
+                    <div class="flex flex-wrap items-center justify-center gap-3 mt-2 text-xs text-gray-500">
+                        <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Del</kbd> Șterge</span>
+                        <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Esc</kbd> Anulează</span>
+                        <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Scroll</kbd> Zoom</span>
+                        <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Drag</kbd> Pan</span>
                     </div>
                 </div>
             </div>
