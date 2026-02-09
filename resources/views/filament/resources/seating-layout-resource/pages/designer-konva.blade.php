@@ -351,13 +351,35 @@
                     this.updateSectionPosition(section.id, Math.round(topLeftX), Math.round(topLeftY));
                 });
 
+                // Real-time update during transform
+                group.on('transform', () => {
+                    if (this.selectedSection === section.id) {
+                        // Update sidebar values in real-time
+                        const scaleX = group.scaleX();
+                        const scaleY = group.scaleY();
+                        this.sectionWidth = Math.round(rect.width() * scaleX);
+                        this.sectionHeight = Math.round(rect.height() * scaleY);
+                        this.sectionRotation = Math.round(group.rotation());
+                    }
+                });
+
                 group.on('transformend', () => {
                     const scaleX = group.scaleX();
                     const scaleY = group.scaleY();
-                    group.scaleX(1);
-                    group.scaleY(1);
+                    // Apply scale to rect dimensions
                     rect.width(rect.width() * scaleX);
                     rect.height(rect.height() * scaleY);
+                    // Update offset for center rotation
+                    group.offsetX(rect.width() / 2);
+                    group.offsetY(rect.height() / 2);
+                    // Reset scale on group
+                    group.scaleX(1);
+                    group.scaleY(1);
+                    // Update sidebar final values
+                    this.sectionWidth = Math.round(rect.width());
+                    this.sectionHeight = Math.round(rect.height());
+                    this.sectionRotation = Math.round(group.rotation());
+                    // Save to backend
                     this.updateSectionTransform(section.id, group);
                 });
 
@@ -666,13 +688,15 @@
                 this.tempRowSeats = [];
             },
             updateDrawRow(pos) {
-                // Clear temp seats
+                // Clear temp seats - BOTH the Konva circles AND the array
                 this.drawLayer.find('.temp-seat').forEach(s => s.destroy());
+                this.tempRowSeats = [];
 
                 const dx = pos.x - this.rowDrawStart.x;
                 const dy = pos.y - this.rowDrawStart.y;
                 const length = Math.sqrt(dx * dx + dy * dy);
-                const numSeats = Math.max(1, Math.floor(length / this.rowSeatSpacing));
+                const spacing = Math.max(15, this.rowSeatSpacing || 20); // Minimum 15px spacing
+                const numSeats = Math.max(1, Math.min(100, Math.floor(length / spacing))); // Max 100 seats per row
 
                 for (let i = 0; i < numSeats; i++) {
                     const t = numSeats > 1 ? i / (numSeats - 1) : 0;
@@ -949,9 +973,12 @@
             },
             updateSectionTransform(sectionId, group) {
                 const rect = group.findOne('Rect');
+                // Convert center position back to top-left for storage
+                const topLeftX = group.x() - group.offsetX();
+                const topLeftY = group.y() - group.offsetY();
                 this.$wire.updateSectionTransform(sectionId, {
-                    x_position: Math.round(group.x()),
-                    y_position: Math.round(group.y()),
+                    x_position: Math.round(topLeftX),
+                    y_position: Math.round(topLeftY),
                     width: Math.round(rect.width()),
                     height: Math.round(rect.height()),
                     rotation: Math.round(group.rotation())
