@@ -339,10 +339,235 @@
             </div>
 
             {{-- RIGHT SIDEBAR - Properties Panel --}}
-            <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-80" x-show="selectedSection || addSeatsMode" x-transition>
-                <h4 class="pb-2 text-sm font-bold tracking-wide text-gray-700 uppercase border-b border-gray-200">Proprietati</h4>
-                <div class="text-sm text-gray-600">
-                    <p>Sectiune selectata: <span x-text="selectedSection || 'Niciuna'"></span></p>
+            <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-80" x-show="selectedSection || selectedDrawnRow || addSeatsMode" x-transition>
+                {{-- Add Seats Mode Panel --}}
+                <template x-if="addSeatsMode && selectedSection && !selectedDrawnRow">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between pb-2 border-b border-purple-200">
+                            <h4 class="text-sm font-bold tracking-wide text-purple-700 uppercase">Adaugă Locuri</h4>
+                            <button x-on:click="addSeatsMode = false" class="text-purple-400 hover:text-purple-600">✕</button>
+                        </div>
+
+                        {{-- Selected Section Info --}}
+                        <div class="p-3 rounded-lg bg-purple-50">
+                            <div class="text-xs font-semibold text-purple-600">Secțiune selectată</div>
+                            <div class="text-sm font-medium text-purple-900" x-text="getSelectedSectionData()?.name || 'Necunoscut'"></div>
+                        </div>
+
+                        {{-- Row Settings --}}
+                        <div class="p-3 space-y-3 border border-purple-200 rounded-lg bg-purple-50">
+                            <div class="text-xs font-semibold text-purple-700 uppercase">Setări Rând</div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-purple-600">Dimensiune loc</label>
+                                    <input type="number" x-model="rowSeatSize" min="8" max="40" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-purple-600">Spațiu locuri</label>
+                                    <input type="number" x-model="rowSeatSpacing" min="0" max="50" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-purple-600">Spațiu între rânduri</label>
+                                <input type="number" x-model="rowSpacing" min="10" max="100" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                        </div>
+
+                        {{-- Numbering Settings --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-blue-50">
+                            <div class="text-xs font-semibold text-blue-700 uppercase">Numerotare</div>
+                            <div>
+                                <label class="block text-xs text-blue-600">Mod numerotare rând</label>
+                                <select x-model="rowNumberingMode" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <option value="numeric">Numere (1, 2, 3...)</option>
+                                    <option value="alpha">Litere (A, B, C...)</option>
+                                    <option value="roman">Romane (I, II, III...)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-blue-600">Direcție numerotare</label>
+                                <select x-model="rowNumberingDirection" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <option value="ltr">Stânga → Dreapta</option>
+                                    <option value="rtl">Dreapta → Stânga</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {{-- Instructions --}}
+                        <div class="p-3 text-xs text-gray-600 rounded-lg bg-gray-50">
+                            <p class="font-medium">Instrucțiuni:</p>
+                            <ul class="mt-1 ml-4 list-disc">
+                                <li>Selectează tipul de locuri din stânga</li>
+                                <li>Click pe canvas pentru a plasa</li>
+                                <li>Trage pentru a desena rânduri</li>
+                            </ul>
+                        </div>
+                    </div>
+                </template>
+
+                {{-- Section Properties (hidden when in addSeats mode) --}}
+                <template x-if="selectedSection && !selectedDrawnRow && !addSeatsMode">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between pb-2 border-b border-gray-200">
+                            <h4 class="text-sm font-bold tracking-wide text-gray-700 uppercase">Proprietăți Secțiune</h4>
+                            <button x-on:click="selectedSection = null" class="text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
+
+                        {{-- Section Name --}}
+                        <div>
+                            <label class="block mb-1 text-xs font-medium text-gray-600">Nume Secțiune</label>
+                            <div class="text-sm font-semibold text-gray-900" x-text="getSelectedSectionData()?.name || 'Fără nume'"></div>
+                        </div>
+
+                        {{-- Add Seats Button --}}
+                        <button x-on:click="addSeatsMode = true" type="button"
+                            class="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md"
+                            x-show="getSelectedSectionData()?.section_type === 'standard'">
+                            <x-svg-icon name="konvaseats" class="w-5 h-5" />
+                            Adaugă Locuri
+                        </button>
+
+                        {{-- Transform Section --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-gray-50">
+                            <div class="text-xs font-semibold text-gray-600 uppercase">Transformare</div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500">Lățime</label>
+                                    <input type="number" x-model="sectionWidth" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500">Înălțime</label>
+                                    <input type="number" x-model="sectionHeight" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500">Rotație (°)</label>
+                                <input type="range" x-model="sectionRotation" min="0" max="360" class="w-full">
+                                <div class="text-xs text-center text-gray-500" x-text="sectionRotation + '°'"></div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500">Colțuri rotunjite</label>
+                                <input type="range" x-model="sectionCornerRadius" min="0" max="50" class="w-full">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500">Scalare</label>
+                                <input type="range" x-model="sectionScale" min="0.5" max="2" step="0.1" class="w-full">
+                                <div class="text-xs text-center text-gray-500" x-text="(sectionScale * 100).toFixed(0) + '%'"></div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500">Curbură</label>
+                                <input type="range" x-model="sectionCurve" min="-100" max="100" class="w-full">
+                                <div class="text-xs text-center text-gray-500" x-text="sectionCurve"></div>
+                            </div>
+                        </div>
+
+                        {{-- Label Section --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-gray-50">
+                            <div class="text-xs font-semibold text-gray-600 uppercase">Etichetă</div>
+                            <div>
+                                <label class="block text-xs text-gray-500">Nume afișat</label>
+                                <input type="text" x-model="sectionLabel" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded" placeholder="Nume secțiune">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500">Dimensiune font</label>
+                                <input type="number" x-model="sectionFontSize" min="8" max="72" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                        </div>
+
+                        {{-- Colors --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-gray-50">
+                            <div class="text-xs font-semibold text-gray-600 uppercase">Culori</div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500">Fundal</label>
+                                    <input type="color" x-model="editColorHex" class="w-full h-8 border rounded cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500">Locuri</label>
+                                    <input type="color" x-model="editSeatColor" class="w-full h-8 border rounded cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Section Info --}}
+                        <div class="p-3 space-y-1 text-xs rounded-lg bg-gray-50">
+                            <div class="flex justify-between"><span class="text-gray-500">Rânduri:</span> <span class="font-medium" x-text="getSelectedSectionData()?.rows?.length || 0"></span></div>
+                            <div class="flex justify-between"><span class="text-gray-500">Locuri:</span> <span class="font-medium" x-text="getSelectedSectionSeatsCount && getSelectedSectionSeatsCount() || 0"></span></div>
+                            <div class="flex justify-between"><span class="text-gray-500">Poziție:</span> <span class="font-medium" x-text="`${Math.round(getSelectedSectionData()?.x_position || 0)}, ${Math.round(getSelectedSectionData()?.y_position || 0)}`"></span></div>
+                        </div>
+                    </div>
+                </template>
+
+                {{-- Row Properties (when a row is selected after drawing) --}}
+                <template x-if="selectedDrawnRow">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between pb-2 border-b border-gray-200">
+                            <h4 class="text-sm font-bold tracking-wide text-gray-700 uppercase">Proprietăți Rând</h4>
+                            <button x-on:click="selectedDrawnRow = null" class="text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
+
+                        {{-- Row Settings --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-purple-50">
+                            <div class="text-xs font-semibold text-purple-700 uppercase">Rând</div>
+                            <div>
+                                <label class="block text-xs text-purple-600">Număr locuri</label>
+                                <input type="number" x-model="drawnRowSeats" min="1" max="100" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-purple-600">Curbură</label>
+                                <input type="range" x-model="drawnRowCurve" min="-50" max="50" class="w-full">
+                                <div class="text-xs text-center text-purple-500" x-text="drawnRowCurve"></div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-purple-600">Spațiu între locuri</label>
+                                <input type="number" x-model="drawnRowSpacing" min="0" max="50" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                        </div>
+
+                        {{-- Numbering --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-blue-50">
+                            <div class="text-xs font-semibold text-blue-700 uppercase">Numerotare</div>
+                            <div>
+                                <label class="block text-xs text-blue-600">Mod numerotare rând</label>
+                                <select x-model="rowNumberingMode" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <option value="numeric">Numere (1, 2, 3...)</option>
+                                    <option value="alpha">Litere (A, B, C...)</option>
+                                    <option value="roman">Romane (I, II, III...)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-blue-600">Începe de la</label>
+                                <input type="number" x-model="rowStartNumber" min="1" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-blue-600">Direcție</label>
+                                <select x-model="rowNumberingDirection" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <option value="ltr">Stânga → Dreapta</option>
+                                    <option value="rtl">Dreapta → Stânga</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {{-- Seat Naming --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-green-50">
+                            <div class="text-xs font-semibold text-green-700 uppercase">Nume Loc</div>
+                            <div>
+                                <label class="block text-xs text-green-600">Tip numerotare</label>
+                                <select x-model="seatNumberingType" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <option value="numeric">Numere (1, 2, 3...)</option>
+                                    <option value="alpha">Litere (A, B, C...)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                {{-- Empty state when nothing selected --}}
+                <div x-show="!selectedSection && !selectedDrawnRow && !addSeatsMode" class="py-8 text-center">
+                    <svg class="w-12 h-12 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-500">Selectează o secțiune pentru a vedea proprietățile</p>
                 </div>
             </div>
         </div>
