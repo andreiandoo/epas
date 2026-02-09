@@ -455,6 +455,38 @@
                 this.transformer.nodes([]);
                 this.layer.batchDraw();
             },
+            applySectionChanges() {
+                if (!this.selectedSection) return;
+
+                // Update via Livewire
+                this.$wire.updateSection(this.selectedSection, {
+                    width: parseInt(this.sectionWidth),
+                    height: parseInt(this.sectionHeight),
+                    rotation: parseInt(this.sectionRotation),
+                    x_position: this.getSelectedSectionData()?.x_position,
+                    y_position: this.getSelectedSectionData()?.y_position,
+                });
+
+                // Update colors separately
+                this.$wire.updateSectionColors(
+                    this.selectedSection,
+                    this.editColorHex,
+                    this.editSeatColor
+                );
+
+                // Update local section data
+                const section = this.sections.find(s => s.id === this.selectedSection);
+                if (section) {
+                    section.width = parseInt(this.sectionWidth);
+                    section.height = parseInt(this.sectionHeight);
+                    section.rotation = parseInt(this.sectionRotation);
+                    section.color_hex = this.editColorHex;
+                    section.seat_color = this.editSeatColor;
+                }
+
+                // Redraw sections on canvas
+                this.drawSections();
+            },
             showSectionContextMenu(e, section) {
                 const containerRect = this.stage.container().getBoundingClientRect();
                 this.contextMenuX = containerRect.left + e.evt.offsetX;
@@ -936,13 +968,16 @@
                 <div class="pt-3 space-y-2 border-t border-gray-200">
                     <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Vedere</div>
                     <div class="flex items-center gap-2">
+                        <button x-on:click="zoomOut()" type="button" class="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded">-</button>
                         <span class="flex-1 text-sm font-medium text-center" x-text="`${Math.round(zoom * 100)}%`"></span>
+                        <button x-on:click="zoomIn()" type="button" class="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded">+</button>
+                        <button x-on:click="resetView()" type="button" class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Reset</button>
                     </div>
                     <div class="flex gap-1">
-                        <button x-on:click="showGrid = !showGrid" type="button" class="flex items-center flex-1 gap-1 px-2 py-1 text-xs rounded-md" :class="showGrid ? 'bg-blue-600 text-white' : 'bg-gray-100'">
+                        <button x-on:click="toggleGrid()" type="button" class="flex items-center flex-1 gap-1 px-2 py-1 text-xs rounded-md" :class="showGrid ? 'bg-blue-600 text-white' : 'bg-gray-100'">
                             <x-svg-icon name="konvagrid" class="w-3 h-3" /> Grid
                         </button>
-                        <button x-on:click="snapToGrid = !snapToGrid" type="button" class="flex items-center flex-1 gap-1 px-2 py-1 text-xs rounded-md" :class="snapToGrid ? 'bg-blue-600 text-white' : 'bg-gray-100'">
+                        <button x-on:click="toggleSnapToGrid()" type="button" class="flex items-center flex-1 gap-1 px-2 py-1 text-xs rounded-md" :class="snapToGrid ? 'bg-blue-600 text-white' : 'bg-gray-100'">
                             Snap
                         </button>
                     </div>
@@ -959,7 +994,7 @@
                         class="flex items-center w-full gap-2 px-3 py-2 text-sm font-medium transition-all bg-gray-50 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-100">
                         Export
                     </button>
-                    <button x-on:click="selectedSection = null" type="button" x-show="selectedSection"
+                    <button x-on:click="deleteSelected()" type="button" x-show="selectedSection"
                         class="flex items-center w-full gap-2 px-3 py-2 text-sm font-medium text-white transition-all bg-red-600 rounded-lg hover:bg-red-700">
                         Sterge Sectiunea
                     </button>
@@ -1210,6 +1245,15 @@
                                 </div>
                             </div>
                         </div>
+
+                        {{-- Apply Button --}}
+                        <button x-on:click="applySectionChanges()" type="button"
+                            class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold text-white transition-all bg-blue-600 rounded-lg hover:bg-blue-700">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Aplică Modificările
+                        </button>
 
                         {{-- Section Info --}}
                         <div class="p-3 space-y-1 text-xs rounded-lg bg-gray-50">
