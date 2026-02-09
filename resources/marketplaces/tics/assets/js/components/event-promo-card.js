@@ -227,6 +227,35 @@ const TicsEventPromoCard = {
             soldPercent: apiEvent.sold_percentage || 0,
             _raw: apiEvent
         };
+    },
+
+    /**
+     * Default render method - renders a city/location promo card
+     * Used in city pages for inline promotional content
+     * @returns {string} HTML string
+     */
+    render() {
+        return `
+            <div class="rounded-2xl overflow-hidden relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white p-6 flex flex-col justify-between min-h-[320px]">
+                <div>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-xs font-semibold rounded-full mb-4">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        Recomandare AI
+                    </span>
+                    <h3 class="text-xl font-bold mb-2">Descoperă evenimente noi</h3>
+                    <p class="text-sm text-white/80 mb-3">Bazat pe preferințele tale, am găsit evenimente care ți-ar putea plăcea.</p>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="w-2 h-2 bg-green-400 rounded-full pulse"></span>
+                        <span class="text-xs text-white/70">15 evenimente noi în zona ta</span>
+                    </div>
+                    <a href="/evenimente" class="w-full py-3 bg-white text-indigo-600 font-semibold rounded-xl hover:bg-white/90 transition-colors text-center block">
+                        Vezi recomandări →
+                    </a>
+                </div>
+            </div>
+        `;
     }
 };
 

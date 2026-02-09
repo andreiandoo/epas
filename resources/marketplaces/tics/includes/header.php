@@ -49,7 +49,7 @@ if ($isLoggedIn && !isset($loggedInUser)) {
                     <svg class="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                    <input type="text" id="searchInput" placeholder="Caută evenimente, artiști, locații..." class="flex-1 bg-transparent outline-none text-gray-900 placeholder:text-gray-400">
+                    <input type="text" id="searchInput" name="tics_search" placeholder="Caută evenimente, artiști, locații..." class="flex-1 bg-transparent outline-none text-gray-900 placeholder:text-gray-400" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other">
                     <kbd class="hidden lg:inline-flex px-2 py-1 bg-gray-200 rounded text-xs text-gray-500 ml-2">⌘K</kbd>
                 </div>
 
@@ -129,12 +129,70 @@ if ($isLoggedIn && !isset($loggedInUser)) {
 
                 <?php if ($isLoggedIn): ?>
                 <!-- Logged in user: Notifications + User Menu -->
-                <button class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                    </svg>
-                    <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                </button>
+                <div class="relative" id="headerNotificationsMenu">
+                    <button onclick="toggleNotificationsDropdown()" class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        <span id="notificationBadge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+
+                    <!-- Notifications Dropdown -->
+                    <div id="notificationsDropdown" class="hidden absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-900">Notificări</h3>
+                            <button onclick="markAllNotificationsRead()" class="text-xs text-indigo-600 hover:underline">Marchează toate citite</button>
+                        </div>
+                        <div id="notificationsList" class="max-h-80 overflow-y-auto">
+                            <!-- Notification items will be here -->
+                            <a href="/bilete/coldplay-music-of-the-spheres-bucuresti" onclick="markNotificationRead(1)" class="notification-item flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors border-b border-gray-50 unread" data-id="1">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm text-gray-900 font-medium">Biletele tale sunt gata!</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">Coldplay - Music of the Spheres • 15 Iunie 2026</p>
+                                    <p class="text-xs text-gray-400 mt-1">Acum 2 ore</p>
+                                </div>
+                                <span class="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-2"></span>
+                            </a>
+                            <a href="/bilete/dua-lipa-bucuresti" onclick="markNotificationRead(2)" class="notification-item flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors border-b border-gray-50 unread" data-id="2">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm text-gray-900 font-medium">Dua Lipa vine în București!</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">Pe baza preferințelor tale • Early Bird disponibil</p>
+                                    <p class="text-xs text-gray-400 mt-1">Acum 5 ore</p>
+                                </div>
+                                <span class="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-2"></span>
+                            </a>
+                            <a href="/cont/comenzi" onclick="markNotificationRead(3)" class="notification-item flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors border-b border-gray-50" data-id="3">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm text-gray-600">Comanda #TCS-2024-1234 confirmată</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">2 bilete • 450 RON</p>
+                                    <p class="text-xs text-gray-400 mt-1">Ieri, 14:32</p>
+                                </div>
+                            </a>
+                            <a href="/cont/puncte" onclick="markNotificationRead(4)" class="notification-item flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors" data-id="4">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm text-gray-600">Ai primit 125 puncte bonus!</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">Soldut tău: 1.250 puncte</p>
+                                    <p class="text-xs text-gray-400 mt-1">Acum 3 zile</p>
+                                </div>
+                            </a>
+                        </div>
+                        <a href="/cont/notificari" class="block px-4 py-3 text-center text-sm font-medium text-indigo-600 hover:bg-gray-50 border-t border-gray-100">
+                            Vezi toate notificările →
+                        </a>
+                    </div>
+                </div>
 
                 <!-- User Menu Dropdown -->
                 <div class="relative" id="headerUserMenu">
@@ -179,12 +237,56 @@ if ($isLoggedIn && !isset($loggedInUser)) {
                 function toggleHeaderUserMenu() {
                     const dropdown = document.getElementById('headerUserDropdown');
                     dropdown.classList.toggle('hidden');
+                    // Close notifications if open
+                    document.getElementById('notificationsDropdown')?.classList.add('hidden');
                 }
+
+                function toggleNotificationsDropdown() {
+                    const dropdown = document.getElementById('notificationsDropdown');
+                    dropdown.classList.toggle('hidden');
+                    // Close user menu if open
+                    document.getElementById('headerUserDropdown')?.classList.add('hidden');
+                }
+
+                function markNotificationRead(id) {
+                    const item = document.querySelector(`.notification-item[data-id="${id}"]`);
+                    if (item) {
+                        item.classList.remove('unread');
+                        const dot = item.querySelector('.bg-indigo-500');
+                        if (dot) dot.remove();
+                    }
+                    updateNotificationBadge();
+                }
+
+                function markAllNotificationsRead() {
+                    document.querySelectorAll('.notification-item.unread').forEach(item => {
+                        item.classList.remove('unread');
+                        const dot = item.querySelector('.bg-indigo-500');
+                        if (dot) dot.remove();
+                    });
+                    updateNotificationBadge();
+                }
+
+                function updateNotificationBadge() {
+                    const unreadCount = document.querySelectorAll('.notification-item.unread').length;
+                    const badge = document.getElementById('notificationBadge');
+                    if (badge) {
+                        badge.style.display = unreadCount > 0 ? 'block' : 'none';
+                    }
+                }
+
                 document.addEventListener('click', function(e) {
-                    const menu = document.getElementById('headerUserMenu');
-                    const dropdown = document.getElementById('headerUserDropdown');
-                    if (menu && dropdown && !menu.contains(e.target)) {
-                        dropdown.classList.add('hidden');
+                    // Close user menu
+                    const userMenu = document.getElementById('headerUserMenu');
+                    const userDropdown = document.getElementById('headerUserDropdown');
+                    if (userMenu && userDropdown && !userMenu.contains(e.target)) {
+                        userDropdown.classList.add('hidden');
+                    }
+                    // Close notifications
+                    const notifMenu = document.getElementById('headerNotificationsMenu');
+                    const notifDropdown = document.getElementById('notificationsDropdown');
+                    if (notifMenu && notifDropdown && !notifMenu.contains(e.target)) {
+                        notifDropdown.classList.add('hidden');
                     }
                 });
                 </script>

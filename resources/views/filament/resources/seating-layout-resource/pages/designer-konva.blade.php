@@ -91,6 +91,7 @@
             rowNumberingMode: 'alpha',
             rowStartNumber: 1,
             rowNumberingDirection: 'ltr',
+            customRowLabel: '',
             seatNumberingType: 'numeric',
             currentDrawingShape: null,
             selectedRowForDrag: null,
@@ -315,10 +316,15 @@
                     section.rows.forEach(row => {
                         if (row.seats) {
                             row.seats.forEach(seat => {
+                                const seatX = parseFloat(seat.x) || 0;
+                                const seatY = parseFloat(seat.y) || 0;
+                                const seatRadius = 10;
+
+                                // Seat circle
                                 const seatCircle = new Konva.Circle({
-                                    x: parseFloat(seat.x) || 0,
-                                    y: parseFloat(seat.y) || 0,
-                                    radius: 8,
+                                    x: seatX,
+                                    y: seatY,
+                                    radius: seatRadius,
                                     fill: section.seat_color || '#22C55E',
                                     stroke: '#166534',
                                     strokeWidth: 1,
@@ -326,6 +332,20 @@
                                     name: 'seat'
                                 });
                                 group.add(seatCircle);
+
+                                // Seat label (number)
+                                const seatLabel = new Konva.Text({
+                                    x: seatX - seatRadius,
+                                    y: seatY - 5,
+                                    width: seatRadius * 2,
+                                    text: seat.label || '',
+                                    fontSize: 9,
+                                    fontFamily: 'Arial',
+                                    fill: '#1f2937',
+                                    align: 'center',
+                                    name: 'seat-label'
+                                });
+                                group.add(seatLabel);
                             });
                         }
                     });
@@ -728,7 +748,18 @@
                             x: seat.x - sectionX,
                             y: seat.y - sectionY
                         }));
-                        this.$wire.addSeatsToSection(this.selectedSection, relativeSeats);
+
+                        // Pass all settings to backend
+                        this.$wire.addRowWithSeats(this.selectedSection, relativeSeats, {
+                            numberingMode: this.rowNumberingMode,
+                            startNumber: this.rowStartNumber,
+                            seatNumberingType: this.seatNumberingType,
+                            seatNumberingDirection: this.rowNumberingDirection,
+                            customLabel: this.customRowLabel || null
+                        });
+
+                        // Clear custom label after use
+                        this.customRowLabel = '';
                     }
                 }
 
@@ -1324,19 +1355,26 @@
                         {{-- Row Settings --}}
                         <div class="p-3 space-y-3 border border-purple-200 rounded-lg bg-purple-50">
                             <div class="text-xs font-semibold text-purple-700 uppercase">Setări Rând</div>
+                            <div>
+                                <label class="block text-xs text-purple-600">Etichetă rând (opțional)</label>
+                                <input type="text" x-model="customRowLabel" placeholder="Ex: A, B, VIP..." class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
                                     <label class="block text-xs text-purple-600">Dimensiune loc</label>
-                                    <input type="number" x-model="rowSeatSize" min="8" max="40" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <input type="number" x-model.number="rowSeatSize" min="8" max="40" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <div class="mt-1 text-xs text-gray-500" x-text="`${rowSeatSize}px`"></div>
                                 </div>
                                 <div>
-                                    <label class="block text-xs text-purple-600">Spațiu locuri</label>
-                                    <input type="number" x-model="rowSeatSpacing" min="0" max="50" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <label class="block text-xs text-purple-600">Spațiu între locuri</label>
+                                    <input type="number" x-model.number="rowSeatSpacing" min="15" max="100" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <div class="mt-1 text-xs text-gray-500" x-text="`${rowSeatSpacing}px`"></div>
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-xs text-purple-600">Spațiu între rânduri</label>
-                                <input type="number" x-model="rowSpacing" min="10" max="100" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                <input type="number" x-model.number="rowSpacing" min="20" max="150" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                <div class="mt-1 text-xs text-gray-500" x-text="`${rowSpacing}px`"></div>
                             </div>
                         </div>
 

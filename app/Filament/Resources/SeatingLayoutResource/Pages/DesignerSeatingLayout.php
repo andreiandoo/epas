@@ -2084,10 +2084,17 @@ class DesignerSeatingLayout extends Page
         $numberingMode = $settings['numberingMode'] ?? 'alpha';
         $startNumber = $settings['startNumber'] ?? 1;
         $existingRowCount = $section->rows()->count();
+        $customLabel = $settings['customLabel'] ?? null;
 
         // Generate row label
-        if ($numberingMode === 'alpha') {
+        if (!empty($customLabel)) {
+            $rowLabel = $customLabel;
+        } elseif ($numberingMode === 'alpha') {
             $rowLabel = chr(ord('A') + $existingRowCount);
+        } elseif ($numberingMode === 'roman') {
+            $romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X',
+                       'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
+            $rowLabel = $romans[$existingRowCount] ?? (string) ($existingRowCount + 1);
         } else {
             $rowLabel = (string) ($startNumber + $existingRowCount);
         }
