@@ -316,8 +316,8 @@
                         if (row.seats) {
                             row.seats.forEach(seat => {
                                 const seatCircle = new Konva.Circle({
-                                    x: seat.x_offset || 0,
-                                    y: seat.y_offset || 0,
+                                    x: parseFloat(seat.x) || 0,
+                                    y: parseFloat(seat.y) || 0,
                                     radius: 8,
                                     fill: section.seat_color || '#22C55E',
                                     stroke: '#166534',
