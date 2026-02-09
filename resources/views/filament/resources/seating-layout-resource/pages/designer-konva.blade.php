@@ -130,7 +130,82 @@
                         <button x-on:click="drawMode = 'select'" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
                             :class="drawMode === 'select' ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <svg viewBox="0 0 32 32" class="w-5 h-5"><path d="M31.371 17.433 10.308 9.008c-.775-.31-1.629.477-1.3 1.3l8.426 21.064c.346.866 1.633.797 1.89-.098l2.654-9.295 9.296-2.656c.895-.255.96-1.544.097-1.89z" fill="currentColor"></path></svg>
                             Selectare
+                        </button>
+                        <button x-on:click="drawMode = 'selectseats'" type="button" x-show="!addSeatsMode"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'selectseats' ? 'bg-pink-500 border-pink-500 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <x-svg-icon name="konvaseats" class="w-5 h-5" />
+                            Selectare Locuri
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Section Tools --}}
+                <div class="space-y-2" x-show="!addSeatsMode" x-transition>
+                    <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Sectiuni</div>
+                    <div class="grid grid-cols-1 gap-1">
+                        <button x-on:click="drawMode = 'drawRect'" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'drawRect' ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"></path>
+                            </svg>
+                            Dreptunghi
+                        </button>
+                        <button x-on:click="drawMode = 'polygon'" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'polygon' ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            <x-svg-icon name="konvapolygon" class="w-5 h-5" />
+                            Poligon
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Add Seats Tools --}}
+                <div x-show="addSeatsMode" x-transition class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Adauga Locuri</div>
+                        <button x-on:click="addSeatsMode = false" type="button" class="text-xs text-gray-400 hover:text-gray-600">x</button>
+                    </div>
+                    <div class="grid grid-cols-1 gap-1">
+                        <button x-on:click="drawMode = 'drawSingleRow'" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'drawSingleRow' ? 'bg-purple-600 border-purple-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            Un singur rand
+                        </button>
+                        <button x-on:click="drawMode = 'drawMultiRows'" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'drawMultiRows' ? 'bg-purple-600 border-purple-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            Multiple randuri
+                        </button>
+                        <button x-on:click="drawMode = 'drawRoundTable'" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'drawRoundTable' ? 'bg-amber-600 border-amber-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            Masa rotunda
+                        </button>
+                        <button x-on:click="drawMode = 'drawRectTable'" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'drawRectTable' ? 'bg-amber-600 border-amber-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            Masa dreptunghiulara
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Other Tools --}}
+                <div class="space-y-2" x-show="!addSeatsMode" x-transition>
+                    <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Alte Instrumente</div>
+                    <div class="grid grid-cols-2 gap-1">
+                        <button x-on:click="drawMode = 'text'" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'text' ? 'bg-gray-700 border-gray-700 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            Text
+                        </button>
+                        <button x-on:click="drawMode = 'line'" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                            :class="drawMode === 'line' ? 'bg-gray-700 border-gray-700 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                            Linie
                         </button>
                     </div>
                 </div>
@@ -141,6 +216,31 @@
                     <div class="flex items-center gap-2">
                         <span class="flex-1 text-sm font-medium text-center" x-text="`${Math.round(zoom * 100)}%`"></span>
                     </div>
+                    <div class="flex gap-1">
+                        <button x-on:click="showGrid = !showGrid" type="button" class="flex items-center flex-1 gap-1 px-2 py-1 text-xs rounded-md" :class="showGrid ? 'bg-blue-600 text-white' : 'bg-gray-100'">
+                            <x-svg-icon name="konvagrid" class="w-3 h-3" /> Grid
+                        </button>
+                        <button x-on:click="snapToGrid = !snapToGrid" type="button" class="flex items-center flex-1 gap-1 px-2 py-1 text-xs rounded-md" :class="snapToGrid ? 'bg-blue-600 text-white' : 'bg-gray-100'">
+                            Snap
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Actions --}}
+                <div class="pt-3 space-y-2 border-t border-gray-200">
+                    <button x-on:click="showBackgroundControls = !showBackgroundControls" type="button"
+                        class="flex items-center w-full gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                        :class="showBackgroundControls ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
+                        Fundal
+                    </button>
+                    <button x-on:click="showExportModal = true" type="button"
+                        class="flex items-center w-full gap-2 px-3 py-2 text-sm font-medium transition-all bg-gray-50 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-100">
+                        Export
+                    </button>
+                    <button x-on:click="selectedSection = null" type="button" x-show="selectedSection"
+                        class="flex items-center w-full gap-2 px-3 py-2 text-sm font-medium text-white transition-all bg-red-600 rounded-lg hover:bg-red-700">
+                        Sterge Sectiunea
+                    </button>
                 </div>
             </div>
 
