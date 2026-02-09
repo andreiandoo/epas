@@ -2184,7 +2184,8 @@ class DesignerSeatingLayout extends Page
 
         // Get row numbering settings
         $existingRowCount = $section->rows()->count();
-        $rowLabel = 'T' . ($existingRowCount + 1); // Table rows get T prefix
+        // Use custom table name if provided, otherwise generate T1, T2, etc.
+        $rowLabel = !empty($tableData['name']) ? $tableData['name'] : ('T' . ($existingRowCount + 1));
 
         // Convert absolute coordinates to section-relative
         $sectionX = (int) $section->x_position;
@@ -2556,6 +2557,43 @@ class DesignerSeatingLayout extends Page
             ->success()
             ->title('Row deleted')
             ->body("Row '{$rowLabel}' has been deleted")
+            ->send();
+    }
+
+    /**
+     * Update row label (name)
+     */
+    public function updateRowLabel($rowId, string $newLabel): void
+    {
+        $row = SeatingRow::find($rowId);
+
+        if (!$row) {
+            Notification::make()
+                ->danger()
+                ->title('Row not found')
+                ->send();
+            return;
+        }
+
+        $section = $row->section;
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Row does not belong to this layout')
+                ->send();
+            return;
+        }
+
+        $oldLabel = $row->label;
+        $row->update(['label' => $newLabel]);
+        $this->reloadSections();
+
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Row updated')
+            ->body("Row name changed from '{$oldLabel}' to '{$newLabel}'")
             ->send();
     }
 

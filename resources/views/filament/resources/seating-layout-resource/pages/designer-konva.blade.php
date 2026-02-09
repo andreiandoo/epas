@@ -76,6 +76,18 @@
             rowSpacing: 20,
             tableSeats: 5,
             tableSeatsRect: 6,
+            tableWidth: 80,
+            tableName: '',
+            selectedRow: null,
+            selectedTableRow: null,
+            selectedTableSectionId: null,
+            editTableName: '',
+            editTableWidth: 80,
+            editTableSeats: 6,
+            selectedRowData: null,
+            selectedRowSectionId: null,
+            editRowLabel: '',
+            editRowSeats: 0,
             tempDrawRect: null,
             drawRectStart: null,
             tempRowLine: null,
@@ -314,23 +326,123 @@
                 // Draw seats if they exist
                 if (section.rows) {
                     section.rows.forEach(row => {
+                        // Check if this row is a table and draw the table shape
+                        const metadata = row.metadata || {};
+                        if (metadata.is_table) {
+                            const centerX = parseFloat(metadata.center_x) || 50;
+                            const centerY = parseFloat(metadata.center_y) || 50;
+                            const tableName = row.label || 'Masă';
+
+                            if (metadata.table_type === 'round') {
+                                // Draw round table circle
+                                const tableRadius = parseFloat(metadata.radius) || 30;
+                                const tableCircle = new Konva.Circle({
+                                    x: centerX,
+                                    y: centerY,
+                                    radius: tableRadius,
+                                    fill: '#8B4513',
+                                    stroke: this.selectedTableRow?.id === row.id ? '#FFD700' : '#5D3A1A',
+                                    strokeWidth: this.selectedTableRow?.id === row.id ? 3 : 2,
+                                    name: 'table-shape',
+                                    id: `table-${row.id}`
+                                });
+                                // Click handler for table selection
+                                tableCircle.on('click tap', (e) => {
+                                    if (this.drawMode === 'select') {
+                                        e.cancelBubble = true;
+                                        this.selectTable(section.id, row);
+                                    }
+                                });
+                                group.add(tableCircle);
+
+                                // Table name label
+                                const tableLabel = new Konva.Text({
+                                    x: centerX - tableRadius,
+                                    y: centerY - 6,
+                                    width: tableRadius * 2,
+                                    text: tableName,
+                                    fontSize: 11,
+                                    fontFamily: 'Arial',
+                                    fontStyle: 'bold',
+                                    fill: '#FFFFFF',
+                                    align: 'center',
+                                    name: 'table-label'
+                                });
+                                group.add(tableLabel);
+                            } else if (metadata.table_type === 'rect') {
+                                // Draw rectangular table
+                                const tableWidth = parseFloat(metadata.width) || 80;
+                                const tableHeight = parseFloat(metadata.height) || 30;
+                                const tableRect = new Konva.Rect({
+                                    x: centerX - tableWidth / 2,
+                                    y: centerY - tableHeight / 2,
+                                    width: tableWidth,
+                                    height: tableHeight,
+                                    fill: '#8B4513',
+                                    stroke: this.selectedTableRow?.id === row.id ? '#FFD700' : '#5D3A1A',
+                                    strokeWidth: this.selectedTableRow?.id === row.id ? 3 : 2,
+                                    cornerRadius: 4,
+                                    name: 'table-shape',
+                                    id: `table-${row.id}`
+                                });
+                                // Click handler for table selection
+                                tableRect.on('click tap', (e) => {
+                                    if (this.drawMode === 'select') {
+                                        e.cancelBubble = true;
+                                        this.selectTable(section.id, row);
+                                    }
+                                });
+                                group.add(tableRect);
+
+                                // Table name label
+                                const tableLabel = new Konva.Text({
+                                    x: centerX - tableWidth / 2,
+                                    y: centerY - 6,
+                                    width: tableWidth,
+                                    text: tableName,
+                                    fontSize: 11,
+                                    fontFamily: 'Arial',
+                                    fontStyle: 'bold',
+                                    fill: '#FFFFFF',
+                                    align: 'center',
+                                    name: 'table-label'
+                                });
+                                group.add(tableLabel);
+                            }
+                        }
+
                         if (row.seats) {
+                            const isRowSelected = this.selectedRowData?.id === row.id;
+                            const metadata = row.metadata || {};
+                            const isTable = metadata.is_table;
+
                             row.seats.forEach(seat => {
                                 const seatX = parseFloat(seat.x) || 0;
                                 const seatY = parseFloat(seat.y) || 0;
                                 const seatRadius = 10;
 
-                                // Seat circle
+                                // Seat circle - highlight if row is selected
                                 const seatCircle = new Konva.Circle({
                                     x: seatX,
                                     y: seatY,
                                     radius: seatRadius,
                                     fill: section.seat_color || '#22C55E',
-                                    stroke: '#166534',
-                                    strokeWidth: 1,
+                                    stroke: isRowSelected ? '#FFD700' : '#166534',
+                                    strokeWidth: isRowSelected ? 2 : 1,
                                     id: `seat-${seat.id}`,
                                     name: 'seat'
                                 });
+
+                                // Click handler for row selection (only for non-tables)
+                                if (!isTable) {
+                                    seatCircle.on('click tap', (e) => {
+                                        if (this.drawMode === 'select') {
+                                            e.cancelBubble = true;
+                                            this.selectRow(section.id, row);
+                                        }
+                                    });
+                                }
+
                                 group.add(seatCircle);
 
                                 // Seat label (number)
@@ -522,8 +634,91 @@
             },
             deselectAll() {
                 this.selectedSection = null;
+                this.selectedTableRow = null;
+                this.selectedTableSectionId = null;
+                this.selectedRowData = null;
+                this.selectedRowSectionId = null;
                 this.transformer.nodes([]);
                 this.layer.batchDraw();
+            },
+            selectTable(sectionId, row) {
+                this.selectedTableRow = row;
+                this.selectedTableSectionId = sectionId;
+                this.selectedSection = sectionId;
+                this.addSeatsMode = false;
+                this.selectedDrawnRow = null;
+
+                // Populate edit fields
+                const metadata = row.metadata || {};
+                this.editTableName = row.label || '';
+                this.editTableSeats = row.seats?.length || 0;
+                if (metadata.table_type === 'rect') {
+                    this.editTableWidth = parseFloat(metadata.width) || 80;
+                }
+
+                // Redraw to show selection highlight
+                this.drawAllSections();
+            },
+            deselectTable() {
+                this.selectedTableRow = null;
+                this.selectedTableSectionId = null;
+                this.drawAllSections();
+            },
+            updateTableName() {
+                if (!this.selectedTableRow || !this.editTableName) return;
+
+                this.$wire.updateRowLabel(this.selectedTableRow.id, this.editTableName).then(() => {
+                    // Update local data
+                    this.selectedTableRow.label = this.editTableName;
+                    this.drawAllSections();
+                });
+            },
+            deleteTable() {
+                if (!this.selectedTableRow) return;
+
+                if (confirm('Sigur doriți să ștergeți această masă?')) {
+                    this.$wire.deleteRow(this.selectedTableRow.id).then(() => {
+                        this.deselectTable();
+                    });
+                }
+            },
+            selectRow(sectionId, row) {
+                this.selectedRowData = row;
+                this.selectedRowSectionId = sectionId;
+                this.selectedSection = sectionId;
+                this.addSeatsMode = false;
+                this.selectedTableRow = null;
+                this.selectedDrawnRow = null;
+
+                // Populate edit fields
+                this.editRowLabel = row.label || '';
+                this.editRowSeats = row.seats?.length || 0;
+
+                // Redraw to show selection highlight
+                this.drawAllSections();
+            },
+            deselectRow() {
+                this.selectedRowData = null;
+                this.selectedRowSectionId = null;
+                this.drawAllSections();
+            },
+            updateRowName() {
+                if (!this.selectedRowData || !this.editRowLabel) return;
+
+                this.$wire.updateRowLabel(this.selectedRowData.id, this.editRowLabel).then(() => {
+                    // Update local data
+                    this.selectedRowData.label = this.editRowLabel;
+                    this.drawAllSections();
+                });
+            },
+            deleteSelectedRow() {
+                if (!this.selectedRowData) return;
+
+                if (confirm('Sigur doriți să ștergeți acest rând?')) {
+                    this.$wire.deleteRow(this.selectedRowData.id).then(() => {
+                        this.deselectRow();
+                    });
+                }
             },
             updateSectionPreview() {
                 if (!this.selectedSection) return;
@@ -823,9 +1018,21 @@
                             });
                         });
 
-                        // Add each row separately
-                        Object.values(rowGroups).forEach(seats => {
-                            this.$wire.addSeatsToSection(this.selectedSection, seats);
+                        // Convert to array of row objects with Y position
+                        const rows = Object.entries(rowGroups).map(([rowIndex, seats]) => {
+                            const avgY = seats.length > 0 ? seats.reduce((sum, s) => sum + s.y, 0) / seats.length : 0;
+                            return {
+                                y: avgY,
+                                seats: seats
+                            };
+                        });
+
+                        // Use addMultipleRowsWithSeats to add all rows at once with proper numbering
+                        this.$wire.addMultipleRowsWithSeats(this.selectedSection, rows, {
+                            numberingMode: this.rowNumberingMode,
+                            startNumber: this.rowStartNumber,
+                            seatNumberingType: this.seatNumberingType,
+                            seatNumberingDirection: this.rowNumberingDirection
                         });
                     }
                 }
@@ -844,18 +1051,30 @@
                 const sectionX = section.x_position || 0;
                 const sectionY = section.y_position || 0;
                 const seats = [];
-                const radius = 40;
+                const tableRadius = 25; // Table visual radius
+                const seatRadius = tableRadius + 20; // Seats around table
                 const numSeats = this.tableSeats;
 
                 for (let i = 0; i < numSeats; i++) {
                     const angle = (i / numSeats) * Math.PI * 2 - Math.PI / 2;
                     seats.push({
-                        x: (pos.x + Math.cos(angle) * radius) - sectionX,
-                        y: (pos.y + Math.sin(angle) * radius) - sectionY
+                        x: pos.x + Math.cos(angle) * seatRadius,
+                        y: pos.y + Math.sin(angle) * seatRadius
                     });
                 }
 
-                this.$wire.addSeatsToSection(this.selectedSection, seats);
+                // Use addTableWithSeats for proper table storage
+                this.$wire.addTableWithSeats(this.selectedSection, {
+                    type: 'round',
+                    seats: seats,
+                    centerX: pos.x - sectionX,
+                    centerY: pos.y - sectionY,
+                    radius: tableRadius,
+                    name: this.tableName || `Masă ${this.sections.find(s => s.id === this.selectedSection)?.rows?.length + 1 || 1}`,
+                    seatSize: this.rowSeatSize
+                });
+
+                this.tableName = '';
             },
             addRectTable(pos) {
                 if (!this.selectedSection) return;
@@ -866,27 +1085,39 @@
                 const sectionX = section.x_position || 0;
                 const sectionY = section.y_position || 0;
                 const seats = [];
-                const width = 80;
-                const height = 40;
+                const tableWidth = this.tableWidth || 80;
+                const tableHeight = 30;
                 const seatsPerSide = Math.ceil(this.tableSeatsRect / 2);
-                const spacing = width / (seatsPerSide + 1);
+                const spacing = tableWidth / (seatsPerSide + 1);
 
                 // Top seats
                 for (let i = 1; i <= seatsPerSide; i++) {
                     seats.push({
-                        x: (pos.x - width/2 + i * spacing) - sectionX,
-                        y: (pos.y - height/2 - 15) - sectionY
+                        x: pos.x - tableWidth/2 + i * spacing,
+                        y: pos.y - tableHeight/2 - 15
                     });
                 }
                 // Bottom seats
                 for (let i = 1; i <= seatsPerSide; i++) {
                     seats.push({
-                        x: (pos.x - width/2 + i * spacing) - sectionX,
-                        y: (pos.y + height/2 + 15) - sectionY
+                        x: pos.x - tableWidth/2 + i * spacing,
+                        y: pos.y + tableHeight/2 + 15
                     });
                 }
 
-                this.$wire.addSeatsToSection(this.selectedSection, seats);
+                // Use addTableWithSeats for proper table storage
+                this.$wire.addTableWithSeats(this.selectedSection, {
+                    type: 'rect',
+                    seats: seats,
+                    centerX: pos.x - sectionX,
+                    centerY: pos.y - sectionY,
+                    width: tableWidth,
+                    height: tableHeight,
+                    name: this.tableName || `Masă ${this.sections.find(s => s.id === this.selectedSection)?.rows?.length + 1 || 1}`,
+                    seatSize: this.rowSeatSize
+                });
+
+                this.tableName = '';
             },
             updateSectionsDraggable() {
                 // Update all sections' draggable state based on current draw mode
@@ -1337,9 +1568,133 @@
             </div>
 
             {{-- RIGHT SIDEBAR - Properties Panel --}}
-            <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-80" x-show="selectedSection || selectedDrawnRow || addSeatsMode" x-transition>
+            <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-80" x-show="selectedSection || selectedDrawnRow || addSeatsMode || selectedTableRow || selectedRowData" x-transition>
+                {{-- Table Properties Panel --}}
+                <template x-if="selectedTableRow">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between pb-2 border-b border-amber-200">
+                            <h4 class="text-sm font-bold tracking-wide text-amber-700 uppercase">Proprietăți Masă</h4>
+                            <button x-on:click="deselectTable()" class="text-amber-400 hover:text-amber-600">✕</button>
+                        </div>
+
+                        {{-- Table Type Badge --}}
+                        <div class="p-3 rounded-lg bg-amber-50">
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                    :class="selectedTableRow?.metadata?.table_type === 'round' ? 'bg-amber-200 text-amber-800' : 'bg-orange-200 text-orange-800'">
+                                    <span x-text="selectedTableRow?.metadata?.table_type === 'round' ? 'Masă Rotundă' : 'Masă Dreptunghiulară'"></span>
+                                </span>
+                            </div>
+                            <div class="mt-2 text-xs text-amber-600">
+                                <span x-text="`${selectedTableRow?.seats?.length || 0} locuri`"></span>
+                            </div>
+                        </div>
+
+                        {{-- Table Name --}}
+                        <div class="p-3 space-y-3 border border-amber-200 rounded-lg bg-amber-50">
+                            <div class="text-xs font-semibold text-amber-700 uppercase">Nume Masă</div>
+                            <div class="flex gap-2">
+                                <input type="text" x-model="editTableName" placeholder="Ex: Masa 1, VIP..."
+                                    class="flex-1 px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                <button x-on:click="updateTableName()" type="button"
+                                    class="px-3 py-1 text-sm font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
+                                    Salvează
+                                </button>
+                            </div>
+                        </div>
+
+                        {{-- Table Dimensions (for rectangular tables) --}}
+                        <div x-show="selectedTableRow?.metadata?.table_type === 'rect'" class="p-3 space-y-3 rounded-lg bg-orange-50">
+                            <div class="text-xs font-semibold text-orange-700 uppercase">Dimensiuni Masă</div>
+                            <div>
+                                <label class="block text-xs text-orange-600">Lățime masă (px)</label>
+                                <input type="number" x-model.number="editTableWidth" min="40" max="200"
+                                    class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                <div class="mt-1 text-xs text-gray-500" x-text="`${editTableWidth}px`"></div>
+                            </div>
+                        </div>
+
+                        {{-- Table Seats Info --}}
+                        <div class="p-3 space-y-2 text-xs rounded-lg bg-gray-50">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Locuri:</span>
+                                <span class="font-medium" x-text="selectedTableRow?.seats?.length || 0"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Secțiune:</span>
+                                <span class="font-medium" x-text="sections.find(s => s.id === selectedTableSectionId)?.name || '-'"></span>
+                            </div>
+                        </div>
+
+                        {{-- Delete Button --}}
+                        <button x-on:click="deleteTable()" type="button"
+                            class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold text-white transition-all bg-red-600 rounded-lg hover:bg-red-700">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            Șterge Masă
+                        </button>
+                    </div>
+                </template>
+
+                {{-- Row Properties Panel (non-table rows) --}}
+                <template x-if="selectedRowData && !selectedTableRow">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between pb-2 border-b border-purple-200">
+                            <h4 class="text-sm font-bold tracking-wide text-purple-700 uppercase">Proprietăți Rând</h4>
+                            <button x-on:click="deselectRow()" class="text-purple-400 hover:text-purple-600">✕</button>
+                        </div>
+
+                        {{-- Row Info --}}
+                        <div class="p-3 rounded-lg bg-purple-50">
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-200 text-purple-800">
+                                    Rând
+                                </span>
+                            </div>
+                            <div class="mt-2 text-xs text-purple-600">
+                                <span x-text="`${selectedRowData?.seats?.length || 0} locuri`"></span>
+                            </div>
+                        </div>
+
+                        {{-- Row Name --}}
+                        <div class="p-3 space-y-3 border border-purple-200 rounded-lg bg-purple-50">
+                            <div class="text-xs font-semibold text-purple-700 uppercase">Etichetă Rând</div>
+                            <div class="flex gap-2">
+                                <input type="text" x-model="editRowLabel" placeholder="Ex: A, B, VIP..."
+                                    class="flex-1 px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                <button x-on:click="updateRowName()" type="button"
+                                    class="px-3 py-1 text-sm font-medium text-white bg-purple-600 rounded hover:bg-purple-700">
+                                    Salvează
+                                </button>
+                            </div>
+                        </div>
+
+                        {{-- Row Details --}}
+                        <div class="p-3 space-y-2 text-xs rounded-lg bg-gray-50">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Locuri:</span>
+                                <span class="font-medium" x-text="selectedRowData?.seats?.length || 0"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Secțiune:</span>
+                                <span class="font-medium" x-text="sections.find(s => s.id === selectedRowSectionId)?.name || '-'"></span>
+                            </div>
+                        </div>
+
+                        {{-- Delete Button --}}
+                        <button x-on:click="deleteSelectedRow()" type="button"
+                            class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold text-white transition-all bg-red-600 rounded-lg hover:bg-red-700">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            Șterge Rând
+                        </button>
+                    </div>
+                </template>
+
                 {{-- Add Seats Mode Panel --}}
-                <template x-if="addSeatsMode && selectedSection && !selectedDrawnRow">
+                <template x-if="addSeatsMode && selectedSection && !selectedDrawnRow && !selectedTableRow && !selectedRowData">
                     <div class="space-y-4">
                         <div class="flex items-center justify-between pb-2 border-b border-purple-200">
                             <h4 class="text-sm font-bold tracking-wide text-purple-700 uppercase">Adaugă Locuri</h4>
@@ -1410,8 +1765,8 @@
                     </div>
                 </template>
 
-                {{-- Section Properties (hidden when in addSeats mode) --}}
-                <template x-if="selectedSection && !selectedDrawnRow && !addSeatsMode">
+                {{-- Section Properties (hidden when in addSeats mode, table selected, or row selected) --}}
+                <template x-if="selectedSection && !selectedDrawnRow && !addSeatsMode && !selectedTableRow && !selectedRowData">
                     <div class="space-y-4">
                         <div class="flex items-center justify-between pb-2 border-b border-gray-200">
                             <h4 class="text-sm font-bold tracking-wide text-gray-700 uppercase">Proprietăți Secțiune</h4>
@@ -1577,7 +1932,7 @@
                 </template>
 
                 {{-- Empty state when nothing selected --}}
-                <div x-show="!selectedSection && !selectedDrawnRow && !addSeatsMode" class="py-8 text-center">
+                <div x-show="!selectedSection && !selectedDrawnRow && !addSeatsMode && !selectedTableRow && !selectedRowData" class="py-8 text-center">
                     <svg class="w-12 h-12 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
                     </svg>
