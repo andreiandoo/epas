@@ -92,6 +92,7 @@
             editRowSeats: 0,
             editRowStartNumber: 1,
             editRowDirection: 'ltr',
+            rowSelectMode: false,
             tempDrawRect: null,
             drawRectStart: null,
             tempRowLine: null,
@@ -415,15 +416,73 @@
                             }
                         }
 
-                        if (row.seats) {
+                        if (row.seats && row.seats.length > 0) {
                             const isRowSelected = this.selectedRowData?.id === row.id;
+                            const isTableSelected = this.selectedTableRow?.id === row.id;
                             const metadata = row.metadata || {};
                             const isTable = metadata.is_table;
+                            const seatRadius = 10;
+                            const padding = 5;
 
+                            // Calculate row bounding box
+                            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
                             row.seats.forEach(seat => {
                                 const seatX = parseFloat(seat.x) || 0;
                                 const seatY = parseFloat(seat.y) || 0;
-                                const seatRadius = 10;
+                                minX = Math.min(minX, seatX - seatRadius);
+                                maxX = Math.max(maxX, seatX + seatRadius);
+                                minY = Math.min(minY, seatY - seatRadius);
+                                maxY = Math.max(maxY, seatY + seatRadius);
+                            });
+
+                            // Add bounding box rectangle for row selection
+                            const rowBbox = new Konva.Rect({
+                                x: minX - padding,
+                                y: minY - padding,
+                                width: maxX - minX + padding * 2,
+                                height: maxY - minY + padding * 2,
+                                fill: 'transparent',
+                                stroke: (isRowSelected || isTableSelected) ? '#FFD700' : 'transparent',
+                                strokeWidth: 2,
+                                cornerRadius: 4,
+                                dash: [5, 3],
+                                id: `row-bbox-${row.id}`,
+                                name: 'row-bbox'
+                            });
+
+                            // Hover effect to show bounding box
+                            rowBbox.on('mouseenter', () => {
+                                if (!isRowSelected && !isTableSelected) {
+                                    rowBbox.stroke('#9CA3AF');
+                                    rowBbox.strokeWidth(1);
+                                    this.layer.batchDraw();
+                                }
+                            });
+                            rowBbox.on('mouseleave', () => {
+                                if (!isRowSelected && !isTableSelected) {
+                                    rowBbox.stroke('transparent');
+                                    this.layer.batchDraw();
+                                }
+                            });
+
+                            // Click handler for row/table selection
+                            rowBbox.on('click tap', (e) => {
+                                if (this.drawMode === 'select' || this.rowSelectMode) {
+                                    e.cancelBubble = true;
+                                    if (isTable) {
+                                        this.selectTable(section.id, row);
+                                    } else {
+                                        this.selectRow(section.id, row);
+                                    }
+                                }
+                            });
+
+                            group.add(rowBbox);
+
+                            // Draw seats
+                            row.seats.forEach(seat => {
+                                const seatX = parseFloat(seat.x) || 0;
+                                const seatY = parseFloat(seat.y) || 0;
 
                                 // Seat circle - highlight if row is selected
                                 const seatCircle = new Konva.Circle({
@@ -431,21 +490,11 @@
                                     y: seatY,
                                     radius: seatRadius,
                                     fill: section.seat_color || '#22C55E',
-                                    stroke: isRowSelected ? '#FFD700' : '#166534',
-                                    strokeWidth: isRowSelected ? 2 : 1,
+                                    stroke: (isRowSelected || isTableSelected) ? '#FFD700' : '#166534',
+                                    strokeWidth: (isRowSelected || isTableSelected) ? 2 : 1,
                                     id: `seat-${seat.id}`,
                                     name: 'seat'
                                 });
-
-                                // Click handler for row selection (only for non-tables)
-                                if (!isTable) {
-                                    seatCircle.on('click tap', (e) => {
-                                        if (this.drawMode === 'select') {
-                                            e.cancelBubble = true;
-                                            this.selectRow(section.id, row);
-                                        }
-                                    });
-                                }
 
                                 group.add(seatCircle);
 
@@ -1899,13 +1948,31 @@
                             <div class="text-sm font-semibold text-gray-900" x-text="getSelectedSectionData()?.name || 'Fără nume'"></div>
                         </div>
 
-                        {{-- Add Seats Button --}}
-                        <button x-on:click="addSeatsMode = true" type="button"
-                            class="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md"
-                            x-show="getSelectedSectionData()?.section_type === 'standard'">
-                            <x-svg-icon name="konvaseats" class="w-5 h-5" />
-                            Adaugă Locuri
-                        </button>
+                        {{-- Action Buttons --}}
+                        <div class="space-y-2" x-show="getSelectedSectionData()?.section_type === 'standard'">
+                            {{-- Add Seats Button --}}
+                            <button x-on:click="addSeatsMode = true" type="button"
+                                class="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md">
+                                <x-svg-icon name="konvaseats" class="w-5 h-5" />
+                                Adaugă Locuri
+                            </button>
+
+                            {{-- Select Row Button --}}
+                            <button x-on:click="rowSelectMode = !rowSelectMode" type="button"
+                                class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold transition-all rounded-lg"
+                                :class="rowSelectMode ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+                                </svg>
+                                <span x-text="rowSelectMode ? 'Mod Selectare Activ' : 'Selectează Rând/Masă'"></span>
+                            </button>
+
+                            {{-- Row Select Mode Info --}}
+                            <div x-show="rowSelectMode" x-transition class="p-2 text-xs text-amber-800 rounded-lg bg-amber-50">
+                                <p class="font-medium">Mod selectare activ</p>
+                                <p class="mt-1">Click pe un rând sau masă pentru a-l selecta. Treceți cu mouse-ul pentru a vedea contururile.</p>
+                            </div>
+                        </div>
 
                         {{-- Transform Section --}}
                         <div class="p-3 space-y-3 rounded-lg bg-gray-50">

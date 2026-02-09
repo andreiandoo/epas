@@ -2812,12 +2812,21 @@ class DesignerSeatingLayout extends Page
             'alignment' => $direction === 'rtl' ? 'right' : 'left',
         ]);
 
-        // Renumber seats
+        // Get seats ordered by X position
         $seats = $row->seats()->orderBy('x')->get();
         if ($direction === 'rtl') {
-            $seats = $seats->reverse();
+            $seats = $seats->reverse()->values();
         }
 
+        // First pass: Set all seat_uids to temporary unique values to avoid conflicts
+        $tempSuffix = '_temp_' . time() . '_';
+        foreach ($seats as $index => $seat) {
+            $seat->update([
+                'seat_uid' => $tempSuffix . $seat->id,
+            ]);
+        }
+
+        // Second pass: Set the actual new labels and seat_uids
         $seatNum = $startNumber;
         foreach ($seats as $seat) {
             $seatLabel = (string) $seatNum;
