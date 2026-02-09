@@ -571,5 +571,154 @@
                 </div>
             </div>
         </div>
+
+        {{-- Export Modal --}}
+        <div x-cloak x-show="showExportModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" x-on:click.self="showExportModal = false" x-on:keydown.escape.window="showExportModal = false">
+            <div x-show="showExportModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="w-full max-w-md p-6 bg-white rounded-lg shadow-xl">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Export Layout</h3>
+                    <button x-on:click="showExportModal = false" type="button" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <button x-on:click="exportSVG && exportSVG(); showExportModal = false" type="button" class="flex flex-col items-center gap-3 p-6 transition border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 group">
+                        <svg class="w-12 h-12 text-gray-400 transition group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="text-sm font-medium text-gray-700 group-hover:text-blue-700">Export SVG</span>
+                        <span class="text-xs text-gray-500">Vector image format</span>
+                    </button>
+                    <button x-on:click="exportJSON && exportJSON(); showExportModal = false" type="button" class="flex flex-col items-center gap-3 p-6 transition border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 group">
+                        <svg class="w-12 h-12 text-gray-400 transition group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="text-sm font-medium text-gray-700 group-hover:text-green-700">Export JSON</span>
+                        <span class="text-xs text-gray-500">Backup data format</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- Color Edit Modal --}}
+        <div x-cloak x-show="showColorModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div class="p-6 bg-white rounded-lg shadow-xl w-96" x-on:click.away="showColorModal = false">
+                <h3 class="mb-4 text-lg font-semibold text-gray-900">Edit Section Colors</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Section Background Color</label>
+                        <input type="color" x-model="editColorHex" class="w-full h-10 rounded cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Seat Color (Available)</label>
+                        <input type="color" x-model="editSeatColor" class="w-full h-10 rounded cursor-pointer">
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button x-on:click="showColorModal = false" type="button" class="px-4 py-2 text-sm text-gray-700 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+                        <button x-on:click="saveSectionColors && saveSectionColors()" type="button" class="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Shape Config Modal --}}
+        <div x-cloak x-show="showShapeConfigModal" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div class="p-6 bg-white rounded-lg shadow-xl w-96" x-on:click.away="showShapeConfigModal = false">
+                <h3 class="mb-4 text-lg font-semibold text-gray-900" x-text="'Add ' + (shapeConfigType || 'Shape')"></h3>
+                <div class="space-y-4">
+                    <div x-show="shapeConfigType === 'text'">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Text Content</label>
+                        <input type="text" x-model="shapeConfigText" class="w-full px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md" placeholder="Enter text...">
+                    </div>
+                    <div x-show="shapeConfigType === 'text'">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Font Size (px)</label>
+                        <input type="number" x-model="shapeConfigFontSize" min="8" max="200" class="w-full px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md">
+                    </div>
+                    <div x-show="shapeConfigType === 'text'">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Font Family</label>
+                        <select x-model="shapeConfigFontFamily" class="w-full px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md">
+                            <option value="Arial">Arial</option>
+                            <option value="Helvetica">Helvetica</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Verdana">Verdana</option>
+                            <option value="Courier New">Courier New</option>
+                        </select>
+                    </div>
+                    <div x-show="shapeConfigType === 'line'">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Stroke Width</label>
+                        <input type="number" x-model="shapeConfigStrokeWidth" min="1" max="20" class="w-full px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md">
+                    </div>
+                    <div x-show="shapeConfigType === 'polygon'">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Edge Smoothing</label>
+                        <input type="range" x-model="shapeConfigTension" min="0" max="1" step="0.05" class="w-full">
+                        <span class="text-xs text-gray-500" x-text="'Tension: ' + shapeConfigTension"></span>
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-gray-700" x-text="shapeConfigType === 'line' ? 'Line Color' : (shapeConfigType === 'text' ? 'Text Color' : 'Fill Color')"></label>
+                        <input type="color" x-model="shapeConfigColor" class="w-full h-10 rounded cursor-pointer">
+                    </div>
+                    <div x-show="shapeConfigType !== 'text' && shapeConfigType !== 'line'">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Opacity</label>
+                        <input type="range" x-model="shapeConfigOpacity" min="0.1" max="1" step="0.05" class="w-full">
+                        <span class="text-xs text-gray-500" x-text="shapeConfigOpacity"></span>
+                    </div>
+                    <div x-show="shapeConfigType !== 'text' && shapeConfigType !== 'line'">
+                        <label class="block mb-1 text-sm font-medium text-gray-700">Label (optional)</label>
+                        <input type="text" x-model="shapeConfigLabel" class="w-full px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md" placeholder="e.g., Stage, Exit...">
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button x-on:click="showShapeConfigModal = false" type="button" class="px-4 py-2 text-sm text-gray-700 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+                        <button x-on:click="confirmShapeConfig && confirmShapeConfig()" type="button" class="px-4 py-2 text-sm text-white bg-green-600 rounded hover:bg-green-700">Add</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Section Context Menu --}}
+        <div x-show="showContextMenu"
+             x-transition:enter="transition ease-out duration-100"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-75"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             :style="`position: fixed; left: ${contextMenuX}px; top: ${contextMenuY}px; z-index: 100;`"
+             x-on:click.away="showContextMenu = false"
+             class="w-48 bg-white border border-gray-200 rounded-lg shadow-xl">
+            <div class="py-1">
+                <button x-on:click="showContextMenu = false" class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    Edit Section
+                </button>
+                <template x-if="contextMenuSectionType === 'standard'">
+                    <div>
+                        <button x-on:click="showContextMenu = false" class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-blue-700 hover:bg-blue-50">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            </svg>
+                            Select Rows
+                        </button>
+                        <button x-on:click="showColorModal = true; showContextMenu = false" class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                            </svg>
+                            Edit Colors
+                        </button>
+                    </div>
+                </template>
+                <div class="border-t border-gray-200"></div>
+                <button x-on:click="deleteSelected && deleteSelected(); showContextMenu = false" class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Delete Section
+                </button>
+            </div>
+        </div>
     </div>
 </x-filament-panels::page>
