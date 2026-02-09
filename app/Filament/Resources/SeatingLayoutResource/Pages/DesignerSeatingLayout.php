@@ -3242,6 +3242,186 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Update row spacing - recalculate seat positions based on new seat size and spacing
+     */
+    public function updateRowSpacing(int $rowId, array $settings): void
+    {
+        $row = SeatingRow::with(['seats', 'section'])->find($rowId);
+
+        if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Row not found')
+                ->send();
+            return;
+        }
+
+        $seatSize = (int) ($settings['seatSize'] ?? 20);
+        $seatSpacing = (int) ($settings['seatSpacing'] ?? 25);
+
+        // Clamp values to reasonable limits
+        $seatSize = max(8, min(40, $seatSize));
+        $seatSpacing = max(15, min(100, $seatSpacing));
+
+        // Get seats ordered by current X position
+        $seats = $row->seats->sortBy('x')->values();
+        if ($seats->isEmpty()) {
+            Notification::make()
+                ->warning()
+                ->title('No seats in row')
+                ->send();
+            return;
+        }
+
+        // Recalculate seat positions maintaining alignment
+        $firstSeatX = $seats->first()->x;
+        $avgY = $seats->avg('y'); // Keep average Y position
+
+        foreach ($seats as $index => $seat) {
+            $newX = $firstSeatX + ($index * $seatSpacing);
+            $seat->update([
+                'x' => round($newX, 2),
+                'y' => round($avgY, 2),
+            ]);
+        }
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Row spacing updated')
+            ->body("Applied seat size {$seatSize}px and spacing {$seatSpacing}px")
+            ->send();
+    }
+
+    /**
+     * Set uniform vertical spacing between multiple rows
+     */
+    public function setRowSpacing(array $rowIds, float $spacing): void
+    {
+        if (count($rowIds) < 2) {
+            Notification::make()
+                ->warning()
+                ->title('Select at least 2 rows')
+                ->send();
+            return;
+        }
+
+        // Clamp spacing to reasonable limits
+        $spacing = max(20, min(200, $spacing));
+
+        // Get rows and sort by average Y position
+        $rows = SeatingRow::with(['seats', 'section'])
+            ->whereIn('id', $rowIds)
+            ->get()
+            ->filter(fn($row) => $row->section && $row->section->layout_id === $this->seatingLayout->id)
+            ->sortBy(fn($row) => $row->seats->avg('y'))
+            ->values();
+
+        if ($rows->count() < 2) {
+            Notification::make()
+                ->danger()
+                ->title('Invalid rows')
+                ->send();
+            return;
+        }
+
+        // Get the starting Y from the first row
+        $startY = $rows->first()->seats->avg('y');
+
+        // Adjust each row's Y position
+        foreach ($rows as $index => $row) {
+            $targetY = $startY + ($index * $spacing);
+            $currentAvgY = $row->seats->avg('y');
+            $offsetY = $targetY - $currentAvgY;
+
+            foreach ($row->seats as $seat) {
+                $seat->update([
+                    'y' => round($seat->y + $offsetY, 2),
+                ]);
+            }
+        }
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Row spacing applied')
+            ->body("Set {$spacing}px spacing between " . count($rowIds) . " rows")
+            ->send();
+    }
+
+    /**
+     * Block seats (mark as imposibil - permanently unavailable)
+     */
+    public function blockSeats(array $seatIds): void
+    {
+        $blockedCount = 0;
+
+        foreach ($seatIds as $seatId) {
+            $seat = SeatingSeat::find($seatId);
+            if (!$seat) continue;
+
+            $row = $seat->row;
+            $section = $row?->section;
+
+            if (!$section || $section->layout_id !== $this->seatingLayout->id) continue;
+
+            $seat->update(['status' => SeatingSeat::STATUS_IMPOSIBIL]);
+            $blockedCount++;
+        }
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Seats blocked')
+            ->body("Blocked {$blockedCount} seat(s)")
+            ->send();
+    }
+
+    /**
+     * Unblock seats (mark as active)
+     */
+    public function unblockSeats(array $seatIds): void
+    {
+        $unblockedCount = 0;
+
+        foreach ($seatIds as $seatId) {
+            $seat = SeatingSeat::find($seatId);
+            if (!$seat) continue;
+
+            $row = $seat->row;
+            $section = $row?->section;
+
+            if (!$section || $section->layout_id !== $this->seatingLayout->id) continue;
+
+            $seat->update(['status' => SeatingSeat::STATUS_ACTIVE]);
+            $unblockedCount++;
+        }
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Seats unblocked')
+            ->body("Unblocked {$unblockedCount} seat(s)")
+            ->send();
+    }
+
+    /**
+     * Delete seats and renumber remaining (alias for deleteSeats which already does this)
+     */
+    public function deleteSeatsAndRenumber(array $seatIds): void
+    {
+        $this->deleteSeats($seatIds);
+    }
+
+    /**
      * Delete multiple seats at once (bulk operation)
      */
     public function deleteSeats(array $seatIds): void

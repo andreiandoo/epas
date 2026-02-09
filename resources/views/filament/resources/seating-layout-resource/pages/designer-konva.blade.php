@@ -92,7 +92,13 @@
             editRowSeats: 0,
             editRowStartNumber: 1,
             editRowDirection: 'ltr',
+            editRowSeatSize: 20,
+            editRowSeatSpacing: 25,
             rowSelectMode: false,
+            multiSelectedRows: [],
+            multiRowSpacing: 30,
+            selectedSeatIds: [],
+            seatSelectMode: false,
             tempDrawRect: null,
             drawRectStart: null,
             tempRowLine: null,
@@ -419,6 +425,7 @@
                         if (row.seats && row.seats.length > 0) {
                             const isRowSelected = this.selectedRowData?.id === row.id;
                             const isTableSelected = this.selectedTableRow?.id === row.id;
+                            const isMultiSelected = this.multiSelectedRows.some(r => r.row.id === row.id);
                             const metadata = row.metadata || {};
                             const isTable = metadata.is_table;
                             const seatRadius = 10;
@@ -435,15 +442,25 @@
                                 maxY = Math.max(maxY, seatY + seatRadius);
                             });
 
+                            // Determine bounding box stroke color
+                            let bboxStroke = 'transparent';
+                            let bboxStrokeWidth = 2;
+                            if (isMultiSelected) {
+                                bboxStroke = '#F59E0B'; // Amber for multi-select
+                                bboxStrokeWidth = 3;
+                            } else if (isRowSelected || isTableSelected) {
+                                bboxStroke = '#FFD700'; // Gold for single select
+                            }
+
                             // Add bounding box rectangle for row selection
                             const rowBbox = new Konva.Rect({
                                 x: minX - padding,
                                 y: minY - padding,
                                 width: maxX - minX + padding * 2,
                                 height: maxY - minY + padding * 2,
-                                fill: 'transparent',
-                                stroke: (isRowSelected || isTableSelected) ? '#FFD700' : 'transparent',
-                                strokeWidth: 2,
+                                fill: isMultiSelected ? 'rgba(245, 158, 11, 0.1)' : 'transparent',
+                                stroke: bboxStroke,
+                                strokeWidth: bboxStrokeWidth,
                                 cornerRadius: 4,
                                 dash: [5, 3],
                                 id: `row-bbox-${row.id}`,
@@ -452,14 +469,14 @@
 
                             // Hover effect to show bounding box
                             rowBbox.on('mouseenter', () => {
-                                if (!isRowSelected && !isTableSelected) {
+                                if (!isRowSelected && !isTableSelected && !isMultiSelected) {
                                     rowBbox.stroke('#9CA3AF');
                                     rowBbox.strokeWidth(1);
                                     this.layer.batchDraw();
                                 }
                             });
                             rowBbox.on('mouseleave', () => {
-                                if (!isRowSelected && !isTableSelected) {
+                                if (!isRowSelected && !isTableSelected && !isMultiSelected) {
                                     rowBbox.stroke('transparent');
                                     this.layer.batchDraw();
                                 }
@@ -469,9 +486,15 @@
                             rowBbox.on('click tap', (e) => {
                                 if (this.drawMode === 'select' || this.rowSelectMode) {
                                     e.cancelBubble = true;
-                                    if (isTable) {
+
+                                    // Check for multi-selection (Ctrl+Click)
+                                    if ((e.evt.ctrlKey || e.evt.metaKey) && this.rowSelectMode && !isTable) {
+                                        this.toggleRowMultiSelect(section.id, row, e.evt);
+                                    } else if (isTable) {
+                                        this.clearMultiRowSelection();
                                         this.selectTable(section.id, row);
                                     } else {
+                                        this.clearMultiRowSelection();
                                         this.selectRow(section.id, row);
                                     }
                                 }
@@ -483,20 +506,67 @@
                             row.seats.forEach(seat => {
                                 const seatX = parseFloat(seat.x) || 0;
                                 const seatY = parseFloat(seat.y) || 0;
+                                const isBlocked = seat.status === 'imposibil';
+                                const isSeatSelected = this.selectedSeatIds.includes(seat.id);
 
-                                // Seat circle - highlight if row is selected
+                                // Determine seat colors based on status and selection
+                                let fillColor = section.seat_color || '#22C55E';
+                                let strokeColor = '#166534';
+                                let strokeWidth = 1;
+
+                                if (isBlocked) {
+                                    fillColor = '#9CA3AF'; // Gray for blocked
+                                    strokeColor = '#DC2626'; // Red border
+                                    strokeWidth = 2;
+                                }
+
+                                if (isSeatSelected) {
+                                    strokeColor = '#2563EB'; // Blue for selected
+                                    strokeWidth = 3;
+                                } else if (isRowSelected || isTableSelected) {
+                                    strokeColor = '#FFD700'; // Gold for row selection
+                                    strokeWidth = 2;
+                                }
+
+                                // Seat circle
                                 const seatCircle = new Konva.Circle({
                                     x: seatX,
                                     y: seatY,
                                     radius: seatRadius,
-                                    fill: section.seat_color || '#22C55E',
-                                    stroke: (isRowSelected || isTableSelected) ? '#FFD700' : '#166534',
-                                    strokeWidth: (isRowSelected || isTableSelected) ? 2 : 1,
+                                    fill: fillColor,
+                                    stroke: strokeColor,
+                                    strokeWidth: strokeWidth,
                                     id: `seat-${seat.id}`,
                                     name: 'seat'
                                 });
 
+                                // Click handler for seat selection
+                                seatCircle.on('click tap', (e) => {
+                                    if (this.seatSelectMode) {
+                                        e.cancelBubble = true;
+                                        this.toggleSeatSelect(seat.id, e.evt);
+                                    }
+                                });
+
                                 group.add(seatCircle);
+
+                                // Draw X for blocked seats
+                                if (isBlocked) {
+                                    const xLine1 = new Konva.Line({
+                                        points: [seatX - 5, seatY - 5, seatX + 5, seatY + 5],
+                                        stroke: '#DC2626',
+                                        strokeWidth: 2,
+                                        name: 'seat-blocked-x'
+                                    });
+                                    const xLine2 = new Konva.Line({
+                                        points: [seatX + 5, seatY - 5, seatX - 5, seatY + 5],
+                                        stroke: '#DC2626',
+                                        strokeWidth: 2,
+                                        name: 'seat-blocked-x'
+                                    });
+                                    group.add(xLine1);
+                                    group.add(xLine2);
+                                }
 
                                 // Seat label (number)
                                 const seatLabel = new Konva.Text({
@@ -506,7 +576,7 @@
                                     text: seat.label || '',
                                     fontSize: 9,
                                     fontFamily: 'Arial',
-                                    fill: '#1f2937',
+                                    fill: isBlocked ? '#374151' : '#1f2937',
                                     align: 'center',
                                     name: 'seat-label'
                                 });
@@ -776,6 +846,16 @@
                 this.editRowStartNumber = row.seat_start_number || 1;
                 this.editRowDirection = row.alignment === 'right' ? 'rtl' : 'ltr';
 
+                // Calculate current seat spacing from seat positions
+                if (row.seats && row.seats.length >= 2) {
+                    const sortedSeats = [...row.seats].sort((a, b) => parseFloat(a.x) - parseFloat(b.x));
+                    const spacing = parseFloat(sortedSeats[1].x) - parseFloat(sortedSeats[0].x);
+                    this.editRowSeatSpacing = Math.round(spacing) || 25;
+                } else {
+                    this.editRowSeatSpacing = 25;
+                }
+                this.editRowSeatSize = 20; // Default seat size
+
                 // Redraw to show selection highlight
                 this.drawAllSections();
             },
@@ -817,6 +897,99 @@
                     direction: this.editRowDirection
                 }).then(() => {
                     this.deselectRow();
+                });
+            },
+            updateRowSpacing() {
+                if (!this.selectedRowData) return;
+
+                this.$wire.updateRowSpacing(this.selectedRowData.id, {
+                    seatSize: this.editRowSeatSize,
+                    seatSpacing: this.editRowSeatSpacing
+                }).then(() => {
+                    this.deselectRow();
+                });
+            },
+            // Multi-row selection methods
+            toggleRowMultiSelect(sectionId, row, event) {
+                const rowKey = `${sectionId}-${row.id}`;
+                const index = this.multiSelectedRows.findIndex(r => r.key === rowKey);
+
+                if (event.ctrlKey || event.metaKey) {
+                    // Add/remove from selection
+                    if (index >= 0) {
+                        this.multiSelectedRows.splice(index, 1);
+                    } else {
+                        this.multiSelectedRows.push({ key: rowKey, sectionId, row });
+                    }
+                } else {
+                    // Replace selection
+                    this.multiSelectedRows = [{ key: rowKey, sectionId, row }];
+                }
+                this.drawAllSections();
+            },
+            clearMultiRowSelection() {
+                this.multiSelectedRows = [];
+                this.drawAllSections();
+            },
+            alignMultiRows(alignment) {
+                if (this.multiSelectedRows.length < 2) return;
+
+                // Get section ID from first selected row (all rows should be in same section for alignment)
+                const sectionId = this.multiSelectedRows[0].sectionId;
+                const rowIds = this.multiSelectedRows.map(r => r.row.id);
+
+                this.$wire.alignRows(sectionId, rowIds, alignment).then(() => {
+                    this.clearMultiRowSelection();
+                });
+            },
+            applyMultiRowSpacing() {
+                if (this.multiSelectedRows.length < 2) return;
+
+                const rowIds = this.multiSelectedRows.map(r => r.row.id);
+                this.$wire.setRowSpacing(rowIds, this.multiRowSpacing).then(() => {
+                    this.clearMultiRowSelection();
+                });
+            },
+            // Seat selection methods
+            toggleSeatSelect(seatId, event) {
+                const index = this.selectedSeatIds.indexOf(seatId);
+
+                if (event.ctrlKey || event.metaKey) {
+                    if (index >= 0) {
+                        this.selectedSeatIds.splice(index, 1);
+                    } else {
+                        this.selectedSeatIds.push(seatId);
+                    }
+                } else {
+                    this.selectedSeatIds = [seatId];
+                }
+                this.drawAllSections();
+            },
+            clearSeatSelection() {
+                this.selectedSeatIds = [];
+                this.drawAllSections();
+            },
+            deleteSelectedSeatsAction() {
+                if (this.selectedSeatIds.length === 0) return;
+
+                if (confirm(`Sigur doriți să ștergeți ${this.selectedSeatIds.length} loc(uri)? Locurile rămase vor fi renumerotate.`)) {
+                    this.$wire.deleteSeatsAndRenumber(this.selectedSeatIds).then(() => {
+                        this.clearSeatSelection();
+                    });
+                }
+            },
+            blockSelectedSeats() {
+                if (this.selectedSeatIds.length === 0) return;
+
+                this.$wire.blockSeats(this.selectedSeatIds).then(() => {
+                    this.clearSeatSelection();
+                });
+            },
+            unblockSelectedSeats() {
+                if (this.selectedSeatIds.length === 0) return;
+
+                this.$wire.unblockSeats(this.selectedSeatIds).then(() => {
+                    this.clearSeatSelection();
                 });
             },
             updateSectionPreview() {
@@ -1651,6 +1824,90 @@
                         </div>
                     </div>
 
+                    {{-- Multi-Row Selection Toolbar --}}
+                    <div x-show="multiSelectedRows.length > 0" x-transition
+                         class="p-3 mb-2 border border-amber-300 rounded-lg bg-amber-50">
+                        <div class="flex flex-wrap items-center gap-4">
+                            <span class="text-sm font-medium text-amber-800">
+                                <span x-text="multiSelectedRows.length"></span> rânduri selectate
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-amber-700">Aliniere:</span>
+                                <button x-on:click="alignMultiRows('left')" type="button"
+                                    class="px-2 py-1 text-xs font-medium text-amber-700 bg-white border border-amber-300 rounded hover:bg-amber-100"
+                                    title="Aliniază la stânga">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"></path>
+                                    </svg>
+                                </button>
+                                <button x-on:click="alignMultiRows('center')" type="button"
+                                    class="px-2 py-1 text-xs font-medium text-amber-700 bg-white border border-amber-300 rounded hover:bg-amber-100"
+                                    title="Centrează">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M4 18h16"></path>
+                                    </svg>
+                                </button>
+                                <button x-on:click="alignMultiRows('right')" type="button"
+                                    class="px-2 py-1 text-xs font-medium text-amber-700 bg-white border border-amber-300 rounded hover:bg-amber-100"
+                                    title="Aliniază la dreapta">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M4 18h16"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-amber-700">Spațiere:</span>
+                                <input type="number" x-model.number="multiRowSpacing" min="20" max="200" step="5"
+                                    class="w-16 px-2 py-1 text-xs border border-amber-300 rounded">
+                                <button x-on:click="applyMultiRowSpacing()" type="button"
+                                    class="px-2 py-1 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
+                                    Aplică
+                                </button>
+                            </div>
+                            <button x-on:click="clearMultiRowSelection()" type="button"
+                                class="px-2 py-1 text-xs font-medium text-amber-700 bg-white border border-amber-300 rounded hover:bg-amber-100">
+                                ✕ Anulează
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Seat Selection Toolbar --}}
+                    <div x-show="selectedSeatIds.length > 0" x-transition
+                         class="p-3 mb-2 border border-blue-300 rounded-lg bg-blue-50">
+                        <div class="flex flex-wrap items-center gap-4">
+                            <span class="text-sm font-medium text-blue-800">
+                                <span x-text="selectedSeatIds.length"></span> loc(uri) selectat(e)
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <button x-on:click="deleteSelectedSeatsAction()" type="button"
+                                    class="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    Șterge
+                                </button>
+                                <button x-on:click="blockSelectedSeats()" type="button"
+                                    class="px-3 py-1.5 text-xs font-medium text-white bg-gray-600 rounded hover:bg-gray-700 flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                                    </svg>
+                                    Blochează
+                                </button>
+                                <button x-on:click="unblockSelectedSeats()" type="button"
+                                    class="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Deblochează
+                                </button>
+                            </div>
+                            <button x-on:click="clearSeatSelection()" type="button"
+                                class="px-2 py-1 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded hover:bg-blue-100">
+                                ✕ Anulează
+                            </button>
+                        </div>
+                    </div>
+
                     {{-- Canvas --}}
                     <div class="overflow-hidden bg-gray-100 border-2 border-gray-300 rounded-lg">
                         <div id="konva-container" wire:ignore style="width: 100%; height: 600px; background: #f3f4f6;"></div>
@@ -1662,6 +1919,7 @@
                         <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Esc</kbd> Anulează</span>
                         <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Scroll</kbd> Zoom</span>
                         <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Drag</kbd> Pan</span>
+                        <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Ctrl+Click</kbd> Selectare multiplă</span>
                     </div>
                 </div>
             </div>
@@ -1818,6 +2076,27 @@
                             </button>
                         </div>
 
+                        {{-- Seat Size and Spacing --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-indigo-50">
+                            <div class="text-xs font-semibold text-indigo-700 uppercase">Dimensiuni și Spațiere</div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-indigo-600">Dimensiune loc (px)</label>
+                                    <input type="number" x-model.number="editRowSeatSize" min="8" max="40"
+                                        class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-indigo-600">Spațiu între locuri (px)</label>
+                                    <input type="number" x-model.number="editRowSeatSpacing" min="15" max="100"
+                                        class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
+                            </div>
+                            <button x-on:click="updateRowSpacing()" type="button"
+                                class="w-full px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700">
+                                Aplică spațiere
+                            </button>
+                        </div>
+
                         {{-- Seat Numbering --}}
                         <div class="p-3 space-y-3 rounded-lg bg-blue-50">
                             <div class="text-xs font-semibold text-blue-700 uppercase">Numerotare Locuri</div>
@@ -1971,6 +2250,24 @@
                             <div x-show="rowSelectMode" x-transition class="p-2 text-xs text-amber-800 rounded-lg bg-amber-50">
                                 <p class="font-medium">Mod selectare activ</p>
                                 <p class="mt-1">Click pe un rând sau masă pentru a-l selecta. Treceți cu mouse-ul pentru a vedea contururile.</p>
+                                <p class="mt-1"><strong>Ctrl+Click</strong> pentru selectare multiplă.</p>
+                            </div>
+
+                            {{-- Select Seat Button --}}
+                            <button x-on:click="seatSelectMode = !seatSelectMode; if(seatSelectMode) rowSelectMode = false;" type="button"
+                                class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold transition-all rounded-lg"
+                                :class="seatSelectMode ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span x-text="seatSelectMode ? 'Mod Selectare Locuri' : 'Selectează Locuri'"></span>
+                            </button>
+
+                            {{-- Seat Select Mode Info --}}
+                            <div x-show="seatSelectMode" x-transition class="p-2 text-xs text-blue-800 rounded-lg bg-blue-50">
+                                <p class="font-medium">Mod selectare locuri activ</p>
+                                <p class="mt-1">Click pe un loc pentru a-l selecta.</p>
+                                <p class="mt-1"><strong>Ctrl+Click</strong> pentru selectare multiplă.</p>
                             </div>
                         </div>
 
