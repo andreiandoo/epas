@@ -95,7 +95,696 @@
             currentDrawingShape: null,
             selectedRowForDrag: null,
             init() {
-                console.log('Alpine initialized - 3 column layout');
+                console.log('Konva Designer initializing...');
+                this.initKonva();
+            },
+            initKonva() {
+                const container = document.getElementById('konva-container');
+                if (!container) {
+                    console.error('Konva container not found');
+                    return;
+                }
+
+                // Create stage
+                this.stage = new Konva.Stage({
+                    container: 'konva-container',
+                    width: container.offsetWidth,
+                    height: 600,
+                    draggable: true
+                });
+
+                // Create layers
+                this.backgroundLayer = new Konva.Layer();
+                this.layer = new Konva.Layer();
+                this.drawLayer = new Konva.Layer();
+                this.seatsLayer = new Konva.Layer();
+
+                this.stage.add(this.backgroundLayer);
+                this.stage.add(this.layer);
+                this.stage.add(this.seatsLayer);
+                this.stage.add(this.drawLayer);
+
+                // Create transformer
+                this.transformer = new Konva.Transformer({
+                    rotateEnabled: true,
+                    enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-center', 'bottom-center']
+                });
+                this.layer.add(this.transformer);
+
+                // Draw background
+                this.drawBackground();
+
+                // Draw grid
+                this.drawGrid();
+
+                // Draw existing sections
+                this.drawSections();
+
+                // Setup event handlers
+                this.setupStageEvents();
+
+                // Handle window resize
+                window.addEventListener('resize', () => this.handleResize());
+
+                console.log('Konva Designer initialized successfully');
+            },
+            drawBackground() {
+                // Clear background layer
+                this.backgroundLayer.destroyChildren();
+
+                // Background color rect
+                const bgRect = new Konva.Rect({
+                    x: 0,
+                    y: 0,
+                    width: this.canvasWidth,
+                    height: this.canvasHeight,
+                    fill: this.backgroundColor
+                });
+                this.backgroundLayer.add(bgRect);
+
+                // Background image if exists
+                if (this.backgroundUrl && this.backgroundVisible) {
+                    const imageObj = new Image();
+                    imageObj.onload = () => {
+                        const bgImage = new Konva.Image({
+                            x: this.backgroundX,
+                            y: this.backgroundY,
+                            image: imageObj,
+                            opacity: this.backgroundOpacity,
+                            scaleX: this.backgroundScale,
+                            scaleY: this.backgroundScale
+                        });
+                        this.backgroundLayer.add(bgImage);
+                        bgImage.moveToBottom();
+                        bgRect.moveToBottom();
+                        this.backgroundLayer.batchDraw();
+                    };
+                    imageObj.src = this.backgroundUrl;
+                }
+
+                this.backgroundLayer.batchDraw();
+            },
+            drawGrid() {
+                // Remove old grid
+                this.layer.find('.grid-line').forEach(l => l.destroy());
+
+                if (!this.showGrid) {
+                    this.layer.batchDraw();
+                    return;
+                }
+
+                const gridSize = this.gridSize;
+                const width = this.canvasWidth;
+                const height = this.canvasHeight;
+
+                // Vertical lines
+                for (let x = 0; x <= width; x += gridSize) {
+                    const line = new Konva.Line({
+                        points: [x, 0, x, height],
+                        stroke: '#e5e7eb',
+                        strokeWidth: 0.5,
+                        name: 'grid-line'
+                    });
+                    this.layer.add(line);
+                    line.moveToBottom();
+                }
+
+                // Horizontal lines
+                for (let y = 0; y <= height; y += gridSize) {
+                    const line = new Konva.Line({
+                        points: [0, y, width, y],
+                        stroke: '#e5e7eb',
+                        strokeWidth: 0.5,
+                        name: 'grid-line'
+                    });
+                    this.layer.add(line);
+                    line.moveToBottom();
+                }
+
+                this.layer.batchDraw();
+            },
+            drawSections() {
+                // Clear existing section shapes
+                this.layer.find('.section-shape').forEach(s => s.destroy());
+                this.seatsLayer.destroyChildren();
+
+                this.sections.forEach(section => {
+                    this.drawSection(section);
+                });
+
+                this.layer.batchDraw();
+                this.seatsLayer.batchDraw();
+            },
+            drawSection(section) {
+                const group = new Konva.Group({
+                    x: section.x_position || 0,
+                    y: section.y_position || 0,
+                    rotation: section.rotation || 0,
+                    draggable: true,
+                    id: `section-${section.id}`,
+                    name: 'section-shape'
+                });
+
+                // Section background
+                const rect = new Konva.Rect({
+                    width: section.width || 200,
+                    height: section.height || 150,
+                    fill: section.color_hex || '#3B82F6',
+                    opacity: 0.3,
+                    stroke: section.color_hex || '#3B82F6',
+                    strokeWidth: 2,
+                    cornerRadius: section.corner_radius || 0
+                });
+                group.add(rect);
+
+                // Section label
+                const label = new Konva.Text({
+                    text: section.name || 'Section',
+                    fontSize: 14,
+                    fontFamily: 'Arial',
+                    fill: '#1f2937',
+                    x: 10,
+                    y: 10
+                });
+                group.add(label);
+
+                // Draw seats if they exist
+                if (section.rows) {
+                    section.rows.forEach(row => {
+                        if (row.seats) {
+                            row.seats.forEach(seat => {
+                                const seatCircle = new Konva.Circle({
+                                    x: seat.x_offset || 0,
+                                    y: seat.y_offset || 0,
+                                    radius: 8,
+                                    fill: section.seat_color || '#22C55E',
+                                    stroke: '#166534',
+                                    strokeWidth: 1,
+                                    id: `seat-${seat.id}`,
+                                    name: 'seat'
+                                });
+                                group.add(seatCircle);
+                            });
+                        }
+                    });
+                }
+
+                // Event handlers for section
+                group.on('click tap', (e) => {
+                    if (this.drawMode === 'select') {
+                        e.cancelBubble = true;
+                        this.selectSection(section.id);
+                    }
+                });
+
+                group.on('contextmenu', (e) => {
+                    e.evt.preventDefault();
+                    this.showSectionContextMenu(e, section);
+                });
+
+                group.on('dragend', () => {
+                    this.updateSectionPosition(section.id, group.x(), group.y());
+                });
+
+                group.on('transformend', () => {
+                    const scaleX = group.scaleX();
+                    const scaleY = group.scaleY();
+                    group.scaleX(1);
+                    group.scaleY(1);
+                    rect.width(rect.width() * scaleX);
+                    rect.height(rect.height() * scaleY);
+                    this.updateSectionTransform(section.id, group);
+                });
+
+                this.layer.add(group);
+            },
+            setupStageEvents() {
+                // Click on stage
+                this.stage.on('click tap', (e) => {
+                    if (e.target === this.stage) {
+                        this.deselectAll();
+                    }
+
+                    if (this.drawMode === 'text' && e.target === this.stage) {
+                        this.addTextAtPosition(this.stage.getPointerPosition());
+                    }
+                });
+
+                // Mouse down for drawing
+                this.stage.on('mousedown touchstart', (e) => {
+                    if (e.target !== this.stage) return;
+
+                    const pos = this.stage.getPointerPosition();
+                    const transformed = this.getTransformedPoint(pos);
+
+                    if (this.drawMode === 'drawRect') {
+                        this.startDrawRect(transformed);
+                    } else if (this.drawMode === 'polygon') {
+                        this.addPolygonPoint(transformed);
+                    } else if (this.drawMode === 'drawSingleRow') {
+                        this.startDrawRow(transformed);
+                    } else if (this.drawMode === 'drawRoundTable') {
+                        this.addRoundTable(transformed);
+                    } else if (this.drawMode === 'drawRectTable') {
+                        this.addRectTable(transformed);
+                    }
+                });
+
+                // Mouse move for drawing preview
+                this.stage.on('mousemove touchmove', (e) => {
+                    const pos = this.stage.getPointerPosition();
+                    if (!pos) return;
+                    const transformed = this.getTransformedPoint(pos);
+
+                    if (this.drawMode === 'drawRect' && this.drawRectStart) {
+                        this.updateDrawRect(transformed);
+                    } else if (this.drawMode === 'drawSingleRow' && this.rowDrawStart) {
+                        this.updateDrawRow(transformed);
+                    }
+                });
+
+                // Mouse up to finish drawing
+                this.stage.on('mouseup touchend', () => {
+                    if (this.drawMode === 'drawRect' && this.drawRectStart) {
+                        this.finishDrawRect();
+                    } else if (this.drawMode === 'drawSingleRow' && this.rowDrawStart) {
+                        this.finishDrawRow();
+                    }
+                });
+
+                // Zoom with scroll
+                this.stage.on('wheel', (e) => {
+                    e.evt.preventDefault();
+                    const scaleBy = 1.05;
+                    const oldScale = this.stage.scaleX();
+                    const pointer = this.stage.getPointerPosition();
+
+                    const mousePointTo = {
+                        x: (pointer.x - this.stage.x()) / oldScale,
+                        y: (pointer.y - this.stage.y()) / oldScale,
+                    };
+
+                    const newScale = e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
+                    this.zoom = Math.max(0.1, Math.min(3, newScale));
+
+                    this.stage.scale({ x: this.zoom, y: this.zoom });
+
+                    const newPos = {
+                        x: pointer.x - mousePointTo.x * this.zoom,
+                        y: pointer.y - mousePointTo.y * this.zoom,
+                    };
+                    this.stage.position(newPos);
+                    this.stage.batchDraw();
+                });
+            },
+            getTransformedPoint(pos) {
+                const transform = this.stage.getAbsoluteTransform().copy().invert();
+                return transform.point(pos);
+            },
+            selectSection(sectionId) {
+                this.selectedSection = sectionId;
+                const group = this.stage.findOne(`#section-${sectionId}`);
+                if (group) {
+                    this.transformer.nodes([group]);
+                    const section = this.sections.find(s => s.id === sectionId);
+                    if (section) {
+                        this.sectionWidth = section.width || 200;
+                        this.sectionHeight = section.height || 150;
+                        this.sectionRotation = section.rotation || 0;
+                        this.editColorHex = section.color_hex || '#3B82F6';
+                        this.editSeatColor = section.seat_color || '#22C55E';
+                    }
+                }
+                this.layer.batchDraw();
+            },
+            deselectAll() {
+                this.selectedSection = null;
+                this.transformer.nodes([]);
+                this.layer.batchDraw();
+            },
+            showSectionContextMenu(e, section) {
+                const containerRect = this.stage.container().getBoundingClientRect();
+                this.contextMenuX = containerRect.left + e.evt.offsetX;
+                this.contextMenuY = containerRect.top + e.evt.offsetY;
+                this.contextMenuSectionId = section.id;
+                this.contextMenuSectionType = section.section_type;
+                this.showContextMenu = true;
+            },
+            startDrawRect(pos) {
+                this.drawRectStart = pos;
+                this.tempDrawRect = new Konva.Rect({
+                    x: pos.x,
+                    y: pos.y,
+                    width: 0,
+                    height: 0,
+                    fill: 'rgba(59, 130, 246, 0.2)',
+                    stroke: '#3B82F6',
+                    strokeWidth: 2,
+                    dash: [5, 5]
+                });
+                this.drawLayer.add(this.tempDrawRect);
+            },
+            updateDrawRect(pos) {
+                if (!this.tempDrawRect) return;
+                const width = pos.x - this.drawRectStart.x;
+                const height = pos.y - this.drawRectStart.y;
+                this.tempDrawRect.width(width);
+                this.tempDrawRect.height(height);
+                this.drawLayer.batchDraw();
+            },
+            finishDrawRect() {
+                if (!this.tempDrawRect || !this.drawRectStart) return;
+
+                const width = Math.abs(this.tempDrawRect.width());
+                const height = Math.abs(this.tempDrawRect.height());
+
+                if (width > 20 && height > 20) {
+                    const x = Math.min(this.drawRectStart.x, this.drawRectStart.x + this.tempDrawRect.width());
+                    const y = Math.min(this.drawRectStart.y, this.drawRectStart.y + this.tempDrawRect.height());
+
+                    // Create section via Livewire
+                    this.$wire.createSection({
+                        name: 'New Section',
+                        section_type: 'standard',
+                        x_position: Math.round(x),
+                        y_position: Math.round(y),
+                        width: Math.round(width),
+                        height: Math.round(height),
+                        color_hex: '#3B82F6'
+                    });
+                }
+
+                this.tempDrawRect.destroy();
+                this.tempDrawRect = null;
+                this.drawRectStart = null;
+                this.drawLayer.batchDraw();
+                this.drawMode = 'select';
+            },
+            addPolygonPoint(pos) {
+                this.polygonPoints.push(pos.x, pos.y);
+
+                // Draw preview
+                if (this.tempPolygon) {
+                    this.tempPolygon.destroy();
+                }
+                this.tempPolygon = new Konva.Line({
+                    points: this.polygonPoints,
+                    stroke: '#10B981',
+                    strokeWidth: 2,
+                    closed: false,
+                    dash: [5, 5]
+                });
+                this.drawLayer.add(this.tempPolygon);
+                this.drawLayer.batchDraw();
+            },
+            finishPolygon() {
+                if (this.polygonPoints.length < 6) return; // Need at least 3 points
+
+                // Calculate bounding box
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                for (let i = 0; i < this.polygonPoints.length; i += 2) {
+                    minX = Math.min(minX, this.polygonPoints[i]);
+                    maxX = Math.max(maxX, this.polygonPoints[i]);
+                    minY = Math.min(minY, this.polygonPoints[i + 1]);
+                    maxY = Math.max(maxY, this.polygonPoints[i + 1]);
+                }
+
+                this.$wire.createSection({
+                    name: 'Polygon Section',
+                    section_type: 'polygon',
+                    x_position: Math.round(minX),
+                    y_position: Math.round(minY),
+                    width: Math.round(maxX - minX),
+                    height: Math.round(maxY - minY),
+                    color_hex: '#10B981',
+                    polygon_points: this.polygonPoints
+                });
+
+                this.cancelDrawing();
+            },
+            startDrawRow(pos) {
+                this.rowDrawStart = pos;
+                this.tempRowSeats = [];
+            },
+            updateDrawRow(pos) {
+                // Clear temp seats
+                this.drawLayer.find('.temp-seat').forEach(s => s.destroy());
+
+                const dx = pos.x - this.rowDrawStart.x;
+                const dy = pos.y - this.rowDrawStart.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const numSeats = Math.max(1, Math.floor(length / this.rowSeatSpacing));
+
+                for (let i = 0; i < numSeats; i++) {
+                    const t = numSeats > 1 ? i / (numSeats - 1) : 0;
+                    const x = this.rowDrawStart.x + dx * t;
+                    const y = this.rowDrawStart.y + dy * t;
+
+                    const seat = new Konva.Circle({
+                        x: x,
+                        y: y,
+                        radius: this.rowSeatSize / 2,
+                        fill: 'rgba(34, 197, 94, 0.5)',
+                        stroke: '#166534',
+                        strokeWidth: 1,
+                        name: 'temp-seat'
+                    });
+                    this.drawLayer.add(seat);
+                    this.tempRowSeats.push({ x, y });
+                }
+                this.drawLayer.batchDraw();
+            },
+            finishDrawRow() {
+                if (this.tempRowSeats.length > 0 && this.selectedSection) {
+                    this.$wire.addSeatsToSection(this.selectedSection, this.tempRowSeats);
+                }
+
+                this.drawLayer.find('.temp-seat').forEach(s => s.destroy());
+                this.tempRowSeats = [];
+                this.rowDrawStart = null;
+                this.drawLayer.batchDraw();
+            },
+            addRoundTable(pos) {
+                const seats = [];
+                const radius = 40;
+                const numSeats = this.tableSeats;
+
+                for (let i = 0; i < numSeats; i++) {
+                    const angle = (i / numSeats) * Math.PI * 2 - Math.PI / 2;
+                    seats.push({
+                        x: pos.x + Math.cos(angle) * radius,
+                        y: pos.y + Math.sin(angle) * radius
+                    });
+                }
+
+                if (this.selectedSection) {
+                    this.$wire.addSeatsToSection(this.selectedSection, seats);
+                }
+            },
+            addRectTable(pos) {
+                const seats = [];
+                const width = 80;
+                const height = 40;
+                const seatsPerSide = Math.ceil(this.tableSeatsRect / 2);
+                const spacing = width / (seatsPerSide + 1);
+
+                // Top seats
+                for (let i = 1; i <= seatsPerSide; i++) {
+                    seats.push({ x: pos.x - width/2 + i * spacing, y: pos.y - height/2 - 15 });
+                }
+                // Bottom seats
+                for (let i = 1; i <= seatsPerSide; i++) {
+                    seats.push({ x: pos.x - width/2 + i * spacing, y: pos.y + height/2 + 15 });
+                }
+
+                if (this.selectedSection) {
+                    this.$wire.addSeatsToSection(this.selectedSection, seats);
+                }
+            },
+            addTextAtPosition(pos) {
+                this.shapeConfigType = 'text';
+                this.shapeConfigData = this.getTransformedPoint(pos);
+                this.showShapeConfigModal = true;
+            },
+            confirmShapeConfig() {
+                if (this.shapeConfigType === 'text' && this.shapeConfigText) {
+                    const text = new Konva.Text({
+                        x: this.shapeConfigData.x,
+                        y: this.shapeConfigData.y,
+                        text: this.shapeConfigText,
+                        fontSize: this.shapeConfigFontSize,
+                        fontFamily: this.shapeConfigFontFamily,
+                        fill: this.shapeConfigColor,
+                        draggable: true,
+                        name: 'text-element'
+                    });
+                    this.layer.add(text);
+                    this.layer.batchDraw();
+                }
+                this.showShapeConfigModal = false;
+                this.shapeConfigText = '';
+            },
+            cancelDrawing() {
+                if (this.tempPolygon) {
+                    this.tempPolygon.destroy();
+                    this.tempPolygon = null;
+                }
+                if (this.tempDrawRect) {
+                    this.tempDrawRect.destroy();
+                    this.tempDrawRect = null;
+                }
+                this.drawLayer.find('.temp-seat').forEach(s => s.destroy());
+                this.polygonPoints = [];
+                this.drawRectStart = null;
+                this.rowDrawStart = null;
+                this.tempRowSeats = [];
+                this.drawLayer.batchDraw();
+                this.drawMode = 'select';
+            },
+            finishDrawing() {
+                if (this.drawMode === 'polygon' && this.polygonPoints.length >= 6) {
+                    this.finishPolygon();
+                } else if (this.drawMode === 'drawRect' && this.tempDrawRect) {
+                    this.finishDrawRect();
+                }
+            },
+            toggleGrid() {
+                this.showGrid = !this.showGrid;
+                this.drawGrid();
+            },
+            toggleSnapToGrid() {
+                this.snapToGrid = !this.snapToGrid;
+            },
+            zoomIn() {
+                this.zoom = Math.min(3, this.zoom + 0.1);
+                this.stage.scale({ x: this.zoom, y: this.zoom });
+                this.stage.batchDraw();
+            },
+            zoomOut() {
+                this.zoom = Math.max(0.1, this.zoom - 0.1);
+                this.stage.scale({ x: this.zoom, y: this.zoom });
+                this.stage.batchDraw();
+            },
+            resetView() {
+                this.zoom = 1;
+                this.stage.scale({ x: 1, y: 1 });
+                this.stage.position({ x: 0, y: 0 });
+                this.stage.batchDraw();
+            },
+            zoomToFit() {
+                const container = this.stage.container();
+                const containerWidth = container.offsetWidth;
+                const containerHeight = container.offsetHeight;
+                const scaleX = containerWidth / this.canvasWidth;
+                const scaleY = containerHeight / this.canvasHeight;
+                this.zoom = Math.min(scaleX, scaleY, 1);
+                this.stage.scale({ x: this.zoom, y: this.zoom });
+                this.stage.position({ x: 0, y: 0 });
+                this.stage.batchDraw();
+            },
+            handleKeyDown(e) {
+                if (e.key === 'Escape') {
+                    this.cancelDrawing();
+                    this.deselectAll();
+                } else if (e.key === 'Delete' && this.selectedSection) {
+                    this.deleteSelected();
+                }
+            },
+            deleteSelected() {
+                if (this.selectedSection) {
+                    this.$wire.deleteSection(this.selectedSection);
+                    this.deselectAll();
+                }
+            },
+            updateSectionPosition(sectionId, x, y) {
+                this.$wire.updateSectionPosition(sectionId, Math.round(x), Math.round(y));
+            },
+            updateSectionTransform(sectionId, group) {
+                const rect = group.findOne('Rect');
+                this.$wire.updateSectionTransform(sectionId, {
+                    x_position: Math.round(group.x()),
+                    y_position: Math.round(group.y()),
+                    width: Math.round(rect.width()),
+                    height: Math.round(rect.height()),
+                    rotation: Math.round(group.rotation())
+                });
+            },
+            updateBackgroundColor() {
+                this.drawBackground();
+            },
+            saveBackgroundColor() {
+                this.$wire.saveBackgroundColor(this.backgroundColor);
+            },
+            toggleBackgroundVisibility() {
+                this.drawBackground();
+            },
+            updateBackgroundScale() {
+                this.drawBackground();
+            },
+            updateBackgroundOpacity() {
+                this.drawBackground();
+            },
+            saveBackgroundSettings() {
+                this.$wire.saveBackgroundSettings({
+                    background_scale: this.backgroundScale,
+                    background_opacity: this.backgroundOpacity,
+                    background_x: this.backgroundX,
+                    background_y: this.backgroundY
+                });
+            },
+            exportSVG() {
+                const dataURL = this.stage.toDataURL({ pixelRatio: 2 });
+                const link = document.createElement('a');
+                link.download = 'seating-layout.png';
+                link.href = dataURL;
+                link.click();
+            },
+            exportJSON() {
+                const data = JSON.stringify(this.sections, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.download = 'seating-layout.json';
+                link.href = url;
+                link.click();
+                URL.revokeObjectURL(url);
+            },
+            handleResize() {
+                const container = this.stage.container();
+                this.stage.width(container.offsetWidth);
+                this.stage.batchDraw();
+            },
+            handleSectionDeleted(detail) {
+                const idx = this.sections.findIndex(s => s.id === detail.sectionId);
+                if (idx !== -1) {
+                    this.sections.splice(idx, 1);
+                }
+                this.drawSections();
+            },
+            handleSectionAdded(detail) {
+                this.sections.push(detail.section);
+                this.drawSections();
+            },
+            handleSeatAdded(detail) {
+                const section = this.sections.find(s => s.id === detail.sectionId);
+                if (section) {
+                    if (!section.rows) section.rows = [];
+                    // Logic to add seats to rows
+                }
+                this.drawSections();
+            },
+            handleLayoutImported(detail) {
+                this.sections = detail.sections;
+                this.drawSections();
+            },
+            handleLayoutUpdated(detail) {
+                this.sections = detail.sections;
+                this.drawSections();
+            },
+            getSelectedSectionSeatsCount() {
+                const section = this.getSelectedSectionData();
+                if (!section || !section.rows) return 0;
+                return section.rows.reduce((total, row) => total + (row.seats?.length || 0), 0);
             },
             getTotalSeats() {
                 return this.sections.reduce((total, section) => {
@@ -721,4 +1410,7 @@
             </div>
         </div>
     </div>
+
+    {{-- Load Konva library --}}
+    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
 </x-filament-panels::page>
