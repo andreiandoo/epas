@@ -380,10 +380,15 @@
                     const pos = this.stage.getPointerPosition();
                     const transformed = this.getTransformedPoint(pos);
 
-                    // For section drawing, only allow on empty stage
-                    if (this.drawMode === 'drawRect' && e.target === this.stage) {
+                    // Check if click is on empty area (stage or background, not on sections)
+                    const isEmptyArea = e.target === this.stage ||
+                                       e.target.getLayer() === this.backgroundLayer ||
+                                       (e.target.name && !e.target.name().includes('section'));
+
+                    // For section drawing, only allow on empty areas
+                    if (this.drawMode === 'drawRect' && isEmptyArea) {
                         this.startDrawRect(transformed);
-                    } else if (this.drawMode === 'polygon' && e.target === this.stage) {
+                    } else if (this.drawMode === 'polygon' && isEmptyArea) {
                         this.addPolygonPoint(transformed);
                     }
                     // For seat drawing modes, allow anywhere (even on sections)
