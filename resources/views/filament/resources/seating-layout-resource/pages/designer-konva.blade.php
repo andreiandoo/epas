@@ -94,24 +94,57 @@
             seatNumberingType: 'numeric',
             currentDrawingShape: null,
             selectedRowForDrag: null,
+            konvaInitialized: false,
             init() {
-                console.log('Konva Designer initializing...');
-                this.initKonva();
+                console.log('Konva Designer: waiting for Konva library...');
+                this.waitForKonva();
+            },
+            waitForKonva() {
+                // Check if Konva is loaded
+                if (typeof Konva !== 'undefined') {
+                    // Also ensure DOM is ready and container exists with dimensions
+                    this.$nextTick(() => {
+                        const container = document.getElementById('konva-container');
+                        if (container && container.offsetWidth > 0) {
+                            if (!this.konvaInitialized) {
+                                this.initKonva();
+                            }
+                        } else {
+                            // Container not ready, wait a bit more
+                            setTimeout(() => this.waitForKonva(), 50);
+                        }
+                    });
+                } else {
+                    // Konva not loaded yet, check again
+                    setTimeout(() => this.waitForKonva(), 50);
+                }
             },
             initKonva() {
+                if (this.konvaInitialized) {
+                    console.log('Konva Designer: already initialized, skipping');
+                    return;
+                }
+
                 const container = document.getElementById('konva-container');
                 if (!container) {
                     console.error('Konva container not found');
                     return;
                 }
 
+                const containerWidth = container.offsetWidth || 800;
+                const containerHeight = 600;
+
+                console.log('Konva Designer: initializing with dimensions', containerWidth, 'x', containerHeight);
+
                 // Create stage
                 this.stage = new Konva.Stage({
                     container: 'konva-container',
-                    width: container.offsetWidth,
-                    height: 600,
+                    width: containerWidth,
+                    height: containerHeight,
                     draggable: true
                 });
+
+                this.konvaInitialized = true;
 
                 // Create layers
                 this.backgroundLayer = new Konva.Layer();
