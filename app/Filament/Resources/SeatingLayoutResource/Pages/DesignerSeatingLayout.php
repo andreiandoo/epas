@@ -2598,6 +2598,248 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Update table seats count (regenerate seats around table)
+     */
+    public function updateTableSeats($rowId, int $newSeatCount): void
+    {
+        $row = SeatingRow::with(['section', 'seats'])->find($rowId);
+
+        if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Table not found')
+                ->send();
+            return;
+        }
+
+        $metadata = $row->metadata ?? [];
+        if (!($metadata['is_table'] ?? false)) {
+            return;
+        }
+
+        $section = $row->section;
+        $tableType = $metadata['table_type'] ?? 'round';
+        $centerX = $metadata['center_x'] ?? 50;
+        $centerY = $metadata['center_y'] ?? 50;
+
+        // Delete existing seats
+        $row->seats()->delete();
+
+        // Generate new seats based on table type
+        $seats = [];
+        if ($tableType === 'round') {
+            $tableRadius = $metadata['radius'] ?? 25;
+            $seatRadius = $tableRadius + 20;
+            for ($i = 0; $i < $newSeatCount; $i++) {
+                $angle = ($i / $newSeatCount) * M_PI * 2 - M_PI / 2;
+                $seats[] = [
+                    'x' => $centerX + cos($angle) * $seatRadius,
+                    'y' => $centerY + sin($angle) * $seatRadius,
+                    'label' => (string) ($i + 1),
+                ];
+            }
+        } else {
+            $tableWidth = $metadata['width'] ?? 80;
+            $tableHeight = $metadata['height'] ?? 30;
+            $seatsPerSide = ceil($newSeatCount / 2);
+            $spacing = $tableWidth / ($seatsPerSide + 1);
+
+            // Top seats
+            for ($i = 0; $i < $seatsPerSide && count($seats) < $newSeatCount; $i++) {
+                $seats[] = [
+                    'x' => $centerX - $tableWidth / 2 + ($i + 1) * $spacing,
+                    'y' => $centerY - $tableHeight / 2 - 15,
+                    'label' => (string) (count($seats) + 1),
+                ];
+            }
+            // Bottom seats
+            for ($i = 0; $i < $seatsPerSide && count($seats) < $newSeatCount; $i++) {
+                $seats[] = [
+                    'x' => $centerX - $tableWidth / 2 + ($i + 1) * $spacing,
+                    'y' => $centerY + $tableHeight / 2 + 15,
+                    'label' => (string) (count($seats) + 1),
+                ];
+            }
+        }
+
+        // Create new seats
+        foreach ($seats as $seatData) {
+            SeatingSeat::create([
+                'row_id' => $row->id,
+                'label' => $seatData['label'],
+                'display_name' => $section->generateSeatDisplayName($row->label, $seatData['label']),
+                'x' => (int) $seatData['x'],
+                'y' => (int) $seatData['y'],
+                'angle' => 0,
+                'shape' => 'circle',
+                'seat_uid' => $section->generateSeatUid($row->label, $seatData['label']),
+            ]);
+        }
+
+        $row->update(['seat_count' => $newSeatCount]);
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Locuri actualizate')
+            ->body("Masa '{$row->label}' are acum {$newSeatCount} locuri")
+            ->send();
+    }
+
+    /**
+     * Update table dimensions (radius for round, width/height for rect)
+     */
+    public function updateTableDimensions($rowId, array $dimensions): void
+    {
+        $row = SeatingRow::with(['section', 'seats'])->find($rowId);
+
+        if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Table not found')
+                ->send();
+            return;
+        }
+
+        $metadata = $row->metadata ?? [];
+        if (!($metadata['is_table'] ?? false)) {
+            return;
+        }
+
+        // Update metadata with new dimensions
+        if (isset($dimensions['radius'])) {
+            $metadata['radius'] = $dimensions['radius'];
+        }
+        if (isset($dimensions['width'])) {
+            $metadata['width'] = $dimensions['width'];
+        }
+        if (isset($dimensions['height'])) {
+            $metadata['height'] = $dimensions['height'];
+        }
+
+        $row->update(['metadata' => $metadata]);
+
+        // Regenerate seat positions
+        $this->updateTableSeats($rowId, $row->seats()->count());
+    }
+
+    /**
+     * Update row seats count
+     */
+    public function updateRowSeats($rowId, int $newSeatCount): void
+    {
+        $row = SeatingRow::with(['section', 'seats'])->find($rowId);
+
+        if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Row not found')
+                ->send();
+            return;
+        }
+
+        $section = $row->section;
+        $currentSeats = $row->seats()->orderBy('x')->get();
+        $currentCount = $currentSeats->count();
+
+        if ($newSeatCount === $currentCount) {
+            return;
+        }
+
+        if ($newSeatCount > $currentCount) {
+            // Add seats to the end
+            $lastSeat = $currentSeats->last();
+            $spacing = 20;
+            $startX = $lastSeat ? ((int) $lastSeat->x + $spacing) : 0;
+            $y = $lastSeat ? (int) $lastSeat->y : (int) $row->y;
+
+            for ($i = 0; $i < $newSeatCount - $currentCount; $i++) {
+                $seatNum = $currentCount + $i + 1;
+                $seatLabel = (string) $seatNum;
+                SeatingSeat::create([
+                    'row_id' => $row->id,
+                    'label' => $seatLabel,
+                    'display_name' => $section->generateSeatDisplayName($row->label, $seatLabel),
+                    'x' => $startX + ($i * $spacing),
+                    'y' => $y,
+                    'angle' => 0,
+                    'shape' => 'circle',
+                    'seat_uid' => $section->generateSeatUid($row->label, $seatLabel),
+                ]);
+            }
+        } else {
+            // Remove seats from the end
+            $seatsToRemove = $currentSeats->slice($newSeatCount);
+            foreach ($seatsToRemove as $seat) {
+                $seat->delete();
+            }
+        }
+
+        $row->update(['seat_count' => $newSeatCount]);
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Locuri actualizate')
+            ->body("Rândul '{$row->label}' are acum {$newSeatCount} locuri")
+            ->send();
+    }
+
+    /**
+     * Update row numbering
+     */
+    public function updateRowNumbering($rowId, array $settings): void
+    {
+        $row = SeatingRow::with(['section', 'seats'])->find($rowId);
+
+        if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Row not found')
+                ->send();
+            return;
+        }
+
+        $section = $row->section;
+        $startNumber = $settings['startNumber'] ?? 1;
+        $direction = $settings['direction'] ?? 'ltr';
+
+        // Update row settings
+        $row->update([
+            'seat_start_number' => $startNumber,
+            'alignment' => $direction === 'rtl' ? 'right' : 'left',
+        ]);
+
+        // Renumber seats
+        $seats = $row->seats()->orderBy('x')->get();
+        if ($direction === 'rtl') {
+            $seats = $seats->reverse();
+        }
+
+        $seatNum = $startNumber;
+        foreach ($seats as $seat) {
+            $seatLabel = (string) $seatNum;
+            $seat->update([
+                'label' => $seatLabel,
+                'display_name' => $section->generateSeatDisplayName($row->label, $seatLabel),
+                'seat_uid' => $section->generateSeatUid($row->label, $seatLabel),
+            ]);
+            $seatNum++;
+        }
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Numerotare actualizată')
+            ->body("Locurile din rândul '{$row->label}' au fost renumerotate")
+            ->send();
+    }
+
+    /**
      * Delete a seat
      */
     public function deleteSeat($seatId): void

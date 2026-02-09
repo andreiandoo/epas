@@ -83,11 +83,15 @@
             selectedTableSectionId: null,
             editTableName: '',
             editTableWidth: 80,
+            editTableHeight: 30,
+            editTableRadius: 25,
             editTableSeats: 6,
             selectedRowData: null,
             selectedRowSectionId: null,
             editRowLabel: '',
             editRowSeats: 0,
+            editRowStartNumber: 1,
+            editRowDirection: 'ltr',
             tempDrawRect: null,
             drawRectStart: null,
             tempRowLine: null,
@@ -647,13 +651,17 @@
                 this.selectedSection = sectionId;
                 this.addSeatsMode = false;
                 this.selectedDrawnRow = null;
+                this.selectedRowData = null;
 
                 // Populate edit fields
                 const metadata = row.metadata || {};
                 this.editTableName = row.label || '';
                 this.editTableSeats = row.seats?.length || 0;
-                if (metadata.table_type === 'rect') {
+                if (metadata.table_type === 'round') {
+                    this.editTableRadius = parseFloat(metadata.radius) || 25;
+                } else {
                     this.editTableWidth = parseFloat(metadata.width) || 80;
+                    this.editTableHeight = parseFloat(metadata.height) || 30;
                 }
 
                 // Redraw to show selection highlight
@@ -682,6 +690,29 @@
                     });
                 }
             },
+            updateTableSeats() {
+                if (!this.selectedTableRow) return;
+
+                this.$wire.updateTableSeats(this.selectedTableRow.id, this.editTableSeats).then(() => {
+                    this.deselectTable();
+                });
+            },
+            updateTableDimensions() {
+                if (!this.selectedTableRow) return;
+
+                const metadata = this.selectedTableRow.metadata || {};
+                const data = {};
+                if (metadata.table_type === 'round') {
+                    data.radius = this.editTableRadius;
+                } else {
+                    data.width = this.editTableWidth;
+                    data.height = this.editTableHeight;
+                }
+
+                this.$wire.updateTableDimensions(this.selectedTableRow.id, data).then(() => {
+                    this.deselectTable();
+                });
+            },
             selectRow(sectionId, row) {
                 this.selectedRowData = row;
                 this.selectedRowSectionId = sectionId;
@@ -693,6 +724,8 @@
                 // Populate edit fields
                 this.editRowLabel = row.label || '';
                 this.editRowSeats = row.seats?.length || 0;
+                this.editRowStartNumber = row.seat_start_number || 1;
+                this.editRowDirection = row.alignment === 'right' ? 'rtl' : 'ltr';
 
                 // Redraw to show selection highlight
                 this.drawAllSections();
@@ -719,6 +752,23 @@
                         this.deselectRow();
                     });
                 }
+            },
+            updateRowSeats() {
+                if (!this.selectedRowData) return;
+
+                this.$wire.updateRowSeats(this.selectedRowData.id, this.editRowSeats).then(() => {
+                    this.deselectRow();
+                });
+            },
+            updateRowNumbering() {
+                if (!this.selectedRowData) return;
+
+                this.$wire.updateRowNumbering(this.selectedRowData.id, {
+                    startNumber: this.editRowStartNumber,
+                    direction: this.editRowDirection
+                }).then(() => {
+                    this.deselectRow();
+                });
             },
             updateSectionPreview() {
                 if (!this.selectedSection) return;
@@ -1585,9 +1635,6 @@
                                     <span x-text="selectedTableRow?.metadata?.table_type === 'round' ? 'Masă Rotundă' : 'Masă Dreptunghiulară'"></span>
                                 </span>
                             </div>
-                            <div class="mt-2 text-xs text-amber-600">
-                                <span x-text="`${selectedTableRow?.seats?.length || 0} locuri`"></span>
-                            </div>
                         </div>
 
                         {{-- Table Name --}}
@@ -1598,26 +1645,61 @@
                                     class="flex-1 px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
                                 <button x-on:click="updateTableName()" type="button"
                                     class="px-3 py-1 text-sm font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
-                                    Salvează
+                                    ✓
                                 </button>
                             </div>
                         </div>
 
-                        {{-- Table Dimensions (for rectangular tables) --}}
-                        <div x-show="selectedTableRow?.metadata?.table_type === 'rect'" class="p-3 space-y-3 rounded-lg bg-orange-50">
-                            <div class="text-xs font-semibold text-orange-700 uppercase">Dimensiuni Masă</div>
-                            <div>
-                                <label class="block text-xs text-orange-600">Lățime masă (px)</label>
-                                <input type="number" x-model.number="editTableWidth" min="40" max="200"
-                                    class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                                <div class="mt-1 text-xs text-gray-500" x-text="`${editTableWidth}px`"></div>
+                        {{-- Table Seats Control --}}
+                        <div class="p-3 space-y-3 border border-amber-200 rounded-lg bg-amber-50">
+                            <div class="text-xs font-semibold text-amber-700 uppercase">Locuri la masă</div>
+                            <div class="flex items-center gap-2">
+                                <button x-on:click="editTableSeats = Math.max(2, editTableSeats - 1)" type="button"
+                                    class="flex items-center justify-center w-8 h-8 text-lg font-bold text-white bg-red-500 rounded hover:bg-red-600"
+                                    :disabled="editTableSeats <= 2">−</button>
+                                <input type="number" x-model.number="editTableSeats" min="2" max="20"
+                                    class="flex-1 px-2 py-1 text-sm text-center text-gray-900 bg-white border border-gray-300 rounded">
+                                <button x-on:click="editTableSeats = Math.min(20, editTableSeats + 1)" type="button"
+                                    class="flex items-center justify-center w-8 h-8 text-lg font-bold text-white bg-green-500 rounded hover:bg-green-600"
+                                    :disabled="editTableSeats >= 20">+</button>
                             </div>
+                            <button x-on:click="updateTableSeats()" type="button"
+                                class="w-full px-3 py-1.5 text-sm font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
+                                Aplică modificări locuri
+                            </button>
                         </div>
 
-                        {{-- Table Seats Info --}}
+                        {{-- Table Dimensions --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-orange-50">
+                            <div class="text-xs font-semibold text-orange-700 uppercase">Dimensiuni</div>
+                            <div x-show="selectedTableRow?.metadata?.table_type === 'round'">
+                                <label class="block text-xs text-orange-600">Rază masă (px)</label>
+                                <input type="number" x-model.number="editTableRadius" min="15" max="100"
+                                    class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                <div class="mt-1 text-xs text-gray-500" x-text="`${editTableRadius}px`"></div>
+                            </div>
+                            <div x-show="selectedTableRow?.metadata?.table_type === 'rect'" class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-orange-600">Lățime (px)</label>
+                                    <input type="number" x-model.number="editTableWidth" min="40" max="200"
+                                        class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-orange-600">Înălțime (px)</label>
+                                    <input type="number" x-model.number="editTableHeight" min="20" max="100"
+                                        class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
+                            </div>
+                            <button x-on:click="updateTableDimensions()" type="button"
+                                class="w-full px-3 py-1.5 text-sm font-medium text-white bg-orange-600 rounded hover:bg-orange-700">
+                                Aplică dimensiuni
+                            </button>
+                        </div>
+
+                        {{-- Table Info --}}
                         <div class="p-3 space-y-2 text-xs rounded-lg bg-gray-50">
                             <div class="flex justify-between">
-                                <span class="text-gray-500">Locuri:</span>
+                                <span class="text-gray-500">Locuri curente:</span>
                                 <span class="font-medium" x-text="selectedTableRow?.seats?.length || 0"></span>
                             </div>
                             <div class="flex justify-between">
@@ -1651,9 +1733,7 @@
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-200 text-purple-800">
                                     Rând
                                 </span>
-                            </div>
-                            <div class="mt-2 text-xs text-purple-600">
-                                <span x-text="`${selectedRowData?.seats?.length || 0} locuri`"></span>
+                                <span class="text-xs text-purple-600" x-text="selectedRowData?.label || '-'"></span>
                             </div>
                         </div>
 
@@ -1665,15 +1745,55 @@
                                     class="flex-1 px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
                                 <button x-on:click="updateRowName()" type="button"
                                     class="px-3 py-1 text-sm font-medium text-white bg-purple-600 rounded hover:bg-purple-700">
-                                    Salvează
+                                    ✓
                                 </button>
                             </div>
+                        </div>
+
+                        {{-- Row Seats Control --}}
+                        <div class="p-3 space-y-3 border border-purple-200 rounded-lg bg-purple-50">
+                            <div class="text-xs font-semibold text-purple-700 uppercase">Locuri în rând</div>
+                            <div class="flex items-center gap-2">
+                                <button x-on:click="editRowSeats = Math.max(1, editRowSeats - 1)" type="button"
+                                    class="flex items-center justify-center w-8 h-8 text-lg font-bold text-white bg-red-500 rounded hover:bg-red-600"
+                                    :disabled="editRowSeats <= 1">−</button>
+                                <input type="number" x-model.number="editRowSeats" min="1" max="100"
+                                    class="flex-1 px-2 py-1 text-sm text-center text-gray-900 bg-white border border-gray-300 rounded">
+                                <button x-on:click="editRowSeats = Math.min(100, editRowSeats + 1)" type="button"
+                                    class="flex items-center justify-center w-8 h-8 text-lg font-bold text-white bg-green-500 rounded hover:bg-green-600"
+                                    :disabled="editRowSeats >= 100">+</button>
+                            </div>
+                            <button x-on:click="updateRowSeats()" type="button"
+                                class="w-full px-3 py-1.5 text-sm font-medium text-white bg-purple-600 rounded hover:bg-purple-700">
+                                Aplică modificări locuri
+                            </button>
+                        </div>
+
+                        {{-- Seat Numbering --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-blue-50">
+                            <div class="text-xs font-semibold text-blue-700 uppercase">Numerotare Locuri</div>
+                            <div>
+                                <label class="block text-xs text-blue-600">Începe de la</label>
+                                <input type="number" x-model.number="editRowStartNumber" min="1" max="999"
+                                    class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-blue-600">Direcție</label>
+                                <select x-model="editRowDirection" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <option value="ltr">Stânga → Dreapta</option>
+                                    <option value="rtl">Dreapta → Stânga</option>
+                                </select>
+                            </div>
+                            <button x-on:click="updateRowNumbering()" type="button"
+                                class="w-full px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
+                                Aplică numerotare
+                            </button>
                         </div>
 
                         {{-- Row Details --}}
                         <div class="p-3 space-y-2 text-xs rounded-lg bg-gray-50">
                             <div class="flex justify-between">
-                                <span class="text-gray-500">Locuri:</span>
+                                <span class="text-gray-500">Locuri curente:</span>
                                 <span class="font-medium" x-text="selectedRowData?.seats?.length || 0"></span>
                             </div>
                             <div class="flex justify-between">
