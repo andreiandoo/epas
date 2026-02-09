@@ -19,7 +19,7 @@ class DesignerSeatingLayout extends Page
 {
     protected static string $resource = SeatingLayoutResource::class;
 
-    protected string $view = 'filament.resources.seating-layout-resource.pages.designer-konva';
+    protected string $view = 'filament.resources.seating-layout-resource.pages.designer-test';
 
     protected static ?string $title = 'Seating Designer';
 
