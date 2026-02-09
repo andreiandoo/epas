@@ -269,19 +269,27 @@
                 this.seatsLayer.batchDraw();
             },
             drawSection(section) {
+                const sectionWidth = section.width || 200;
+                const sectionHeight = section.height || 150;
+
+                // Create group with offset at center for rotation around center
                 const group = new Konva.Group({
-                    x: section.x_position || 0,
-                    y: section.y_position || 0,
+                    x: (section.x_position || 0) + sectionWidth / 2,
+                    y: (section.y_position || 0) + sectionHeight / 2,
+                    offsetX: sectionWidth / 2,
+                    offsetY: sectionHeight / 2,
                     rotation: section.rotation || 0,
-                    draggable: true,
+                    scaleX: section.scale || 1,
+                    scaleY: section.scale || 1,
+                    draggable: this.drawMode === 'select', // Only draggable in select mode
                     id: `section-${section.id}`,
                     name: 'section-shape'
                 });
 
                 // Section background
                 const rect = new Konva.Rect({
-                    width: section.width || 200,
-                    height: section.height || 150,
+                    width: sectionWidth,
+                    height: sectionHeight,
                     fill: section.color_hex || '#3B82F6',
                     opacity: 0.3,
                     stroke: section.color_hex || '#3B82F6',
@@ -292,12 +300,13 @@
 
                 // Section label
                 const label = new Konva.Text({
-                    text: section.name || 'Section',
-                    fontSize: 14,
+                    text: section.label || section.name || 'Section',
+                    fontSize: section.font_size || 14,
                     fontFamily: 'Arial',
                     fill: '#1f2937',
                     x: 10,
-                    y: 10
+                    y: 10,
+                    name: 'section-label'
                 });
                 group.add(label);
 
@@ -336,7 +345,10 @@
                 });
 
                 group.on('dragend', () => {
-                    this.updateSectionPosition(section.id, group.x(), group.y());
+                    // Account for offset - position is center, we need top-left for storage
+                    const topLeftX = group.x() - group.offsetX();
+                    const topLeftY = group.y() - group.offsetY();
+                    this.updateSectionPosition(section.id, Math.round(topLeftX), Math.round(topLeftY));
                 });
 
                 group.on('transformend', () => {
@@ -451,6 +463,10 @@
                         this.sectionWidth = section.width || 200;
                         this.sectionHeight = section.height || 150;
                         this.sectionRotation = section.rotation || 0;
+                        this.sectionScale = section.scale || 1;
+                        this.sectionCornerRadius = section.corner_radius || 0;
+                        this.sectionLabel = section.label || section.name || '';
+                        this.sectionFontSize = section.font_size || 14;
                         this.editColorHex = section.color_hex || '#3B82F6';
                         this.editSeatColor = section.seat_color || '#22C55E';
                     }
@@ -465,29 +481,50 @@
             updateSectionPreview() {
                 if (!this.selectedSection) return;
 
+                const newWidth = parseInt(this.sectionWidth) || 200;
+                const newHeight = parseInt(this.sectionHeight) || 150;
+                const newScale = parseFloat(this.sectionScale) || 1;
+
                 // Update local section data for preview
                 const section = this.sections.find(s => s.id === this.selectedSection);
                 if (section) {
-                    section.width = parseInt(this.sectionWidth) || section.width;
-                    section.height = parseInt(this.sectionHeight) || section.height;
+                    section.width = newWidth;
+                    section.height = newHeight;
                     section.rotation = parseInt(this.sectionRotation) || 0;
+                    section.scale = newScale;
                     section.color_hex = this.editColorHex;
                     section.seat_color = this.editSeatColor;
                     section.corner_radius = parseInt(this.sectionCornerRadius) || 0;
+                    section.label = this.sectionLabel;
+                    section.font_size = parseInt(this.sectionFontSize) || 14;
                 }
 
                 // Update the Konva group directly for instant preview
                 const group = this.stage.findOne(`#section-${this.selectedSection}`);
                 if (group) {
+                    // Update offset for center rotation when size changes
+                    group.offsetX(newWidth / 2);
+                    group.offsetY(newHeight / 2);
                     group.rotation(parseInt(this.sectionRotation) || 0);
+                    group.scaleX(newScale);
+                    group.scaleY(newScale);
+
                     const rect = group.findOne('Rect');
                     if (rect) {
-                        rect.width(parseInt(this.sectionWidth) || 200);
-                        rect.height(parseInt(this.sectionHeight) || 150);
+                        rect.width(newWidth);
+                        rect.height(newHeight);
                         rect.fill(this.editColorHex);
                         rect.stroke(this.editColorHex);
                         rect.cornerRadius(parseInt(this.sectionCornerRadius) || 0);
                     }
+
+                    // Update label text
+                    const label = group.findOne('.section-label');
+                    if (label) {
+                        label.text(this.sectionLabel || section?.name || 'Section');
+                        label.fontSize(parseInt(this.sectionFontSize) || 14);
+                    }
+
                     // Update seats color
                     group.find('.seat').forEach(seat => {
                         seat.fill(this.editSeatColor);
@@ -653,7 +690,17 @@
             },
             finishDrawRow() {
                 if (this.tempRowSeats.length > 0 && this.selectedSection) {
-                    this.$wire.addSeatsToSection(this.selectedSection, this.tempRowSeats);
+                    // Convert absolute coordinates to section-relative coordinates
+                    const section = this.sections.find(s => s.id === this.selectedSection);
+                    if (section) {
+                        const sectionX = section.x_position || 0;
+                        const sectionY = section.y_position || 0;
+                        const relativeSeats = this.tempRowSeats.map(seat => ({
+                            x: seat.x - sectionX,
+                            y: seat.y - sectionY
+                        }));
+                        this.$wire.addSeatsToSection(this.selectedSection, relativeSeats);
+                    }
                 }
 
                 this.drawLayer.find('.temp-seat').forEach(s => s.destroy());
@@ -701,17 +748,26 @@
             },
             finishDrawMultiRows() {
                 if (this.tempMultiRowSeats.length > 0 && this.selectedSection) {
-                    // Group seats by row for proper row creation
-                    const rowGroups = {};
-                    this.tempMultiRowSeats.forEach(seat => {
-                        if (!rowGroups[seat.row]) rowGroups[seat.row] = [];
-                        rowGroups[seat.row].push({ x: seat.x, y: seat.y });
-                    });
+                    const section = this.sections.find(s => s.id === this.selectedSection);
+                    if (section) {
+                        const sectionX = section.x_position || 0;
+                        const sectionY = section.y_position || 0;
 
-                    // Add each row separately
-                    Object.values(rowGroups).forEach(seats => {
-                        this.$wire.addSeatsToSection(this.selectedSection, seats);
-                    });
+                        // Group seats by row for proper row creation
+                        const rowGroups = {};
+                        this.tempMultiRowSeats.forEach(seat => {
+                            if (!rowGroups[seat.row]) rowGroups[seat.row] = [];
+                            rowGroups[seat.row].push({
+                                x: seat.x - sectionX,
+                                y: seat.y - sectionY
+                            });
+                        });
+
+                        // Add each row separately
+                        Object.values(rowGroups).forEach(seats => {
+                            this.$wire.addSeatsToSection(this.selectedSection, seats);
+                        });
+                    }
                 }
 
                 this.drawLayer.find('.temp-multi-seat').forEach(s => s.destroy());
@@ -720,6 +776,13 @@
                 this.drawLayer.batchDraw();
             },
             addRoundTable(pos) {
+                if (!this.selectedSection) return;
+
+                const section = this.sections.find(s => s.id === this.selectedSection);
+                if (!section) return;
+
+                const sectionX = section.x_position || 0;
+                const sectionY = section.y_position || 0;
                 const seats = [];
                 const radius = 40;
                 const numSeats = this.tableSeats;
@@ -727,16 +790,21 @@
                 for (let i = 0; i < numSeats; i++) {
                     const angle = (i / numSeats) * Math.PI * 2 - Math.PI / 2;
                     seats.push({
-                        x: pos.x + Math.cos(angle) * radius,
-                        y: pos.y + Math.sin(angle) * radius
+                        x: (pos.x + Math.cos(angle) * radius) - sectionX,
+                        y: (pos.y + Math.sin(angle) * radius) - sectionY
                     });
                 }
 
-                if (this.selectedSection) {
-                    this.$wire.addSeatsToSection(this.selectedSection, seats);
-                }
+                this.$wire.addSeatsToSection(this.selectedSection, seats);
             },
             addRectTable(pos) {
+                if (!this.selectedSection) return;
+
+                const section = this.sections.find(s => s.id === this.selectedSection);
+                if (!section) return;
+
+                const sectionX = section.x_position || 0;
+                const sectionY = section.y_position || 0;
                 const seats = [];
                 const width = 80;
                 const height = 40;
@@ -745,16 +813,32 @@
 
                 // Top seats
                 for (let i = 1; i <= seatsPerSide; i++) {
-                    seats.push({ x: pos.x - width/2 + i * spacing, y: pos.y - height/2 - 15 });
+                    seats.push({
+                        x: (pos.x - width/2 + i * spacing) - sectionX,
+                        y: (pos.y - height/2 - 15) - sectionY
+                    });
                 }
                 // Bottom seats
                 for (let i = 1; i <= seatsPerSide; i++) {
-                    seats.push({ x: pos.x - width/2 + i * spacing, y: pos.y + height/2 + 15 });
+                    seats.push({
+                        x: (pos.x - width/2 + i * spacing) - sectionX,
+                        y: (pos.y + height/2 + 15) - sectionY
+                    });
                 }
 
-                if (this.selectedSection) {
-                    this.$wire.addSeatsToSection(this.selectedSection, seats);
-                }
+                this.$wire.addSeatsToSection(this.selectedSection, seats);
+            },
+            updateSectionsDraggable() {
+                // Update all sections' draggable state based on current draw mode
+                const isDraggable = this.drawMode === 'select';
+                this.layer.find('.section-shape').forEach(group => {
+                    group.draggable(isDraggable);
+                });
+                this.layer.batchDraw();
+            },
+            setDrawMode(mode) {
+                this.drawMode = mode;
+                this.updateSectionsDraggable();
             },
             addTextAtPosition(pos) {
                 this.shapeConfigType = 'text';
@@ -971,13 +1055,13 @@
                 <div class="space-y-2">
                     <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Selectie</div>
                     <div class="grid grid-cols-1 gap-1">
-                        <button x-on:click="drawMode = 'select'" type="button"
+                        <button x-on:click="setDrawMode('select')" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
                             :class="drawMode === 'select' ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             <svg viewBox="0 0 32 32" class="w-5 h-5"><path d="M31.371 17.433 10.308 9.008c-.775-.31-1.629.477-1.3 1.3l8.426 21.064c.346.866 1.633.797 1.89-.098l2.654-9.295 9.296-2.656c.895-.255.96-1.544.097-1.89z" fill="currentColor"></path></svg>
                             Selectare
                         </button>
-                        <button x-on:click="drawMode = 'selectseats'" type="button" x-show="!addSeatsMode"
+                        <button x-on:click="setDrawMode('selectseats')" type="button" x-show="!addSeatsMode"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
                             :class="drawMode === 'selectseats' ? 'bg-pink-500 border-pink-500 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             <x-svg-icon name="konvaseats" class="w-5 h-5" />
@@ -990,7 +1074,7 @@
                 <div class="space-y-2" x-show="!addSeatsMode" x-transition>
                     <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Sectiuni</div>
                     <div class="grid grid-cols-1 gap-1">
-                        <button x-on:click="drawMode = 'drawRect'" type="button"
+                        <button x-on:click="setDrawMode('drawRect')" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
                             :class="drawMode === 'drawRect' ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -998,7 +1082,7 @@
                             </svg>
                             Dreptunghi
                         </button>
-                        <button x-on:click="drawMode = 'polygon'" type="button"
+                        <button x-on:click="setDrawMode('polygon')" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
                             :class="drawMode === 'polygon' ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             <x-svg-icon name="konvapolygon" class="w-5 h-5" />
@@ -1014,22 +1098,22 @@
                         <button x-on:click="addSeatsMode = false" type="button" class="text-xs text-gray-400 hover:text-gray-600">x</button>
                     </div>
                     <div class="grid grid-cols-1 gap-1">
-                        <button x-on:click="drawMode = 'drawSingleRow'" type="button"
+                        <button x-on:click="setDrawMode('drawSingleRow')" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
                             :class="drawMode === 'drawSingleRow' ? 'bg-purple-600 border-purple-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             Un singur rand
                         </button>
-                        <button x-on:click="drawMode = 'drawMultiRows'" type="button"
+                        <button x-on:click="setDrawMode('drawMultiRows')" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
                             :class="drawMode === 'drawMultiRows' ? 'bg-purple-600 border-purple-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             Multiple randuri
                         </button>
-                        <button x-on:click="drawMode = 'drawRoundTable'" type="button"
+                        <button x-on:click="setDrawMode('drawRoundTable')" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
                             :class="drawMode === 'drawRoundTable' ? 'bg-amber-600 border-amber-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             Masa rotunda
                         </button>
-                        <button x-on:click="drawMode = 'drawRectTable'" type="button"
+                        <button x-on:click="setDrawMode('drawRectTable')" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
                             :class="drawMode === 'drawRectTable' ? 'bg-amber-600 border-amber-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             Masa dreptunghiulara
@@ -1041,12 +1125,12 @@
                 <div class="space-y-2" x-show="!addSeatsMode" x-transition>
                     <div class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Alte Instrumente</div>
                     <div class="grid grid-cols-2 gap-1">
-                        <button x-on:click="drawMode = 'text'" type="button"
+                        <button x-on:click="setDrawMode('text')" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
                             :class="drawMode === 'text' ? 'bg-gray-700 border-gray-700 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             Text
                         </button>
-                        <button x-on:click="drawMode = 'line'" type="button"
+                        <button x-on:click="setDrawMode('line')" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
                             :class="drawMode === 'line' ? 'bg-gray-700 border-gray-700 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             Linie
@@ -1313,11 +1397,11 @@
                             <div class="text-xs font-semibold text-gray-600 uppercase">Etichetă</div>
                             <div>
                                 <label class="block text-xs text-gray-500">Nume afișat</label>
-                                <input type="text" x-model="sectionLabel" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded" placeholder="Nume secțiune">
+                                <input type="text" x-model="sectionLabel" x-on:input="updateSectionPreview()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded" placeholder="Nume secțiune">
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-500">Dimensiune font</label>
-                                <input type="number" x-model="sectionFontSize" min="8" max="72" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                <input type="number" x-model="sectionFontSize" x-on:input="updateSectionPreview()" min="8" max="72" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
                             </div>
                         </div>
 
