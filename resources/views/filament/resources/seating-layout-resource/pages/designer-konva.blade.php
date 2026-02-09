@@ -1042,18 +1042,20 @@
                 </button>
             </div>
         </div>
+    </div>
+</x-filament-panels::page>
 
-        {{-- Inline styles --}}
-        <style>
-            [x-cloak] { display: none !important; }
-            .fi-header { flex-direction: column !important; align-items: flex-start !important; }
-            .fi-header .fi-header-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.75rem; border-top: 1px solid #E5E7EB; margin-top: 0.5rem; }
-        </style>
+@push('styles')
+<style>
+    [x-cloak] { display: none !important; }
+    .fi-header { flex-direction: column !important; align-items: flex-start !important; }
+    .fi-header .fi-header-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.75rem; border-top: 1px solid #E5E7EB; margin-top: 0.5rem; }
+</style>
+@endpush
 
-        {{-- Load Konva.js library --}}
-        <script src="https://unpkg.com/konva@9/konva.min.js"></script>
-
-        <script>
+@push('scripts')
+<script src="https://unpkg.com/konva@9/konva.min.js"></script>
+<script>
         // Define all methods that will be merged into the Alpine component
         // The component DATA is already defined in the inline alpine:init script above
         window.konvaDesignerMethods = {
@@ -4721,6 +4723,5 @@
                 },
             };
         // Methods are now available globally - the init() in the Alpine component will poll for them
-        </script>
-    </div>
-</x-filament-panels::page>
+</script>
+@endpush
