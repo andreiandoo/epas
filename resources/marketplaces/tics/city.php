@@ -40,12 +40,12 @@ $cities = [
             ['slug' => 'baneasa', 'name' => 'Băneasa', 'count' => 15],
         ],
         'venues' => [
-            ['name' => 'Arena Națională', 'icon' => '🏟️', 'capacity' => '55.000 locuri', 'events' => 12, 'gradient' => 'from-indigo-100 to-purple-100'],
-            ['name' => 'Sala Palatului', 'icon' => '🎭', 'capacity' => '4.000 locuri', 'events' => 28, 'gradient' => 'from-pink-100 to-rose-100'],
-            ['name' => 'Romexpo', 'icon' => '🎪', 'capacity' => '10.000 locuri', 'events' => 8, 'gradient' => 'from-amber-100 to-orange-100'],
-            ['name' => 'TNB', 'icon' => '🎭', 'capacity' => '1.200 locuri', 'events' => 45, 'gradient' => 'from-green-100 to-emerald-100'],
-            ['name' => 'Arenele Romane', 'icon' => '🎸', 'capacity' => '5.000 locuri', 'events' => 6, 'gradient' => 'from-blue-100 to-cyan-100'],
-            ['name' => 'Berăria H', 'icon' => '🎤', 'capacity' => '2.500 locuri', 'events' => 34, 'gradient' => 'from-purple-100 to-violet-100'],
+            ['name' => 'Arena Națională', 'slug' => 'arena-nationala', 'icon' => '🏟️', 'capacity' => '55.000 locuri', 'events' => 12, 'gradient' => 'from-indigo-100 to-purple-100'],
+            ['name' => 'Sala Palatului', 'slug' => 'sala-palatului', 'icon' => '🎭', 'capacity' => '4.000 locuri', 'events' => 28, 'gradient' => 'from-pink-100 to-rose-100'],
+            ['name' => 'Romexpo', 'slug' => 'romexpo', 'icon' => '🎪', 'capacity' => '10.000 locuri', 'events' => 8, 'gradient' => 'from-amber-100 to-orange-100'],
+            ['name' => 'TNB', 'slug' => 'teatrul-national-bucuresti', 'icon' => '🎭', 'capacity' => '1.200 locuri', 'events' => 45, 'gradient' => 'from-green-100 to-emerald-100'],
+            ['name' => 'Arenele Romane', 'slug' => 'arenele-romane', 'icon' => '🎸', 'capacity' => '5.000 locuri', 'events' => 6, 'gradient' => 'from-blue-100 to-cyan-100'],
+            ['name' => 'Berăria H', 'slug' => 'beraria-h', 'icon' => '🎤', 'capacity' => '2.500 locuri', 'events' => 34, 'gradient' => 'from-purple-100 to-violet-100'],
         ]
     ],
     'cluj-napoca' => [
@@ -66,10 +66,10 @@ $cities = [
             ['slug' => 'gheorgheni', 'name' => 'Gheorgheni', 'count' => 18],
         ],
         'venues' => [
-            ['name' => 'BT Arena', 'icon' => '🏟️', 'capacity' => '10.000 locuri', 'events' => 15, 'gradient' => 'from-indigo-100 to-purple-100'],
-            ['name' => 'Casa de Cultură', 'icon' => '🎭', 'capacity' => '1.500 locuri', 'events' => 22, 'gradient' => 'from-pink-100 to-rose-100'],
-            ['name' => 'Form Space', 'icon' => '🎸', 'capacity' => '800 locuri', 'events' => 34, 'gradient' => 'from-amber-100 to-orange-100'],
-            ['name' => 'Flying Circus', 'icon' => '🎤', 'capacity' => '600 locuri', 'events' => 28, 'gradient' => 'from-green-100 to-emerald-100'],
+            ['name' => 'BT Arena', 'slug' => 'bt-arena-cluj', 'icon' => '🏟️', 'capacity' => '10.000 locuri', 'events' => 15, 'gradient' => 'from-indigo-100 to-purple-100'],
+            ['name' => 'Casa de Cultură', 'slug' => 'casa-de-cultura-cluj', 'icon' => '🎭', 'capacity' => '1.500 locuri', 'events' => 22, 'gradient' => 'from-pink-100 to-rose-100'],
+            ['name' => 'Form Space', 'slug' => 'form-space-cluj', 'icon' => '🎸', 'capacity' => '800 locuri', 'events' => 34, 'gradient' => 'from-amber-100 to-orange-100'],
+            ['name' => 'Flying Circus', 'slug' => 'flying-circus-cluj', 'icon' => '🎤', 'capacity' => '600 locuri', 'events' => 28, 'gradient' => 'from-green-100 to-emerald-100'],
         ]
     ],
     'timisoara' => [
@@ -89,8 +89,8 @@ $cities = [
             ['slug' => 'fabric', 'name' => 'Fabric', 'count' => 15],
         ],
         'venues' => [
-            ['name' => 'Sala Capitol', 'icon' => '🎭', 'capacity' => '1.200 locuri', 'events' => 18, 'gradient' => 'from-indigo-100 to-purple-100'],
-            ['name' => 'Filarmonica', 'icon' => '🎻', 'capacity' => '800 locuri', 'events' => 24, 'gradient' => 'from-pink-100 to-rose-100'],
+            ['name' => 'Sala Capitol', 'slug' => 'sala-capitol-timisoara', 'icon' => '🎭', 'capacity' => '1.200 locuri', 'events' => 18, 'gradient' => 'from-indigo-100 to-purple-100'],
+            ['name' => 'Filarmonica Banatul', 'slug' => 'filarmonica-banatul', 'icon' => '🎻', 'capacity' => '800 locuri', 'events' => 24, 'gradient' => 'from-pink-100 to-rose-100'],
         ]
     ]
 ];
@@ -120,6 +120,10 @@ $headExtra = <<<HTML
 HTML;
 
 include __DIR__ . '/includes/head.php';
+
+// Set login state for header
+setLoginState($isLoggedIn, $loggedInUser);
+
 include __DIR__ . '/includes/header.php';
 ?>
 
@@ -214,7 +218,7 @@ include __DIR__ . '/includes/header.php';
 
     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <?php foreach ($city['venues'] as $venue): ?>
-        <a href="#" class="venue-card bg-white rounded-2xl p-4 border border-gray-200 text-center group hover:shadow-lg transition-all">
+        <a href="<?= venueUrl($venue['slug']) ?>" class="venue-card bg-white rounded-2xl p-4 border border-gray-200 text-center group hover:shadow-lg transition-all">
             <div class="w-16 h-16 bg-gradient-to-br <?= $venue['gradient'] ?> rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
                 <span class="text-2xl"><?= $venue['icon'] ?></span>
             </div>

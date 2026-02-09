@@ -253,3 +253,54 @@ function getCityName($slug) {
     // Fallback: capitalize slug
     return ucfirst(str_replace('-', ' ', $slug));
 }
+
+// ============================================================================
+// DEMO LOGIN STATE
+// ============================================================================
+
+// Demo mode: set to true to simulate logged-in user on all pages
+define('DEMO_LOGIN_ENABLED', true);
+
+// Demo user data
+$DEMO_USER = [
+    'id' => 1,
+    'name' => 'Alexandru Marin',
+    'firstName' => 'Alexandru',
+    'lastName' => 'Marin',
+    'email' => 'alexandru.marin@example.com',
+    'avatar' => 'https://i.pravatar.cc/40?img=68',
+    'points' => 1250,
+    'phone' => '+40 721 234 567',
+    'city' => 'Bucuresti',
+    'birthDate' => '1992-05-15',
+];
+
+/**
+ * Check if demo user is logged in
+ * In production, this would check session/JWT
+ */
+function isDemoLoggedIn() {
+    return defined('DEMO_LOGIN_ENABLED') && DEMO_LOGIN_ENABLED;
+}
+
+/**
+ * Get demo user data
+ */
+function getDemoUser() {
+    global $DEMO_USER;
+    return $DEMO_USER;
+}
+
+/**
+ * Set login state variables for header
+ * Call this before including header.php
+ */
+function setLoginState(&$isLoggedIn, &$loggedInUser) {
+    if (isDemoLoggedIn()) {
+        $isLoggedIn = true;
+        $loggedInUser = getDemoUser();
+    } else {
+        $isLoggedIn = false;
+        $loggedInUser = null;
+    }
+}

@@ -148,6 +148,10 @@ $headExtra = <<<HTML
 HTML;
 
 include __DIR__ . '/includes/head.php';
+
+// Set login state for header
+setLoginState($isLoggedIn, $loggedInUser);
+
 include __DIR__ . '/includes/header.php';
 ?>
 

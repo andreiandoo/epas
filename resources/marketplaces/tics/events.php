@@ -50,6 +50,9 @@ if ($categoryData) {
 // Include head
 require_once __DIR__ . '/includes/head.php';
 
+// Set login state for header
+setLoginState($isLoggedIn, $loggedInUser);
+
 // Include header
 require_once __DIR__ . '/includes/header.php';
 
