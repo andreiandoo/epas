@@ -1908,6 +1908,77 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Create a new section from canvas drawing (called from Konva.js)
+     */
+    public function createSection(array $data): void
+    {
+        // Map field names from JS to PHP
+        $mappedData = [
+            'name' => $data['name'] ?? 'New Section',
+            'x' => $data['x_position'] ?? $data['x'] ?? 100,
+            'y' => $data['y_position'] ?? $data['y'] ?? 100,
+            'width' => $data['width'] ?? 200,
+            'height' => $data['height'] ?? 150,
+            'color' => $data['color_hex'] ?? $data['color'] ?? '#3B82F6',
+        ];
+
+        // Handle polygon sections
+        if (($data['section_type'] ?? 'standard') === 'polygon' && isset($data['polygon_points'])) {
+            $this->addDrawnShape('polygon', [
+                'x' => $mappedData['x'],
+                'y' => $mappedData['y'],
+                'width' => $mappedData['width'],
+                'height' => $mappedData['height'],
+                'metadata' => ['points' => $data['polygon_points']],
+            ], $mappedData['color'], 0.3, ['label' => $mappedData['name']]);
+            return;
+        }
+
+        // Standard rectangle section
+        $this->addRectSection($mappedData);
+    }
+
+    /**
+     * Update section position (called from Konva.js drag end)
+     */
+    public function updateSectionPosition(int $sectionId, int $x, int $y): void
+    {
+        $this->updateSection($sectionId, [
+            'x_position' => $x,
+            'y_position' => $y,
+        ]);
+    }
+
+    /**
+     * Update section transform (position, size, rotation) from Konva.js
+     */
+    public function updateSectionTransform(int $sectionId, array $data): void
+    {
+        $this->updateSection($sectionId, [
+            'x_position' => $data['x_position'] ?? null,
+            'y_position' => $data['y_position'] ?? null,
+            'width' => $data['width'] ?? null,
+            'height' => $data['height'] ?? null,
+            'rotation' => $data['rotation'] ?? null,
+        ]);
+    }
+
+    /**
+     * Add seats to a section (called from Konva.js row drawing)
+     */
+    public function addSeatsToSection(int $sectionId, array $seats): void
+    {
+        if (empty($seats)) {
+            return;
+        }
+
+        $this->addRowWithSeats($sectionId, $seats, [
+            'numberingMode' => 'alpha',
+            'startNumber' => 1,
+        ]);
+    }
+
+    /**
      * Add a drawn shape (polygon, circle, text, line) as a decorative section
      */
     public function addDrawnShape(string $type, array $geometry, string $color, float $opacity, array $extra = []): void
