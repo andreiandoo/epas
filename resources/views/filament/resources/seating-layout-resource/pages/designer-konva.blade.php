@@ -354,28 +354,31 @@
             setupStageEvents() {
                 // Click on stage
                 this.stage.on('click tap', (e) => {
-                    if (e.target === this.stage) {
+                    if (e.target === this.stage && this.drawMode === 'select') {
                         this.deselectAll();
                     }
 
-                    if (this.drawMode === 'text' && e.target === this.stage) {
+                    if (this.drawMode === 'text') {
                         this.addTextAtPosition(this.stage.getPointerPosition());
                     }
                 });
 
                 // Mouse down for drawing
                 this.stage.on('mousedown touchstart', (e) => {
-                    if (e.target !== this.stage) return;
-
                     const pos = this.stage.getPointerPosition();
                     const transformed = this.getTransformedPoint(pos);
 
-                    if (this.drawMode === 'drawRect') {
+                    // For section drawing, only allow on empty stage
+                    if (this.drawMode === 'drawRect' && e.target === this.stage) {
                         this.startDrawRect(transformed);
-                    } else if (this.drawMode === 'polygon') {
+                    } else if (this.drawMode === 'polygon' && e.target === this.stage) {
                         this.addPolygonPoint(transformed);
-                    } else if (this.drawMode === 'drawSingleRow') {
+                    }
+                    // For seat drawing modes, allow anywhere (even on sections)
+                    else if (this.drawMode === 'drawSingleRow') {
                         this.startDrawRow(transformed);
+                    } else if (this.drawMode === 'drawMultiRows') {
+                        this.startDrawMultiRows(transformed);
                     } else if (this.drawMode === 'drawRoundTable') {
                         this.addRoundTable(transformed);
                     } else if (this.drawMode === 'drawRectTable') {
@@ -393,6 +396,8 @@
                         this.updateDrawRect(transformed);
                     } else if (this.drawMode === 'drawSingleRow' && this.rowDrawStart) {
                         this.updateDrawRow(transformed);
+                    } else if (this.drawMode === 'drawMultiRows' && this.multiRowStart) {
+                        this.updateDrawMultiRows(transformed);
                     }
                 });
 
@@ -402,6 +407,8 @@
                         this.finishDrawRect();
                     } else if (this.drawMode === 'drawSingleRow' && this.rowDrawStart) {
                         this.finishDrawRow();
+                    } else if (this.drawMode === 'drawMultiRows' && this.multiRowStart) {
+                        this.finishDrawMultiRows();
                     }
                 });
 
@@ -455,10 +462,44 @@
                 this.transformer.nodes([]);
                 this.layer.batchDraw();
             },
-            applySectionChanges() {
+            updateSectionPreview() {
                 if (!this.selectedSection) return;
 
-                // Update via Livewire
+                // Update local section data for preview
+                const section = this.sections.find(s => s.id === this.selectedSection);
+                if (section) {
+                    section.width = parseInt(this.sectionWidth) || section.width;
+                    section.height = parseInt(this.sectionHeight) || section.height;
+                    section.rotation = parseInt(this.sectionRotation) || 0;
+                    section.color_hex = this.editColorHex;
+                    section.seat_color = this.editSeatColor;
+                    section.corner_radius = parseInt(this.sectionCornerRadius) || 0;
+                }
+
+                // Update the Konva group directly for instant preview
+                const group = this.stage.findOne(`#section-${this.selectedSection}`);
+                if (group) {
+                    group.rotation(parseInt(this.sectionRotation) || 0);
+                    const rect = group.findOne('Rect');
+                    if (rect) {
+                        rect.width(parseInt(this.sectionWidth) || 200);
+                        rect.height(parseInt(this.sectionHeight) || 150);
+                        rect.fill(this.editColorHex);
+                        rect.stroke(this.editColorHex);
+                        rect.cornerRadius(parseInt(this.sectionCornerRadius) || 0);
+                    }
+                    // Update seats color
+                    group.find('.seat').forEach(seat => {
+                        seat.fill(this.editSeatColor);
+                    });
+                    this.transformer.forceUpdate();
+                }
+                this.layer.batchDraw();
+            },
+            saveSectionChanges() {
+                if (!this.selectedSection) return;
+
+                // Save via Livewire
                 this.$wire.updateSection(this.selectedSection, {
                     width: parseInt(this.sectionWidth),
                     height: parseInt(this.sectionHeight),
@@ -467,25 +508,16 @@
                     y_position: this.getSelectedSectionData()?.y_position,
                 });
 
-                // Update colors separately
+                // Save colors separately
                 this.$wire.updateSectionColors(
                     this.selectedSection,
                     this.editColorHex,
                     this.editSeatColor
                 );
-
-                // Update local section data
-                const section = this.sections.find(s => s.id === this.selectedSection);
-                if (section) {
-                    section.width = parseInt(this.sectionWidth);
-                    section.height = parseInt(this.sectionHeight);
-                    section.rotation = parseInt(this.sectionRotation);
-                    section.color_hex = this.editColorHex;
-                    section.seat_color = this.editSeatColor;
-                }
-
-                // Redraw sections on canvas
-                this.drawSections();
+            },
+            applySectionChanges() {
+                // Alias for backwards compatibility
+                this.saveSectionChanges();
             },
             showSectionContextMenu(e, section) {
                 const containerRect = this.stage.container().getBoundingClientRect();
@@ -627,6 +659,64 @@
                 this.drawLayer.find('.temp-seat').forEach(s => s.destroy());
                 this.tempRowSeats = [];
                 this.rowDrawStart = null;
+                this.drawLayer.batchDraw();
+            },
+            startDrawMultiRows(pos) {
+                this.multiRowStart = pos;
+                this.tempMultiRowSeats = [];
+            },
+            updateDrawMultiRows(pos) {
+                // Clear temp seats
+                this.drawLayer.find('.temp-multi-seat').forEach(s => s.destroy());
+                this.tempMultiRowSeats = [];
+
+                const dx = pos.x - this.multiRowStart.x;
+                const dy = pos.y - this.multiRowStart.y;
+                const width = Math.abs(dx);
+                const height = Math.abs(dy);
+                const startX = Math.min(this.multiRowStart.x, pos.x);
+                const startY = Math.min(this.multiRowStart.y, pos.y);
+
+                const numRows = Math.max(1, Math.floor(height / this.rowSpacing));
+                const seatsPerRow = Math.max(1, Math.floor(width / this.rowSeatSpacing));
+
+                for (let row = 0; row < numRows; row++) {
+                    const rowY = startY + row * this.rowSpacing + this.rowSpacing / 2;
+                    for (let col = 0; col < seatsPerRow; col++) {
+                        const seatX = startX + col * this.rowSeatSpacing + this.rowSeatSpacing / 2;
+                        const seat = new Konva.Circle({
+                            x: seatX,
+                            y: rowY,
+                            radius: this.rowSeatSize / 2,
+                            fill: 'rgba(34, 197, 94, 0.5)',
+                            stroke: '#166534',
+                            strokeWidth: 1,
+                            name: 'temp-multi-seat'
+                        });
+                        this.drawLayer.add(seat);
+                        this.tempMultiRowSeats.push({ x: seatX, y: rowY, row: row });
+                    }
+                }
+                this.drawLayer.batchDraw();
+            },
+            finishDrawMultiRows() {
+                if (this.tempMultiRowSeats.length > 0 && this.selectedSection) {
+                    // Group seats by row for proper row creation
+                    const rowGroups = {};
+                    this.tempMultiRowSeats.forEach(seat => {
+                        if (!rowGroups[seat.row]) rowGroups[seat.row] = [];
+                        rowGroups[seat.row].push({ x: seat.x, y: seat.y });
+                    });
+
+                    // Add each row separately
+                    Object.values(rowGroups).forEach(seats => {
+                        this.$wire.addSeatsToSection(this.selectedSection, seats);
+                    });
+                }
+
+                this.drawLayer.find('.temp-multi-seat').forEach(s => s.destroy());
+                this.tempMultiRowSeats = [];
+                this.multiRowStart = null;
                 this.drawLayer.batchDraw();
             },
             addRoundTable(pos) {
@@ -1190,30 +1280,30 @@
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs text-gray-500">Lățime</label>
-                                    <input type="number" x-model="sectionWidth" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <input type="number" x-model="sectionWidth" x-on:input="updateSectionPreview()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
                                 </div>
                                 <div>
                                     <label class="block text-xs text-gray-500">Înălțime</label>
-                                    <input type="number" x-model="sectionHeight" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                    <input type="number" x-model="sectionHeight" x-on:input="updateSectionPreview()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-500">Rotație (°)</label>
-                                <input type="range" x-model="sectionRotation" min="0" max="360" class="w-full">
+                                <input type="range" x-model="sectionRotation" x-on:input="updateSectionPreview()" min="0" max="360" class="w-full">
                                 <div class="text-xs text-center text-gray-500" x-text="sectionRotation + '°'"></div>
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-500">Colțuri rotunjite</label>
-                                <input type="range" x-model="sectionCornerRadius" min="0" max="50" class="w-full">
+                                <input type="range" x-model="sectionCornerRadius" x-on:input="updateSectionPreview()" min="0" max="50" class="w-full">
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-500">Scalare</label>
-                                <input type="range" x-model="sectionScale" min="0.5" max="2" step="0.1" class="w-full">
+                                <input type="range" x-model="sectionScale" x-on:input="updateSectionPreview()" min="0.5" max="2" step="0.1" class="w-full">
                                 <div class="text-xs text-center text-gray-500" x-text="(sectionScale * 100).toFixed(0) + '%'"></div>
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-500">Curbură</label>
-                                <input type="range" x-model="sectionCurve" min="-100" max="100" class="w-full">
+                                <input type="range" x-model="sectionCurve" x-on:input="updateSectionPreview()" min="-100" max="100" class="w-full">
                                 <div class="text-xs text-center text-gray-500" x-text="sectionCurve"></div>
                             </div>
                         </div>
@@ -1237,22 +1327,22 @@
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs text-gray-500">Fundal</label>
-                                    <input type="color" x-model="editColorHex" class="w-full h-8 border rounded cursor-pointer">
+                                    <input type="color" x-model="editColorHex" x-on:input="updateSectionPreview()" class="w-full h-8 border rounded cursor-pointer">
                                 </div>
                                 <div>
                                     <label class="block text-xs text-gray-500">Locuri</label>
-                                    <input type="color" x-model="editSeatColor" class="w-full h-8 border rounded cursor-pointer">
+                                    <input type="color" x-model="editSeatColor" x-on:input="updateSectionPreview()" class="w-full h-8 border rounded cursor-pointer">
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Apply Button --}}
-                        <button x-on:click="applySectionChanges()" type="button"
-                            class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold text-white transition-all bg-blue-600 rounded-lg hover:bg-blue-700">
+                        {{-- Save Button --}}
+                        <button x-on:click="saveSectionChanges()" type="button"
+                            class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold text-white transition-all bg-green-600 rounded-lg hover:bg-green-700">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
                             </svg>
-                            Aplică Modificările
+                            Salvează
                         </button>
 
                         {{-- Section Info --}}
