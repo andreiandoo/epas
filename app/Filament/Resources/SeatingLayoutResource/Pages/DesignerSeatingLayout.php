@@ -3392,4 +3392,54 @@ class DesignerSeatingLayout extends Page
             ->title('Element updated')
             ->send();
     }
+
+    /**
+     * Update icon section properties
+     */
+    public function updateIconSection(int $sectionId, array $data): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Section not found')
+                ->send();
+            return;
+        }
+
+        if ($section->section_type !== 'icon') {
+            return;
+        }
+
+        $metadata = $section->metadata ?? [];
+        $updates = [];
+
+        // Handle icon-specific properties
+        if (isset($data['icon_key'])) {
+            $metadata['icon_key'] = $data['icon_key'];
+        }
+        if (isset($data['icon_color'])) {
+            $metadata['icon_color'] = $data['icon_color'];
+        }
+        if (isset($data['icon_size'])) {
+            $metadata['icon_size'] = (int) $data['icon_size'];
+        }
+
+        // Handle label (stored directly on section)
+        if (isset($data['label'])) {
+            $updates['label'] = $data['label'];
+        }
+
+        $updates['metadata'] = $metadata;
+        $section->update($updates);
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Iconiță actualizată')
+            ->send();
+    }
 }

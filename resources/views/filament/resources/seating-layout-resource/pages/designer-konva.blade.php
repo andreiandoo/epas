@@ -63,6 +63,11 @@
             editTextFontSize: 16,
             editTextFontFamily: 'Arial',
             editTextFontWeight: 'normal',
+            // Icon section editing
+            editIconKey: 'info_point',
+            editIconColor: '#FFFFFF',
+            editIconSize: 48,
+            editIconLabel: '',
             contextMenuX: 0,
             contextMenuY: 0,
             contextMenuSectionId: null,
@@ -933,15 +938,16 @@
                                         document.body.style.cursor = 'pointer';
                                     }
 
-                                    // Show tooltip
+                                    // Show tooltip - use getClientRect for accurate screen position
                                     const container = document.getElementById('konva-container');
                                     const containerRect = container.getBoundingClientRect();
-                                    const absPos = seatCircle.getAbsolutePosition();
-                                    const stage = this.stage;
 
-                                    // Calculate position relative to container
-                                    const tooltipX = absPos.x * stage.scaleX() + stage.x();
-                                    const tooltipY = absPos.y * stage.scaleY() + stage.y();
+                                    // Get the seat's bounding rect in client (viewport) coordinates
+                                    const seatRect = seatCircle.getClientRect();
+
+                                    // Calculate position relative to the container
+                                    const tooltipX = seatRect.x + seatRect.width / 2 - containerRect.left;
+                                    const tooltipY = seatRect.y - containerRect.top;
 
                                     // Generate seat name and ID
                                     const sectionCode = section.section_code || section.name || 'SEC';
@@ -1013,9 +1019,12 @@
                                 rowGroup.add(seatLabel);
                             });
 
-                            // Draw row label if enabled
-                            if (this.showRowLabel && row.label && !isTable) {
-                                const labelPos = this.rowLabelPos || 'left';
+                            // Draw row label if enabled (check per-row setting from metadata, then global)
+                            const rowMetadata = row.metadata || {};
+                            const showLabel = rowMetadata.show_label !== undefined ? rowMetadata.show_label : this.showRowLabel;
+                            if (showLabel && row.label && !isTable) {
+                                // Use per-row label position from metadata, fallback to global setting
+                                const labelPos = rowMetadata.label_position || this.rowLabelPos || 'left';
                                 let labelX, labelY, labelAlign = 'center';
 
                                 if (labelPos === 'left') {
@@ -1256,6 +1265,11 @@
                         // Initialize text editing if it's a text layer
                         if (section.section_type === 'decorative' && section.metadata?.shape === 'text') {
                             this.initTextEditing();
+                        }
+
+                        // Initialize icon editing if it's an icon section
+                        if (section.section_type === 'icon') {
+                            this.initIconEditing();
                         }
                     }
                 }
@@ -1958,9 +1972,8 @@
                 wire.updateRowLabelSettings(rowIds, {
                     showLabel: this.showRowLabels,
                     position: this.rowLabelPosition
-                }).then(() => {
-                    this.drawSections();
                 });
+                // Note: handleLayoutUpdated will refresh sections and redraw when the event is received
             },
             // Seat selection methods
             toggleSeatSelect(seatId, event) {
@@ -2963,6 +2976,48 @@
                 }).then(() => {
                     this.drawSections();
                 });
+            },
+            isSelectedIconSection() {
+                const section = this.getSelectedSectionData();
+                return section?.section_type === 'icon';
+            },
+            initIconEditing() {
+                const section = this.getSelectedSectionData();
+                if (!section || !this.isSelectedIconSection()) return;
+
+                const metadata = section.metadata || {};
+                this.editIconKey = metadata.icon_key || 'info_point';
+                this.editIconColor = metadata.icon_color || '#FFFFFF';
+                this.editIconSize = parseInt(metadata.icon_size) || 48;
+                this.editIconLabel = section.label || '';
+            },
+            previewIconChanges() {
+                const section = this.getSelectedSectionData();
+                if (!section) return;
+
+                section.metadata = section.metadata || {};
+                section.metadata.icon_key = this.editIconKey;
+                section.metadata.icon_color = this.editIconColor;
+                section.metadata.icon_size = this.editIconSize;
+                section.label = this.editIconLabel;
+
+                this.drawSections();
+            },
+            updateIconSection() {
+                const wire = this.getWire();
+                if (!wire) return;
+
+                const section = this.getSelectedSectionData();
+                if (!section) return;
+
+                wire.updateIconSection(section.id, {
+                    icon_key: this.editIconKey,
+                    icon_color: this.editIconColor,
+                    icon_size: this.editIconSize,
+                    label: this.editIconLabel
+                }).then(() => {
+                    this.drawSections();
+                });
             }
          }"
          x-init="init()"
@@ -3813,8 +3868,63 @@
                     </div>
                 </template>
 
-                {{-- Section Properties (hidden when in addSeats mode, table selected, or row selected) --}}
-                <template x-if="selectedSection && !isSelectedTextLayer() && !selectedDrawnRow && !addSeatsMode && !selectedTableRow && !selectedRowData">
+                {{-- Icon Section Properties Panel --}}
+                <template x-if="selectedSection && isSelectedIconSection() && !addSeatsMode">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between pb-1 border-b border-gray-200">
+                            <h4 class="text-xs font-bold tracking-wide text-gray-700 uppercase">Proprietăți Iconiță</h4>
+                            <button x-on:click="selectedSection = null" class="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+                        </div>
+
+                        {{-- Icon Symbol Selection --}}
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-600">Simbol:</label>
+                            <select x-model="editIconKey" x-on:change="previewIconChanges()"
+                                class="w-full px-2 py-1.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                                <template x-for="(iconDef, key) in iconDefinitions" :key="key">
+                                    <option :value="key" x-text="iconDef.label || key"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        {{-- Icon Color --}}
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-gray-600 w-20">Culoare:</label>
+                            <input type="color" x-model="editIconColor" x-on:input="previewIconChanges()"
+                                class="flex-1 h-8 border border-gray-300 rounded cursor-pointer">
+                        </div>
+
+                        {{-- Icon Size --}}
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-gray-600 w-20">Dimensiune:</label>
+                            <input type="range" x-model.number="editIconSize" x-on:input="previewIconChanges()" min="24" max="128" class="flex-1">
+                            <span class="w-10 text-xs text-center" x-text="editIconSize + 'px'"></span>
+                        </div>
+
+                        {{-- Icon Label --}}
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-600">Etichetă:</label>
+                            <input type="text" x-model="editIconLabel" x-on:input="previewIconChanges()"
+                                placeholder="Text sub iconiță..."
+                                class="w-full px-2 py-1.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                        </div>
+
+                        {{-- Save Button --}}
+                        <button x-on:click="updateIconSection()" type="button"
+                            class="w-full px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
+                            Salvează Modificările
+                        </button>
+
+                        {{-- Delete Button --}}
+                        <button x-on:click="deleteSelected()" type="button"
+                            class="w-full px-3 py-2 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700">
+                            Șterge Iconiță
+                        </button>
+                    </div>
+                </template>
+
+                {{-- Section Properties (hidden when in addSeats mode, table selected, row selected, text layer, or icon) --}}
+                <template x-if="selectedSection && !isSelectedTextLayer() && !isSelectedIconSection() && !selectedDrawnRow && !addSeatsMode && !selectedTableRow && !selectedRowData">
                     <div class="space-y-2">
                         <div class="flex items-center justify-between pb-1 border-b border-gray-200">
                             <h4 class="text-xs font-bold tracking-wide text-gray-700 uppercase">
