@@ -3,6 +3,7 @@
          wire:ignore
          x-cloak
          x-data="{
+            livewireComponentId: @js($this->getId()),
             stage: null,
             layer: null,
             transformer: null,
@@ -139,6 +140,20 @@
             init() {
                 console.log('Konva Designer: waiting for Konva library...');
                 this.waitForKonva();
+            },
+            getWire() {
+                // Try to get Livewire component, first via $wire magic, then via Livewire.find()
+                if (this.$wire && typeof this.$wire.call === 'function') {
+                    return this.$wire;
+                }
+                // Fallback: find component by ID
+                if (this.livewireComponentId && typeof Livewire !== 'undefined') {
+                    const component = Livewire.find(this.livewireComponentId);
+                    if (component) {
+                        return component;
+                    }
+                }
+                return null;
             },
             waitForKonva() {
                 // Check if Konva is loaded
@@ -388,9 +403,10 @@
 
                             if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
                                 // Call backend to update seat positions (guard against disconnected Livewire)
-                                if (this.$wire) {
+                                const wire = this.getWire();
+                                if (wire) {
                                     try {
-                                        this.$wire.moveRow(row.id, deltaX, deltaY).then(() => {
+                                        wire.moveRow(row.id, deltaX, deltaY).then(() => {
                                             // Position reset happens after backend confirms via layout-updated event
                                         });
                                     } catch (e) {
@@ -741,7 +757,7 @@
                     const topLeftX = group.x() - group.offsetX();
                     const topLeftY = group.y() - group.offsetY();
                     // Guard against Livewire component being disconnected
-                    if (this.$wire) {
+                    if (this.getWire()) {
                         this.updateSectionPosition(section.id, Math.round(topLeftX), Math.round(topLeftY));
                     }
                 });
@@ -943,8 +959,10 @@
             },
             updateTableName() {
                 if (!this.selectedTableRow || !this.editTableName) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
-                this.$wire.updateRowLabel(this.selectedTableRow.id, this.editTableName).then(() => {
+                wire.updateRowLabel(this.selectedTableRow.id, this.editTableName).then(() => {
                     // Update local data
                     this.selectedTableRow.label = this.editTableName;
                     this.drawSections();
@@ -952,21 +970,27 @@
             },
             deleteTable() {
                 if (!this.selectedTableRow) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
                 if (confirm('Sigur doriți să ștergeți această masă?')) {
-                    this.$wire.deleteRow(this.selectedTableRow.id).then(() => {
+                    wire.deleteRow(this.selectedTableRow.id).then(() => {
                         this.deselectTable();
                     });
                 }
             },
             updateTableSeats() {
                 if (!this.selectedTableRow) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
-                this.$wire.updateTableSeats(this.selectedTableRow.id, this.editTableSeats);
+                wire.updateTableSeats(this.selectedTableRow.id, this.editTableSeats);
                 // Note: handleLayoutUpdated will redraw when the event is received
             },
             updateTableDimensions() {
                 if (!this.selectedTableRow) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
                 const metadata = this.selectedTableRow.metadata || {};
                 const data = {};
@@ -977,7 +1001,7 @@
                     data.height = this.editTableHeight;
                 }
 
-                this.$wire.updateTableDimensions(this.selectedTableRow.id, data).then(() => {
+                wire.updateTableDimensions(this.selectedTableRow.id, data).then(() => {
                     // Stay selected for further edits
                     this.drawSections();
                 });
@@ -1082,8 +1106,10 @@
             },
             updateRowName() {
                 if (!this.selectedRowData || !this.editRowLabel) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
-                this.$wire.updateRowLabel(this.selectedRowData.id, this.editRowLabel).then(() => {
+                wire.updateRowLabel(this.selectedRowData.id, this.editRowLabel).then(() => {
                     // Update local data
                     this.selectedRowData.label = this.editRowLabel;
                     this.drawSections();
@@ -1091,24 +1117,30 @@
             },
             deleteSelectedRow() {
                 if (!this.selectedRowData) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
                 if (confirm('Sigur doriți să ștergeți acest rând?')) {
-                    this.$wire.deleteRow(this.selectedRowData.id).then(() => {
+                    wire.deleteRow(this.selectedRowData.id).then(() => {
                         this.deselectRow();
                     });
                 }
             },
             updateRowSeats() {
                 if (!this.selectedRowData) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
-                this.$wire.updateRowSeats(this.selectedRowData.id, this.editRowSeats).then(() => {
+                wire.updateRowSeats(this.selectedRowData.id, this.editRowSeats).then(() => {
                     this.deselectRow();
                 });
             },
             updateRowNumbering() {
                 if (!this.selectedRowData) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
-                this.$wire.updateRowNumbering(this.selectedRowData.id, {
+                wire.updateRowNumbering(this.selectedRowData.id, {
                     startNumber: this.editRowStartNumber,
                     direction: this.editRowDirection,
                     numberingMode: this.editRowNumberingMode
@@ -1118,8 +1150,10 @@
             },
             updateRowSpacing() {
                 if (!this.selectedRowData) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
-                this.$wire.updateRowSpacing(this.selectedRowData.id, {
+                wire.updateRowSpacing(this.selectedRowData.id, {
                     seatSize: this.editRowSeatSize,
                     seatSpacing: this.editRowSeatSpacing
                 });
@@ -1127,8 +1161,10 @@
             },
             updateRowCurve() {
                 if (!this.selectedRowData) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
-                this.$wire.updateRowCurve(this.selectedRowData.id, this.editRowCurve);
+                wire.updateRowCurve(this.selectedRowData.id, this.editRowCurve);
                 // Note: handleLayoutUpdated will refresh original seats when the event is received
             },
             refreshOriginalSeats() {
@@ -1347,28 +1383,34 @@
             },
             alignMultiRows(alignment) {
                 if (this.multiSelectedRows.length < 2) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
                 // Get section ID from first selected row (all rows should be in same section for alignment)
                 const sectionId = this.multiSelectedRows[0].sectionId;
                 const rowIds = this.multiSelectedRows.map(r => r.row.id);
 
-                this.$wire.alignRows(sectionId, rowIds, alignment).then(() => {
+                wire.alignRows(sectionId, rowIds, alignment).then(() => {
                     this.clearMultiRowSelection();
                 });
             },
             applyMultiRowSpacing() {
                 if (this.multiSelectedRows.length < 2) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
                 const rowIds = this.multiSelectedRows.map(r => r.row.id);
-                this.$wire.setRowSpacing(rowIds, this.multiRowSpacing).then(() => {
+                wire.setRowSpacing(rowIds, this.multiRowSpacing).then(() => {
                     this.clearMultiRowSelection();
                 });
             },
             applyMultiRowSeatSpacing() {
                 if (this.multiSelectedRows.length === 0) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
                 const rowIds = this.multiSelectedRows.map(r => r.row.id);
-                this.$wire.setMultiRowSeatSpacing(rowIds, this.multiRowSeatSpacing).then(() => {
+                wire.setMultiRowSeatSpacing(rowIds, this.multiRowSeatSpacing).then(() => {
                     this.clearMultiRowSelection();
                 });
             },
@@ -1428,13 +1470,18 @@
             },
             updateMultiRowLabel(item) {
                 // Update row label immediately
-                this.$wire.updateRowLabel(item.row.id, item.row.label);
+                const wire = this.getWire();
+                if (wire) {
+                    wire.updateRowLabel(item.row.id, item.row.label);
+                }
             },
             applyRowLabelSettings() {
                 if (this.multiSelectedRows.length === 0) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
                 const rowIds = this.multiSelectedRows.map(r => r.row.id);
-                this.$wire.updateRowLabelSettings(rowIds, {
+                wire.updateRowLabelSettings(rowIds, {
                     showLabel: this.showRowLabels,
                     position: this.rowLabelPosition
                 }).then(() => {
@@ -1476,9 +1523,11 @@
             },
             deleteSelectedSeatsAction() {
                 if (this.selectedSeatIds.length === 0) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
                 if (confirm(`Sigur doriți să ștergeți ${this.selectedSeatIds.length} loc(uri)? Locurile rămase vor fi renumerotate.`)) {
-                    this.$wire.deleteSeatsAndRenumber(this.selectedSeatIds).then(() => {
+                    wire.deleteSeatsAndRenumber(this.selectedSeatIds).then(() => {
                         this.clearSeatSelection();
                     });
                 }
@@ -1489,16 +1538,20 @@
             },
             blockSelectedSeatsWithReason() {
                 if (this.selectedSeatIds.length === 0) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
-                this.$wire.blockSeats(this.selectedSeatIds, this.blockReason).then(() => {
+                wire.blockSeats(this.selectedSeatIds, this.blockReason).then(() => {
                     this.showBlockReasonModal = false;
                     this.clearSeatSelection();
                 });
             },
             unblockSelectedSeats() {
                 if (this.selectedSeatIds.length === 0) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
-                this.$wire.unblockSeats(this.selectedSeatIds).then(() => {
+                wire.unblockSeats(this.selectedSeatIds).then(() => {
                     this.clearSeatSelection();
                 });
             },
@@ -1559,9 +1612,11 @@
             },
             saveSectionChanges() {
                 if (!this.selectedSection) return;
+                const wire = this.getWire();
+                if (!wire) return;
 
                 // Save via Livewire
-                this.$wire.updateSection(this.selectedSection, {
+                wire.updateSection(this.selectedSection, {
                     width: parseInt(this.sectionWidth),
                     height: parseInt(this.sectionHeight),
                     rotation: parseInt(this.sectionRotation),
@@ -1570,7 +1625,7 @@
                 });
 
                 // Save colors separately
-                this.$wire.updateSectionColors(
+                wire.updateSectionColors(
                     this.selectedSection,
                     this.editColorHex,
                     this.editSeatColor
@@ -1621,15 +1676,18 @@
                     const y = Math.min(this.drawRectStart.y, this.drawRectStart.y + this.tempDrawRect.height());
 
                     // Create section via Livewire
-                    this.$wire.createSection({
-                        name: 'New Section',
-                        section_type: 'standard',
-                        x_position: Math.round(x),
-                        y_position: Math.round(y),
-                        width: Math.round(width),
-                        height: Math.round(height),
-                        color_hex: '#3B82F6'
-                    });
+                    const wire = this.getWire();
+                    if (wire) {
+                        wire.createSection({
+                            name: 'New Section',
+                            section_type: 'standard',
+                            x_position: Math.round(x),
+                            y_position: Math.round(y),
+                            width: Math.round(width),
+                            height: Math.round(height),
+                            color_hex: '#3B82F6'
+                        });
+                    }
                 }
 
                 this.tempDrawRect.destroy();
@@ -1803,16 +1861,19 @@
                     maxY = Math.max(maxY, this.polygonPoints[i + 1]);
                 }
 
-                this.$wire.createSection({
-                    name: 'Polygon Section',
-                    section_type: 'polygon',
-                    x_position: Math.round(minX),
-                    y_position: Math.round(minY),
-                    width: Math.round(maxX - minX),
-                    height: Math.round(maxY - minY),
-                    color_hex: '#10B981',
-                    polygon_points: this.polygonPoints
-                });
+                const wire = this.getWire();
+                if (wire) {
+                    wire.createSection({
+                        name: 'Polygon Section',
+                        section_type: 'polygon',
+                        x_position: Math.round(minX),
+                        y_position: Math.round(minY),
+                        width: Math.round(maxX - minX),
+                        height: Math.round(maxY - minY),
+                        color_hex: '#10B981',
+                        polygon_points: this.polygonPoints
+                    });
+                }
 
                 this.cancelDrawing();
             },
@@ -1863,13 +1924,16 @@
                         }));
 
                         // Pass all settings to backend
-                        this.$wire.addRowWithSeats(this.selectedSection, relativeSeats, {
-                            numberingMode: this.rowNumberingMode,
-                            startNumber: this.rowStartNumber,
-                            seatNumberingType: this.seatNumberingType,
-                            seatNumberingDirection: this.rowNumberingDirection,
-                            customLabel: this.customRowLabel || null
-                        });
+                        const wire = this.getWire();
+                        if (wire) {
+                            wire.addRowWithSeats(this.selectedSection, relativeSeats, {
+                                numberingMode: this.rowNumberingMode,
+                                startNumber: this.rowStartNumber,
+                                seatNumberingType: this.seatNumberingType,
+                                seatNumberingDirection: this.rowNumberingDirection,
+                                customLabel: this.customRowLabel || null
+                            });
+                        }
 
                         // Clear custom label after use
                         this.customRowLabel = '';
@@ -1946,12 +2010,15 @@
                         });
 
                         // Use addMultipleRowsWithSeats to add all rows at once with proper numbering
-                        this.$wire.addMultipleRowsWithSeats(this.selectedSection, rows, {
-                            numberingMode: this.rowNumberingMode,
-                            startNumber: this.rowStartNumber,
-                            seatNumberingType: this.seatNumberingType,
-                            seatNumberingDirection: this.rowNumberingDirection
-                        });
+                        const wire = this.getWire();
+                        if (wire) {
+                            wire.addMultipleRowsWithSeats(this.selectedSection, rows, {
+                                numberingMode: this.rowNumberingMode,
+                                startNumber: this.rowStartNumber,
+                                seatNumberingType: this.seatNumberingType,
+                                seatNumberingDirection: this.rowNumberingDirection
+                            });
+                        }
                     }
                 }
 
@@ -1982,15 +2049,18 @@
                 }
 
                 // Use addTableWithSeats for proper table storage
-                this.$wire.addTableWithSeats(this.selectedSection, {
-                    type: 'round',
-                    seats: seats,
-                    centerX: pos.x - sectionX,
-                    centerY: pos.y - sectionY,
-                    radius: tableRadius,
-                    name: this.tableName || `Masă ${this.sections.find(s => s.id === this.selectedSection)?.rows?.length + 1 || 1}`,
-                    seatSize: this.rowSeatSize
-                });
+                const wire = this.getWire();
+                if (wire) {
+                    wire.addTableWithSeats(this.selectedSection, {
+                        type: 'round',
+                        seats: seats,
+                        centerX: pos.x - sectionX,
+                        centerY: pos.y - sectionY,
+                        radius: tableRadius,
+                        name: this.tableName || `Masă ${this.sections.find(s => s.id === this.selectedSection)?.rows?.length + 1 || 1}`,
+                        seatSize: this.rowSeatSize
+                    });
+                }
 
                 this.tableName = '';
             },
@@ -2024,16 +2094,19 @@
                 }
 
                 // Use addTableWithSeats for proper table storage
-                this.$wire.addTableWithSeats(this.selectedSection, {
-                    type: 'rect',
-                    seats: seats,
-                    centerX: pos.x - sectionX,
-                    centerY: pos.y - sectionY,
-                    width: tableWidth,
-                    height: tableHeight,
-                    name: this.tableName || `Masă ${this.sections.find(s => s.id === this.selectedSection)?.rows?.length + 1 || 1}`,
-                    seatSize: this.rowSeatSize
-                });
+                const wire = this.getWire();
+                if (wire) {
+                    wire.addTableWithSeats(this.selectedSection, {
+                        type: 'rect',
+                        seats: seats,
+                        centerX: pos.x - sectionX,
+                        centerY: pos.y - sectionY,
+                        width: tableWidth,
+                        height: tableHeight,
+                        name: this.tableName || `Masă ${this.sections.find(s => s.id === this.selectedSection)?.rows?.length + 1 || 1}`,
+                        seatSize: this.rowSeatSize
+                    });
+                }
 
                 this.tableName = '';
             },
@@ -2146,25 +2219,31 @@
             },
             deleteSelected() {
                 if (this.selectedSection) {
-                    this.$wire.deleteSection(this.selectedSection);
+                    const wire = this.getWire();
+                    if (wire) {
+                        wire.deleteSection(this.selectedSection);
+                    }
                     this.deselectAll();
                 }
             },
             updateSectionPosition(sectionId, x, y) {
                 // Guard against Livewire component being disconnected
-                if (!this.$wire) return;
+                const wire = this.getWire();
+                if (!wire) return;
                 try {
-                    this.$wire.updateSectionPosition(sectionId, Math.round(x), Math.round(y));
+                    wire.updateSectionPosition(sectionId, Math.round(x), Math.round(y));
                 } catch (e) {
                     console.warn('Could not update section position:', e.message);
                 }
             },
             updateSectionTransform(sectionId, group) {
+                const wire = this.getWire();
+                if (!wire) return;
                 const rect = group.findOne('Rect');
                 // Convert center position back to top-left for storage
                 const topLeftX = group.x() - group.offsetX();
                 const topLeftY = group.y() - group.offsetY();
-                this.$wire.updateSectionTransform(sectionId, {
+                wire.updateSectionTransform(sectionId, {
                     x_position: Math.round(topLeftX),
                     y_position: Math.round(topLeftY),
                     width: Math.round(rect.width()),
@@ -2176,7 +2255,10 @@
                 this.drawBackground();
             },
             saveBackgroundColor() {
-                this.$wire.saveBackgroundColor(this.backgroundColor);
+                const wire = this.getWire();
+                if (wire) {
+                    wire.saveBackgroundColor(this.backgroundColor);
+                }
             },
             toggleBackgroundVisibility() {
                 this.drawBackground();
@@ -2188,12 +2270,15 @@
                 this.drawBackground();
             },
             saveBackgroundSettings() {
-                this.$wire.saveBackgroundSettings({
-                    background_scale: this.backgroundScale,
-                    background_opacity: this.backgroundOpacity,
-                    background_x: this.backgroundX,
-                    background_y: this.backgroundY
-                });
+                const wire = this.getWire();
+                if (wire) {
+                    wire.saveBackgroundSettings({
+                        background_scale: this.backgroundScale,
+                        background_opacity: this.backgroundOpacity,
+                        background_x: this.backgroundX,
+                        background_y: this.backgroundY
+                    });
+                }
             },
             handleBackgroundUpload(event) {
                 const file = event.target.files[0];
@@ -2206,13 +2291,16 @@
                 }
 
                 // Upload via Livewire
-                this.$wire.uploadBackgroundImage(file).then((url) => {
-                    if (url) {
-                        this.backgroundUrl = url;
-                        this.backgroundVisible = true;
-                        this.drawBackground();
-                    }
-                });
+                const wire = this.getWire();
+                if (wire) {
+                    wire.uploadBackgroundImage(file).then((url) => {
+                        if (url) {
+                            this.backgroundUrl = url;
+                            this.backgroundVisible = true;
+                            this.drawBackground();
+                        }
+                    });
+                }
             },
             exportSVG() {
                 const dataURL = this.stage.toDataURL({ pixelRatio: 2 });
