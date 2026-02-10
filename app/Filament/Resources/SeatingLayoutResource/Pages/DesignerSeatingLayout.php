@@ -2004,11 +2004,12 @@ class DesignerSeatingLayout extends Page
         $metadata['seat_spacing'] = $seatSpacing;
         $row->update(['metadata' => $metadata]);
 
-        // Recalculate seat positions based on new spacing
+        // Recalculate seat positions based on new spacing between seats
         $centerX = (float) ($metadata['center_x'] ?? 50);
         $centerY = (float) ($metadata['center_y'] ?? 50);
         $seats = $row->seats()->orderBy('id')->get();
         $seatCount = $seats->count();
+        $tableGap = 15; // Fixed gap from table edge to seats
 
         if ($seatCount === 0) {
             return;
@@ -2016,7 +2017,12 @@ class DesignerSeatingLayout extends Page
 
         if ($metadata['table_type'] === 'round') {
             $tableRadius = (float) ($metadata['radius'] ?? 25);
-            $seatRadius = $tableRadius + $seatSpacing;
+            // Calculate radius needed to achieve desired spacing between seats
+            // Chord length between adjacent seats = 2 * r * sin(π/n)
+            // So r = spacing / (2 * sin(π/n))
+            $minSeatRadius = $tableRadius + $tableGap;
+            $requiredRadius = $seatCount > 1 ? $seatSpacing / (2 * sin(M_PI / $seatCount)) : $minSeatRadius;
+            $seatRadius = max($requiredRadius, $minSeatRadius);
 
             foreach ($seats as $index => $seat) {
                 $angle = ($index / $seatCount) * 2 * M_PI - (M_PI / 2);
@@ -2026,25 +2032,26 @@ class DesignerSeatingLayout extends Page
                 ]);
             }
         } elseif ($metadata['table_type'] === 'rect') {
-            $tableWidth = (float) ($metadata['width'] ?? 80);
             $tableHeight = (float) ($metadata['height'] ?? 30);
             $seatsPerSide = (int) ceil($seatCount / 2);
-            $spacing = $tableWidth / ($seatsPerSide + 1);
+            // Use seatSpacing as the horizontal distance between seat centers
+            $totalSeatsWidth = ($seatsPerSide - 1) * $seatSpacing;
+            $startX = $centerX - $totalSeatsWidth / 2;
             $idx = 0;
 
             // Top seats
             for ($i = 0; $i < $seatsPerSide && $idx < $seatCount; $i++) {
                 $seats[$idx]->update([
-                    'x' => $centerX - $tableWidth / 2 + ($i + 1) * $spacing,
-                    'y' => $centerY - $tableHeight / 2 - $seatSpacing,
+                    'x' => $startX + $i * $seatSpacing,
+                    'y' => $centerY - $tableHeight / 2 - $tableGap,
                 ]);
                 $idx++;
             }
             // Bottom seats
             for ($i = 0; $i < $seatsPerSide && $idx < $seatCount; $i++) {
                 $seats[$idx]->update([
-                    'x' => $centerX - $tableWidth / 2 + ($i + 1) * $spacing,
-                    'y' => $centerY + $tableHeight / 2 + $seatSpacing,
+                    'x' => $startX + $i * $seatSpacing,
+                    'y' => $centerY + $tableHeight / 2 + $tableGap,
                 ]);
                 $idx++;
             }

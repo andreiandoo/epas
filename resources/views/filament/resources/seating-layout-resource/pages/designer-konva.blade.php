@@ -90,6 +90,7 @@
             editTableRadius: 25,
             editTableSeats: 6,
             editTableColor: '#8B4513',
+            editTableTextColor: '#FFFFFF',
             editTableSeatSpacing: 20,
             selectedRowData: null,
             selectedRowSectionId: null,
@@ -576,8 +577,9 @@
                             const centerY = parseFloat(metadata.center_y) || 50;
                             const tableName = row.label || 'Masă';
 
-                            // Get table color from metadata
+                            // Get table color and text color from metadata
                             const tableColor = metadata.table_color || '#8B4513';
+                            const textColor = metadata.text_color || '#FFFFFF';
 
                             if (metadata.table_type === 'round') {
                                 // Draw round table circle
@@ -610,7 +612,7 @@
                                     fontSize: 11,
                                     fontFamily: 'Arial',
                                     fontStyle: 'bold',
-                                    fill: '#FFFFFF',
+                                    fill: textColor,
                                     align: 'center',
                                     name: 'table-label'
                                 });
@@ -649,7 +651,7 @@
                                     fontSize: 11,
                                     fontFamily: 'Arial',
                                     fontStyle: 'bold',
-                                    fill: '#FFFFFF',
+                                    fill: textColor,
                                     align: 'center',
                                     name: 'table-label'
                                 });
@@ -1113,6 +1115,7 @@
                 this.editTableName = row.label || '';
                 this.editTableSeats = row.seats?.length || 0;
                 this.editTableColor = metadata.table_color || '#8B4513';
+                this.editTableTextColor = metadata.text_color || '#FFFFFF';
                 this.editTableSeatSpacing = parseFloat(metadata.seat_spacing) || 20;
                 if (metadata.table_type === 'round') {
                     this.editTableRadius = parseFloat(metadata.radius) || 25;
@@ -1261,6 +1264,33 @@
                     this.drawSections();
                 });
             },
+            previewTableTextColor() {
+                if (!this.selectedTableRow) return;
+
+                // Update the local metadata for preview
+                const section = this.sections.find(s => s.id === this.selectedTableSectionId);
+                if (!section) return;
+
+                const row = section.rows?.find(r => r.id === this.selectedTableRow.id);
+                if (!row) return;
+
+                row.metadata = row.metadata || {};
+                row.metadata.text_color = this.editTableTextColor;
+
+                // Redraw to show preview
+                this.drawSections();
+            },
+            updateTableTextColor() {
+                if (!this.selectedTableRow) return;
+                const wire = this.getWire();
+                if (!wire) return;
+
+                wire.updateTableMetadata(this.selectedTableRow.id, {
+                    text_color: this.editTableTextColor
+                }).then(() => {
+                    this.drawSections();
+                });
+            },
             previewTableSeatSpacing() {
                 if (!this.selectedTableRow) return;
 
@@ -1275,11 +1305,18 @@
                 const centerX = parseFloat(metadata.center_x) || 50;
                 const centerY = parseFloat(metadata.center_y) || 50;
                 const seatCount = row.seats.length;
-                const seatGap = this.editTableSeatSpacing;
+                const seatSpacing = this.editTableSeatSpacing; // Spacing between seats
+                const tableGap = 15; // Fixed gap from table edge to seats
 
                 if (metadata.table_type === 'round') {
                     const tableRadius = parseFloat(metadata.radius) || 25;
-                    const seatRadius = tableRadius + seatGap;
+                    // Calculate radius needed to achieve desired spacing between seats
+                    // Chord length between adjacent seats = 2 * r * sin(π/n)
+                    // So r = spacing / (2 * sin(π/n))
+                    const minSeatRadius = tableRadius + tableGap;
+                    const requiredRadius = seatCount > 1 ? seatSpacing / (2 * Math.sin(Math.PI / seatCount)) : minSeatRadius;
+                    const seatRadius = Math.max(requiredRadius, minSeatRadius);
+
                     // Recalculate seat positions based on new spacing
                     row.seats.forEach((seat, i) => {
                         const angle = (i / seatCount) * Math.PI * 2 - Math.PI / 2;
@@ -1290,18 +1327,20 @@
                     const tableWidth = parseFloat(metadata.width) || 80;
                     const tableHeight = parseFloat(metadata.height) || 30;
                     const seatsPerSide = Math.ceil(seatCount / 2);
-                    const spacing = tableWidth / (seatsPerSide + 1);
+                    // Use seatSpacing as the horizontal distance between seat centers
+                    const totalSeatsWidth = (seatsPerSide - 1) * seatSpacing;
+                    const startX = centerX - totalSeatsWidth / 2;
                     let idx = 0;
                     // Top seats
                     for (let i = 0; i < seatsPerSide && idx < seatCount; i++) {
-                        row.seats[idx].x = centerX - tableWidth / 2 + (i + 1) * spacing;
-                        row.seats[idx].y = centerY - tableHeight / 2 - seatGap;
+                        row.seats[idx].x = startX + i * seatSpacing;
+                        row.seats[idx].y = centerY - tableHeight / 2 - tableGap;
                         idx++;
                     }
                     // Bottom seats
                     for (let i = 0; i < seatsPerSide && idx < seatCount; i++) {
-                        row.seats[idx].x = centerX - tableWidth / 2 + (i + 1) * spacing;
-                        row.seats[idx].y = centerY + tableHeight / 2 + seatGap;
+                        row.seats[idx].x = startX + i * seatSpacing;
+                        row.seats[idx].y = centerY + tableHeight / 2 + tableGap;
                         idx++;
                     }
                 }
@@ -3109,6 +3148,15 @@
                             <input type="color" x-model="editTableColor" x-on:input="previewTableColor()"
                                 class="w-8 h-6 p-0 border border-gray-300 rounded cursor-pointer">
                             <button x-on:click="updateTableColor()" type="button"
+                                class="px-2 py-0.5 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">Salvează</button>
+                        </div>
+
+                        {{-- Text Color --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Text:</label>
+                            <input type="color" x-model="editTableTextColor" x-on:input="previewTableTextColor()"
+                                class="w-8 h-6 p-0 border border-gray-300 rounded cursor-pointer">
+                            <button x-on:click="updateTableTextColor()" type="button"
                                 class="px-2 py-0.5 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">Salvează</button>
                         </div>
 
