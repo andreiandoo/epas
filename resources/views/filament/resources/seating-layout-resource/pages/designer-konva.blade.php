@@ -387,17 +387,24 @@
                             const deltaY = rowGroup.y() - dragStartY;
 
                             if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
-                                // Reset group position (positions will be updated via backend)
-                                rowGroup.x(0);
-                                rowGroup.y(0);
                                 // Call backend to update seat positions (guard against disconnected Livewire)
                                 if (this.$wire) {
                                     try {
-                                        this.$wire.moveRow(row.id, deltaX, deltaY);
+                                        this.$wire.moveRow(row.id, deltaX, deltaY).then(() => {
+                                            // Position reset happens after backend confirms via layout-updated event
+                                        });
                                     } catch (e) {
                                         console.warn('Could not move row:', e.message);
+                                        // Reset position on error
+                                        rowGroup.x(0);
+                                        rowGroup.y(0);
+                                        this.layer.batchDraw();
                                     }
                                 }
+                            } else {
+                                // Reset for tiny movements
+                                rowGroup.x(0);
+                                rowGroup.y(0);
                             }
                         });
 
@@ -671,6 +678,44 @@
                                 });
                                 rowGroup.add(seatLabel);
                             });
+
+                            // Draw row label if enabled
+                            if (this.showRowLabel && row.label && !isTable) {
+                                const labelPos = this.rowLabelPos || 'left';
+                                let labelX, labelY, labelAlign = 'center';
+
+                                if (labelPos === 'left') {
+                                    labelX = minX - 25;
+                                    labelY = (minY + maxY) / 2 - 6;
+                                    labelAlign = 'right';
+                                } else if (labelPos === 'right') {
+                                    labelX = maxX + 10;
+                                    labelY = (minY + maxY) / 2 - 6;
+                                    labelAlign = 'left';
+                                } else if (labelPos === 'above') {
+                                    labelX = (minX + maxX) / 2 - 10;
+                                    labelY = minY - 18;
+                                    labelAlign = 'center';
+                                } else { // below
+                                    labelX = (minX + maxX) / 2 - 10;
+                                    labelY = maxY + 8;
+                                    labelAlign = 'center';
+                                }
+
+                                const rowLabelText = new Konva.Text({
+                                    x: labelX,
+                                    y: labelY,
+                                    text: row.label,
+                                    fontSize: 11,
+                                    fontFamily: 'Arial',
+                                    fontStyle: 'bold',
+                                    fill: '#374151',
+                                    align: labelAlign,
+                                    width: 20,
+                                    name: 'row-label-text'
+                                });
+                                rowGroup.add(rowLabelText);
+                            }
                         }
 
                         // Add the row group to the section group
@@ -1780,16 +1825,16 @@
                 this.drawLayer.find('.temp-seat').forEach(s => s.destroy());
                 this.tempRowSeats = [];
 
+                // Horizontal only - ignore Y movement
                 const dx = pos.x - this.rowDrawStart.x;
-                const dy = pos.y - this.rowDrawStart.y;
-                const length = Math.sqrt(dx * dx + dy * dy);
+                const length = Math.abs(dx);
                 const spacing = Math.max(15, this.rowSeatSpacing || 20); // Minimum 15px spacing
                 const numSeats = Math.max(1, Math.min(100, Math.floor(length / spacing))); // Max 100 seats per row
+                const direction = dx >= 0 ? 1 : -1;
 
                 for (let i = 0; i < numSeats; i++) {
-                    const t = numSeats > 1 ? i / (numSeats - 1) : 0;
-                    const x = this.rowDrawStart.x + dx * t;
-                    const y = this.rowDrawStart.y + dy * t;
+                    const x = this.rowDrawStart.x + (i * spacing * direction);
+                    const y = this.rowDrawStart.y; // Keep Y fixed (horizontal row)
 
                     const seat = new Konva.Circle({
                         x: x,
@@ -2893,7 +2938,7 @@
                         <div class="flex gap-1" x-show="getSelectedSectionData()?.section_type === 'standard'">
                             <button x-on:click="addSeatsMode = true" type="button"
                                 class="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold text-white rounded bg-purple-600 hover:bg-purple-700">
-                                <x-svg-icon name="konvaseats" class="w-4 h-4" /> Locuri
+                                <x-svg-icon name="konvaseats" class="w-4 h-4" /> Adaugă
                             </button>
                             <button x-on:click="rowSelectMode = !rowSelectMode; if(rowSelectMode) { seatSelectMode = false; clearSeatSelection(); }" type="button"
                                 class="flex-1 px-2 py-1.5 text-xs font-semibold rounded"
@@ -3091,25 +3136,25 @@
                     Selectați motivul pentru care blocați <span x-text="selectedSeatIds.length" class="font-medium"></span> loc(uri):
                 </p>
                 <div class="space-y-2 mb-6">
-                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50" :class="blockReason === 'stricat' ? 'border-red-500 bg-red-50' : 'border-gray-200'">
+                    <label class="flex items-center gap-3 p-3 bg-white border rounded-lg cursor-pointer hover:bg-gray-50" :class="blockReason === 'stricat' ? 'border-red-500 bg-red-50' : 'border-gray-200'">
                         <input type="radio" x-model="blockReason" value="stricat" class="text-red-600">
                         <div>
                             <span class="font-medium text-gray-900">Stricat</span>
-                            <p class="text-xs text-gray-500">Scaunul este deteriorat și necesită reparații</p>
+                            <p class="text-xs text-gray-600">Scaunul este deteriorat și necesită reparații</p>
                         </div>
                     </label>
-                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50" :class="blockReason === 'lipsa' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'">
+                    <label class="flex items-center gap-3 p-3 bg-white border rounded-lg cursor-pointer hover:bg-gray-50" :class="blockReason === 'lipsa' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'">
                         <input type="radio" x-model="blockReason" value="lipsa" class="text-orange-600">
                         <div>
                             <span class="font-medium text-gray-900">Lipsă</span>
-                            <p class="text-xs text-gray-500">Scaunul lipsește fizic din locație</p>
+                            <p class="text-xs text-gray-600">Scaunul lipsește fizic din locație</p>
                         </div>
                     </label>
-                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50" :class="blockReason === 'indisponibil' ? 'border-gray-500 bg-gray-100' : 'border-gray-200'">
-                        <input type="radio" x-model="blockReason" value="indisponibil" class="text-gray-600">
+                    <label class="flex items-center gap-3 p-3 bg-white border rounded-lg cursor-pointer hover:bg-gray-50" :class="blockReason === 'indisponibil' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
+                        <input type="radio" x-model="blockReason" value="indisponibil" class="text-blue-600">
                         <div>
                             <span class="font-medium text-gray-900">Indisponibil</span>
-                            <p class="text-xs text-gray-500">Locul este temporar indisponibil (acces restricționat, etc.)</p>
+                            <p class="text-xs text-gray-600">Locul este temporar indisponibil (acces restricționat, etc.)</p>
                         </div>
                     </label>
                 </div>
