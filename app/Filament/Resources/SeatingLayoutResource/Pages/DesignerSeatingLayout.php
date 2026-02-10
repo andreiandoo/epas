@@ -1231,6 +1231,18 @@ class DesignerSeatingLayout extends Page
             return;
         }
 
+        // Update section metadata with seat size and spacing if provided
+        if (isset($settings['seatSize']) || isset($settings['seatSpacing'])) {
+            $metadata = $section->metadata ?? [];
+            if (isset($settings['seatSize'])) {
+                $metadata['seat_size'] = (int) $settings['seatSize'];
+            }
+            if (isset($settings['seatSpacing'])) {
+                $metadata['seat_spacing'] = (int) $settings['seatSpacing'];
+            }
+            $section->update(['metadata' => $metadata]);
+        }
+
         // Get row numbering settings
         $numberingMode = $settings['numberingMode'] ?? 'alpha';
         $startNumber = $settings['startNumber'] ?? 1;
@@ -1413,6 +1425,21 @@ class DesignerSeatingLayout extends Page
                 ->title('Section not found')
                 ->send();
             return;
+        }
+
+        // Update section metadata with seat size, spacing, and row spacing if provided
+        if (isset($settings['seatSize']) || isset($settings['seatSpacing']) || isset($settings['rowSpacing'])) {
+            $metadata = $section->metadata ?? [];
+            if (isset($settings['seatSize'])) {
+                $metadata['seat_size'] = (int) $settings['seatSize'];
+            }
+            if (isset($settings['seatSpacing'])) {
+                $metadata['seat_spacing'] = (int) $settings['seatSpacing'];
+            }
+            if (isset($settings['rowSpacing'])) {
+                $metadata['row_spacing'] = (int) $settings['rowSpacing'];
+            }
+            $section->update(['metadata' => $metadata]);
         }
 
         // Get row numbering settings

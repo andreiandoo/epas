@@ -804,7 +804,10 @@
                         }
 
                         if (row.seats && row.seats.length > 0) {
-                            const seatRadius = 10;
+                            // Get seat size from section metadata, default to 15
+                            const sectionMeta = section.metadata || {};
+                            const seatSize = parseInt(sectionMeta.seat_size) || 15;
+                            const seatRadius = seatSize / 2;
                             const padding = 5;
 
                             // Calculate row bounding box
@@ -2473,7 +2476,7 @@
                             y: seat.y - sectionY
                         }));
 
-                        // Pass all settings to backend
+                        // Pass all settings to backend including seat size and spacing
                         const wire = this.getWire();
                         if (wire) {
                             wire.addRowWithSeats(this.selectedSection, relativeSeats, {
@@ -2481,7 +2484,9 @@
                                 startNumber: this.rowStartNumber,
                                 seatNumberingType: this.seatNumberingType,
                                 seatNumberingDirection: this.rowNumberingDirection,
-                                customLabel: this.customRowLabel || null
+                                customLabel: this.customRowLabel || null,
+                                seatSize: this.rowSeatSize,
+                                seatSpacing: this.rowSeatSpacing
                             });
                         }
 
@@ -2597,7 +2602,10 @@
                                 numberingMode: this.rowNumberingMode,
                                 startNumber: this.rowStartNumber,
                                 seatNumberingType: this.seatNumberingType,
-                                seatNumberingDirection: this.rowNumberingDirection
+                                seatNumberingDirection: this.rowNumberingDirection,
+                                seatSize: this.rowSeatSize,
+                                seatSpacing: this.rowSeatSpacing,
+                                rowSpacing: this.rowSpacing
                             });
                         }
                     }
@@ -3834,13 +3842,19 @@
                         {{-- Numbering Settings --}}
                         <div class="p-3 space-y-3 rounded-lg bg-blue-50">
                             <div class="text-xs font-semibold text-blue-700 uppercase">Numerotare</div>
-                            <div>
-                                <label class="block text-xs text-blue-600">Mod numerotare rând</label>
-                                <select x-model="rowNumberingMode" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                                    <option value="numeric">Numere (1, 2, 3...)</option>
-                                    <option value="alpha">Litere (A, B, C...)</option>
-                                    <option value="roman">Romane (I, II, III...)</option>
-                                </select>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-blue-600">Mod numerotare rând</label>
+                                    <select x-model="rowNumberingMode" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                        <option value="numeric">Numere (1, 2, 3...)</option>
+                                        <option value="alpha">Litere (A, B, C...)</option>
+                                        <option value="roman">Romane (I, II, III...)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-blue-600">Start de la</label>
+                                    <input type="number" x-model.number="rowStartNumber" min="1" max="999" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-xs text-blue-600">Direcție numerotare</label>
