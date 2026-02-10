@@ -2548,15 +2548,31 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
-     * Upload background image via Livewire
+     * Upload background image via base64 data
      */
-    public function uploadBackgroundImage($file): ?string
+    public function uploadBackgroundImageBase64(string $base64Data, string $filename): ?string
     {
-        if (!$file) return null;
+        if (empty($base64Data)) return null;
 
         try {
+            // Extract the base64 content (remove data:image/xxx;base64, prefix)
+            $parts = explode(',', $base64Data);
+            if (count($parts) !== 2) {
+                throw new \Exception('Invalid base64 format');
+            }
+
+            $imageData = base64_decode($parts[1]);
+            if ($imageData === false) {
+                throw new \Exception('Failed to decode base64 data');
+            }
+
+            // Generate unique filename
+            $extension = pathinfo($filename, PATHINFO_EXTENSION) ?: 'png';
+            $newFilename = 'bg_' . $this->seatingLayout->id . '_' . time() . '.' . $extension;
+            $path = 'seating/backgrounds/' . $newFilename;
+
             // Store the file
-            $path = $file->store('seating/backgrounds', 'public');
+            \Storage::disk('public')->put($path, $imageData);
 
             // Update the layout with new image path
             $this->seatingLayout->update([
@@ -3237,7 +3253,7 @@ class DesignerSeatingLayout extends Page
             'backgroundScale' => $this->seatingLayout->background_scale ?? 1,
             'backgroundX' => $this->seatingLayout->background_x ?? 0,
             'backgroundY' => $this->seatingLayout->background_y ?? 0,
-            'backgroundOpacity' => $this->seatingLayout->background_opacity ?? 0.3,
+            'backgroundOpacity' => $this->seatingLayout->background_opacity ?? 1,
             'backgroundColor' => $this->seatingLayout->background_color ?? '#F3F4F6',
             'iconDefinitions' => config('seating-icons', []),
         ];

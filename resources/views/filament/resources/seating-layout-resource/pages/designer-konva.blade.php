@@ -22,12 +22,12 @@
             canvasWidth: {{ $seatingLayout->canvas_w ?? 1200 }},
             canvasHeight: {{ $seatingLayout->canvas_h ?? 800 }},
             backgroundColor: '{{ $seatingLayout->background_color ?? '#f3f4f6' }}',
-            backgroundUrl: {{ Js::from($seatingLayout->background_image_url) }},
+            backgroundUrl: {{ Js::from($backgroundUrl ?? null) }},
             backgroundVisible: true,
             backgroundScale: {{ $seatingLayout->background_scale ?? 1 }},
             backgroundX: {{ $seatingLayout->background_x ?? 0 }},
             backgroundY: {{ $seatingLayout->background_y ?? 0 }},
-            backgroundOpacity: {{ $seatingLayout->background_opacity ?? 0.3 }},
+            backgroundOpacity: {{ $seatingLayout->background_opacity ?? 1 }},
             showBackgroundControls: false,
             drawMode: 'select',
             polygonPoints: [],
@@ -284,19 +284,21 @@
                 // Clear background layer
                 this.backgroundLayer.destroyChildren();
 
-                // Background color rect
+                // Background color rect (always at the very bottom)
                 const bgRect = new Konva.Rect({
                     x: 0,
                     y: 0,
                     width: this.canvasWidth,
                     height: this.canvasHeight,
-                    fill: this.backgroundColor
+                    fill: this.backgroundColor,
+                    name: 'background-color'
                 });
                 this.backgroundLayer.add(bgRect);
 
-                // Background image if exists
+                // Background image if exists (renders ON TOP of the color)
                 if (this.backgroundUrl && this.backgroundVisible) {
                     const imageObj = new Image();
+                    imageObj.crossOrigin = 'anonymous'; // Handle CORS for external images
                     imageObj.onload = () => {
                         const bgImage = new Konva.Image({
                             x: this.backgroundX,
@@ -304,12 +306,16 @@
                             image: imageObj,
                             opacity: this.backgroundOpacity,
                             scaleX: this.backgroundScale,
-                            scaleY: this.backgroundScale
+                            scaleY: this.backgroundScale,
+                            name: 'background-image'
                         });
+                        // Add image and ensure correct z-order: color at bottom, image on top
                         this.backgroundLayer.add(bgImage);
-                        bgImage.moveToBottom();
-                        bgRect.moveToBottom();
+                        bgRect.moveToBottom(); // Color stays at bottom
                         this.backgroundLayer.batchDraw();
+                    };
+                    imageObj.onerror = () => {
+                        console.error('Failed to load background image:', this.backgroundUrl);
                     };
                     imageObj.src = this.backgroundUrl;
                 }
@@ -2822,17 +2828,27 @@
                     return;
                 }
 
-                // Upload via Livewire
-                const wire = this.getWire();
-                if (wire) {
-                    wire.uploadBackgroundImage(file).then((url) => {
-                        if (url) {
-                            this.backgroundUrl = url;
-                            this.backgroundVisible = true;
-                            this.drawBackground();
-                        }
-                    });
+                // Validate file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Imaginea este prea mare. Maxim 5MB.');
+                    return;
                 }
+
+                // Convert to base64 and upload via Livewire
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const wire = this.getWire();
+                    if (wire) {
+                        wire.uploadBackgroundImageBase64(reader.result, file.name).then((url) => {
+                            if (url) {
+                                this.backgroundUrl = url;
+                                this.backgroundVisible = true;
+                                this.drawBackground();
+                            }
+                        });
+                    }
+                };
+                reader.readAsDataURL(file);
             },
             exportSVG() {
                 const dataURL = this.stage.toDataURL({ pixelRatio: 2 });
