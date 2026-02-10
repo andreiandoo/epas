@@ -92,6 +92,7 @@
             editRowSeats: 0,
             editRowStartNumber: 1,
             editRowDirection: 'ltr',
+            editRowNumberingMode: 'numeric',
             editRowSeatSize: 20,
             editRowSeatSpacing: 25,
             editRowCurve: 0,
@@ -380,8 +381,14 @@
                                 // Reset group position (positions will be updated via backend)
                                 rowGroup.x(0);
                                 rowGroup.y(0);
-                                // Call backend to update seat positions
-                                this.$wire.moveRow(row.id, deltaX, deltaY);
+                                // Call backend to update seat positions (guard against disconnected Livewire)
+                                if (this.$wire) {
+                                    try {
+                                        this.$wire.moveRow(row.id, deltaX, deltaY);
+                                    } catch (e) {
+                                        console.warn('Could not move row:', e.message);
+                                    }
+                                }
                             }
                         });
 
@@ -679,7 +686,10 @@
                     // Account for offset - position is center, we need top-left for storage
                     const topLeftX = group.x() - group.offsetX();
                     const topLeftY = group.y() - group.offsetY();
-                    this.updateSectionPosition(section.id, Math.round(topLeftX), Math.round(topLeftY));
+                    // Guard against Livewire component being disconnected
+                    if (this.$wire) {
+                        this.updateSectionPosition(section.id, Math.round(topLeftX), Math.round(topLeftY));
+                    }
                 });
 
                 // Real-time update during transform
@@ -924,6 +934,7 @@
                 this.editRowSeats = row.seats?.length || 0;
                 this.editRowStartNumber = row.seat_start_number || 1;
                 this.editRowDirection = row.alignment === 'right' ? 'rtl' : 'ltr';
+                this.editRowNumberingMode = row.metadata?.numbering_mode || 'numeric';
 
                 // Calculate current seat spacing from seat positions
                 if (row.seats && row.seats.length >= 2) {
@@ -982,7 +993,8 @@
 
                 this.$wire.updateRowNumbering(this.selectedRowData.id, {
                     startNumber: this.editRowStartNumber,
-                    direction: this.editRowDirection
+                    direction: this.editRowDirection,
+                    numberingMode: this.editRowNumberingMode
                 }).then(() => {
                     this.deselectRow();
                 });
@@ -1770,7 +1782,13 @@
                 }
             },
             updateSectionPosition(sectionId, x, y) {
-                this.$wire.updateSectionPosition(sectionId, Math.round(x), Math.round(y));
+                // Guard against Livewire component being disconnected
+                if (!this.$wire) return;
+                try {
+                    this.$wire.updateSectionPosition(sectionId, Math.round(x), Math.round(y));
+                } catch (e) {
+                    console.warn('Could not update section position:', e.message);
+                }
             },
             updateSectionTransform(sectionId, group) {
                 const rect = group.findOne('Rect');
@@ -2139,7 +2157,7 @@
                             <div x-show="showRowLabels" class="space-y-2">
                                 <div class="flex items-center gap-2 mb-2">
                                     <span class="text-xs text-amber-600">Poziție etichetă:</span>
-                                    <select x-model="rowLabelPosition" class="px-2 py-1 text-xs border border-amber-300 rounded">
+                                    <select x-model="rowLabelPosition" class="px-2 py-1 text-xs text-gray-900 bg-white border border-amber-300 rounded">
                                         <option value="left">Stânga</option>
                                         <option value="right">Dreapta</option>
                                         <option value="above">Deasupra</option>
@@ -2151,7 +2169,7 @@
                                         <div class="flex items-center gap-1 px-2 py-1 bg-amber-50 border border-amber-200 rounded">
                                             <span class="text-xs text-amber-600" x-text="`R${index + 1}:`"></span>
                                             <input type="text" x-model="item.row.label" x-on:change="updateMultiRowLabel(item)"
-                                                class="w-12 px-1 py-0.5 text-xs border border-amber-300 rounded text-center">
+                                                class="w-12 px-1 py-0.5 text-xs text-gray-900 bg-white border border-amber-300 rounded text-center">
                                         </div>
                                     </template>
                                 </div>
@@ -2373,7 +2391,17 @@
                             <span class="text-xs text-gray-500">px</span>
                         </div>
 
-                        {{-- Numbering --}}
+                        {{-- Numbering Type --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Tip nr:</label>
+                            <select x-model="editRowNumberingMode" class="flex-1 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                                <option value="numeric">1, 2, 3...</option>
+                                <option value="alpha">A, B, C...</option>
+                                <option value="roman">I, II, III...</option>
+                            </select>
+                        </div>
+
+                        {{-- Numbering Start + Direction --}}
                         <div class="flex items-center gap-1">
                             <label class="text-xs text-gray-600 w-16">Start nr:</label>
                             <input type="number" x-model.number="editRowStartNumber" min="1" max="999"

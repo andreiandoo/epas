@@ -2747,16 +2747,27 @@ class DesignerSeatingLayout extends Page
             return;
         }
 
+        $isRtl = $row->alignment === 'right';
+        $startNumber = $row->seat_start_number ?? 1;
+        $metadata = $row->metadata ?? [];
+        $numberingMode = $metadata['numbering_mode'] ?? 'numeric';
+
         if ($newSeatCount > $currentCount) {
-            // Add seats to the end
+            // Add seats to the end (right side for LTR, left side for RTL)
             $lastSeat = $currentSeats->last();
             $spacing = 20;
-            $startX = $lastSeat ? ((int) $lastSeat->x + $spacing) : 0;
-            $y = $lastSeat ? (int) $lastSeat->y : (int) $row->y;
+
+            // Calculate spacing from existing seats if available
+            if ($currentCount >= 2) {
+                $spacing = abs($currentSeats->get(1)->x - $currentSeats->get(0)->x);
+            }
+
+            $startX = $lastSeat ? ((float) $lastSeat->x + $spacing) : 0;
+            $y = $lastSeat ? (float) $lastSeat->y : (float) ($row->y ?? 0);
 
             for ($i = 0; $i < $newSeatCount - $currentCount; $i++) {
                 $seatNum = $currentCount + $i + 1;
-                $seatLabel = (string) $seatNum;
+                $seatLabel = $this->formatSeatLabel($seatNum, $numberingMode);
                 SeatingSeat::create([
                     'row_id' => $row->id,
                     'label' => $seatLabel,
@@ -2769,7 +2780,7 @@ class DesignerSeatingLayout extends Page
                 ]);
             }
         } else {
-            // Remove seats from the end
+            // Remove seats from the end (based on X position order)
             $seatsToRemove = $currentSeats->slice($newSeatCount);
             foreach ($seatsToRemove as $seat) {
                 $seat->delete();
@@ -2777,6 +2788,31 @@ class DesignerSeatingLayout extends Page
         }
 
         $row->update(['seat_count' => $newSeatCount]);
+
+        // Renumber remaining seats to respect the start number and direction
+        $remainingSeats = $row->seats()->orderBy('x')->get();
+        if ($isRtl) {
+            $remainingSeats = $remainingSeats->reverse()->values();
+        }
+
+        // First pass: temporary UIDs to avoid conflicts
+        $tempSuffix = '_temp_' . time() . '_';
+        foreach ($remainingSeats as $seat) {
+            $seat->update(['seat_uid' => $tempSuffix . $seat->id]);
+        }
+
+        // Second pass: renumber with proper labels
+        $seatNum = $startNumber;
+        foreach ($remainingSeats as $seat) {
+            $seatLabel = $this->formatSeatLabel($seatNum, $numberingMode);
+            $seat->update([
+                'label' => $seatLabel,
+                'display_name' => $section->generateSeatDisplayName($row->label, $seatLabel),
+                'seat_uid' => $section->generateSeatUid($row->label, $seatLabel),
+            ]);
+            $seatNum++;
+        }
+
         $this->reloadSections();
         $this->dispatch('layout-updated', sections: $this->sections);
 
@@ -2805,11 +2841,15 @@ class DesignerSeatingLayout extends Page
         $section = $row->section;
         $startNumber = $settings['startNumber'] ?? 1;
         $direction = $settings['direction'] ?? 'ltr';
+        $numberingMode = $settings['numberingMode'] ?? 'numeric';
 
-        // Update row settings
+        // Update row settings including numbering mode in metadata
+        $metadata = $row->metadata ?? [];
+        $metadata['numbering_mode'] = $numberingMode;
         $row->update([
             'seat_start_number' => $startNumber,
             'alignment' => $direction === 'rtl' ? 'right' : 'left',
+            'metadata' => $metadata,
         ]);
 
         // Get seats ordered by X position
@@ -2829,7 +2869,7 @@ class DesignerSeatingLayout extends Page
         // Second pass: Set the actual new labels and seat_uids
         $seatNum = $startNumber;
         foreach ($seats as $seat) {
-            $seatLabel = (string) $seatNum;
+            $seatLabel = $this->formatSeatLabel($seatNum, $numberingMode);
             $seat->update([
                 'label' => $seatLabel,
                 'display_name' => $section->generateSeatDisplayName($row->label, $seatLabel),
@@ -2846,6 +2886,52 @@ class DesignerSeatingLayout extends Page
             ->title('Numerotare actualizată')
             ->body("Locurile din rândul '{$row->label}' au fost renumerotate")
             ->send();
+    }
+
+    /**
+     * Format seat label based on numbering mode
+     */
+    private function formatSeatLabel(int $number, string $mode): string
+    {
+        return match ($mode) {
+            'alpha' => $this->numberToAlpha($number),
+            'roman' => $this->numberToRoman($number),
+            default => (string) $number,
+        };
+    }
+
+    /**
+     * Convert number to alphabetic (1=A, 2=B, ..., 27=AA, etc.)
+     */
+    private function numberToAlpha(int $number): string
+    {
+        $result = '';
+        while ($number > 0) {
+            $number--;
+            $result = chr(65 + ($number % 26)) . $result;
+            $number = intdiv($number, 26);
+        }
+        return $result;
+    }
+
+    /**
+     * Convert number to Roman numerals
+     */
+    private function numberToRoman(int $number): string
+    {
+        $map = [
+            'M' => 1000, 'CM' => 900, 'D' => 500, 'CD' => 400,
+            'C' => 100, 'XC' => 90, 'L' => 50, 'XL' => 40,
+            'X' => 10, 'IX' => 9, 'V' => 5, 'IV' => 4, 'I' => 1
+        ];
+        $result = '';
+        foreach ($map as $roman => $value) {
+            while ($number >= $value) {
+                $result .= $roman;
+                $number -= $value;
+            }
+        }
+        return $result;
     }
 
     /**
