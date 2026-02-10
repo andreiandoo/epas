@@ -2133,13 +2133,16 @@
                 const wire = this.getWire();
                 if (!wire) return;
 
-                // Save via Livewire
+                // Save via Livewire - include name, font_size, and corner_radius
                 wire.updateSection(this.selectedSection, {
                     width: parseInt(this.sectionWidth),
                     height: parseInt(this.sectionHeight),
                     rotation: parseInt(this.sectionRotation),
+                    corner_radius: parseInt(this.sectionCornerRadius),
                     x_position: this.getSelectedSectionData()?.x_position,
                     y_position: this.getSelectedSectionData()?.y_position,
+                    name: this.sectionLabel,
+                    font_size: parseInt(this.sectionFontSize)
                 });
 
                 // Save colors separately

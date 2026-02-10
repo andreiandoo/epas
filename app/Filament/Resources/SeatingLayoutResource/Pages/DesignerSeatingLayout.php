@@ -980,17 +980,28 @@ class DesignerSeatingLayout extends Page
         }
 
         // Filter to only allowed fields
-        $allowedFields = ['x_position', 'y_position', 'width', 'height', 'rotation'];
+        $allowedFields = ['x_position', 'y_position', 'width', 'height', 'rotation', 'corner_radius'];
         $filteredUpdates = array_intersect_key($updates, array_flip($allowedFields));
 
-        if (empty($filteredUpdates)) {
-            return;
-        }
-
-        // Force save with explicit field assignment
+        // Force save with explicit field assignment for numeric fields
         foreach ($filteredUpdates as $field => $value) {
             $section->{$field} = (int) $value;
         }
+
+        // Handle name/label separately (string field)
+        if (isset($updates['name']) && !empty($updates['name'])) {
+            $section->name = $updates['name'];
+            // Also update section label if it's used
+            $section->label = $updates['name'];
+        }
+
+        // Handle font_size in metadata
+        if (isset($updates['font_size'])) {
+            $metadata = $section->metadata ?? [];
+            $metadata['font_size'] = (int) $updates['font_size'];
+            $section->metadata = $metadata;
+        }
+
         $section->save();
 
         $this->reloadSections();
