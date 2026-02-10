@@ -16,6 +16,8 @@
             gridSize: 20,
             selectedSection: null,
             sections: {{ Js::from($sections) }},
+            undoStack: [],
+            maxUndoSteps: 20,
             iconDefinitions: {{ Js::from($iconDefinitions ?? []) }},
             canvasWidth: {{ $seatingLayout->canvas_w ?? 1200 }},
             canvasHeight: {{ $seatingLayout->canvas_h ?? 800 }},
@@ -154,6 +156,34 @@
                     }
                 }
                 return null;
+            },
+            saveState() {
+                // Save current sections state for undo
+                const snapshot = JSON.parse(JSON.stringify(this.sections));
+                this.undoStack.push(snapshot);
+                // Limit undo stack size
+                if (this.undoStack.length > this.maxUndoSteps) {
+                    this.undoStack.shift();
+                }
+            },
+            undo() {
+                if (this.undoStack.length === 0) return;
+
+                const previousState = this.undoStack.pop();
+                const wire = this.getWire();
+                if (wire) {
+                    // Restore the previous state via backend
+                    wire.restoreState(previousState).then(() => {
+                        // Backend will dispatch layout-updated event
+                    });
+                } else {
+                    // Fallback: just restore locally
+                    this.sections = previousState;
+                    this.drawSections();
+                }
+            },
+            canUndo() {
+                return this.undoStack.length > 0;
             },
             waitForKonva() {
                 // Check if Konva is loaded
@@ -865,6 +895,13 @@
                         this.finishDrawMultiRows();
                     } else if (this.drawMode === 'line' && this.lineDrawStart) {
                         this.finishDrawLine();
+                    }
+                });
+
+                // Double-click to finish polygon
+                this.stage.on('dblclick dbltap', (e) => {
+                    if (this.drawMode === 'polygon' && this.polygonPoints.length >= 6) {
+                        this.finishPolygon();
                     }
                 });
 
@@ -2213,17 +2250,32 @@
                     this.deselectAll();
                     this.rowSelectMode = false;
                     this.seatSelectMode = false;
-                } else if (e.key === 'Delete' && this.selectedSection) {
+                } else if (e.key === 'Delete') {
                     this.deleteSelected();
+                } else if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                    e.preventDefault();
+                    this.undo();
                 }
             },
             deleteSelected() {
-                if (this.selectedSection) {
-                    const wire = this.getWire();
-                    if (wire) {
+                const wire = this.getWire();
+                if (!wire) return;
+
+                // Save state for undo before any deletion
+                this.saveState();
+
+                // Priority: selected seats > selected row > selected table > selected section
+                if (this.selectedSeatIds.length > 0) {
+                    this.deleteSelectedSeatsAction();
+                } else if (this.selectedRowData) {
+                    this.deleteSelectedRow();
+                } else if (this.selectedTableRow) {
+                    this.deleteTable();
+                } else if (this.selectedSection) {
+                    if (confirm('Sigur doriți să ștergeți această secțiune?')) {
                         wire.deleteSection(this.selectedSection);
+                        this.deselectAll();
                     }
-                    this.deselectAll();
                 }
             },
             updateSectionPosition(sectionId, x, y) {
@@ -2396,12 +2448,6 @@
                             <svg viewBox="0 0 32 32" class="w-5 h-5"><path d="M31.371 17.433 10.308 9.008c-.775-.31-1.629.477-1.3 1.3l8.426 21.064c.346.866 1.633.797 1.89-.098l2.654-9.295 9.296-2.656c.895-.255.96-1.544.097-1.89z" fill="currentColor"></path></svg>
                             Selectare
                         </button>
-                        <button x-on:click="setDrawMode('selectseats')" type="button" x-show="!addSeatsMode"
-                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
-                            :class="drawMode === 'selectseats' ? 'bg-pink-500 border-pink-500 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
-                            <x-svg-icon name="konvaseats" class="w-5 h-5" />
-                            Selectare Locuri
-                        </button>
                     </div>
                 </div>
 
@@ -2422,6 +2468,27 @@
                             :class="drawMode === 'polygon' ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             <x-svg-icon name="konvapolygon" class="w-5 h-5" />
                             Poligon
+                        </button>
+                    </div>
+                    {{-- Polygon finish helper --}}
+                    <div x-show="drawMode === 'polygon'" x-transition class="space-y-2">
+                        <div class="p-2 text-xs text-emerald-700 bg-emerald-50 rounded-lg">
+                            <p class="font-medium">Mod Poligon:</p>
+                            <p>• Click pentru a adăuga puncte</p>
+                            <p>• Dublu-click pentru a finaliza</p>
+                            <p class="mt-1">Puncte: <span x-text="Math.floor(polygonPoints.length / 2)"></span></p>
+                        </div>
+                        <button x-on:click="finishPolygon()" type="button"
+                            x-show="polygonPoints.length >= 6"
+                            class="flex items-center justify-center w-full gap-2 px-3 py-2 text-sm font-medium text-white transition-all bg-emerald-600 border border-emerald-600 rounded-lg hover:bg-emerald-700">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Finalizează Poligon
+                        </button>
+                        <button x-on:click="cancelDrawing()" type="button"
+                            class="flex items-center justify-center w-full gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-all bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200">
+                            Anulează
                         </button>
                     </div>
                 </div>
@@ -2490,6 +2557,19 @@
                             Snap
                         </button>
                     </div>
+                </div>
+
+                {{-- Undo --}}
+                <div class="pt-3 border-t border-gray-200">
+                    <button x-on:click="undo()" type="button"
+                        class="flex items-center w-full gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg"
+                        :class="canUndo() ? 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100' : 'bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed'"
+                        :disabled="!canUndo()">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                        </svg>
+                        Anulează (Ctrl+Z)
+                    </button>
                 </div>
 
                 {{-- Actions --}}

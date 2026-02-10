@@ -1599,6 +1599,121 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Restore a previous state (for undo functionality)
+     */
+    public function restoreState(array $previousSections): void
+    {
+        // Get current section IDs for this layout
+        $currentSectionIds = SeatingSection::where('layout_id', $this->seatingLayout->id)
+            ->pluck('id')
+            ->toArray();
+
+        $previousSectionIds = array_column($previousSections, 'id');
+
+        // Delete sections that don't exist in previous state
+        foreach ($currentSectionIds as $sectionId) {
+            if (!in_array($sectionId, $previousSectionIds)) {
+                SeatingSection::find($sectionId)?->delete();
+            }
+        }
+
+        // Restore or create sections from previous state
+        foreach ($previousSections as $sectionData) {
+            $section = SeatingSection::find($sectionData['id'] ?? 0);
+
+            if (!$section) {
+                // Section was deleted, recreate it
+                $section = SeatingSection::create([
+                    'layout_id' => $this->seatingLayout->id,
+                    'tenant_id' => $this->seatingLayout->tenant_id,
+                    'name' => $sectionData['name'] ?? 'Restored Section',
+                    'section_code' => $sectionData['section_code'] ?? 'RST' . uniqid(),
+                    'section_type' => $sectionData['section_type'] ?? 'standard',
+                    'x_position' => $sectionData['x_position'] ?? 0,
+                    'y_position' => $sectionData['y_position'] ?? 0,
+                    'width' => $sectionData['width'] ?? 200,
+                    'height' => $sectionData['height'] ?? 150,
+                    'color_hex' => $sectionData['color_hex'] ?? '#3B82F6',
+                    'seat_color' => $sectionData['seat_color'] ?? '#22C55E',
+                ]);
+            }
+
+            // Restore rows and seats
+            if (isset($sectionData['rows']) && is_array($sectionData['rows'])) {
+                $currentRowIds = $section->rows()->pluck('id')->toArray();
+                $previousRowIds = array_column($sectionData['rows'], 'id');
+
+                // Delete rows that don't exist in previous state
+                foreach ($currentRowIds as $rowId) {
+                    if (!in_array($rowId, $previousRowIds)) {
+                        SeatingRow::find($rowId)?->delete();
+                    }
+                }
+
+                foreach ($sectionData['rows'] as $rowData) {
+                    $row = SeatingRow::find($rowData['id'] ?? 0);
+
+                    if (!$row) {
+                        $row = SeatingRow::create([
+                            'section_id' => $section->id,
+                            'label' => $rowData['label'] ?? 'R',
+                            'y' => $rowData['y'] ?? 0,
+                            'rotation' => $rowData['rotation'] ?? 0,
+                            'seat_count' => count($rowData['seats'] ?? []),
+                        ]);
+                    }
+
+                    // Restore seats
+                    if (isset($rowData['seats']) && is_array($rowData['seats'])) {
+                        $currentSeatIds = $row->seats()->pluck('id')->toArray();
+                        $previousSeatIds = array_column($rowData['seats'], 'id');
+
+                        // Delete seats that don't exist in previous state
+                        foreach ($currentSeatIds as $seatId) {
+                            if (!in_array($seatId, $previousSeatIds)) {
+                                SeatingSeat::find($seatId)?->delete();
+                            }
+                        }
+
+                        foreach ($rowData['seats'] as $seatData) {
+                            $seat = SeatingSeat::find($seatData['id'] ?? 0);
+
+                            if (!$seat) {
+                                SeatingSeat::create([
+                                    'row_id' => $row->id,
+                                    'label' => $seatData['label'] ?? '?',
+                                    'display_name' => $seatData['display_name'] ?? '',
+                                    'x' => $seatData['x'] ?? 0,
+                                    'y' => $seatData['y'] ?? 0,
+                                    'angle' => $seatData['angle'] ?? 0,
+                                    'shape' => $seatData['shape'] ?? 'circle',
+                                    'seat_uid' => $seatData['seat_uid'] ?? ($section->section_code . '_' . ($rowData['label'] ?? 'R') . '_' . ($seatData['label'] ?? '?') . '_' . uniqid()),
+                                    'status' => $seatData['status'] ?? 'active',
+                                ]);
+                            } else {
+                                $seat->update([
+                                    'x' => $seatData['x'] ?? $seat->x,
+                                    'y' => $seatData['y'] ?? $seat->y,
+                                    'status' => $seatData['status'] ?? $seat->status,
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Anulat')
+            ->body('Modificarea a fost anulată')
+            ->send();
+    }
+
+    /**
      * Delete section (called from Konva.js)
      */
     public function deleteSection($sectionId): void
