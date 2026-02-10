@@ -37,6 +37,10 @@
             circleStart: null,
             tempCircle: null,
             showExportModal: false,
+            showLayoutTree: false,
+            expandedSections: {},
+            expandedRows: {},
+            seatTooltip: { show: false, x: 0, y: 0, seatName: '', seatId: '' },
             showColorModal: false,
             showShapeConfigModal: false,
             showContextMenu: false,
@@ -465,6 +469,121 @@
 
                 this.layer.add(group);
             },
+            drawDecorativeSection(section, sectionDraggable) {
+                const metadata = section.metadata || {};
+                const shape = metadata.shape || 'polygon';
+                const opacity = parseFloat(metadata.opacity) || 0.3;
+                const color = section.background_color || section.color_hex || '#10B981';
+                const isSelected = this.selectedSection === section.id;
+
+                // Create group for the decorative element
+                const group = new Konva.Group({
+                    x: section.x_position || 0,
+                    y: section.y_position || 0,
+                    rotation: section.rotation || 0,
+                    draggable: sectionDraggable,
+                    id: `section-${section.id}`,
+                    name: 'section-shape'
+                });
+
+                if (shape === 'polygon' && metadata.points) {
+                    // Draw polygon from stored points
+                    // Points are stored as absolute coordinates, convert to relative
+                    const points = metadata.points;
+                    const minX = section.x_position || 0;
+                    const minY = section.y_position || 0;
+
+                    // Convert absolute points to relative
+                    const relativePoints = [];
+                    for (let i = 0; i < points.length; i += 2) {
+                        relativePoints.push(points[i] - minX);
+                        relativePoints.push(points[i + 1] - minY);
+                    }
+
+                    const polygon = new Konva.Line({
+                        points: relativePoints,
+                        fill: color,
+                        opacity: opacity,
+                        stroke: isSelected ? '#FFD700' : color,
+                        strokeWidth: isSelected ? 3 : 2,
+                        closed: true,
+                        name: 'polygon-shape'
+                    });
+                    group.add(polygon);
+
+                    // Add label if exists
+                    if (metadata.label || section.name) {
+                        const label = new Konva.Text({
+                            x: 10,
+                            y: 10,
+                            text: metadata.label || section.name,
+                            fontSize: 12,
+                            fontFamily: 'Arial',
+                            fill: '#1f2937',
+                            name: 'section-label'
+                        });
+                        group.add(label);
+                    }
+                } else if (shape === 'text') {
+                    // Draw text element
+                    const text = new Konva.Text({
+                        x: 0,
+                        y: 0,
+                        text: metadata.text || 'Text',
+                        fontSize: parseInt(metadata.fontSize) || 16,
+                        fontFamily: metadata.fontFamily || 'Arial',
+                        fill: color,
+                        name: 'text-shape'
+                    });
+                    group.add(text);
+
+                    // Add selection border
+                    if (isSelected) {
+                        const textRect = text.getClientRect();
+                        const border = new Konva.Rect({
+                            x: -2,
+                            y: -2,
+                            width: textRect.width + 4,
+                            height: textRect.height + 4,
+                            stroke: '#3B82F6',
+                            strokeWidth: 2,
+                            dash: [5, 3],
+                            name: 'selection-highlight'
+                        });
+                        group.add(border);
+                    }
+                } else if (shape === 'line') {
+                    // Draw line element
+                    const line = new Konva.Line({
+                        points: metadata.points || [0, 0, 100, 0],
+                        stroke: color,
+                        strokeWidth: parseInt(metadata.strokeWidth) || 2,
+                        name: 'line-shape'
+                    });
+                    group.add(line);
+                }
+
+                // Event handlers
+                group.on('click tap', (e) => {
+                    if (this.drawMode === 'select') {
+                        e.cancelBubble = true;
+                        this.selectSection(section.id);
+                    }
+                });
+
+                group.on('contextmenu', (e) => {
+                    e.evt.preventDefault();
+                    this.showSectionContextMenu(e, section);
+                });
+
+                group.on('dragend', () => {
+                    if (this.getWire()) {
+                        this.updateSectionPosition(section.id, Math.round(group.x()), Math.round(group.y()));
+                    }
+                });
+
+                this.layer.add(group);
+            },
             drawSection(section) {
                 const sectionWidth = section.width || 200;
                 const sectionHeight = section.height || 150;
@@ -477,6 +596,12 @@
                 // Handle icon sections differently
                 if (section.section_type === 'icon') {
                     this.drawIconSection(section, sectionDraggable);
+                    return;
+                }
+
+                // Handle decorative sections (polygon, text, line)
+                if (section.section_type === 'decorative') {
+                    this.drawDecorativeSection(section, sectionDraggable);
                     return;
                 }
 
@@ -783,8 +908,9 @@
                                     seatData: { id: seat.id, label: seat.label, rowLabel: row.label }
                                 });
 
-                                // Hover effect for seat selection mode
-                                seatCircle.on('mouseenter', () => {
+                                // Hover effect and tooltip
+                                seatCircle.on('mouseenter', (e) => {
+                                    // Visual hover effect for seat selection mode
                                     if (this.seatSelectMode && !isSeatSelected) {
                                         seatCircle.stroke('#3B82F6');
                                         seatCircle.strokeWidth(3);
@@ -792,8 +918,32 @@
                                         this.layer.batchDraw();
                                         document.body.style.cursor = 'pointer';
                                     }
+
+                                    // Show tooltip
+                                    const container = document.getElementById('konva-container');
+                                    const containerRect = container.getBoundingClientRect();
+                                    const absPos = seatCircle.getAbsolutePosition();
+                                    const stage = this.stage;
+
+                                    // Calculate position relative to container
+                                    const tooltipX = absPos.x * stage.scaleX() + stage.x();
+                                    const tooltipY = absPos.y * stage.scaleY() + stage.y();
+
+                                    // Generate seat name and ID
+                                    const sectionCode = section.section_code || section.name || 'SEC';
+                                    const seatName = `${section.name || 'Secțiune'}, Rând ${row.label}, Loc ${seat.label}`;
+                                    const seatUid = seat.seat_uid || `${sectionCode}-${row.label}-${seat.label}`;
+
+                                    this.seatTooltip = {
+                                        show: true,
+                                        x: tooltipX,
+                                        y: tooltipY,
+                                        seatName: seatName,
+                                        seatId: seatUid
+                                    };
                                 });
                                 seatCircle.on('mouseleave', () => {
+                                    // Visual hover effect reset
                                     if (this.seatSelectMode && !isSeatSelected) {
                                         seatCircle.stroke(strokeColor);
                                         seatCircle.strokeWidth(strokeWidth);
@@ -801,6 +951,9 @@
                                         this.layer.batchDraw();
                                         document.body.style.cursor = 'default';
                                     }
+
+                                    // Hide tooltip
+                                    this.seatTooltip.show = false;
                                 });
 
                                 // Click handler for seat selection
@@ -1751,14 +1904,20 @@
                     const row = section.rows?.find(r => r.id === item.row.id);
                     if (!row || !row.seats || row.seats.length < 2) return;
 
-                    // Sort by X position
-                    const sortedSeats = [...row.seats].sort((a, b) => a.x - b.x);
-                    const firstX = sortedSeats[0].x;
-                    const avgY = row.seats.reduce((sum, s) => sum + (parseFloat(s.y) || 0), 0) / row.seats.length;
+                    // Sort by X position to find the first seat
+                    const sortedSeats = [...row.seats].sort((a, b) => parseFloat(a.x) - parseFloat(b.x));
+                    const firstX = parseFloat(sortedSeats[0].x);
 
-                    // Recalculate positions with new spacing
-                    row.seats.forEach((seat, idx) => {
-                        seat.x = firstX + (idx * spacing);
+                    // Create a map of original seat IDs to their sorted index
+                    const seatOrderMap = new Map();
+                    sortedSeats.forEach((seat, idx) => {
+                        seatOrderMap.set(seat.id, idx);
+                    });
+
+                    // Recalculate positions with new spacing, preserving Y
+                    row.seats.forEach(seat => {
+                        const sortedIdx = seatOrderMap.get(seat.id);
+                        seat.x = firstX + (sortedIdx * spacing);
                     });
                 });
 
@@ -1816,6 +1975,37 @@
                     }
                 }
                 return labels;
+            },
+            highlightSeat(seatId) {
+                // Find seat and its section/row
+                for (const section of this.sections) {
+                    for (const row of (section.rows || [])) {
+                        for (const seat of (row.seats || [])) {
+                            if (seat.id === seatId) {
+                                // Select the seat
+                                this.selectedSeatIds = [seatId];
+                                this.seatSelectMode = true;
+
+                                // Find the seat on canvas and center view on it
+                                const seatNode = this.stage.findOne(`#seat-${seatId}`);
+                                if (seatNode) {
+                                    const seatX = parseFloat(seat.x) + (section.x_position || 0);
+                                    const seatY = parseFloat(seat.y) + (section.y_position || 0);
+
+                                    // Animate or center view on the seat
+                                    const stageWidth = this.stage.width();
+                                    const stageHeight = this.stage.height();
+                                    const newX = stageWidth / 2 - seatX * this.zoom;
+                                    const newY = stageHeight / 2 - seatY * this.zoom;
+
+                                    this.stage.position({ x: newX, y: newY });
+                                }
+                                this.drawSections();
+                                return;
+                            }
+                        }
+                    }
+                }
             },
             deleteSelectedSeatsAction() {
                 if (this.selectedSeatIds.length === 0) return;
@@ -2428,19 +2618,37 @@
                 this.showShapeConfigModal = true;
             },
             confirmShapeConfig() {
+                const wire = this.getWire();
+                if (!wire) {
+                    this.showShapeConfigModal = false;
+                    return;
+                }
+
                 if (this.shapeConfigType === 'text' && this.shapeConfigText) {
-                    const text = new Konva.Text({
-                        x: this.shapeConfigData.x,
-                        y: this.shapeConfigData.y,
+                    // Measure text dimensions for bounding box
+                    const tempText = new Konva.Text({
                         text: this.shapeConfigText,
                         fontSize: this.shapeConfigFontSize,
                         fontFamily: this.shapeConfigFontFamily,
-                        fill: this.shapeConfigColor,
-                        draggable: true,
-                        name: 'text-element'
                     });
-                    this.layer.add(text);
-                    this.layer.batchDraw();
+                    const textWidth = tempText.width();
+                    const textHeight = tempText.height();
+                    tempText.destroy();
+
+                    // Save text as decorative section to backend
+                    wire.addDrawnShape('text', {
+                        x_position: Math.round(this.shapeConfigData.x),
+                        y_position: Math.round(this.shapeConfigData.y),
+                        width: Math.round(textWidth) + 10,
+                        height: Math.round(textHeight) + 10,
+                        metadata: {
+                            text: this.shapeConfigText,
+                            fontSize: this.shapeConfigFontSize,
+                            fontFamily: this.shapeConfigFontFamily
+                        }
+                    }, this.shapeConfigColor, 1, {
+                        label: this.shapeConfigText.substring(0, 20)
+                    });
                 }
                 this.showShapeConfigModal = false;
                 this.shapeConfigText = '';
@@ -2858,11 +3066,16 @@
                             <h3 class="text-base font-semibold text-gray-900">Canvas</h3>
                             <span class="px-2 py-0.5 text-xs bg-gray-100 rounded text-gray-600" x-text="`${canvasWidth}×${canvasHeight}px`"></span>
                         </div>
-                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                        <button x-on:click="showLayoutTree = !showLayoutTree" type="button"
+                            class="flex items-center gap-2 px-2 py-1 text-xs text-gray-600 transition-colors rounded hover:bg-gray-100"
+                            :class="showLayoutTree ? 'bg-gray-100' : ''">
                             <span x-text="`${sections.length} secțiuni`"></span>
                             <span>•</span>
                             <span x-text="`${getTotalSeats()} locuri`"></span>
-                        </div>
+                            <svg class="w-3 h-3 transition-transform" :class="showLayoutTree ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
                     </div>
 
                     {{-- Background controls (collapsible) --}}
@@ -3063,8 +3276,20 @@
                     </div>
 
                     {{-- Canvas --}}
-                    <div class="overflow-hidden bg-gray-100 border-2 border-gray-300 rounded-lg">
+                    <div class="relative overflow-hidden bg-gray-100 border-2 border-gray-300 rounded-lg">
                         <div id="konva-container" wire:ignore style="width: 100%; height: 600px; background: #f3f4f6;"></div>
+
+                        {{-- Seat Tooltip --}}
+                        <div x-show="seatTooltip.show" x-cloak
+                            class="absolute z-50 px-3 py-2 text-xs bg-gray-900 text-white rounded-lg shadow-lg pointer-events-none"
+                            :style="`left: ${seatTooltip.x}px; top: ${seatTooltip.y}px; transform: translate(-50%, -100%) translateY(-8px);`">
+                            <div class="font-medium" x-text="seatTooltip.seatName"></div>
+                            <div class="text-gray-400 text-[10px] mt-0.5" x-text="seatTooltip.seatId"></div>
+                            {{-- Arrow --}}
+                            <div class="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-full">
+                                <div class="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900"></div>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- Keyboard shortcuts --}}
@@ -3074,6 +3299,73 @@
                         <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Scroll</kbd> Zoom</span>
                         <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Drag</kbd> Pan</span>
                         <span><kbd class="px-1 py-0.5 bg-gray-100 border rounded">Ctrl+Click</kbd> Selectare multiplă</span>
+                    </div>
+
+                    {{-- Layout Tree Accordion --}}
+                    <div x-show="showLayoutTree" x-transition class="mt-3 overflow-hidden border border-gray-200 rounded-lg">
+                        <div class="max-h-80 overflow-y-auto">
+                            <template x-for="section in sections" :key="section.id">
+                                <div class="border-b border-gray-100 last:border-b-0">
+                                    {{-- Section Header --}}
+                                    <button x-on:click="expandedSections[section.id] = !expandedSections[section.id]" type="button"
+                                        class="flex items-center justify-between w-full px-3 py-2 text-left bg-gray-50 hover:bg-gray-100 transition-colors">
+                                        <div class="flex items-center gap-2">
+                                            <svg class="w-4 h-4 transition-transform" :class="expandedSections[section.id] ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                            </svg>
+                                            <div class="w-3 h-3 rounded" :style="`background-color: ${section.color_hex || section.background_color || '#3B82F6'}`"></div>
+                                            <span class="text-sm font-medium text-gray-700" x-text="section.name || section.label || 'Secțiune'"></span>
+                                        </div>
+                                        <span class="text-xs text-gray-500" x-text="`${section.rows?.length || 0} rânduri`"></span>
+                                    </button>
+
+                                    {{-- Rows --}}
+                                    <div x-show="expandedSections[section.id]" x-transition class="bg-white">
+                                        <template x-for="row in section.rows || []" :key="row.id">
+                                            <div class="border-t border-gray-50">
+                                                {{-- Row Header --}}
+                                                <button x-on:click="expandedRows[row.id] = !expandedRows[row.id]" type="button"
+                                                    class="flex items-center justify-between w-full px-3 py-1.5 pl-8 text-left hover:bg-gray-50 transition-colors">
+                                                    <div class="flex items-center gap-2">
+                                                        <svg class="w-3 h-3 transition-transform text-gray-400" :class="expandedRows[row.id] ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                                        </svg>
+                                                        <span class="text-xs font-medium text-gray-600" x-text="row.metadata?.is_table ? `Masă ${row.label}` : `Rând ${row.label}`"></span>
+                                                    </div>
+                                                    <span class="text-xs text-gray-400" x-text="`${row.seats?.length || 0} locuri`"></span>
+                                                </button>
+
+                                                {{-- Seats --}}
+                                                <div x-show="expandedRows[row.id]" x-transition class="bg-gray-50 border-t border-gray-100">
+                                                    <div class="px-4 py-2 max-h-40 overflow-y-auto">
+                                                        <div class="flex flex-wrap gap-1">
+                                                            <template x-for="seat in row.seats || []" :key="seat.id">
+                                                                <div class="px-2 py-0.5 text-xs bg-white border border-gray-200 rounded cursor-pointer hover:bg-blue-50 hover:border-blue-300"
+                                                                     x-on:click="highlightSeat(seat.id)"
+                                                                     :class="seat.status === 'imposibil' ? 'bg-red-50 border-red-200' : ''">
+                                                                    <div class="font-medium" x-text="seat.label"></div>
+                                                                    <div class="text-gray-400 text-[10px]" x-text="seat.seat_uid || `${section.section_code}-${row.label}-${seat.label}`"></div>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        {{-- Empty rows message --}}
+                                        <div x-show="!section.rows || section.rows.length === 0" class="px-4 py-2 text-xs text-gray-400 italic">
+                                            Niciun rând în această secțiune
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            {{-- Empty sections message --}}
+                            <div x-show="!sections || sections.length === 0" class="px-4 py-3 text-sm text-gray-400 italic text-center">
+                                Nicio secțiune creată
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
