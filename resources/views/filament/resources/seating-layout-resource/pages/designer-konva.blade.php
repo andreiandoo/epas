@@ -539,9 +539,11 @@
                                     x: seatX,
                                     y: seatY,
                                     radius: seatRadius,
-                                    fill: fillColor,
+                                    fill: isSeatSelected ? '#DBEAFE' : fillColor, // Light blue fill for selected
                                     stroke: strokeColor,
                                     strokeWidth: strokeWidth,
+                                    scaleX: isSeatSelected ? 1.15 : 1,
+                                    scaleY: isSeatSelected ? 1.15 : 1,
                                     id: `seat-${seat.id}`,
                                     name: 'seat',
                                     seatData: { id: seat.id, label: seat.label, rowLabel: row.label }
@@ -792,7 +794,7 @@
                 this.selectedSeatIds = [];
                 this.transformer.nodes([]);
                 this.layer.batchDraw();
-                this.drawAllSections();
+                this.drawSections();
             },
             selectTable(sectionId, row) {
                 this.selectedTableRow = row;
@@ -814,12 +816,12 @@
                 }
 
                 // Redraw to show selection highlight
-                this.drawAllSections();
+                this.drawSections();
             },
             deselectTable() {
                 this.selectedTableRow = null;
                 this.selectedTableSectionId = null;
-                this.drawAllSections();
+                this.drawSections();
             },
             updateTableName() {
                 if (!this.selectedTableRow || !this.editTableName) return;
@@ -827,7 +829,7 @@
                 this.$wire.updateRowLabel(this.selectedTableRow.id, this.editTableName).then(() => {
                     // Update local data
                     this.selectedTableRow.label = this.editTableName;
-                    this.drawAllSections();
+                    this.drawSections();
                 });
             },
             deleteTable() {
@@ -888,12 +890,12 @@
                 this.editRowCurve = row.curve_offset || 0;
 
                 // Redraw to show selection highlight
-                this.drawAllSections();
+                this.drawSections();
             },
             deselectRow() {
                 this.selectedRowData = null;
                 this.selectedRowSectionId = null;
-                this.drawAllSections();
+                this.drawSections();
             },
             updateRowName() {
                 if (!this.selectedRowData || !this.editRowLabel) return;
@@ -901,7 +903,7 @@
                 this.$wire.updateRowLabel(this.selectedRowData.id, this.editRowLabel).then(() => {
                     // Update local data
                     this.selectedRowData.label = this.editRowLabel;
-                    this.drawAllSections();
+                    this.drawSections();
                 });
             },
             deleteSelectedRow() {
@@ -963,11 +965,11 @@
                     // Replace selection
                     this.multiSelectedRows = [{ key: rowKey, sectionId, row }];
                 }
-                this.drawAllSections();
+                this.drawSections();
             },
             clearMultiRowSelection() {
                 this.multiSelectedRows = [];
-                this.drawAllSections();
+                this.drawSections();
             },
             alignMultiRows(alignment) {
                 if (this.multiSelectedRows.length < 2) return;
@@ -1008,7 +1010,7 @@
                     showLabel: this.showRowLabels,
                     position: this.rowLabelPosition
                 }).then(() => {
-                    this.drawAllSections();
+                    this.drawSections();
                 });
             },
             // Seat selection methods
@@ -1024,11 +1026,11 @@
                 } else {
                     this.selectedSeatIds = [seatId];
                 }
-                this.drawAllSections();
+                this.drawSections();
             },
             clearSeatSelection() {
                 this.selectedSeatIds = [];
-                this.drawAllSections();
+                this.drawSections();
             },
             getSelectedSeatLabels() {
                 // Get labels for selected seats from sections data
@@ -2367,7 +2369,7 @@
                             </button>
 
                             {{-- Select Row Button --}}
-                            <button x-on:click="rowSelectMode = !rowSelectMode" type="button"
+                            <button x-on:click="rowSelectMode = !rowSelectMode; if(rowSelectMode) { seatSelectMode = false; clearSeatSelection(); }" type="button"
                                 class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold transition-all rounded-lg"
                                 :class="rowSelectMode ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2384,7 +2386,7 @@
                             </div>
 
                             {{-- Select Seat Button --}}
-                            <button x-on:click="seatSelectMode = !seatSelectMode; if(seatSelectMode) rowSelectMode = false;" type="button"
+                            <button x-on:click="seatSelectMode = !seatSelectMode; if(seatSelectMode) { rowSelectMode = false; clearMultiRowSelection(); deselectRow(); }" type="button"
                                 class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold transition-all rounded-lg"
                                 :class="seatSelectMode ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
