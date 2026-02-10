@@ -25,6 +25,7 @@ class SeatingSeat extends Model
         'shape',
         'seat_uid',
         'status',
+        'block_reason',
     ];
 
     protected $casts = [

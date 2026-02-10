@@ -3354,11 +3354,160 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
-     * Block seats (mark as imposibil - permanently unavailable)
+     * Set seat spacing for multiple rows
      */
-    public function blockSeats(array $seatIds): void
+    public function setMultiRowSeatSpacing(array $rowIds, float $spacing): void
+    {
+        if (count($rowIds) === 0) {
+            return;
+        }
+
+        // Clamp spacing to reasonable limits
+        $spacing = max(15, min(100, $spacing));
+        $updatedCount = 0;
+
+        foreach ($rowIds as $rowId) {
+            $row = SeatingRow::with(['seats', 'section'])->find($rowId);
+            if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
+                continue;
+            }
+
+            $seats = $row->seats->sortBy('x')->values();
+            if ($seats->isEmpty()) {
+                continue;
+            }
+
+            // Recalculate seat X positions with new spacing
+            $firstSeatX = $seats->first()->x;
+            foreach ($seats as $index => $seat) {
+                $newX = $firstSeatX + ($index * $spacing);
+                $seat->update(['x' => round($newX, 2)]);
+            }
+            $updatedCount++;
+        }
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Seat spacing applied')
+            ->body("Applied {$spacing}px spacing to {$updatedCount} rows")
+            ->send();
+    }
+
+    /**
+     * Update row label settings (show/hide and position)
+     */
+    public function updateRowLabelSettings(array $rowIds, array $settings): void
+    {
+        if (count($rowIds) === 0) {
+            return;
+        }
+
+        $showLabel = $settings['showLabel'] ?? true;
+        $position = $settings['position'] ?? 'left';
+        $updatedCount = 0;
+
+        foreach ($rowIds as $rowId) {
+            $row = SeatingRow::with('section')->find($rowId);
+            if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
+                continue;
+            }
+
+            // Store in metadata
+            $metadata = $row->metadata ?? [];
+            $metadata['show_label'] = $showLabel;
+            $metadata['label_position'] = $position;
+            $row->update(['metadata' => $metadata]);
+            $updatedCount++;
+        }
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Row labels updated')
+            ->body("Updated label settings for {$updatedCount} rows")
+            ->send();
+    }
+
+    /**
+     * Update row curve - applies a parabolic curve to seat Y positions
+     */
+    public function updateRowCurve(int $rowId, float $curveOffset): void
+    {
+        $row = SeatingRow::with(['seats', 'section'])->find($rowId);
+
+        if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Row not found')
+                ->send();
+            return;
+        }
+
+        // Clamp curve to reasonable limits
+        $curveOffset = max(-50, min(50, $curveOffset));
+
+        // Get seats ordered by X position
+        $seats = $row->seats->sortBy('x')->values();
+        if ($seats->isEmpty()) {
+            Notification::make()
+                ->warning()
+                ->title('No seats in row')
+                ->send();
+            return;
+        }
+
+        // Calculate the center X and base Y
+        $minX = $seats->first()->x;
+        $maxX = $seats->last()->x;
+        $centerX = ($minX + $maxX) / 2;
+        $rowWidth = $maxX - $minX;
+        $baseY = $seats->avg('y');
+
+        // Apply parabolic curve: y = baseY + curveOffset * (1 - ((x - centerX) / (rowWidth/2))^2)
+        foreach ($seats as $seat) {
+            if ($rowWidth > 0) {
+                $normalizedX = ($seat->x - $centerX) / ($rowWidth / 2); // -1 to 1
+                $curveY = $curveOffset * (1 - ($normalizedX * $normalizedX)); // Parabola
+                $newY = $baseY + $curveY;
+            } else {
+                $newY = $baseY;
+            }
+
+            $seat->update([
+                'y' => round($newY, 2),
+            ]);
+        }
+
+        // Save curve offset to row
+        $row->update(['curve_offset' => $curveOffset]);
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Row curve applied')
+            ->body("Applied curve offset {$curveOffset} to row")
+            ->send();
+    }
+
+    /**
+     * Block seats (mark as imposibil - permanently unavailable)
+     * @param string $reason One of: stricat, lipsa, indisponibil
+     */
+    public function blockSeats(array $seatIds, string $reason = 'indisponibil'): void
     {
         $blockedCount = 0;
+        $reasonLabels = [
+            'stricat' => 'Stricat',
+            'lipsa' => 'Lipsă',
+            'indisponibil' => 'Indisponibil',
+        ];
 
         foreach ($seatIds as $seatId) {
             $seat = SeatingSeat::find($seatId);
@@ -3369,17 +3518,21 @@ class DesignerSeatingLayout extends Page
 
             if (!$section || $section->layout_id !== $this->seatingLayout->id) continue;
 
-            $seat->update(['status' => SeatingSeat::STATUS_IMPOSIBIL]);
+            $seat->update([
+                'status' => SeatingSeat::STATUS_IMPOSIBIL,
+                'block_reason' => $reason,
+            ]);
             $blockedCount++;
         }
 
         $this->reloadSections();
         $this->dispatch('layout-updated', sections: $this->sections);
 
+        $reasonLabel = $reasonLabels[$reason] ?? $reason;
         Notification::make()
             ->success()
             ->title('Seats blocked')
-            ->body("Blocked {$blockedCount} seat(s)")
+            ->body("Blocked {$blockedCount} seat(s) - Reason: {$reasonLabel}")
             ->send();
     }
 
@@ -3399,7 +3552,10 @@ class DesignerSeatingLayout extends Page
 
             if (!$section || $section->layout_id !== $this->seatingLayout->id) continue;
 
-            $seat->update(['status' => SeatingSeat::STATUS_ACTIVE]);
+            $seat->update([
+                'status' => SeatingSeat::STATUS_ACTIVE,
+                'block_reason' => null,
+            ]);
             $unblockedCount++;
         }
 

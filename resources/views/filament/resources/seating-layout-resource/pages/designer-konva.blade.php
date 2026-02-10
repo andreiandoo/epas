@@ -94,11 +94,17 @@
             editRowDirection: 'ltr',
             editRowSeatSize: 20,
             editRowSeatSpacing: 25,
+            editRowCurve: 0,
             rowSelectMode: false,
             multiSelectedRows: [],
             multiRowSpacing: 30,
+            multiRowSeatSpacing: 25,
+            showRowLabels: true,
+            rowLabelPosition: 'left',
             selectedSeatIds: [],
             seatSelectMode: false,
+            showBlockReasonModal: false,
+            blockReason: 'stricat',
             tempDrawRect: null,
             drawRectStart: null,
             tempRowLine: null,
@@ -537,7 +543,28 @@
                                     stroke: strokeColor,
                                     strokeWidth: strokeWidth,
                                     id: `seat-${seat.id}`,
-                                    name: 'seat'
+                                    name: 'seat',
+                                    seatData: { id: seat.id, label: seat.label, rowLabel: row.label }
+                                });
+
+                                // Hover effect for seat selection mode
+                                seatCircle.on('mouseenter', () => {
+                                    if (this.seatSelectMode && !isSeatSelected) {
+                                        seatCircle.stroke('#3B82F6');
+                                        seatCircle.strokeWidth(3);
+                                        seatCircle.scale({ x: 1.2, y: 1.2 });
+                                        this.layer.batchDraw();
+                                        document.body.style.cursor = 'pointer';
+                                    }
+                                });
+                                seatCircle.on('mouseleave', () => {
+                                    if (this.seatSelectMode && !isSeatSelected) {
+                                        seatCircle.stroke(strokeColor);
+                                        seatCircle.strokeWidth(strokeWidth);
+                                        seatCircle.scale({ x: 1, y: 1 });
+                                        this.layer.batchDraw();
+                                        document.body.style.cursor = 'default';
+                                    }
                                 });
 
                                 // Click handler for seat selection
@@ -761,8 +788,11 @@
                 this.selectedTableSectionId = null;
                 this.selectedRowData = null;
                 this.selectedRowSectionId = null;
+                this.multiSelectedRows = [];
+                this.selectedSeatIds = [];
                 this.transformer.nodes([]);
                 this.layer.batchDraw();
+                this.drawAllSections();
             },
             selectTable(sectionId, row) {
                 this.selectedTableRow = row;
@@ -855,6 +885,7 @@
                     this.editRowSeatSpacing = 25;
                 }
                 this.editRowSeatSize = 20; // Default seat size
+                this.editRowCurve = row.curve_offset || 0;
 
                 // Redraw to show selection highlight
                 this.drawAllSections();
@@ -909,6 +940,13 @@
                     this.deselectRow();
                 });
             },
+            updateRowCurve() {
+                if (!this.selectedRowData) return;
+
+                this.$wire.updateRowCurve(this.selectedRowData.id, this.editRowCurve).then(() => {
+                    this.deselectRow();
+                });
+            },
             // Multi-row selection methods
             toggleRowMultiSelect(sectionId, row, event) {
                 const rowKey = `${sectionId}-${row.id}`;
@@ -950,6 +988,29 @@
                     this.clearMultiRowSelection();
                 });
             },
+            applyMultiRowSeatSpacing() {
+                if (this.multiSelectedRows.length === 0) return;
+
+                const rowIds = this.multiSelectedRows.map(r => r.row.id);
+                this.$wire.setMultiRowSeatSpacing(rowIds, this.multiRowSeatSpacing).then(() => {
+                    this.clearMultiRowSelection();
+                });
+            },
+            updateMultiRowLabel(item) {
+                // Update row label immediately
+                this.$wire.updateRowLabel(item.row.id, item.row.label);
+            },
+            applyRowLabelSettings() {
+                if (this.multiSelectedRows.length === 0) return;
+
+                const rowIds = this.multiSelectedRows.map(r => r.row.id);
+                this.$wire.updateRowLabelSettings(rowIds, {
+                    showLabel: this.showRowLabels,
+                    position: this.rowLabelPosition
+                }).then(() => {
+                    this.drawAllSections();
+                });
+            },
             // Seat selection methods
             toggleSeatSelect(seatId, event) {
                 const index = this.selectedSeatIds.indexOf(seatId);
@@ -969,6 +1030,20 @@
                 this.selectedSeatIds = [];
                 this.drawAllSections();
             },
+            getSelectedSeatLabels() {
+                // Get labels for selected seats from sections data
+                const labels = [];
+                for (const section of this.sections) {
+                    for (const row of (section.rows || [])) {
+                        for (const seat of (row.seats || [])) {
+                            if (this.selectedSeatIds.includes(seat.id)) {
+                                labels.push(`${row.label || '?'}${seat.label || '?'}`);
+                            }
+                        }
+                    }
+                }
+                return labels;
+            },
             deleteSelectedSeatsAction() {
                 if (this.selectedSeatIds.length === 0) return;
 
@@ -980,8 +1055,13 @@
             },
             blockSelectedSeats() {
                 if (this.selectedSeatIds.length === 0) return;
+                this.showBlockReasonModal = true;
+            },
+            blockSelectedSeatsWithReason() {
+                if (this.selectedSeatIds.length === 0) return;
 
-                this.$wire.blockSeats(this.selectedSeatIds).then(() => {
+                this.$wire.blockSeats(this.selectedSeatIds, this.blockReason).then(() => {
+                    this.showBlockReasonModal = false;
                     this.clearSeatSelection();
                 });
             },
@@ -1492,6 +1572,8 @@
                 if (e.key === 'Escape') {
                     this.cancelDrawing();
                     this.deselectAll();
+                    this.rowSelectMode = false;
+                    this.seatSelectMode = false;
                 } else if (e.key === 'Delete' && this.selectedSection) {
                     this.deleteSelected();
                 }
@@ -1761,43 +1843,6 @@
                         </div>
                     </div>
 
-                    {{-- Seats selection toolbar --}}
-                    <div x-show="selectedSeats.length > 0" x-transition class="flex items-center gap-4 p-3 mb-3 border border-orange-200 rounded-lg bg-orange-50">
-                        <span class="text-sm font-medium text-orange-800" x-text="`${selectedSeats.length} locuri selectate`"></span>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <select x-model="assignToSectionId" class="text-sm text-gray-900 bg-white border-gray-300 rounded-md">
-                                <option value="">Alege secțiunea...</option>
-                                @foreach($sections as $section)
-                                    @if($section['section_type'] === 'standard')
-                                        <option value="{{ $section['id'] }}">{{ $section['name'] }}</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                            <input type="text" x-model="assignToRowLabel" placeholder="Rând (ex: A, 1)" class="w-24 text-sm text-gray-900 bg-white border-gray-300 rounded-md">
-                            <button x-on:click="assignSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-orange-600 rounded-md hover:bg-orange-700">Atribuie</button>
-                            <button x-on:click="deleteSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-red-600 rounded-md hover:bg-red-700">Șterge</button>
-                            <button x-on:click="clearSelection" type="button" class="px-3 py-1 text-sm text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">Anulează</button>
-                        </div>
-                    </div>
-
-                    {{-- Rows selection toolbar --}}
-                    <div x-show="selectedRows.length > 0" x-transition class="flex items-center gap-4 p-3 mb-3 border border-blue-200 rounded-lg bg-blue-50">
-                        <span class="text-sm font-medium text-blue-800" x-text="`${selectedRows.length} rânduri selectate`"></span>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-blue-600">Aliniere:</span>
-                            <button x-on:click="alignSelectedRows('left')" type="button" class="p-1 text-blue-700 bg-blue-100 rounded hover:bg-blue-200">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h14"></path></svg>
-                            </button>
-                            <button x-on:click="alignSelectedRows('center')" type="button" class="p-1 text-blue-700 bg-blue-100 rounded hover:bg-blue-200">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M5 18h14"></path></svg>
-                            </button>
-                            <button x-on:click="alignSelectedRows('right')" type="button" class="p-1 text-blue-700 bg-blue-100 rounded hover:bg-blue-200">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M6 18h14"></path></svg>
-                            </button>
-                            <button x-on:click="clearRowSelection" type="button" class="px-2 py-1 text-sm text-gray-700 bg-gray-200 rounded hover:bg-gray-300">Anulează</button>
-                        </div>
-                    </div>
-
                     {{-- Background controls (collapsible) --}}
                     <div x-show="showBackgroundControls" x-transition class="p-3 mb-3 border border-indigo-200 rounded-lg bg-indigo-50">
                         <div class="flex flex-wrap items-center gap-4">
@@ -1826,48 +1871,106 @@
 
                     {{-- Multi-Row Selection Toolbar --}}
                     <div x-show="multiSelectedRows.length > 0" x-transition
-                         class="p-3 mb-2 border border-amber-300 rounded-lg bg-amber-50">
-                        <div class="flex flex-wrap items-center gap-4">
-                            <span class="text-sm font-medium text-amber-800">
+                         class="p-4 mb-2 border border-amber-300 rounded-lg bg-amber-50">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-semibold text-amber-800">
                                 <span x-text="multiSelectedRows.length"></span> rânduri selectate
                             </span>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-amber-700">Aliniere:</span>
-                                <button x-on:click="alignMultiRows('left')" type="button"
-                                    class="px-2 py-1 text-xs font-medium text-amber-700 bg-white border border-amber-300 rounded hover:bg-amber-100"
-                                    title="Aliniază la stânga">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"></path>
-                                    </svg>
-                                </button>
-                                <button x-on:click="alignMultiRows('center')" type="button"
-                                    class="px-2 py-1 text-xs font-medium text-amber-700 bg-white border border-amber-300 rounded hover:bg-amber-100"
-                                    title="Centrează">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M4 18h16"></path>
-                                    </svg>
-                                </button>
-                                <button x-on:click="alignMultiRows('right')" type="button"
-                                    class="px-2 py-1 text-xs font-medium text-amber-700 bg-white border border-amber-300 rounded hover:bg-amber-100"
-                                    title="Aliniază la dreapta">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M4 18h16"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-amber-700">Spațiere:</span>
-                                <input type="number" x-model.number="multiRowSpacing" min="20" max="200" step="5"
-                                    class="w-16 px-2 py-1 text-xs border border-amber-300 rounded">
-                                <button x-on:click="applyMultiRowSpacing()" type="button"
-                                    class="px-2 py-1 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
-                                    Aplică
-                                </button>
-                            </div>
                             <button x-on:click="clearMultiRowSelection()" type="button"
                                 class="px-2 py-1 text-xs font-medium text-amber-700 bg-white border border-amber-300 rounded hover:bg-amber-100">
                                 ✕ Anulează
                             </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            {{-- Alignment --}}
+                            <div class="p-2 bg-white border border-amber-200 rounded">
+                                <div class="mb-2 text-xs font-medium text-amber-700">Aliniere</div>
+                                <div class="flex items-center gap-1">
+                                    <button x-on:click="alignMultiRows('left')" type="button"
+                                        class="flex-1 px-2 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded hover:bg-amber-100"
+                                        title="Aliniază la stânga">
+                                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"></path>
+                                        </svg>
+                                    </button>
+                                    <button x-on:click="alignMultiRows('center')" type="button"
+                                        class="flex-1 px-2 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded hover:bg-amber-100"
+                                        title="Centrează">
+                                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M4 18h16"></path>
+                                        </svg>
+                                    </button>
+                                    <button x-on:click="alignMultiRows('right')" type="button"
+                                        class="flex-1 px-2 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded hover:bg-amber-100"
+                                        title="Aliniază la dreapta">
+                                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M4 18h16"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {{-- Row Spacing --}}
+                            <div class="p-2 bg-white border border-amber-200 rounded">
+                                <div class="mb-2 text-xs font-medium text-amber-700">Spațiere rânduri (px)</div>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" x-model.number="multiRowSpacing" min="20" max="200" step="5"
+                                        class="flex-1 px-2 py-1 text-xs border border-amber-300 rounded">
+                                    <button x-on:click="applyMultiRowSpacing()" type="button"
+                                        class="px-3 py-1 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
+                                        Aplică
+                                    </button>
+                                </div>
+                            </div>
+
+                            {{-- Seat Spacing --}}
+                            <div class="p-2 bg-white border border-amber-200 rounded">
+                                <div class="mb-2 text-xs font-medium text-amber-700">Spațiere locuri (px)</div>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" x-model.number="multiRowSeatSpacing" min="15" max="100" step="5"
+                                        class="flex-1 px-2 py-1 text-xs border border-amber-300 rounded">
+                                    <button x-on:click="applyMultiRowSeatSpacing()" type="button"
+                                        class="px-3 py-1 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
+                                        Aplică
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Row Names Section --}}
+                        <div class="p-3 mt-3 bg-white border border-amber-200 rounded">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-medium text-amber-700">Nume rânduri</span>
+                                <label class="flex items-center gap-1 text-xs">
+                                    <input type="checkbox" x-model="showRowLabels" class="w-3 h-3 text-amber-600 border-amber-300 rounded">
+                                    <span class="text-amber-600">Afișează etichete</span>
+                                </label>
+                            </div>
+                            <div x-show="showRowLabels" class="space-y-2">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-xs text-amber-600">Poziție etichetă:</span>
+                                    <select x-model="rowLabelPosition" class="px-2 py-1 text-xs border border-amber-300 rounded">
+                                        <option value="left">Stânga</option>
+                                        <option value="right">Dreapta</option>
+                                        <option value="above">Deasupra</option>
+                                        <option value="below">Sub</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <template x-for="(item, index) in multiSelectedRows" :key="item.key">
+                                        <div class="flex items-center gap-1 px-2 py-1 bg-amber-50 border border-amber-200 rounded">
+                                            <span class="text-xs text-amber-600" x-text="`R${index + 1}:`"></span>
+                                            <input type="text" x-model="item.row.label" x-on:change="updateMultiRowLabel(item)"
+                                                class="w-12 px-1 py-0.5 text-xs border border-amber-300 rounded text-center">
+                                        </div>
+                                    </template>
+                                </div>
+                                <button x-on:click="applyRowLabelSettings()" type="button"
+                                    class="w-full px-3 py-1.5 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
+                                    Salvează setări etichete
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -1875,9 +1978,19 @@
                     <div x-show="selectedSeatIds.length > 0" x-transition
                          class="p-3 mb-2 border border-blue-300 rounded-lg bg-blue-50">
                         <div class="flex flex-wrap items-center gap-4">
-                            <span class="text-sm font-medium text-blue-800">
-                                <span x-text="selectedSeatIds.length"></span> loc(uri) selectat(e)
-                            </span>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-medium text-blue-800">
+                                    <span x-text="selectedSeatIds.length"></span> loc(uri) selectat(e)
+                                </span>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    <template x-for="label in getSelectedSeatLabels().slice(0, 10)" :key="label">
+                                        <span class="px-1.5 py-0.5 text-xs font-medium bg-blue-200 text-blue-800 rounded" x-text="label"></span>
+                                    </template>
+                                    <span x-show="getSelectedSeatLabels().length > 10" class="px-1.5 py-0.5 text-xs text-blue-600">
+                                        +<span x-text="getSelectedSeatLabels().length - 10"></span> altele
+                                    </span>
+                                </div>
+                            </div>
                             <div class="flex items-center gap-2">
                                 <button x-on:click="deleteSelectedSeatsAction()" type="button"
                                     class="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 flex items-center gap-1">
@@ -1886,7 +1999,7 @@
                                     </svg>
                                     Șterge
                                 </button>
-                                <button x-on:click="blockSelectedSeats()" type="button"
+                                <button x-on:click="showBlockReasonModal = true" type="button"
                                     class="px-3 py-1.5 text-xs font-medium text-white bg-gray-600 rounded hover:bg-gray-700 flex items-center gap-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
@@ -2097,6 +2210,23 @@
                             </button>
                         </div>
 
+                        {{-- Row Curve --}}
+                        <div class="p-3 space-y-3 rounded-lg bg-teal-50">
+                            <div class="text-xs font-semibold text-teal-700 uppercase">Curbură Rând</div>
+                            <div>
+                                <input type="range" x-model.number="editRowCurve" min="-50" max="50" class="w-full">
+                                <div class="flex justify-between text-xs text-teal-600">
+                                    <span>-50</span>
+                                    <span x-text="editRowCurve" class="font-medium"></span>
+                                    <span>+50</span>
+                                </div>
+                            </div>
+                            <button x-on:click="updateRowCurve()" type="button"
+                                class="w-full px-3 py-1.5 text-sm font-medium text-white bg-teal-600 rounded hover:bg-teal-700">
+                                Aplică curbură
+                            </button>
+                        </div>
+
                         {{-- Seat Numbering --}}
                         <div class="p-3 space-y-3 rounded-lg bg-blue-50">
                             <div class="text-xs font-semibold text-blue-700 uppercase">Numerotare Locuri</div>
@@ -2298,11 +2428,6 @@
                                 <input type="range" x-model="sectionScale" x-on:input="updateSectionPreview()" min="0.5" max="2" step="0.1" class="w-full">
                                 <div class="text-xs text-center text-gray-500" x-text="(sectionScale * 100).toFixed(0) + '%'"></div>
                             </div>
-                            <div>
-                                <label class="block text-xs text-gray-500">Curbură</label>
-                                <input type="range" x-model="sectionCurve" x-on:input="updateSectionPreview()" min="-100" max="100" class="w-full">
-                                <div class="text-xs text-center text-gray-500" x-text="sectionCurve"></div>
-                            </div>
                         </div>
 
                         {{-- Label Section --}}
@@ -2450,6 +2575,54 @@
                         </svg>
                         <span class="text-sm font-medium text-gray-700 group-hover:text-green-700">Export JSON</span>
                         <span class="text-xs text-gray-500">Backup data format</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- Block Reason Modal --}}
+        <div x-cloak x-show="showBlockReasonModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" x-on:click.self="showBlockReasonModal = false" x-on:keydown.escape.window="showBlockReasonModal = false">
+            <div x-show="showBlockReasonModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="w-full max-w-sm p-6 bg-white rounded-lg shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Motivul blocării</h3>
+                    <button x-on:click="showBlockReasonModal = false" type="button" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <p class="mb-4 text-sm text-gray-600">
+                    Selectați motivul pentru care blocați <span x-text="selectedSeatIds.length" class="font-medium"></span> loc(uri):
+                </p>
+                <div class="space-y-2 mb-6">
+                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50" :class="blockReason === 'stricat' ? 'border-red-500 bg-red-50' : 'border-gray-200'">
+                        <input type="radio" x-model="blockReason" value="stricat" class="text-red-600">
+                        <div>
+                            <span class="font-medium text-gray-900">Stricat</span>
+                            <p class="text-xs text-gray-500">Scaunul este deteriorat și necesită reparații</p>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50" :class="blockReason === 'lipsa' ? 'border-orange-500 bg-orange-50' : 'border-gray-200'">
+                        <input type="radio" x-model="blockReason" value="lipsa" class="text-orange-600">
+                        <div>
+                            <span class="font-medium text-gray-900">Lipsă</span>
+                            <p class="text-xs text-gray-500">Scaunul lipsește fizic din locație</p>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50" :class="blockReason === 'indisponibil' ? 'border-gray-500 bg-gray-100' : 'border-gray-200'">
+                        <input type="radio" x-model="blockReason" value="indisponibil" class="text-gray-600">
+                        <div>
+                            <span class="font-medium text-gray-900">Indisponibil</span>
+                            <p class="text-xs text-gray-500">Locul este temporar indisponibil (acces restricționat, etc.)</p>
+                        </div>
+                    </label>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button x-on:click="showBlockReasonModal = false" type="button" class="px-4 py-2 text-sm text-gray-700 bg-gray-200 rounded hover:bg-gray-300">
+                        Anulează
+                    </button>
+                    <button x-on:click="blockSelectedSeatsWithReason()" type="button" class="px-4 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700">
+                        Blochează
                     </button>
                 </div>
             </div>
