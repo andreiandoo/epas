@@ -988,11 +988,9 @@ class DesignerSeatingLayout extends Page
             $section->{$field} = (int) $value;
         }
 
-        // Handle name/label separately (string field)
+        // Handle name separately (string field)
         if (isset($updates['name']) && !empty($updates['name'])) {
             $section->name = $updates['name'];
-            // Also update section label if it's used
-            $section->label = $updates['name'];
         }
 
         // Handle font_size in metadata
