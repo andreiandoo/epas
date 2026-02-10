@@ -3497,6 +3497,38 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Move a row (and all its seats) by a delta offset
+     * Called from Konva.js when dragging a selected row/table
+     */
+    public function moveRow(int $rowId, float $deltaX, float $deltaY): void
+    {
+        $row = SeatingRow::with(['seats', 'section'])->find($rowId);
+
+        if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
+            return;
+        }
+
+        // Update all seat positions
+        foreach ($row->seats as $seat) {
+            $seat->update([
+                'x' => round($seat->x + $deltaX, 2),
+                'y' => round($seat->y + $deltaY, 2),
+            ]);
+        }
+
+        // Update table center position if it's a table
+        $metadata = $row->metadata ?? [];
+        if (!empty($metadata['is_table'])) {
+            $metadata['center_x'] = round(($metadata['center_x'] ?? 0) + $deltaX, 2);
+            $metadata['center_y'] = round(($metadata['center_y'] ?? 0) + $deltaY, 2);
+            $row->update(['metadata' => $metadata]);
+        }
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+    }
+
+    /**
      * Block seats (mark as imposibil - permanently unavailable)
      * @param string $reason One of: stricat, lipsa, indisponibil
      */

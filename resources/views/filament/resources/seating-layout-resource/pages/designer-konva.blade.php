@@ -95,6 +95,7 @@
             editRowSeatSize: 20,
             editRowSeatSpacing: 25,
             editRowCurve: 0,
+            originalRowSeats: [], // Store original seat positions for preview calculations
             rowSelectMode: false,
             multiSelectedRows: [],
             multiRowSpacing: 30,
@@ -302,6 +303,11 @@
                 const sectionWidth = section.width || 200;
                 const sectionHeight = section.height || 150;
 
+                // Check if a row/table in this section is selected (prevents section dragging)
+                const hasSelectedRow = this.selectedRowData && this.selectedRowSectionId === section.id;
+                const hasSelectedTable = this.selectedTableRow && this.selectedTableSectionId === section.id;
+                const sectionDraggable = this.drawMode === 'select' && !hasSelectedRow && !hasSelectedTable;
+
                 // Create group with offset at center for rotation around center
                 const group = new Konva.Group({
                     x: (section.x_position || 0) + sectionWidth / 2,
@@ -311,7 +317,7 @@
                     rotation: section.rotation || 0,
                     scaleX: section.scale || 1,
                     scaleY: section.scale || 1,
-                    draggable: this.drawMode === 'select', // Only draggable in select mode
+                    draggable: sectionDraggable, // Draggable only when no row/table is selected
                     id: `section-${section.id}`,
                     name: 'section-shape'
                 });
@@ -343,9 +349,44 @@
                 // Draw seats if they exist
                 if (section.rows) {
                     section.rows.forEach(row => {
-                        // Check if this row is a table and draw the table shape
                         const metadata = row.metadata || {};
-                        if (metadata.is_table) {
+                        const isTable = metadata.is_table;
+                        const isRowSelected = this.selectedRowData?.id === row.id;
+                        const isTableSelected = this.selectedTableRow?.id === row.id;
+                        const isMultiSelected = this.multiSelectedRows.some(r => r.row.id === row.id);
+                        const isDraggable = (isRowSelected || isTableSelected) && this.drawMode === 'select';
+
+                        // Create a group for each row/table to enable individual dragging
+                        const rowGroup = new Konva.Group({
+                            id: `row-group-${row.id}`,
+                            name: 'row-group',
+                            draggable: isDraggable
+                        });
+
+                        // Track drag start position for delta calculation
+                        let dragStartX = 0;
+                        let dragStartY = 0;
+
+                        rowGroup.on('dragstart', () => {
+                            dragStartX = rowGroup.x();
+                            dragStartY = rowGroup.y();
+                        });
+
+                        rowGroup.on('dragend', () => {
+                            const deltaX = rowGroup.x() - dragStartX;
+                            const deltaY = rowGroup.y() - dragStartY;
+
+                            if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
+                                // Reset group position (positions will be updated via backend)
+                                rowGroup.x(0);
+                                rowGroup.y(0);
+                                // Call backend to update seat positions
+                                this.$wire.moveRow(row.id, deltaX, deltaY);
+                            }
+                        });
+
+                        // Check if this row is a table and draw the table shape
+                        if (isTable) {
                             const centerX = parseFloat(metadata.center_x) || 50;
                             const centerY = parseFloat(metadata.center_y) || 50;
                             const tableName = row.label || 'Masă';
@@ -358,8 +399,8 @@
                                     y: centerY,
                                     radius: tableRadius,
                                     fill: '#8B4513',
-                                    stroke: this.selectedTableRow?.id === row.id ? '#FFD700' : '#5D3A1A',
-                                    strokeWidth: this.selectedTableRow?.id === row.id ? 3 : 2,
+                                    stroke: isTableSelected ? '#FFD700' : '#5D3A1A',
+                                    strokeWidth: isTableSelected ? 3 : 2,
                                     name: 'table-shape',
                                     id: `table-${row.id}`
                                 });
@@ -370,7 +411,7 @@
                                         this.selectTable(section.id, row);
                                     }
                                 });
-                                group.add(tableCircle);
+                                rowGroup.add(tableCircle);
 
                                 // Table name label
                                 const tableLabel = new Konva.Text({
@@ -385,7 +426,7 @@
                                     align: 'center',
                                     name: 'table-label'
                                 });
-                                group.add(tableLabel);
+                                rowGroup.add(tableLabel);
                             } else if (metadata.table_type === 'rect') {
                                 // Draw rectangular table
                                 const tableWidth = parseFloat(metadata.width) || 80;
@@ -396,8 +437,8 @@
                                     width: tableWidth,
                                     height: tableHeight,
                                     fill: '#8B4513',
-                                    stroke: this.selectedTableRow?.id === row.id ? '#FFD700' : '#5D3A1A',
-                                    strokeWidth: this.selectedTableRow?.id === row.id ? 3 : 2,
+                                    stroke: isTableSelected ? '#FFD700' : '#5D3A1A',
+                                    strokeWidth: isTableSelected ? 3 : 2,
                                     cornerRadius: 4,
                                     name: 'table-shape',
                                     id: `table-${row.id}`
@@ -409,7 +450,7 @@
                                         this.selectTable(section.id, row);
                                     }
                                 });
-                                group.add(tableRect);
+                                rowGroup.add(tableRect);
 
                                 // Table name label
                                 const tableLabel = new Konva.Text({
@@ -424,16 +465,11 @@
                                     align: 'center',
                                     name: 'table-label'
                                 });
-                                group.add(tableLabel);
+                                rowGroup.add(tableLabel);
                             }
                         }
 
                         if (row.seats && row.seats.length > 0) {
-                            const isRowSelected = this.selectedRowData?.id === row.id;
-                            const isTableSelected = this.selectedTableRow?.id === row.id;
-                            const isMultiSelected = this.multiSelectedRows.some(r => r.row.id === row.id);
-                            const metadata = row.metadata || {};
-                            const isTable = metadata.is_table;
                             const seatRadius = 10;
                             const padding = 5;
 
@@ -506,21 +542,28 @@
                                 }
                             });
 
-                            group.add(rowBbox);
+                            rowGroup.add(rowBbox);
 
                             // Draw seats
                             row.seats.forEach(seat => {
                                 const seatX = parseFloat(seat.x) || 0;
                                 const seatY = parseFloat(seat.y) || 0;
                                 const isBlocked = seat.status === 'imposibil';
+                                const isPreview = seat.status === 'preview'; // Preview seats (not yet saved)
                                 const isSeatSelected = this.selectedSeatIds.includes(seat.id);
 
                                 // Determine seat colors based on status and selection
                                 let fillColor = section.seat_color || '#22C55E';
                                 let strokeColor = '#166534';
                                 let strokeWidth = 1;
+                                let dashPattern = null;
 
-                                if (isBlocked) {
+                                if (isPreview) {
+                                    fillColor = '#E0F2FE'; // Light blue for preview
+                                    strokeColor = '#0EA5E9'; // Cyan border
+                                    strokeWidth = 2;
+                                    dashPattern = [4, 2]; // Dashed border
+                                } else if (isBlocked) {
                                     fillColor = '#9CA3AF'; // Gray for blocked
                                     strokeColor = '#DC2626'; // Red border
                                     strokeWidth = 2;
@@ -542,6 +585,7 @@
                                     fill: isSeatSelected ? '#DBEAFE' : fillColor, // Light blue fill for selected
                                     stroke: strokeColor,
                                     strokeWidth: strokeWidth,
+                                    dash: dashPattern,
                                     scaleX: isSeatSelected ? 1.15 : 1,
                                     scaleY: isSeatSelected ? 1.15 : 1,
                                     id: `seat-${seat.id}`,
@@ -577,7 +621,7 @@
                                     }
                                 });
 
-                                group.add(seatCircle);
+                                rowGroup.add(seatCircle);
 
                                 // Draw X for blocked seats
                                 if (isBlocked) {
@@ -593,8 +637,8 @@
                                         strokeWidth: 2,
                                         name: 'seat-blocked-x'
                                     });
-                                    group.add(xLine1);
-                                    group.add(xLine2);
+                                    rowGroup.add(xLine1);
+                                    rowGroup.add(xLine2);
                                 }
 
                                 // Seat label (number)
@@ -609,9 +653,12 @@
                                     align: 'center',
                                     name: 'seat-label'
                                 });
-                                group.add(seatLabel);
+                                rowGroup.add(seatLabel);
                             });
                         }
+
+                        // Add the row group to the section group
+                        group.add(rowGroup);
                     });
                 }
 
@@ -889,6 +936,14 @@
                 this.editRowSeatSize = 20; // Default seat size
                 this.editRowCurve = row.curve_offset || 0;
 
+                // Store original seat positions for preview calculations
+                this.originalRowSeats = (row.seats || []).map(seat => ({
+                    id: seat.id,
+                    x: parseFloat(seat.x) || 0,
+                    y: parseFloat(seat.y) || 0,
+                    label: seat.label
+                }));
+
                 // Redraw to show selection highlight
                 this.drawSections();
             },
@@ -938,16 +993,144 @@
                 this.$wire.updateRowSpacing(this.selectedRowData.id, {
                     seatSize: this.editRowSeatSize,
                     seatSpacing: this.editRowSeatSpacing
-                }).then(() => {
-                    this.deselectRow();
                 });
+                // Note: handleLayoutUpdated will refresh original seats when the event is received
             },
             updateRowCurve() {
                 if (!this.selectedRowData) return;
 
-                this.$wire.updateRowCurve(this.selectedRowData.id, this.editRowCurve).then(() => {
-                    this.deselectRow();
+                this.$wire.updateRowCurve(this.selectedRowData.id, this.editRowCurve);
+                // Note: handleLayoutUpdated will refresh original seats when the event is received
+            },
+            refreshOriginalSeats() {
+                // After saving, refresh the originalRowSeats from the updated sections data
+                if (!this.selectedRowData) return;
+
+                const section = this.sections.find(s => s.id === this.selectedRowSectionId);
+                if (!section) return;
+
+                const row = section.rows?.find(r => r.id === this.selectedRowData.id);
+                if (!row || !row.seats) return;
+
+                this.originalRowSeats = row.seats.map(seat => ({
+                    id: seat.id,
+                    x: parseFloat(seat.x) || 0,
+                    y: parseFloat(seat.y) || 0,
+                    label: seat.label
+                }));
+
+                // Also update the selectedRowData reference
+                this.selectedRowData = row;
+            },
+            // Real-time preview methods
+            previewRowCurve() {
+                if (!this.selectedRowData || this.originalRowSeats.length === 0) return;
+
+                const seats = this.originalRowSeats;
+                const curveOffset = this.editRowCurve;
+
+                // Calculate center X and base Y from original positions
+                const sortedSeats = [...seats].sort((a, b) => a.x - b.x);
+                const minX = sortedSeats[0].x;
+                const maxX = sortedSeats[sortedSeats.length - 1].x;
+                const centerX = (minX + maxX) / 2;
+                const rowWidth = maxX - minX;
+                const baseY = seats.reduce((sum, s) => sum + s.y, 0) / seats.length;
+
+                // Update the local section data with curved positions
+                const section = this.sections.find(s => s.id === this.selectedRowSectionId);
+                if (!section) return;
+
+                const row = section.rows?.find(r => r.id === this.selectedRowData.id);
+                if (!row || !row.seats) return;
+
+                // Apply parabolic curve to each seat in the local data
+                row.seats.forEach(seat => {
+                    const origSeat = seats.find(s => s.id === seat.id);
+                    if (!origSeat) return;
+
+                    if (rowWidth > 0) {
+                        const normalizedX = (origSeat.x - centerX) / (rowWidth / 2); // -1 to 1
+                        const curveY = curveOffset * (1 - (normalizedX * normalizedX)); // Parabola
+                        seat.y = baseY + curveY;
+                    } else {
+                        seat.y = baseY;
+                    }
                 });
+
+                // Redraw to show preview
+                this.drawSections();
+            },
+            previewRowSeats() {
+                if (!this.selectedRowData || this.originalRowSeats.length === 0) return;
+
+                const section = this.sections.find(s => s.id === this.selectedRowSectionId);
+                if (!section) return;
+
+                const row = section.rows?.find(r => r.id === this.selectedRowData.id);
+                if (!row) return;
+
+                const currentCount = this.originalRowSeats.length;
+                const newCount = this.editRowSeats;
+                const spacing = this.editRowSeatSpacing || 25;
+
+                if (newCount === currentCount) {
+                    // Reset to original seats
+                    row.seats = this.originalRowSeats.map(s => ({...s}));
+                } else if (newCount > currentCount) {
+                    // Preview adding seats - create placeholder seats
+                    const sortedOriginal = [...this.originalRowSeats].sort((a, b) => a.x - b.x);
+                    const lastSeat = sortedOriginal[sortedOriginal.length - 1];
+                    const avgY = this.originalRowSeats.reduce((sum, s) => sum + s.y, 0) / this.originalRowSeats.length;
+
+                    row.seats = this.originalRowSeats.map(s => ({...s}));
+                    for (let i = 0; i < newCount - currentCount; i++) {
+                        row.seats.push({
+                            id: `preview-${i}`,
+                            x: lastSeat.x + (i + 1) * spacing,
+                            y: avgY,
+                            label: String(currentCount + i + 1),
+                            status: 'preview' // Mark as preview seat
+                        });
+                    }
+                } else {
+                    // Preview removing seats - just show fewer seats
+                    const sortedOriginal = [...this.originalRowSeats].sort((a, b) => a.x - b.x);
+                    row.seats = sortedOriginal.slice(0, newCount).map(s => ({...s}));
+                }
+
+                // Redraw to show preview
+                this.drawSections();
+            },
+            previewRowSpacing() {
+                if (!this.selectedRowData || this.originalRowSeats.length === 0) return;
+
+                const section = this.sections.find(s => s.id === this.selectedRowSectionId);
+                if (!section) return;
+
+                const row = section.rows?.find(r => r.id === this.selectedRowData.id);
+                if (!row || !row.seats) return;
+
+                const spacing = this.editRowSeatSpacing || 25;
+                const sortedOriginal = [...this.originalRowSeats].sort((a, b) => a.x - b.x);
+                const firstX = sortedOriginal[0].x;
+                const avgY = this.originalRowSeats.reduce((sum, s) => sum + s.y, 0) / this.originalRowSeats.length;
+
+                // Recalculate X positions with new spacing
+                row.seats.forEach((seat, index) => {
+                    const origSeat = sortedOriginal[index];
+                    if (origSeat) {
+                        seat.x = firstX + (index * spacing);
+                        seat.y = avgY; // Reset Y to baseline (curve will be reapplied if needed)
+                    }
+                });
+
+                // Reapply curve if set
+                if (this.editRowCurve !== 0) {
+                    this.previewRowCurve();
+                } else {
+                    this.drawSections();
+                }
             },
             // Multi-row selection methods
             toggleRowMultiSelect(sectionId, row, event) {
@@ -1672,6 +1855,10 @@
             },
             handleLayoutUpdated(detail) {
                 this.sections = detail.sections;
+                // Refresh original seats if a row is selected (for preview calculations)
+                if (this.selectedRowData) {
+                    this.refreshOriginalSeats();
+                }
                 this.drawSections();
             },
             getSelectedSectionSeatsCount() {
@@ -2143,133 +2330,73 @@
 
                 {{-- Row Properties Panel (non-table rows) --}}
                 <template x-if="selectedRowData && !selectedTableRow">
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between pb-2 border-b border-purple-200">
-                            <h4 class="text-sm font-bold tracking-wide text-purple-700 uppercase">Proprietăți Rând</h4>
-                            <button x-on:click="deselectRow()" class="text-purple-400 hover:text-purple-600">✕</button>
-                        </div>
-
-                        {{-- Row Info --}}
-                        <div class="p-3 rounded-lg bg-purple-50">
-                            <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-200 text-purple-800">
-                                    Rând
-                                </span>
-                                <span class="text-xs text-purple-600" x-text="selectedRowData?.label || '-'"></span>
-                            </div>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between pb-1 border-b border-purple-200">
+                            <h4 class="text-xs font-bold tracking-wide text-purple-700 uppercase">Rând: <span x-text="selectedRowData?.label || '-'"></span></h4>
+                            <button x-on:click="deselectRow()" class="text-purple-400 hover:text-purple-600 text-sm">✕</button>
                         </div>
 
                         {{-- Row Name --}}
-                        <div class="p-3 space-y-3 border border-purple-200 rounded-lg bg-purple-50">
-                            <div class="text-xs font-semibold text-purple-700 uppercase">Etichetă Rând</div>
-                            <div class="flex gap-2">
-                                <input type="text" x-model="editRowLabel" placeholder="Ex: A, B, VIP..."
-                                    class="flex-1 px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                                <button x-on:click="updateRowName()" type="button"
-                                    class="px-3 py-1 text-sm font-medium text-white bg-purple-600 rounded hover:bg-purple-700">
-                                    ✓
-                                </button>
-                            </div>
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Etichetă:</label>
+                            <input type="text" x-model="editRowLabel" placeholder="A, B..."
+                                class="flex-1 px-2 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                            <button x-on:click="updateRowName()" type="button"
+                                class="px-2 py-0.5 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700">✓</button>
                         </div>
 
                         {{-- Row Seats Control --}}
-                        <div class="p-3 space-y-3 border border-purple-200 rounded-lg bg-purple-50">
-                            <div class="text-xs font-semibold text-purple-700 uppercase">Locuri în rând</div>
-                            <div class="flex items-center gap-2">
-                                <button x-on:click="editRowSeats = Math.max(1, editRowSeats - 1)" type="button"
-                                    class="flex items-center justify-center w-8 h-8 text-lg font-bold text-white bg-red-500 rounded hover:bg-red-600"
-                                    :disabled="editRowSeats <= 1">−</button>
-                                <input type="number" x-model.number="editRowSeats" min="1" max="100"
-                                    class="flex-1 px-2 py-1 text-sm text-center text-gray-900 bg-white border border-gray-300 rounded">
-                                <button x-on:click="editRowSeats = Math.min(100, editRowSeats + 1)" type="button"
-                                    class="flex items-center justify-center w-8 h-8 text-lg font-bold text-white bg-green-500 rounded hover:bg-green-600"
-                                    :disabled="editRowSeats >= 100">+</button>
-                            </div>
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Locuri:</label>
+                            <button x-on:click="editRowSeats = Math.max(1, editRowSeats - 1); previewRowSeats()" type="button"
+                                class="w-6 h-6 text-xs font-bold text-white bg-red-500 rounded hover:bg-red-600">−</button>
+                            <input type="number" x-model.number="editRowSeats" x-on:input="previewRowSeats()" min="1" max="100"
+                                class="w-14 px-1 py-0.5 text-xs text-center text-gray-900 bg-white border border-gray-300 rounded">
+                            <button x-on:click="editRowSeats = Math.min(100, editRowSeats + 1); previewRowSeats()" type="button"
+                                class="w-6 h-6 text-xs font-bold text-white bg-green-500 rounded hover:bg-green-600">+</button>
                             <button x-on:click="updateRowSeats()" type="button"
-                                class="w-full px-3 py-1.5 text-sm font-medium text-white bg-purple-600 rounded hover:bg-purple-700">
-                                Aplică modificări locuri
-                            </button>
+                                class="px-2 py-0.5 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700">Salvează</button>
                         </div>
 
-                        {{-- Seat Size and Spacing --}}
-                        <div class="p-3 space-y-3 rounded-lg bg-indigo-50">
-                            <div class="text-xs font-semibold text-indigo-700 uppercase">Dimensiuni și Spațiere</div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="block text-xs text-indigo-600">Dimensiune loc (px)</label>
-                                    <input type="number" x-model.number="editRowSeatSize" min="8" max="40"
-                                        class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-indigo-600">Spațiu între locuri (px)</label>
-                                    <input type="number" x-model.number="editRowSeatSpacing" min="15" max="100"
-                                        class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                                </div>
-                            </div>
-                            <button x-on:click="updateRowSpacing()" type="button"
-                                class="w-full px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700">
-                                Aplică spațiere
-                            </button>
+                        {{-- Curve --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Curbură:</label>
+                            <input type="range" x-model.number="editRowCurve" x-on:input="previewRowCurve()" x-on:change="updateRowCurve()" min="-50" max="50" class="flex-1">
+                            <span class="w-8 text-xs text-center font-medium" x-text="editRowCurve"></span>
                         </div>
 
-                        {{-- Row Curve --}}
-                        <div class="p-3 space-y-3 rounded-lg bg-teal-50">
-                            <div class="text-xs font-semibold text-teal-700 uppercase">Curbură Rând</div>
-                            <div>
-                                <input type="range" x-model.number="editRowCurve" min="-50" max="50" class="w-full">
-                                <div class="flex justify-between text-xs text-teal-600">
-                                    <span>-50</span>
-                                    <span x-text="editRowCurve" class="font-medium"></span>
-                                    <span>+50</span>
-                                </div>
-                            </div>
-                            <button x-on:click="updateRowCurve()" type="button"
-                                class="w-full px-3 py-1.5 text-sm font-medium text-white bg-teal-600 rounded hover:bg-teal-700">
-                                Aplică curbură
-                            </button>
+                        {{-- Spacing --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Spațiere:</label>
+                            <input type="number" x-model.number="editRowSeatSpacing" x-on:input="previewRowSpacing()" x-on:change="updateRowSpacing()" min="15" max="100"
+                                class="w-14 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                            <span class="text-xs text-gray-500">px</span>
                         </div>
 
-                        {{-- Seat Numbering --}}
-                        <div class="p-3 space-y-3 rounded-lg bg-blue-50">
-                            <div class="text-xs font-semibold text-blue-700 uppercase">Numerotare Locuri</div>
-                            <div>
-                                <label class="block text-xs text-blue-600">Începe de la</label>
-                                <input type="number" x-model.number="editRowStartNumber" min="1" max="999"
-                                    class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-blue-600">Direcție</label>
-                                <select x-model="editRowDirection" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                                    <option value="ltr">Stânga → Dreapta</option>
-                                    <option value="rtl">Dreapta → Stânga</option>
-                                </select>
-                            </div>
+                        {{-- Numbering --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Start nr:</label>
+                            <input type="number" x-model.number="editRowStartNumber" min="1" max="999"
+                                class="w-14 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                            <select x-model="editRowDirection" class="flex-1 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                                <option value="ltr">→ Stânga-Dreapta</option>
+                                <option value="rtl">← Dreapta-Stânga</option>
+                            </select>
                             <button x-on:click="updateRowNumbering()" type="button"
-                                class="w-full px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
-                                Aplică numerotare
+                                class="px-2 py-0.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700">✓</button>
+                        </div>
+
+                        {{-- Info + Delete --}}
+                        <div class="flex items-center justify-between pt-1 border-t border-gray-200">
+                            <span class="text-xs text-gray-500">
+                                <span x-text="selectedRowData?.seats?.length || 0"></span> locuri •
+                                <span x-text="sections.find(s => s.id === selectedRowSectionId)?.name || '-'"></span>
+                            </span>
+                            <button x-on:click="deleteSelectedRow()" type="button"
+                                class="px-2 py-0.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700">
+                                Șterge
                             </button>
                         </div>
-
-                        {{-- Row Details --}}
-                        <div class="p-3 space-y-2 text-xs rounded-lg bg-gray-50">
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">Locuri curente:</span>
-                                <span class="font-medium" x-text="selectedRowData?.seats?.length || 0"></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">Secțiune:</span>
-                                <span class="font-medium" x-text="sections.find(s => s.id === selectedRowSectionId)?.name || '-'"></span>
-                            </div>
-                        </div>
-
-                        {{-- Delete Button --}}
-                        <button x-on:click="deleteSelectedRow()" type="button"
-                            class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold text-white transition-all bg-red-600 rounded-lg hover:bg-red-700">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                            Șterge Rând
-                        </button>
                     </div>
                 </template>
 
