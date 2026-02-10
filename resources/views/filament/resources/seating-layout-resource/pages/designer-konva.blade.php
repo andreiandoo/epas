@@ -2400,8 +2400,9 @@
                 this.tempRowSeats = [];
             },
             updateDrawRow(pos) {
-                // Clear temp seats - BOTH the Konva circles AND the array
+                // Clear temp seats and label
                 this.drawLayer.find('.temp-seat').forEach(s => s.destroy());
+                this.drawLayer.find('.temp-count-label').forEach(s => s.destroy());
                 this.tempRowSeats = [];
 
                 // Horizontal only - ignore Y movement
@@ -2427,6 +2428,34 @@
                     this.drawLayer.add(seat);
                     this.tempRowSeats.push({ x, y });
                 }
+
+                // Add count label above the row
+                if (numSeats > 0) {
+                    const labelX = Math.min(this.rowDrawStart.x, pos.x) + Math.abs(dx) / 2;
+                    const labelY = this.rowDrawStart.y - 25;
+                    const countLabel = new Konva.Label({
+                        x: labelX,
+                        y: labelY,
+                        name: 'temp-count-label'
+                    });
+                    countLabel.add(new Konva.Tag({
+                        fill: '#1e40af',
+                        cornerRadius: 4,
+                        pointerDirection: 'down',
+                        pointerWidth: 8,
+                        pointerHeight: 5
+                    }));
+                    countLabel.add(new Konva.Text({
+                        text: `1 rând • ${numSeats} locuri`,
+                        fontSize: 12,
+                        fontFamily: 'Arial',
+                        fontStyle: 'bold',
+                        fill: '#ffffff',
+                        padding: 6
+                    }));
+                    this.drawLayer.add(countLabel);
+                }
+
                 this.drawLayer.batchDraw();
             },
             finishDrawRow() {
@@ -2459,6 +2488,7 @@
                 }
 
                 this.drawLayer.find('.temp-seat').forEach(s => s.destroy());
+                this.drawLayer.find('.temp-count-label').forEach(s => s.destroy());
                 this.tempRowSeats = [];
                 this.rowDrawStart = null;
                 this.drawLayer.batchDraw();
@@ -2468,8 +2498,9 @@
                 this.tempMultiRowSeats = [];
             },
             updateDrawMultiRows(pos) {
-                // Clear temp seats
+                // Clear temp seats and label
                 this.drawLayer.find('.temp-multi-seat').forEach(s => s.destroy());
+                this.drawLayer.find('.temp-count-label').forEach(s => s.destroy());
                 this.tempMultiRowSeats = [];
 
                 const dx = pos.x - this.multiRowStart.x;
@@ -2481,6 +2512,7 @@
 
                 const numRows = Math.max(1, Math.floor(height / this.rowSpacing));
                 const seatsPerRow = Math.max(1, Math.floor(width / this.rowSeatSpacing));
+                const totalSeats = numRows * seatsPerRow;
 
                 for (let row = 0; row < numRows; row++) {
                     const rowY = startY + row * this.rowSpacing + this.rowSpacing / 2;
@@ -2499,6 +2531,34 @@
                         this.tempMultiRowSeats.push({ x: seatX, y: rowY, row: row });
                     }
                 }
+
+                // Add count label above the bounding box
+                if (totalSeats > 0) {
+                    const labelX = startX + width / 2;
+                    const labelY = startY - 10;
+                    const countLabel = new Konva.Label({
+                        x: labelX,
+                        y: labelY,
+                        name: 'temp-count-label'
+                    });
+                    countLabel.add(new Konva.Tag({
+                        fill: '#1e40af',
+                        cornerRadius: 4,
+                        pointerDirection: 'down',
+                        pointerWidth: 8,
+                        pointerHeight: 5
+                    }));
+                    countLabel.add(new Konva.Text({
+                        text: `${numRows} ${numRows === 1 ? 'rând' : 'rânduri'} • ${seatsPerRow} locuri/rând • Total: ${totalSeats}`,
+                        fontSize: 12,
+                        fontFamily: 'Arial',
+                        fontStyle: 'bold',
+                        fill: '#ffffff',
+                        padding: 6
+                    }));
+                    this.drawLayer.add(countLabel);
+                }
+
                 this.drawLayer.batchDraw();
             },
             finishDrawMultiRows() {
@@ -2541,6 +2601,7 @@
                 }
 
                 this.drawLayer.find('.temp-multi-seat').forEach(s => s.destroy());
+                this.drawLayer.find('.temp-count-label').forEach(s => s.destroy());
                 this.tempMultiRowSeats = [];
                 this.multiRowStart = null;
                 this.drawLayer.batchDraw();
