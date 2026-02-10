@@ -2894,16 +2894,16 @@ class DesignerSeatingLayout extends Page
     private function formatSeatLabel(int $number, string $mode): string
     {
         return match ($mode) {
-            'alpha' => $this->numberToAlpha($number),
-            'roman' => $this->numberToRoman($number),
+            'alpha' => $this->intToAlphaLabel($number),
+            'roman' => $this->intToRomanLabel($number),
             default => (string) $number,
         };
     }
 
     /**
-     * Convert number to alphabetic (1=A, 2=B, ..., 27=AA, etc.)
+     * Convert integer to alphabetic label (1=A, 2=B, ..., 27=AA, etc.)
      */
-    private function numberToAlpha(int $number): string
+    private function intToAlphaLabel(int $number): string
     {
         $result = '';
         while ($number > 0) {
@@ -2915,9 +2915,9 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
-     * Convert number to Roman numerals
+     * Convert integer to Roman numerals
      */
-    private function numberToRoman(int $number): string
+    private function intToRomanLabel(int $number): string
     {
         $map = [
             'M' => 1000, 'CM' => 900, 'D' => 500, 'CD' => 400,
@@ -3132,19 +3132,52 @@ class DesignerSeatingLayout extends Page
     /**
      * Save background image settings
      */
-    public function saveBackgroundSettings(float $scale, int $x, int $y, float $opacity): void
+    public function saveBackgroundSettings(array $settings): void
     {
         $this->seatingLayout->update([
-            'background_scale' => $scale,
-            'background_x' => $x,
-            'background_y' => $y,
-            'background_opacity' => $opacity,
+            'background_scale' => $settings['background_scale'] ?? $this->seatingLayout->background_scale,
+            'background_x' => $settings['background_x'] ?? $this->seatingLayout->background_x,
+            'background_y' => $settings['background_y'] ?? $this->seatingLayout->background_y,
+            'background_opacity' => $settings['background_opacity'] ?? $this->seatingLayout->background_opacity,
         ]);
 
         Notification::make()
             ->success()
             ->title('Background settings saved')
             ->send();
+    }
+
+    /**
+     * Upload background image via Livewire
+     */
+    public function uploadBackgroundImage($file): ?string
+    {
+        if (!$file) return null;
+
+        try {
+            // Store the file
+            $path = $file->store('seating/backgrounds', 'public');
+
+            // Update the layout with new image path
+            $this->seatingLayout->update([
+                'background_image_path' => $path,
+                'background_image_url' => null, // Clear external URL if any
+            ]);
+
+            Notification::make()
+                ->success()
+                ->title('Imagine încărcată')
+                ->send();
+
+            return \Storage::disk('public')->url($path);
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Eroare la încărcare')
+                ->body($e->getMessage())
+                ->send();
+            return null;
+        }
     }
 
     /**

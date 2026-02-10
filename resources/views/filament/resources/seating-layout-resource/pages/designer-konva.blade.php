@@ -127,6 +127,9 @@
             currentDrawingShape: null,
             selectedRowForDrag: null,
             konvaInitialized: false,
+            lineDrawStart: null,
+            tempLine: null,
+            linePoints: [],
             init() {
                 console.log('Konva Designer: waiting for Konva library...');
                 this.waitForKonva();
@@ -753,6 +756,8 @@
                         this.startDrawRect(transformed);
                     } else if (this.drawMode === 'polygon' && isEmptyArea) {
                         this.addPolygonPoint(transformed);
+                    } else if (this.drawMode === 'line') {
+                        this.startDrawLine(transformed);
                     }
                     // For seat drawing modes, allow anywhere (even on sections)
                     else if (this.drawMode === 'drawSingleRow') {
@@ -778,6 +783,8 @@
                         this.updateDrawRow(transformed);
                     } else if (this.drawMode === 'drawMultiRows' && this.multiRowStart) {
                         this.updateDrawMultiRows(transformed);
+                    } else if (this.drawMode === 'line' && this.lineDrawStart) {
+                        this.updateDrawLine(transformed);
                     }
                 });
 
@@ -789,6 +796,8 @@
                         this.finishDrawRow();
                     } else if (this.drawMode === 'drawMultiRows' && this.multiRowStart) {
                         this.finishDrawMultiRows();
+                    } else if (this.drawMode === 'line' && this.lineDrawStart) {
+                        this.finishDrawLine();
                     }
                 });
 
@@ -901,9 +910,8 @@
             updateTableSeats() {
                 if (!this.selectedTableRow) return;
 
-                this.$wire.updateTableSeats(this.selectedTableRow.id, this.editTableSeats).then(() => {
-                    this.deselectTable();
-                });
+                this.$wire.updateTableSeats(this.selectedTableRow.id, this.editTableSeats);
+                // Note: handleLayoutUpdated will redraw when the event is received
             },
             updateTableDimensions() {
                 if (!this.selectedTableRow) return;
@@ -918,8 +926,36 @@
                 }
 
                 this.$wire.updateTableDimensions(this.selectedTableRow.id, data).then(() => {
-                    this.deselectTable();
+                    // Stay selected for further edits
+                    this.drawSections();
                 });
+            },
+            previewTableSeats() {
+                // Real-time preview of table seat count is complex (circular arrangement)
+                // For now, just update the display - actual seats are recalculated on save
+                this.drawSections();
+            },
+            previewTableDimensions() {
+                if (!this.selectedTableRow) return;
+
+                // Update the local metadata for preview
+                const section = this.sections.find(s => s.id === this.selectedTableSectionId);
+                if (!section) return;
+
+                const row = section.rows?.find(r => r.id === this.selectedTableRow.id);
+                if (!row) return;
+
+                const metadata = row.metadata || {};
+                if (metadata.table_type === 'round') {
+                    metadata.radius = this.editTableRadius;
+                } else {
+                    metadata.width = this.editTableWidth;
+                    metadata.height = this.editTableHeight;
+                }
+                row.metadata = metadata;
+
+                // Redraw to show preview
+                this.drawSections();
             },
             selectRow(sectionId, row) {
                 this.selectedRowData = row;
@@ -1405,6 +1441,54 @@
                 this.drawLayer.batchDraw();
                 this.drawMode = 'select';
             },
+            startDrawLine(pos) {
+                this.lineDrawStart = pos;
+                this.linePoints = [pos.x, pos.y, pos.x, pos.y];
+                this.tempLine = new Konva.Line({
+                    points: this.linePoints,
+                    stroke: this.shapeConfigColor || '#000000',
+                    strokeWidth: this.shapeConfigStrokeWidth || 3,
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                });
+                this.drawLayer.add(this.tempLine);
+                this.drawLayer.batchDraw();
+            },
+            updateDrawLine(pos) {
+                if (!this.tempLine || !this.lineDrawStart) return;
+
+                this.linePoints = [this.lineDrawStart.x, this.lineDrawStart.y, pos.x, pos.y];
+                this.tempLine.points(this.linePoints);
+                this.drawLayer.batchDraw();
+            },
+            finishDrawLine() {
+                if (!this.tempLine || !this.lineDrawStart) return;
+
+                const dx = this.linePoints[2] - this.linePoints[0];
+                const dy = this.linePoints[3] - this.linePoints[1];
+                const length = Math.sqrt(dx * dx + dy * dy);
+
+                if (length > 10) {
+                    // Create permanent line on the layer (visual only for now)
+                    const permanentLine = new Konva.Line({
+                        points: [...this.linePoints],
+                        stroke: this.shapeConfigColor || '#000000',
+                        strokeWidth: this.shapeConfigStrokeWidth || 3,
+                        lineCap: 'round',
+                        lineJoin: 'round',
+                        name: 'decoration-line',
+                        draggable: this.drawMode === 'select'
+                    });
+                    this.layer.add(permanentLine);
+                    this.layer.batchDraw();
+                }
+
+                this.tempLine.destroy();
+                this.tempLine = null;
+                this.lineDrawStart = null;
+                this.linePoints = [];
+                this.drawLayer.batchDraw();
+            },
             addPolygonPoint(pos) {
                 this.polygonPoints.push(pos.x, pos.y);
 
@@ -1826,6 +1910,25 @@
                     background_y: this.backgroundY
                 });
             },
+            handleBackgroundUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    alert('Vă rugăm selectați o imagine.');
+                    return;
+                }
+
+                // Upload via Livewire
+                this.$wire.uploadBackgroundImage(file).then((url) => {
+                    if (url) {
+                        this.backgroundUrl = url;
+                        this.backgroundVisible = true;
+                        this.drawBackground();
+                    }
+                });
+            },
             exportSVG() {
                 const dataURL = this.stage.toDataURL({ pixelRatio: 2 });
                 const link = document.createElement('a');
@@ -2051,28 +2154,47 @@
                     </div>
 
                     {{-- Background controls (collapsible) --}}
-                    <div x-show="showBackgroundControls" x-transition class="p-3 mb-3 border border-indigo-200 rounded-lg bg-indigo-50">
-                        <div class="flex flex-wrap items-center gap-4">
+                    <div x-show="showBackgroundControls" x-transition class="p-3 mb-3 space-y-3 border border-indigo-200 rounded-lg bg-indigo-50">
+                        {{-- Color --}}
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs font-medium text-indigo-800 w-16">Culoare:</label>
+                            <input type="color" x-model="backgroundColor" x-on:input="updateBackgroundColor && updateBackgroundColor()" class="w-8 h-8 border border-gray-300 rounded cursor-pointer">
+                            <button x-on:click="saveBackgroundColor && saveBackgroundColor()" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Salvează</button>
+                        </div>
+
+                        {{-- Image Upload --}}
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs font-medium text-indigo-800 w-16">Imagine:</label>
+                            <input type="file" accept="image/*" x-on:change="handleBackgroundUpload($event)"
+                                class="flex-1 text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-indigo-600 file:text-white hover:file:bg-indigo-700">
+                        </div>
+
+                        {{-- Image Controls (always visible) --}}
+                        <div class="space-y-2">
                             <div class="flex items-center gap-2">
-                                <label class="text-xs font-medium text-indigo-800">Culoare:</label>
-                                <input type="color" x-model="backgroundColor" x-on:input="updateBackgroundColor && updateBackgroundColor()" class="w-8 h-8 border border-gray-300 rounded cursor-pointer">
-                                <button x-on:click="saveBackgroundColor && saveBackgroundColor()" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Salvează</button>
-                            </div>
-                            <div x-show="backgroundUrl" class="flex flex-wrap items-center gap-3">
-                                <label class="flex items-center gap-1 cursor-pointer">
+                                <label class="flex items-center gap-1 cursor-pointer w-16">
                                     <input type="checkbox" x-model="backgroundVisible" x-on:change="toggleBackgroundVisibility && toggleBackgroundVisibility()" class="w-4 h-4 text-indigo-600 border-gray-300 rounded">
-                                    <span class="text-xs text-indigo-800">Imagine</span>
+                                    <span class="text-xs text-indigo-800">Vizibil</span>
                                 </label>
-                                <div class="flex items-center gap-1">
-                                    <label class="text-xs text-indigo-700">Scală:</label>
-                                    <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.01" x-on:input="updateBackgroundScale && updateBackgroundScale()" class="w-16" :disabled="!backgroundVisible">
-                                </div>
-                                <div class="flex items-center gap-1">
-                                    <label class="text-xs text-indigo-700">Opacitate:</label>
-                                    <input type="range" x-model="backgroundOpacity" min="0" max="1" step="0.01" x-on:input="updateBackgroundOpacity && updateBackgroundOpacity()" class="w-16" :disabled="!backgroundVisible">
-                                </div>
-                                <button x-on:click="saveBackgroundSettings && saveBackgroundSettings()" type="button" class="px-2 py-1 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">Salvează</button>
+                                <span class="text-xs text-gray-400" x-show="!backgroundUrl">(nicio imagine)</span>
                             </div>
+
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-indigo-700 w-16">Opacitate:</label>
+                                <input type="range" x-model="backgroundOpacity" min="0" max="1" step="0.01" x-on:input="updateBackgroundOpacity && updateBackgroundOpacity()" class="flex-1" :disabled="!backgroundVisible || !backgroundUrl">
+                                <span class="w-8 text-xs text-center" x-text="Math.round(backgroundOpacity * 100) + '%'"></span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-indigo-700 w-16">Scală:</label>
+                                <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.01" x-on:input="updateBackgroundScale && updateBackgroundScale()" class="flex-1" :disabled="!backgroundVisible || !backgroundUrl">
+                                <span class="w-8 text-xs text-center" x-text="(backgroundScale * 100).toFixed(0) + '%'"></span>
+                            </div>
+
+                            <button x-on:click="saveBackgroundSettings && saveBackgroundSettings()" type="button" x-show="backgroundUrl"
+                                class="w-full px-2 py-1.5 text-xs text-white bg-indigo-600 rounded hover:bg-indigo-700">
+                                Salvează setări imagine
+                            </button>
                         </div>
                     </div>
 
@@ -2246,103 +2368,77 @@
 
             {{-- RIGHT SIDEBAR - Properties Panel --}}
             <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-80" x-show="selectedSection || selectedDrawnRow || addSeatsMode || selectedTableRow || selectedRowData" x-transition>
-                {{-- Table Properties Panel --}}
+                {{-- Table Properties Panel (compact with real-time) --}}
                 <template x-if="selectedTableRow">
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between pb-2 border-b border-amber-200">
-                            <h4 class="text-sm font-bold tracking-wide text-amber-700 uppercase">Proprietăți Masă</h4>
-                            <button x-on:click="deselectTable()" class="text-amber-400 hover:text-amber-600">✕</button>
-                        </div>
-
-                        {{-- Table Type Badge --}}
-                        <div class="p-3 rounded-lg bg-amber-50">
-                            <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                    :class="selectedTableRow?.metadata?.table_type === 'round' ? 'bg-amber-200 text-amber-800' : 'bg-orange-200 text-orange-800'">
-                                    <span x-text="selectedTableRow?.metadata?.table_type === 'round' ? 'Masă Rotundă' : 'Masă Dreptunghiulară'"></span>
-                                </span>
-                            </div>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between pb-1 border-b border-amber-200">
+                            <h4 class="text-xs font-bold tracking-wide text-amber-700 uppercase">
+                                <span x-text="selectedTableRow?.metadata?.table_type === 'round' ? 'Masă Rotundă' : 'Masă Drept.'"></span>:
+                                <span x-text="selectedTableRow?.label || '-'"></span>
+                            </h4>
+                            <button x-on:click="deselectTable()" class="text-amber-400 hover:text-amber-600 text-sm">✕</button>
                         </div>
 
                         {{-- Table Name --}}
-                        <div class="p-3 space-y-3 border border-amber-200 rounded-lg bg-amber-50">
-                            <div class="text-xs font-semibold text-amber-700 uppercase">Nume Masă</div>
-                            <div class="flex gap-2">
-                                <input type="text" x-model="editTableName" placeholder="Ex: Masa 1, VIP..."
-                                    class="flex-1 px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                                <button x-on:click="updateTableName()" type="button"
-                                    class="px-3 py-1 text-sm font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
-                                    ✓
-                                </button>
-                            </div>
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Nume:</label>
+                            <input type="text" x-model="editTableName" placeholder="Masa 1..."
+                                class="flex-1 px-2 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                            <button x-on:click="updateTableName()" type="button"
+                                class="px-2 py-0.5 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">✓</button>
                         </div>
 
                         {{-- Table Seats Control --}}
-                        <div class="p-3 space-y-3 border border-amber-200 rounded-lg bg-amber-50">
-                            <div class="text-xs font-semibold text-amber-700 uppercase">Locuri la masă</div>
-                            <div class="flex items-center gap-2">
-                                <button x-on:click="editTableSeats = Math.max(2, editTableSeats - 1)" type="button"
-                                    class="flex items-center justify-center w-8 h-8 text-lg font-bold text-white bg-red-500 rounded hover:bg-red-600"
-                                    :disabled="editTableSeats <= 2">−</button>
-                                <input type="number" x-model.number="editTableSeats" min="2" max="20"
-                                    class="flex-1 px-2 py-1 text-sm text-center text-gray-900 bg-white border border-gray-300 rounded">
-                                <button x-on:click="editTableSeats = Math.min(20, editTableSeats + 1)" type="button"
-                                    class="flex items-center justify-center w-8 h-8 text-lg font-bold text-white bg-green-500 rounded hover:bg-green-600"
-                                    :disabled="editTableSeats >= 20">+</button>
-                            </div>
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Locuri:</label>
+                            <button x-on:click="editTableSeats = Math.max(2, editTableSeats - 1); previewTableSeats()" type="button"
+                                class="w-6 h-6 text-xs font-bold text-white bg-red-500 rounded hover:bg-red-600">−</button>
+                            <input type="number" x-model.number="editTableSeats" x-on:input="previewTableSeats()" min="2" max="20"
+                                class="w-14 px-1 py-0.5 text-xs text-center text-gray-900 bg-white border border-gray-300 rounded">
+                            <button x-on:click="editTableSeats = Math.min(20, editTableSeats + 1); previewTableSeats()" type="button"
+                                class="w-6 h-6 text-xs font-bold text-white bg-green-500 rounded hover:bg-green-600">+</button>
                             <button x-on:click="updateTableSeats()" type="button"
-                                class="w-full px-3 py-1.5 text-sm font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
-                                Aplică modificări locuri
-                            </button>
+                                class="px-2 py-0.5 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">Salvează</button>
                         </div>
 
-                        {{-- Table Dimensions --}}
-                        <div class="p-3 space-y-3 rounded-lg bg-orange-50">
-                            <div class="text-xs font-semibold text-orange-700 uppercase">Dimensiuni</div>
-                            <div x-show="selectedTableRow?.metadata?.table_type === 'round'">
-                                <label class="block text-xs text-orange-600">Rază masă (px)</label>
-                                <input type="number" x-model.number="editTableRadius" min="15" max="100"
-                                    class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                                <div class="mt-1 text-xs text-gray-500" x-text="`${editTableRadius}px`"></div>
-                            </div>
-                            <div x-show="selectedTableRow?.metadata?.table_type === 'rect'" class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="block text-xs text-orange-600">Lățime (px)</label>
-                                    <input type="number" x-model.number="editTableWidth" min="40" max="200"
-                                        class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-orange-600">Înălțime (px)</label>
-                                    <input type="number" x-model.number="editTableHeight" min="20" max="100"
-                                        class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                                </div>
-                            </div>
+                        {{-- Round Table Radius --}}
+                        <div x-show="selectedTableRow?.metadata?.table_type === 'round'" class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Rază:</label>
+                            <input type="range" x-model.number="editTableRadius" x-on:input="previewTableDimensions()" min="15" max="100" class="flex-1">
+                            <span class="w-10 text-xs text-center" x-text="editTableRadius + 'px'"></span>
                             <button x-on:click="updateTableDimensions()" type="button"
-                                class="w-full px-3 py-1.5 text-sm font-medium text-white bg-orange-600 rounded hover:bg-orange-700">
-                                Aplică dimensiuni
+                                class="px-2 py-0.5 text-xs font-medium text-white bg-orange-600 rounded hover:bg-orange-700">✓</button>
+                        </div>
+
+                        {{-- Rect Table Dimensions --}}
+                        <template x-if="selectedTableRow?.metadata?.table_type === 'rect'">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-1">
+                                    <label class="text-xs text-gray-600 w-16">Lățime:</label>
+                                    <input type="range" x-model.number="editTableWidth" x-on:input="previewTableDimensions()" min="40" max="200" class="flex-1">
+                                    <span class="w-10 text-xs text-center" x-text="editTableWidth + 'px'"></span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <label class="text-xs text-gray-600 w-16">Înălțime:</label>
+                                    <input type="range" x-model.number="editTableHeight" x-on:input="previewTableDimensions()" min="20" max="100" class="flex-1">
+                                    <span class="w-10 text-xs text-center" x-text="editTableHeight + 'px'"></span>
+                                    <button x-on:click="updateTableDimensions()" type="button"
+                                        class="px-2 py-0.5 text-xs font-medium text-white bg-orange-600 rounded hover:bg-orange-700">✓</button>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- Info + Delete --}}
+                        <div class="flex items-center justify-between pt-1 border-t border-gray-200">
+                            <span class="text-xs text-gray-500">
+                                <span x-text="selectedTableRow?.seats?.length || 0"></span> locuri •
+                                <span x-text="sections.find(s => s.id === selectedTableSectionId)?.name || '-'"></span>
+                            </span>
+                            <button x-on:click="deleteTable()" type="button"
+                                class="px-2 py-0.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700">
+                                Șterge
                             </button>
                         </div>
-
-                        {{-- Table Info --}}
-                        <div class="p-3 space-y-2 text-xs rounded-lg bg-gray-50">
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">Locuri curente:</span>
-                                <span class="font-medium" x-text="selectedTableRow?.seats?.length || 0"></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">Secțiune:</span>
-                                <span class="font-medium" x-text="sections.find(s => s.id === selectedTableSectionId)?.name || '-'"></span>
-                            </div>
-                        </div>
-
-                        {{-- Delete Button --}}
-                        <button x-on:click="deleteTable()" type="button"
-                            class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold text-white transition-all bg-red-600 rounded-lg hover:bg-red-700">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                            Șterge Masă
-                        </button>
                     </div>
                 </template>
 
