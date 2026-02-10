@@ -119,16 +119,22 @@ class SeatingSection extends Model
     }
 
     /**
-     * Generate seat UID in format: SECTION_CODE-ROW-SEAT
-     * All parts are cleaned to alphanumeric and uppercase
+     * Generate seat UID in format: S{sectionId}-{rowLabel}-{seatNum}
+     * Example: S21-A-1, S21-B-15
+     * Spaces in row labels are replaced with underscores
      */
     public function generateSeatUid(string $rowLabel, string $seatLabel): string
     {
-        $sectionCode = $this->section_code ?: $this->name;
-        $cleanSection = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $sectionCode));
-        $cleanRow = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $rowLabel));
-        $cleanSeat = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $seatLabel));
+        // Use section's database ID for uniqueness
+        $sectionId = $this->id;
 
-        return "{$cleanSection}-{$cleanRow}-{$cleanSeat}";
+        // Clean row label: replace spaces with underscores, keep alphanumeric
+        $cleanRow = strtoupper(preg_replace('/\s+/', '_', $rowLabel));
+        $cleanRow = preg_replace('/[^a-zA-Z0-9_]/', '', $cleanRow);
+
+        // Clean seat label: keep only alphanumeric
+        $cleanSeat = preg_replace('/[^a-zA-Z0-9]/', '', $seatLabel);
+
+        return "S{$sectionId}-{$cleanRow}-{$cleanSeat}";
     }
 }

@@ -109,15 +109,23 @@ class SeatingSeat extends Model
     }
 
     /**
-     * Generate a unique seat UID in format: SECTION_CODE-ROW-SEAT
+     * Generate a unique seat UID in format: S{sectionId}-{rowLabel}-{seatNum}
+     * Example: S21-A-1, S21-VIP_ROW-15
+     *
+     * @param int $sectionId The section's database ID
+     * @param string $rowLabel The row label (spaces converted to underscores)
+     * @param string $seatLabel The seat number/label
      */
-    public static function generateSeatUid(string $sectionCode, string $rowLabel, string $seatLabel): string
+    public static function generateSeatUid(int $sectionId, string $rowLabel, string $seatLabel): string
     {
-        $cleanSection = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $sectionCode));
-        $cleanRow = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $rowLabel));
-        $cleanSeat = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $seatLabel));
+        // Clean row label: replace spaces with underscores, keep alphanumeric
+        $cleanRow = strtoupper(preg_replace('/\s+/', '_', $rowLabel));
+        $cleanRow = preg_replace('/[^a-zA-Z0-9_]/', '', $cleanRow);
 
-        return "{$cleanSection}-{$cleanRow}-{$cleanSeat}";
+        // Clean seat label: keep only alphanumeric
+        $cleanSeat = preg_replace('/[^a-zA-Z0-9]/', '', $seatLabel);
+
+        return "S{$sectionId}-{$cleanRow}-{$cleanSeat}";
     }
 
     /**
@@ -146,8 +154,7 @@ class SeatingSeat extends Model
             if (empty($seat->seat_uid) && $seat->row_id) {
                 $row = SeatingRow::with('section')->find($seat->row_id);
                 if ($row && $row->section) {
-                    $sectionCode = $row->section->section_code ?: $row->section->name;
-                    $seat->seat_uid = self::generateSeatUid($sectionCode, $row->label, $seat->label);
+                    $seat->seat_uid = self::generateSeatUid($row->section->id, $row->label, $seat->label);
                 }
             }
 

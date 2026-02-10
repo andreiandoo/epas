@@ -2867,6 +2867,49 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Update section seat style (size and color)
+     */
+    public function updateSectionSeatStyle(int $sectionId, array $settings): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Section not found')
+                ->send();
+            return;
+        }
+
+        $seatSize = (int) ($settings['seatSize'] ?? 20);
+        $seatColor = $settings['seatColor'] ?? '#22C55E';
+
+        // Clamp seat size to reasonable limits
+        $seatSize = max(8, min(40, $seatSize));
+
+        // Validate color format
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $seatColor)) {
+            $seatColor = '#22C55E';
+        }
+
+        // Update section metadata and seat_color
+        $metadata = $section->metadata ?? [];
+        $metadata['seat_size'] = $seatSize;
+        $section->metadata = $metadata;
+        $section->seat_color = $seatColor;
+        $section->save();
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Seat style updated')
+            ->body("Applied seat size {$seatSize}px and color {$seatColor}")
+            ->send();
+    }
+
+    /**
      * Set uniform vertical spacing between multiple rows
      */
     public function setRowSpacing(array $rowIds, float $spacing): void

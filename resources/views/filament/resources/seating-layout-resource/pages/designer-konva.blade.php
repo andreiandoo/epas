@@ -116,6 +116,7 @@
             editRowNumberingMode: 'numeric',
             editRowSeatSize: 20,
             editRowSeatSpacing: 25,
+            editRowSeatColor: '#22C55E',
             editRowCurve: 0,
             originalRowSeats: [], // Store original seat positions for preview calculations
             rowSelectMode: false,
@@ -1570,7 +1571,13 @@
                 } else {
                     this.editRowSeatSpacing = 25;
                 }
-                this.editRowSeatSize = 20; // Default seat size
+
+                // Get seat size and color from section metadata
+                const section = this.sections.find(s => s.id === sectionId);
+                const sectionMeta = section?.metadata || {};
+                this.editRowSeatSize = parseInt(sectionMeta.seat_size) || 20;
+                this.editRowSeatColor = section?.seat_color || '#22C55E';
+
                 this.editRowCurve = row.curve_offset || 0;
 
                 // Store original seat positions for preview calculations
@@ -1843,6 +1850,39 @@
                 } else {
                     this.drawSections();
                 }
+            },
+            previewRowSeatSize() {
+                if (!this.selectedRowSectionId) return;
+
+                const section = this.sections.find(s => s.id === this.selectedRowSectionId);
+                if (!section) return;
+
+                // Update section metadata temporarily for preview
+                if (!section.metadata) section.metadata = {};
+                section.metadata.seat_size = this.editRowSeatSize;
+
+                this.drawSections();
+            },
+            previewRowSeatColor() {
+                if (!this.selectedRowSectionId) return;
+
+                const section = this.sections.find(s => s.id === this.selectedRowSectionId);
+                if (!section) return;
+
+                // Update section seat_color temporarily for preview
+                section.seat_color = this.editRowSeatColor;
+
+                this.drawSections();
+            },
+            updateRowSeatStyle() {
+                if (!this.selectedRowSectionId) return;
+                const wire = this.getWire();
+                if (!wire) return;
+
+                wire.updateSectionSeatStyle(this.selectedRowSectionId, {
+                    seatSize: this.editRowSeatSize,
+                    seatColor: this.editRowSeatColor
+                });
             },
             // Multi-row selection methods
             toggleRowMultiSelect(sectionId, row, event) {
@@ -3746,6 +3786,21 @@
                             <input type="number" x-model.number="editRowSeatSpacing" x-on:input="previewRowSpacing()" x-on:change="updateRowSpacing()" min="15" max="100"
                                 class="w-14 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
                             <span class="text-xs text-gray-500">px</span>
+                        </div>
+
+                        {{-- Seat Size --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Dim. loc:</label>
+                            <input type="number" x-model.number="editRowSeatSize" x-on:input="previewRowSeatSize()" x-on:change="updateRowSeatStyle()" min="8" max="40"
+                                class="w-14 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                            <span class="text-xs text-gray-500">px</span>
+                        </div>
+
+                        {{-- Seat Color --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Culoare:</label>
+                            <input type="color" x-model="editRowSeatColor" x-on:input="previewRowSeatColor()" x-on:change="updateRowSeatStyle()"
+                                class="flex-1 h-6 border border-gray-300 rounded cursor-pointer">
                         </div>
 
                         {{-- Numbering Type --}}
