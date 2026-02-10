@@ -130,6 +130,12 @@
             lineDrawStart: null,
             tempLine: null,
             linePoints: [],
+            drawnLines: [],
+            selectedLine: null,
+            editLineColor: '#000000',
+            editLineStrokeWidth: 3,
+            showRowLabel: true,
+            rowLabelPos: 'left',
             init() {
                 console.log('Konva Designer: waiting for Konva library...');
                 this.waitForKonva();
@@ -858,6 +864,7 @@
                 this.selectedRowSectionId = null;
                 this.multiSelectedRows = [];
                 this.selectedSeatIds = [];
+                if (this.selectedLine) this.deselectLine();
                 this.transformer.nodes([]);
                 this.layer.batchDraw();
                 this.drawSections();
@@ -943,14 +950,43 @@
                 if (!section) return;
 
                 const row = section.rows?.find(r => r.id === this.selectedTableRow.id);
-                if (!row) return;
+                if (!row || !row.seats) return;
 
                 const metadata = row.metadata || {};
+                const centerX = parseFloat(metadata.center_x) || 50;
+                const centerY = parseFloat(metadata.center_y) || 50;
+                const seatCount = row.seats.length;
+                const seatGap = 20; // Fixed gap between table edge and seats
+
                 if (metadata.table_type === 'round') {
                     metadata.radius = this.editTableRadius;
+                    const seatRadius = this.editTableRadius + seatGap;
+                    // Recalculate seat positions to maintain gap
+                    row.seats.forEach((seat, i) => {
+                        const angle = (i / seatCount) * Math.PI * 2 - Math.PI / 2;
+                        seat.x = centerX + Math.cos(angle) * seatRadius;
+                        seat.y = centerY + Math.sin(angle) * seatRadius;
+                    });
                 } else {
                     metadata.width = this.editTableWidth;
                     metadata.height = this.editTableHeight;
+                    const tableWidth = this.editTableWidth;
+                    const tableHeight = this.editTableHeight;
+                    const seatsPerSide = Math.ceil(seatCount / 2);
+                    const spacing = tableWidth / (seatsPerSide + 1);
+                    let idx = 0;
+                    // Top seats
+                    for (let i = 0; i < seatsPerSide && idx < seatCount; i++) {
+                        row.seats[idx].x = centerX - tableWidth / 2 + (i + 1) * spacing;
+                        row.seats[idx].y = centerY - tableHeight / 2 - 15;
+                        idx++;
+                    }
+                    // Bottom seats
+                    for (let i = 0; i < seatsPerSide && idx < seatCount; i++) {
+                        row.seats[idx].x = centerX - tableWidth / 2 + (i + 1) * spacing;
+                        row.seats[idx].y = centerY + tableHeight / 2 + 15;
+                        idx++;
+                    }
                 }
                 row.metadata = metadata;
 
@@ -1121,6 +1157,7 @@
                 const currentCount = this.originalRowSeats.length;
                 const newCount = this.editRowSeats;
                 const spacing = this.editRowSeatSpacing || 25;
+                const curveOffset = this.editRowCurve || 0;
 
                 if (newCount === currentCount) {
                     // Reset to original seats
@@ -1137,8 +1174,8 @@
                             id: `preview-${i}`,
                             x: lastSeat.x + (i + 1) * spacing,
                             y: avgY,
-                            label: String(currentCount + i + 1),
-                            status: 'preview' // Mark as preview seat
+                            label: this.formatSeatLabelFrontend(currentCount + i + 1, this.editRowNumberingMode),
+                            status: 'preview'
                         });
                     }
                 } else {
@@ -1147,7 +1184,68 @@
                     row.seats = sortedOriginal.slice(0, newCount).map(s => ({...s}));
                 }
 
+                // Re-apply curve if set
+                if (curveOffset !== 0 && row.seats.length > 1) {
+                    const sortedSeats = [...row.seats].sort((a, b) => a.x - b.x);
+                    const minX = sortedSeats[0].x;
+                    const maxX = sortedSeats[sortedSeats.length - 1].x;
+                    const centerX = (minX + maxX) / 2;
+                    const rowWidth = maxX - minX;
+                    const baseY = row.seats.reduce((sum, s) => sum + s.y, 0) / row.seats.length;
+
+                    row.seats.forEach(seat => {
+                        if (rowWidth > 0) {
+                            const normalizedX = (seat.x - centerX) / (rowWidth / 2);
+                            const curveY = curveOffset * (1 - (normalizedX * normalizedX));
+                            seat.y = baseY + curveY;
+                        }
+                    });
+                }
+
                 // Redraw to show preview
+                this.drawSections();
+            },
+            formatSeatLabelFrontend(num, mode) {
+                if (mode === 'alpha') {
+                    let result = '';
+                    while (num > 0) {
+                        num--;
+                        result = String.fromCharCode(65 + (num % 26)) + result;
+                        num = Math.floor(num / 26);
+                    }
+                    return result;
+                } else if (mode === 'roman') {
+                    const map = [['M',1000],['CM',900],['D',500],['CD',400],['C',100],['XC',90],['L',50],['XL',40],['X',10],['IX',9],['V',5],['IV',4],['I',1]];
+                    let result = '';
+                    for (const [r, v] of map) {
+                        while (num >= v) { result += r; num -= v; }
+                    }
+                    return result;
+                }
+                return String(num);
+            },
+            previewNumberingType() {
+                if (!this.selectedRowData) return;
+
+                const section = this.sections.find(s => s.id === this.selectedRowSectionId);
+                if (!section) return;
+
+                const row = section.rows?.find(r => r.id === this.selectedRowData.id);
+                if (!row || !row.seats) return;
+
+                const startNum = this.editRowStartNumber || 1;
+                const mode = this.editRowNumberingMode;
+                const isRtl = this.editRowDirection === 'rtl';
+
+                // Sort seats by X position
+                const sortedSeats = [...row.seats].sort((a, b) => a.x - b.x);
+                if (isRtl) sortedSeats.reverse();
+
+                // Update labels
+                sortedSeats.forEach((seat, idx) => {
+                    seat.label = this.formatSeatLabelFrontend(startNum + idx, mode);
+                });
+
                 this.drawSections();
             },
             previewRowSpacing() {
@@ -1228,6 +1326,60 @@
                 this.$wire.setMultiRowSeatSpacing(rowIds, this.multiRowSeatSpacing).then(() => {
                     this.clearMultiRowSelection();
                 });
+            },
+            previewMultiRowSpacing() {
+                if (this.multiSelectedRows.length < 2) return;
+
+                // Sort selected rows by Y position
+                const sortedRows = [...this.multiSelectedRows].sort((a, b) => {
+                    const aY = a.row.seats?.[0]?.y || 0;
+                    const bY = b.row.seats?.[0]?.y || 0;
+                    return aY - bY;
+                });
+
+                // Get the first row's Y position as baseline
+                const baseY = sortedRows[0].row.seats?.[0]?.y || 0;
+                const spacing = this.multiRowSpacing;
+
+                // Update Y positions with new spacing
+                sortedRows.forEach((item, idx) => {
+                    const section = this.sections.find(s => s.id === item.sectionId);
+                    if (!section) return;
+                    const row = section.rows?.find(r => r.id === item.row.id);
+                    if (!row || !row.seats) return;
+
+                    const targetY = baseY + (idx * spacing);
+                    const deltaY = targetY - (row.seats[0]?.y || 0);
+                    row.seats.forEach(seat => {
+                        seat.y = (parseFloat(seat.y) || 0) + deltaY;
+                    });
+                });
+
+                this.drawSections();
+            },
+            previewMultiRowSeatSpacing() {
+                if (this.multiSelectedRows.length === 0) return;
+
+                const spacing = this.multiRowSeatSpacing;
+
+                this.multiSelectedRows.forEach(item => {
+                    const section = this.sections.find(s => s.id === item.sectionId);
+                    if (!section) return;
+                    const row = section.rows?.find(r => r.id === item.row.id);
+                    if (!row || !row.seats || row.seats.length < 2) return;
+
+                    // Sort by X position
+                    const sortedSeats = [...row.seats].sort((a, b) => a.x - b.x);
+                    const firstX = sortedSeats[0].x;
+                    const avgY = row.seats.reduce((sum, s) => sum + (parseFloat(s.y) || 0), 0) / row.seats.length;
+
+                    // Recalculate positions with new spacing
+                    row.seats.forEach((seat, idx) => {
+                        seat.x = firstX + (idx * spacing);
+                    });
+                });
+
+                this.drawSections();
             },
             updateMultiRowLabel(item) {
                 // Update row label immediately
@@ -1469,16 +1621,47 @@
                 const length = Math.sqrt(dx * dx + dy * dy);
 
                 if (length > 10) {
-                    // Create permanent line on the layer (visual only for now)
-                    const permanentLine = new Konva.Line({
+                    const lineId = 'line-' + Date.now();
+                    const lineData = {
+                        id: lineId,
                         points: [...this.linePoints],
                         stroke: this.shapeConfigColor || '#000000',
                         strokeWidth: this.shapeConfigStrokeWidth || 3,
+                    };
+                    this.drawnLines.push(lineData);
+
+                    // Create permanent line on the layer
+                    const permanentLine = new Konva.Line({
+                        points: lineData.points,
+                        stroke: lineData.stroke,
+                        strokeWidth: lineData.strokeWidth,
                         lineCap: 'round',
                         lineJoin: 'round',
                         name: 'decoration-line',
-                        draggable: this.drawMode === 'select'
+                        id: lineId,
+                        draggable: true,
+                        hitStrokeWidth: 15
                     });
+
+                    permanentLine.on('click tap', (e) => {
+                        if (this.drawMode === 'select') {
+                            e.cancelBubble = true;
+                            this.selectLine(lineId);
+                        }
+                    });
+
+                    permanentLine.on('dragend', () => {
+                        const data = this.drawnLines.find(l => l.id === lineId);
+                        if (data) {
+                            const dx = permanentLine.x();
+                            const dy = permanentLine.y();
+                            data.points = data.points.map((p, i) => i % 2 === 0 ? p + dx : p + dy);
+                            permanentLine.x(0);
+                            permanentLine.y(0);
+                            permanentLine.points(data.points);
+                        }
+                    });
+
                     this.layer.add(permanentLine);
                     this.layer.batchDraw();
                 }
@@ -1488,6 +1671,63 @@
                 this.lineDrawStart = null;
                 this.linePoints = [];
                 this.drawLayer.batchDraw();
+            },
+            selectLine(lineId) {
+                this.selectedLine = this.drawnLines.find(l => l.id === lineId) || null;
+                if (this.selectedLine) {
+                    this.editLineColor = this.selectedLine.stroke;
+                    this.editLineStrokeWidth = this.selectedLine.strokeWidth;
+                    // Highlight selected line
+                    this.layer.find('.decoration-line').forEach(line => {
+                        if (line.id() === lineId) {
+                            line.stroke(this.selectedLine.stroke);
+                            line.strokeWidth(this.selectedLine.strokeWidth + 2);
+                            line.dash([5, 5]);
+                        } else {
+                            const data = this.drawnLines.find(l => l.id === line.id());
+                            if (data) {
+                                line.stroke(data.stroke);
+                                line.strokeWidth(data.strokeWidth);
+                                line.dash([]);
+                            }
+                        }
+                    });
+                    this.layer.batchDraw();
+                }
+            },
+            deselectLine() {
+                if (this.selectedLine) {
+                    const line = this.layer.findOne('#' + this.selectedLine.id);
+                    if (line) {
+                        line.stroke(this.selectedLine.stroke);
+                        line.strokeWidth(this.selectedLine.strokeWidth);
+                        line.dash([]);
+                    }
+                }
+                this.selectedLine = null;
+                this.layer.batchDraw();
+            },
+            updateLineStyle() {
+                if (!this.selectedLine) return;
+                this.selectedLine.stroke = this.editLineColor;
+                this.selectedLine.strokeWidth = this.editLineStrokeWidth;
+                const konvaLine = this.layer.findOne('#' + this.selectedLine.id);
+                if (konvaLine) {
+                    konvaLine.stroke(this.editLineColor);
+                    konvaLine.strokeWidth(this.editLineStrokeWidth);
+                    konvaLine.dash([]);
+                    this.layer.batchDraw();
+                }
+            },
+            deleteLine() {
+                if (!this.selectedLine) return;
+                const konvaLine = this.layer.findOne('#' + this.selectedLine.id);
+                if (konvaLine) {
+                    konvaLine.destroy();
+                }
+                this.drawnLines = this.drawnLines.filter(l => l.id !== this.selectedLine.id);
+                this.selectedLine = null;
+                this.layer.batchDraw();
             },
             addPolygonPoint(pos) {
                 this.polygonPoints.push(pos.x, pos.y);
@@ -2244,11 +2484,11 @@
                             <div class="p-2 bg-white border border-amber-200 rounded">
                                 <div class="mb-2 text-xs font-medium text-amber-700">Spațiere rânduri (px)</div>
                                 <div class="flex items-center gap-2">
-                                    <input type="number" x-model.number="multiRowSpacing" min="20" max="200" step="5"
-                                        class="flex-1 px-2 py-1 text-xs border border-amber-300 rounded">
+                                    <input type="range" x-model.number="multiRowSpacing" x-on:input="previewMultiRowSpacing()" min="20" max="200" step="5" class="flex-1">
+                                    <span class="w-10 text-xs text-center" x-text="multiRowSpacing"></span>
                                     <button x-on:click="applyMultiRowSpacing()" type="button"
-                                        class="px-3 py-1 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
-                                        Aplică
+                                        class="px-2 py-1 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
+                                        ✓
                                     </button>
                                 </div>
                             </div>
@@ -2257,11 +2497,11 @@
                             <div class="p-2 bg-white border border-amber-200 rounded">
                                 <div class="mb-2 text-xs font-medium text-amber-700">Spațiere locuri (px)</div>
                                 <div class="flex items-center gap-2">
-                                    <input type="number" x-model.number="multiRowSeatSpacing" min="15" max="100" step="5"
-                                        class="flex-1 px-2 py-1 text-xs border border-amber-300 rounded">
+                                    <input type="range" x-model.number="multiRowSeatSpacing" x-on:input="previewMultiRowSeatSpacing()" min="15" max="100" step="5" class="flex-1">
+                                    <span class="w-10 text-xs text-center" x-text="multiRowSeatSpacing"></span>
                                     <button x-on:click="applyMultiRowSeatSpacing()" type="button"
-                                        class="px-3 py-1 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
-                                        Aplică
+                                        class="px-2 py-1 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">
+                                        ✓
                                     </button>
                                 </div>
                             </div>
@@ -2367,7 +2607,36 @@
             </div>
 
             {{-- RIGHT SIDEBAR - Properties Panel --}}
-            <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-80" x-show="selectedSection || selectedDrawnRow || addSeatsMode || selectedTableRow || selectedRowData" x-transition>
+            <div class="flex-shrink-0 p-4 space-y-4 bg-white border border-gray-200 rounded-lg shadow-sm w-80" x-show="selectedSection || selectedDrawnRow || addSeatsMode || selectedTableRow || selectedRowData || selectedLine" x-transition>
+                {{-- Line Properties Panel --}}
+                <template x-if="selectedLine">
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between pb-1 border-b border-gray-200">
+                            <h4 class="text-xs font-bold tracking-wide text-gray-700 uppercase">Proprietăți Linie</h4>
+                            <button x-on:click="deselectLine()" class="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+                        </div>
+
+                        {{-- Line Color --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Culoare:</label>
+                            <input type="color" x-model="editLineColor" x-on:input="updateLineStyle()" class="flex-1 h-7 border rounded cursor-pointer">
+                        </div>
+
+                        {{-- Line Stroke Width --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Grosime:</label>
+                            <input type="range" x-model.number="editLineStrokeWidth" x-on:input="updateLineStyle()" min="1" max="20" class="flex-1">
+                            <span class="w-10 text-xs text-center" x-text="editLineStrokeWidth + 'px'"></span>
+                        </div>
+
+                        {{-- Delete Button --}}
+                        <button x-on:click="deleteLine()" type="button"
+                            class="w-full px-2 py-1.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700">
+                            Șterge Linia
+                        </button>
+                    </div>
+                </template>
+
                 {{-- Table Properties Panel (compact with real-time) --}}
                 <template x-if="selectedTableRow">
                     <div class="space-y-2">
@@ -2490,10 +2759,24 @@
                         {{-- Numbering Type --}}
                         <div class="flex items-center gap-1">
                             <label class="text-xs text-gray-600 w-16">Tip nr:</label>
-                            <select x-model="editRowNumberingMode" class="flex-1 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                            <select x-model="editRowNumberingMode" x-on:change="previewNumberingType()" class="flex-1 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
                                 <option value="numeric">1, 2, 3...</option>
                                 <option value="alpha">A, B, C...</option>
                                 <option value="roman">I, II, III...</option>
+                            </select>
+                        </div>
+
+                        {{-- Row Label Settings --}}
+                        <div class="flex items-center gap-1 pt-1 border-t border-gray-100">
+                            <label class="flex items-center gap-1 text-xs text-gray-600">
+                                <input type="checkbox" x-model="showRowLabel" class="w-3 h-3">
+                                Etichetă
+                            </label>
+                            <select x-model="rowLabelPos" class="flex-1 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!showRowLabel">
+                                <option value="left">Stânga</option>
+                                <option value="right">Dreapta</option>
+                                <option value="above">Sus</option>
+                                <option value="below">Jos</option>
                             </select>
                         </div>
 
@@ -2598,133 +2881,93 @@
 
                 {{-- Section Properties (hidden when in addSeats mode, table selected, or row selected) --}}
                 <template x-if="selectedSection && !selectedDrawnRow && !addSeatsMode && !selectedTableRow && !selectedRowData">
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between pb-2 border-b border-gray-200">
-                            <h4 class="text-sm font-bold tracking-wide text-gray-700 uppercase">Proprietăți Secțiune</h4>
-                            <button x-on:click="selectedSection = null" class="text-gray-400 hover:text-gray-600">✕</button>
-                        </div>
-
-                        {{-- Section Name --}}
-                        <div>
-                            <label class="block mb-1 text-xs font-medium text-gray-600">Nume Secțiune</label>
-                            <div class="text-sm font-semibold text-gray-900" x-text="getSelectedSectionData()?.name || 'Fără nume'"></div>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between pb-1 border-b border-gray-200">
+                            <h4 class="text-xs font-bold tracking-wide text-gray-700 uppercase">
+                                Secțiune: <span x-text="getSelectedSectionData()?.name || '-'"></span>
+                            </h4>
+                            <button x-on:click="selectedSection = null" class="text-gray-400 hover:text-gray-600 text-sm">✕</button>
                         </div>
 
                         {{-- Action Buttons --}}
-                        <div class="space-y-2" x-show="getSelectedSectionData()?.section_type === 'standard'">
-                            {{-- Add Seats Button --}}
+                        <div class="flex gap-1" x-show="getSelectedSectionData()?.section_type === 'standard'">
                             <button x-on:click="addSeatsMode = true" type="button"
-                                class="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md">
-                                <x-svg-icon name="konvaseats" class="w-5 h-5" />
-                                Adaugă Locuri
+                                class="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold text-white rounded bg-purple-600 hover:bg-purple-700">
+                                <x-svg-icon name="konvaseats" class="w-4 h-4" /> Locuri
                             </button>
-
-                            {{-- Select Row Button --}}
                             <button x-on:click="rowSelectMode = !rowSelectMode; if(rowSelectMode) { seatSelectMode = false; clearSeatSelection(); }" type="button"
-                                class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold transition-all rounded-lg"
+                                class="flex-1 px-2 py-1.5 text-xs font-semibold rounded"
                                 :class="rowSelectMode ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
-                                </svg>
-                                <span x-text="rowSelectMode ? 'Mod Selectare Activ' : 'Selectează Rând/Masă'"></span>
+                                Rânduri
                             </button>
-
-                            {{-- Row Select Mode Info --}}
-                            <div x-show="rowSelectMode" x-transition class="p-2 text-xs text-amber-800 rounded-lg bg-amber-50">
-                                <p class="font-medium">Mod selectare activ</p>
-                                <p class="mt-1">Click pe un rând sau masă pentru a-l selecta. Treceți cu mouse-ul pentru a vedea contururile.</p>
-                                <p class="mt-1"><strong>Ctrl+Click</strong> pentru selectare multiplă.</p>
-                            </div>
-
-                            {{-- Select Seat Button --}}
                             <button x-on:click="seatSelectMode = !seatSelectMode; if(seatSelectMode) { rowSelectMode = false; clearMultiRowSelection(); deselectRow(); }" type="button"
-                                class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold transition-all rounded-lg"
+                                class="flex-1 px-2 py-1.5 text-xs font-semibold rounded"
                                 :class="seatSelectMode ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                <span x-text="seatSelectMode ? 'Mod Selectare Locuri' : 'Selectează Locuri'"></span>
+                                Locuri
                             </button>
-
-                            {{-- Seat Select Mode Info --}}
-                            <div x-show="seatSelectMode" x-transition class="p-2 text-xs text-blue-800 rounded-lg bg-blue-50">
-                                <p class="font-medium">Mod selectare locuri activ</p>
-                                <p class="mt-1">Click pe un loc pentru a-l selecta.</p>
-                                <p class="mt-1"><strong>Ctrl+Click</strong> pentru selectare multiplă.</p>
-                            </div>
                         </div>
 
-                        {{-- Transform Section --}}
-                        <div class="p-3 space-y-3 rounded-lg bg-gray-50">
-                            <div class="text-xs font-semibold text-gray-600 uppercase">Transformare</div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs text-gray-500">Lățime</label>
-                                    <input type="number" x-model="sectionWidth" x-on:input="updateSectionPreview()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-500">Înălțime</label>
-                                    <input type="number" x-model="sectionHeight" x-on:input="updateSectionPreview()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-500">Rotație (°)</label>
-                                <input type="range" x-model="sectionRotation" x-on:input="updateSectionPreview()" min="0" max="360" class="w-full">
-                                <div class="text-xs text-center text-gray-500" x-text="sectionRotation + '°'"></div>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-500">Colțuri rotunjite</label>
-                                <input type="range" x-model="sectionCornerRadius" x-on:input="updateSectionPreview()" min="0" max="50" class="w-full">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-500">Scalare</label>
-                                <input type="range" x-model="sectionScale" x-on:input="updateSectionPreview()" min="0.5" max="2" step="0.1" class="w-full">
-                                <div class="text-xs text-center text-gray-500" x-text="(sectionScale * 100).toFixed(0) + '%'"></div>
-                            </div>
+                        {{-- Mode Info --}}
+                        <div x-show="rowSelectMode" x-transition class="p-1.5 text-xs text-amber-700 rounded bg-amber-50">
+                            Click rând/masă. <strong>Ctrl+Click</strong> = multi-selectare.
+                        </div>
+                        <div x-show="seatSelectMode" x-transition class="p-1.5 text-xs text-blue-700 rounded bg-blue-50">
+                            Click loc. <strong>Ctrl+Click</strong> = multi-selectare.
                         </div>
 
-                        {{-- Label Section --}}
-                        <div class="p-3 space-y-3 rounded-lg bg-gray-50">
-                            <div class="text-xs font-semibold text-gray-600 uppercase">Etichetă</div>
-                            <div>
-                                <label class="block text-xs text-gray-500">Nume afișat</label>
-                                <input type="text" x-model="sectionLabel" x-on:input="updateSectionPreview()" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded" placeholder="Nume secțiune">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-500">Dimensiune font</label>
-                                <input type="number" x-model="sectionFontSize" x-on:input="updateSectionPreview()" min="8" max="72" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
-                            </div>
+                        {{-- Dimensions --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-500 w-10">Dim:</label>
+                            <input type="number" x-model="sectionWidth" x-on:input="updateSectionPreview()" class="w-14 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded" title="Lățime">
+                            <span class="text-gray-400">×</span>
+                            <input type="number" x-model="sectionHeight" x-on:input="updateSectionPreview()" class="w-14 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded" title="Înălțime">
+                            <span class="text-xs text-gray-400">px</span>
+                        </div>
+
+                        {{-- Rotation --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-500 w-10">Rot:</label>
+                            <input type="range" x-model="sectionRotation" x-on:input="updateSectionPreview()" min="0" max="360" class="flex-1">
+                            <span class="w-10 text-xs text-center" x-text="sectionRotation + '°'"></span>
+                        </div>
+
+                        {{-- Corner Radius --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-500 w-10">Colț:</label>
+                            <input type="range" x-model="sectionCornerRadius" x-on:input="updateSectionPreview()" min="0" max="50" class="flex-1">
+                            <span class="w-10 text-xs text-center" x-text="sectionCornerRadius + 'px'"></span>
+                        </div>
+
+                        {{-- Scale --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-500 w-10">Scală:</label>
+                            <input type="range" x-model="sectionScale" x-on:input="updateSectionPreview()" min="0.5" max="2" step="0.1" class="flex-1">
+                            <span class="w-10 text-xs text-center" x-text="(sectionScale * 100).toFixed(0) + '%'"></span>
+                        </div>
+
+                        {{-- Label --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-500 w-10">Nume:</label>
+                            <input type="text" x-model="sectionLabel" x-on:input="updateSectionPreview()" class="flex-1 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded" placeholder="Nume secțiune">
+                            <input type="number" x-model="sectionFontSize" x-on:input="updateSectionPreview()" min="8" max="72" class="w-10 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded" title="Font size">
                         </div>
 
                         {{-- Colors --}}
-                        <div class="p-3 space-y-3 rounded-lg bg-gray-50">
-                            <div class="text-xs font-semibold text-gray-600 uppercase">Culori</div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs text-gray-500">Fundal</label>
-                                    <input type="color" x-model="editColorHex" x-on:input="updateSectionPreview()" class="w-full h-8 border rounded cursor-pointer">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-500">Locuri</label>
-                                    <input type="color" x-model="editSeatColor" x-on:input="updateSectionPreview()" class="w-full h-8 border rounded cursor-pointer">
-                                </div>
-                            </div>
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-500 w-10">Culori:</label>
+                            <input type="color" x-model="editColorHex" x-on:input="updateSectionPreview()" class="w-8 h-6 border rounded cursor-pointer" title="Fundal">
+                            <input type="color" x-model="editSeatColor" x-on:input="updateSectionPreview()" class="w-8 h-6 border rounded cursor-pointer" title="Locuri">
+                            <button x-on:click="saveSectionChanges()" type="button"
+                                class="flex-1 px-2 py-0.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700">
+                                Salvează
+                            </button>
                         </div>
 
-                        {{-- Save Button --}}
-                        <button x-on:click="saveSectionChanges()" type="button"
-                            class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold text-white transition-all bg-green-600 rounded-lg hover:bg-green-700">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
-                            </svg>
-                            Salvează
-                        </button>
-
                         {{-- Section Info --}}
-                        <div class="p-3 space-y-1 text-xs rounded-lg bg-gray-50">
-                            <div class="flex justify-between"><span class="text-gray-500">Rânduri:</span> <span class="font-medium" x-text="getSelectedSectionData()?.rows?.length || 0"></span></div>
-                            <div class="flex justify-between"><span class="text-gray-500">Locuri:</span> <span class="font-medium" x-text="getSelectedSectionSeatsCount && getSelectedSectionSeatsCount() || 0"></span></div>
-                            <div class="flex justify-between"><span class="text-gray-500">Poziție:</span> <span class="font-medium" x-text="`${Math.round(getSelectedSectionData()?.x_position || 0)}, ${Math.round(getSelectedSectionData()?.y_position || 0)}`"></span></div>
+                        <div class="flex items-center justify-between pt-1 border-t border-gray-200 text-xs text-gray-500">
+                            <span><span x-text="getSelectedSectionData()?.rows?.length || 0"></span> rânduri</span>
+                            <span><span x-text="getSelectedSectionSeatsCount && getSelectedSectionSeatsCount() || 0"></span> locuri</span>
+                            <span x-text="`(${Math.round(getSelectedSectionData()?.x_position || 0)}, ${Math.round(getSelectedSectionData()?.y_position || 0)})`"></span>
                         </div>
                     </div>
                 </template>

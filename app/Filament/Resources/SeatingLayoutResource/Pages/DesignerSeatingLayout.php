@@ -2813,6 +2813,12 @@ class DesignerSeatingLayout extends Page
             $seatNum++;
         }
 
+        // Re-apply curve if it was set
+        $curveOffset = $row->curve_offset ?? 0;
+        if ($curveOffset != 0) {
+            $this->applyCurveToRow($row, $curveOffset);
+        }
+
         $this->reloadSections();
         $this->dispatch('layout-updated', sections: $this->sections);
 
@@ -2821,6 +2827,33 @@ class DesignerSeatingLayout extends Page
             ->title('Locuri actualizate')
             ->body("Rândul '{$row->label}' are acum {$newSeatCount} locuri")
             ->send();
+    }
+
+    /**
+     * Apply parabolic curve to a row's seats (internal helper)
+     */
+    private function applyCurveToRow(SeatingRow $row, float $curveOffset): void
+    {
+        $seats = $row->seats()->orderBy('x')->get();
+        if ($seats->isEmpty()) return;
+
+        $minX = $seats->first()->x;
+        $maxX = $seats->last()->x;
+        $centerX = ($minX + $maxX) / 2;
+        $rowWidth = $maxX - $minX;
+        $baseY = $seats->avg('y');
+
+        foreach ($seats as $seat) {
+            if ($rowWidth > 0) {
+                $normalizedX = ($seat->x - $centerX) / ($rowWidth / 2);
+                $curveY = $curveOffset * (1 - ($normalizedX * $normalizedX));
+                $newY = $baseY + $curveY;
+            } else {
+                $newY = $baseY;
+            }
+
+            $seat->update(['y' => round($newY, 2)]);
+        }
     }
 
     /**
