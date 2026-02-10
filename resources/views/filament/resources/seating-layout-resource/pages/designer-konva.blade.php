@@ -89,6 +89,8 @@
             editTableHeight: 30,
             editTableRadius: 25,
             editTableSeats: 6,
+            editTableColor: '#8B4513',
+            editTableSeatSpacing: 20,
             selectedRowData: null,
             selectedRowSectionId: null,
             editRowLabel: '',
@@ -354,6 +356,114 @@
                 this.layer.batchDraw();
                 this.seatsLayer.batchDraw();
             },
+            drawIconSection(section, sectionDraggable) {
+                const metadata = section.metadata || {};
+                const iconKey = metadata.icon_key || 'info_point';
+                const iconColor = metadata.icon_color || '#FFFFFF';
+                const iconSize = parseInt(metadata.icon_size) || 48;
+                const iconLabel = section.label || '';
+
+                // Get icon SVG from definitions
+                const iconDef = this.iconDefinitions[iconKey];
+                if (!iconDef) {
+                    console.warn(`Icon definition not found for key: ${iconKey}`);
+                    return;
+                }
+
+                const totalHeight = iconLabel ? iconSize + 20 : iconSize;
+
+                // Create group for the icon
+                const group = new Konva.Group({
+                    x: (section.x_position || 0) + iconSize / 2,
+                    y: (section.y_position || 0) + totalHeight / 2,
+                    offsetX: iconSize / 2,
+                    offsetY: totalHeight / 2,
+                    rotation: section.rotation || 0,
+                    scaleX: section.scale || 1,
+                    scaleY: section.scale || 1,
+                    draggable: sectionDraggable,
+                    id: `section-${section.id}`,
+                    name: 'section-shape'
+                });
+
+                // Create image from SVG
+                const svgString = iconDef.svg;
+                const img = new Image();
+                const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(svgBlob);
+
+                img.onload = () => {
+                    const konvaImage = new Konva.Image({
+                        x: 0,
+                        y: 0,
+                        width: iconSize,
+                        height: iconSize,
+                        image: img,
+                        name: 'icon-image'
+                    });
+                    group.add(konvaImage);
+
+                    // Selection highlight (subtle border when selected)
+                    if (this.selectedSection === section.id) {
+                        const highlight = new Konva.Rect({
+                            x: -4,
+                            y: -4,
+                            width: iconSize + 8,
+                            height: totalHeight + 8,
+                            stroke: '#3B82F6',
+                            strokeWidth: 2,
+                            cornerRadius: 4,
+                            dash: [5, 3],
+                            name: 'selection-highlight'
+                        });
+                        group.add(highlight);
+                    }
+
+                    this.layer.batchDraw();
+                    URL.revokeObjectURL(url);
+                };
+                img.src = url;
+
+                // Add label below icon if provided
+                if (iconLabel) {
+                    const labelText = new Konva.Text({
+                        x: 0,
+                        y: iconSize + 4,
+                        width: iconSize,
+                        text: iconLabel,
+                        fontSize: 11,
+                        fontFamily: 'Arial',
+                        fontStyle: 'bold',
+                        fill: iconColor,
+                        align: 'center',
+                        name: 'icon-label'
+                    });
+                    group.add(labelText);
+                }
+
+                // Event handlers for icon section
+                group.on('click tap', (e) => {
+                    if (this.drawMode === 'select') {
+                        e.cancelBubble = true;
+                        this.selectSection(section.id);
+                    }
+                });
+
+                group.on('contextmenu', (e) => {
+                    e.evt.preventDefault();
+                    this.showSectionContextMenu(e, section);
+                });
+
+                group.on('dragend', () => {
+                    const topLeftX = group.x() - group.offsetX();
+                    const topLeftY = group.y() - group.offsetY();
+                    if (this.getWire()) {
+                        this.updateSectionPosition(section.id, Math.round(topLeftX), Math.round(topLeftY));
+                    }
+                });
+
+                this.layer.add(group);
+            },
             drawSection(section) {
                 const sectionWidth = section.width || 200;
                 const sectionHeight = section.height || 150;
@@ -362,6 +472,12 @@
                 const hasSelectedRow = this.selectedRowData && this.selectedRowSectionId === section.id;
                 const hasSelectedTable = this.selectedTableRow && this.selectedTableSectionId === section.id;
                 const sectionDraggable = this.drawMode === 'select' && !hasSelectedRow && !hasSelectedTable;
+
+                // Handle icon sections differently
+                if (section.section_type === 'icon') {
+                    this.drawIconSection(section, sectionDraggable);
+                    return;
+                }
 
                 // Create group with offset at center for rotation around center
                 const group = new Konva.Group({
@@ -460,6 +576,9 @@
                             const centerY = parseFloat(metadata.center_y) || 50;
                             const tableName = row.label || 'Masă';
 
+                            // Get table color from metadata
+                            const tableColor = metadata.table_color || '#8B4513';
+
                             if (metadata.table_type === 'round') {
                                 // Draw round table circle
                                 const tableRadius = parseFloat(metadata.radius) || 30;
@@ -467,8 +586,8 @@
                                     x: centerX,
                                     y: centerY,
                                     radius: tableRadius,
-                                    fill: '#8B4513',
-                                    stroke: isTableSelected ? '#FFD700' : '#5D3A1A',
+                                    fill: tableColor,
+                                    stroke: isTableSelected ? '#FFD700' : this.darkenColor(tableColor, 30),
                                     strokeWidth: isTableSelected ? 3 : 2,
                                     name: 'table-shape',
                                     id: `table-${row.id}`
@@ -505,8 +624,8 @@
                                     y: centerY - tableHeight / 2,
                                     width: tableWidth,
                                     height: tableHeight,
-                                    fill: '#8B4513',
-                                    stroke: isTableSelected ? '#FFD700' : '#5D3A1A',
+                                    fill: tableColor,
+                                    stroke: isTableSelected ? '#FFD700' : this.darkenColor(tableColor, 30),
                                     strokeWidth: isTableSelected ? 3 : 2,
                                     cornerRadius: 4,
                                     name: 'table-shape',
@@ -934,6 +1053,20 @@
                 const transform = this.stage.getAbsoluteTransform().copy().invert();
                 return transform.point(pos);
             },
+            darkenColor(hex, percent) {
+                // Remove # if present
+                hex = hex.replace(/^#/, '');
+                // Parse hex to RGB
+                let r = parseInt(hex.substring(0, 2), 16);
+                let g = parseInt(hex.substring(2, 4), 16);
+                let b = parseInt(hex.substring(4, 6), 16);
+                // Darken by percent
+                r = Math.max(0, Math.floor(r * (100 - percent) / 100));
+                g = Math.max(0, Math.floor(g * (100 - percent) / 100));
+                b = Math.max(0, Math.floor(b * (100 - percent) / 100));
+                // Convert back to hex
+                return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+            },
             selectSection(sectionId) {
                 this.selectedSection = sectionId;
                 const group = this.stage.findOne(`#section-${sectionId}`);
@@ -979,6 +1112,8 @@
                 const metadata = row.metadata || {};
                 this.editTableName = row.label || '';
                 this.editTableSeats = row.seats?.length || 0;
+                this.editTableColor = metadata.table_color || '#8B4513';
+                this.editTableSeatSpacing = parseFloat(metadata.seat_spacing) || 20;
                 if (metadata.table_type === 'round') {
                     this.editTableRadius = parseFloat(metadata.radius) || 25;
                 } else {
@@ -1098,6 +1233,91 @@
 
                 // Redraw to show preview
                 this.drawSections();
+            },
+            previewTableColor() {
+                if (!this.selectedTableRow) return;
+
+                // Update the local metadata for preview
+                const section = this.sections.find(s => s.id === this.selectedTableSectionId);
+                if (!section) return;
+
+                const row = section.rows?.find(r => r.id === this.selectedTableRow.id);
+                if (!row) return;
+
+                row.metadata = row.metadata || {};
+                row.metadata.table_color = this.editTableColor;
+
+                // Redraw to show preview
+                this.drawSections();
+            },
+            updateTableColor() {
+                if (!this.selectedTableRow) return;
+                const wire = this.getWire();
+                if (!wire) return;
+
+                wire.updateTableMetadata(this.selectedTableRow.id, {
+                    table_color: this.editTableColor
+                }).then(() => {
+                    this.drawSections();
+                });
+            },
+            previewTableSeatSpacing() {
+                if (!this.selectedTableRow) return;
+
+                // Update the local metadata for preview
+                const section = this.sections.find(s => s.id === this.selectedTableSectionId);
+                if (!section) return;
+
+                const row = section.rows?.find(r => r.id === this.selectedTableRow.id);
+                if (!row || !row.seats) return;
+
+                const metadata = row.metadata || {};
+                const centerX = parseFloat(metadata.center_x) || 50;
+                const centerY = parseFloat(metadata.center_y) || 50;
+                const seatCount = row.seats.length;
+                const seatGap = this.editTableSeatSpacing;
+
+                if (metadata.table_type === 'round') {
+                    const tableRadius = parseFloat(metadata.radius) || 25;
+                    const seatRadius = tableRadius + seatGap;
+                    // Recalculate seat positions based on new spacing
+                    row.seats.forEach((seat, i) => {
+                        const angle = (i / seatCount) * Math.PI * 2 - Math.PI / 2;
+                        seat.x = centerX + Math.cos(angle) * seatRadius;
+                        seat.y = centerY + Math.sin(angle) * seatRadius;
+                    });
+                } else if (metadata.table_type === 'rect') {
+                    const tableWidth = parseFloat(metadata.width) || 80;
+                    const tableHeight = parseFloat(metadata.height) || 30;
+                    const seatsPerSide = Math.ceil(seatCount / 2);
+                    const spacing = tableWidth / (seatsPerSide + 1);
+                    let idx = 0;
+                    // Top seats
+                    for (let i = 0; i < seatsPerSide && idx < seatCount; i++) {
+                        row.seats[idx].x = centerX - tableWidth / 2 + (i + 1) * spacing;
+                        row.seats[idx].y = centerY - tableHeight / 2 - seatGap;
+                        idx++;
+                    }
+                    // Bottom seats
+                    for (let i = 0; i < seatsPerSide && idx < seatCount; i++) {
+                        row.seats[idx].x = centerX - tableWidth / 2 + (i + 1) * spacing;
+                        row.seats[idx].y = centerY + tableHeight / 2 + seatGap;
+                        idx++;
+                    }
+                }
+                row.metadata.seat_spacing = this.editTableSeatSpacing;
+
+                // Redraw to show preview
+                this.drawSections();
+            },
+            updateTableSeatSpacing() {
+                if (!this.selectedTableRow) return;
+                const wire = this.getWire();
+                if (!wire) return;
+
+                wire.updateTableSeatSpacing(this.selectedTableRow.id, this.editTableSeatSpacing).then(() => {
+                    this.drawSections();
+                });
             },
             selectRow(sectionId, row) {
                 this.selectedRowData = row;
@@ -2883,6 +3103,24 @@
                                 class="px-2 py-0.5 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">Salvează</button>
                         </div>
 
+                        {{-- Table Color --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Culoare:</label>
+                            <input type="color" x-model="editTableColor" x-on:input="previewTableColor()"
+                                class="w-8 h-6 p-0 border border-gray-300 rounded cursor-pointer">
+                            <button x-on:click="updateTableColor()" type="button"
+                                class="px-2 py-0.5 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">Salvează</button>
+                        </div>
+
+                        {{-- Seat Spacing --}}
+                        <div class="flex items-center gap-1">
+                            <label class="text-xs text-gray-600 w-16">Spațiere:</label>
+                            <input type="range" x-model.number="editTableSeatSpacing" x-on:input="previewTableSeatSpacing()" min="10" max="50" class="flex-1">
+                            <span class="w-10 text-xs text-center" x-text="editTableSeatSpacing + 'px'"></span>
+                            <button x-on:click="updateTableSeatSpacing()" type="button"
+                                class="px-2 py-0.5 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">✓</button>
+                        </div>
+
                         {{-- Round Table Radius --}}
                         <div x-show="selectedTableRow?.metadata?.table_type === 'round'" class="flex items-center gap-1">
                             <label class="text-xs text-gray-600 w-16">Rază:</label>
@@ -3291,15 +3529,16 @@
 
         {{-- Block Reason Modal --}}
         <div x-cloak x-show="showBlockReasonModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" x-on:click.self="showBlockReasonModal = false" x-on:keydown.escape.window="showBlockReasonModal = false">
-            <div x-show="showBlockReasonModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="w-full max-w-sm p-6 bg-white rounded-lg shadow-xl">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Motivul blocării</h3>
-                    <button x-on:click="showBlockReasonModal = false" type="button" class="text-gray-400 hover:text-gray-600">
+            <div x-show="showBlockReasonModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="w-full max-w-sm overflow-hidden bg-white rounded-lg shadow-xl">
+                <div class="flex items-center justify-between px-6 py-4 bg-gray-800">
+                    <h3 class="text-lg font-semibold text-white">Motivul blocării</h3>
+                    <button x-on:click="showBlockReasonModal = false" type="button" class="text-gray-300 hover:text-white">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
+                <div class="p-6">
                 <p class="mb-4 text-sm text-gray-600">
                     Selectați motivul pentru care blocați <span x-text="selectedSeatIds.length" class="font-medium"></span> loc(uri):
                 </p>
@@ -3333,6 +3572,7 @@
                     <button x-on:click="blockSelectedSeatsWithReason()" type="button" class="px-4 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700">
                         Blochează
                     </button>
+                </div>
                 </div>
             </div>
         </div>

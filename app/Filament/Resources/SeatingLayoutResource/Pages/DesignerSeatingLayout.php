@@ -1951,6 +1951,109 @@ class DesignerSeatingLayout extends Page
     }
 
     /**
+     * Update table metadata (color, etc.)
+     */
+    public function updateTableMetadata($rowId, array $data): void
+    {
+        $row = SeatingRow::with('section')->find($rowId);
+
+        if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Table not found')
+                ->send();
+            return;
+        }
+
+        $metadata = $row->metadata ?? [];
+        if (!($metadata['is_table'] ?? false)) {
+            return;
+        }
+
+        // Update metadata with new values
+        foreach ($data as $key => $value) {
+            $metadata[$key] = $value;
+        }
+
+        $row->update(['metadata' => $metadata]);
+
+        $this->dispatch('layout-updated', sections: $this->getSections());
+    }
+
+    /**
+     * Update table seat spacing and recalculate seat positions
+     */
+    public function updateTableSeatSpacing($rowId, float $seatSpacing): void
+    {
+        $row = SeatingRow::with(['section', 'seats'])->find($rowId);
+
+        if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Table not found')
+                ->send();
+            return;
+        }
+
+        $metadata = $row->metadata ?? [];
+        if (!($metadata['is_table'] ?? false)) {
+            return;
+        }
+
+        // Store seat spacing in metadata
+        $metadata['seat_spacing'] = $seatSpacing;
+        $row->update(['metadata' => $metadata]);
+
+        // Recalculate seat positions based on new spacing
+        $centerX = (float) ($metadata['center_x'] ?? 50);
+        $centerY = (float) ($metadata['center_y'] ?? 50);
+        $seats = $row->seats()->orderBy('id')->get();
+        $seatCount = $seats->count();
+
+        if ($seatCount === 0) {
+            return;
+        }
+
+        if ($metadata['table_type'] === 'round') {
+            $tableRadius = (float) ($metadata['radius'] ?? 25);
+            $seatRadius = $tableRadius + $seatSpacing;
+
+            foreach ($seats as $index => $seat) {
+                $angle = ($index / $seatCount) * 2 * M_PI - (M_PI / 2);
+                $seat->update([
+                    'x' => $centerX + cos($angle) * $seatRadius,
+                    'y' => $centerY + sin($angle) * $seatRadius,
+                ]);
+            }
+        } elseif ($metadata['table_type'] === 'rect') {
+            $tableWidth = (float) ($metadata['width'] ?? 80);
+            $tableHeight = (float) ($metadata['height'] ?? 30);
+            $seatsPerSide = (int) ceil($seatCount / 2);
+            $spacing = $tableWidth / ($seatsPerSide + 1);
+            $idx = 0;
+
+            // Top seats
+            for ($i = 0; $i < $seatsPerSide && $idx < $seatCount; $i++) {
+                $seats[$idx]->update([
+                    'x' => $centerX - $tableWidth / 2 + ($i + 1) * $spacing,
+                    'y' => $centerY - $tableHeight / 2 - $seatSpacing,
+                ]);
+                $idx++;
+            }
+            // Bottom seats
+            for ($i = 0; $i < $seatsPerSide && $idx < $seatCount; $i++) {
+                $seats[$idx]->update([
+                    'x' => $centerX - $tableWidth / 2 + ($i + 1) * $spacing,
+                    'y' => $centerY + $tableHeight / 2 + $seatSpacing,
+                ]);
+                $idx++;
+            }
+        }
+
+        $this->dispatch('layout-updated', sections: $this->getSections());
+    }
+
+    /**
      * Update row seats count
      */
     public function updateRowSeats($rowId, int $newSeatCount): void
