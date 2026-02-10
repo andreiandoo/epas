@@ -44,6 +44,37 @@ class DesignerSeatingLayout extends Page
         return implode(' — ', $parts);
     }
 
+    /**
+     * Generate a short unique section code (e.g., SEC_A3X2)
+     * Format: PREFIX_XXXX where PREFIX is 3 chars from name/type and XXXX is random alphanumeric
+     */
+    protected function generateShortSectionCode(string $nameOrType): string
+    {
+        // Clean and get first 3 chars as prefix
+        $prefix = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $nameOrType));
+        $prefix = substr($prefix, 0, 3) ?: 'SEC';
+
+        // Generate 4 random alphanumeric characters
+        $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid confusing chars (0/O, 1/I/L)
+        $suffix = '';
+        for ($i = 0; $i < 4; $i++) {
+            $suffix .= $chars[random_int(0, strlen($chars) - 1)];
+        }
+
+        $code = $prefix . '_' . $suffix;
+
+        // Ensure uniqueness within this layout
+        $existing = SeatingSection::where('layout_id', $this->seatingLayout->id)
+            ->where('section_code', $code)
+            ->exists();
+
+        if ($existing) {
+            return $this->generateShortSectionCode($nameOrType); // Retry with new random
+        }
+
+        return $code;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -1108,7 +1139,7 @@ class DesignerSeatingLayout extends Page
             'layout_id' => $this->seatingLayout->id,
             'tenant_id' => $this->seatingLayout->tenant_id,
             'name' => $extra['label'] ?? ucfirst($type),
-            'section_code' => strtoupper(substr($type, 0, 3)) . '_' . time(),
+            'section_code' => $this->generateShortSectionCode($type),
             'section_type' => 'decorative',
             'x_position' => (int) ($geometry['x_position'] ?? 100),
             'y_position' => (int) ($geometry['y_position'] ?? 100),
@@ -1134,8 +1165,8 @@ class DesignerSeatingLayout extends Page
      */
     public function addRectSection(array $data): void
     {
-        // Generate section code from name or timestamp
-        $sectionCode = strtoupper(substr(str_replace(' ', '', $data['name'] ?? 'SECT'), 0, 5)) . '_' . time();
+        // Generate short unique section code
+        $sectionCode = $this->generateShortSectionCode($data['name'] ?? 'SECT');
 
         $section = SeatingSection::create([
             'layout_id' => $this->seatingLayout->id,
@@ -3281,5 +3312,68 @@ class DesignerSeatingLayout extends Page
         }
 
         $this->reloadSections();
+    }
+
+    /**
+     * Update decorative section (text, polygon, line) properties
+     */
+    public function updateDecorativeSection(int $sectionId, array $data): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            Notification::make()
+                ->danger()
+                ->title('Section not found')
+                ->send();
+            return;
+        }
+
+        if ($section->section_type !== 'decorative') {
+            return;
+        }
+
+        $metadata = $section->metadata ?? [];
+        $updates = [];
+
+        // Handle text-specific properties
+        if (isset($data['text'])) {
+            $metadata['text'] = $data['text'];
+            // Also update section name to match text content (truncated)
+            $updates['name'] = mb_substr($data['text'], 0, 50);
+        }
+        if (isset($data['fontSize'])) {
+            $metadata['fontSize'] = (int) $data['fontSize'];
+        }
+        if (isset($data['fontFamily'])) {
+            $metadata['fontFamily'] = $data['fontFamily'];
+        }
+        if (isset($data['fontWeight'])) {
+            $metadata['fontWeight'] = $data['fontWeight'];
+        }
+
+        // Handle color (stored as background_color for decorative sections)
+        if (isset($data['color'])) {
+            $updates['background_color'] = $data['color'];
+        }
+
+        // Handle stroke properties for lines
+        if (isset($data['strokeWidth'])) {
+            $metadata['strokeWidth'] = (int) $data['strokeWidth'];
+        }
+        if (isset($data['strokeColor'])) {
+            $metadata['strokeColor'] = $data['strokeColor'];
+        }
+
+        $updates['metadata'] = $metadata;
+        $section->update($updates);
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
+
+        Notification::make()
+            ->success()
+            ->title('Element updated')
+            ->send();
     }
 }

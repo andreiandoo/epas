@@ -57,6 +57,12 @@
             shapeConfigColor: '#000000',
             shapeConfigOpacity: 1,
             shapeConfigLabel: '',
+            // Text layer editing
+            editTextContent: '',
+            editTextColor: '#000000',
+            editTextFontSize: 16,
+            editTextFontFamily: 'Arial',
+            editTextFontWeight: 'normal',
             contextMenuX: 0,
             contextMenuY: 0,
             contextMenuSectionId: null,
@@ -526,12 +532,14 @@
                     }
                 } else if (shape === 'text') {
                     // Draw text element
+                    const fontWeight = metadata.fontWeight || 'normal';
                     const text = new Konva.Text({
                         x: 0,
                         y: 0,
                         text: metadata.text || 'Text',
                         fontSize: parseInt(metadata.fontSize) || 16,
                         fontFamily: metadata.fontFamily || 'Arial',
+                        fontStyle: fontWeight === 'bold' ? 'bold' : (fontWeight === 'lighter' ? '' : ''),
                         fill: color,
                         name: 'text-shape'
                     });
@@ -1238,6 +1246,11 @@
                         this.sectionFontSize = section.font_size || 14;
                         this.editColorHex = section.color_hex || '#3B82F6';
                         this.editSeatColor = section.seat_color || '#22C55E';
+
+                        // Initialize text editing if it's a text layer
+                        if (section.section_type === 'decorative' && section.metadata?.shape === 'text') {
+                            this.initTextEditing();
+                        }
                     }
                 }
                 this.layer.batchDraw();
@@ -2889,6 +2902,51 @@
             },
             getSelectedSectionData() {
                 return this.sections.find(s => s.id === this.selectedSection);
+            },
+            isSelectedTextLayer() {
+                const section = this.getSelectedSectionData();
+                return section?.section_type === 'decorative' && section?.metadata?.shape === 'text';
+            },
+            initTextEditing() {
+                const section = this.getSelectedSectionData();
+                if (!section || !this.isSelectedTextLayer()) return;
+
+                const metadata = section.metadata || {};
+                this.editTextContent = metadata.text || '';
+                this.editTextColor = section.background_color || '#000000';
+                this.editTextFontSize = parseInt(metadata.fontSize) || 16;
+                this.editTextFontFamily = metadata.fontFamily || 'Arial';
+                this.editTextFontWeight = metadata.fontWeight || 'normal';
+            },
+            previewTextChanges() {
+                const section = this.getSelectedSectionData();
+                if (!section) return;
+
+                section.metadata = section.metadata || {};
+                section.metadata.text = this.editTextContent;
+                section.metadata.fontSize = this.editTextFontSize;
+                section.metadata.fontFamily = this.editTextFontFamily;
+                section.metadata.fontWeight = this.editTextFontWeight;
+                section.background_color = this.editTextColor;
+
+                this.drawSections();
+            },
+            updateTextLayer() {
+                const wire = this.getWire();
+                if (!wire) return;
+
+                const section = this.getSelectedSectionData();
+                if (!section) return;
+
+                wire.updateDecorativeSection(section.id, {
+                    text: this.editTextContent,
+                    fontSize: this.editTextFontSize,
+                    fontFamily: this.editTextFontFamily,
+                    fontWeight: this.editTextFontWeight,
+                    color: this.editTextColor
+                }).then(() => {
+                    this.drawSections();
+                });
             }
          }"
          x-init="init()"
@@ -3670,8 +3728,77 @@
                     </div>
                 </template>
 
+                {{-- Text Layer Properties Panel --}}
+                <template x-if="selectedSection && isSelectedTextLayer() && !addSeatsMode">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between pb-1 border-b border-gray-200">
+                            <h4 class="text-xs font-bold tracking-wide text-gray-700 uppercase">Proprietăți Text</h4>
+                            <button x-on:click="selectedSection = null" class="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+                        </div>
+
+                        {{-- Text Content --}}
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Text:</label>
+                            <textarea x-model="editTextContent" x-on:input="previewTextChanges()" rows="2"
+                                class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded resize-none"></textarea>
+                        </div>
+
+                        {{-- Color --}}
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-gray-600 w-20">Culoare:</label>
+                            <input type="color" x-model="editTextColor" x-on:input="previewTextChanges()"
+                                class="flex-1 h-8 border border-gray-300 rounded cursor-pointer">
+                        </div>
+
+                        {{-- Font Size --}}
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-gray-600 w-20">Dimensiune:</label>
+                            <input type="range" x-model.number="editTextFontSize" x-on:input="previewTextChanges()" min="8" max="120" class="flex-1">
+                            <span class="w-10 text-xs text-center" x-text="editTextFontSize + 'px'"></span>
+                        </div>
+
+                        {{-- Font Family --}}
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-gray-600 w-20">Font:</label>
+                            <select x-model="editTextFontFamily" x-on:change="previewTextChanges()"
+                                class="flex-1 px-2 py-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                                <option value="Arial">Arial</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Verdana">Verdana</option>
+                                <option value="Courier New">Courier New</option>
+                                <option value="Impact">Impact</option>
+                            </select>
+                        </div>
+
+                        {{-- Font Weight --}}
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-gray-600 w-20">Grosime:</label>
+                            <select x-model="editTextFontWeight" x-on:change="previewTextChanges()"
+                                class="flex-1 px-2 py-1 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                                <option value="normal">Normal</option>
+                                <option value="bold">Bold</option>
+                                <option value="lighter">Light</option>
+                            </select>
+                        </div>
+
+                        {{-- Save Button --}}
+                        <button x-on:click="updateTextLayer()" type="button"
+                            class="w-full px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
+                            Salvează Modificările
+                        </button>
+
+                        {{-- Delete Button --}}
+                        <button x-on:click="deleteSelected()" type="button"
+                            class="w-full px-3 py-2 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700">
+                            Șterge Text
+                        </button>
+                    </div>
+                </template>
+
                 {{-- Section Properties (hidden when in addSeats mode, table selected, or row selected) --}}
-                <template x-if="selectedSection && !selectedDrawnRow && !addSeatsMode && !selectedTableRow && !selectedRowData">
+                <template x-if="selectedSection && !isSelectedTextLayer() && !selectedDrawnRow && !addSeatsMode && !selectedTableRow && !selectedRowData">
                     <div class="space-y-2">
                         <div class="flex items-center justify-between pb-1 border-b border-gray-200">
                             <h4 class="text-xs font-bold tracking-wide text-gray-700 uppercase">

@@ -120,10 +120,15 @@ class SeatingSection extends Model
 
     /**
      * Generate seat UID in format: SECTION_CODE-ROW-SEAT
+     * All parts are cleaned to alphanumeric and uppercase
      */
     public function generateSeatUid(string $rowLabel, string $seatLabel): string
     {
-        $sectionCode = $this->section_code ?: strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $this->name));
-        return "{$sectionCode}-{$rowLabel}-{$seatLabel}";
+        $sectionCode = $this->section_code ?: $this->name;
+        $cleanSection = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $sectionCode));
+        $cleanRow = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $rowLabel));
+        $cleanSeat = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $seatLabel));
+
+        return "{$cleanSection}-{$cleanRow}-{$cleanSeat}";
     }
 }
