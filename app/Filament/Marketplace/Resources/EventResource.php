@@ -1235,154 +1235,6 @@ class EventResource extends Resource
                                             ->columns(12)
                                             ->columnSpan(12),
 
-                                        // Seating Sections selector (visible when event has a seating layout)
-                                        Forms\Components\Select::make('seatingSections')
-                                            ->label($t('Secțiuni locuri asignate', 'Assigned Seating Sections'))
-                                            ->relationship('seatingSections', 'name')
-                                            ->multiple()
-                                            ->preload()
-                                            ->searchable()
-                                            ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
-                                            ->options(function (SGet $get) {
-                                                $layoutId = $get('../../seating_layout_id');
-                                                if (!$layoutId) return [];
-
-                                                return SeatingSection::query()
-                                                    ->where('layout_id', $layoutId)
-                                                    ->where('section_type', 'standard')
-                                                    ->orderBy('display_order')
-                                                    ->get()
-                                                    ->mapWithKeys(fn ($section) => [
-                                                        $section->id => $section->name . ' (' . $section->total_seats . ' seats)'
-                                                    ]);
-                                            })
-                                            ->disableOptionWhen(function (string $value, SGet $get) {
-                                                // Get event ID and current ticket type ID
-                                                $eventId = $get('../../id');
-                                                $currentTicketTypeId = $get('id');
-
-                                                if (!$eventId) return false;
-
-                                                // Check if this section is already assigned to another ticket type
-                                                $assignedToOther = \App\Models\TicketType::where('event_id', $eventId)
-                                                    ->when($currentTicketTypeId, fn($q) => $q->where('id', '!=', $currentTicketTypeId))
-                                                    ->whereHas('seatingSections', fn($q) => $q->where('seating_sections.id', $value))
-                                                    ->exists();
-
-                                                return $assignedToOther;
-                                            })
-                                            ->live(onBlur: true)
-                                            ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                                // Auto-update capacity based on total seats in selected sections
-                                                if (!empty($state)) {
-                                                    $totalSeats = SeatingSection::whereIn('id', $state)
-                                                        ->get()
-                                                        ->sum(fn ($s) => $s->total_seats);
-                                                    $set('capacity', $totalSeats);
-                                                }
-                                            })
-                                            ->helperText($t('Atribuie secțiuni de locuri acestui tip de bilet. Secțiunile deja atribuite altor tipuri de bilete sunt dezactivate.', 'Assign seating sections to this ticket type. Sections already assigned to other ticket types are disabled.'))
-                                            ->columnSpan(12),
-
-                                        // Visual preview of selected sections
-                                        Forms\Components\Placeholder::make('sections_preview')
-                                            ->label('')
-                                            ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id') && !empty($get('seatingSections')))
-                                            ->content(function (SGet $get) {
-                                                $layoutId = $get('../../seating_layout_id');
-                                                $selectedSections = $get('seatingSections') ?? [];
-
-                                                if (!$layoutId || empty($selectedSections)) {
-                                                    return '';
-                                                }
-
-                                                $layout = \App\Models\Seating\SeatingLayout::withoutGlobalScopes()
-                                                    ->with('sections')
-                                                    ->find($layoutId);
-
-                                                if (!$layout) return '';
-
-                                                // Get all sections for this layout
-                                                $allSections = $layout->sections;
-
-                                                if ($allSections->isEmpty()) return '';
-
-                                                // Use full canvas as viewBox for proper proportions
-                                                $canvasW = $layout->canvas_w ?? 1920;
-                                                $canvasH = $layout->canvas_h ?? 1080;
-
-                                                // Background image
-                                                $bgImage = '';
-                                                $bgPath = $layout->background_image_path ?? $layout->background_image_url;
-                                                if ($bgPath) {
-                                                    $bgUrl = str_starts_with($bgPath, 'http') ? $bgPath : asset('storage/' . $bgPath);
-                                                    $bgScale = $layout->background_scale ?? 1;
-                                                    $bgX = $layout->background_x ?? 0;
-                                                    $bgY = $layout->background_y ?? 0;
-                                                    $bgOpacity = $layout->background_opacity ?? 0.5;
-                                                    $bgW = $canvasW * $bgScale;
-                                                    $bgH = $canvasH * $bgScale;
-                                                    $bgImage = "<image href=\"{$bgUrl}\" x=\"{$bgX}\" y=\"{$bgY}\" width=\"{$bgW}\" height=\"{$bgH}\" opacity=\"{$bgOpacity}\" preserveAspectRatio=\"xMidYMid meet\"/>";
-                                                }
-
-                                                // Build SVG paths for sections
-                                                $svgSections = '';
-                                                foreach ($allSections as $section) {
-                                                    $isSelected = in_array($section->id, $selectedSections);
-                                                    $x = $section->origin_x ?? 0;
-                                                    $y = $section->origin_y ?? 0;
-                                                    $w = max(50, $section->width ?? 200);
-                                                    $h = max(30, $section->height ?? 100);
-                                                    $rotation = $section->rotation ?? 0;
-                                                    $name = e($section->name);
-
-                                                    // Colors based on selection - more visible
-                                                    $fill = $isSelected ? 'rgba(34, 197, 94, 0.7)' : 'rgba(55, 65, 81, 0.5)';
-                                                    $stroke = $isSelected ? '#22c55e' : '#6b7280';
-                                                    $textColor = $isSelected ? '#ffffff' : '#d1d5db';
-                                                    $strokeWidth = $isSelected ? '4' : '2';
-
-                                                    // Section rectangle with rotation
-                                                    $cx = $x + $w / 2;
-                                                    $cy = $y + $h / 2;
-                                                    $transform = $rotation != 0 ? " transform=\"rotate({$rotation} {$cx} {$cy})\"" : '';
-
-                                                    $svgSections .= "<g{$transform}>";
-                                                    $svgSections .= "<rect x=\"{$x}\" y=\"{$y}\" width=\"{$w}\" height=\"{$h}\" fill=\"{$fill}\" stroke=\"{$stroke}\" stroke-width=\"{$strokeWidth}\" rx=\"6\"/>";
-                                                    // Section name - scale font based on section size
-                                                    $fontSize = max(14, min(28, min($w, $h) / 4));
-                                                    $svgSections .= "<text x=\"{$cx}\" y=\"{$cy}\" text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"{$textColor}\" font-size=\"{$fontSize}\" font-weight=\"700\" stroke=\"#000\" stroke-width=\"0.5\">{$name}</text>";
-                                                    $svgSections .= "</g>";
-                                                }
-
-                                                $selectedCount = count($selectedSections);
-                                                $totalSeats = SeatingSection::whereIn('id', $selectedSections)->get()->sum(fn ($s) => $s->total_seats);
-
-                                                // Calculate aspect ratio for responsive height
-                                                $aspectRatio = $canvasH / $canvasW;
-                                                $heightClass = $aspectRatio > 0.7 ? 'h-72' : 'h-48';
-
-                                                return new \Illuminate\Support\HtmlString("
-                                                    <div class='p-3 bg-gray-900 border border-gray-700 rounded-lg'>
-                                                        <div class='flex items-center justify-between mb-2'>
-                                                            <span class='text-sm font-medium text-gray-300'>
-                                                                Secțiuni selectate: <span class='font-bold text-green-400'>{$selectedCount}</span>
-                                                                <span class='text-gray-500'>({$totalSeats} locuri)</span>
-                                                            </span>
-                                                            <div class='flex items-center gap-3 text-xs text-gray-500'>
-                                                                <span class='flex items-center gap-1'><span class='w-3 h-3 bg-green-500 rounded'></span> Selectate</span>
-                                                                <span class='flex items-center gap-1'><span class='w-3 h-3 bg-gray-600 rounded'></span> Disponibile</span>
-                                                            </div>
-                                                        </div>
-                                                        <svg viewBox=\"0 0 {$canvasW} {$canvasH}\" preserveAspectRatio=\"xMidYMid meet\" class='w-full {$heightClass} bg-gray-950 rounded border border-gray-800'>
-                                                            {$bgImage}
-                                                            {$svgSections}
-                                                        </svg>
-                                                    </div>
-                                                ");
-                                            })
-                                            ->columnSpan(12),
-
                                         // Blocked seats info for assigned sections
                                         Forms\Components\Placeholder::make('blocked_seats_info')
                                             ->label('')
@@ -1457,29 +1309,20 @@ class EventResource extends Resource
                                             ->live(onBlur: true)
                                             ->columnSpan(3),
 
-                                        // Seating Rows selector (visible when event has a seating layout)
+                                        // Interactive SVG row picker (visible when event has a seating layout)
                                         Forms\Components\CheckboxList::make('seatingRows')
                                             ->label($t('Rânduri de locuri asignate', 'Assigned Seating Rows'))
                                             ->relationship('seatingRows', 'label')
+                                            ->view('filament.forms.components.seating-row-picker')
                                             ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
                                             ->options(function (SGet $get) {
                                                 $layoutId = $get('../../seating_layout_id');
                                                 if (!$layoutId) return [];
-
                                                 return SeatingRow::query()
                                                     ->whereHas('section', fn ($q) => $q->where('layout_id', $layoutId)->where('section_type', 'standard'))
-                                                    ->with('section')
-                                                    ->get()
-                                                    ->sortBy([
-                                                        fn ($a, $b) => ($a->section->display_order ?? 0) <=> ($b->section->display_order ?? 0),
-                                                        fn ($a, $b) => intval($a->label) <=> intval($b->label),
-                                                    ])
-                                                    ->mapWithKeys(fn ($row) => [
-                                                        $row->id => $row->section->name . ' — Rând ' . $row->label . ' (' . $row->seat_count . ' locuri)'
-                                                    ]);
+                                                    ->pluck('id', 'id')
+                                                    ->toArray();
                                             })
-                                            ->columns(2)
-                                            ->searchable()
                                             ->live()
                                             ->afterStateUpdated(function ($state, SSet $set) {
                                                 if (!empty($state)) {
@@ -1489,86 +1332,6 @@ class EventResource extends Resource
                                                         $set('capacity', $totalSeats);
                                                     }
                                                 }
-                                            })
-                                            ->helperText($t(
-                                                'Selectează rândurile de locuri pentru acest tip de bilet. Mai multe tipuri de bilete pot partaja aceleași rânduri.',
-                                                'Select seating rows for this ticket type. Multiple ticket types can share the same rows.'
-                                            ))
-                                            ->columnSpan(12),
-
-                                        // Visual preview of selected rows with seat dots
-                                        Forms\Components\Placeholder::make('rows_preview')
-                                            ->label('')
-                                            ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id') && !empty(array_filter($get('seatingRows') ?? [])))
-                                            ->content(function (SGet $get) {
-                                                $layoutId = $get('../../seating_layout_id');
-                                                $selectedRows = array_map('intval', array_filter($get('seatingRows') ?? []));
-                                                $color = $get('color') ?: '#3b82f6';
-
-                                                if (!$layoutId || empty($selectedRows)) return '';
-
-                                                $sections = SeatingSection::where('layout_id', $layoutId)
-                                                    ->where('section_type', 'standard')
-                                                    ->with('rows')
-                                                    ->orderBy('display_order')
-                                                    ->get();
-
-                                                if ($sections->isEmpty()) return '';
-
-                                                $totalSelected = 0;
-                                                $totalSeats = 0;
-                                                $html = "<div class='space-y-3'>";
-
-                                                foreach ($sections as $section) {
-                                                    if ($section->rows->isEmpty()) continue;
-
-                                                    $html .= "<div class='bg-gray-800/50 rounded-lg p-3 border border-gray-700/50'>";
-                                                    $html .= "<div class='text-sm font-medium text-gray-300 mb-2'>" . e($section->name) . "</div>";
-                                                    $html .= "<div class='space-y-1'>";
-
-                                                    $sortedRows = $section->rows->sortBy(fn ($r) => intval($r->label));
-                                                    foreach ($sortedRows as $row) {
-                                                        $isSelected = in_array($row->id, $selectedRows);
-                                                        $bgColor = $isSelected ? $color . '25' : 'transparent';
-                                                        $borderColor = $isSelected ? $color : '#374151';
-                                                        $textColor = $isSelected ? '#fff' : '#6b7280';
-                                                        $dotColor = $isSelected ? $color : '#4b5563';
-
-                                                        if ($isSelected) {
-                                                            $totalSelected++;
-                                                            $totalSeats += $row->seat_count;
-                                                        }
-
-                                                        $seatDots = '';
-                                                        $maxDots = min($row->seat_count, 40);
-                                                        for ($i = 0; $i < $maxDots; $i++) {
-                                                            $seatDots .= "<span class='inline-block w-2 h-2 rounded-full' style='background:{$dotColor}'></span> ";
-                                                        }
-                                                        if ($row->seat_count > 40) {
-                                                            $seatDots .= "<span class='text-xs text-gray-500'>+" . ($row->seat_count - 40) . "</span>";
-                                                        }
-
-                                                        $html .= "<div class='flex items-center gap-2 px-2 py-1 rounded border' style='background:{$bgColor};border-color:{$borderColor}'>";
-                                                        $html .= "<span class='text-xs font-mono font-bold min-w-[2.5rem]' style='color:{$textColor}'>" . e($row->label) . "</span>";
-                                                        $html .= "<div class='flex-1 flex flex-wrap gap-px'>{$seatDots}</div>";
-                                                        $html .= "<span class='text-xs whitespace-nowrap' style='color:{$textColor}'>" . $row->seat_count . " loc.</span>";
-                                                        $html .= "</div>";
-                                                    }
-
-                                                    $html .= "</div></div>";
-                                                }
-
-                                                $html .= "</div>";
-
-                                                $summary = "<div class='flex items-center justify-between mb-2'>";
-                                                $summary .= "<span class='text-sm font-medium text-gray-300'>";
-                                                $summary .= "Rânduri selectate: <span class='font-bold' style='color:{$color}'>{$totalSelected}</span>";
-                                                $summary .= " <span class='text-gray-500'>({$totalSeats} locuri)</span>";
-                                                $summary .= "</span></div>";
-
-                                                return new \Illuminate\Support\HtmlString(
-                                                    "<div class='p-3 bg-gray-900 border border-gray-700 rounded-lg'>{$summary}{$html}</div>"
-                                                );
                                             })
                                             ->columnSpan(12),
 
@@ -2159,7 +1922,7 @@ class EventResource extends Resource
                                                 $tooltip .= "&#10;" . $t('Neatribuit', 'Unassigned');
                                             }
 
-                                            $svgContent .= "<circle cx=\"{$seatX}\" cy=\"{$seatY}\" r=\"{$seatR}\" fill=\"{$fillColor}\" stroke=\"{$strokeColor}\" stroke-width=\"{$strokeW}\"><title>{$tooltip}</title></circle>";
+                                            $svgContent .= "<circle cx=\"{$seatX}\" cy=\"{$seatY}\" r=\"{$seatR}\" fill=\"{$fillColor}\" stroke=\"{$strokeColor}\" stroke-width=\"{$strokeW}\" data-tip=\"{$tooltip}\"/>";
                                         }
                                     }
 
@@ -2213,12 +1976,28 @@ class EventResource extends Resource
                                 $summaryHtml .= "</div></div>";
 
                                 return new HtmlString("
-                                    <div class='p-4 bg-gray-900 border border-gray-700 rounded-lg'>
+                                    <div class='p-4 bg-gray-900 border border-gray-700 rounded-lg'
+                                         x-data=\"{ tip: '', tipX: 0, tipY: 0, showTip: false }\"
+                                    >
                                         {$summaryHtml}
-                                        <svg viewBox=\"0 0 {$canvasW} {$canvasH}\" preserveAspectRatio=\"xMidYMid meet\" class='w-full bg-gray-950 rounded border border-gray-800' style='height: {$heightPx}px; max-height: 600px;'>
+                                        <svg viewBox=\"0 0 {$canvasW} {$canvasH}\" preserveAspectRatio=\"xMidYMid meet\"
+                                             class='w-full bg-gray-950 rounded border border-gray-800'
+                                             style='height: {$heightPx}px; max-height: 600px;'
+                                             @mousemove=\"
+                                                const c = \$event.target.closest('circle[data-tip]');
+                                                if (c) { tip = c.dataset.tip; tipX = \$event.clientX + 14; tipY = \$event.clientY - 10; showTip = true; }
+                                                else { showTip = false; }
+                                             \"
+                                             @mouseleave=\"showTip = false\"
+                                        >
                                             {$bgImage}
                                             {$svgContent}
                                         </svg>
+                                        <div x-show=\"showTip\" x-cloak
+                                             :style=\"'left:' + tipX + 'px;top:' + tipY + 'px'\"
+                                             class='fixed z-50 pointer-events-none px-3 py-2 text-xs bg-gray-800 border border-gray-600 rounded-lg shadow-xl text-white whitespace-pre-line'
+                                             x-text=\"tip\">
+                                        </div>
                                         {$legendHtml}
                                     </div>
                                 ");
