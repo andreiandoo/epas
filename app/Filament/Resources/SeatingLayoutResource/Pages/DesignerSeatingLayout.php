@@ -49,6 +49,11 @@ class DesignerSeatingLayout extends Page
         return null;
     }
 
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
+
     /**
      * Generate a short unique section code (e.g., SEC_A3X2)
      * Format: PREFIX_XXXX where PREFIX is 3 chars from name/type and XXXX is random alphanumeric
@@ -87,6 +92,7 @@ class DesignerSeatingLayout extends Page
                 ->label('Import Map')
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('info')
+                ->extraAttributes(['class' => '!hidden'])
                 ->modalWidth('5xl')
                 ->modalHeading('Import Seating Map')
                 ->steps([
@@ -244,6 +250,7 @@ class DesignerSeatingLayout extends Page
                 ->label('Add Decorative Zone')
                 ->icon('heroicon-o-star')
                 ->color('warning')
+                ->extraAttributes(['class' => '!hidden'])
                 ->modalHeading('Add Decorative Zone (Stage, etc.)')
                 ->modalDescription('Create a non-seat area like a stage, dance floor, or other decorative element.')
                 ->form([
@@ -347,6 +354,7 @@ class DesignerSeatingLayout extends Page
                 ->label('Add Icon')
                 ->icon('heroicon-o-map-pin')
                 ->color('info')
+                ->extraAttributes(['class' => '!hidden'])
                 ->modalHeading('Add Map Icon')
                 ->modalDescription('Add an icon marker to your seating map (exit, toilet, info point, etc.)')
                 ->form([
@@ -446,6 +454,7 @@ class DesignerSeatingLayout extends Page
                 ->label('Layout Settings')
                 ->icon('heroicon-o-cog-6-tooth')
                 ->color('gray')
+                ->extraAttributes(['class' => '!hidden'])
                 ->url(fn () => static::getResource()::getUrl('edit', ['record' => $this->seatingLayout])),
         ];
     }
