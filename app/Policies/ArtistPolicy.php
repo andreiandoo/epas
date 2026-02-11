@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Models\Artist;
+use App\Models\MarketplaceAdmin;
 use Illuminate\Contracts\Auth\Authenticatable;
 
 /**
@@ -17,6 +18,11 @@ class ArtistPolicy
      */
     protected function isAdmin(Authenticatable $user): bool
     {
+        // Marketplace admin users — always allowed (scoped by marketplace_client_id in resource)
+        if ($user instanceof MarketplaceAdmin) {
+            return true;
+        }
+
         return in_array($user->role ?? '', ['super-admin', 'admin', 'editor']);
     }
 
@@ -42,18 +48,25 @@ class ArtistPolicy
 
     public function delete(Authenticatable $user, Artist $artist): bool
     {
-        // Only super-admin and admin can delete
+        if ($user instanceof MarketplaceAdmin) {
+            return in_array($user->role ?? '', ['super_admin', 'admin']);
+        }
         return in_array($user->role ?? '', ['super-admin', 'admin']);
     }
 
     public function restore(Authenticatable $user, Artist $artist): bool
     {
+        if ($user instanceof MarketplaceAdmin) {
+            return in_array($user->role ?? '', ['super_admin', 'admin']);
+        }
         return in_array($user->role ?? '', ['super-admin', 'admin']);
     }
 
     public function forceDelete(Authenticatable $user, Artist $artist): bool
     {
-        // Only super-admin can force delete
+        if ($user instanceof MarketplaceAdmin) {
+            return ($user->role ?? '') === 'super_admin';
+        }
         return ($user->role ?? '') === 'super-admin';
     }
 }
