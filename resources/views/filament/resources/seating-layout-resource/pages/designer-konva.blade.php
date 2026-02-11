@@ -414,10 +414,13 @@
                 // Create image from SVG - apply icon color by replacing fill colors
                 let svgString = iconDef.svg;
                 // Replace fill colors in the SVG with the selected icon color
-                svgString = svgString.replace(/fill="[^"]*"/g, `fill="${iconColor}"`);
-                svgString = svgString.replace(/fill:'[^']*'/g, `fill:'${iconColor}'`);
-                // Also handle stroke if needed
-                svgString = svgString.replace(/stroke="[^"]*"/g, `stroke="${iconColor}"`);
+                // Use RegExp constructor to avoid template parsing issues with forward slashes
+                const fillAttrRegex = new RegExp('fill="[^"]*"', 'g');
+                const fillStyleRegex = new RegExp("fill:'[^']*'", 'g');
+                const strokeRegex = new RegExp('stroke="[^"]*"', 'g');
+                svgString = svgString.replace(fillAttrRegex, `fill="${iconColor}"`);
+                svgString = svgString.replace(fillStyleRegex, `fill:'${iconColor}'`);
+                svgString = svgString.replace(strokeRegex, `stroke="${iconColor}"`);
 
                 const img = new Image();
                 const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
