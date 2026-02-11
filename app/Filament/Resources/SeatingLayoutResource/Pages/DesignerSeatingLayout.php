@@ -35,13 +35,18 @@ class DesignerSeatingLayout extends Page
         $this->reloadSections();
     }
 
-    public function getSubheading(): ?string
+    public function getHeading(): string
     {
         $parts = [$this->seatingLayout->name];
         if ($this->seatingLayout->venue) {
             $parts[] = $this->seatingLayout->venue->getTranslation('name');
         }
         return implode(' — ', $parts);
+    }
+
+    public function getSubheading(): ?string
+    {
+        return null;
     }
 
     /**
@@ -233,231 +238,7 @@ class DesignerSeatingLayout extends Page
                     }
                 }),
 
-            Actions\Action::make('addSection')
-                ->label('Add Section')
-                ->icon('heroicon-o-plus-circle')
-                ->color('primary')
-                ->form([
-                    Forms\Components\TextInput::make('name')
-                        ->required()
-                        ->maxLength(100)
-                        ->columnSpanFull(),
-
-                    Forms\Components\TextInput::make('section_code')
-                        ->label('Section Code')
-                        ->required()
-                        ->maxLength(20)
-                        ->helperText('Unique identifier per map (e.g., A, B, VIP)')
-                        ->rules([
-                            fn () => function (string $attribute, $value, $fail) {
-                                if (SeatingSection::where('layout_id', $this->seatingLayout->id)
-                                    ->where('section_code', $value)
-                                    ->exists()) {
-                                    $fail('This section code already exists in this layout.');
-                                }
-                            },
-                        ])
-                        ->columnSpanFull(),
-
-                    Forms\Components\Select::make('section_type')
-                        ->options([
-                            'standard' => 'Standard (rows & seats)',
-                            'general_admission' => 'General Admission (capacity only)',
-                        ])
-                        ->default('standard')
-                        ->required()
-                        ->reactive()
-                        ->columnSpanFull(),
-
-                    Forms\Components\ColorPicker::make('color_hex')
-                        ->label('Section Background Color')
-                        ->default('#3B82F6')
-                        ->helperText('Background color for the section area')
-                        ->columnSpan(1),
-
-                    Forms\Components\ColorPicker::make('seat_color')
-                        ->label('Seat Color (Available)')
-                        ->default('#22C55E')
-                        ->helperText('Color for available seats in this section')
-                        ->columnSpan(1),
-
-                    // Standard section: rows & seats configuration
-                    SC\Section::make('Rows & Seats Configuration')
-                        ->description('Configure the initial layout of rows and seats')
-                        ->visible(fn ($get) => $get('section_type') === 'standard')
-                        ->schema([
-                            Forms\Components\TextInput::make('num_rows')
-                                ->label('Number of Rows')
-                                ->numeric()
-                                ->default(5)
-                                ->minValue(1)
-                                ->maxValue(50)
-                                ->columnSpan(1),
-
-                            Forms\Components\TextInput::make('seats_per_row')
-                                ->label('Seats per Row')
-                                ->numeric()
-                                ->default(10)
-                                ->minValue(1)
-                                ->maxValue(100)
-                                ->columnSpan(1),
-
-                            Forms\Components\Select::make('seat_shape')
-                                ->label('Seat Shape')
-                                ->options([
-                                    'circle' => 'Circle',
-                                    'rect' => 'Square',
-                                ])
-                                ->default('circle')
-                                ->columnSpan(1),
-
-                            Forms\Components\TextInput::make('seat_size')
-                                ->label('Seat Size (px)')
-                                ->numeric()
-                                ->default(10)
-                                ->minValue(4)
-                                ->maxValue(30)
-                                ->columnSpan(1),
-
-                            Forms\Components\TextInput::make('row_spacing')
-                                ->label('Row Spacing (px)')
-                                ->numeric()
-                                ->default(25)
-                                ->minValue(10)
-                                ->maxValue(100)
-                                ->columnSpan(1),
-
-                            Forms\Components\TextInput::make('seat_spacing')
-                                ->label('Seat Spacing (px)')
-                                ->numeric()
-                                ->default(18)
-                                ->minValue(5)
-                                ->maxValue(50)
-                                ->columnSpan(1),
-
-                            Forms\Components\Select::make('seat_numbering')
-                                ->label('Seat Numbering Direction')
-                                ->options([
-                                    'ltr' => 'Left to Right (1, 2, 3...)',
-                                    'rtl' => 'Right to Left (...3, 2, 1)',
-                                ])
-                                ->default('ltr')
-                                ->columnSpan(1),
-
-                            Forms\Components\Select::make('row_numbering')
-                                ->label('Row Numbering Direction')
-                                ->options([
-                                    'ttb' => 'Top to Bottom (1, 2, 3...)',
-                                    'btt' => 'Bottom to Top (...3, 2, 1)',
-                                ])
-                                ->default('ttb')
-                                ->columnSpan(1),
-
-                            Forms\Components\Select::make('numbering_mode')
-                                ->label('Seat Numbering Mode')
-                                ->options([
-                                    'normal' => 'Normal (per row: 1-10, 1-10, 1-10...)',
-                                    'section' => 'Section (continuous: 1-10, 11-20, 21-30...)',
-                                    'snake' => 'Snake (alternating: 1-10→, ←11-20, 21-30→...)',
-                                ])
-                                ->default('normal')
-                                ->helperText('How seat numbers are assigned across rows')
-                                ->columnSpanFull(),
-                        ])
-                        ->columns(2),
-
-                    Forms\Components\Hidden::make('x_position')
-                        ->default(100),
-
-                    Forms\Components\Hidden::make('y_position')
-                        ->default(100),
-
-                    Forms\Components\Hidden::make('width')
-                        ->default(200),
-
-                    Forms\Components\Hidden::make('height')
-                        ->default(150),
-
-                    Forms\Components\Hidden::make('rotation')
-                        ->default(0),
-
-                    Forms\Components\Hidden::make('metadata'),
-
-                    Forms\Components\TextInput::make('display_order')
-                        ->label('Display Order')
-                        ->numeric()
-                        ->default(0)
-                        ->helperText('Order in which sections are displayed')
-                        ->columnSpanFull(),
-                ])
-                ->action(function (array $data): void {
-                    $data['layout_id'] = $this->seatingLayout->id;
-                    $data['tenant_id'] = $this->seatingLayout->tenant_id;
-
-                    if (!isset($data['display_order']) || $data['display_order'] === null || $data['display_order'] === '') {
-                        $data['display_order'] = 0;
-                    }
-
-                    if (isset($data['metadata']) && is_string($data['metadata'])) {
-                        $data['metadata'] = json_decode($data['metadata'], true);
-                    }
-
-                    // Calculate section dimensions based on seats
-                    $numRows = (int) ($data['num_rows'] ?? 0);
-                    $seatsPerRow = (int) ($data['seats_per_row'] ?? 0);
-                    $seatSize = (int) ($data['seat_size'] ?? 10);
-                    $rowSpacing = (int) ($data['row_spacing'] ?? 25);
-                    $seatSpacing = (int) ($data['seat_spacing'] ?? 18);
-
-                    if ($data['section_type'] === 'standard' && $numRows > 0 && $seatsPerRow > 0) {
-                        // Calculate required dimensions with padding
-                        $padding = 20;
-                        $data['width'] = ($seatsPerRow * $seatSpacing) + $padding;
-                        $data['height'] = ($numRows * $rowSpacing) + $padding;
-                    }
-
-                    // Store seat settings in metadata
-                    $data['metadata'] = array_merge($data['metadata'] ?? [], [
-                        'seat_size' => $seatSize,
-                        'seat_spacing' => $seatSpacing,
-                        'row_spacing' => $rowSpacing,
-                        'seat_shape' => $data['seat_shape'] ?? 'circle',
-                        'numbering_mode' => $data['numbering_mode'] ?? 'normal',
-                    ]);
-
-                    // Remove form-only fields before creating
-                    $createData = collect($data)->except([
-                        'num_rows', 'seats_per_row', 'seat_shape', 'seat_size',
-                        'row_spacing', 'seat_spacing', 'seat_numbering', 'row_numbering', 'numbering_mode'
-                    ])->toArray();
-
-                    $section = SeatingSection::create($createData);
-
-                    // Create rows and seats for standard sections
-                    if ($data['section_type'] === 'standard' && $numRows > 0 && $seatsPerRow > 0) {
-                        $this->createSectionSeats(
-                            $section,
-                            $numRows,
-                            $seatsPerRow,
-                            $seatSize,
-                            $rowSpacing,
-                            $seatSpacing,
-                            $data['seat_shape'] ?? 'circle',
-                            $data['seat_numbering'] ?? 'ltr',
-                            $data['row_numbering'] ?? 'ttb',
-                            $data['numbering_mode'] ?? 'normal'
-                        );
-                    }
-
-                    $this->reloadSections();
-
-                    $this->dispatch('section-added', section: $section->load('rows.seats')->toArray());
-
-                    Notification::make()
-                        ->success()
-                        ->title('Section added successfully')
-                        ->send();
-                }),
+            // Note: addSection action removed - sections are now created via canvas tools
 
             Actions\Action::make('addDecorativeZone')
                 ->label('Add Decorative Zone')
@@ -3520,5 +3301,97 @@ class DesignerSeatingLayout extends Page
             ->success()
             ->title('Iconiță actualizată')
             ->send();
+    }
+
+    /**
+     * Quick add icon from sidebar - creates a default icon that can be edited
+     */
+    public function addQuickIcon(): void
+    {
+        $section = SeatingSection::create([
+            'layout_id' => $this->seatingLayout->id,
+            'tenant_id' => $this->seatingLayout->tenant_id,
+            'name' => 'Info',
+            'section_code' => $this->generateShortSectionCode('ICON'),
+            'section_type' => 'icon',
+            'x_position' => 200,
+            'y_position' => 200,
+            'width' => 48,
+            'height' => 68,
+            'rotation' => 0,
+            'display_order' => 100,
+            'background_color' => '#3B82F6',
+            'corner_radius' => 8,
+            'metadata' => [
+                'icon_key' => 'info_point',
+                'icon_color' => '#FFFFFF',
+                'icon_size' => 48,
+            ],
+        ]);
+
+        $this->reloadSections();
+        $this->dispatch('section-added', section: $section->toArray());
+
+        Notification::make()
+            ->success()
+            ->title('Iconiță adăugată')
+            ->body('Selectați iconița pentru a o edita')
+            ->send();
+    }
+
+    /**
+     * Quick add decorative zone from sidebar - creates a default zone that can be edited
+     */
+    public function addQuickDecorative(): void
+    {
+        $section = SeatingSection::create([
+            'layout_id' => $this->seatingLayout->id,
+            'tenant_id' => $this->seatingLayout->tenant_id,
+            'name' => 'Zonă Decorativă',
+            'section_code' => $this->generateShortSectionCode('DEC'),
+            'section_type' => 'decorative',
+            'x_position' => 300,
+            'y_position' => 100,
+            'width' => 200,
+            'height' => 100,
+            'rotation' => 0,
+            'display_order' => 50,
+            'background_color' => '#9333EA',
+            'corner_radius' => 0,
+            'metadata' => [
+                'shape' => 'polygon',
+                'opacity' => 0.3,
+            ],
+        ]);
+
+        $this->reloadSections();
+        $this->dispatch('section-added', section: $section->toArray());
+
+        Notification::make()
+            ->success()
+            ->title('Zonă decorativă adăugată')
+            ->body('Selectați zona pentru a o edita')
+            ->send();
+    }
+
+    /**
+     * Update section label visibility and position
+     */
+    public function updateSectionLabel(int $sectionId, array $settings): void
+    {
+        $section = SeatingSection::find($sectionId);
+
+        if (!$section || $section->layout_id !== $this->seatingLayout->id) {
+            return;
+        }
+
+        $metadata = $section->metadata ?? [];
+        $metadata['show_label'] = $settings['show_label'] ?? true;
+        $metadata['label_position'] = $settings['label_position'] ?? 'inside';
+
+        $section->update(['metadata' => $metadata]);
+
+        $this->reloadSections();
+        $this->dispatch('layout-updated', sections: $this->sections);
     }
 }

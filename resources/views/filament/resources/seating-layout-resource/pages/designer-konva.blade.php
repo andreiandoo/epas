@@ -87,6 +87,8 @@
             sectionCornerRadius: 0,
             sectionLabel: '',
             sectionFontSize: 14,
+            showSectionLabel: true,
+            sectionLabelPosition: 'inside',
             addSeatsMode: false,
             savedViewState: null,
             rowSeatSize: 15,
@@ -409,8 +411,14 @@
                     name: 'section-shape'
                 });
 
-                // Create image from SVG
-                const svgString = iconDef.svg;
+                // Create image from SVG - apply icon color by replacing fill colors
+                let svgString = iconDef.svg;
+                // Replace fill colors in the SVG with the selected icon color
+                svgString = svgString.replace(/fill="[^"]*"/g, `fill="${iconColor}"`);
+                svgString = svgString.replace(/fill:'[^']*'/g, `fill:'${iconColor}'`);
+                // Also handle stroke if needed
+                svgString = svgString.replace(/stroke="[^"]*"/g, `stroke="${iconColor}"`);
+
                 const img = new Image();
                 const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
                 const url = URL.createObjectURL(svgBlob);
@@ -1265,6 +1273,11 @@
                         this.sectionFontSize = section.font_size || 14;
                         this.editColorHex = section.color_hex || '#3B82F6';
                         this.editSeatColor = section.seat_color || '#22C55E';
+
+                        // Initialize label visibility and position from metadata
+                        const metadata = section.metadata || {};
+                        this.showSectionLabel = metadata.show_label !== false;
+                        this.sectionLabelPosition = metadata.label_position || 'inside';
 
                         // Initialize text editing if it's a text layer
                         if (section.section_type === 'decorative' && section.metadata?.shape === 'text') {
@@ -2194,6 +2207,12 @@
                     this.editColorHex,
                     this.editSeatColor
                 );
+
+                // Save label visibility and position
+                wire.updateSectionLabel(this.selectedSection, {
+                    show_label: this.showSectionLabel,
+                    label_position: this.sectionLabelPosition
+                });
             },
             applySectionChanges() {
                 // Alias for backwards compatibility
@@ -3245,6 +3264,21 @@
                             :class="drawMode === 'line' ? 'bg-gray-700 border-gray-700 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             Linie
                         </button>
+                        <button wire:click="addQuickIcon" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            Iconiță
+                        </button>
+                        <button wire:click="addQuickDecorative" type="button"
+                            class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                            </svg>
+                            Zonă
+                        </button>
                     </div>
                 </div>
 
@@ -3745,7 +3779,7 @@
 
                 {{-- Row Properties Panel (non-table rows) --}}
                 <template x-if="selectedRowData && !selectedTableRow">
-                    <div class="space-y-2">
+                    <div class="space-y-3">
                         <div class="flex items-center justify-between pb-1 border-b border-purple-200">
                             <h4 class="text-xs font-bold tracking-wide text-purple-700 uppercase">Rând: <span x-text="selectedRowData?.label || '-'"></span></h4>
                             <button x-on:click="deselectRow()" class="text-purple-400 hover:text-purple-600 text-sm">✕</button>
@@ -4058,7 +4092,7 @@
 
                 {{-- Section Properties (hidden when in addSeats mode, table selected, row selected, text layer, or icon) --}}
                 <template x-if="selectedSection && !isSelectedTextLayer() && !isSelectedIconSection() && !selectedDrawnRow && !addSeatsMode && !selectedTableRow && !selectedRowData">
-                    <div class="space-y-2">
+                    <div class="space-y-3">
                         <div class="flex items-center justify-between pb-1 border-b border-gray-200">
                             <h4 class="text-xs font-bold tracking-wide text-gray-700 uppercase">
                                 Secțiune: <span x-text="getSelectedSectionData()?.name || '-'"></span>
@@ -4066,18 +4100,19 @@
                             <button x-on:click="selectedSection = null" class="text-gray-400 hover:text-gray-600 text-sm">✕</button>
                         </div>
 
-                        {{-- Action Buttons --}}
+                        {{-- Action Buttons - Mutually Exclusive --}}
                         <div class="flex gap-1" x-show="getSelectedSectionData()?.section_type === 'standard'">
-                            <button x-on:click="addSeatsMode = true" type="button"
-                                class="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold text-white rounded bg-purple-600 hover:bg-purple-700">
+                            <button x-on:click="addSeatsMode = true; rowSelectMode = false; seatSelectMode = false; clearMultiRowSelection(); clearSeatSelection();" type="button"
+                                class="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold rounded"
+                                :class="addSeatsMode ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
                                 <x-svg-icon name="konvaseats" class="w-4 h-4" /> Adaugă
                             </button>
-                            <button x-on:click="rowSelectMode = !rowSelectMode; if(rowSelectMode) { seatSelectMode = false; clearSeatSelection(); }" type="button"
+                            <button x-on:click="rowSelectMode = !rowSelectMode; if(rowSelectMode) { addSeatsMode = false; seatSelectMode = false; clearSeatSelection(); } else { clearMultiRowSelection(); deselectRow(); }" type="button"
                                 class="flex-1 px-2 py-1.5 text-xs font-semibold rounded"
                                 :class="rowSelectMode ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
                                 Rânduri
                             </button>
-                            <button x-on:click="seatSelectMode = !seatSelectMode; if(seatSelectMode) { rowSelectMode = false; clearMultiRowSelection(); deselectRow(); }" type="button"
+                            <button x-on:click="seatSelectMode = !seatSelectMode; if(seatSelectMode) { addSeatsMode = false; rowSelectMode = false; clearMultiRowSelection(); deselectRow(); } else { clearSeatSelection(); }" type="button"
                                 class="flex-1 px-2 py-1.5 text-xs font-semibold rounded"
                                 :class="seatSelectMode ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
                                 Locuri
@@ -4127,6 +4162,21 @@
                             <label class="text-xs text-gray-500 w-10">Nume:</label>
                             <input type="text" x-model="sectionLabel" x-on:input="updateSectionPreview()" class="flex-1 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded" placeholder="Nume secțiune">
                             <input type="number" x-model="sectionFontSize" x-on:input="updateSectionPreview()" min="8" max="72" class="w-10 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded" title="Font size">
+                        </div>
+
+                        {{-- Label Visibility & Position --}}
+                        <div class="flex items-center gap-2">
+                            <label class="flex items-center gap-1 text-xs text-gray-500">
+                                <input type="checkbox" x-model="showSectionLabel" x-on:change="updateSectionPreview()" class="w-3 h-3">
+                                Afișează
+                            </label>
+                            <select x-model="sectionLabelPosition" x-on:change="updateSectionPreview()" class="flex-1 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded" :disabled="!showSectionLabel">
+                                <option value="inside">În interior</option>
+                                <option value="outside-top">Sus (exterior)</option>
+                                <option value="outside-bottom">Jos (exterior)</option>
+                                <option value="outside-left">Stânga (exterior)</option>
+                                <option value="outside-right">Dreapta (exterior)</option>
+                            </select>
                         </div>
 
                         {{-- Colors --}}
