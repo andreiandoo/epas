@@ -54,6 +54,8 @@ class TicketType extends Model
         'event_series',
         // Sort order for drag & drop reordering
         'sort_order',
+        // Color for seating map visualization
+        'color',
     ];
 
     protected $casts = [
@@ -100,6 +102,16 @@ class TicketType extends Model
             'ticket_type_seating_sections',
             'ticket_type_id',
             'seating_section_id'
+        )->withTimestamps();
+    }
+
+    public function seatingRows(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            \App\Models\Seating\SeatingRow::class,
+            'ticket_type_seating_rows',
+            'ticket_type_id',
+            'seating_row_id'
         )->withTimestamps();
     }
 

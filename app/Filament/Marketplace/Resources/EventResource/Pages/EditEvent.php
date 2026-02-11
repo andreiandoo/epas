@@ -93,7 +93,8 @@ class EditEvent extends EditRecord
     protected function getUploadImagesAction(): Actions\Action
     {
         $marketplace = static::getMarketplaceClient();
-        $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
+        $rawLang = $marketplace->language ?? $marketplace->locale ?? null;
+        $lang = (!empty($rawLang)) ? $rawLang : 'ro';
         $t = fn($ro, $en) => $lang === 'ro' ? $ro : $en;
 
         return Actions\Action::make('uploadImages')
@@ -682,6 +683,11 @@ class EditEvent extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
+        // Determine the marketplace language (same logic as form())
+        $marketplace = static::getMarketplaceClient();
+        $rawLang = $marketplace->language ?? $marketplace->locale ?? null;
+        $lang = (!empty($rawLang)) ? $rawLang : 'ro';
+
         // Ensure translatable fields are properly populated for nested form fields
         // The form uses title.{language} syntax, so we need to ensure title is an array
         $translatableFields = ['title', 'subtitle', 'short_description', 'description', 'ticket_terms'];
@@ -697,12 +703,17 @@ class EditEvent extends EditRecord
                     if (is_array($decoded)) {
                         $data[$field] = $decoded;
                     } else {
-                        // Fallback: treat as simple string, wrap in array with 'ro' key
-                        $data[$field] = ['ro' => $rawValue];
+                        // Fallback: treat as simple string, wrap in array with current language key
+                        $data[$field] = [$lang => $rawValue];
                     }
                 } elseif (is_array($rawValue)) {
                     $data[$field] = $rawValue;
                 }
+            }
+
+            // Ensure the current language key exists — copy first available translation if missing
+            if (is_array($data[$field] ?? null) && !isset($data[$field][$lang]) && !empty($data[$field])) {
+                $data[$field][$lang] = reset($data[$field]);
             }
         }
 

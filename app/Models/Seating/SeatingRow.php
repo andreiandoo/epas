@@ -4,6 +4,7 @@ namespace App\Models\Seating;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SeatingRow extends Model
@@ -49,5 +50,15 @@ class SeatingRow extends Model
     public function seats(): HasMany
     {
         return $this->hasMany(SeatingSeat::class, 'row_id');
+    }
+
+    public function ticketTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            \App\Models\TicketType::class,
+            'ticket_type_seating_rows',
+            'seating_row_id',
+            'ticket_type_id'
+        )->withTimestamps();
     }
 }

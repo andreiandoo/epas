@@ -17,6 +17,7 @@ use App\Models\Tax\GeneralTax;
 use App\Models\Venue;
 use App\Models\Seating\SeatingLayout;
 use App\Models\Seating\SeatingSection;
+use App\Models\Seating\SeatingRow;
 use App\Rules\UniqueSeatingSectionPerEvent;
 use App\Models\MarketplaceTaxTemplate;
 use App\Models\EventGeneratedDocument;
@@ -99,7 +100,9 @@ class EventResource extends Resource
 
         // Get tenant's language (check both 'language' and 'locale' columns)
         // Default to 'ro' (Romanian) for this marketplace
-        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'ro';
+        // Use empty() check because ?? doesn't catch empty strings ''
+        $lang = $marketplace->language ?? $marketplace->locale ?? null;
+        $marketplaceLanguage = (!empty($lang)) ? $lang : 'ro';
 
         // Translation helper for labels
         $t = function (string $ro, string $en) use ($marketplaceLanguage): string {
@@ -1447,6 +1450,128 @@ class EventResource extends Resource
                                             })
                                             ->columnSpan(12),
 
+                                        // Ticket type color for seating map visualization
+                                        Forms\Components\ColorPicker::make('color')
+                                            ->label($t('Culoare pe hartă', 'Map color'))
+                                            ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
+                                            ->live(onBlur: true)
+                                            ->columnSpan(3),
+
+                                        // Seating Rows selector (visible when event has a seating layout)
+                                        Forms\Components\CheckboxList::make('seatingRows')
+                                            ->label($t('Rânduri de locuri asignate', 'Assigned Seating Rows'))
+                                            ->relationship('seatingRows', 'label')
+                                            ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
+                                            ->options(function (SGet $get) {
+                                                $layoutId = $get('../../seating_layout_id');
+                                                if (!$layoutId) return [];
+
+                                                return SeatingRow::query()
+                                                    ->whereHas('section', fn ($q) => $q->where('layout_id', $layoutId)->where('section_type', 'standard'))
+                                                    ->with('section')
+                                                    ->get()
+                                                    ->sortBy([
+                                                        fn ($a, $b) => ($a->section->display_order ?? 0) <=> ($b->section->display_order ?? 0),
+                                                        fn ($a, $b) => intval($a->label) <=> intval($b->label),
+                                                    ])
+                                                    ->mapWithKeys(fn ($row) => [
+                                                        $row->id => $row->section->name . ' — Rând ' . $row->label . ' (' . $row->seat_count . ' locuri)'
+                                                    ]);
+                                            })
+                                            ->columns(2)
+                                            ->searchable()
+                                            ->live()
+                                            ->afterStateUpdated(function ($state, SSet $set) {
+                                                if (!empty($state)) {
+                                                    $filtered = array_filter($state);
+                                                    if (!empty($filtered)) {
+                                                        $totalSeats = SeatingRow::whereIn('id', $filtered)->sum('seat_count');
+                                                        $set('capacity', $totalSeats);
+                                                    }
+                                                }
+                                            })
+                                            ->helperText($t(
+                                                'Selectează rândurile de locuri pentru acest tip de bilet. Mai multe tipuri de bilete pot partaja aceleași rânduri.',
+                                                'Select seating rows for this ticket type. Multiple ticket types can share the same rows.'
+                                            ))
+                                            ->columnSpan(12),
+
+                                        // Visual preview of selected rows with seat dots
+                                        Forms\Components\Placeholder::make('rows_preview')
+                                            ->label('')
+                                            ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id') && !empty(array_filter($get('seatingRows') ?? [])))
+                                            ->content(function (SGet $get) {
+                                                $layoutId = $get('../../seating_layout_id');
+                                                $selectedRows = array_map('intval', array_filter($get('seatingRows') ?? []));
+                                                $color = $get('color') ?: '#3b82f6';
+
+                                                if (!$layoutId || empty($selectedRows)) return '';
+
+                                                $sections = SeatingSection::where('layout_id', $layoutId)
+                                                    ->where('section_type', 'standard')
+                                                    ->with('rows')
+                                                    ->orderBy('display_order')
+                                                    ->get();
+
+                                                if ($sections->isEmpty()) return '';
+
+                                                $totalSelected = 0;
+                                                $totalSeats = 0;
+                                                $html = "<div class='space-y-3'>";
+
+                                                foreach ($sections as $section) {
+                                                    if ($section->rows->isEmpty()) continue;
+
+                                                    $html .= "<div class='bg-gray-800/50 rounded-lg p-3 border border-gray-700/50'>";
+                                                    $html .= "<div class='text-sm font-medium text-gray-300 mb-2'>" . e($section->name) . "</div>";
+                                                    $html .= "<div class='space-y-1'>";
+
+                                                    $sortedRows = $section->rows->sortBy(fn ($r) => intval($r->label));
+                                                    foreach ($sortedRows as $row) {
+                                                        $isSelected = in_array($row->id, $selectedRows);
+                                                        $bgColor = $isSelected ? $color . '25' : 'transparent';
+                                                        $borderColor = $isSelected ? $color : '#374151';
+                                                        $textColor = $isSelected ? '#fff' : '#6b7280';
+                                                        $dotColor = $isSelected ? $color : '#4b5563';
+
+                                                        if ($isSelected) {
+                                                            $totalSelected++;
+                                                            $totalSeats += $row->seat_count;
+                                                        }
+
+                                                        $seatDots = '';
+                                                        $maxDots = min($row->seat_count, 40);
+                                                        for ($i = 0; $i < $maxDots; $i++) {
+                                                            $seatDots .= "<span class='inline-block w-2 h-2 rounded-full' style='background:{$dotColor}'></span> ";
+                                                        }
+                                                        if ($row->seat_count > 40) {
+                                                            $seatDots .= "<span class='text-xs text-gray-500'>+" . ($row->seat_count - 40) . "</span>";
+                                                        }
+
+                                                        $html .= "<div class='flex items-center gap-2 px-2 py-1 rounded border' style='background:{$bgColor};border-color:{$borderColor}'>";
+                                                        $html .= "<span class='text-xs font-mono font-bold min-w-[2.5rem]' style='color:{$textColor}'>" . e($row->label) . "</span>";
+                                                        $html .= "<div class='flex-1 flex flex-wrap gap-px'>{$seatDots}</div>";
+                                                        $html .= "<span class='text-xs whitespace-nowrap' style='color:{$textColor}'>" . $row->seat_count . " loc.</span>";
+                                                        $html .= "</div>";
+                                                    }
+
+                                                    $html .= "</div></div>";
+                                                }
+
+                                                $html .= "</div>";
+
+                                                $summary = "<div class='flex items-center justify-between mb-2'>";
+                                                $summary .= "<span class='text-sm font-medium text-gray-300'>";
+                                                $summary .= "Rânduri selectate: <span class='font-bold' style='color:{$color}'>{$totalSelected}</span>";
+                                                $summary .= " <span class='text-gray-500'>({$totalSeats} locuri)</span>";
+                                                $summary .= "</span></div>";
+
+                                                return new \Illuminate\Support\HtmlString(
+                                                    "<div class='p-3 bg-gray-900 border border-gray-700 rounded-lg'>{$summary}{$html}</div>"
+                                                );
+                                            })
+                                            ->columnSpan(12),
+
                                         // Reducere fieldset
                                         SC\Fieldset::make($t('Reducere', 'Discount'))
                                             ->schema([
@@ -1913,6 +2038,193 @@ class EventResource extends Resource
                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Adaugă tag-uri meta SEO personalizate. Folosește șabloanele de mai sus pentru a adăuga rapid seturi comune.', 'Add custom SEO meta tags. Use templates above to quickly add common sets.')),
                 ]),
                                     ]), // End Tab 5: SEO
+
+                                // ========== TAB 6: HARTA LOCURI ==========
+                                SC\Tabs\Tab::make($t('Harta Locuri', 'Seating Map'))
+                                    ->key('harta')
+                                    ->icon('heroicon-o-map')
+                                    ->visible(fn (SGet $get) => (bool) $get('seating_layout_id'))
+                                    ->schema([
+                        // Full seating map visualization with ticket type colors and tooltips
+                        Forms\Components\Placeholder::make('seating_map_visualization')
+                            ->hiddenLabel()
+                            ->content(function (?Event $record) use ($marketplace, $t) {
+                                if (!$record || !$record->seating_layout_id) {
+                                    return new HtmlString(
+                                        '<div class="p-6 text-center text-gray-500">' .
+                                        $t('Salvați evenimentul cu o hartă de locuri pentru a vedea vizualizarea.', 'Save the event with a seating layout to see the visualization.') .
+                                        '</div>'
+                                    );
+                                }
+
+                                $layout = SeatingLayout::withoutGlobalScopes()
+                                    ->with(['sections' => function ($q) {
+                                        $q->where('section_type', 'standard')->orderBy('display_order');
+                                    }, 'sections.rows.seats'])
+                                    ->find($record->seating_layout_id);
+
+                                if (!$layout) return '';
+
+                                // Get ticket types for this event with their seating rows
+                                $ticketTypes = \App\Models\TicketType::where('event_id', $record->id)
+                                    ->with('seatingRows')
+                                    ->get();
+
+                                // Build row -> ticket types map
+                                $rowTicketTypesMap = [];
+                                foreach ($ticketTypes as $tt) {
+                                    foreach ($tt->seatingRows as $row) {
+                                        $rowTicketTypesMap[$row->id][] = [
+                                            'name' => $tt->name,
+                                            'color' => $tt->color ?? '#6b7280',
+                                            'price' => $tt->price_max ?? (($tt->price_cents ?? 0) / 100),
+                                            'currency' => $tt->currency ?? ($marketplace->currency ?? 'RON'),
+                                        ];
+                                    }
+                                }
+
+                                // Canvas dimensions
+                                $canvasW = $layout->canvas_w ?? 1920;
+                                $canvasH = $layout->canvas_h ?? 1080;
+
+                                // Background image
+                                $bgImage = '';
+                                $bgPath = $layout->background_image_path ?? $layout->background_image_url;
+                                if ($bgPath) {
+                                    $bgUrl = str_starts_with($bgPath, 'http') ? $bgPath : asset('storage/' . $bgPath);
+                                    $bgScale = $layout->background_scale ?? 1;
+                                    $bgX = $layout->background_x ?? 0;
+                                    $bgY = $layout->background_y ?? 0;
+                                    $bgOpacity = $layout->background_opacity ?? 0.5;
+                                    $bgW = $canvasW * $bgScale;
+                                    $bgH = $canvasH * $bgScale;
+                                    $bgImage = "<image href=\"{$bgUrl}\" x=\"{$bgX}\" y=\"{$bgY}\" width=\"{$bgW}\" height=\"{$bgH}\" opacity=\"{$bgOpacity}\" preserveAspectRatio=\"xMidYMid meet\"/>";
+                                }
+
+                                // Render seats grouped by section
+                                $svgContent = '';
+                                $totalSeatCount = 0;
+                                $assignedSeatCount = 0;
+
+                                foreach ($layout->sections as $section) {
+                                    $sX = $section->x_position ?? 0;
+                                    $sY = $section->y_position ?? 0;
+                                    $sW = $section->width ?? 200;
+                                    $sH = $section->height ?? 150;
+                                    $sRotation = $section->rotation ?? 0;
+
+                                    // Section group with rotation
+                                    $sCx = $sX + $sW / 2;
+                                    $sCy = $sY + $sH / 2;
+                                    $sTransform = $sRotation != 0 ? " transform=\"rotate({$sRotation} {$sCx} {$sCy})\"" : '';
+                                    $svgContent .= "<g{$sTransform}>";
+
+                                    // Section boundary (subtle)
+                                    $svgContent .= "<rect x=\"{$sX}\" y=\"{$sY}\" width=\"{$sW}\" height=\"{$sH}\" fill=\"none\" stroke=\"rgba(255,255,255,0.1)\" stroke-width=\"1\" rx=\"4\"/>";
+
+                                    // Section label above the section
+                                    $sName = e($section->name);
+                                    $labelY = max(0, $sY - 8);
+                                    $svgContent .= "<text x=\"{$sX}\" y=\"{$labelY}\" fill=\"rgba(255,255,255,0.5)\" font-size=\"14\" font-weight=\"600\">{$sName}</text>";
+
+                                    foreach ($section->rows as $row) {
+                                        $rowTTs = $rowTicketTypesMap[$row->id] ?? [];
+                                        $rowColor = !empty($rowTTs) ? $rowTTs[0]['color'] : '#374151';
+
+                                        foreach ($row->seats as $seat) {
+                                            $seatX = $sX + ($seat->x ?? 0);
+                                            $seatY = $sY + ($seat->y ?? 0);
+                                            $seatR = 6;
+
+                                            // Style based on seat status
+                                            $fillColor = $rowColor;
+                                            $strokeColor = '#ffffff';
+                                            $strokeW = '0.5';
+                                            if ($seat->status === 'imposibil') {
+                                                $fillColor = '#1f2937';
+                                                $strokeColor = '#4b5563';
+                                            }
+
+                                            $isAssigned = !empty($rowTTs) && $seat->status !== 'imposibil';
+                                            if ($isAssigned) $assignedSeatCount++;
+                                            $totalSeatCount++;
+
+                                            // Build tooltip: Section — Rând — Loc + prices
+                                            $tooltip = e($section->name) . " — Rând " . e($row->label) . " — Loc " . e($seat->label);
+                                            if (!empty($rowTTs)) {
+                                                foreach ($rowTTs as $ttInfo) {
+                                                    $tooltip .= "&#10;" . e($ttInfo['name']) . ": " . number_format($ttInfo['price'], 2) . " " . e($ttInfo['currency']);
+                                                }
+                                            } else {
+                                                $tooltip .= "&#10;" . $t('Neatribuit', 'Unassigned');
+                                            }
+
+                                            $svgContent .= "<circle cx=\"{$seatX}\" cy=\"{$seatY}\" r=\"{$seatR}\" fill=\"{$fillColor}\" stroke=\"{$strokeColor}\" stroke-width=\"{$strokeW}\"><title>{$tooltip}</title></circle>";
+                                        }
+                                    }
+
+                                    $svgContent .= "</g>";
+                                }
+
+                                // Calculate height class based on aspect ratio
+                                $aspectRatio = $canvasH / $canvasW;
+                                $heightPx = $aspectRatio > 0.7 ? 500 : 400;
+
+                                // Legend
+                                $legendHtml = '';
+                                if ($ticketTypes->isNotEmpty()) {
+                                    $legendHtml = "<div class='flex flex-wrap gap-3 mt-4 pt-4 border-t border-gray-700'>";
+                                    foreach ($ticketTypes as $tt) {
+                                        $ttColor = $tt->color ?? '#6b7280';
+                                        $ttPrice = $tt->price_max ?? (($tt->price_cents ?? 0) / 100);
+                                        $ttCurrency = $tt->currency ?? ($marketplace->currency ?? 'RON');
+                                        $ttRowCount = $tt->seatingRows->count();
+                                        $legendHtml .= "<div class='flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 border border-gray-700'>";
+                                        $legendHtml .= "<span class='w-3 h-3 rounded-full flex-shrink-0' style='background:" . e($ttColor) . "'></span>";
+                                        $legendHtml .= "<span class='text-sm text-gray-200 font-medium'>" . e($tt->name) . "</span>";
+                                        $legendHtml .= "<span class='text-xs text-gray-400'>" . number_format($ttPrice, 2) . " " . e($ttCurrency) . "</span>";
+                                        if ($ttRowCount > 0) {
+                                            $legendHtml .= "<span class='text-xs text-gray-500'>({$ttRowCount} " . $t('rânduri', 'rows') . ")</span>";
+                                        }
+                                        $legendHtml .= "</div>";
+                                    }
+                                    // Unassigned legend item
+                                    $legendHtml .= "<div class='flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 border border-gray-700'>";
+                                    $legendHtml .= "<span class='w-3 h-3 rounded-full flex-shrink-0' style='background:#374151'></span>";
+                                    $legendHtml .= "<span class='text-sm text-gray-400'>" . $t('Neatribuit', 'Unassigned') . "</span>";
+                                    $legendHtml .= "</div>";
+                                    // Imposibil legend item
+                                    $legendHtml .= "<div class='flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 border border-gray-700'>";
+                                    $legendHtml .= "<span class='w-3 h-3 rounded-full flex-shrink-0' style='background:#1f2937;border:1px solid #4b5563'></span>";
+                                    $legendHtml .= "<span class='text-sm text-gray-400'>" . $t('Blocat', 'Blocked') . "</span>";
+                                    $legendHtml .= "</div>";
+                                    $legendHtml .= "</div>";
+                                }
+
+                                // Summary stats
+                                $unassigned = $totalSeatCount - $assignedSeatCount;
+                                $summaryHtml = "<div class='flex items-center justify-between mb-3'>";
+                                $summaryHtml .= "<div class='text-sm text-gray-300'>";
+                                $summaryHtml .= $t('Total locuri', 'Total seats') . ": <span class='font-bold text-white'>{$totalSeatCount}</span>";
+                                $summaryHtml .= " &middot; " . $t('Atribuite', 'Assigned') . ": <span class='font-bold text-green-400'>{$assignedSeatCount}</span>";
+                                if ($unassigned > 0) {
+                                    $summaryHtml .= " &middot; " . $t('Neatribuite', 'Unassigned') . ": <span class='font-bold text-gray-400'>{$unassigned}</span>";
+                                }
+                                $summaryHtml .= "</div></div>";
+
+                                return new HtmlString("
+                                    <div class='p-4 bg-gray-900 border border-gray-700 rounded-lg'>
+                                        {$summaryHtml}
+                                        <svg viewBox=\"0 0 {$canvasW} {$canvasH}\" preserveAspectRatio=\"xMidYMid meet\" class='w-full bg-gray-950 rounded border border-gray-800' style='height: {$heightPx}px; max-height: 600px;'>
+                                            {$bgImage}
+                                            {$svgContent}
+                                        </svg>
+                                        {$legendHtml}
+                                    </div>
+                                ");
+                            })
+                            ->columnSpanFull(),
+                                    ]), // End Tab 6: Harta Locuri
                             ]), // End Tabs component
                     ]),
                 // ========== COLOANA DREAPTĂ - SIDEBAR (1/4) ==========
@@ -2847,6 +3159,15 @@ class EventResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
+                    ->sortable(),
+                Tables\Columns\IconColumn::make('seating_layout_id')
+                    ->label('Seating')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-map')
+                    ->falseIcon('heroicon-o-minus')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->getStateUsing(fn ($record) => !empty($record->seating_layout_id))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('marketplaceOrganizer.name')
                     ->label('Organizer')
