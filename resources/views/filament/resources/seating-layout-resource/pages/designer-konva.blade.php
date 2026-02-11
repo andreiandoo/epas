@@ -413,14 +413,15 @@
 
                 // Create image from SVG - apply icon color by replacing fill colors
                 let svgString = iconDef.svg;
-                // Replace fill colors in the SVG with the selected icon color
-                // Use RegExp constructor to avoid template parsing issues with forward slashes
-                const fillAttrRegex = new RegExp('fill="[^"]*"', 'g');
-                const fillStyleRegex = new RegExp("fill:'[^']*'", 'g');
-                const strokeRegex = new RegExp('stroke="[^"]*"', 'g');
-                svgString = svgString.replace(fillAttrRegex, `fill="${iconColor}"`);
-                svgString = svgString.replace(fillStyleRegex, `fill:'${iconColor}'`);
-                svgString = svgString.replace(strokeRegex, `stroke="${iconColor}"`);
+                // Replace fill/stroke colors in the SVG with the selected icon color
+                // Use \x22 hex escapes for double quotes to avoid breaking the HTML x-data attribute
+                const dq = String.fromCharCode(34);
+                const fillAttrRegex = new RegExp('fill=' + dq + '[^' + dq + ']*' + dq, 'g');
+                const fillStyleRegex = new RegExp('fill:\x27[^\x27]*\x27', 'g');
+                const strokeRegex = new RegExp('stroke=' + dq + '[^' + dq + ']*' + dq, 'g');
+                svgString = svgString.replace(fillAttrRegex, 'fill=' + dq + iconColor + dq);
+                svgString = svgString.replace(fillStyleRegex, 'fill:\x27' + iconColor + '\x27');
+                svgString = svgString.replace(strokeRegex, 'stroke=' + dq + iconColor + dq);
 
                 const img = new Image();
                 const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
