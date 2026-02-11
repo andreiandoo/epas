@@ -256,7 +256,7 @@
 
                 // Create layers with performance optimizations
                 this.backgroundLayer = new Konva.Layer({ listening: false });
-                this.gridLayer = new Konva.Layer({ listening: false, hitGraphEnabled: false });
+                this.gridLayer = new Konva.Layer({ listening: false });
                 this.layer = new Konva.Layer();
                 this.drawLayer = new Konva.Layer();
                 this.seatsLayer = new Konva.Layer({ perfectDrawEnabled: false });
@@ -2918,7 +2918,13 @@
                 }
             },
             updateSectionPosition(sectionId, x, y) {
-                // Guard against Livewire component being disconnected
+                // Update local sections data immediately so redraws use new position
+                const section = this.sections.find(s => s.id === sectionId);
+                if (section) {
+                    section.x_position = Math.round(x);
+                    section.y_position = Math.round(y);
+                }
+                // Persist to backend
                 const wire = this.getWire();
                 if (!wire) return;
                 try {
