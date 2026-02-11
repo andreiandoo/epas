@@ -41,6 +41,7 @@
             expandedSections: {},
             expandedRows: {},
             seatTooltip: { show: false, x: 0, y: 0, seatName: '', seatId: '' },
+            _lastTooltipUpdate: 0,
             showColorModal: false,
             showShapeConfigModal: false,
             showContextMenu: false,
@@ -253,13 +254,15 @@
 
                 this.konvaInitialized = true;
 
-                // Create layers
-                this.backgroundLayer = new Konva.Layer();
+                // Create layers with performance optimizations
+                this.backgroundLayer = new Konva.Layer({ listening: false });
+                this.gridLayer = new Konva.Layer({ listening: false, hitGraphEnabled: false });
                 this.layer = new Konva.Layer();
                 this.drawLayer = new Konva.Layer();
-                this.seatsLayer = new Konva.Layer();
+                this.seatsLayer = new Konva.Layer({ perfectDrawEnabled: false });
 
                 this.stage.add(this.backgroundLayer);
+                this.stage.add(this.gridLayer);
                 this.stage.add(this.layer);
                 this.stage.add(this.seatsLayer);
                 this.stage.add(this.drawLayer);
@@ -299,6 +302,8 @@
                     width: this.canvasWidth,
                     height: this.canvasHeight,
                     fill: this.backgroundColor,
+                    listening: false,
+                    perfectDrawEnabled: false,
                     name: 'background-color'
                 });
                 this.backgroundLayer.add(bgRect);
@@ -331,11 +336,11 @@
                 this.backgroundLayer.batchDraw();
             },
             drawGrid() {
-                // Remove old grid
-                this.layer.find('.grid-line').forEach(l => l.destroy());
+                // Clear dedicated grid layer
+                this.gridLayer.destroyChildren();
 
                 if (!this.showGrid) {
-                    this.layer.batchDraw();
+                    this.gridLayer.batchDraw();
                     return;
                 }
 
@@ -345,29 +350,29 @@
 
                 // Vertical lines
                 for (let x = 0; x <= width; x += gridSize) {
-                    const line = new Konva.Line({
+                    this.gridLayer.add(new Konva.Line({
                         points: [x, 0, x, height],
                         stroke: '#e5e7eb',
                         strokeWidth: 0.5,
-                        name: 'grid-line'
-                    });
-                    this.layer.add(line);
-                    line.moveToBottom();
+                        listening: false,
+                        perfectDrawEnabled: false
+                    }));
                 }
 
                 // Horizontal lines
                 for (let y = 0; y <= height; y += gridSize) {
-                    const line = new Konva.Line({
+                    this.gridLayer.add(new Konva.Line({
                         points: [0, y, width, y],
                         stroke: '#e5e7eb',
                         strokeWidth: 0.5,
-                        name: 'grid-line'
-                    });
-                    this.layer.add(line);
-                    line.moveToBottom();
+                        listening: false,
+                        perfectDrawEnabled: false
+                    }));
                 }
 
-                this.layer.batchDraw();
+                this.gridLayer.batchDraw();
+                // Cache the grid layer for faster redraws during pan/zoom
+                try { this.gridLayer.cache(); } catch(e) {}
             },
             drawSections() {
                 // Clear existing section shapes
@@ -932,18 +937,21 @@
                                     x: seatX,
                                     y: seatY,
                                     radius: seatRadius,
-                                    fill: isSeatSelected ? '#DBEAFE' : fillColor, // Light blue fill for selected
+                                    fill: isSeatSelected ? '#DBEAFE' : fillColor,
                                     stroke: strokeColor,
                                     strokeWidth: strokeWidth,
                                     dash: dashPattern,
                                     scaleX: isSeatSelected ? 1.15 : 1,
                                     scaleY: isSeatSelected ? 1.15 : 1,
+                                    perfectDrawEnabled: false,
+                                    shadowForStrokeEnabled: false,
+                                    hitStrokeWidth: 0,
                                     id: `seat-${seat.id}`,
                                     name: 'seat',
                                     seatData: { id: seat.id, label: seat.label, rowLabel: row.label }
                                 });
 
-                                // Hover effect and tooltip
+                                // Hover effect and tooltip (throttled to avoid Alpine reactivity storms)
                                 seatCircle.on('mouseenter', (e) => {
                                     // Visual hover effect for seat selection mode
                                     if (this.seatSelectMode && !isSeatSelected) {
@@ -954,28 +962,25 @@
                                         document.body.style.cursor = 'pointer';
                                     }
 
-                                    // Show tooltip - use getClientRect for accurate screen position
+                                    // Throttle tooltip updates to max once per 50ms
+                                    const now = Date.now();
+                                    if (now - this._lastTooltipUpdate < 50) return;
+                                    this._lastTooltipUpdate = now;
+
+                                    // Show tooltip
                                     const container = document.getElementById('konva-container');
                                     const containerRect = container.getBoundingClientRect();
-
-                                    // Get the seat's bounding rect in client (viewport) coordinates
                                     const seatRect = seatCircle.getClientRect();
-
-                                    // Calculate position relative to the container
                                     const tooltipX = seatRect.x + seatRect.width / 2 - containerRect.left;
                                     const tooltipY = seatRect.y - containerRect.top;
-
-                                    // Generate seat name and ID
                                     const sectionCode = section.section_code || section.name || 'SEC';
-                                    const seatName = `${section.name || 'Secțiune'}, Rând ${row.label}, Loc ${seat.label}`;
-                                    const seatUid = seat.seat_uid || `${sectionCode}-${row.label}-${seat.label}`;
 
                                     this.seatTooltip = {
                                         show: true,
                                         x: tooltipX,
                                         y: tooltipY,
-                                        seatName: seatName,
-                                        seatId: seatUid
+                                        seatName: `${section.name || 'Secțiune'}, Rând ${row.label}, Loc ${seat.label}`,
+                                        seatId: seat.seat_uid || `${sectionCode}-${row.label}-${seat.label}`
                                     };
                                 });
                                 seatCircle.on('mouseleave', () => {
@@ -3268,7 +3273,7 @@
                             :class="drawMode === 'line' ? 'bg-gray-700 border-gray-700 text-white shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'">
                             Linie
                         </button>
-                        <button x-on:click="$wire.addQuickIcon()" type="button"
+                        <button x-on:click="$wire.mountAction('addIcon')" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
@@ -3276,7 +3281,7 @@
                             </svg>
                             Iconiță
                         </button>
-                        <button x-on:click="$wire.addQuickDecorative()" type="button"
+                        <button x-on:click="$wire.mountAction('addDecorativeZone')" type="button"
                             class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border rounded-lg bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
