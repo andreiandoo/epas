@@ -1248,7 +1248,7 @@
             },
             darkenColor(hex, percent) {
                 // Remove # if present
-                hex = hex.replace(/^#/, '');
+                if (hex.startsWith('#')) hex = hex.slice(1);
                 // Parse hex to RGB
                 let r = parseInt(hex.substring(0, 2), 16);
                 let g = parseInt(hex.substring(2, 4), 16);
