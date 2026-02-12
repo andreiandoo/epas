@@ -681,6 +681,35 @@ class EditEvent extends EditRecord
         \App\Models\TicketType::where('id', $ticketType->id)->update(['quota_total' => $newTotal]);
     }
 
+    /**
+     * Toggle a seating row assignment for a ticket type.
+     * Called from the interactive seating map editor via $wire.call().
+     */
+    public function toggleSeatingRowAssignment(int $ticketTypeId, int $rowId): bool
+    {
+        $this->skipRender();
+
+        $ticketType = \App\Models\TicketType::where('id', $ticketTypeId)
+            ->where('event_id', $this->record->id)
+            ->first();
+
+        if (!$ticketType) return false;
+
+        // Toggle: if already attached, detach; otherwise attach
+        if ($ticketType->seatingRows()->where('seating_row_id', $rowId)->exists()) {
+            $ticketType->seatingRows()->detach($rowId);
+        } else {
+            $ticketType->seatingRows()->attach($rowId);
+        }
+
+        // Update ticket type capacity based on total assigned seat count
+        $totalSeats = $ticketType->seatingRows()
+            ->sum('seat_count');
+        $ticketType->update(['capacity' => $totalSeats ?: null]);
+
+        return true;
+    }
+
     protected function mutateFormDataBeforeFill(array $data): array
     {
         // Determine the marketplace language (same logic as form())
