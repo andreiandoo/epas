@@ -463,39 +463,32 @@ class EditEvent extends EditRecord
 
         $event = $this->record;
         $layoutId = $event->seating_layout_id;
-
-        \Illuminate\Support\Facades\Log::info('updateSeatStatuses called', [
+        $debug = [
             'event_id' => $event->id,
             'layout_id' => $layoutId,
             'action' => $action,
-            'seat_uids_count' => count($seatUids),
-            'seat_uids_sample' => array_slice($seatUids, 0, 5),
-        ]);
+            'sent_uids' => array_slice($seatUids, 0, 5),
+        ];
 
         if (!$layoutId || empty($seatUids)) {
-            \Illuminate\Support\Facades\Log::warning('updateSeatStatuses: no layoutId or empty seatUids');
-            return ['updated' => 0, 'invite_url' => null];
+            return ['updated' => 0, 'invite_url' => null, 'debug' => $debug + ['fail' => 'no_layout_or_empty']];
         }
 
         // Find or create EventSeatingLayout directly by event_id
         $eventSeating = \App\Models\Seating\EventSeatingLayout::where('event_id', $event->id)->first();
-
-        \Illuminate\Support\Facades\Log::info('updateSeatStatuses: eventSeating lookup', [
-            'found' => $eventSeating !== null,
-            'event_seating_id' => $eventSeating?->id,
-        ]);
+        $debug['esl_found'] = $eventSeating !== null;
+        $debug['esl_id'] = $eventSeating?->id;
+        $created = false;
 
         if (!$eventSeating) {
-            // Load the seating layout template
             $layout = \App\Models\Seating\SeatingLayout::withoutGlobalScopes()
                 ->with(['sections.rows.seats'])
                 ->find($layoutId);
 
             if (!$layout || $layout->sections->isEmpty()) {
-                return ['updated' => 0, 'invite_url' => null];
+                return ['updated' => 0, 'invite_url' => null, 'debug' => $debug + ['fail' => 'no_layout_sections']];
             }
 
-            // Create EventSeatingLayout + EventSeat records
             $eventSeating = \App\Models\Seating\EventSeatingLayout::create([
                 'event_id' => $event->id,
                 'layout_id' => $layout->id,
@@ -504,6 +497,7 @@ class EditEvent extends EditRecord
                 'published_at' => now(),
             ]);
 
+            $seatCount = 0;
             foreach ($layout->sections as $section) {
                 foreach ($section->rows as $row) {
                     foreach ($row->seats as $seat) {
@@ -517,22 +511,36 @@ class EditEvent extends EditRecord
                             'status' => ($baseStatus === 'imposibil') ? 'disabled' : 'available',
                             'version' => 1,
                         ]);
+                        $seatCount++;
                     }
                 }
             }
+            $created = true;
+            $debug['esl_created'] = true;
+            $debug['esl_id'] = $eventSeating->id;
+            $debug['seats_created'] = $seatCount;
         }
 
-        // Block or unblock seats
-        $matchCount = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+        // Diagnostic: check matching seats
+        $totalSeats = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)->count();
+        $matchingSeats = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+            ->whereIn('seat_uid', $seatUids)->count();
+
+        // Sample DB seat_uids to compare with sent ones
+        $dbSampleUids = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+            ->limit(5)->pluck('seat_uid')->toArray();
+
+        // Check statuses of matching seats
+        $matchingStatuses = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
             ->whereIn('seat_uid', $seatUids)
-            ->count();
+            ->pluck('status', 'seat_uid')->toArray();
 
-        \Illuminate\Support\Facades\Log::info('updateSeatStatuses: before update', [
-            'event_seating_id' => $eventSeating->id,
-            'matching_event_seats' => $matchCount,
-            'total_event_seats' => $eventSeating->seats()->count(),
-        ]);
+        $debug['total_event_seats'] = $totalSeats;
+        $debug['matching_seats'] = $matchingSeats;
+        $debug['db_sample_uids'] = $dbSampleUids;
+        $debug['matching_statuses'] = $matchingStatuses;
 
+        // Block or unblock seats
         $updated = 0;
         if ($action === 'block') {
             $updated = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
@@ -552,7 +560,7 @@ class EditEvent extends EditRecord
                 ]);
         }
 
-        \Illuminate\Support\Facades\Log::info('updateSeatStatuses: result', ['updated' => $updated]);
+        $debug['updated'] = $updated;
 
         $inviteUrl = null;
         if ($updated > 0 && $action === 'block' && $createInvitations) {
@@ -571,7 +579,7 @@ class EditEvent extends EditRecord
             }
         }
 
-        return ['updated' => $updated, 'invite_url' => $inviteUrl];
+        return ['updated' => $updated, 'invite_url' => $inviteUrl, 'debug' => $debug];
     }
 
     /**
