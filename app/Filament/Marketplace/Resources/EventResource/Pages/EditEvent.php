@@ -461,18 +461,71 @@ class EditEvent extends EditRecord
     {
         $this->skipRender();
 
-        $seatingService = app(MarketplaceEventSeatingService::class);
-        $eventSeating = $seatingService->getOrCreateEventSeatingByEventId($this->record->id);
+        $event = $this->record;
+        $layoutId = $event->seating_layout_id;
 
-        if (!$eventSeating) {
+        if (!$layoutId || empty($seatUids)) {
             return ['updated' => 0, 'invite_url' => null];
         }
 
+        // Find or create EventSeatingLayout directly by event_id
+        $eventSeating = \App\Models\Seating\EventSeatingLayout::where('event_id', $event->id)->first();
+
+        if (!$eventSeating) {
+            // Load the seating layout template
+            $layout = \App\Models\Seating\SeatingLayout::withoutGlobalScopes()
+                ->with(['sections.rows.seats'])
+                ->find($layoutId);
+
+            if (!$layout || $layout->sections->isEmpty()) {
+                return ['updated' => 0, 'invite_url' => null];
+            }
+
+            // Create EventSeatingLayout + EventSeat records
+            $eventSeating = \App\Models\Seating\EventSeatingLayout::create([
+                'event_id' => $event->id,
+                'layout_id' => $layout->id,
+                'marketplace_client_id' => $event->marketplace_client_id ?? null,
+                'status' => 'active',
+                'published_at' => now(),
+            ]);
+
+            foreach ($layout->sections as $section) {
+                foreach ($section->rows as $row) {
+                    foreach ($row->seats as $seat) {
+                        $baseStatus = $seat->status ?? 'active';
+                        \App\Models\Seating\EventSeat::create([
+                            'event_seating_id' => $eventSeating->id,
+                            'seat_uid' => $seat->seat_uid,
+                            'section_name' => $section->name,
+                            'row_label' => $row->label,
+                            'seat_label' => $seat->label,
+                            'status' => ($baseStatus === 'imposibil') ? 'disabled' : 'available',
+                            'version' => 1,
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // Block or unblock seats
         $updated = 0;
         if ($action === 'block') {
-            $updated = $seatingService->blockSeats($eventSeating->id, $seatUids);
+            $updated = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+                ->whereIn('seat_uid', $seatUids)
+                ->where('status', 'available')
+                ->update([
+                    'status' => 'blocked',
+                    'version' => \Illuminate\Support\Facades\DB::raw('version + 1'),
+                ]);
         } else {
-            $updated = $seatingService->unblockSeats($eventSeating->id, $seatUids);
+            $updated = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+                ->whereIn('seat_uid', $seatUids)
+                ->where('status', 'blocked')
+                ->update([
+                    'status' => 'available',
+                    'version' => \Illuminate\Support\Facades\DB::raw('version + 1'),
+                ]);
         }
 
         $inviteUrl = null;
@@ -485,10 +538,10 @@ class EditEvent extends EditRecord
 
             if ($hasInvitations) {
                 session()->put('blocked_seats_for_invitation', [
-                    'event_id' => $this->record->id,
+                    'event_id' => $event->id,
                     'seat_uids' => $seatUids,
                 ]);
-                $inviteUrl = route('filament.marketplace.pages.invitations') . '?event=' . $this->record->id . '&prefill_seats=1';
+                $inviteUrl = route('filament.marketplace.pages.invitations') . '?event=' . $event->id . '&prefill_seats=1';
             }
         }
 

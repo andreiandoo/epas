@@ -219,15 +219,18 @@
             let action = this.blockAction;
             let invite = this.mkInvite;
 
-            let done = (ok) => {
+            let done = (ok, cnt) => {
                 this.blockSaving = false;
-                if (ok) {
+                if (ok && cnt > 0) {
                     let newES = {...this.ES};
                     uids.forEach(uid => {
                         if (action === 'block') newES[uid] = 'blocked';
                         else delete newES[uid];
                     });
                     this.ES = newES;
+                    this.selSeats = [];
+                } else if (ok && cnt === 0) {
+                    console.warn('updateSeatStatuses returned 0 updated seats');
                     this.selSeats = [];
                 }
             };
@@ -241,13 +244,14 @@
                             ? lw.call('updateSeatStatuses', uids, action, invite)
                             : lw.updateSeatStatuses(uids, action, invite);
                         if (p && p.then) p.then(r => {
-                            done(true);
+                            let cnt = r && r.updated !== undefined ? r.updated : -1;
+                            done(true, cnt);
                             if (r && r.invite_url) window.open(r.invite_url, '_blank');
-                        }).catch(() => done(false));
-                        else done(true);
-                    } else done(false);
-                } else done(false);
-            } catch(e) { done(false); }
+                        }).catch(e => { console.error('updateSeatStatuses error:', e); done(false, 0); });
+                        else done(true, -1);
+                    } else { console.error('Livewire component not found'); done(false, 0); }
+                } else { console.error('No wire:id or Livewire not loaded'); done(false, 0); }
+            } catch(e) { console.error('applyBlock exception:', e); done(false, 0); }
         },
 
         selectAllBlockedInView() {
