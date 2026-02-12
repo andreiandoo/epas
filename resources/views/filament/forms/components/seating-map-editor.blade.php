@@ -66,9 +66,22 @@
         }
     }
 
+    // Load event-level seat statuses (blocked/sold/held) for display
+    $eventSeatStatuses = [];
+    if ($eventId) {
+        $eventSeating = \App\Models\Seating\EventSeatingLayout::where('event_id', $eventId)->first();
+        if ($eventSeating) {
+            $eventSeatStatuses = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+                ->whereIn('status', ['blocked', 'sold', 'held', 'disabled'])
+                ->pluck('status', 'seat_uid')
+                ->toArray();
+        }
+    }
+
     $ticketTypesJson = json_encode($ticketTypesData);
     $rowAssignmentsJson = json_encode((object) $rowAssignments);
     $rowInfoJson = json_encode((object) $rowInfoMap);
+    $eventSeatStatusesJson = json_encode((object) $eventSeatStatuses);
     $firstTTId = !empty($ticketTypesData) ? $ticketTypesData[0]['id'] : 'null';
 @endphp
 
@@ -80,12 +93,17 @@
         sel: {{ $firstTTId }},
         A: {{ $rowAssignmentsJson }},
         RI: {{ $rowInfoJson }},
+        ES: {{ $eventSeatStatusesJson }},
         mode: 'view',
         saving: false,
         vbX: 0, vbY: 0, vbW: {{ $canvasW }}, vbH: {{ $canvasH }},
         OW: {{ $canvasW }}, OH: {{ $canvasH }},
-        md: false, pan: false, mdRow: null, mdX: 0, mdY: 0, psX: 0, psY: 0, pvX: 0, pvY: 0,
+        md: false, pan: false, mdRow: null, mdSeat: null, mdX: 0, mdY: 0, psX: 0, psY: 0, pvX: 0, pvY: 0,
         tip: '', tipX: 0, tipY: 0, showTip: false,
+        selSeats: [],
+        blockAction: 'block',
+        mkInvite: false,
+        blockSaving: false,
 
         get zoom() { return Math.round((this.OW / this.vbW) * 100) },
 
@@ -97,6 +115,15 @@
             let a = this.A[rid];
             if (a && a.length) { let s = a.find(x => Number(x.id) === Number(this.sel)); if (s) return s.color; return a[0].color; }
             return '#374151';
+        },
+        sc(uid, rid) {
+            if (this.selSeats.includes(uid)) return '#fbbf24';
+            let es = this.ES[uid];
+            if (es === 'blocked') return '#6b7280';
+            if (es === 'sold') return '#dc2626';
+            if (es === 'held') return '#f59e0b';
+            if (es === 'disabled') return '#1f2937';
+            return this.rc(rid);
         },
         ro(rid) {
             let a = this.A[rid];
@@ -159,16 +186,90 @@
             } catch(e) { done(); }
         },
 
+        toggleSeat(uid) {
+            if (this.mode !== 'block') return;
+            let idx = this.selSeats.indexOf(uid);
+            if (idx > -1) this.selSeats = this.selSeats.filter(u => u !== uid);
+            else this.selSeats = [...this.selSeats, uid];
+        },
+
         enterAssign() { this.mode = 'assign'; },
         exitAssign() { this.mode = 'view'; },
+        enterBlock() { this.mode = 'block'; this.selSeats = []; this.blockAction = 'block'; this.mkInvite = false; },
+        exitBlock() { this.mode = 'view'; this.selSeats = []; },
+
+        applyBlock() {
+            if (!this.selSeats.length) return;
+            this.blockSaving = true;
+            let uids = [...this.selSeats];
+            let action = this.blockAction;
+            let invite = this.mkInvite;
+
+            let done = (ok) => {
+                this.blockSaving = false;
+                if (ok) {
+                    uids.forEach(uid => {
+                        if (action === 'block') this.ES[uid] = 'blocked';
+                        else delete this.ES[uid];
+                    });
+                    this.selSeats = [];
+                }
+            };
+            try {
+                let el = this.$el.closest('[wire\\:id]');
+                let wid = el ? el.getAttribute('wire:id') : null;
+                if (wid && window.Livewire) {
+                    let lw = window.Livewire.find(wid);
+                    if (lw) {
+                        let p = (typeof lw.call === 'function')
+                            ? lw.call('updateSeatStatuses', uids, action, invite)
+                            : lw.updateSeatStatuses(uids, action, invite);
+                        if (p && p.then) p.then(r => {
+                            done(true);
+                            if (r && r.invite_url) window.open(r.invite_url, '_blank');
+                        }).catch(() => done(false));
+                        else done(true);
+                    } else done(false);
+                } else done(false);
+            } catch(e) { done(false); }
+        },
+
+        selectAllBlockedInView() {
+            let svg = this.$refs.svg;
+            let circles = svg.querySelectorAll('circle[data-seat-uid]');
+            let uids = [];
+            circles.forEach(c => {
+                let uid = c.dataset.seatUid;
+                if (this.ES[uid] === 'blocked') uids.push(uid);
+            });
+            this.selSeats = uids;
+        },
 
         hoverTip(e) {
             if (this.md) { this.showTip = false; return; }
+            if (this.mode === 'block') {
+                let circle = e.target.closest('circle[data-seat-uid]');
+                if (circle) {
+                    let uid = circle.dataset.seatUid;
+                    let label = circle.dataset.seatLabel || '';
+                    let rg = circle.closest('[data-row-id]');
+                    let rid = rg ? rg.dataset.rowId : null;
+                    let info = rid ? this.RI[rid] : null;
+                    let es = this.ES[uid];
+                    let t = info ? info.section + ' \u2014 ' + (/^Mas/i.test(info.label) ? '' : 'R\u00e2nd ') + info.label + ' \u2014 Loc ' + label : 'Loc ' + label;
+                    if (es === 'blocked') t += '\n\u26d4 Blocat';
+                    else if (es === 'sold') t += '\n\u2714 V\u00e2ndut';
+                    else if (es === 'held') t += '\n\u23f3 Re\u021binut';
+                    else t += '\n\u2705 Disponibil';
+                    this.tip = t; this.tipX = e.clientX + 14; this.tipY = e.clientY - 10; this.showTip = true;
+                } else { this.showTip = false; }
+                return;
+            }
             let rg = e.target.closest('[data-row-id]');
             if (rg) {
                 let rid = rg.dataset.rowId, info = this.RI[rid];
                 if (info) {
-                    let t = info.section + ' \u2014 R\u00e2nd ' + info.label + ' (' + info.seatCount + ' locuri)';
+                    let t = info.section + ' \u2014 ' + (/^Mas/i.test(info.label) ? '' : 'R\u00e2nd ') + info.label + ' (' + info.seatCount + ' locuri)';
                     let a = this.A[rid];
                     if (a && a.length) t += String.fromCharCode(10) + a.map(x => x.name).join(', ');
                     else t += String.fromCharCode(10) + 'Neatribuit';
@@ -211,10 +312,13 @@
             pvX = vbX; pvY = vbY;
             let rg = e.target.closest('[data-row-id]');
             mdRow = rg ? rg.dataset.rowId : null;
+            let sc = e.target.closest('circle[data-seat-uid]');
+            mdSeat = sc ? sc.dataset.seatUid : null;
         });
         window.addEventListener('mousemove', (e) => {
             if (!md) return;
             if (mode === 'assign' && mdRow) return;
+            if (mode === 'block' && mdSeat) return;
             let dx = e.clientX - mdX, dy = e.clientY - mdY;
             if (!pan && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) pan = true;
             if (pan) {
@@ -226,7 +330,17 @@
         });
         window.addEventListener('mouseup', (e) => {
             if (!md) return;
-            if (mode === 'assign' && mdRow) {
+            if (mode === 'block') {
+                if (mdSeat && !pan) {
+                    toggleSeat(mdSeat);
+                } else if (!pan) {
+                    let el = document.elementFromPoint(e.clientX, e.clientY);
+                    if (el && svg.contains(el)) {
+                        let sc = el.closest('circle[data-seat-uid]');
+                        if (sc) toggleSeat(sc.dataset.seatUid);
+                    }
+                }
+            } else if (mode === 'assign' && mdRow) {
                 toggle(mdRow);
             } else if (!pan) {
                 let el = document.elementFromPoint(e.clientX, e.clientY);
@@ -235,7 +349,7 @@
                     if (rg) toggle(rg.dataset.rowId);
                 }
             }
-            md = false; pan = false; mdRow = null;
+            md = false; pan = false; mdRow = null; mdSeat = null;
         });
     "
     class="space-y-3"
@@ -246,6 +360,11 @@
             class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 transition-all">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
             Aloc&#259; bilete
+        </button>
+        <button type="button" x-show="mode==='view'" x-on:click="enterBlock()"
+            class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 transition-all">
+            <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            Blocheaz&#259; locuri
         </button>
         <div class="flex items-center gap-2 ml-auto">
             <button type="button" x-on:click="zoomCenter(1.3)" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition">+ Zoom</button>
@@ -274,6 +393,32 @@
         </div>
     </div>
 
+    {{-- Block seats toolbar (block mode only) --}}
+    <div x-show="mode==='block'" x-cloak>
+        <div class="flex flex-wrap items-center gap-3 p-3 bg-red-900/20 border border-red-800/40 rounded-lg">
+            <span class="text-xs text-gray-300">Click pe locuri individuale pentru a le selecta:</span>
+            <select x-model="blockAction" class="text-sm bg-gray-700 text-white border border-gray-600 rounded-lg px-3 py-1.5 focus:ring-1 focus:ring-red-500 focus:border-red-500">
+                <option value="block">Blocheaz&#259; locuri</option>
+                <option value="unblock">Deblocheaz&#259; locuri</option>
+            </select>
+            <label class="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer" x-show="blockAction==='block'" x-cloak>
+                <input type="checkbox" x-model="mkInvite" class="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0">
+                Genereaz&#259; invita&#539;ie
+            </label>
+            <span class="text-xs font-medium" :class="selSeats.length > 0 ? 'text-yellow-400' : 'text-gray-500'" x-text="selSeats.length + ' locuri selectate'"></span>
+            <button type="button" x-on:click="selectAllBlockedInView()" x-show="blockAction==='unblock'" x-cloak
+                class="px-2 py-1 text-xs rounded bg-gray-700 hover:bg-gray-600 text-gray-300 transition">Selecteaz&#259; toate blocate</button>
+            <button type="button" x-on:click="applyBlock()" :disabled="!selSeats.length || blockSaving"
+                class="px-3 py-1.5 text-xs font-medium rounded-lg text-white transition disabled:opacity-40"
+                :class="blockAction==='block' ? 'bg-red-700 hover:bg-red-600' : 'bg-blue-700 hover:bg-blue-600'">
+                <span x-show="!blockSaving" x-text="blockAction==='block' ? 'Blocheaz\u0103 (' + selSeats.length + ')' : 'Deblocheaz\u0103 (' + selSeats.length + ')'"></span>
+                <span x-show="blockSaving" class="animate-pulse">Salvare...</span>
+            </button>
+            <button type="button" x-on:click="exitBlock()"
+                class="ml-auto px-3 py-1.5 text-xs font-medium rounded-lg bg-green-700 hover:bg-green-600 text-white transition">Terminat</button>
+        </div>
+    </div>
+
     {{-- SVG Map --}}
     <div class="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden relative">
         <svg x-ref="svg"
@@ -281,7 +426,7 @@
             preserveAspectRatio="xMidYMid meet"
             class="w-full bg-gray-950 select-none"
             style="height: calc(100vh - 300px); min-height: 500px;"
-            :style="pan ? 'cursor:grabbing' : (mode==='assign' ? 'cursor:crosshair' : 'cursor:grab')"
+            :style="pan ? 'cursor:grabbing' : (mode==='assign' ? 'cursor:crosshair' : (mode==='block' ? 'cursor:crosshair' : 'cursor:grab'))"
             x-on:mousemove="hoverTip($event)"
             x-on:mouseleave="showTip = false"
         >
@@ -299,26 +444,30 @@
                 @endphp
 
                 <g @if($rot != 0) transform="rotate({{ $rot }} {{ $cx }} {{ $cy }})" @endif>
-                    <rect x="{{ $sX }}" y="{{ $sY }}" width="{{ $sW }}" height="{{ $sH }}"
-                          fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1" rx="4"/>
                     <text x="{{ $sX + 4 }}" y="{{ max(12, $sY - 6) }}"
                           fill="rgba(255,255,255,0.4)" font-size="13" font-weight="600">{{ $section->name }}</text>
 
                     @foreach($section->rows as $row)
                         <g data-row-id="{{ $row->id }}" style="transition: opacity 0.15s"
-                           :opacity="ro({{ $row->id }})">
+                           :opacity="mode==='block' ? 1 : ro({{ $row->id }})">
                             @foreach($row->seats as $seat)
                                 @php
                                     $seatX = $sX + ($seat->x ?? 0);
                                     $seatY = $sY + ($seat->y ?? 0);
+                                    $seatUid = $seat->seat_uid ?? '';
                                 @endphp
                                 @if($seat->status === 'imposibil')
                                     <circle cx="{{ $seatX }}" cy="{{ $seatY }}" r="6"
-                                            fill="#1f2937" stroke="#4b5563" stroke-width="0.5"/>
+                                            fill="#1f2937" stroke="#4b5563" stroke-width="0.5"
+                                            class="pointer-events-none"/>
                                 @else
                                     <circle cx="{{ $seatX }}" cy="{{ $seatY }}" r="6"
-                                            :fill="rc({{ $row->id }})"
-                                            stroke="#fff" stroke-width="0.5"
+                                            data-seat-uid="{{ $seatUid }}"
+                                            data-seat-label="{{ $seat->label }}"
+                                            :fill="mode==='block' ? sc('{{ $seatUid }}', {{ $row->id }}) : rc({{ $row->id }})"
+                                            :stroke="mode==='block' && selSeats.includes('{{ $seatUid }}') ? '#fbbf24' : '#fff'"
+                                            :stroke-width="mode==='block' && selSeats.includes('{{ $seatUid }}') ? '2.5' : '0.5'"
+                                            :r="mode==='block' && selSeats.includes('{{ $seatUid }}') ? '7' : '6'"
                                             class="transition-colors duration-100"/>
                                 @endif
                             @endforeach
@@ -359,8 +508,20 @@
             <span class="text-gray-400">Neatribuit</span>
         </span>
         <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
-            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#1f2937;border:1px solid #4b5563"></span>
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#6b7280"></span>
             <span class="text-gray-400">Blocat</span>
+        </span>
+        <span x-show="mode==='block'" x-cloak class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#fbbf24"></span>
+            <span class="text-gray-400">Selectat</span>
+        </span>
+        <span x-show="mode==='block'" x-cloak class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#dc2626"></span>
+            <span class="text-gray-400">V&#226;ndut</span>
+        </span>
+        <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#1f2937;border:1px solid #4b5563"></span>
+            <span class="text-gray-400">Imposibil</span>
         </span>
     </div>
 
@@ -383,7 +544,7 @@
                         <template x-for="r in summaryFor(tt.id).rows" :key="r.rid">
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300">
                                 <span class="text-gray-500" x-text="r.section"></span>
-                                <span x-text="'R&#226;nd ' + r.label"></span>
+                                <span x-text="(/^Mas/i.test(r.label) ? '' : 'R\u00e2nd ') + r.label"></span>
                                 <span class="text-gray-500" x-text="'(' + r.seatCount + ')'"></span>
                             </span>
                         </template>

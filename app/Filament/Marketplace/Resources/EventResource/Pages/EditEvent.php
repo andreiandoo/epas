@@ -682,6 +682,48 @@ class EditEvent extends EditRecord
     }
 
     /**
+     * Block or unblock seats from the interactive seating map editor.
+     * Called via $wire.call() from the block mode in seating-map-editor.blade.php.
+     */
+    public function updateSeatStatuses(array $seatUids, string $action, bool $createInvitations = false): array
+    {
+        $this->skipRender();
+
+        $seatingService = app(MarketplaceEventSeatingService::class);
+        $eventSeating = $seatingService->getOrCreateEventSeatingByEventId($this->record->id);
+
+        if (!$eventSeating) {
+            return ['updated' => 0, 'invite_url' => null];
+        }
+
+        $updated = 0;
+        if ($action === 'block') {
+            $updated = $seatingService->blockSeats($eventSeating->id, $seatUids);
+        } else {
+            $updated = $seatingService->unblockSeats($eventSeating->id, $seatUids);
+        }
+
+        $inviteUrl = null;
+        if ($updated > 0 && $action === 'block' && $createInvitations) {
+            $marketplace = static::getMarketplaceClient();
+            $hasInvitations = $marketplace?->microservices()
+                ->where('microservices.slug', 'invitations')
+                ->wherePivot('is_active', true)
+                ->exists() ?? false;
+
+            if ($hasInvitations) {
+                session()->put('blocked_seats_for_invitation', [
+                    'event_id' => $this->record->id,
+                    'seat_uids' => $seatUids,
+                ]);
+                $inviteUrl = route('filament.marketplace.pages.invitations') . '?event=' . $this->record->id . '&prefill_seats=1';
+            }
+        }
+
+        return ['updated' => $updated, 'invite_url' => $inviteUrl];
+    }
+
+    /**
      * Toggle a seating row assignment for a ticket type.
      * Called from the interactive seating map editor via $wire.call().
      */

@@ -208,11 +208,6 @@ class EPasSeating {
      */
     drawSections() {
         this.state.geometry.sections.forEach(section => {
-            // Draw section boundary
-            this.ctx.strokeStyle = '#9ca3af';
-            this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(section.x_position, section.y_position, section.width, section.height);
-
             // Draw section label
             this.ctx.fillStyle = '#374151';
             this.ctx.font = 'bold 14px sans-serif';

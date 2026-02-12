@@ -649,7 +649,7 @@ class EventResource extends Resource
                                         }
                                         $url = \Illuminate\Support\Facades\Storage::disk('public')->url($record->poster_url);
                                         return new \Illuminate\Support\HtmlString(
-                                            "<img src='{$url}' alt='Poster' class='max-h-48 rounded-lg shadow' />"
+                                            "<img src='{$url}' alt='Poster' class='rounded-lg shadow max-h-48' />"
                                         );
                                     }),
                                 Forms\Components\Placeholder::make('hero_preview')
@@ -660,7 +660,7 @@ class EventResource extends Resource
                                         }
                                         $url = \Illuminate\Support\Facades\Storage::disk('public')->url($record->hero_image_url);
                                         return new \Illuminate\Support\HtmlString(
-                                            "<img src='{$url}' alt='Hero' class='max-h-48 rounded-lg shadow' />"
+                                            "<img src='{$url}' alt='Hero' class='rounded-lg shadow max-h-48' />"
                                         );
                                     }),
                             ])->columns(2),
@@ -1240,79 +1240,80 @@ class EventResource extends Resource
                                         // Serie bilet fieldset
                                         SC\Fieldset::make($t('Serie bilet', 'Ticket series'))
                                             ->schema([
-                                                SC\Grid::make(3)->schema([
-                                                    Forms\Components\TextInput::make('series_start')
-                                                        ->label($t('Serie start', 'Series start'))
-                                                        ->placeholder($t('Ex: AMB-5-00001', 'E.g. AMB-5-00001'))
-                                                        ->maxLength(50)
-                                                        ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                            if (!$state) {
-                                                                $eventSeries = $get('../../event_series');
-                                                                $capacity = $get('capacity');
-                                                                $ticketTypeIdentifier = $get('id') ?: $get('sku');
-                                                                if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
-                                                                    $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
-                                                                }
+                                                Forms\Components\TextInput::make('series_start')
+                                                    ->label($t('Serie start', 'Series start'))
+                                                    ->placeholder($t('Ex: AMB-5-00001', 'E.g. AMB-5-00001'))
+                                                    ->maxLength(50)
+                                                    ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                        if (!$state) {
+                                                            $eventSeries = $get('../../event_series');
+                                                            $capacity = $get('capacity');
+                                                            $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                            if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
+                                                                $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
                                                             }
-                                                        }),
-                                                    Forms\Components\TextInput::make('series_end')
-                                                        ->label($t('Serie end', 'Series end'))
-                                                        ->placeholder($t('Ex: AMB-5-00500', 'E.g. AMB-5-00500'))
-                                                        ->maxLength(50)
-                                                        ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                            if (!$state) {
-                                                                $eventSeries = $get('../../event_series');
-                                                                $capacity = $get('capacity');
-                                                                $ticketTypeIdentifier = $get('id') ?: $get('sku');
-                                                                if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
-                                                                    $endNumber = (int)$capacity;
-                                                                    $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
-                                                                }
+                                                        }
+                                                    })
+                                                    ->columnSpan(4),
+                                                Forms\Components\TextInput::make('series_end')
+                                                    ->label($t('Serie end', 'Series end'))
+                                                    ->placeholder($t('Ex: AMB-5-00500', 'E.g. AMB-5-00500'))
+                                                    ->maxLength(50)
+                                                    ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                        if (!$state) {
+                                                            $eventSeries = $get('../../event_series');
+                                                            $capacity = $get('capacity');
+                                                            $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                            if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
+                                                                $endNumber = (int)$capacity;
+                                                                $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
                                                             }
-                                                        }),
-                                                    Forms\Components\Toggle::make('is_refundable')
-                                                        ->label($t('Returnabil', 'Refundable'))
-                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet', 'If the event is cancelled or postponed, customers can request a refund for this ticket type'))
-                                                        ->default(false),
-                                                ]),
+                                                        }
+                                                    })
+                                                    ->columnSpan(4),
+                                                Forms\Components\Toggle::make('is_refundable')
+                                                    ->label($t('Returnabil', 'Refundable'))
+                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet', 'If the event is cancelled or postponed, customers can request a refund for this ticket type'))
+                                                    ->default(false)
+                                                    ->columnSpan(4),
                                             ])
+                                            ->columns(12)
                                             ->columnSpan(12),
 
                                         // Disponibilitate fieldset
                                         SC\Fieldset::make($t('Disponibilitate', 'Availability'))
                                             ->schema([
-                                                SC\Grid::make(12)->schema([
-                                                    Forms\Components\Toggle::make('is_active')
-                                                        ->label($t('Activ', 'Active'))
-                                                        ->default(true)
-                                                        ->live()
-                                                        ->columnSpan(2),
-                                                    Forms\Components\DateTimePicker::make('active_until')
-                                                        ->label($t('Activ până la', 'Active until'))
-                                                        ->native(false)
-                                                        ->seconds(false)
-                                                        ->displayFormat('Y-m-d H:i')
-                                                        ->minDate(now())
-                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
-                                                        ->visible(fn (SGet $get) => $get('is_active'))
-                                                        ->columnSpan(10),
-                                                    // Scheduling fields - shown when ticket is NOT active
-                                                    Forms\Components\DateTimePicker::make('scheduled_at')
-                                                        ->label($t('Programează activare', 'Schedule Activation'))
-                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când acest tip de bilet ar trebui să devină automat activ', 'When this ticket type should automatically become active'))
-                                                        ->native(false)
-                                                        ->seconds(false)
-                                                        ->displayFormat('Y-m-d H:i')
-                                                        ->minDate(now())
-                                                        ->visible(fn (SGet $get) => !$get('is_active'))
-                                                        ->columnSpan(6),
-                                                    Forms\Components\Toggle::make('autostart_when_previous_sold_out')
-                                                        ->label($t('Autostart când precedentul e sold out', 'Autostart when previous sold out'))
-                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Activează automat când tipurile de bilete anterioare ajung la capacitate 0', 'Activate automatically when previous ticket types reach 0 capacity'))
-                                                        ->visible(fn (SGet $get) => !$get('is_active'))
-                                                        ->columnSpan(4),
-                                                ]),
+                                                Forms\Components\Toggle::make('is_active')
+                                                    ->label($t('Activ', 'Active'))
+                                                    ->default(true)
+                                                    ->live()
+                                                    ->columnSpan(6),
+                                                Forms\Components\DateTimePicker::make('active_until')
+                                                    ->label($t('Activ până la', 'Active until'))
+                                                    ->native(false)
+                                                    ->seconds(false)
+                                                    ->displayFormat('Y-m-d H:i')
+                                                    ->minDate(now())
+                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
+                                                    ->visible(fn (SGet $get) => $get('is_active'))
+                                                    ->columnSpan(6),
+                                                // Scheduling fields - shown when ticket is NOT active
+                                                Forms\Components\DateTimePicker::make('scheduled_at')
+                                                    ->label($t('Programează activare', 'Schedule Activation'))
+                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când acest tip de bilet ar trebui să devină automat activ', 'When this ticket type should automatically become active'))
+                                                    ->native(false)
+                                                    ->seconds(false)
+                                                    ->displayFormat('Y-m-d H:i')
+                                                    ->minDate(now())
+                                                    ->visible(fn (SGet $get) => !$get('is_active'))
+                                                    ->columnSpan(4),
+                                                Forms\Components\Toggle::make('autostart_when_previous_sold_out')
+                                                    ->label($t('Autostart când precedentul e sold out', 'Autostart when previous sold out'))
+                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Activează automat când tipurile de bilete anterioare ajung la capacitate 0', 'Activate automatically when previous ticket types reach 0 capacity'))
+                                                    ->visible(fn (SGet $get) => !$get('is_active'))
+                                                    ->columnSpan(4),
                                             ])
+                                            ->columns(12)
                                             ->columnSpan(12),
 
                                         // Reducere fieldset
@@ -1487,6 +1488,7 @@ class EventResource extends Resource
                                                             ->columnSpan(4),
                                                     ]),
                                             ])
+                                            ->columns(12)
                                             ->columnSpan(12),
                                     ]),
                             ])->collapsible(),

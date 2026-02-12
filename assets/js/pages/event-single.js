@@ -2171,10 +2171,6 @@ const EventPage = {
                 return; // Skip rest of section rendering for icons
             }
 
-            // Section background fill at 25% opacity
-            var sectionBgColor = section.color_hex || '#6B7280';
-            svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionBgColor + '" fill-opacity="0.25" rx="4"/>';
-
             // Section name (positioned ABOVE the section, outside)
             var textY = section.y - 5;
             var textX = section.x + (section.width / 2);
@@ -2395,10 +2391,6 @@ const EventPage = {
                 svg += '</g>'; // Close section group
                 return; // Skip rest of section rendering for icons
             }
-
-            // Section background fill at 25% opacity
-            var sectionBgColor = section.color_hex || '#6B7280';
-            svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionBgColor + '" fill-opacity="0.25" rx="4"/>';
 
             // Section name
             var textY = section.y - 5;

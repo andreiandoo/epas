@@ -134,7 +134,7 @@
                         const rowId = row.dataset.rowId;
                         const info = this.rowInfo[rowId];
                         if (info) {
-                            let text = info.section + ' — Rând ' + info.label + ' (' + info.seatCount + ' locuri)';
+                            let text = info.section + ' — ' + (/^Mas/i.test(info.label) ? '' : 'Rând ') + info.label + ' (' + info.seatCount + ' locuri)';
                             const other = this.otherColors[rowId];
                             if (other && other.length > 0) {
                                 text += '\n' + other.map(o => o.name).join(', ');
@@ -195,9 +195,6 @@
                         @endphp
 
                         <g @if($rot != 0) transform="rotate({{ $rot }} {{ $cx }} {{ $cy }})" @endif>
-                            {{-- Section boundary --}}
-                            <rect x="{{ $sX }}" y="{{ $sY }}" width="{{ $sW }}" height="{{ $sH }}"
-                                  fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1" rx="4"/>
                             <text x="{{ $sX + 4 }}" y="{{ max(12, $sY - 6) }}"
                                   fill="rgba(255,255,255,0.4)" font-size="13" font-weight="600">{{ $section->name }}</text>
 
