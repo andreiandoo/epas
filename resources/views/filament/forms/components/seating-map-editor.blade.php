@@ -78,10 +78,23 @@
         }
     }
 
+    // Build seat info map for blocked seats summary (seat_uid => [section, row, seatLabel])
+    $seatInfoMap = [];
+    foreach ($sections as $section) {
+        foreach ($section->rows as $row) {
+            foreach ($row->seats as $seat) {
+                if ($seat->seat_uid && $seat->status !== 'imposibil') {
+                    $seatInfoMap[$seat->seat_uid] = [$section->name, $row->label, $seat->label];
+                }
+            }
+        }
+    }
+
     $ticketTypesJson = json_encode($ticketTypesData);
     $rowAssignmentsJson = json_encode((object) $rowAssignments);
     $rowInfoJson = json_encode((object) $rowInfoMap);
     $eventSeatStatusesJson = json_encode((object) $eventSeatStatuses);
+    $seatInfoJson = json_encode((object) $seatInfoMap);
     $firstTTId = !empty($ticketTypesData) ? $ticketTypesData[0]['id'] : 'null';
 @endphp
 
@@ -94,6 +107,7 @@
         A: {{ $rowAssignmentsJson }},
         RI: {{ $rowInfoJson }},
         ES: {{ $eventSeatStatusesJson }},
+        SI: {{ $seatInfoJson }},
         mode: 'view',
         saving: false,
         vbX: 0, vbY: 0, vbW: {{ $canvasW }}, vbH: {{ $canvasH }},
@@ -116,8 +130,8 @@
             if (a && a.length) { let s = a.find(x => Number(x.id) === Number(this.sel)); if (s) return s.color; return a[0].color; }
             return '#374151';
         },
-        sc(uid, rid) {
-            if (this.selSeats.includes(uid)) return '#fbbf24';
+        fc(uid, rid) {
+            if (this.mode === 'block' && this.selSeats.includes(uid)) return '#fbbf24';
             let es = this.ES[uid];
             if (es === 'blocked') return '#6b7280';
             if (es === 'sold') return '#dc2626';
@@ -296,6 +310,22 @@
                 }
             }
             return { rows, seats };
+        },
+
+        get blockedSummary() {
+            let groups = {}, total = 0;
+            let keys = Object.keys(this.ES);
+            for (let i = 0; i < keys.length; i++) {
+                let uid = keys[i];
+                if (this.ES[uid] !== 'blocked') continue;
+                let si = this.SI[uid];
+                if (!si) continue;
+                let key = si[0] + '|' + si[1];
+                if (!groups[key]) groups[key] = { section: si[0], row: si[1], seats: [] };
+                groups[key].seats.push(si[2]);
+                total++;
+            }
+            return { groups: Object.values(groups), total };
         }
     }"
     x-init="
@@ -464,11 +494,15 @@
                                     <circle cx="{{ $seatX }}" cy="{{ $seatY }}" r="6"
                                             data-seat-uid="{{ $seatUid }}"
                                             data-seat-label="{{ $seat->label }}"
-                                            :fill="mode==='block' ? sc('{{ $seatUid }}', {{ $row->id }}) : rc({{ $row->id }})"
+                                            :fill="fc('{{ $seatUid }}', {{ $row->id }})"
                                             :stroke="mode==='block' && selSeats.includes('{{ $seatUid }}') ? '#fbbf24' : '#fff'"
                                             :stroke-width="mode==='block' && selSeats.includes('{{ $seatUid }}') ? '2.5' : '0.5'"
                                             :r="mode==='block' && selSeats.includes('{{ $seatUid }}') ? '7' : '6'"
                                             class="transition-colors duration-100"/>
+                                    <text x="{{ $seatX }}" y="{{ $seatY + 3 }}"
+                                          font-size="7" text-anchor="middle" font-weight="600"
+                                          fill="rgba(255,255,255,0.9)"
+                                          class="pointer-events-none select-none">{{ $seat->label }}</text>
                                 @endif
                             @endforeach
 
@@ -552,6 +586,26 @@
                     <div x-show="summaryFor(tt.id).rows.length === 0" class="mt-1 ml-5 text-xs text-gray-600 italic">Nicio asignare</div>
                 </div>
             </template>
+        </div>
+    </div>
+
+    {{-- Blocked seats summary --}}
+    <div class="border border-gray-700 rounded-lg overflow-hidden" x-show="blockedSummary.total > 0">
+        <div class="bg-gray-800/50 px-4 py-2 border-b border-gray-700 flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-300">Locuri blocate</span>
+            <span class="text-xs text-gray-500" x-text="blockedSummary.total + ' locuri'"></span>
+        </div>
+        <div class="px-4 py-2.5">
+            <div class="flex flex-wrap gap-1.5">
+                <template x-for="g in blockedSummary.groups" :key="g.section + g.row">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300">
+                        <span class="w-2 h-2 rounded-full bg-gray-500 flex-shrink-0"></span>
+                        <span class="text-gray-500" x-text="g.section"></span>
+                        <span x-text="(/^Mas/i.test(g.row) ? '' : 'R\u00e2nd ') + g.row"></span>
+                        <span class="text-gray-400" x-text="'Loc ' + g.seats.sort((a,b) => a-b).join(', ')"></span>
+                    </span>
+                </template>
+            </div>
         </div>
     </div>
 </div>
