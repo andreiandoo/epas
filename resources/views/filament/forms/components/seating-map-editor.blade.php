@@ -195,7 +195,6 @@
         </div>
         <div id="sme-summary-body" class="divide-y divide-gray-800"></div>
     </div>
-</div>
 
 <script>
 (function() {
@@ -575,6 +574,7 @@
     renderSummary();
 })();
 </script>
+</div>
 @else
     <div class="p-4 text-center text-gray-500 text-sm">
         Nu există o hartă de locuri configurată sau salvată pentru acest eveniment.
