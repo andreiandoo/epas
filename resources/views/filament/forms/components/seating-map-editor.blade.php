@@ -25,7 +25,6 @@
             $canvasW = $layout->canvas_w ?? 1920;
             $canvasH = $layout->canvas_h ?? 1080;
 
-            // Background image
             $bgPath = $layout->background_image_path ?? $layout->background_image_url;
             if ($bgPath) {
                 $bgUrl = str_starts_with($bgPath, 'http') ? $bgPath : asset('storage/' . $bgPath);
@@ -40,7 +39,6 @@
         }
     }
 
-    // Load ticket types with seating row assignments
     if ($eventId) {
         $tts = \App\Models\TicketType::where('event_id', $eventId)
             ->with('seatingRows')
@@ -55,76 +53,180 @@
                 'price' => $tt->price_max ?? 0,
                 'currency' => $tt->currency ?? 'RON',
             ];
-
             foreach ($tt->seatingRows as $row) {
-                if (!isset($rowAssignments[$row->id])) {
-                    $rowAssignments[$row->id] = [];
-                }
-                $rowAssignments[$row->id][] = [
-                    'id' => $tt->id,
-                    'name' => $tt->name,
-                    'color' => $tt->color ?? '#6b7280',
-                ];
+                if (!isset($rowAssignments[$row->id])) $rowAssignments[$row->id] = [];
+                $rowAssignments[$row->id][] = ['id' => $tt->id, 'name' => $tt->name, 'color' => $tt->color ?? '#6b7280'];
             }
         }
     }
 
-    // Build row info map for tooltips
     foreach ($sections as $section) {
         foreach ($section->rows as $row) {
-            $rowInfoMap[$row->id] = [
-                'section' => $section->name,
-                'label' => $row->label,
-                'seatCount' => $row->seat_count,
-            ];
+            $rowInfoMap[$row->id] = ['section' => $section->name, 'label' => $row->label, 'seatCount' => $row->seat_count];
         }
     }
 
     $ticketTypesJson = json_encode($ticketTypesData);
     $rowAssignmentsJson = json_encode($rowAssignments);
     $rowInfoJson = json_encode($rowInfoMap);
+    $firstTTId = !empty($ticketTypesData) ? $ticketTypesData[0]['id'] : 'null';
 @endphp
 
 @if($layout && $sections->isNotEmpty())
-<div id="seating-map-editor-root" class="space-y-3" wire:ignore>
-    {{-- Mode toggle + controls bar --}}
-    <div id="sme-toolbar" class="flex items-center gap-3">
-        <button type="button" id="sme-btn-assign"
-            class="px-4 py-2 text-sm font-medium rounded-lg transition-all bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600">
+<div
+    wire:ignore
+    x-data="{
+        TT: {{ $ticketTypesJson }},
+        sel: {{ $firstTTId }},
+        A: {{ $rowAssignmentsJson }},
+        RI: {{ $rowInfoJson }},
+        mode: 'view',
+        saving: false,
+        vbX: 0, vbY: 0, vbW: {{ $canvasW }}, vbH: {{ $canvasH }},
+        OW: {{ $canvasW }}, OH: {{ $canvasH }},
+        md: false, pan: false, mdX: 0, mdY: 0, psX: 0, psY: 0, pvX: 0, pvY: 0,
+        tip: '', tipX: 0, tipY: 0, showTip: false,
+
+        get zoom() { return Math.round((this.OW / this.vbW) * 100) },
+
+        rc(rid) {
+            let a = this.A[rid];
+            if (a && a.length) { let s = a.find(x => x.id === this.sel); if (s) return s.color; return a[0].color; }
+            return '#374151';
+        },
+        ro(rid) {
+            let a = this.A[rid];
+            if (!a || !a.length) return 0.5;
+            if (this.mode === 'assign') { return a.find(x => x.id === this.sel) ? 1 : 0.35; }
+            return 0.8;
+        },
+        isSel(rid) { let a = this.A[rid]; return a ? a.some(x => x.id === this.sel) : false; },
+
+        zoomAt(cx, cy, f) {
+            let svg = this.$refs.svg;
+            let r = svg.getBoundingClientRect();
+            let mx = ((cx - r.left) / r.width) * this.vbW + this.vbX;
+            let my = ((cy - r.top) / r.height) * this.vbH + this.vbY;
+            let nw = this.vbW / f, nh = this.vbH / f;
+            let z = this.OW / nw;
+            if (z < 0.3 || z > 5) return;
+            this.vbX = mx - (mx - this.vbX) / f;
+            this.vbY = my - (my - this.vbY) / f;
+            this.vbW = nw; this.vbH = nh;
+        },
+        zoomCenter(f) {
+            let r = this.$refs.svg.getBoundingClientRect();
+            this.zoomAt(r.left + r.width/2, r.top + r.height/2, f);
+        },
+        resetZoom() { this.vbX = 0; this.vbY = 0; this.vbW = this.OW; this.vbH = this.OH; },
+
+        toggle(rid) {
+            if (this.mode !== 'assign' || !this.sel) return;
+            rid = Number(rid);
+            this.saving = true;
+            let w = null;
+            let el = this.$el.closest('[wire\\\\:id]');
+            if (el && el.__livewire) w = el.__livewire;
+            if (!w) { this.saving = false; return; }
+            w.call('toggleSeatingRowAssignment', this.sel, rid).then(ok => {
+                if (ok !== false) {
+                    if (!this.A[rid]) this.A[rid] = [];
+                    let idx = this.A[rid].findIndex(x => x.id === this.sel);
+                    if (idx > -1) { this.A[rid].splice(idx, 1); if (!this.A[rid].length) delete this.A[rid]; }
+                    else { let t = this.TT.find(x => x.id === this.sel); this.A[rid] = [...(this.A[rid]||[]), {id:this.sel, name:t?t.name:'', color:t?t.color:'#6b7280'}]; }
+                }
+                this.saving = false;
+            }).catch(() => { this.saving = false; });
+        },
+
+        enterAssign() { this.mode = 'assign'; },
+        exitAssign() { this.mode = 'view'; },
+
+        hoverTip(e) {
+            if (this.md) { this.showTip = false; return; }
+            let rg = e.target.closest('[data-row-id]');
+            if (rg) {
+                let rid = rg.dataset.rowId, info = this.RI[rid];
+                if (info) {
+                    let t = info.section + ' \u2014 R\u00e2nd ' + info.label + ' (' + info.seatCount + ' locuri)';
+                    let a = this.A[rid];
+                    if (a && a.length) t += String.fromCharCode(10) + a.map(x => x.name).join(', ');
+                    else t += String.fromCharCode(10) + 'Neatribuit';
+                    this.tip = t; this.tipX = e.clientX + 14; this.tipY = e.clientY - 10; this.showTip = true;
+                } else { this.showTip = false; }
+            } else { this.showTip = false; }
+        },
+
+        summaryFor(ttId) {
+            let rows = [], seats = 0;
+            for (let [rid, arr] of Object.entries(this.A)) {
+                if (arr.some(x => x.id === ttId)) { let i = this.RI[rid]; if (i) { rows.push(i); seats += i.seatCount; } }
+            }
+            return { rows, seats };
+        }
+    }"
+    x-init="
+        let svg = $refs.svg;
+        svg.addEventListener('wheel', (e) => { e.preventDefault(); e.stopPropagation(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.15 : 1/1.15); }, {passive:false});
+        svg.addEventListener('mousedown', (e) => { if(e.button!==0)return; md=true; pan=false; mdX=e.clientX; mdY=e.clientY; psX=e.clientX; psY=e.clientY; pvX=vbX; pvY=vbY; });
+        window.addEventListener('mousemove', (e) => {
+            if(!md) return;
+            let dx=e.clientX-mdX, dy=e.clientY-mdY;
+            if(!pan && (Math.abs(dx)>5||Math.abs(dy)>5)) pan=true;
+            if(pan) { let r=svg.getBoundingClientRect(); vbX=pvX-(e.clientX-psX)*(vbW/r.width); vbY=pvY-(e.clientY-psY)*(vbH/r.height); }
+        });
+        window.addEventListener('mouseup', (e) => {
+            if(!md) return;
+            if(!pan) { let el=document.elementFromPoint(e.clientX,e.clientY); if(el&&svg.contains(el)){let rg=el.closest('[data-row-id]'); if(rg) toggle(rg.dataset.rowId);} }
+            md=false; pan=false;
+        });
+    "
+    class="space-y-3"
+>
+    {{-- Toolbar --}}
+    <div class="flex items-center gap-3">
+        <button type="button" x-show="mode==='view'" x-on:click="enterAssign()"
+            class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 transition-all">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
             Alocă bilete
         </button>
-        <div id="sme-zoom-controls" class="flex items-center gap-2 ml-auto">
-            <button type="button" id="sme-zoom-in"
-                class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition">+ Zoom</button>
-            <button type="button" id="sme-zoom-out"
-                class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition">− Zoom</button>
-            <button type="button" id="sme-zoom-reset"
-                class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition">Reset</button>
-            <span id="sme-zoom-pct" class="text-xs text-gray-500">100%</span>
+        <div class="flex items-center gap-2 ml-auto">
+            <button type="button" x-on:click="zoomCenter(1.3)" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition">+ Zoom</button>
+            <button type="button" x-on:click="zoomCenter(1/1.3)" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition">− Zoom</button>
+            <button type="button" x-on:click="resetZoom()" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition">Reset</button>
+            <span class="text-xs text-gray-500" x-text="zoom + '%'"></span>
         </div>
     </div>
 
-    {{-- Ticket type selector (hidden by default, shown in assign mode) --}}
-    <div id="sme-tt-selector" class="hidden">
+    {{-- Ticket type selector (assign mode only) --}}
+    <div x-show="mode==='assign'" x-cloak>
         <div class="flex flex-wrap items-center gap-2 p-3 bg-gray-800/60 border border-gray-700 rounded-lg">
             <span class="text-xs text-gray-400 mr-1">Selectează tip bilet, apoi click pe rânduri:</span>
-            <div id="sme-tt-chips" class="flex flex-wrap gap-2"></div>
-            <button type="button" id="sme-btn-done"
-                class="ml-auto px-3 py-1.5 text-xs font-medium rounded-lg bg-green-700 hover:bg-green-600 text-white transition">
-                Terminat
-            </button>
-            <span id="sme-saving" class="hidden ml-2 text-xs text-yellow-400 animate-pulse">Salvare...</span>
+            <template x-for="tt in TT" :key="tt.id">
+                <button type="button" x-on:click="sel = tt.id"
+                    :class="sel === tt.id ? 'ring-2 ring-offset-1 ring-offset-gray-900' : 'opacity-60 hover:opacity-90'"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium text-white transition-all"
+                    :style="`background:${tt.color}; --tw-ring-color:${tt.color}`">
+                    <span x-text="tt.name"></span>
+                    <span class="text-xs opacity-70" x-text="tt.price > 0 ? (tt.price.toFixed(2)+' '+tt.currency) : ''"></span>
+                </button>
+            </template>
+            <button type="button" x-on:click="exitAssign()"
+                class="ml-auto px-3 py-1.5 text-xs font-medium rounded-lg bg-green-700 hover:bg-green-600 text-white transition">Terminat</button>
+            <span x-show="saving" class="ml-2 text-xs text-yellow-400 animate-pulse">Salvare...</span>
         </div>
     </div>
 
-    {{-- SVG Map container --}}
-    <div class="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden relative" id="sme-map-wrap">
-        <svg id="sme-svg"
-            viewBox="0 0 {{ $canvasW }} {{ $canvasH }}"
+    {{-- SVG Map --}}
+    <div class="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden relative">
+        <svg x-ref="svg"
+            :viewBox="`${vbX} ${vbY} ${vbW} ${vbH}`"
             preserveAspectRatio="xMidYMid meet"
             class="w-full bg-gray-950 select-none"
-            style="height: 70vh; min-height: 500px; max-height: 800px; cursor: grab;"
+            style="height: 70vh; min-height: 500px; max-height: 800px;"
+            :style="pan ? 'cursor:grabbing' : (mode==='assign' ? 'cursor:crosshair' : 'cursor:grab')"
+            x-on:mousemove="hoverTip($event)"
+            x-on:mouseleave="showTip = false"
         >
             {!! $bgImage !!}
 
@@ -140,14 +242,14 @@
                 @endphp
 
                 <g @if($rot != 0) transform="rotate({{ $rot }} {{ $cx }} {{ $cy }})" @endif>
-                    {{-- Section boundary --}}
                     <rect x="{{ $sX }}" y="{{ $sY }}" width="{{ $sW }}" height="{{ $sH }}"
                           fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1" rx="4"/>
                     <text x="{{ $sX + 4 }}" y="{{ max(12, $sY - 6) }}"
                           fill="rgba(255,255,255,0.4)" font-size="13" font-weight="600">{{ $section->name }}</text>
 
                     @foreach($section->rows as $row)
-                        <g data-row-id="{{ $row->id }}" class="cursor-pointer" style="transition: opacity 0.15s">
+                        <g data-row-id="{{ $row->id }}" style="transition: opacity 0.15s"
+                           :opacity="ro({{ $row->id }})">
                             @foreach($row->seats as $seat)
                                 @php
                                     $seatX = $sX + ($seat->x ?? 0);
@@ -158,23 +260,22 @@
                                             fill="#1f2937" stroke="#4b5563" stroke-width="0.5"/>
                                 @else
                                     <circle cx="{{ $seatX }}" cy="{{ $seatY }}" r="6"
-                                            data-row-color="{{ $row->id }}"
-                                            fill="#374151"
+                                            :fill="rc({{ $row->id }})"
                                             stroke="#fff" stroke-width="0.5"
                                             class="transition-colors duration-100"/>
                                 @endif
                             @endforeach
 
-                            {{-- Row label --}}
                             @php
                                 $firstSeat = $row->seats->first();
                                 $labelX = $firstSeat ? $sX + ($firstSeat->x ?? 0) - 16 : $sX;
                                 $labelY = $firstSeat ? $sY + ($firstSeat->y ?? 0) : $sY;
                             @endphp
                             <text x="{{ $labelX }}" y="{{ $labelY + 4 }}"
-                                  fill="rgba(255,255,255,0.3)" font-size="10" text-anchor="end"
-                                  data-row-label="{{ $row->id }}"
-                                  class="pointer-events-none select-none">{{ $row->label }}</text>
+                                  font-size="10" text-anchor="end"
+                                  class="pointer-events-none select-none"
+                                  :fill="isSel({{ $row->id }}) ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)'"
+                            >{{ $row->label }}</text>
                         </g>
                     @endforeach
                 </g>
@@ -182,401 +283,62 @@
         </svg>
 
         {{-- Tooltip --}}
-        <div id="sme-tooltip" class="fixed z-50 pointer-events-none px-3 py-2 text-xs bg-gray-800 border border-gray-600 rounded-lg shadow-xl text-white whitespace-pre-line" style="display:none;"></div>
+        <div x-show="showTip" x-cloak
+             :style="`left:${tipX}px;top:${tipY}px`"
+             class="fixed z-50 pointer-events-none px-3 py-2 text-xs bg-gray-800 border border-gray-600 rounded-lg shadow-xl text-white whitespace-pre-line"
+             x-text="tip"></div>
     </div>
 
     {{-- Legend --}}
-    <div id="sme-legend" class="flex flex-wrap gap-2 text-xs"></div>
+    <div class="flex flex-wrap gap-2 text-xs">
+        <template x-for="tt in TT" :key="'l'+tt.id">
+            <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="`background:${tt.color}`"></span>
+                <span class="text-gray-200" x-text="tt.name"></span>
+            </span>
+        </template>
+        <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
+            <span class="w-2.5 h-2.5 rounded-full bg-gray-700 flex-shrink-0"></span>
+            <span class="text-gray-400">Neatribuit</span>
+        </span>
+        <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#1f2937;border:1px solid #4b5563"></span>
+            <span class="text-gray-400">Blocat</span>
+        </span>
+    </div>
 
     {{-- Assignment summary --}}
-    <div id="sme-summary" class="border border-gray-700 rounded-lg overflow-hidden">
+    <div class="border border-gray-700 rounded-lg overflow-hidden">
         <div class="bg-gray-800/50 px-4 py-2 border-b border-gray-700">
             <span class="text-sm font-medium text-gray-300">Rânduri asignate per tip bilet</span>
         </div>
-        <div id="sme-summary-body" class="divide-y divide-gray-800"></div>
+        <div class="divide-y divide-gray-800">
+            <template x-for="tt in TT" :key="'s'+tt.id">
+                <div class="px-4 py-2.5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full flex-shrink-0" :style="`background:${tt.color}`"></span>
+                            <span class="text-sm font-medium text-white" x-text="tt.name"></span>
+                        </div>
+                        <span class="text-xs text-gray-400" x-text="summaryFor(tt.id).seats + ' locuri'"></span>
+                    </div>
+                    <div x-show="summaryFor(tt.id).rows.length > 0" class="mt-1.5 ml-5 flex flex-wrap gap-1">
+                        <template x-for="r in summaryFor(tt.id).rows" :key="r.label">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300">
+                                <span class="text-gray-500" x-text="r.section"></span>
+                                <span x-text="'Rând ' + r.label"></span>
+                                <span class="text-gray-500" x-text="'(' + r.seatCount + ')'"></span>
+                            </span>
+                        </template>
+                    </div>
+                    <div x-show="summaryFor(tt.id).rows.length === 0" class="mt-1 ml-5 text-xs text-gray-600 italic">Nicio asignare</div>
+                </div>
+            </template>
+        </div>
     </div>
-
-<script>
-(function() {
-    // Wait for DOM to be ready
-    const root = document.getElementById('seating-map-editor-root');
-    if (!root) return;
-
-    // ---- Data ----
-    const ticketTypes = {!! $ticketTypesJson !!};
-    const assignments = {!! $rowAssignmentsJson !!};
-    const rowInfo = {!! $rowInfoJson !!};
-
-    const CANVAS_W = {{ $canvasW }};
-    const CANVAS_H = {{ $canvasH }};
-
-    // ---- State ----
-    let mode = 'view'; // 'view' or 'assign'
-    let selectedTT = ticketTypes.length > 0 ? ticketTypes[0].id : null;
-    let saving = false;
-
-    // Zoom/pan
-    let vbX = 0, vbY = 0, vbW = CANVAS_W, vbH = CANVAS_H;
-    let isMouseDown = false, isPanning = false;
-    let mouseDownX = 0, mouseDownY = 0;
-    let panStartX = 0, panStartY = 0, panStartVbX = 0, panStartVbY = 0;
-    const DRAG_THRESHOLD = 5;
-    const MIN_ZOOM = 0.3, MAX_ZOOM = 5;
-
-    // ---- DOM refs ----
-    const svg = document.getElementById('sme-svg');
-    const tooltip = document.getElementById('sme-tooltip');
-    const ttSelector = document.getElementById('sme-tt-selector');
-    const ttChips = document.getElementById('sme-tt-chips');
-    const btnAssign = document.getElementById('sme-btn-assign');
-    const btnDone = document.getElementById('sme-btn-done');
-    const savingEl = document.getElementById('sme-saving');
-    const zoomPct = document.getElementById('sme-zoom-pct');
-    const legendEl = document.getElementById('sme-legend');
-    const summaryBody = document.getElementById('sme-summary-body');
-
-    // Find $wire (Livewire component)
-    function getWire() {
-        const el = root.closest('[wire\\:id]');
-        if (el && el.__livewire) return el.__livewire;
-        // Fallback: search up from root
-        let node = root;
-        while (node) {
-            if (node.__livewire) return node.__livewire;
-            node = node.parentElement;
-        }
-        return null;
-    }
-
-    // ---- Rendering ----
-    function updateViewBox() {
-        svg.setAttribute('viewBox', vbX + ' ' + vbY + ' ' + vbW + ' ' + vbH);
-        const zoom = Math.round((CANVAS_W / vbW) * 100);
-        zoomPct.textContent = zoom + '%';
-    }
-
-    function getRowColor(rowId) {
-        const assigns = assignments[rowId];
-        if (assigns && assigns.length > 0) {
-            if (mode === 'assign' && selectedTT) {
-                const sel = assigns.find(a => a.id === selectedTT);
-                if (sel) return sel.color;
-            }
-            return assigns[0].color;
-        }
-        return '#374151';
-    }
-
-    function getRowOpacity(rowId) {
-        const assigns = assignments[rowId];
-        if (!assigns || assigns.length === 0) return 0.5;
-        if (mode === 'assign' && selectedTT) {
-            const sel = assigns.find(a => a.id === selectedTT);
-            if (sel) return 1;
-            return 0.35;
-        }
-        return 0.8;
-    }
-
-    function isAssignedToSelected(rowId) {
-        const assigns = assignments[rowId];
-        if (!assigns) return false;
-        return assigns.some(a => a.id === selectedTT);
-    }
-
-    function renderRowColors() {
-        // Update all seat circles
-        svg.querySelectorAll('[data-row-id]').forEach(g => {
-            const rowId = g.dataset.rowId;
-            const color = getRowColor(rowId);
-            const opacity = getRowOpacity(rowId);
-            g.style.opacity = opacity;
-
-            g.querySelectorAll('circle[data-row-color]').forEach(c => {
-                c.setAttribute('fill', color);
-            });
-
-            // Row label brightness
-            const label = g.querySelector('[data-row-label]');
-            if (label) {
-                const bright = (mode === 'assign') ? isAssignedToSelected(rowId) : (assignments[rowId] && assignments[rowId].length > 0);
-                label.setAttribute('fill', bright ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)');
-            }
-        });
-    }
-
-    function renderLegend() {
-        let html = '';
-        ticketTypes.forEach(tt => {
-            html += '<span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">';
-            html += '<span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:' + tt.color + '"></span>';
-            html += '<span class="text-gray-200">' + tt.name + '</span>';
-            html += '</span>';
-        });
-        html += '<span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">';
-        html += '<span class="w-2.5 h-2.5 rounded-full bg-gray-700 flex-shrink-0"></span>';
-        html += '<span class="text-gray-400">Neatribuit</span></span>';
-        html += '<span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">';
-        html += '<span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#1f2937;border:1px solid #4b5563"></span>';
-        html += '<span class="text-gray-400">Blocat</span></span>';
-        legendEl.innerHTML = html;
-    }
-
-    function renderSummary() {
-        let html = '';
-        ticketTypes.forEach(tt => {
-            const rows = [];
-            let totalSeats = 0;
-            for (const [rowId, assigns] of Object.entries(assignments)) {
-                if (assigns.some(a => a.id === tt.id)) {
-                    const info = rowInfo[rowId];
-                    if (info) {
-                        rows.push(info);
-                        totalSeats += info.seatCount;
-                    }
-                }
-            }
-            html += '<div class="px-4 py-2.5">';
-            html += '<div class="flex items-center justify-between">';
-            html += '<div class="flex items-center gap-2">';
-            html += '<span class="w-3 h-3 rounded-full flex-shrink-0" style="background:' + tt.color + '"></span>';
-            html += '<span class="text-sm font-medium text-white">' + tt.name + '</span>';
-            html += '</div>';
-            html += '<span class="text-xs text-gray-400">' + totalSeats + ' locuri</span>';
-            html += '</div>';
-            if (rows.length > 0) {
-                html += '<div class="mt-1.5 ml-5 flex flex-wrap gap-1">';
-                rows.forEach(r => {
-                    html += '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300">';
-                    html += '<span class="text-gray-500">' + r.section + '</span>';
-                    html += '<span>Rând ' + r.label + '</span>';
-                    html += '<span class="text-gray-500">(' + r.seatCount + ')</span>';
-                    html += '</span>';
-                });
-                html += '</div>';
-            } else {
-                html += '<div class="mt-1 ml-5 text-xs text-gray-600 italic">Nicio asignare</div>';
-            }
-            html += '</div>';
-        });
-        summaryBody.innerHTML = html;
-    }
-
-    function renderTTChips() {
-        let html = '';
-        ticketTypes.forEach(tt => {
-            const sel = tt.id === selectedTT;
-            const cls = sel
-                ? 'ring-2 ring-offset-1 ring-offset-gray-900'
-                : 'opacity-60 hover:opacity-90';
-            html += '<button type="button" data-tt-id="' + tt.id + '" ';
-            html += 'class="sme-tt-chip flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium text-white transition-all ' + cls + '" ';
-            html += 'style="background:' + tt.color + '; --tw-ring-color:' + tt.color + '">';
-            html += '<span>' + tt.name + '</span>';
-            if (tt.price > 0) html += '<span class="text-xs opacity-70">' + tt.price.toFixed(2) + ' ' + tt.currency + '</span>';
-            html += '</button>';
-        });
-        ttChips.innerHTML = html;
-
-        // Bind chip clicks
-        ttChips.querySelectorAll('.sme-tt-chip').forEach(btn => {
-            btn.addEventListener('click', () => {
-                selectedTT = Number(btn.dataset.ttId);
-                renderTTChips();
-                renderRowColors();
-            });
-        });
-    }
-
-    // ---- Mode toggle ----
-    function enterAssignMode() {
-        mode = 'assign';
-        btnAssign.classList.add('hidden');
-        ttSelector.classList.remove('hidden');
-        svg.style.cursor = 'crosshair';
-        renderTTChips();
-        renderRowColors();
-    }
-
-    function exitAssignMode() {
-        mode = 'view';
-        btnAssign.classList.remove('hidden');
-        ttSelector.classList.add('hidden');
-        svg.style.cursor = 'grab';
-        renderRowColors();
-    }
-
-    btnAssign.addEventListener('click', enterAssignMode);
-    btnDone.addEventListener('click', exitAssignMode);
-
-    // ---- Toggle row assignment ----
-    function toggleRow(rowId) {
-        if (mode !== 'assign' || !selectedTT) return;
-        rowId = Number(rowId);
-
-        saving = true;
-        savingEl.classList.remove('hidden');
-
-        const wire = getWire();
-        if (!wire) { saving = false; savingEl.classList.add('hidden'); return; }
-
-        wire.call('toggleSeatingRowAssignment', selectedTT, rowId).then(result => {
-            if (result !== false) {
-                // Update local assignments
-                if (!assignments[rowId]) assignments[rowId] = [];
-                const idx = assignments[rowId].findIndex(a => a.id === selectedTT);
-                if (idx > -1) {
-                    assignments[rowId].splice(idx, 1);
-                    if (assignments[rowId].length === 0) delete assignments[rowId];
-                } else {
-                    const tt = ticketTypes.find(t => t.id === selectedTT);
-                    assignments[rowId].push({ id: selectedTT, name: tt ? tt.name : '', color: tt ? tt.color : '#6b7280' });
-                }
-                renderRowColors();
-                renderSummary();
-            }
-            saving = false;
-            savingEl.classList.add('hidden');
-        }).catch(() => { saving = false; savingEl.classList.add('hidden'); });
-    }
-
-    // ---- Zoom ----
-    function zoomAt(clientX, clientY, factor) {
-        const rect = svg.getBoundingClientRect();
-        const mx = ((clientX - rect.left) / rect.width) * vbW + vbX;
-        const my = ((clientY - rect.top) / rect.height) * vbH + vbY;
-
-        let newW = vbW / factor;
-        let newH = vbH / factor;
-
-        const zoom = CANVAS_W / newW;
-        if (zoom < MIN_ZOOM || zoom > MAX_ZOOM) return;
-
-        vbX = mx - (mx - vbX) / factor;
-        vbY = my - (my - vbY) / factor;
-        vbW = newW;
-        vbH = newH;
-        updateViewBox();
-    }
-
-    function zoomCenter(factor) {
-        const rect = svg.getBoundingClientRect();
-        zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, factor);
-    }
-
-    svg.addEventListener('wheel', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const factor = e.deltaY < 0 ? 1.15 : (1 / 1.15);
-        zoomAt(e.clientX, e.clientY, factor);
-    }, { passive: false });
-
-    document.getElementById('sme-zoom-in').addEventListener('click', () => zoomCenter(1.3));
-    document.getElementById('sme-zoom-out').addEventListener('click', () => zoomCenter(1 / 1.3));
-    document.getElementById('sme-zoom-reset').addEventListener('click', () => {
-        vbX = 0; vbY = 0; vbW = CANVAS_W; vbH = CANVAS_H;
-        updateViewBox();
-    });
-
-    // ---- Pan ----
-    svg.addEventListener('mousedown', function(e) {
-        if (e.button !== 0) return;
-        isMouseDown = true;
-        isPanning = false;
-        mouseDownX = e.clientX;
-        mouseDownY = e.clientY;
-        panStartX = e.clientX;
-        panStartY = e.clientY;
-        panStartVbX = vbX;
-        panStartVbY = vbY;
-    });
-
-    window.addEventListener('mousemove', function(e) {
-        // Tooltip (always, if over SVG)
-        if (!isMouseDown) {
-            const el = document.elementFromPoint(e.clientX, e.clientY);
-            if (el && svg.contains(el)) {
-                const rowG = el.closest('[data-row-id]');
-                if (rowG) {
-                    const rowId = rowG.dataset.rowId;
-                    const info = rowInfo[rowId];
-                    if (info) {
-                        let text = info.section + ' \u2014 R\u00e2nd ' + info.label + ' (' + info.seatCount + ' locuri)';
-                        const assigns = assignments[rowId];
-                        if (assigns && assigns.length > 0) {
-                            text += '\n' + assigns.map(a => a.name).join(', ');
-                        } else {
-                            text += '\nNeatribuit';
-                        }
-                        tooltip.textContent = text;
-                        tooltip.style.left = (e.clientX + 14) + 'px';
-                        tooltip.style.top = (e.clientY - 10) + 'px';
-                        tooltip.style.display = 'block';
-                    } else {
-                        tooltip.style.display = 'none';
-                    }
-                } else {
-                    tooltip.style.display = 'none';
-                }
-            } else {
-                tooltip.style.display = 'none';
-            }
-        } else {
-            tooltip.style.display = 'none';
-        }
-
-        // Pan
-        if (!isMouseDown) return;
-        const dx = e.clientX - mouseDownX;
-        const dy = e.clientY - mouseDownY;
-
-        if (!isPanning && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
-            isPanning = true;
-            svg.style.cursor = 'grabbing';
-        }
-
-        if (isPanning) {
-            const rect = svg.getBoundingClientRect();
-            const scaleX = vbW / rect.width;
-            const scaleY = vbH / rect.height;
-            vbX = panStartVbX - (e.clientX - panStartX) * scaleX;
-            vbY = panStartVbY - (e.clientY - panStartY) * scaleY;
-            updateViewBox();
-        }
-    });
-
-    window.addEventListener('mouseup', function(e) {
-        if (!isMouseDown) return;
-
-        if (!isPanning) {
-            // It was a click, not a drag
-            const el = document.elementFromPoint(e.clientX, e.clientY);
-            if (el && svg.contains(el)) {
-                const rowG = el.closest('[data-row-id]');
-                if (rowG) {
-                    toggleRow(rowG.dataset.rowId);
-                }
-            }
-        }
-
-        isMouseDown = false;
-        isPanning = false;
-        svg.style.cursor = (mode === 'assign') ? 'crosshair' : 'grab';
-    });
-
-    svg.addEventListener('mouseleave', function() {
-        tooltip.style.display = 'none';
-    });
-
-    // ---- Initial render ----
-    renderRowColors();
-    renderLegend();
-    renderSummary();
-})();
-</script>
 </div>
 @else
-    <div class="p-4 text-center text-gray-500 text-sm">
-        Nu există o hartă de locuri configurată sau salvată pentru acest eveniment.
-    </div>
+<div class="p-4 text-center text-gray-500 text-sm">
+    Nu există o hartă de locuri configurată sau salvată pentru acest eveniment.
+</div>
 @endif
