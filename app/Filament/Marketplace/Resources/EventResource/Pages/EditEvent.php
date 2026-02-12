@@ -604,9 +604,24 @@ class EditEvent extends EditRecord
                 ->exists() ?? false;
 
             if ($hasInvitations) {
+                // Fetch seat details for invitation notes
+                $blockedSeats = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+                    ->whereIn('seat_uid', $seatUids)
+                    ->where('status', 'blocked')
+                    ->get(['section_name', 'row_label', 'seat_label']);
+
+                // Group by section+row for readable notes
+                $grouped = $blockedSeats->groupBy(fn ($s) => $s->section_name . ' — Rând ' . $s->row_label);
+                $notesParts = [];
+                foreach ($grouped as $key => $seats) {
+                    $notesParts[] = $key . ': Loc ' . $seats->pluck('seat_label')->sort()->implode(', ');
+                }
+
                 session()->put('blocked_seats_for_invitation', [
                     'event_id' => $event->id,
                     'seat_uids' => $seatUids,
+                    'seats' => $blockedSeats->pluck('seat_label')->toArray(),
+                    'notes_text' => implode('; ', $notesParts),
                 ]);
                 $inviteUrl = route('filament.marketplace.pages.invitations') . '?event=' . $event->id . '&prefill_seats=1';
             }

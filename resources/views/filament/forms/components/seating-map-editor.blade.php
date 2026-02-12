@@ -296,14 +296,29 @@
                 } else { this.showTip = false; }
                 return;
             }
+            let circle = e.target.closest('circle[data-seat-uid]');
             let rg = e.target.closest('[data-row-id]');
-            if (rg) {
+            if (circle) {
+                let uid = circle.dataset.seatUid;
+                let label = circle.dataset.seatLabel || '';
+                let rid = rg ? rg.dataset.rowId : null;
+                let info = rid ? this.RI[rid] : null;
+                let es = this.ES[uid];
+                let t = info ? info.section + ' \u2014 ' + (/^Mas/i.test(info.label) ? '' : 'R\u00e2nd ') + info.label + ' \u2014 Loc ' + label : 'Loc ' + label;
+                let a = rid ? this.A[rid] : null;
+                if (a && a.length) t += '\n' + a.map(x => x.name).join(', ');
+                else t += '\nNeatribuit';
+                if (es === 'blocked') t += '\n\u26d4 Blocat';
+                else if (es === 'sold') t += '\n\u2714 V\u00e2ndut';
+                else if (es === 'held') t += '\n\u23f3 Re\u021binut';
+                this.tip = t; this.tipX = e.clientX + 14; this.tipY = e.clientY - 10; this.showTip = true;
+            } else if (rg) {
                 let rid = rg.dataset.rowId, info = this.RI[rid];
                 if (info) {
                     let t = info.section + ' \u2014 ' + (/^Mas/i.test(info.label) ? '' : 'R\u00e2nd ') + info.label + ' (' + info.seatCount + ' locuri)';
                     let a = this.A[rid];
-                    if (a && a.length) t += String.fromCharCode(10) + a.map(x => x.name).join(', ');
-                    else t += String.fromCharCode(10) + 'Neatribuit';
+                    if (a && a.length) t += '\n' + a.map(x => x.name).join(', ');
+                    else t += '\nNeatribuit';
                     this.tip = t; this.tipX = e.clientX + 14; this.tipY = e.clientY - 10; this.showTip = true;
                 } else { this.showTip = false; }
             } else { this.showTip = false; }
@@ -556,7 +571,7 @@
                             <text x="{{ $labelX }}" y="{{ $labelY + 4 }}"
                                   font-size="10" text-anchor="end"
                                   class="pointer-events-none select-none"
-                                  :fill="isSel({{ $row->id }}) ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.4)'"
+                                  :fill="isSel({{ $row->id }}) ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0.85)'"
                             >{{ $row->label }}</text>
                         </g>
                     @endforeach

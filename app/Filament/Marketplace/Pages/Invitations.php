@@ -109,10 +109,10 @@ class Invitations extends Page
         if (request()->query('prefill_seats') && $this->preselectedEventId) {
             $seatData = session()->pull('blocked_seats_for_invitation');
 
-            $seatCount = $seatData ? count($seatData['seats'] ?? []) : 1;
+            $seatCount = $seatData ? count($seatData['seats'] ?? $seatData['seat_uids'] ?? []) : 1;
             $seatNotes = '';
             if ($seatData) {
-                $seatNotes = "Blocked seats: Section {$seatData['section']}, Row {$seatData['row']}, Seats: " . implode(', ', $seatData['seats']);
+                $seatNotes = $seatData['notes_text'] ?? ('Blocked seats: ' . implode(', ', $seatData['seat_uids'] ?? []));
             }
 
             $this->batchData = [
