@@ -480,6 +480,15 @@ class EditEvent extends EditRecord
         $debug['esl_id'] = $eventSeating?->id;
         $created = false;
 
+        // If existing EventSeatingLayout is from a different layout version, recreate it
+        if ($eventSeating && (int) $eventSeating->layout_id !== (int) $layoutId) {
+            $debug['esl_stale'] = true;
+            $debug['esl_old_layout'] = $eventSeating->layout_id;
+            $eventSeating->seats()->delete();
+            $eventSeating->delete();
+            $eventSeating = null;
+        }
+
         if (!$eventSeating) {
             $layout = \App\Models\Seating\SeatingLayout::withoutGlobalScopes()
                 ->with(['sections.rows.seats'])

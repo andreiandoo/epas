@@ -68,8 +68,10 @@
 
     // Load event-level seat statuses (blocked/sold/held) for display
     $eventSeatStatuses = [];
-    if ($eventId) {
-        $eventSeating = \App\Models\Seating\EventSeatingLayout::where('event_id', $eventId)->first();
+    if ($eventId && $layoutId) {
+        $eventSeating = \App\Models\Seating\EventSeatingLayout::where('event_id', $eventId)
+            ->where('layout_id', $layoutId)
+            ->first();
         if ($eventSeating) {
             $eventSeatStatuses = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
                 ->whereIn('status', ['blocked', 'sold', 'held', 'disabled'])
@@ -86,6 +88,18 @@
                 if ($seat->seat_uid && $seat->status !== 'imposibil') {
                     $seatInfoMap[$seat->seat_uid] = [$section->name, $row->label, $seat->label];
                 }
+            }
+        }
+    }
+
+    // Count imposibil seats and total seats for legend
+    $imposibilCount = 0;
+    $totalSeatCount = 0;
+    foreach ($sections as $section) {
+        foreach ($section->rows as $row) {
+            foreach ($row->seats as $seat) {
+                if ($seat->status === 'imposibil') $imposibilCount++;
+                else $totalSeatCount++;
             }
         }
     }
@@ -108,6 +122,8 @@
         RI: {{ $rowInfoJson }},
         ES: {{ $eventSeatStatusesJson }},
         SI: {{ $seatInfoJson }},
+        imposibilCount: {{ $imposibilCount }},
+        totalSeatCount: {{ $totalSeatCount }},
         mode: 'view',
         saving: false,
         vbX: 0, vbY: 0, vbW: {{ $canvasW }}, vbH: {{ $canvasH }},
@@ -327,6 +343,23 @@
                 total++;
             }
             return { groups: Object.values(groups), total };
+        },
+        get LC() {
+            let es = Object.values(this.ES);
+            let blocked = es.filter(s => s === 'blocked').length;
+            let sold = es.filter(s => s === 'sold').length;
+            let held = es.filter(s => s === 'held').length;
+            let assigned = 0, riKeys = Object.keys(this.RI), assignedRids = new Set();
+            for (let k = 0; k < riKeys.length; k++) {
+                let rid = riKeys[k];
+                if (this.A[rid] && this.A[rid].length) { assigned += this.RI[rid].seatCount; assignedRids.add(rid); }
+            }
+            let unassigned = 0;
+            for (let k = 0; k < riKeys.length; k++) {
+                let rid = riKeys[k];
+                if (!assignedRids.has(rid)) unassigned += this.RI[rid].seatCount;
+            }
+            return { blocked, sold, held, unassigned, imposibil: this.imposibilCount };
         }
     }"
     x-init="
@@ -533,27 +566,33 @@
             <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
                 <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="`background:${tt.color}`"></span>
                 <span class="text-gray-200" x-text="tt.name"></span>
+                <span class="text-gray-500" x-text="summaryFor(tt.id).seats"></span>
             </span>
         </template>
         <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
             <span class="w-2.5 h-2.5 rounded-full bg-gray-700 flex-shrink-0"></span>
             <span class="text-gray-400">Neatribuit</span>
+            <span class="text-gray-500" x-text="LC.unassigned"></span>
         </span>
         <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
             <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#6b7280"></span>
             <span class="text-gray-400">Blocat</span>
+            <span class="text-gray-500" x-text="LC.blocked"></span>
         </span>
         <span x-show="mode==='block'" x-cloak class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
             <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#fbbf24"></span>
             <span class="text-gray-400">Selectat</span>
+            <span class="text-gray-500" x-text="selSeats.length"></span>
         </span>
         <span x-show="mode==='block'" x-cloak class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
             <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#dc2626"></span>
             <span class="text-gray-400">V&#226;ndut</span>
+            <span class="text-gray-500" x-text="LC.sold"></span>
         </span>
         <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
             <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#1f2937;border:1px solid #4b5563"></span>
             <span class="text-gray-400">Imposibil</span>
+            <span class="text-gray-500" x-text="LC.imposibil"></span>
         </span>
     </div>
 
