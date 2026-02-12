@@ -219,20 +219,15 @@
             let action = this.blockAction;
             let invite = this.mkInvite;
 
-            let done = (ok, cnt) => {
+            let update = () => {
+                let newES = {...this.ES};
+                uids.forEach(uid => {
+                    if (action === 'block') newES[uid] = 'blocked';
+                    else delete newES[uid];
+                });
+                this.ES = newES;
+                this.selSeats = [];
                 this.blockSaving = false;
-                if (ok && cnt > 0) {
-                    let newES = {...this.ES};
-                    uids.forEach(uid => {
-                        if (action === 'block') newES[uid] = 'blocked';
-                        else delete newES[uid];
-                    });
-                    this.ES = newES;
-                    this.selSeats = [];
-                } else if (ok && cnt === 0) {
-                    console.warn('updateSeatStatuses returned 0 updated seats');
-                    this.selSeats = [];
-                }
             };
             try {
                 let el = this.$el.closest('[wire\\:id]');
@@ -244,14 +239,14 @@
                             ? lw.call('updateSeatStatuses', uids, action, invite)
                             : lw.updateSeatStatuses(uids, action, invite);
                         if (p && p.then) p.then(r => {
-                            let cnt = r && r.updated !== undefined ? r.updated : -1;
-                            done(true, cnt);
+                            console.log('updateSeatStatuses response:', r);
+                            update();
                             if (r && r.invite_url) window.open(r.invite_url, '_blank');
-                        }).catch(e => { console.error('updateSeatStatuses error:', e); done(false, 0); });
-                        else done(true, -1);
-                    } else { console.error('Livewire component not found'); done(false, 0); }
-                } else { console.error('No wire:id or Livewire not loaded'); done(false, 0); }
-            } catch(e) { console.error('applyBlock exception:', e); done(false, 0); }
+                        }).catch(e => { console.error('updateSeatStatuses error:', e); update(); });
+                        else update();
+                    } else { console.error('Livewire component not found'); this.blockSaving = false; }
+                } else { console.error('No wire:id or Livewire'); this.blockSaving = false; }
+            } catch(e) { console.error('applyBlock exception:', e); this.blockSaving = false; }
         },
 
         selectAllBlockedInView() {

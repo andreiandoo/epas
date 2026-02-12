@@ -464,12 +464,26 @@ class EditEvent extends EditRecord
         $event = $this->record;
         $layoutId = $event->seating_layout_id;
 
+        \Illuminate\Support\Facades\Log::info('updateSeatStatuses called', [
+            'event_id' => $event->id,
+            'layout_id' => $layoutId,
+            'action' => $action,
+            'seat_uids_count' => count($seatUids),
+            'seat_uids_sample' => array_slice($seatUids, 0, 5),
+        ]);
+
         if (!$layoutId || empty($seatUids)) {
+            \Illuminate\Support\Facades\Log::warning('updateSeatStatuses: no layoutId or empty seatUids');
             return ['updated' => 0, 'invite_url' => null];
         }
 
         // Find or create EventSeatingLayout directly by event_id
         $eventSeating = \App\Models\Seating\EventSeatingLayout::where('event_id', $event->id)->first();
+
+        \Illuminate\Support\Facades\Log::info('updateSeatStatuses: eventSeating lookup', [
+            'found' => $eventSeating !== null,
+            'event_seating_id' => $eventSeating?->id,
+        ]);
 
         if (!$eventSeating) {
             // Load the seating layout template
@@ -509,6 +523,16 @@ class EditEvent extends EditRecord
         }
 
         // Block or unblock seats
+        $matchCount = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+            ->whereIn('seat_uid', $seatUids)
+            ->count();
+
+        \Illuminate\Support\Facades\Log::info('updateSeatStatuses: before update', [
+            'event_seating_id' => $eventSeating->id,
+            'matching_event_seats' => $matchCount,
+            'total_event_seats' => $eventSeating->seats()->count(),
+        ]);
+
         $updated = 0;
         if ($action === 'block') {
             $updated = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
@@ -527,6 +551,8 @@ class EditEvent extends EditRecord
                     'version' => \Illuminate\Support\Facades\DB::raw('version + 1'),
                 ]);
         }
+
+        \Illuminate\Support\Facades\Log::info('updateSeatStatuses: result', ['updated' => $updated]);
 
         $inviteUrl = null;
         if ($updated > 0 && $action === 'block' && $createInvitations) {
