@@ -222,10 +222,12 @@
             let done = (ok) => {
                 this.blockSaving = false;
                 if (ok) {
+                    let newES = {...this.ES};
                     uids.forEach(uid => {
-                        if (action === 'block') this.ES[uid] = 'blocked';
-                        else delete this.ES[uid];
+                        if (action === 'block') newES[uid] = 'blocked';
+                        else delete newES[uid];
                     });
+                    this.ES = newES;
                     this.selSeats = [];
                 }
             };
@@ -474,9 +476,6 @@
                 @endphp
 
                 <g @if($rot != 0) transform="rotate({{ $rot }} {{ $cx }} {{ $cy }})" @endif>
-                    <text x="{{ $sX + 4 }}" y="{{ max(12, $sY - 6) }}"
-                          fill="rgba(255,255,255,0.4)" font-size="13" font-weight="600">{{ $section->name }}</text>
-
                     @foreach($section->rows as $row)
                         <g data-row-id="{{ $row->id }}" style="transition: opacity 0.15s"
                            :opacity="mode==='block' ? 1 : ro({{ $row->id }})">
@@ -514,7 +513,7 @@
                             <text x="{{ $labelX }}" y="{{ $labelY + 4 }}"
                                   font-size="10" text-anchor="end"
                                   class="pointer-events-none select-none"
-                                  :fill="isSel({{ $row->id }}) ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)'"
+                                  :fill="isSel({{ $row->id }}) ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.4)'"
                             >{{ $row->label }}</text>
                         </g>
                     @endforeach
