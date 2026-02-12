@@ -513,10 +513,14 @@ class EditEvent extends EditRecord
                 return ['updated' => 0, 'invite_url' => null, 'debug' => $debug + ['fail' => 'no_layout_sections']];
             }
 
+            // Generate geometry snapshot
+            $geometry = app(\App\Services\Seating\GeometryStorage::class)->generateGeometrySnapshot($layout);
+
             $eventSeating = \App\Models\Seating\EventSeatingLayout::create([
                 'event_id' => $event->id,
                 'layout_id' => $layout->id,
                 'marketplace_client_id' => $event->marketplace_client_id ?? null,
+                'json_geometry' => $geometry,
                 'status' => 'active',
                 'published_at' => now(),
             ]);
