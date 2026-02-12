@@ -105,22 +105,19 @@ class Invitations extends Page
             }
         }
 
-        // Handle prefill from Block Seats action
+        // Handle prefill from Block Seats action (data via URL params)
         if (request()->query('prefill_seats') && $this->preselectedEventId) {
-            $seatData = session()->pull('blocked_seats_for_invitation');
-
-            $seatCount = $seatData ? count($seatData['seats'] ?? $seatData['seat_uids'] ?? []) : 1;
-            $seatNotes = '';
-            if ($seatData) {
-                $seatNotes = $seatData['notes_text'] ?? ('Blocked seats: ' . implode(', ', $seatData['seat_uids'] ?? []));
-            }
+            $seatCount = (int) (request()->query('qty', 1));
+            $seatNotes = request()->query('notes', '');
+            $seatUidsParam = request()->query('seat_uids', '');
 
             $this->batchData = [
                 'event_ref' => $this->preselectedEventId,
                 'name' => 'Blocked Seats Invitations',
-                'qty_planned' => $seatCount,
+                'qty_planned' => max(1, $seatCount),
                 'seat_mode' => 'manual',
                 'notes' => $seatNotes,
+                'seat_uids' => $seatUidsParam,
             ];
             $this->showCreateModal = true;
         }

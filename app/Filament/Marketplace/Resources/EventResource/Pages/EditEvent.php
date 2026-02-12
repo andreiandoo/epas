@@ -617,13 +617,16 @@ class EditEvent extends EditRecord
                     $notesParts[] = $key . ': Loc ' . $seats->pluck('seat_label')->sort()->implode(', ');
                 }
 
-                session()->put('blocked_seats_for_invitation', [
-                    'event_id' => $event->id,
-                    'seat_uids' => $seatUids,
-                    'seats' => $blockedSeats->pluck('seat_label')->toArray(),
-                    'notes_text' => implode('; ', $notesParts),
-                ]);
-                $inviteUrl = route('filament.marketplace.pages.invitations') . '?event=' . $event->id . '&prefill_seats=1';
+                $notesText = implode('; ', $notesParts);
+                $seatCount = $blockedSeats->count();
+
+                // Pass data via URL params (more reliable than session for cross-tab)
+                $inviteUrl = route('filament.marketplace.pages.invitations')
+                    . '?event=' . $event->id
+                    . '&prefill_seats=1'
+                    . '&qty=' . $seatCount
+                    . '&notes=' . urlencode($notesText)
+                    . '&seat_uids=' . urlencode(implode(',', $seatUids));
             }
         }
 
