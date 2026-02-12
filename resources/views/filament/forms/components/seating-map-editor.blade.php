@@ -144,15 +144,15 @@
         rc(rid) {
             let a = this.A[rid];
             if (a && a.length) { let s = a.find(x => Number(x.id) === Number(this.sel)); if (s) return s.color; return a[0].color; }
-            return '#374151';
+            return '#9ca3af';
         },
         fc(uid, rid) {
             if (this.mode === 'block' && this.selSeats.includes(uid)) return '#fbbf24';
             let es = this.ES[uid];
-            if (es === 'blocked') return '#6b7280';
+            if (es === 'blocked') return '#dc2626';
             if (es === 'sold') return '#dc2626';
             if (es === 'held') return '#f59e0b';
-            if (es === 'disabled') return '#1f2937';
+            if (es === 'disabled') return '#e5e7eb';
             return this.rc(rid);
         },
         ro(rid) {
@@ -484,17 +484,24 @@
     </div>
 
     {{-- SVG Map --}}
-    <div class="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden relative">
+    <div class="border rounded-lg overflow-hidden relative" style="background-color:#ffffff;border-color:#d1d5db">
         <svg x-ref="svg"
             viewBox="0 0 {{ $canvasW }} {{ $canvasH }}"
             preserveAspectRatio="xMidYMid meet"
-            class="w-full bg-gray-950 select-none"
-            style="height: calc(100vh - 300px); min-height: 500px;"
+            class="w-full select-none"
+            style="background-color:#ffffff;height:calc(100vh - 300px);min-height:500px;"
             :style="pan ? 'cursor:grabbing' : (mode==='assign' ? 'cursor:crosshair' : (mode==='block' ? 'cursor:crosshair' : 'cursor:grab'))"
             x-on:mousemove="hoverTip($event)"
             x-on:mouseleave="showTip = false"
         >
             {!! $bgImage !!}
+
+            <defs>
+                <g id="seat-x">
+                    <line x1="-3.5" y1="-3.5" x2="3.5" y2="3.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                    <line x1="3.5" y1="-3.5" x2="-3.5" y2="3.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                </g>
+            </defs>
 
             @foreach($sections as $section)
                 @php
@@ -519,7 +526,7 @@
                                 @endphp
                                 @if($seat->status === 'imposibil')
                                     <circle cx="{{ $seatX }}" cy="{{ $seatY }}" r="6"
-                                            fill="#1f2937" stroke="#4b5563" stroke-width="0.5"
+                                            fill="#e5e7eb" stroke="#9ca3af" stroke-width="0.5"
                                             class="pointer-events-none"/>
                                 @else
                                     <circle cx="{{ $seatX }}" cy="{{ $seatY }}" r="6"
@@ -533,7 +540,11 @@
                                     <text x="{{ $seatX }}" y="{{ $seatY + 3 }}"
                                           font-size="7" text-anchor="middle" font-weight="600"
                                           fill="rgba(255,255,255,0.9)"
-                                          class="pointer-events-none select-none">{{ $seat->label }}</text>
+                                          class="pointer-events-none select-none"
+                                          :style="ES['{{ $seatUid }}'] === 'blocked' && !selSeats.includes('{{ $seatUid }}') ? 'display:none' : ''">{{ $seat->label }}</text>
+                                    <use href="#seat-x" x="{{ $seatX }}" y="{{ $seatY }}"
+                                         class="pointer-events-none"
+                                         :style="ES['{{ $seatUid }}'] === 'blocked' && !selSeats.includes('{{ $seatUid }}') ? '' : 'display:none'"/>
                                 @endif
                             @endforeach
 
@@ -570,12 +581,14 @@
             </span>
         </template>
         <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
-            <span class="w-2.5 h-2.5 rounded-full bg-gray-700 flex-shrink-0"></span>
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#9ca3af"></span>
             <span class="text-gray-400">Neatribuit</span>
             <span class="text-gray-500" x-text="LC.unassigned"></span>
         </span>
         <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
-            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#6b7280"></span>
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0 relative" style="background:#dc2626">
+                <span class="absolute inset-0 flex items-center justify-center text-white font-bold" style="font-size:6px;line-height:1">&times;</span>
+            </span>
             <span class="text-gray-400">Blocat</span>
             <span class="text-gray-500" x-text="LC.blocked"></span>
         </span>
@@ -590,7 +603,7 @@
             <span class="text-gray-500" x-text="LC.sold"></span>
         </span>
         <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
-            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#1f2937;border:1px solid #4b5563"></span>
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#e5e7eb;border:1px solid #9ca3af"></span>
             <span class="text-gray-400">Imposibil</span>
             <span class="text-gray-500" x-text="LC.imposibil"></span>
         </span>
