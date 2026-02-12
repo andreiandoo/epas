@@ -1059,7 +1059,7 @@ class EventResource extends Resource
                                             ->placeholder($t('ex: Early Bird, Standard, VIP', 'e.g. Early Bird, Standard, VIP'))
                                             ->datalist(['Early Bird','Standard','VIP','Backstage','Student','Senior','Child'])
                                             ->required()
-                                            ->columnSpan(6)
+                                            ->columnSpan(5)
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                 if ($get('sku')) return;
@@ -1068,7 +1068,12 @@ class EventResource extends Resource
                                         Forms\Components\TextInput::make('sku')
                                             ->label('SKU')
                                             ->placeholder($t('Se generează automat dacă lași gol', 'AUTO-GEN if left empty'))
-                                            ->columnSpan(6),
+                                            ->columnSpan(4),
+                                        Forms\Components\ColorPicker::make('color')
+                                            ->label($t('Culoare pe hartă', 'Map color'))
+                                            ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
+                                            ->live(onBlur: true)
+                                            ->columnSpan(3),
 
                                         Forms\Components\Textarea::make('description')
                                             ->label($t('Descriere', 'Description'))
@@ -1232,133 +1237,10 @@ class EventResource extends Resource
                                             ->columns(12)
                                             ->columnSpan(12),
 
-                                        // Ticket type color for seating map visualization
-                                        Forms\Components\ColorPicker::make('color')
-                                            ->label($t('Culoare pe hartă', 'Map color'))
-                                            ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
-                                            ->live(onBlur: true)
-                                            ->columnSpan(3),
-
-                                        // Reducere fieldset
-                                        SC\Fieldset::make($t('Reducere', 'Discount'))
-                                            ->schema([
-                                                Forms\Components\Toggle::make('has_sale')
-                                                    ->label($t('Activează reducere', 'Enable Sale Discount'))
-                                                    ->live()
-                                                    ->default(false)
-                                                    ->dehydrated(false)
-                                                    ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                        // Auto-enable if there's existing sale data
-                                                        $hasSaleData = $get('price') || $get('discount_percent') || $get('sales_start_at') || $get('sales_end_at') || $get('sale_stock');
-                                                        if ($hasSaleData) {
-                                                            $set('has_sale', true);
-                                                        }
-                                                    })
-                                                    ->columnSpan(12),
-
-                                                Forms\Components\TextInput::make('price')
-                                                    ->label($t('Preț promoțional', 'Sale price'))
-                                                    ->placeholder($t('lasă gol dacă nu e reducere', 'leave empty if no sale'))
-                                                    ->numeric()
-                                                    ->minValue(0)
-                                                    ->live(debounce: 300)
-                                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                                        $price = (float) ($get('price_max') ?: 0);
-                                                        $sale = $state !== null && $state !== '' ? (float)$state : null;
-                                                        if ($price > 0 && $sale) {
-                                                            $d = round((1 - ($sale / $price)) * 100, 2);
-                                                            $set('discount_percent', max(0, min(100, $d)));
-                                                        } else {
-                                                            $set('discount_percent', null);
-                                                        }
-                                                    })
-                                                    ->visible(fn (SGet $get) => $get('has_sale'))
-                                                    ->columnSpan(3),
-                                                Forms\Components\TextInput::make('discount_percent')
-                                                    ->label($t('Reducere %', 'Discount %'))
-                                                    ->placeholder($t('ex: 20', 'e.g. 20'))
-                                                    ->numeric()
-                                                    ->minValue(0)
-                                                    ->maxValue(100)
-                                                    ->live(debounce: 300)
-                                                    ->formatStateUsing(function ($state, SGet $get) {
-                                                        // Calculate discount % on form load based on price_max and price
-                                                        if ($state !== null && $state !== '') {
-                                                            return $state;
-                                                        }
-                                                        $priceMax = (float) ($get('price_max') ?: 0);
-                                                        $salePrice = $get('price');
-                                                        if ($priceMax > 0 && $salePrice !== null && $salePrice !== '') {
-                                                            $sale = (float) $salePrice;
-                                                            return round((1 - ($sale / $priceMax)) * 100, 2);
-                                                        }
-                                                        return null;
-                                                    })
-                                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                                        $price = (float) ($get('price_max') ?: 0);
-                                                        if ($price <= 0) return;
-                                                        if ($state === null || $state === '') {
-                                                            $set('price', null);
-                                                            return;
-                                                        }
-                                                        $disc = max(0, min(100, (float)$state));
-                                                        $set('price', round($price * (1 - $disc/100), 2));
-                                                    })
-                                                    ->visible(fn (SGet $get) => $get('has_sale'))
-                                                    ->columnSpan(3),
-                                                Forms\Components\DateTimePicker::make('sales_start_at')
-                                                    ->label($t('Început reducere', 'Sale starts'))
-                                                    ->native(false)
-                                                    ->seconds(false)
-                                                    ->displayFormat('Y-m-d H:i')
-                                                    ->minDate(now())
-                                                    ->live(debounce: 500)
-                                                    ->afterStateUpdated(function ($state, SSet $set) {
-                                                        if (!$state) return;
-
-                                                        $selectedDate = Carbon::parse($state);
-                                                        $now = Carbon::now();
-
-                                                        // If the selected date is today and time is midnight (default), set current time
-                                                        if ($selectedDate->isToday() && $selectedDate->format('H:i') === '00:00') {
-                                                            // Set to current time, rounded up to next 5 minutes
-                                                            $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
-                                                            $set('sales_start_at', $newTime->format('Y-m-d H:i'));
-                                                        }
-                                                        // Ensure the datetime is not in the past
-                                                        elseif ($selectedDate->lt($now)) {
-                                                            $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
-                                                            $set('sales_start_at', $newTime->format('Y-m-d H:i'));
-                                                        }
-                                                    })
-                                                    ->visible(fn (SGet $get) => $get('has_sale'))
-                                                    ->columnSpan(3),
-                                                Forms\Components\DateTimePicker::make('sales_end_at')
-                                                    ->label($t('Sfârșit reducere', 'Sale ends'))
-                                                    ->native(false)
-                                                    ->seconds(false)
-                                                    ->displayFormat('Y-m-d H:i')
-                                                    ->visible(fn (SGet $get) => $get('has_sale'))
-                                                    ->columnSpan(3),
-
-                                                // Sale stock - limit how many tickets can be sold at sale price
-                                                Forms\Components\TextInput::make('sale_stock')
-                                                    ->label($t('Stoc reducere', 'Sale stock'))
-                                                    ->placeholder($t('Nelimitat', 'Unlimited'))
-                                                    ->numeric()
-                                                    ->minValue(0)
-                                                    ->nullable()
-                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul de bilete disponibile la preț redus. Când se consumă stocul, oferta se închide automat.', 'Number of tickets available at discounted price. When stock runs out, the offer closes automatically.'))
-                                                    ->visible(fn (SGet $get) => $get('has_sale'))
-                                                    ->columnSpan(6),
-                                            ])
-                                            ->columns(12)
-                                            ->columnSpan(12),
-
                                         // Serie bilet fieldset
                                         SC\Fieldset::make($t('Serie bilet', 'Ticket series'))
                                             ->schema([
-                                                SC\Grid::make(3)->schema([
+                                                SC\Grid::make(1)->schema([
                                                     Forms\Components\TextInput::make('series_start')
                                                         ->label($t('Serie start', 'Series start'))
                                                         ->placeholder($t('Ex: AMB-5-00001', 'E.g. AMB-5-00001'))
@@ -1431,6 +1313,116 @@ class EventResource extends Resource
                                                         ->columnSpan(6),
                                                 ]),
                                             ])
+                                            ->columnSpan(12),
+
+                                        // Reducere fieldset
+                                        SC\Fieldset::make($t('Reducere', 'Discount'))
+                                            ->schema([
+                                                Forms\Components\Toggle::make('has_sale')
+                                                    ->label($t('Activează reducere', 'Enable Sale Discount'))
+                                                    ->live()
+                                                    ->default(false)
+                                                    ->dehydrated(false)
+                                                    ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                        $hasSaleData = $get('price') || $get('discount_percent') || $get('sales_start_at') || $get('sales_end_at') || $get('sale_stock');
+                                                        if ($hasSaleData) {
+                                                            $set('has_sale', true);
+                                                        }
+                                                    })
+                                                    ->columnSpan(12),
+
+                                                Forms\Components\TextInput::make('price')
+                                                    ->label($t('Preț promoțional', 'Sale price'))
+                                                    ->placeholder($t('lasă gol dacă nu e reducere', 'leave empty if no sale'))
+                                                    ->numeric()
+                                                    ->minValue(0)
+                                                    ->live(debounce: 300)
+                                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                        $price = (float) ($get('price_max') ?: 0);
+                                                        $sale = $state !== null && $state !== '' ? (float)$state : null;
+                                                        if ($price > 0 && $sale) {
+                                                            $d = round((1 - ($sale / $price)) * 100, 2);
+                                                            $set('discount_percent', max(0, min(100, $d)));
+                                                        } else {
+                                                            $set('discount_percent', null);
+                                                        }
+                                                    })
+                                                    ->visible(fn (SGet $get) => $get('has_sale'))
+                                                    ->columnSpan(3),
+                                                Forms\Components\TextInput::make('discount_percent')
+                                                    ->label($t('Reducere %', 'Discount %'))
+                                                    ->placeholder($t('ex: 20', 'e.g. 20'))
+                                                    ->numeric()
+                                                    ->minValue(0)
+                                                    ->maxValue(100)
+                                                    ->live(debounce: 300)
+                                                    ->formatStateUsing(function ($state, SGet $get) {
+                                                        if ($state !== null && $state !== '') {
+                                                            return $state;
+                                                        }
+                                                        $priceMax = (float) ($get('price_max') ?: 0);
+                                                        $salePrice = $get('price');
+                                                        if ($priceMax > 0 && $salePrice !== null && $salePrice !== '') {
+                                                            $sale = (float) $salePrice;
+                                                            return round((1 - ($sale / $priceMax)) * 100, 2);
+                                                        }
+                                                        return null;
+                                                    })
+                                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                        $price = (float) ($get('price_max') ?: 0);
+                                                        if ($price <= 0) return;
+                                                        if ($state === null || $state === '') {
+                                                            $set('price', null);
+                                                            return;
+                                                        }
+                                                        $disc = max(0, min(100, (float)$state));
+                                                        $set('price', round($price * (1 - $disc/100), 2));
+                                                    })
+                                                    ->visible(fn (SGet $get) => $get('has_sale'))
+                                                    ->columnSpan(3),
+                                                Forms\Components\DateTimePicker::make('sales_start_at')
+                                                    ->label($t('Început reducere', 'Sale starts'))
+                                                    ->native(false)
+                                                    ->seconds(false)
+                                                    ->displayFormat('Y-m-d H:i')
+                                                    ->minDate(now())
+                                                    ->live(debounce: 500)
+                                                    ->afterStateUpdated(function ($state, SSet $set) {
+                                                        if (!$state) return;
+
+                                                        $selectedDate = Carbon::parse($state);
+                                                        $now = Carbon::now();
+
+                                                        if ($selectedDate->isToday() && $selectedDate->format('H:i') === '00:00') {
+                                                            $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
+                                                            $set('sales_start_at', $newTime->format('Y-m-d H:i'));
+                                                        }
+                                                        elseif ($selectedDate->lt($now)) {
+                                                            $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
+                                                            $set('sales_start_at', $newTime->format('Y-m-d H:i'));
+                                                        }
+                                                    })
+                                                    ->visible(fn (SGet $get) => $get('has_sale'))
+                                                    ->columnSpan(3),
+                                                Forms\Components\DateTimePicker::make('sales_end_at')
+                                                    ->label($t('Sfârșit reducere', 'Sale ends'))
+                                                    ->native(false)
+                                                    ->seconds(false)
+                                                    ->displayFormat('Y-m-d H:i')
+                                                    ->visible(fn (SGet $get) => $get('has_sale'))
+                                                    ->columnSpan(3),
+
+                                                Forms\Components\TextInput::make('sale_stock')
+                                                    ->label($t('Stoc reducere', 'Sale stock'))
+                                                    ->placeholder($t('Nelimitat', 'Unlimited'))
+                                                    ->numeric()
+                                                    ->minValue(0)
+                                                    ->nullable()
+                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul de bilete disponibile la preț redus. Când se consumă stocul, oferta se închide automat.', 'Number of tickets available at discounted price. When stock runs out, the offer closes automatically.'))
+                                                    ->visible(fn (SGet $get) => $get('has_sale'))
+                                                    ->columnSpan(6),
+                                            ])
+                                            ->columns(12)
                                             ->columnSpan(12),
 
                                         // Bulk discounts fieldset
