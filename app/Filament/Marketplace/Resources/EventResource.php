@@ -1240,7 +1240,7 @@ class EventResource extends Resource
                                         // Serie bilet fieldset
                                         SC\Fieldset::make($t('Serie bilet', 'Ticket series'))
                                             ->schema([
-                                                SC\Grid::make(1)->schema([
+                                                SC\Grid::make(3)->schema([
                                                     Forms\Components\TextInput::make('series_start')
                                                         ->label($t('Serie start', 'Series start'))
                                                         ->placeholder($t('Ex: AMB-5-00001', 'E.g. AMB-5-00001'))
@@ -1286,7 +1286,7 @@ class EventResource extends Resource
                                                         ->label($t('Activ', 'Active'))
                                                         ->default(true)
                                                         ->live()
-                                                        ->columnSpan(3),
+                                                        ->columnSpan(2),
                                                     Forms\Components\DateTimePicker::make('active_until')
                                                         ->label($t('Activ până la', 'Active until'))
                                                         ->native(false)
@@ -1295,7 +1295,7 @@ class EventResource extends Resource
                                                         ->minDate(now())
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
                                                         ->visible(fn (SGet $get) => $get('is_active'))
-                                                        ->columnSpan(9),
+                                                        ->columnSpan(10),
                                                     // Scheduling fields - shown when ticket is NOT active
                                                     Forms\Components\DateTimePicker::make('scheduled_at')
                                                         ->label($t('Programează activare', 'Schedule Activation'))
@@ -1310,7 +1310,7 @@ class EventResource extends Resource
                                                         ->label($t('Autostart când precedentul e sold out', 'Autostart when previous sold out'))
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Activează automat când tipurile de bilete anterioare ajung la capacitate 0', 'Activate automatically when previous ticket types reach 0 capacity'))
                                                         ->visible(fn (SGet $get) => !$get('is_active'))
-                                                        ->columnSpan(6),
+                                                        ->columnSpan(4),
                                                 ]),
                                             ])
                                             ->columnSpan(12),

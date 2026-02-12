@@ -130,29 +130,33 @@
         toggle(rid) {
             if (this.mode !== 'assign' || !this.sel) return;
             rid = Number(rid);
+
+            if (!this.A[rid]) this.A[rid] = [];
+            let idx = this.A[rid].findIndex(x => Number(x.id) === Number(this.sel));
+            if (idx > -1) {
+                this.A[rid].splice(idx, 1);
+                if (!this.A[rid].length) delete this.A[rid];
+            } else {
+                let t = this.TT.find(x => Number(x.id) === Number(this.sel));
+                this.A[rid] = [...(this.A[rid] || []), {id: this.sel, name: t ? t.name : '', color: t ? t.color : '#6b7280'}];
+            }
+
             this.saving = true;
-
-            let el = this.$el.closest('[wire\\:id]');
-            if (!el) { this.saving = false; return; }
-            let wid = el.getAttribute('wire:id');
-            if (!wid || !window.Livewire) { this.saving = false; return; }
-            let comp = window.Livewire.find(wid);
-            if (!comp) { this.saving = false; return; }
-
-            comp.$wire.toggleSeatingRowAssignment(this.sel, rid).then(ok => {
-                if (ok !== false) {
-                    if (!this.A[rid]) this.A[rid] = [];
-                    let idx = this.A[rid].findIndex(x => Number(x.id) === Number(this.sel));
-                    if (idx > -1) {
-                        this.A[rid].splice(idx, 1);
-                        if (!this.A[rid].length) delete this.A[rid];
-                    } else {
-                        let t = this.TT.find(x => Number(x.id) === Number(this.sel));
-                        this.A[rid] = [...(this.A[rid] || []), {id: this.sel, name: t ? t.name : '', color: t ? t.color : '#6b7280'}];
-                    }
-                }
-                this.saving = false;
-            }).catch(() => { this.saving = false; });
+            let done = () => { this.saving = false; };
+            try {
+                let el = this.$el.closest('[wire\\:id]');
+                let wid = el ? el.getAttribute('wire:id') : null;
+                if (wid && window.Livewire) {
+                    let lw = window.Livewire.find(wid);
+                    if (lw) {
+                        let p = (typeof lw.call === 'function')
+                            ? lw.call('toggleSeatingRowAssignment', this.sel, rid)
+                            : lw.toggleSeatingRowAssignment(this.sel, rid);
+                        if (p && p.then) p.then(done).catch(done);
+                        else done();
+                    } else done();
+                } else done();
+            } catch(e) { done(); }
         },
 
         enterAssign() { this.mode = 'assign'; },
