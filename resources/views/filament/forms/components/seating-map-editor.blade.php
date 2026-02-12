@@ -67,8 +67,8 @@
     }
 
     $ticketTypesJson = json_encode($ticketTypesData);
-    $rowAssignmentsJson = json_encode($rowAssignments);
-    $rowInfoJson = json_encode($rowInfoMap);
+    $rowAssignmentsJson = json_encode((object) $rowAssignments);
+    $rowInfoJson = json_encode((object) $rowInfoMap);
     $firstTTId = !empty($ticketTypesData) ? $ticketTypesData[0]['id'] : 'null';
 @endphp
 
@@ -89,22 +89,25 @@
 
         get zoom() { return Math.round((this.OW / this.vbW) * 100) },
 
+        syncVB() {
+            this.$refs.svg.setAttribute('viewBox', this.vbX + ' ' + this.vbY + ' ' + this.vbW + ' ' + this.vbH);
+        },
+
         rc(rid) {
             let a = this.A[rid];
-            if (a && a.length) { let s = a.find(x => x.id === this.sel); if (s) return s.color; return a[0].color; }
+            if (a && a.length) { let s = a.find(x => Number(x.id) === Number(this.sel)); if (s) return s.color; return a[0].color; }
             return '#374151';
         },
         ro(rid) {
             let a = this.A[rid];
             if (!a || !a.length) return 0.5;
-            if (this.mode === 'assign') { return a.find(x => x.id === this.sel) ? 1 : 0.35; }
+            if (this.mode === 'assign') { return a.find(x => Number(x.id) === Number(this.sel)) ? 1 : 0.35; }
             return 0.8;
         },
-        isSel(rid) { let a = this.A[rid]; return a ? a.some(x => x.id === this.sel) : false; },
+        isSel(rid) { let a = this.A[rid]; return a ? a.some(x => Number(x.id) === Number(this.sel)) : false; },
 
         zoomAt(cx, cy, f) {
-            let svg = this.$refs.svg;
-            let r = svg.getBoundingClientRect();
+            let r = this.$refs.svg.getBoundingClientRect();
             let mx = ((cx - r.left) / r.width) * this.vbW + this.vbX;
             let my = ((cy - r.top) / r.height) * this.vbH + this.vbY;
             let nw = this.vbW / f, nh = this.vbH / f;
@@ -113,27 +116,40 @@
             this.vbX = mx - (mx - this.vbX) / f;
             this.vbY = my - (my - this.vbY) / f;
             this.vbW = nw; this.vbH = nh;
+            this.syncVB();
         },
         zoomCenter(f) {
             let r = this.$refs.svg.getBoundingClientRect();
             this.zoomAt(r.left + r.width/2, r.top + r.height/2, f);
         },
-        resetZoom() { this.vbX = 0; this.vbY = 0; this.vbW = this.OW; this.vbH = this.OH; },
+        resetZoom() {
+            this.vbX = 0; this.vbY = 0; this.vbW = this.OW; this.vbH = this.OH;
+            this.syncVB();
+        },
 
         toggle(rid) {
             if (this.mode !== 'assign' || !this.sel) return;
             rid = Number(rid);
             this.saving = true;
-            let w = null;
-            let el = this.$el.closest('[wire\\\\:id]');
-            if (el && el.__livewire) w = el.__livewire;
-            if (!w) { this.saving = false; return; }
-            w.call('toggleSeatingRowAssignment', this.sel, rid).then(ok => {
+
+            let el = this.$el.closest('[wire\\:id]');
+            if (!el) { this.saving = false; return; }
+            let wid = el.getAttribute('wire:id');
+            if (!wid || !window.Livewire) { this.saving = false; return; }
+            let comp = window.Livewire.find(wid);
+            if (!comp) { this.saving = false; return; }
+
+            comp.$wire.toggleSeatingRowAssignment(this.sel, rid).then(ok => {
                 if (ok !== false) {
                     if (!this.A[rid]) this.A[rid] = [];
-                    let idx = this.A[rid].findIndex(x => x.id === this.sel);
-                    if (idx > -1) { this.A[rid].splice(idx, 1); if (!this.A[rid].length) delete this.A[rid]; }
-                    else { let t = this.TT.find(x => x.id === this.sel); this.A[rid] = [...(this.A[rid]||[]), {id:this.sel, name:t?t.name:'', color:t?t.color:'#6b7280'}]; }
+                    let idx = this.A[rid].findIndex(x => Number(x.id) === Number(this.sel));
+                    if (idx > -1) {
+                        this.A[rid].splice(idx, 1);
+                        if (!this.A[rid].length) delete this.A[rid];
+                    } else {
+                        let t = this.TT.find(x => Number(x.id) === Number(this.sel));
+                        this.A[rid] = [...(this.A[rid] || []), {id: this.sel, name: t ? t.name : '', color: t ? t.color : '#6b7280'}];
+                    }
                 }
                 this.saving = false;
             }).catch(() => { this.saving = false; });
@@ -158,27 +174,59 @@
         },
 
         summaryFor(ttId) {
+            ttId = Number(ttId);
             let rows = [], seats = 0;
-            for (let [rid, arr] of Object.entries(this.A)) {
-                if (arr.some(x => x.id === ttId)) { let i = this.RI[rid]; if (i) { rows.push(i); seats += i.seatCount; } }
+            let keys = Object.keys(this.A);
+            for (let k = 0; k < keys.length; k++) {
+                let rid = keys[k];
+                let arr = this.A[rid];
+                if (arr && arr.length) {
+                    for (let j = 0; j < arr.length; j++) {
+                        if (Number(arr[j].id) === ttId) {
+                            let i = this.RI[rid];
+                            if (i) { rows.push({rid: rid, section: i.section, label: i.label, seatCount: i.seatCount}); seats += i.seatCount; }
+                            break;
+                        }
+                    }
+                }
             }
             return { rows, seats };
         }
     }"
     x-init="
         let svg = $refs.svg;
-        svg.addEventListener('wheel', (e) => { e.preventDefault(); e.stopPropagation(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.15 : 1/1.15); }, {passive:false});
-        svg.addEventListener('mousedown', (e) => { if(e.button!==0)return; md=true; pan=false; mdX=e.clientX; mdY=e.clientY; psX=e.clientX; psY=e.clientY; pvX=vbX; pvY=vbY; });
+        svg.addEventListener('wheel', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.15 : 1/1.15);
+        }, {passive: false});
+        svg.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            md = true; pan = false;
+            mdX = e.clientX; mdY = e.clientY;
+            psX = e.clientX; psY = e.clientY;
+            pvX = vbX; pvY = vbY;
+        });
         window.addEventListener('mousemove', (e) => {
-            if(!md) return;
-            let dx=e.clientX-mdX, dy=e.clientY-mdY;
-            if(!pan && (Math.abs(dx)>5||Math.abs(dy)>5)) pan=true;
-            if(pan) { let r=svg.getBoundingClientRect(); vbX=pvX-(e.clientX-psX)*(vbW/r.width); vbY=pvY-(e.clientY-psY)*(vbH/r.height); }
+            if (!md) return;
+            let dx = e.clientX - mdX, dy = e.clientY - mdY;
+            if (!pan && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) pan = true;
+            if (pan) {
+                let r = svg.getBoundingClientRect();
+                vbX = pvX - (e.clientX - psX) * (vbW / r.width);
+                vbY = pvY - (e.clientY - psY) * (vbH / r.height);
+                svg.setAttribute('viewBox', vbX + ' ' + vbY + ' ' + vbW + ' ' + vbH);
+            }
         });
         window.addEventListener('mouseup', (e) => {
-            if(!md) return;
-            if(!pan) { let el=document.elementFromPoint(e.clientX,e.clientY); if(el&&svg.contains(el)){let rg=el.closest('[data-row-id]'); if(rg) toggle(rg.dataset.rowId);} }
-            md=false; pan=false;
+            if (!md) return;
+            if (!pan) {
+                let el = document.elementFromPoint(e.clientX, e.clientY);
+                if (el && svg.contains(el)) {
+                    let rg = el.closest('[data-row-id]');
+                    if (rg) toggle(rg.dataset.rowId);
+                }
+            }
+            md = false; pan = false;
         });
     "
     class="space-y-3"
@@ -188,11 +236,11 @@
         <button type="button" x-show="mode==='view'" x-on:click="enterAssign()"
             class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 transition-all">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-            Alocă bilete
+            Aloc&#259; bilete
         </button>
         <div class="flex items-center gap-2 ml-auto">
             <button type="button" x-on:click="zoomCenter(1.3)" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition">+ Zoom</button>
-            <button type="button" x-on:click="zoomCenter(1/1.3)" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition">− Zoom</button>
+            <button type="button" x-on:click="zoomCenter(1/1.3)" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition">&minus; Zoom</button>
             <button type="button" x-on:click="resetZoom()" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition">Reset</button>
             <span class="text-xs text-gray-500" x-text="zoom + '%'"></span>
         </div>
@@ -201,7 +249,7 @@
     {{-- Ticket type selector (assign mode only) --}}
     <div x-show="mode==='assign'" x-cloak>
         <div class="flex flex-wrap items-center gap-2 p-3 bg-gray-800/60 border border-gray-700 rounded-lg">
-            <span class="text-xs text-gray-400 mr-1">Selectează tip bilet, apoi click pe rânduri:</span>
+            <span class="text-xs text-gray-400 mr-1">Selecteaz&#259; tip bilet, apoi click pe r&#226;nduri:</span>
             <template x-for="tt in TT" :key="tt.id">
                 <button type="button" x-on:click="sel = tt.id"
                     :class="sel === tt.id ? 'ring-2 ring-offset-1 ring-offset-gray-900' : 'opacity-60 hover:opacity-90'"
@@ -220,10 +268,10 @@
     {{-- SVG Map --}}
     <div class="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden relative">
         <svg x-ref="svg"
-            :viewBox="`${vbX} ${vbY} ${vbW} ${vbH}`"
+            viewBox="0 0 {{ $canvasW }} {{ $canvasH }}"
             preserveAspectRatio="xMidYMid meet"
             class="w-full bg-gray-950 select-none"
-            style="height: 70vh; min-height: 500px; max-height: 800px;"
+            style="height: calc(100vh - 300px); min-height: 500px;"
             :style="pan ? 'cursor:grabbing' : (mode==='assign' ? 'cursor:crosshair' : 'cursor:grab')"
             x-on:mousemove="hoverTip($event)"
             x-on:mouseleave="showTip = false"
@@ -310,7 +358,7 @@
     {{-- Assignment summary --}}
     <div class="border border-gray-700 rounded-lg overflow-hidden">
         <div class="bg-gray-800/50 px-4 py-2 border-b border-gray-700">
-            <span class="text-sm font-medium text-gray-300">Rânduri asignate per tip bilet</span>
+            <span class="text-sm font-medium text-gray-300">R&#226;nduri asignate per tip bilet</span>
         </div>
         <div class="divide-y divide-gray-800">
             <template x-for="tt in TT" :key="'s'+tt.id">
@@ -323,10 +371,10 @@
                         <span class="text-xs text-gray-400" x-text="summaryFor(tt.id).seats + ' locuri'"></span>
                     </div>
                     <div x-show="summaryFor(tt.id).rows.length > 0" class="mt-1.5 ml-5 flex flex-wrap gap-1">
-                        <template x-for="r in summaryFor(tt.id).rows" :key="r.label">
+                        <template x-for="r in summaryFor(tt.id).rows" :key="r.rid">
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-300">
                                 <span class="text-gray-500" x-text="r.section"></span>
-                                <span x-text="'Rând ' + r.label"></span>
+                                <span x-text="'R&#226;nd ' + r.label"></span>
                                 <span class="text-gray-500" x-text="'(' + r.seatCount + ')'"></span>
                             </span>
                         </template>
@@ -339,6 +387,6 @@
 </div>
 @else
 <div class="p-4 text-center text-gray-500 text-sm">
-    Nu există o hartă de locuri configurată sau salvată pentru acest eveniment.
+    Nu exist&#259; o hart&#259; de locuri configurat&#259; sau salvat&#259; pentru acest eveniment.
 </div>
 @endif
