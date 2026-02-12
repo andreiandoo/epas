@@ -75,7 +75,8 @@ class ImportArtists extends Page implements HasForms
                                     <p><strong>Optional columns:</strong></p>
                                     <ul class="list-disc list-inside ml-4 space-y-1">
                                         <li>slug, email, phone, website, country, city</li>
-                                        <li>facebook_url, instagram_url, tiktok_url, spotify_url, youtube_url</li>
+                                        <li>facebook_url, instagram_url, tiktok_url, spotify_url, youtube_url, twitter_url</li>
+                                        <li>wiki_url, lastfm_url, itunes_url, musicbrainz_url</li>
                                         <li>youtube_id, spotify_id</li>
                                         <li>main_image, logo_h, logo_v (URLs for images)</li>
                                         <li>bio_en, bio_ro (or bio(en), bio(ro))</li>
@@ -200,6 +201,11 @@ class ImportArtists extends Page implements HasForms
             'tiktok_url' => $data['tiktok_url'] ?? null,
             'spotify_url' => $data['spotify_url'] ?? null,
             'youtube_url' => $data['youtube_url'] ?? null,
+            'twitter_url' => $data['twitter_url'] ?? null,
+            'wiki_url' => $data['wiki_url'] ?? $data['wikipedia_url'] ?? null,
+            'lastfm_url' => $data['lastfm_url'] ?? $data['last_fm_url'] ?? null,
+            'itunes_url' => $data['itunes_url'] ?? $data['apple_music_url'] ?? null,
+            'musicbrainz_url' => $data['musicbrainz_url'] ?? null,
             'youtube_id' => $data['youtube_id'] ?? null,
             'spotify_id' => $data['spotify_id'] ?? null,
             'main_image_url' => $data['main_image'] ?? $data['main_image_url'] ?? $data['image_url'] ?? null,
@@ -423,6 +429,7 @@ class ImportArtists extends Page implements HasForms
                     $headers = [
                         'name', 'slug', 'email', 'phone', 'website', 'country', 'city',
                         'facebook_url', 'instagram_url', 'tiktok_url', 'spotify_url', 'youtube_url',
+                        'twitter_url', 'wiki_url', 'lastfm_url', 'itunes_url', 'musicbrainz_url',
                         'youtube_id', 'spotify_id',
                         'main_image', 'logo_h', 'logo_v',
                         'bio_en', 'bio_ro',
@@ -433,7 +440,7 @@ class ImportArtists extends Page implements HasForms
                     ];
 
                     $content = implode(',', $headers) . "\n";
-                    $content .= '"Artist Name","artist-slug","email@example.com","+40123456789","https://website.com","RO","Bucharest","https://facebook.com/artist","https://instagram.com/artist","https://tiktok.com/@artist","https://open.spotify.com/artist/123","https://youtube.com/channel/123","","","https://example.com/image.jpg","https://example.com/logo.png","https://example.com/portrait.jpg","English bio text","Bio în română","band,solo-artist","pop,rock,electronic","John","Doe","manager@email.com","+40123456789","https://manager.com","Jane","Smith","agent@email.com","+40987654321","https://agent.com","https://youtube.com/watch?v=VIDEO1","","","",""';
+                    $content .= '"Artist Name","artist-slug","email@example.com","+40123456789","https://website.com","RO","Bucharest","https://facebook.com/artist","https://instagram.com/artist","https://tiktok.com/@artist","https://open.spotify.com/artist/123","https://youtube.com/channel/123","https://x.com/artist","https://en.wikipedia.org/wiki/Artist","https://www.last.fm/music/Artist","https://music.apple.com/artist/123","https://musicbrainz.org/artist/uuid","","","https://example.com/image.jpg","https://example.com/logo.png","https://example.com/portrait.jpg","English bio text","Bio în română","band,solo-artist","pop,rock,electronic","John","Doe","manager@email.com","+40123456789","https://manager.com","Jane","Smith","agent@email.com","+40987654321","https://agent.com","https://youtube.com/watch?v=VIDEO1","","","",""';
 
                     return response()->streamDownload(function () use ($content) {
                         echo $content;
