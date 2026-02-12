@@ -516,14 +516,19 @@ class EditEvent extends EditRecord
             // Generate geometry snapshot
             $geometry = app(\App\Services\Seating\GeometryStorage::class)->generateGeometrySnapshot($layout);
 
-            $eventSeating = \App\Models\Seating\EventSeatingLayout::create([
-                'event_id' => $event->id,
-                'layout_id' => $layout->id,
-                'marketplace_client_id' => $event->marketplace_client_id ?? null,
-                'json_geometry' => $geometry,
-                'status' => 'active',
-                'published_at' => now(),
-            ]);
+            // Use firstOrCreate to handle race conditions / partial previous attempts
+            $eventSeating = \App\Models\Seating\EventSeatingLayout::firstOrCreate(
+                ['event_id' => $event->id, 'layout_id' => $layout->id],
+                [
+                    'marketplace_client_id' => $event->marketplace_client_id ?? null,
+                    'json_geometry' => $geometry,
+                    'status' => 'active',
+                    'published_at' => now(),
+                ]
+            );
+
+            // Clear any orphaned/partial seats from previous failed attempts, then recreate
+            $eventSeating->seats()->delete();
 
             $seatCount = 0;
             foreach ($layout->sections as $section) {
