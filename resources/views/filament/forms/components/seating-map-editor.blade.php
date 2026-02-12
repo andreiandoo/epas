@@ -84,7 +84,7 @@
         saving: false,
         vbX: 0, vbY: 0, vbW: {{ $canvasW }}, vbH: {{ $canvasH }},
         OW: {{ $canvasW }}, OH: {{ $canvasH }},
-        md: false, pan: false, mdX: 0, mdY: 0, psX: 0, psY: 0, pvX: 0, pvY: 0,
+        md: false, pan: false, mdRow: null, mdX: 0, mdY: 0, psX: 0, psY: 0, pvX: 0, pvY: 0,
         tip: '', tipX: 0, tipY: 0, showTip: false,
 
         get zoom() { return Math.round((this.OW / this.vbW) * 100) },
@@ -205,9 +205,12 @@
             mdX = e.clientX; mdY = e.clientY;
             psX = e.clientX; psY = e.clientY;
             pvX = vbX; pvY = vbY;
+            let rg = e.target.closest('[data-row-id]');
+            mdRow = rg ? rg.dataset.rowId : null;
         });
         window.addEventListener('mousemove', (e) => {
             if (!md) return;
+            if (mode === 'assign' && mdRow) return;
             let dx = e.clientX - mdX, dy = e.clientY - mdY;
             if (!pan && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) pan = true;
             if (pan) {
@@ -219,14 +222,16 @@
         });
         window.addEventListener('mouseup', (e) => {
             if (!md) return;
-            if (!pan) {
+            if (mode === 'assign' && mdRow) {
+                toggle(mdRow);
+            } else if (!pan) {
                 let el = document.elementFromPoint(e.clientX, e.clientY);
                 if (el && svg.contains(el)) {
                     let rg = el.closest('[data-row-id]');
                     if (rg) toggle(rg.dataset.rowId);
                 }
             }
-            md = false; pan = false;
+            md = false; pan = false; mdRow = null;
         });
     "
     class="space-y-3"
