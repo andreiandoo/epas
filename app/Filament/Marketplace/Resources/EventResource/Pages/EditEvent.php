@@ -480,13 +480,28 @@ class EditEvent extends EditRecord
         $debug['esl_id'] = $eventSeating?->id;
         $created = false;
 
-        // If existing EventSeatingLayout is from a different layout version, recreate it
-        if ($eventSeating && (int) $eventSeating->layout_id !== (int) $layoutId) {
-            $debug['esl_stale'] = true;
-            $debug['esl_old_layout'] = $eventSeating->layout_id;
-            $eventSeating->seats()->delete();
-            $eventSeating->delete();
-            $eventSeating = null;
+        // If existing EventSeatingLayout has stale seats (layout changed or UIDs regenerated), recreate
+        if ($eventSeating) {
+            $stale = false;
+            if ((int) $eventSeating->layout_id !== (int) $layoutId) {
+                $stale = true;
+                $debug['esl_stale_reason'] = 'layout_id_mismatch';
+            } else {
+                // Check if seat UIDs actually exist in the EventSeat records
+                $uidMatch = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+                    ->whereIn('seat_uid', array_slice($seatUids, 0, 3))
+                    ->exists();
+                if (!$uidMatch) {
+                    $stale = true;
+                    $debug['esl_stale_reason'] = 'uid_mismatch';
+                }
+            }
+            if ($stale) {
+                $debug['esl_stale'] = true;
+                $eventSeating->seats()->delete();
+                $eventSeating->delete();
+                $eventSeating = null;
+            }
         }
 
         if (!$eventSeating) {
