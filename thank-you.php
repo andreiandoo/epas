@@ -449,6 +449,7 @@ const ThankYouPage = {
         const total = parseFloat(order.total) || 0;
         const discount = parseFloat(order.discount) || 0;
         const serviceFee = parseFloat(order.service_fee) || 0;
+        const insuranceAmount = parseFloat(order.insurance_amount) || 0;
         const currency = order.currency || 'RON';
 
         document.getElementById('paymentSummary').innerHTML = `
@@ -462,6 +463,12 @@ const ThankYouPage = {
                 <div class="flex justify-between">
                     <span class="text-muted">Comision serviciu</span>
                     <span>${AmbiletUtils.formatCurrency(serviceFee)}</span>
+                </div>
+                ` : ''}
+                ${insuranceAmount > 0 ? `
+                <div class="flex justify-between">
+                    <span class="text-muted">Taxa de retur</span>
+                    <span>${AmbiletUtils.formatCurrency(insuranceAmount)}</span>
                 </div>
                 ` : ''}
                 ${discount > 0 ? `
