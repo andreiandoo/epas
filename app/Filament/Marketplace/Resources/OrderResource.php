@@ -786,7 +786,9 @@ class OrderResource extends Resource
         }
 
         // Calculate final total
-        $finalTotal = $isOnTop ? ($ticketsValue + $commission - $discount) : $total;
+        $finalTotal = $isOnTop
+            ? ($ticketsValue + $commission - $discount + $insuranceAmount)
+            : $total;
 
         // Total
         $html .= "

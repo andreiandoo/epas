@@ -165,7 +165,7 @@ class CheckoutController extends BaseController
                 $marketplaceEvent = MarketplaceEvent::find($eventId);
 
                 // Use Event model (tenant events) - find by marketplace event's name/date or direct ID
-                $event = Event::with('tenant')->find($eventId);
+                $event = Event::with(['tenant', 'marketplaceOrganizer'])->find($eventId);
                 if (!$event && $marketplaceEvent) {
                     // If no tenant Event with this ID, the event_id IS a MarketplaceEvent ID
                     // Try to find the tenant event by matching the marketplace event
@@ -275,9 +275,20 @@ class CheckoutController extends BaseController
                 }
 
                 // Calculate commission - for tenant events, use tenant or client commission rate
-                $commissionRate = $event?->tenant?->commission_rate ?? $client->commission_rate ?? 5;
+                $commissionRate = $event?->commission_rate
+                    ?? $event?->marketplaceOrganizer?->commission_rate
+                    ?? $event?->tenant?->commission_rate
+                    ?? $client->commission_rate
+                    ?? 5;
                 $netAmount = $subtotal - $discount;
                 $commissionAmount = round($netAmount * ($commissionRate / 100), 2);
+
+                // Determine commission mode (on_top = customer pays commission extra)
+                $commissionMode = $event?->commission_mode
+                    ?? $event?->marketplaceOrganizer?->default_commission_mode
+                    ?? $client->commission_mode
+                    ?? 'included';
+                $isOnTop = in_array($commissionMode, ['on_top', 'added_on_top']);
 
                 // Apply ticket insurance fee (only to first order if multiple orders)
                 $orderInsuranceAmount = 0;
@@ -286,8 +297,11 @@ class CheckoutController extends BaseController
                     $insuranceApplied = true;
                 }
 
-                // Final order total includes insurance
+                // Final order total: net + insurance + commission (if on_top)
                 $orderTotal = $netAmount + $orderInsuranceAmount;
+                if ($isOnTop) {
+                    $orderTotal += $commissionAmount;
+                }
 
                 // Get currency from cart or default to client's currency
                 $currency = isset($cart) ? $cart->currency : ($client->currency ?? 'RON');
@@ -326,6 +340,7 @@ class CheckoutController extends BaseController
                         'user_agent' => $request->userAgent(),
                         'ticket_insurance' => $hasInsurance && $orderInsuranceAmount > 0,
                         'insurance_amount' => $orderInsuranceAmount,
+                        'commission_mode' => $commissionMode,
                     ],
                 ]);
 
