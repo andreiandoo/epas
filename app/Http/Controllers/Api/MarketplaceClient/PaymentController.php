@@ -154,61 +154,87 @@ class PaymentController extends BaseController
     /**
      * Handle payment callback from payment processor
      */
-    public function callback(Request $request, string $clientSlug): JsonResponse
+    public function callback(Request $request, string $clientSlug): JsonResponse|\Illuminate\Http\Response
     {
         Log::channel('marketplace')->info('Payment callback received', [
             'client_slug' => $clientSlug,
-            'data' => $request->all(),
+            'request_keys' => array_keys($request->all()),
         ]);
 
-        // Find order from callback data
-        $orderId = $request->input('order_id') ?? $request->input('orderId');
-        $orderNumber = $request->input('order_number') ?? $request->input('orderNumber');
-
-        $order = Order::when($orderId, fn($q) => $q->where('id', $orderId))
-            ->when($orderNumber, fn($q) => $q->where('order_number', $orderNumber))
-            ->whereHas('marketplaceClient', fn($q) => $q->where('slug', $clientSlug))
-            ->first();
-
-        if (!$order) {
-            Log::channel('marketplace')->error('Order not found for payment callback', [
-                'client_slug' => $clientSlug,
-                'order_id' => $orderId,
-                'order_number' => $orderNumber,
-            ]);
-            return $this->error('Order not found', 404);
-        }
-
         try {
-            // For marketplace orders, use the marketplace client's payment config
-            $client = $order->marketplaceClient;
-            $processorType = $order->payment_processor;
-
-            if (!$processorType) {
-                // Fallback to default payment method
-                $defaultPaymentMethod = $client->getDefaultPaymentMethod();
-                $processorType = match ($defaultPaymentMethod?->slug) {
-                    'netopia', 'netopia-payments', 'payment-netopia' => 'netopia',
-                    'stripe', 'stripe-payments', 'payment-stripe' => 'stripe',
-                    'euplatesc', 'payment-euplatesc' => 'euplatesc',
-                    'payu', 'payment-payu' => 'payu',
-                    default => $defaultPaymentMethod?->slug ?? 'netopia',
-                };
+            // Find marketplace client first (needed to decrypt Netopia callbacks)
+            $client = \App\Models\MarketplaceClient::where('slug', $clientSlug)->first();
+            if (!$client) {
+                Log::channel('marketplace')->error('Marketplace client not found for callback', [
+                    'client_slug' => $clientSlug,
+                ]);
+                return $this->error('Client not found', 404);
             }
 
-            $paymentConfig = $client->getPaymentMethodSettings($processorType)
-                ?? $client->getPaymentMethodSettings('netopia')
-                ?? $client->getPaymentMethodSettings('netopia-payments')
-                ?? $client->getPaymentMethodSettings('payment-netopia');
+            // Determine processor type
+            $defaultPaymentMethod = $client->getDefaultPaymentMethod();
+            $processorType = match ($defaultPaymentMethod?->slug) {
+                'netopia', 'netopia-payments', 'payment-netopia' => 'netopia',
+                'stripe', 'stripe-payments', 'payment-stripe' => 'stripe',
+                'euplatesc', 'payment-euplatesc' => 'euplatesc',
+                'payu', 'payment-payu' => 'payu',
+                default => $defaultPaymentMethod?->slug ?? 'netopia',
+            };
 
+            $paymentConfig = $client->getPaymentMethodSettings($defaultPaymentMethod->slug);
             if (!$paymentConfig) {
                 throw new \Exception('Payment configuration not found for callback');
             }
 
             $processor = PaymentProcessorFactory::makeFromArray($processorType, $paymentConfig);
 
-            // Verify and process the callback
+            // Process the callback (decrypt for Netopia, verify for others)
             $result = $processor->processCallback($request->all(), $request->headers->all());
+
+            Log::channel('marketplace')->info('Payment callback processed', [
+                'client_slug' => $clientSlug,
+                'processor' => $processorType,
+                'status' => $result['status'],
+                'order_id_from_callback' => $result['order_id'] ?? $result['payment_id'] ?? 'unknown',
+            ]);
+
+            // Find order using the order ID from the decrypted callback data
+            $callbackOrderId = $result['order_id'] ?? $result['payment_id'] ?? null;
+            $orderId = $request->input('order_id') ?? $request->input('orderId');
+            $orderNumber = $request->input('order_number') ?? $request->input('orderNumber');
+
+            $order = Order::where(function ($q) use ($callbackOrderId, $orderId, $orderNumber) {
+                    // Try callback order ID as order_number first (Netopia uses our order_number as ID)
+                    if ($callbackOrderId) {
+                        $q->where('order_number', $callbackOrderId)
+                          ->orWhere('payment_reference', $callbackOrderId);
+                    }
+                    if ($orderId) {
+                        $q->orWhere('id', $orderId);
+                    }
+                    if ($orderNumber) {
+                        $q->orWhere('order_number', $orderNumber);
+                    }
+                })
+                ->where('marketplace_client_id', $client->id)
+                ->first();
+
+            if (!$order) {
+                Log::channel('marketplace')->error('Order not found for payment callback', [
+                    'client_slug' => $clientSlug,
+                    'callback_order_id' => $callbackOrderId,
+                    'request_order_id' => $orderId,
+                    'request_order_number' => $orderNumber,
+                ]);
+                return $this->error('Order not found', 404);
+            }
+
+            Log::channel('marketplace')->info('Order found for callback', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'current_status' => $order->status,
+                'callback_status' => $result['status'],
+            ]);
 
             if ($result['status'] === 'success') {
                 // SECURITY FIX: Idempotency check - prevent double-spending via webhook replay
@@ -326,11 +352,7 @@ class PaymentController extends BaseController
                     'client_slug' => $clientSlug,
                 ]);
 
-                return $this->success([
-                    'order_id' => $order->id,
-                    'order_number' => $order->order_number,
-                    'status' => 'completed',
-                ], 'Payment successful');
+                return $this->netopiaResponse(0);
 
             } else {
                 // Payment failed or pending
@@ -348,18 +370,33 @@ class PaymentController extends BaseController
                     'error' => $errorMessage,
                 ]);
 
-                return $this->error($errorMessage, 400);
+                return $this->netopiaResponse(0);
             }
 
         } catch (\Exception $e) {
             Log::channel('marketplace')->error('Error processing payment callback', [
-                'order_id' => $order->id,
                 'client_slug' => $clientSlug,
+                'order_id' => isset($order) ? $order->id : null,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            return $this->error('Error processing payment', 500);
+            // Return temporary error so Netopia retries
+            return $this->netopiaResponse(1, $e->getMessage());
         }
+    }
+
+    /**
+     * Return Netopia-expected XML response for IPN
+     * error_code 0 = OK, error_type 1 = temp error (retry), 2 = permanent error
+     */
+    protected function netopiaResponse(int $errorCode = 0, string $message = 'OK'): \Illuminate\Http\Response
+    {
+        $errorType = $errorCode === 0 ? '1' : '1'; // type 1 = temporary (allows retry)
+        $xml = '<?xml version="1.0" encoding="utf-8"?>' . "\n"
+             . '<crc error_type="' . $errorType . '" error_code="' . $errorCode . '">' . htmlspecialchars($message) . '</crc>';
+
+        return response($xml, 200, ['Content-Type' => 'application/xml']);
     }
 
     /**
