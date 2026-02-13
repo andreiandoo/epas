@@ -86,7 +86,7 @@ class AccountController extends BaseController
                         : $order->event->title,
                     'slug' => $order->event->slug,
                     'date' => $order->event->event_date?->toIso8601String(),
-                    'venue' => $order->event->venue?->name ?? null,
+                    'venue' => $this->resolveTranslatable($order->event->venue?->name),
                     'city' => $order->event->venue?->city ?? null,
                     'image' => $imageUrl,
                     'featured_image' => $imageUrl,
@@ -370,7 +370,7 @@ class AccountController extends BaseController
                 'date' => $order->event->event_date?->toIso8601String(),
                 'end_date' => null,
                 'doors_open' => $order->event->door_time,
-                'venue' => $order->event->venue?->name ?? null,
+                'venue' => $this->resolveTranslatable($order->event->venue?->name),
                 'venue_address' => $order->event->venue?->address ?? null,
                 'city' => $order->event->venue?->city ?? null,
                 'image' => $imageUrl,
@@ -880,5 +880,22 @@ class AccountController extends BaseController
         }
 
         return $customer;
+    }
+
+    /**
+     * Resolve a translatable field to a string (picks ro > en > first available)
+     */
+    protected function resolveTranslatable(mixed $value): ?string
+    {
+        if (is_null($value)) {
+            return null;
+        }
+        if (is_string($value)) {
+            return $value;
+        }
+        if (is_array($value)) {
+            return $value['ro'] ?? $value['en'] ?? reset($value) ?: null;
+        }
+        return (string) $value;
     }
 }
