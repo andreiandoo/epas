@@ -496,6 +496,7 @@ class AccountController extends BaseController
                     }
                     return [
                         'id' => $ticket->id,
+                        'code' => $ticket->code,
                         'barcode' => $ticket->barcode,
                         'type' => $ticketType?->name,
                         'price' => (float) ($ticketType?->price ?? $ticket->price ?? 0),
