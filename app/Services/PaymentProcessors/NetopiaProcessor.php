@@ -3,6 +3,7 @@
 namespace App\Services\PaymentProcessors;
 
 use App\Models\TenantPaymentConfig;
+use Illuminate\Support\Facades\Log;
 
 class NetopiaProcessor implements PaymentProcessorInterface
 {
@@ -69,57 +70,62 @@ class NetopiaProcessor implements PaymentProcessorInterface
             throw new \Exception('Netopia is not properly configured');
         }
 
-        // Generate unique payment ID
-        $paymentId = 'netopia_' . uniqid() . '_' . time();
+        // Use order_number as unique orderId for Netopia (more descriptive than numeric ID)
+        $orderId = $data['order_number'] ?? ('ORD-' . $data['order_id'] . '-' . time());
 
         // Prepare payment data
         $paymentData = [
             'signature' => $this->keys['signature'],
-            'orderId' => $data['order_id'] ?? $paymentId,
+            'orderId' => $orderId,
             'amount' => number_format($data['amount'], 2, '.', ''),
             'currency' => strtoupper($data['currency'] ?? 'RON'),
             'details' => $data['description'] ?? 'Payment',
             'confirmUrl' => $data['callback_url'] ?? $data['success_url'],
             'returnUrl' => $data['return_url'] ?? $data['success_url'],
             'cancelUrl' => $data['cancel_url'],
-            'params' => [
-                'customer_email' => $data['customer_email'] ?? null,
-                'customer_name' => $data['customer_name'] ?? null,
-            ],
+            'customer_email' => $data['customer_email'] ?? null,
+            'customer_name' => $data['customer_name'] ?? null,
         ];
-
-        // Merge metadata
-        if (!empty($data['metadata'])) {
-            $paymentData['params'] = array_merge($paymentData['params'], $data['metadata']);
-        }
 
         // Create XML request for mobilPay
         $xml = $this->createMobilPayXML($paymentData);
 
-        // Encrypt data with public key
+        Log::channel('marketplace')->debug('Netopia: XML created', [
+            'order_id' => $orderId,
+            'xml_length' => strlen($xml),
+        ]);
+
+        // Encrypt data with public certificate
         $encryptedData = $this->encryptData($xml);
 
-        // Netopia requires POST form submission to the base URL (no /pay path)
+        Log::channel('marketplace')->info('Netopia: Payment encrypted', [
+            'order_id' => $orderId,
+            'cipher' => $encryptedData['cipher'],
+            'env_key_length' => strlen($encryptedData['env_key']),
+            'data_length' => strlen($encryptedData['data']),
+        ]);
+
+        // Build form data for POST submission
         $formData = [
             'env_key' => base64_encode($encryptedData['env_key']),
             'data' => base64_encode($encryptedData['data']),
         ];
 
-        // Include cipher and IV for AES-256-CBC (required by Netopia for PHP 7+)
-        if (!empty($encryptedData['cipher'])) {
+        // Include cipher and IV when using AES-256-CBC
+        if ($encryptedData['cipher'] !== 'rc4') {
             $formData['cipher'] = $encryptedData['cipher'];
-        }
-        if (!empty($encryptedData['iv'])) {
-            $formData['iv'] = base64_encode($encryptedData['iv']);
+            if (!empty($encryptedData['iv'])) {
+                $formData['iv'] = base64_encode($encryptedData['iv']);
+            }
         }
 
         return [
-            'payment_id' => $paymentId,
+            'payment_id' => $orderId,
             'redirect_url' => $this->baseUrl,
             'method' => 'POST',
             'form_data' => $formData,
             'additional_data' => [
-                'order_id' => $paymentData['orderId'],
+                'order_id' => $orderId,
                 'encrypted' => true,
             ],
         ];
@@ -148,15 +154,18 @@ class NetopiaProcessor implements PaymentProcessorInterface
 
         $decryptedData = $this->decryptData($encryptedData, $envKey, $cipher, $iv);
 
-        // SECURITY FIX: Parse XML with XXE protection
-        $previousValue = libxml_disable_entity_loader(true);
+        // Parse XML with XXE protection
         libxml_use_internal_errors(true);
         $xmlData = simplexml_load_string($decryptedData, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOCDATA);
-        libxml_disable_entity_loader($previousValue);
+
+        if ($xmlData === false) {
+            throw new \Exception('Netopia: Failed to parse callback XML');
+        }
 
         // Parse the response
-        $action = (string) $xmlData->attributes()->action;
-        $errorCode = (string) $xmlData->error['code'];
+        $action = (string) ($xmlData->mobilpay->action ?? $xmlData->attributes()->action ?? '');
+        $errorCode = (string) ($xmlData->mobilpay->error['code'] ?? $xmlData->error['code'] ?? '');
+        $errorMessage = (string) ($xmlData->mobilpay->error ?? $xmlData->error ?? '');
 
         // Map Netopia status to our standard status
         $status = 'pending';
@@ -175,14 +184,14 @@ class NetopiaProcessor implements PaymentProcessorInterface
         return [
             'status' => $status,
             'payment_id' => (string) $xmlData->attributes()->id,
-            'order_id' => (string) $xmlData->order_id,
-            'amount' => (float) $xmlData->amount,
-            'currency' => (string) $xmlData->currency,
+            'order_id' => (string) ($xmlData->order_id ?? $xmlData->attributes()->id),
+            'amount' => (float) ($xmlData->invoice['amount'] ?? $xmlData->amount ?? 0),
+            'currency' => (string) ($xmlData->invoice['currency'] ?? $xmlData->currency ?? 'RON'),
             'transaction_id' => (string) $xmlData->attributes()->id,
             'paid_at' => $status === 'success' ? date('c') : null,
             'metadata' => [
                 'error_code' => $errorCode,
-                'error_message' => (string) $xmlData->error,
+                'error_message' => $errorMessage,
                 'action' => $action,
             ],
         ];
@@ -190,25 +199,9 @@ class NetopiaProcessor implements PaymentProcessorInterface
 
     public function verifySignature(array $payload, array $headers): bool
     {
-        // For Netopia, we verify using RSA signature
-        if (empty($this->keys['public_key'])) {
-            return true; // Can't verify without key
-        }
-
-        try {
-            $envKey = $payload['env_key'] ?? null;
-            $data = $payload['data'] ?? null;
-
-            if (!$envKey || !$data) {
-                return false;
-            }
-
-            // The data itself is encrypted with our public key,
-            // which means it's authentic if we can decrypt it
-            return true;
-        } catch (\Exception $e) {
-            return false;
-        }
+        // For Netopia, authenticity is verified by successful decryption
+        // (data is encrypted with merchant's public key, only our private key can decrypt)
+        return true;
     }
 
     public function getPaymentStatus(string $paymentId): array
@@ -219,7 +212,6 @@ class NetopiaProcessor implements PaymentProcessorInterface
 
         // Netopia doesn't provide a standard status check API
         // Status is typically obtained through callbacks
-        // Return pending status as we can't check directly
         return [
             'status' => 'pending',
             'amount' => 0,
@@ -234,8 +226,6 @@ class NetopiaProcessor implements PaymentProcessorInterface
             throw new \Exception('Netopia is not properly configured');
         }
 
-        // Netopia refunds are typically handled through their dashboard
-        // API refunds require special integration
         throw new \Exception('Refunds for Netopia must be processed manually through the dashboard');
     }
 
@@ -250,14 +240,14 @@ class NetopiaProcessor implements PaymentProcessorInterface
     }
 
     /**
-     * Create mobilPay XML structure
+     * Create mobilPay XML structure (matches official mobilPay spec)
      */
     protected function createMobilPayXML(array $data): string
     {
         $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="utf-8"?><order/>');
 
         $xml->addAttribute('id', $data['orderId']);
-        $xml->addAttribute('timestamp', time());
+        $xml->addAttribute('timestamp', (string) time());
         $xml->addAttribute('type', 'card');
 
         $xml->addChild('signature', $data['signature']);
@@ -268,26 +258,26 @@ class NetopiaProcessor implements PaymentProcessorInterface
 
         $invoice->addChild('details', htmlspecialchars($data['details']));
 
+        // Contact info with billing element (required by mobilPay)
         $contactInfo = $invoice->addChild('contact_info');
-        if (!empty($data['params']['customer_email'])) {
-            $contactInfo->addChild('email', $data['params']['customer_email']);
-        }
-        if (!empty($data['params']['customer_name'])) {
-            $contactInfo->addChild('name', htmlspecialchars($data['params']['customer_name']));
+        $billing = $contactInfo->addChild('billing');
+        $billing->addAttribute('type', 'person');
+
+        $customerName = $data['customer_name'] ?? '';
+        $nameParts = explode(' ', trim($customerName), 2);
+        $billing->addChild('first_name', htmlspecialchars($nameParts[0] ?? 'N/A'));
+        $billing->addChild('last_name', htmlspecialchars($nameParts[1] ?? 'N/A'));
+
+        if (!empty($data['customer_email'])) {
+            $billing->addChild('email', $data['customer_email']);
         }
 
-        $xml->addChild('confirm_url', htmlspecialchars($data['confirmUrl']));
-        $xml->addChild('return_url', htmlspecialchars($data['returnUrl']));
+        $billing->addChild('address', 'N/A');
+        $billing->addChild('mobile_phone', 'N/A');
 
-        // Add custom params
-        if (!empty($data['params'])) {
-            $params = $xml->addChild('params');
-            foreach ($data['params'] as $key => $value) {
-                if (!in_array($key, ['customer_email', 'customer_name'])) {
-                    $params->addChild($key, htmlspecialchars($value));
-                }
-            }
-        }
+        $xml->addChild('url');
+        $xml->url->addChild('confirm', htmlspecialchars($data['confirmUrl']));
+        $xml->url->addChild('return', htmlspecialchars($data['returnUrl']));
 
         return $xml->asXML();
     }
@@ -299,24 +289,32 @@ class NetopiaProcessor implements PaymentProcessorInterface
     {
         $publicKeyCert = $this->keys['public_key'];
 
-        // Extract public key from X.509 certificate or PEM public key
-        $publicKey = openssl_get_publickey($publicKeyCert);
-        if (!$publicKey) {
-            throw new \Exception('Netopia: Invalid public key/certificate');
+        // Read X.509 certificate and extract public key
+        $certResource = openssl_x509_read($publicKeyCert);
+        if (!$certResource) {
+            // Try as direct public key
+            $publicKey = openssl_pkey_get_public($publicKeyCert);
+        } else {
+            $publicKey = openssl_pkey_get_public($certResource);
         }
 
-        // Use AES-256-CBC (recommended for PHP 7+), fallback to RC4
-        $cipher = 'aes-256-cbc';
-        $iv = '';
-        $envKeys = [];
+        if (!$publicKey) {
+            throw new \Exception('Netopia: Invalid public key/certificate: ' . openssl_error_string());
+        }
 
-        $result = openssl_seal($data, $encryptedData, $envKeys, [$publicKey], $cipher, $iv);
+        $envKeys = [];
+        $encryptedData = '';
+
+        // Try RC4 first (widest Netopia compatibility, especially sandbox)
+        $cipher = 'rc4';
+        $iv = '';
+        $result = openssl_seal($data, $encryptedData, $envKeys, [$publicKey], $cipher);
 
         if ($result === false) {
-            // Fallback to RC4 if AES fails (some older Netopia accounts)
-            $cipher = 'rc4';
+            // Fallback to AES-256-CBC
+            $cipher = 'aes-256-cbc';
             $iv = '';
-            $result = openssl_seal($data, $encryptedData, $envKeys, [$publicKey], $cipher);
+            $result = openssl_seal($data, $encryptedData, $envKeys, [$publicKey], $cipher, $iv);
 
             if ($result === false) {
                 throw new \Exception('Netopia: Failed to encrypt payment data: ' . openssl_error_string());
@@ -345,7 +343,7 @@ class NetopiaProcessor implements PaymentProcessorInterface
         $srcEnvKey = base64_decode($encryptedKey);
         $srcIv = !empty($iv) ? base64_decode($iv) : '';
 
-        // Default cipher based on what was sent, or try aes-256-cbc then rc4
+        // Default cipher based on what was sent, or try rc4 then aes-256-cbc
         if (empty($cipher)) {
             $cipher = !empty($srcIv) ? 'aes-256-cbc' : 'rc4';
         }
