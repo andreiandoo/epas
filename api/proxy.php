@@ -2770,6 +2770,11 @@ if (isset($http_response_header)) {
     }
 }
 
+// Debug log for non-2xx responses
+if ($statusCode >= 400) {
+    error_log("[proxy.php] API ERROR: {$method} {$url} => HTTP {$statusCode} | action={$action} | response=" . substr($response ?: '(empty)', 0, 500));
+}
+
 // Store in cache if cacheable
 if ($useCache && $response !== false) {
     ApiCache::set($action, $_GET, $response, $statusCode);
