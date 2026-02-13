@@ -356,10 +356,11 @@ const ThankYouPage = {
 
         try {
             const response = await AmbiletAPI.get(`/customer/orders/${orderRef}`);
-            if (response.success && response.data) {
-                this.order = response.data;
+            if (response.success && response.data?.order) {
+                this.order = response.data.order;
                 this.renderOrderData();
             } else {
+                console.warn('Order data not found in response:', response);
                 this.showDemoData();
             }
         } catch (error) {
@@ -380,65 +381,91 @@ const ThankYouPage = {
 
         // Update texts
         document.getElementById('printingText').textContent = 'Biletele sunt gata!';
-        document.getElementById('buyerEmail').textContent = order.buyer?.email || 'Email-ul tău';
+        document.getElementById('buyerEmail').textContent = order.customer_email || 'Email-ul tău';
 
         // Event info
         const eventInfo = document.getElementById('eventInfo');
-        if (order.event) {
+        const event = order.event;
+        if (event) {
+            const eventTitle = event.name || event.title || 'Eveniment';
+            const eventDate = event.date ? AmbiletUtils.formatDate(event.date) : '';
+            const eventTime = event.doors_open || (event.date ? new Date(event.date).toLocaleTimeString('ro-RO', {hour: '2-digit', minute: '2-digit'}) : '');
             eventInfo.innerHTML = `
-                <img src="${getStorageUrl(order.event.image)}" alt="${order.event.title}" class="w-20 h-20 rounded-xl object-cover" loading="lazy">
+                <img src="${getStorageUrl(event.image)}" alt="${eventTitle}" class="w-20 h-20 rounded-xl object-cover" loading="lazy" onerror="this.style.display='none'">
                 <div>
-                    <h3 class="font-bold text-secondary">${order.event.title}</h3>
-                    <p class="text-sm text-muted mt-1">${order.event.date ? AmbiletUtils.formatDate(order.event.date) : ''} ${order.event.time ? '• ' + order.event.time : ''}</p>
-                    <p class="text-sm text-muted">${order.event.venue || ''}</p>
+                    <h3 class="font-bold text-secondary">${eventTitle}</h3>
+                    <p class="text-sm text-muted mt-1">${eventDate}${eventTime ? ' • ' + eventTime : ''}</p>
+                    <p class="text-sm text-muted">${event.venue || ''}${event.city ? ', ' + event.city : ''}</p>
                 </div>
             `;
         }
 
         // Tickets
-        this.renderTickets(order.tickets || []);
+        const tickets = order.tickets || [];
+        this.renderTickets(Array.isArray(tickets) ? tickets : Object.values(tickets));
 
-        // Payment summary
-        if (order.totals) {
-            document.getElementById('paymentSummary').innerHTML = `
-                <h4 class="font-semibold text-secondary mb-3">Sumar plată</h4>
-                <div class="space-y-2 text-sm">
-                    <div class="flex justify-between">
-                        <span class="text-muted">Subtotal</span>
-                        <span>${AmbiletUtils.formatCurrency(order.totals.subtotal)}</span>
+        // Ticket summary (items grouped by type)
+        const ticketsSummary = document.getElementById('ticketsSummary');
+        if (order.items && order.items.length > 0) {
+            ticketsSummary.innerHTML = `
+                <h4 class="font-semibold text-secondary mb-3">Bilete achiziționate</h4>
+                ${order.items.map(item => `
+                    <div class="flex justify-between items-center py-2 border-b border-border last:border-0">
+                        <div>
+                            <span class="font-medium text-secondary">${item.name}</span>
+                            <span class="text-muted text-sm ml-1">× ${item.quantity}</span>
+                        </div>
+                        <span class="font-semibold">${AmbiletUtils.formatCurrency(item.total)}</span>
                     </div>
-                    ${order.totals.discount ? `
-                    <div class="flex justify-between text-success">
-                        <span>Reducere</span>
-                        <span>-${AmbiletUtils.formatCurrency(order.totals.discount)}</span>
-                    </div>
-                    ` : ''}
-                    ${(order.totals.taxes && order.totals.taxes.length > 0) ?
-                        order.totals.taxes.map(tax => `
-                            <div class="flex justify-between">
-                                <span class="text-muted">${tax.name}${tax.value_type === 'percent' ? ' (' + tax.value + '%)' : ''}</span>
-                                <span>${AmbiletUtils.formatCurrency(tax.amount)}</span>
-                            </div>
-                        `).join('') :
-                        (order.totals.tax ? `
-                            <div class="flex justify-between">
-                                <span class="text-muted">Taxe</span>
-                                <span>${AmbiletUtils.formatCurrency(order.totals.tax)}</span>
-                            </div>
-                        ` : '')
-                    }
-                    <div class="flex justify-between pt-2 border-t border-border font-bold text-lg">
-                        <span>Total plătit</span>
-                        <span class="text-primary">${AmbiletUtils.formatCurrency(order.totals.total)}</span>
-                    </div>
-                </div>
+                `).join('')}
             `;
         }
 
-        // Points
-        if (order.points) {
-            document.getElementById('earnedPoints').textContent = '+' + order.points.earned;
-            document.getElementById('newPoints').textContent = order.points.total || order.points.earned;
+        // Payment summary
+        const subtotal = parseFloat(order.subtotal) || 0;
+        const total = parseFloat(order.total) || 0;
+        const discount = parseFloat(order.discount) || 0;
+        const serviceFee = parseFloat(order.service_fee) || 0;
+        const currency = order.currency || 'RON';
+
+        document.getElementById('paymentSummary').innerHTML = `
+            <h4 class="font-semibold text-secondary mb-3">Sumar plată</h4>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-muted">Subtotal</span>
+                    <span>${AmbiletUtils.formatCurrency(subtotal)}</span>
+                </div>
+                ${serviceFee > 0 ? `
+                <div class="flex justify-between">
+                    <span class="text-muted">Comision serviciu</span>
+                    <span>${AmbiletUtils.formatCurrency(serviceFee)}</span>
+                </div>
+                ` : ''}
+                ${discount > 0 ? `
+                <div class="flex justify-between text-success">
+                    <span>Reducere</span>
+                    <span>-${AmbiletUtils.formatCurrency(discount)}</span>
+                </div>
+                ` : ''}
+                <div class="flex justify-between pt-2 border-t border-border font-bold text-lg">
+                    <span>Total plătit</span>
+                    <span class="text-primary">${AmbiletUtils.formatCurrency(total)}</span>
+                </div>
+            </div>
+        `;
+
+        // Payment method
+        if (order.payment_method) {
+            const cardEl = document.getElementById('cardNumber');
+            if (cardEl) {
+                cardEl.textContent = order.payment_method;
+            }
+        }
+
+        // Hide points section if no points data
+        const pointsEl = document.getElementById('pointsEarned');
+        if (pointsEl) {
+            pointsEl.style.display = 'none';
         }
     },
 
@@ -452,7 +479,7 @@ const ThankYouPage = {
             return;
         }
 
-        document.getElementById('ticketsCount').textContent = `${total} bilet${total > 1 ? 'e' : ''} pentru ${this.order?.event?.title || 'eveniment'}`;
+        document.getElementById('ticketsCount').textContent = `${total} bilet${total > 1 ? 'e' : ''} pentru ${this.order?.event?.name || this.order?.event?.title || 'eveniment'}`;
 
         container.innerHTML = tickets.map((ticket, idx) => this.renderTicketCard(ticket, idx, total)).join('');
 
@@ -486,6 +513,11 @@ const ThankYouPage = {
             `<div class="barcode-line" style="height: ${20 + Math.random() * 15}px;"></div>`
         ).join('');
 
+        const event = this.order?.event;
+        const eventTitle = event?.name || event?.title || 'Eveniment';
+        const eventDate = event?.date ? AmbiletUtils.formatDate(event.date, 'medium') : '';
+        const eventTime = event?.doors_open || (event?.date ? new Date(event.date).toLocaleTimeString('ro-RO', {hour: '2-digit', minute: '2-digit'}) : '');
+
         return `
             <div class="ticket-card" data-index="${idx}">
                 <div class="ticket-card-header">
@@ -493,8 +525,7 @@ const ThankYouPage = {
                         <span class="text-xs opacity-70">${SITE_NAME} TICKET</span>
                         <span class="text-xs font-bold bg-white/20 px-2 py-0.5 rounded">${idx + 1} / ${total}</span>
                     </div>
-                    <h3 class="font-bold text-lg">${ticket.type_name || 'Bilet'}</h3>
-                    <p class="text-sm opacity-80">${ticket.description || ''}</p>
+                    <h3 class="font-bold text-lg">${ticket.type || ticket.type_name || 'Bilet'}</h3>
                 </div>
                 <div class="ticket-card-body">
                     <div class="ticket-dashed-line"></div>
@@ -502,26 +533,28 @@ const ThankYouPage = {
                     <div class="space-y-3 mt-4">
                         <div>
                             <p class="text-xs text-muted uppercase tracking-wide">Eveniment</p>
-                            <p class="font-bold text-secondary">${this.order?.event?.title || 'Eveniment'}</p>
+                            <p class="font-bold text-secondary">${eventTitle}</p>
                         </div>
                         <div class="flex gap-4">
                             <div>
                                 <p class="text-xs text-muted uppercase tracking-wide">Data</p>
-                                <p class="font-semibold text-secondary">${ticket.date || this.order?.event?.date || ''}</p>
+                                <p class="font-semibold text-secondary">${eventDate}</p>
                             </div>
+                            ${eventTime ? `
                             <div>
                                 <p class="text-xs text-muted uppercase tracking-wide">Ora</p>
-                                <p class="font-semibold text-secondary">${ticket.time || this.order?.event?.time || ''}</p>
+                                <p class="font-semibold text-secondary">${eventTime}</p>
                             </div>
+                            ` : ''}
                         </div>
                         <div>
                             <p class="text-xs text-muted uppercase tracking-wide">Locație</p>
-                            <p class="font-semibold text-secondary">${this.order?.event?.venue || ''}</p>
+                            <p class="font-semibold text-secondary">${event?.venue || ''}${event?.city ? ', ' + event.city : ''}</p>
                         </div>
                         <div class="flex justify-between items-center pt-2">
                             <div>
                                 <p class="text-xs text-muted">Participant</p>
-                                <p class="font-semibold text-secondary text-sm">${ticket.beneficiary?.name || this.order?.buyer?.name || 'Participant'}</p>
+                                <p class="font-semibold text-secondary text-sm">${ticket.attendee_name || this.order?.billing_address || 'Participant'}</p>
                             </div>
                             <div class="text-right">
                                 <p class="text-xs text-muted">Preț</p>
@@ -531,7 +564,7 @@ const ThankYouPage = {
                     </div>
 
                     <div class="ticket-barcode">${barcodeLines}</div>
-                    <p class="text-center text-[10px] text-muted mt-2">${ticket.code || 'TIX-' + Math.random().toString(36).substring(2, 8).toUpperCase()}</p>
+                    <p class="text-center text-[10px] text-muted mt-2">${ticket.barcode || ticket.code || ''}</p>
                 </div>
             </div>
         `;
