@@ -220,6 +220,45 @@ class PaymentController extends BaseController
                 // Activate tickets
                 $order->tickets()->update(['status' => 'valid']);
 
+                // Confirm seat purchases (held → sold) now that payment is confirmed
+                $seatedItems = $order->meta['seated_items'] ?? [];
+                if (!empty($seatedItems)) {
+                    $seatHoldService = app(\App\Services\Seating\SeatHoldService::class);
+
+                    foreach ($seatedItems as $seatedItem) {
+                        try {
+                            $confirmResult = $seatHoldService->confirmPurchase(
+                                $seatedItem['event_seating_id'],
+                                $seatedItem['seat_uids'],
+                                'payment-confirmed',
+                                (int) ($order->total * 100)
+                            );
+
+                            if (!empty($confirmResult['failed'])) {
+                                Log::channel('marketplace')->warning('Some seats could not be confirmed after payment', [
+                                    'order_id' => $order->id,
+                                    'event_seating_id' => $seatedItem['event_seating_id'],
+                                    'failed' => $confirmResult['failed'],
+                                    'confirmed' => $confirmResult['confirmed'],
+                                ]);
+                            } else {
+                                Log::channel('marketplace')->info('Seats confirmed after payment', [
+                                    'order_id' => $order->id,
+                                    'event_seating_id' => $seatedItem['event_seating_id'],
+                                    'confirmed_count' => count($confirmResult['confirmed']),
+                                ]);
+                            }
+                        } catch (\Exception $e) {
+                            // Log but don't fail the payment callback - payment is already confirmed
+                            Log::channel('marketplace')->error('Failed to confirm seats after payment', [
+                                'order_id' => $order->id,
+                                'event_seating_id' => $seatedItem['event_seating_id'],
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
+                }
+
                 // Record financial transactions for organizer balance
                 if ($order->marketplace_organizer_id && $order->marketplace_client_id) {
                     $organizer = $order->marketplaceOrganizer;

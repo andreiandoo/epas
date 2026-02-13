@@ -471,60 +471,49 @@ class CheckoutController extends BaseController
                 ];
             }
 
-            // Confirm seat purchases for items with seats
-            $sessionId = $this->getSessionId($request);
+            // Extend seat holds to match order expiration (seats stay 'held' until payment confirms)
+            // Seat confirmation (held → sold) happens in PaymentController callback after payment succeeds
             $seatedItems = collect($cartItems)->filter(fn($item) => !empty($item['seat_uids']));
+            $orderExpiresAt = now()->addMinutes(15);
 
             foreach ($seatedItems as $item) {
                 if (!empty($item['event_seating_id']) && !empty($item['seat_uids'])) {
                     $eventSeatingId = (int) $item['event_seating_id'];
                     $seatUids = $item['seat_uids'];
-                    $totalAmountCents = (int) (($item['price'] ?? 0) * ($item['quantity'] ?? 1) * 100);
 
-                    // DEBUG: Log exact parameters and DB state before confirming
-                    $existingSeats = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeatingId)
+                    // Extend seat holds to match order expiration
+                    \App\Models\Seating\SeatHold::where('event_seating_id', $eventSeatingId)
                         ->whereIn('seat_uid', $seatUids)
-                        ->get(['seat_uid', 'status', 'version']);
+                        ->update(['expires_at' => $orderExpiresAt]);
 
-                    $totalSeatsInLayout = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeatingId)->count();
+                    // Store seated items in order meta so payment callback can confirm them
+                    // Find which order this event belongs to
+                    $eventId = $item['event_id'] ?? null;
+                    foreach ($orders as &$orderData) {
+                        $orderId = $orderData['id'];
+                        $orderEventId = $orderData['event']['id'] ?? null;
 
-                    Log::channel('marketplace')->info('Checkout: About to confirm seats', [
-                        'event_seating_id' => $eventSeatingId,
-                        'seat_uids' => $seatUids,
-                        'session_id' => $sessionId,
-                        'total_seats_in_layout' => $totalSeatsInLayout,
-                        'matching_seats_found' => $existingSeats->count(),
-                        'seat_statuses' => $existingSeats->map(fn($s) => [
-                            'uid' => $s->seat_uid,
-                            'status' => $s->status,
-                            'version' => $s->version,
-                        ])->toArray(),
-                    ]);
-
-                    $confirmResult = $this->seatHoldService->confirmPurchase(
-                        $eventSeatingId,
-                        $seatUids,
-                        $sessionId,
-                        $totalAmountCents
-                    );
-
-                    if (!empty($confirmResult['failed'])) {
-                        Log::channel('marketplace')->error('Failed to confirm seat purchase', [
-                            'client_id' => $client->id,
-                            'event_seating_id' => $eventSeatingId,
-                            'seat_uids' => $seatUids,
-                            'failed_seats' => $confirmResult['failed'],
-                            'confirmed_seats' => $confirmResult['confirmed'] ?? [],
-                            'session_id' => $sessionId,
-                        ]);
-
-                        throw new \Exception('Failed to confirm seat reservations. Please try again.');
+                        if ($orderEventId == $eventId) {
+                            $orderModel = Order::find($orderId);
+                            if ($orderModel) {
+                                $meta = $orderModel->meta ?? [];
+                                $meta['seated_items'] = $meta['seated_items'] ?? [];
+                                $meta['seated_items'][] = [
+                                    'event_seating_id' => $eventSeatingId,
+                                    'seat_uids' => $seatUids,
+                                ];
+                                $orderModel->update(['meta' => $meta]);
+                            }
+                            break;
+                        }
                     }
+                    unset($orderData);
 
-                    Log::channel('marketplace')->info('Confirmed seat purchase', [
+                    Log::channel('marketplace')->info('Checkout: Extended seat holds for payment', [
                         'client_id' => $client->id,
                         'event_seating_id' => $eventSeatingId,
-                        'confirmed_seats' => count($confirmResult['confirmed']),
+                        'seat_count' => count($seatUids),
+                        'hold_extended_to' => $orderExpiresAt->toIso8601String(),
                     ]);
                 }
             }

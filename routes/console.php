@@ -646,3 +646,15 @@ Schedule::command('seating:release-expired-holds')
     ->onFailure(function () {
         \Log::error('Failed to release expired seat holds');
     });
+
+// Cleanup expired pending marketplace orders (every 5 minutes)
+// Releases held seats, cancels pending tickets, restores quota, marks orders as expired
+Schedule::command('marketplace:cleanup-expired-orders')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::debug('Expired marketplace orders cleaned up');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to clean up expired marketplace orders');
+    });
