@@ -126,11 +126,11 @@ class TicketType extends Model
     }
 
     /**
-     * Check if this ticket type has seating sections assigned
+     * Check if this ticket type has seating assigned (rows or sections)
      */
     public function hasSeatingAssigned(): bool
     {
-        return $this->seatingSections()->exists();
+        return $this->seatingRows()->exists() || $this->seatingSections()->exists();
     }
 
     /**

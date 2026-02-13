@@ -359,6 +359,7 @@ class MarketplaceEventsController extends BaseController
             },
             'marketplaceEventCategory',
             'ticketTypes.seatingSections',
+            'ticketTypes.seatingRows.section',
             'artists',
         ])->first();
 
@@ -502,9 +503,23 @@ class MarketplaceEventsController extends BaseController
                     $originalPrice = $targetPrice;
                 }
 
-                // Get seating sections if assigned
+                // Get seating sections — derive from assigned rows or direct section assignments
                 $seatingSections = [];
-                if ($tt->relationLoaded('seatingSections') && $tt->seatingSections->isNotEmpty()) {
+                if ($tt->relationLoaded('seatingRows') && $tt->seatingRows->isNotEmpty()) {
+                    // Derive sections from assigned rows (new model)
+                    $seatingSections = $tt->seatingRows
+                        ->filter(fn ($r) => $r->relationLoaded('section') && $r->section)
+                        ->pluck('section')
+                        ->unique('id')
+                        ->map(fn ($s) => [
+                            'id' => $s->id,
+                            'name' => $s->name,
+                            'color' => $s->color_hex,
+                            'color_hex' => $s->color_hex,
+                            'seat_color' => $s->seat_color,
+                        ])->values()->toArray();
+                } elseif ($tt->relationLoaded('seatingSections') && $tt->seatingSections->isNotEmpty()) {
+                    // Fallback: direct section assignments (legacy)
                     $seatingSections = $tt->seatingSections->map(fn ($s) => [
                         'id' => $s->id,
                         'name' => $s->name,
