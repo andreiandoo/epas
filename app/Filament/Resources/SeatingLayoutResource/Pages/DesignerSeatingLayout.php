@@ -3083,19 +3083,38 @@ class DesignerSeatingLayout extends Page
         // Get remaining seats ordered by X position (left to right)
         $seats = $row->seats()->orderBy('x', 'asc')->get();
 
+        // Check if any seat actually needs renumbering
+        $needsRenumber = false;
+        $number = 1;
+        foreach ($seats as $seat) {
+            if ($seat->label !== (string) $number) {
+                $needsRenumber = true;
+                break;
+            }
+            $number++;
+        }
+
+        if (!$needsRenumber) {
+            return;
+        }
+
+        // Two-pass approach to avoid unique constraint violations on seat_uid:
+        // Pass 1: assign temporary UIDs to all seats that need renumbering
+        $tempSuffix = '_temp_' . time() . '_';
+        foreach ($seats as $seat) {
+            $seat->update(['seat_uid' => $tempSuffix . $seat->id]);
+        }
+
+        // Pass 2: assign final labels and UIDs
+        $section = $row->section;
         $number = 1;
         foreach ($seats as $seat) {
             $newLabel = (string) $number;
-
-            // Only update if label changed
-            if ($seat->label !== $newLabel) {
-                $section = $row->section;
-                $seat->update([
-                    'label' => $newLabel,
-                    'display_name' => $section ? $section->generateSeatDisplayName($row->label, $newLabel) : $newLabel,
-                    'seat_uid' => $section ? $section->generateSeatUid($row->label, $newLabel) : uniqid(),
-                ]);
-            }
+            $seat->update([
+                'label' => $newLabel,
+                'display_name' => $section ? $section->generateSeatDisplayName($row->label, $newLabel) : $newLabel,
+                'seat_uid' => $section ? $section->generateSeatUid($row->label, $newLabel) : uniqid(),
+            ]);
             $number++;
         }
     }

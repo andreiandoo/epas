@@ -15,6 +15,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
+use Illuminate\Validation\Rules\Unique;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\Action;
@@ -73,7 +74,36 @@ class OrganizerResource extends Resource
                             Forms\Components\TextInput::make('email')
                                 ->email()
                                 ->required()
-                                ->maxLength(255),
+                                ->maxLength(255)
+                                ->unique(
+                                    table: 'marketplace_organizers',
+                                    column: 'email',
+                                    ignoreRecord: true,
+                                    modifyRuleUsing: fn (Unique $rule) => $rule->where(
+                                        'marketplace_client_id',
+                                        Auth::guard('marketplace_admin')->user()?->marketplace_client_id
+                                    ),
+                                )
+                                ->validationMessages([
+                                    'unique' => 'Acest email este deja înregistrat la un alt organizator.',
+                                ])
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, ?MarketplaceOrganizer $record) {
+                                    if (empty($state)) return;
+                                    $marketplaceClientId = Auth::guard('marketplace_admin')->user()?->marketplace_client_id;
+                                    $exists = MarketplaceOrganizer::where('email', $state)
+                                        ->where('marketplace_client_id', $marketplaceClientId)
+                                        ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                                        ->exists();
+                                    if ($exists) {
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Email duplicat!')
+                                            ->body("Adresa \"{$state}\" este deja folosită de un alt organizator.")
+                                            ->warning()
+                                            ->persistent()
+                                            ->send();
+                                    }
+                                }),
 
                             Forms\Components\TextInput::make('password')
                                 ->label('Parolă')
