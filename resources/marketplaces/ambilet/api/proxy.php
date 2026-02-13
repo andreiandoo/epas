@@ -947,9 +947,43 @@ switch ($action) {
         break;
 
     case 'cart':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'DELETE') {
+            $endpoint = '/customer/cart';
+        } else {
+            $endpoint = '/customer/cart';
+        }
+        break;
+
+    case 'cart.items.add':
         $method = 'POST';
         $body = file_get_contents('php://input');
-        $endpoint = '/customer/cart';
+        $endpoint = '/customer/cart/items';
+        break;
+
+    case 'cart.items.add-with-seats':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/cart/items/with-seats';
+        break;
+
+    case 'cart.items.manage':
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = file_get_contents('php://input');
+        $itemKey = $_GET['item_key'] ?? '';
+        $endpoint = '/customer/cart/items/' . urlencode($itemKey);
+        break;
+
+    case 'cart.seats.release':
+        $method = 'DELETE';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/cart/seats';
+        break;
+
+    case 'cart.promo-code':
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/cart/promo-code';
         break;
 
     case 'checkout.features':

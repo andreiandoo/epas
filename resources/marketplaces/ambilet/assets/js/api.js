@@ -176,6 +176,12 @@ const AmbiletAPI = {
         if (endpoint.match(/\/locations\/regions\/[a-z0-9-]+$/i)) return 'locations.region';
         if (endpoint.includes('/locations/regions')) return 'locations.regions';
 
+        // Cart sub-routes (specific patterns first, then catch-all)
+        if (endpoint.includes('/cart/items/with-seats')) return 'cart.items.add-with-seats';
+        if (endpoint.includes('/cart/seats')) return 'cart.seats.release';
+        if (endpoint.match(/\/cart\/items\/[^/]+$/)) return 'cart.items.manage';
+        if (endpoint.includes('/cart/items')) return 'cart.items.add';
+        if (endpoint.includes('/cart/promo-code')) return 'cart.promo-code';
         if (endpoint.includes('/cart')) return 'cart';
         if (endpoint === '/checkout.features' || endpoint === '/checkout/features') return 'checkout.features';
         if (endpoint.includes('/checkout')) return 'checkout';
@@ -531,6 +537,12 @@ const AmbiletAPI = {
         const organizerDocumentViewMatch = endpoint.match(/\/organizer\/documents\/(\d+)\/view$/);
         if (organizerDocumentViewMatch) {
             return `document_id=${encodeURIComponent(organizerDocumentViewMatch[1])}`;
+        }
+
+        // Cart item management - extract item key
+        const cartItemMatch = endpoint.match(/\/cart\/items\/([^/?]+)$/);
+        if (cartItemMatch) {
+            return `item_key=${encodeURIComponent(cartItemMatch[1])}`;
         }
 
         // Pass through query params
