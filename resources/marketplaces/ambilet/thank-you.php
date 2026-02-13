@@ -347,11 +347,18 @@ const ThankYouPage = {
 
     async loadOrderData() {
         const urlParams = new URLSearchParams(window.location.search);
-        const orderRef = urlParams.get('order');
+        // Read from 'order' param (our param) or 'orderId' (Netopia adds this on redirect)
+        const orderRef = urlParams.get('order') || urlParams.get('orderId');
 
         if (!orderRef) {
             this.showDemoData();
             return;
+        }
+
+        // Clean up duplicate URL params (keep only ?order=)
+        if (urlParams.get('orderId') || urlParams.has('orderId')) {
+            const cleanUrl = window.location.pathname + '?order=' + encodeURIComponent(orderRef);
+            history.replaceState(null, '', cleanUrl);
         }
 
         try {
