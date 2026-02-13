@@ -320,10 +320,10 @@ class NetopiaProcessor implements PaymentProcessorInterface
         // Try RC4 first (widest Netopia compatibility, especially sandbox)
         $cipher = 'rc4';
         $iv = '';
-        $result = openssl_seal($data, $encryptedData, $envKeys, [$publicKey], $cipher);
+        $result = @openssl_seal($data, $encryptedData, $envKeys, [$publicKey], $cipher);
 
         if ($result === false) {
-            // Fallback to AES-256-CBC
+            // Fallback to AES-256-CBC (RC4 may be disabled in OpenSSL 3.0+)
             $cipher = 'aes-256-cbc';
             $iv = '';
             $result = openssl_seal($data, $encryptedData, $envKeys, [$publicKey], $cipher, $iv);
@@ -363,21 +363,51 @@ class NetopiaProcessor implements PaymentProcessorInterface
         $srcEnvKey = base64_decode($encryptedKey);
         $srcIv = !empty($iv) ? base64_decode($iv) : '';
 
-        // Default cipher based on what was sent, or try rc4 then aes-256-cbc
+        // Default cipher based on what was sent
         if (empty($cipher)) {
             $cipher = !empty($srcIv) ? 'aes-256-cbc' : 'rc4';
         }
 
-        $result = openssl_open($srcData, $data, $srcEnvKey, $privateKey, $cipher, $srcIv);
+        // Attempt 1: openssl_open with the specified cipher
+        if ($cipher === 'rc4') {
+            // RC4 has no IV — suppress warnings in case RC4 is disabled in OpenSSL 3.0+
+            $result = @openssl_open($srcData, $data, $srcEnvKey, $privateKey, 'rc4');
+        } elseif (!empty($srcIv)) {
+            $result = @openssl_open($srcData, $data, $srcEnvKey, $privateKey, $cipher, $srcIv);
+        } else {
+            $result = false;
+        }
 
-        if ($result === false) {
-            // Fallback: try the other cipher
-            $fallbackCipher = ($cipher === 'rc4') ? 'aes-256-cbc' : 'rc4';
-            $result = openssl_open($srcData, $data, $srcEnvKey, $privateKey, $fallbackCipher);
+        if ($result !== false) {
+            return $data;
+        }
 
-            if ($result === false) {
-                throw new \Exception('Netopia: Failed to decrypt callback data: ' . openssl_error_string());
-            }
+        // Attempt 2: Manual decryption (RSA decrypt envelope key + symmetric decrypt)
+        // This handles OpenSSL 3.0+ where RC4 is a legacy cipher not available via openssl_open
+        Log::channel('marketplace')->debug('Netopia: openssl_open failed, trying manual decryption', [
+            'cipher' => $cipher,
+            'openssl_error' => openssl_error_string(),
+        ]);
+
+        if (!openssl_private_decrypt($srcEnvKey, $decryptedKey, $privateKey, OPENSSL_PKCS1_PADDING)) {
+            throw new \Exception('Netopia: Failed to decrypt envelope key: ' . openssl_error_string());
+        }
+
+        if ($cipher === 'rc4') {
+            // RC4 has no IV
+            $data = @openssl_decrypt($srcData, 'rc4', $decryptedKey, OPENSSL_RAW_DATA);
+        } else {
+            $data = @openssl_decrypt($srcData, $cipher, $decryptedKey, OPENSSL_RAW_DATA, $srcIv);
+        }
+
+        if ($data === false) {
+            // Last resort: check if RC4 is available at all
+            $availableCiphers = openssl_get_cipher_methods();
+            $rc4Available = in_array('rc4', $availableCiphers);
+
+            throw new \Exception('Netopia: Failed to decrypt callback data. cipher=' . $cipher
+                . ', rc4_available=' . ($rc4Available ? 'yes' : 'NO')
+                . ', error=' . openssl_error_string());
         }
 
         return $data;
