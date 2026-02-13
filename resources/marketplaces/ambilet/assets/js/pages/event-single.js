@@ -1852,12 +1852,17 @@ const EventPage = {
     },
 
     /**
-     * Build a mapping of row ID to ticket type(s) that can use it
+     * Build a mapping of row ID to ticket type(s) that can use it.
+     * Uses seating_rows (row-level) if available, falls back to seating_sections (section-level).
      */
     buildRowToTicketTypeMap() {
         var map = {};
+        var hasRowData = false;
+
+        // Try row-level assignments first (new model)
         this.ticketTypes.forEach(function(tt) {
             if (tt.seating_rows && tt.seating_rows.length > 0) {
+                hasRowData = true;
                 tt.seating_rows.forEach(function(row) {
                     if (!map[row.id]) {
                         map[row.id] = [];
@@ -1866,6 +1871,27 @@ const EventPage = {
                 });
             }
         });
+
+        // Fallback: derive row assignments from section-level assignments
+        if (!hasRowData && this.seatingLayout && this.seatingLayout.sections) {
+            var sectionMap = this.buildSectionToTicketTypeMap();
+            this.seatingLayout.sections.forEach(function(section) {
+                var tts = sectionMap[section.id];
+                if (tts && tts.length > 0 && section.rows) {
+                    section.rows.forEach(function(row) {
+                        if (!map[row.id]) {
+                            map[row.id] = [];
+                        }
+                        tts.forEach(function(tt) {
+                            if (!map[row.id].some(function(existing) { return existing.id === tt.id; })) {
+                                map[row.id].push(tt);
+                            }
+                        });
+                    });
+                }
+            });
+        }
+
         return map;
     },
 
