@@ -1133,7 +1133,7 @@ const CheckoutPage = {
                 `;
 
                 const payResponse = await AmbiletAPI.post(`/orders/${order.id}/pay`, {
-                    return_url: window.location.origin + '/thank-you?order=' + order.order_number,
+                    return_url: window.location.origin + '/multumim?order=' + order.order_number,
                     cancel_url: window.location.origin + '/checkout'
                 });
 
@@ -1169,7 +1169,7 @@ const CheckoutPage = {
                 // No payment required (free tickets or zero total)
                 AmbiletCart.clear();
                 localStorage.removeItem('cart_end_time');
-                window.location.href = '/thank-you?order=' + order.order_number;
+                window.location.href = '/multumim?order=' + order.order_number;
             }
         } catch (error) {
             console.error('Checkout error:', error);

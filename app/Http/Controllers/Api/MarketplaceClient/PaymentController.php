@@ -98,7 +98,7 @@ class PaymentController extends BaseController
                 'currency' => $order->currency,
                 'customer_email' => $order->customer_email,
                 'customer_name' => $order->customer_name,
-                'description' => "Tickets for {$eventTitle}",
+                'description' => "Bilete pentru {$eventTitle}",
                 'success_url' => $request->input('return_url', $client->domain . '/order-complete'),
                 'return_url' => $request->input('return_url', $client->domain . '/order-complete'),
                 'cancel_url' => $request->input('cancel_url', $client->domain . '/order-cancelled'),
