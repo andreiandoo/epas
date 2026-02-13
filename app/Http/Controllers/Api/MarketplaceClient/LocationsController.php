@@ -218,12 +218,30 @@ class LocationsController extends BaseController
             $cityNameMap[$city->slug] = $city->id;
         }
 
+        // Base query filters (consistent with EventsController listing)
+        $baseFilters = function ($query) use ($clientId) {
+            $query->where('marketplace_client_id', $clientId)
+                ->where('status', 'published')
+                ->where(function ($q) {
+                    $q->where('is_public', true)->orWhereNull('is_public');
+                })
+                ->where(function ($q) {
+                    $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+                })
+                ->where(function ($q) {
+                    // Upcoming: event_date >= today OR starts_at >= now
+                    $q->where(function ($inner) {
+                        $inner->whereNotNull('event_date')->where('event_date', '>=', now()->toDateString());
+                    })->orWhere(function ($inner) {
+                        $inner->whereNull('event_date')->where('starts_at', '>=', now());
+                    });
+                });
+        };
+
         // Count events by marketplace_city_id (direct link)
-        $directCounts = Event::where('marketplace_client_id', $clientId)
-            ->where(function ($q) {
-                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-            })
-            ->where('event_date', '>=', now()->toDateString())
+        $directQuery = Event::query();
+        $baseFilters($directQuery);
+        $directCounts = $directQuery
             ->whereNotNull('marketplace_city_id')
             ->whereIn('marketplace_city_id', $cities->pluck('id'))
             ->selectRaw('marketplace_city_id, COUNT(*) as event_count')
@@ -235,11 +253,9 @@ class LocationsController extends BaseController
         }
 
         // Also count events by venue city name (for events without marketplace_city_id)
-        $eventsByVenueCity = Event::where('marketplace_client_id', $clientId)
-            ->where(function ($q) {
-                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-            })
-            ->where('event_date', '>=', now()->toDateString())
+        $venueCityQuery = Event::query();
+        $baseFilters($venueCityQuery);
+        $eventsByVenueCity = $venueCityQuery
             ->whereNull('marketplace_city_id')
             ->whereHas('venue', function ($q) {
                 $q->whereNotNull('city');
