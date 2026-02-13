@@ -79,8 +79,8 @@ class NetopiaProcessor implements PaymentProcessorInterface
             'amount' => number_format($data['amount'], 2, '.', ''),
             'currency' => strtoupper($data['currency'] ?? 'RON'),
             'details' => $data['description'] ?? 'Payment',
-            'confirmUrl' => $data['success_url'],
-            'returnUrl' => $data['success_url'],
+            'confirmUrl' => $data['callback_url'] ?? $data['success_url'],
+            'returnUrl' => $data['return_url'] ?? $data['success_url'],
             'cancelUrl' => $data['cancel_url'],
             'params' => [
                 'customer_email' => $data['customer_email'] ?? null,
@@ -99,16 +99,25 @@ class NetopiaProcessor implements PaymentProcessorInterface
         // Encrypt data with public key
         $encryptedData = $this->encryptData($xml);
 
-        // Netopia requires POST form submission, not GET
-        // Return form data for the frontend to create a POST form
+        // Netopia requires POST form submission to the base URL (no /pay path)
+        $formData = [
+            'env_key' => base64_encode($encryptedData['env_key']),
+            'data' => base64_encode($encryptedData['data']),
+        ];
+
+        // Include cipher and IV for AES-256-CBC (required by Netopia for PHP 7+)
+        if (!empty($encryptedData['cipher'])) {
+            $formData['cipher'] = $encryptedData['cipher'];
+        }
+        if (!empty($encryptedData['iv'])) {
+            $formData['iv'] = base64_encode($encryptedData['iv']);
+        }
+
         return [
             'payment_id' => $paymentId,
-            'redirect_url' => $this->baseUrl . '/pay',
-            'method' => 'POST', // Signal that this requires POST
-            'form_data' => [
-                'env_key' => base64_encode($encryptedData['env_key']),
-                'data' => base64_encode($encryptedData['data']),
-            ],
+            'redirect_url' => $this->baseUrl,
+            'method' => 'POST',
+            'form_data' => $formData,
             'additional_data' => [
                 'order_id' => $paymentData['orderId'],
                 'encrypted' => true,
@@ -130,12 +139,14 @@ class NetopiaProcessor implements PaymentProcessorInterface
         // Decrypt the callback data
         $envKey = $payload['env_key'] ?? null;
         $encryptedData = $payload['data'] ?? null;
+        $cipher = $payload['cipher'] ?? '';
+        $iv = $payload['iv'] ?? '';
 
         if (!$envKey || !$encryptedData) {
             throw new \Exception('Missing required callback data');
         }
 
-        $decryptedData = $this->decryptData($encryptedData, $envKey);
+        $decryptedData = $this->decryptData($encryptedData, $envKey, $cipher, $iv);
 
         // SECURITY FIX: Parse XML with XXE protection
         $previousValue = libxml_disable_entity_loader(true);
@@ -282,46 +293,75 @@ class NetopiaProcessor implements PaymentProcessorInterface
     }
 
     /**
-     * Encrypt data with Netopia public key
+     * Encrypt data using openssl_seal() — matches official mobilPay protocol
      */
     protected function encryptData(string $data): array
     {
-        $publicKey = $this->keys['public_key'];
+        $publicKeyCert = $this->keys['public_key'];
 
-        // Generate random encryption key
-        $encryptionKey = openssl_random_pseudo_bytes(32);
+        // Extract public key from X.509 certificate or PEM public key
+        $publicKey = openssl_get_publickey($publicKeyCert);
+        if (!$publicKey) {
+            throw new \Exception('Netopia: Invalid public key/certificate');
+        }
 
-        // Encrypt data with AES
-        $iv = openssl_random_pseudo_bytes(16);
-        $encryptedData = openssl_encrypt($data, 'AES-256-CBC', $encryptionKey, OPENSSL_RAW_DATA, $iv);
-        $encryptedData = $iv . $encryptedData;
+        // Use AES-256-CBC (recommended for PHP 7+), fallback to RC4
+        $cipher = 'aes-256-cbc';
+        $iv = '';
+        $envKeys = [];
 
-        // Encrypt the encryption key with RSA public key
-        $publicKeyResource = openssl_pkey_get_public($publicKey);
-        openssl_public_encrypt($encryptionKey, $encryptedKey, $publicKeyResource);
+        $result = openssl_seal($data, $encryptedData, $envKeys, [$publicKey], $cipher, $iv);
+
+        if ($result === false) {
+            // Fallback to RC4 if AES fails (some older Netopia accounts)
+            $cipher = 'rc4';
+            $iv = '';
+            $result = openssl_seal($data, $encryptedData, $envKeys, [$publicKey], $cipher);
+
+            if ($result === false) {
+                throw new \Exception('Netopia: Failed to encrypt payment data: ' . openssl_error_string());
+            }
+        }
 
         return [
-            'env_key' => $encryptedKey,
+            'env_key' => $envKeys[0],
             'data' => $encryptedData,
+            'cipher' => $cipher,
+            'iv' => $iv,
         ];
     }
 
     /**
-     * Decrypt callback data
+     * Decrypt callback data using openssl_open() — matches official mobilPay protocol
      */
-    protected function decryptData(string $encryptedData, string $encryptedKey): string
+    protected function decryptData(string $encryptedData, string $encryptedKey, string $cipher = '', string $iv = ''): string
     {
-        $privateKey = $this->keys['api_key']; // Private key stored as api_key
+        $privateKey = openssl_pkey_get_private($this->keys['private_key']);
+        if (!$privateKey) {
+            throw new \Exception('Netopia: Invalid private key');
+        }
 
-        // Decrypt the encryption key
-        $privateKeyResource = openssl_pkey_get_private($privateKey);
-        openssl_private_decrypt(base64_decode($encryptedKey), $decryptionKey, $privateKeyResource);
+        $srcData = base64_decode($encryptedData);
+        $srcEnvKey = base64_decode($encryptedKey);
+        $srcIv = !empty($iv) ? base64_decode($iv) : '';
 
-        // Decrypt the data
-        $encryptedDataDecoded = base64_decode($encryptedData);
-        $iv = substr($encryptedDataDecoded, 0, 16);
-        $encryptedPayload = substr($encryptedDataDecoded, 16);
+        // Default cipher based on what was sent, or try aes-256-cbc then rc4
+        if (empty($cipher)) {
+            $cipher = !empty($srcIv) ? 'aes-256-cbc' : 'rc4';
+        }
 
-        return openssl_decrypt($encryptedPayload, 'AES-256-CBC', $decryptionKey, OPENSSL_RAW_DATA, $iv);
+        $result = openssl_open($srcData, $data, $srcEnvKey, $privateKey, $cipher, $srcIv);
+
+        if ($result === false) {
+            // Fallback: try the other cipher
+            $fallbackCipher = ($cipher === 'rc4') ? 'aes-256-cbc' : 'rc4';
+            $result = openssl_open($srcData, $data, $srcEnvKey, $privateKey, $fallbackCipher);
+
+            if ($result === false) {
+                throw new \Exception('Netopia: Failed to decrypt callback data: ' . openssl_error_string());
+            }
+        }
+
+        return $data;
     }
 }
