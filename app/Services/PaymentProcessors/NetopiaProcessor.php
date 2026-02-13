@@ -367,27 +367,68 @@ class NetopiaProcessor implements PaymentProcessorInterface
             $cipher = !empty($srcIv) ? 'aes-256-cbc' : 'rc4';
         }
 
-        // Attempt 1: openssl_open (works when the cipher is available in OpenSSL)
+        // Verify key pair: check if private key matches the public certificate
+        $pubCert = $this->keys['public_key'] ?? '';
+        if (!empty($pubCert)) {
+            $certPubKey = @openssl_pkey_get_public($pubCert);
+            if ($certPubKey) {
+                $certDetails = openssl_pkey_get_details($certPubKey);
+                $privDetails = openssl_pkey_get_details($privateKey);
+                $keysMatch = ($certDetails['key'] ?? '') === ($privDetails['key'] ?? '');
+
+                Log::channel('marketplace')->info('Netopia: Key pair check', [
+                    'keys_match' => $keysMatch,
+                    'cert_bits' => $certDetails['bits'] ?? 0,
+                    'priv_bits' => $privDetails['bits'] ?? 0,
+                ]);
+
+                if (!$keysMatch) {
+                    Log::channel('marketplace')->error('Netopia: KEY MISMATCH - private key does NOT match public certificate!');
+                }
+            }
+        }
+
+        // Attempt 1: Try to enable legacy provider and use openssl_open
         $data = '';
+        $result = false;
+
+        // Try loading OpenSSL legacy provider via temp config (for RC4 support)
         if ($cipher === 'rc4') {
+            $legacyConf = $this->tryEnableLegacyProvider();
+            if ($legacyConf) {
+                $result = @openssl_open($srcData, $data, $srcEnvKey, $privateKey, 'rc4');
+                if ($result !== false) {
+                    Log::channel('marketplace')->info('Netopia: Decrypted via openssl_open with legacy provider');
+                    @unlink($legacyConf);
+                    return $data;
+                }
+                @unlink($legacyConf);
+            }
+
+            // Try without legacy provider (in case it's already available)
             $result = @openssl_open($srcData, $data, $srcEnvKey, $privateKey, 'rc4');
         } elseif (!empty($srcIv)) {
             $result = @openssl_open($srcData, $data, $srcEnvKey, $privateKey, $cipher, $srcIv);
-        } else {
-            $result = false;
         }
 
         if ($result !== false) {
+            Log::channel('marketplace')->info('Netopia: Decrypted via openssl_open');
             return $data;
         }
 
-        // Attempt 2: Manual decryption (RSA decrypt envelope key + pure PHP RC4)
-        // Required for OpenSSL 3.0+ where RC4 is completely removed
-        Log::channel('marketplace')->info('Netopia: openssl_open failed, using manual decryption', [
+        // Attempt 2: Use openssl CLI tool (can load legacy provider independently)
+        Log::channel('marketplace')->info('Netopia: openssl_open failed, trying CLI fallback', [
             'cipher' => $cipher,
-            'env_key_len' => strlen($srcEnvKey),
-            'data_len' => strlen($srcData),
         ]);
+
+        $cliResult = $this->decryptViaCli($srcData, $srcEnvKey, $rawKey, $cipher, $srcIv);
+        if ($cliResult !== false) {
+            Log::channel('marketplace')->info('Netopia: Decrypted via openssl CLI');
+            return $cliResult;
+        }
+
+        // Attempt 3: Manual RSA + pure PHP RC4
+        Log::channel('marketplace')->info('Netopia: CLI failed, trying manual RSA + PHP RC4');
 
         if (!openssl_private_decrypt($srcEnvKey, $symmetricKey, $privateKey, OPENSSL_PKCS1_PADDING)) {
             throw new \Exception('Netopia: Failed to decrypt envelope key: ' . openssl_error_string());
@@ -399,24 +440,181 @@ class NetopiaProcessor implements PaymentProcessorInterface
         ]);
 
         if ($cipher === 'rc4') {
-            // Use pure PHP RC4 — OpenSSL 3.0+ doesn't support RC4
             $data = $this->rc4($symmetricKey, $srcData);
         } else {
-            // For other ciphers, try openssl_decrypt
             $data = @openssl_decrypt($srcData, $cipher, $symmetricKey, OPENSSL_RAW_DATA, $srcIv);
             if ($data === false) {
                 throw new \Exception('Netopia: Failed to decrypt with ' . $cipher . ': ' . openssl_error_string());
             }
         }
 
-        Log::channel('marketplace')->info('Netopia: Data decrypted', [
+        // Check if output looks like XML
+        $looksLikeXml = str_starts_with(trim($data), '<?xml') || str_starts_with(trim($data), '<order');
+        Log::channel('marketplace')->info('Netopia: Manual decrypt result', [
             'output_len' => strlen($data),
-            'starts_with_hex' => bin2hex(substr($data, 0, 20)),
-            'starts_with_text' => substr($data, 0, 80),
-            'looks_like_xml' => str_starts_with(trim($data), '<?xml') || str_starts_with(trim($data), '<order'),
+            'looks_like_xml' => $looksLikeXml,
+            'first_bytes_hex' => bin2hex(substr($data, 0, 16)),
         ]);
 
+        if (!$looksLikeXml) {
+            throw new \Exception('Netopia: Decryption produced invalid data (not XML). '
+                . 'This usually means the private key does not match the certificate Netopia used to encrypt. '
+                . 'Key len=' . strlen($symmetricKey) . ' bytes, output starts with: ' . bin2hex(substr($data, 0, 16)));
+        }
+
         return $data;
+    }
+
+    /**
+     * Try to enable OpenSSL legacy provider via temporary config file
+     */
+    protected function tryEnableLegacyProvider(): ?string
+    {
+        try {
+            $conf = tempnam(sys_get_temp_dir(), 'openssl_legacy_');
+            if (!$conf) {
+                return null;
+            }
+
+            file_put_contents($conf, implode("\n", [
+                'openssl_conf = openssl_init',
+                '',
+                '[openssl_init]',
+                'providers = provider_sect',
+                '',
+                '[provider_sect]',
+                'default = default_sect',
+                'legacy = legacy_sect',
+                '',
+                '[default_sect]',
+                'activate = 1',
+                '',
+                '[legacy_sect]',
+                'activate = 1',
+            ]));
+
+            // Set before any OpenSSL calls
+            putenv("OPENSSL_CONF={$conf}");
+
+            return $conf;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Decrypt using openssl CLI tool (can access legacy provider independently of PHP extension)
+     */
+    protected function decryptViaCli(string $srcData, string $srcEnvKey, string $privateKeyPem, string $cipher, string $srcIv): string|false
+    {
+        // Check if openssl CLI is available
+        $opensslPath = trim(@shell_exec('which openssl 2>/dev/null') ?? '');
+        if (empty($opensslPath)) {
+            return false;
+        }
+
+        try {
+            // Write temp files
+            $tmpDir = sys_get_temp_dir();
+            $envKeyFile = tempnam($tmpDir, 'netopia_ek_');
+            $dataFile = tempnam($tmpDir, 'netopia_dat_');
+            $keyFile = tempnam($tmpDir, 'netopia_key_');
+            $decKeyFile = tempnam($tmpDir, 'netopia_dk_');
+
+            file_put_contents($envKeyFile, $srcEnvKey);
+            file_put_contents($dataFile, $srcData);
+            file_put_contents($keyFile, $privateKeyPem);
+
+            // Step 1: RSA decrypt the envelope key
+            $cmd1 = sprintf(
+                '%s pkeyutl -decrypt -inkey %s -in %s -out %s -pkeyopt rsa_padding_mode:pkcs1 2>&1',
+                escapeshellarg($opensslPath),
+                escapeshellarg($keyFile),
+                escapeshellarg($envKeyFile),
+                escapeshellarg($decKeyFile)
+            );
+            exec($cmd1, $output1, $code1);
+
+            if ($code1 !== 0) {
+                Log::channel('marketplace')->warning('Netopia CLI: RSA decrypt failed', [
+                    'exit_code' => $code1,
+                    'output' => implode("\n", $output1),
+                ]);
+                $this->cleanupTempFiles($envKeyFile, $dataFile, $keyFile, $decKeyFile);
+                return false;
+            }
+
+            $symmetricKey = file_get_contents($decKeyFile);
+            $symKeyHex = bin2hex($symmetricKey);
+
+            // Step 2: Decrypt data with the symmetric key
+            if ($cipher === 'rc4') {
+                // Try openssl CLI with legacy provider for RC4
+                $cmd2 = sprintf(
+                    '%s enc -rc4 -d -K %s -nosalt -in %s -provider legacy -provider default 2>&1',
+                    escapeshellarg($opensslPath),
+                    $symKeyHex,
+                    escapeshellarg($dataFile)
+                );
+                $data = @shell_exec($cmd2);
+
+                if ($data === null || $data === '') {
+                    // Try without provider flags (older OpenSSL)
+                    $cmd2b = sprintf(
+                        '%s enc -rc4 -d -K %s -nosalt -in %s 2>&1',
+                        escapeshellarg($opensslPath),
+                        $symKeyHex,
+                        escapeshellarg($dataFile)
+                    );
+                    $data = @shell_exec($cmd2b);
+                }
+
+                if ($data === null || $data === '') {
+                    // Last fallback: use pure PHP RC4 with CLI-decrypted key
+                    $data = $this->rc4($symmetricKey, $srcData);
+                }
+            } else {
+                $ivHex = bin2hex($srcIv);
+                $cmd2 = sprintf(
+                    '%s enc -%s -d -K %s -iv %s -nosalt -in %s 2>&1',
+                    escapeshellarg($opensslPath),
+                    escapeshellarg($cipher),
+                    $symKeyHex,
+                    $ivHex,
+                    escapeshellarg($dataFile)
+                );
+                $data = @shell_exec($cmd2);
+            }
+
+            $this->cleanupTempFiles($envKeyFile, $dataFile, $keyFile, $decKeyFile);
+
+            if ($data && (str_starts_with(trim($data), '<?xml') || str_starts_with(trim($data), '<order'))) {
+                return $data;
+            }
+
+            Log::channel('marketplace')->info('Netopia CLI: decrypt completed but output not XML', [
+                'data_len' => strlen($data ?? ''),
+                'first_bytes' => bin2hex(substr($data ?? '', 0, 16)),
+            ]);
+
+            return false;
+
+        } catch (\Throwable $e) {
+            Log::channel('marketplace')->warning('Netopia CLI: exception', ['error' => $e->getMessage()]);
+            return false;
+        }
+    }
+
+    /**
+     * Clean up temporary files used for CLI decryption
+     */
+    protected function cleanupTempFiles(string ...$files): void
+    {
+        foreach ($files as $file) {
+            if (file_exists($file)) {
+                @unlink($file);
+            }
+        }
     }
 
     /**
