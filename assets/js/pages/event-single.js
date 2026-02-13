@@ -1890,17 +1890,33 @@ const EventPage = {
             }
         });
 
+        // Track which data source was used
+        this._rowDataSource = hasRowData ? 'row' : 'section';
+
         // Fallback: derive row assignments from section-level assignments
         if (!hasRowData && this.seatingLayout && this.seatingLayout.sections) {
+            console.warn('[EventPage] No row-level data found, using section-level fallback.');
             var sectionMap = this.buildSectionToTicketTypeMap();
             this.seatingLayout.sections.forEach(function(section) {
                 var tts = sectionMap[section.id];
                 if (tts && tts.length > 0 && section.rows) {
-                    section.rows.forEach(function(row) {
+                    // If section has only 1 ticket type, assign all rows to it
+                    // If multiple, distribute rows proportionally among ticket types
+                    // but ALL ticket types are still "available" for every row (for clicking)
+                    section.rows.forEach(function(row, rowIdx) {
                         if (!map[row.id]) {
                             map[row.id] = [];
                         }
-                        tts.forEach(function(tt) {
+                        // Reorder so the "primary" ticket type for this row comes first
+                        // This determines the row's display color
+                        var primaryIdx = rowIdx % tts.length;
+                        var reordered = [tts[primaryIdx]];
+                        tts.forEach(function(tt, i) {
+                            if (i !== primaryIdx && !map[row.id].some(function(existing) { return existing.id === tt.id; })) {
+                                reordered.push(tt);
+                            }
+                        });
+                        reordered.forEach(function(tt) {
                             if (!map[row.id].some(function(existing) { return existing.id === tt.id; })) {
                                 map[row.id].push(tt);
                             }
@@ -1909,6 +1925,17 @@ const EventPage = {
                 }
             });
         }
+
+        console.log('[EventPage] Row-to-TicketType map built. Source: ' + this._rowDataSource + ', rows mapped: ' + Object.keys(map).length);
+        // Log per-ticket-type row counts
+        var self = this;
+        this.ticketTypes.forEach(function(tt) {
+            var rowCount = 0;
+            Object.keys(map).forEach(function(rowId) {
+                if (map[rowId].some(function(t) { return t.id === tt.id; })) rowCount++;
+            });
+            console.log('[EventPage]   TT#' + tt.id + ' "' + tt.name + '" color=' + (tt.color || 'null') + ' rows=' + (tt.seating_rows ? tt.seating_rows.length : 0) + ' mapped_rows=' + rowCount);
+        });
 
         return map;
     },
@@ -1921,8 +1948,15 @@ const EventPage = {
         if (!this.seatingLayout) return;
 
         console.log('[EventPage] Opening seat selection modal');
-        console.log('[EventPage] Seating layout:', this.seatingLayout);
-        console.log('[EventPage] Ticket type colors:', this.ticketTypes.map(function(tt) { return { id: tt.id, name: tt.name, color: tt.color, resolved: EventPage.getTicketTypeColor(tt) }; }));
+        console.log('[EventPage] Seating layout sections:', (this.seatingLayout?.sections || []).length);
+        console.log('[EventPage] Ticket types from API:');
+        this.ticketTypes.forEach(function(tt) {
+            console.log('  TT#' + tt.id + ' "' + tt.name + '"' +
+                ' | color=' + JSON.stringify(tt.color) +
+                ' | seating_rows=' + (tt.seating_rows ? tt.seating_rows.length : 0) +
+                ' | seating_sections=' + (tt.seating_sections ? tt.seating_sections.length : 0) +
+                ' | resolved_color=' + EventPage.getTicketTypeColor(tt));
+        });
 
         // Build section and row to ticket type mappings
         this.sectionToTicketTypeMap = this.buildSectionToTicketTypeMap();
@@ -2565,11 +2599,11 @@ const EventPage = {
                 section.rows.forEach(function(row) {
                     if (!row.seats || row.seats.length === 0) return;
 
-                    // Row-based ticket type lookup — sort by price so cheapest is first
-                    var ticketTypesForRow = (self.rowToTicketTypeMap[row.id] || []).slice().sort(function(a, b) { return (a.price || 0) - (b.price || 0); });
+                    // Row-based ticket type lookup (keep original order — first assigned type determines color)
+                    var ticketTypesForRow = self.rowToTicketTypeMap[row.id] || [];
                     var isRowAssigned = ticketTypesForRow.length > 0;
 
-                    // Seat color from cheapest ticket type's color
+                    // Seat color from the first ticket type assigned to this row
                     var availableSeatColor = isRowAssigned ? self.getTicketTypeColor(ticketTypesForRow[0]) : '#E5E7EB';
 
                     // Row label near first seat
