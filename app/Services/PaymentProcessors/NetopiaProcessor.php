@@ -134,7 +134,7 @@ class NetopiaProcessor implements PaymentProcessorInterface
     public function processCallback(array $payload, array $headers = []): array
     {
         if (!$this->isConfigured()) {
-            throw new \Exception('Netopia is not properly configured');
+            throw new \Exception('Netopia is not properly configured. Keys present: ' . implode(', ', array_keys(array_filter($this->keys))));
         }
 
         // Verify signature first
@@ -149,10 +149,22 @@ class NetopiaProcessor implements PaymentProcessorInterface
         $iv = $payload['iv'] ?? '';
 
         if (!$envKey || !$encryptedData) {
-            throw new \Exception('Missing required callback data');
+            throw new \Exception('Missing required callback data: env_key=' . ($envKey ? 'present' : 'missing') . ', data=' . ($encryptedData ? 'present' : 'missing'));
         }
 
+        Log::channel('marketplace')->debug('Netopia: Decrypting callback', [
+            'cipher' => $cipher ?: 'auto-detect',
+            'has_iv' => !empty($iv),
+            'has_private_key' => !empty($this->keys['private_key']),
+            'private_key_starts' => substr($this->keys['private_key'] ?? '', 0, 30),
+        ]);
+
         $decryptedData = $this->decryptData($encryptedData, $envKey, $cipher, $iv);
+
+        Log::channel('marketplace')->debug('Netopia: Callback decrypted', [
+            'decrypted_length' => strlen($decryptedData),
+            'starts_with' => substr($decryptedData, 0, 80),
+        ]);
 
         // Parse XML with XXE protection
         libxml_use_internal_errors(true);
@@ -334,9 +346,17 @@ class NetopiaProcessor implements PaymentProcessorInterface
      */
     protected function decryptData(string $encryptedData, string $encryptedKey, string $cipher = '', string $iv = ''): string
     {
-        $privateKey = openssl_pkey_get_private($this->keys['private_key']);
+        $rawKey = $this->keys['private_key'] ?? '';
+        if (empty($rawKey)) {
+            throw new \Exception('Netopia: Private key is empty');
+        }
+
+        // Normalize line endings (DB may store \r\n, openssl needs \n)
+        $rawKey = str_replace("\r\n", "\n", $rawKey);
+
+        $privateKey = openssl_pkey_get_private($rawKey);
         if (!$privateKey) {
-            throw new \Exception('Netopia: Invalid private key');
+            throw new \Exception('Netopia: Invalid private key: ' . openssl_error_string());
         }
 
         $srcData = base64_decode($encryptedData);

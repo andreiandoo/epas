@@ -171,14 +171,20 @@ class PaymentController extends BaseController
                 return $this->error('Client not found', 404);
             }
 
+            Log::channel('marketplace')->debug('Callback: client found', ['client_id' => $client->id]);
+
             // Determine processor type
             $defaultPaymentMethod = $client->getDefaultPaymentMethod();
-            $processorType = match ($defaultPaymentMethod?->slug) {
+            if (!$defaultPaymentMethod) {
+                throw new \Exception('No payment method configured for client: ' . $clientSlug);
+            }
+
+            $processorType = match ($defaultPaymentMethod->slug) {
                 'netopia', 'netopia-payments', 'payment-netopia' => 'netopia',
                 'stripe', 'stripe-payments', 'payment-stripe' => 'stripe',
                 'euplatesc', 'payment-euplatesc' => 'euplatesc',
                 'payu', 'payment-payu' => 'payu',
-                default => $defaultPaymentMethod?->slug ?? 'netopia',
+                default => $defaultPaymentMethod->slug,
             };
 
             $paymentConfig = $client->getPaymentMethodSettings($defaultPaymentMethod->slug);
@@ -186,10 +192,32 @@ class PaymentController extends BaseController
                 throw new \Exception('Payment configuration not found for callback');
             }
 
+            Log::channel('marketplace')->debug('Callback: creating processor', [
+                'processor_type' => $processorType,
+                'config_keys' => array_keys($paymentConfig),
+            ]);
+
             $processor = PaymentProcessorFactory::makeFromArray($processorType, $paymentConfig);
 
+            Log::channel('marketplace')->debug('Callback: processing callback data', [
+                'has_env_key' => !empty($request->input('env_key')),
+                'has_data' => !empty($request->input('data')),
+                'cipher' => $request->input('cipher', 'not set'),
+                'env_key_length' => strlen($request->input('env_key', '')),
+                'data_length' => strlen($request->input('data', '')),
+            ]);
+
             // Process the callback (decrypt for Netopia, verify for others)
-            $result = $processor->processCallback($request->all(), $request->headers->all());
+            try {
+                $result = $processor->processCallback($request->all(), $request->headers->all());
+            } catch (\Throwable $decryptError) {
+                Log::channel('marketplace')->error('Callback: processCallback failed', [
+                    'error' => $decryptError->getMessage(),
+                    'error_class' => get_class($decryptError),
+                    'file' => $decryptError->getFile() . ':' . $decryptError->getLine(),
+                ]);
+                throw $decryptError;
+            }
 
             Log::channel('marketplace')->info('Payment callback processed', [
                 'client_slug' => $clientSlug,
@@ -373,11 +401,13 @@ class PaymentController extends BaseController
                 return $this->netopiaResponse(0);
             }
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::channel('marketplace')->error('Error processing payment callback', [
                 'client_slug' => $clientSlug,
                 'order_id' => isset($order) ? $order->id : null,
                 'error' => $e->getMessage(),
+                'error_class' => get_class($e),
+                'file' => $e->getFile() . ':' . $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
