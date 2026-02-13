@@ -225,6 +225,43 @@ body {
     background: linear-gradient(135deg, #0984e3 0%, #74b9ff 100%);
 }
 
+.hot-badge {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+}
+
+/* ===========================================
+   LETTER FILTER BUTTONS
+   =========================================== */
+
+.letter-btn {
+    transition: all 0.15s ease;
+}
+
+.letter-btn:hover {
+    background: #f3f4f6;
+}
+
+.letter-btn.active {
+    background: #111827;
+    color: white;
+}
+
+/* ===========================================
+   FOLLOW BUTTON
+   =========================================== */
+
+.follow-btn {
+    transition: all 0.2s ease;
+}
+
+.follow-btn:hover {
+    transform: scale(1.05);
+}
+
+.follow-btn:active {
+    transform: scale(0.95);
+}
+
 /* ===========================================
    CHIPS & FILTERS
    =========================================== */
@@ -756,6 +793,69 @@ input[type="range"]::-moz-range-thumb {
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
+}
+
+/* ===========================================
+   ARTIST PAGE
+   =========================================== */
+
+/* Artist Hero Gradient */
+.artist-hero {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+/* Stat Card - Glass effect */
+.stat-card {
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Social Button */
+.social-btn {
+    transition: all 0.2s ease;
+}
+
+.social-btn:hover {
+    transform: translateY(-2px);
+}
+
+/* Event Row */
+.event-row {
+    transition: all 0.2s ease;
+}
+
+.event-row:hover {
+    background: #f9fafb;
+}
+
+/* Video Card */
+.video-card {
+    transition: all 0.25s ease;
+}
+
+.video-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
+}
+
+/* Spotify Progress Bar */
+.spotify-bar-bg {
+    background: #e5e7eb;
+}
+
+.spotify-bar-fill {
+    background: linear-gradient(90deg, #1DB954 0%, #1ed760 100%);
+    transition: width 0.8s ease;
+}
+
+/* Modal Backdrop */
+.modal-backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content-enter {
+    animation: fadeInUp 0.3s ease forwards;
 }
 
 /* ===========================================

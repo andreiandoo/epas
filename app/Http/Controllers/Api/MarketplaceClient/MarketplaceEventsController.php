@@ -541,6 +541,16 @@ class MarketplaceEventsController extends BaseController
                     ];
                 }
 
+                // Build seating_rows for row-level ticket type mapping
+                $seatingRows = [];
+                if ($tt->relationLoaded('seatingRows') && $tt->seatingRows->isNotEmpty()) {
+                    $seatingRows = $tt->seatingRows->map(fn ($r) => [
+                        'id' => $r->id,
+                        'label' => $r->label,
+                        'section_id' => $r->section_id,
+                    ])->values()->toArray();
+                }
+
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
@@ -548,6 +558,7 @@ class MarketplaceEventsController extends BaseController
                     'price' => (float) $basePrice,
                     'original_price' => $originalPrice ? (float) $originalPrice : null,
                     'currency' => $tt->currency ?? 'RON',
+                    'color' => $tt->color ?? null,
                     'available' => $available,
                     'min_per_order' => $tt->min_per_order ?? 1,
                     'max_per_order' => $tt->max_per_order ?? 10,
@@ -555,6 +566,7 @@ class MarketplaceEventsController extends BaseController
                     'is_sold_out' => $available <= 0,
                     'has_seating' => !empty($seatingSections),
                     'seating_sections' => $seatingSections,
+                    'seating_rows' => $seatingRows,
                     // Per-ticket commission (null = use event defaults)
                     'commission' => $ticketCommission,
                 ];

@@ -18,6 +18,54 @@ const EventPage = {
     selectedSeats: {},  // ticketTypeId -> [seatId, ...]
     seatSelectionModal: null,
     sectionToTicketTypeMap: {},  // sectionId -> [ticketType, ...]
+    rowToTicketTypeMap: {},      // rowId -> [ticketType, ...]
+
+    /**
+     * Calculate commission for a ticket type
+     * @param {Object} ticketType - The ticket type object
+     * @param {number} basePrice - The base price of the ticket
+     * @returns {Object} { amount: number, rate: number|null, fixed: number|null, mode: string, type: string }
+     */
+    calculateTicketCommission(ticketType, basePrice) {
+        // Check if ticket has custom commission settings
+        if (ticketType.commission && ticketType.commission.type) {
+            const comm = ticketType.commission;
+            let amount = 0;
+
+            switch (comm.type) {
+                case 'percentage':
+                    amount = basePrice * (comm.rate / 100);
+                    break;
+                case 'fixed':
+                    amount = comm.fixed || 0;
+                    break;
+                case 'both':
+                    amount = (basePrice * (comm.rate / 100)) + (comm.fixed || 0);
+                    break;
+            }
+
+            return {
+                amount: Math.round(amount * 100) / 100,
+                rate: comm.rate || null,
+                fixed: comm.fixed || null,
+                mode: comm.mode || this.event.commission_mode || 'included',
+                type: comm.type
+            };
+        }
+
+        // Fall back to event-level commission (percentage only)
+        const rate = this.event.commission_rate || 5;
+        const mode = this.event.commission_mode || 'included';
+        const amount = basePrice * (rate / 100);
+
+        return {
+            amount: Math.round(amount * 100) / 100,
+            rate: rate,
+            fixed: null,
+            mode: mode,
+            type: 'percentage'
+        };
+    },
 
     // DOM element IDs
     elements: {
@@ -437,7 +485,7 @@ const EventPage = {
             artists: artistsData,
             ticket_types: ticketTypesData.map(function(tt) {
                 var available = tt.available_quantity !== undefined ? tt.available_quantity : (tt.available !== undefined ? tt.available : 999);
-                console.log('[EventPage] Processing ticket type:', tt.name, 'price:', tt.price, 'original_price:', tt.original_price, 'has_seating:', tt.has_seating);
+                console.log('[EventPage] Processing ticket type:', tt.name, 'price:', tt.price, 'original_price:', tt.original_price, 'has_seating:', tt.has_seating, 'commission:', tt.commission);
                 return {
                     id: tt.id,
                     name: tt.name,
@@ -452,7 +500,8 @@ const EventPage = {
                     status: tt.status,
                     is_sold_out: available <= 0,
                     has_seating: tt.has_seating || false,
-                    seating_sections: tt.seating_sections || []
+                    seating_sections: tt.seating_sections || [],
+                    commission: tt.commission || null
                 };
             }),
             seating_layout: apiData.seating_layout || null,
@@ -626,10 +675,10 @@ const EventPage = {
                         urlPrefix: '/bilete/'
                     });
                 } else if (container) {
-                    container.innerHTML = '<p class="col-span-full text-muted text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
+                    container.innerHTML = '<p class="col-span-full text-white text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
                 }
             } else if (container) {
-                container.innerHTML = '<p class="col-span-full text-muted text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
+                container.innerHTML = '<p class="col-span-full text-white text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
             }
         } catch (e) {
             console.error('Failed to load ended related events:', e);
@@ -689,8 +738,10 @@ const EventPage = {
         document.getElementById(this.elements.eventTime).textContent = 'Acces: ' + (e.start_time || '20:00');
         document.getElementById(this.elements.eventDoors).textContent = 'Doors: ' + (e.doors_time || '19:00');
 
-        // Venue
-        document.getElementById(this.elements.venueName).textContent = e.venue?.name || e.location || 'Locație TBA';
+        // Venue (with city)
+        var venueName = e.venue?.name || e.location || 'Locație TBA';
+        var venueCity = e.venue?.city || e.city || '';
+        document.getElementById(this.elements.venueName).textContent = venueCity ? venueName + ', ' + venueCity : venueName;
         document.getElementById(this.elements.venueAddress).textContent = e.venue?.address || '';
 
         var venueLink = document.getElementById(this.elements.venueLink);
@@ -940,7 +991,7 @@ const EventPage = {
         var self = this;
         container.innerHTML = this.galleryImages.slice(0, 4).map(function(img, i) {
             return '<button onclick="EventPage.changeImage(' + i + ')" class="gallery-thumb ' + (i === 0 ? 'active' : '') + ' w-16 h-12 rounded-lg overflow-hidden border-2 border-white/50 opacity-80">' +
-                '<img src="' + img + '" class="object-cover w-full h-full">' +
+                '<img src="' + img + '" class="object-cover w-full h-full" loading="lazy">' +
             '</button>';
         }).join('');
     },
@@ -987,6 +1038,20 @@ const EventPage = {
             var artistImage = artist.image_url || artist.image || '/assets/images/default-artist.png';
             var artistLink = artist.slug ? '/artist/' + artist.slug : '#';
             var artistDescription = artist.bio || artist.description || '';
+            var isHeadliner = artist.is_headliner === true;
+            var isCoHeadliner = artist.is_co_headliner === true;
+
+            // Build status badge HTML
+            var statusBadgeHtml = '';
+            if (isHeadliner) {
+                statusBadgeHtml = '<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold text-white rounded-full bg-gradient-to-r from-amber-500 to-amber-600 shadow-sm">' +
+                    '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' +
+                    'HEADLINER</span>';
+            } else if (isCoHeadliner) {
+                statusBadgeHtml = '<span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full bg-secondary/10 text-secondary">' +
+                    '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' +
+                    'CO-HEADLINER</span>';
+            }
 
             var socialLinksHtml = '';
             var socialLinks = artist.social_links || {};
@@ -1000,15 +1065,23 @@ const EventPage = {
                 socialLinksHtml += '</div>';
             }
 
-            allHtml += '<div class="flex flex-col gap-6 md:flex-row' + (i > 0 ? ' pt-6 mt-6 border-t border-border' : '') + '">' +
-                '<div class="md:w-1/3">' +
-                    '<a href="' + artistLink + '">' +
-                        '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105">' +
+            // Headliners get larger display
+            var imageColClass = isHeadliner ? 'md:w-2/5' : 'md:w-1/3';
+            var contentColClass = isHeadliner ? 'md:w-3/5' : 'md:w-2/3';
+            var nameClass = isHeadliner ? 'text-3xl' : 'text-2xl';
+            var containerClass = isHeadliner ? 'p-4 -m-4 rounded-2xl bg-gradient-to-r from-amber-50 to-transparent border border-amber-100' : '';
+
+            allHtml += '<div class="flex flex-col gap-6 md:flex-row ' + containerClass + (i > 0 ? ' pt-6 mt-6' + (isHeadliner ? '' : ' border-t border-border') : '') + '">' +
+                '<div class="' + imageColClass + '">' +
+                    '<a href="' + artistLink + '" class="relative block">' +
+                        '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105" loading="lazy">' +
+                        (isHeadliner ? '<div class="absolute px-2 py-1 text-xs font-bold text-white rounded-lg shadow-lg top-3 left-3 bg-gradient-to-r from-amber-500 to-amber-600">★ HEADLINER</div>' : '') +
                     '</a>' +
                 '</div>' +
-                '<div class="md:w-2/3">' +
-                    '<div class="flex items-center gap-3 mb-4 mobile:justify-between">' +
-                        '<a href="' + artistLink + '" class="text-2xl font-bold text-secondary hover:text-primary">' + artist.name + '</a>' +
+                '<div class="' + contentColClass + '">' +
+                    '<div class="flex flex-wrap items-center gap-3 mb-4 mobile:justify-between">' +
+                        '<a href="' + artistLink + '" class="' + nameClass + ' font-bold text-secondary hover:text-primary">' + artist.name + '</a>' +
+                        statusBadgeHtml +
                         (artist.verified ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary">Verified</span>' : '') +
                     '</div>' +
                     (artistDescription ? '<p class="mb-4 leading-relaxed text-muted">' + artistDescription + '</p>' : '<p class="mb-4 leading-relaxed text-muted">Detalii despre artist vor fi disponibile în curând.</p>') +
@@ -1043,7 +1116,7 @@ const EventPage = {
 
         var html = '<div class="flex flex-col gap-6 md:flex-row">' +
             '<div class="md:w-1/3">' +
-                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl">' +
+                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl" loading="lazy">' +
             '</div>' +
             '<div class="md:w-2/3">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
@@ -1093,8 +1166,6 @@ const EventPage = {
     renderTicketTypes() {
         const container = document.getElementById(this.elements.ticketTypes);
         var self = this;
-        var commissionRate = this.event.commission_rate || 5;
-        var commissionMode = this.event.commission_mode || 'included';
         var targetPrice = this.event.target_price ? parseFloat(this.event.target_price) : null;
 
         // Check if event is cancelled, postponed, or sold out - disable all ticket purchasing
@@ -1162,28 +1233,47 @@ const EventPage = {
                 availabilityHtml = '<span class="text-xs font-semibold text-success"></span>';
             }
 
-            // Calculate commission for tooltip (displayPrice already calculated above)
-            var basePrice, commissionAmount;
-            if (commissionMode === 'included') {
-                basePrice = tt.price / (1 + commissionRate / 100);
-                commissionAmount = tt.price - basePrice;
+            // Calculate commission for tooltip using per-ticket commission
+            var ticketComm = self.calculateTicketCommission(tt, tt.price);
+            var basePrice, commissionAmount, totalPrice;
+            var commissionLabel = '';
+
+            if (ticketComm.type === 'fixed') {
+                commissionLabel = ticketComm.fixed.toFixed(2) + ' lei';
+            } else if (ticketComm.type === 'both') {
+                commissionLabel = ticketComm.rate + '% + ' + ticketComm.fixed.toFixed(2) + ' lei';
             } else {
+                commissionLabel = ticketComm.rate + '%';
+            }
+
+            if (ticketComm.mode === 'included') {
+                // Commission is included - calculate base price from display price
+                if (ticketComm.type === 'fixed') {
+                    basePrice = tt.price - ticketComm.fixed;
+                } else if (ticketComm.type === 'both') {
+                    basePrice = (tt.price - ticketComm.fixed) / (1 + ticketComm.rate / 100);
+                } else {
+                    basePrice = tt.price / (1 + ticketComm.rate / 100);
+                }
+                commissionAmount = tt.price - basePrice;
+                totalPrice = tt.price;
+            } else {
+                // Commission added on top
                 basePrice = tt.price;
-                commissionAmount = tt.price * (commissionRate / 100);
+                commissionAmount = ticketComm.amount;
+                totalPrice = tt.price + commissionAmount;
             }
 
             // Tooltip HTML - show commission as "Taxe procesare"
             var tooltipHtml = '<p class="mb-2 text-sm font-semibold">Detalii pret bilet:</p><div class="space-y-1 text-xs">';
-            if (commissionMode === 'included') {
+            if (ticketComm.mode === 'included') {
                 tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Pret bilet:</span><span>' + basePrice.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionRate + '%):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + tt.price.toFixed(2) + ' lei</span></div>';
+                    '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionLabel + '):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                    '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + totalPrice.toFixed(2) + ' lei</span></div>';
             } else {
-                // Commission added on top - show base price first, then processing fees
-                var totalWithCommission = tt.price + commissionAmount;
                 tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Pret bilet:</span><span>' + tt.price.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionRate + '%):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total la plata:</span><span class="font-semibold">' + totalWithCommission.toFixed(2) + ' lei</span></div>';
+                    '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionLabel + '):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                    '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total la plata:</span><span class="font-semibold">' + totalPrice.toFixed(2) + ' lei</span></div>';
             }
             tooltipHtml += '</div>';
 
@@ -1261,8 +1351,40 @@ const EventPage = {
         const tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketId); });
         if (!tt) return;
 
-        const newQty = (this.quantities[ticketId] || 0) + delta;
-        if (newQty >= 0 && newQty <= tt.available) {
+        const currentQty = this.quantities[ticketId] || 0;
+        let newQty = currentQty + delta;
+        const minPerOrder = tt.min_per_order || 1;
+        const maxPerOrder = Math.min(tt.max_per_order || 10, tt.available);
+
+        // Handle min/max per order limits
+        if (delta > 0) {
+            // Increasing - check max limit
+            if (newQty > maxPerOrder) {
+                if (typeof AmbiletNotifications !== 'undefined') {
+                    AmbiletNotifications.warning('Maxim ' + maxPerOrder + ' bilete de acest tip per comandă');
+                }
+                return;
+            }
+            // If going from 0, jump to min_per_order
+            if (currentQty === 0 && newQty < minPerOrder) {
+                newQty = minPerOrder;
+            }
+        } else if (delta < 0) {
+            // Decreasing - if would go below min but not to 0, stop at min
+            if (newQty > 0 && newQty < minPerOrder) {
+                newQty = 0; // Allow removing completely
+            }
+            if (newQty < 0) {
+                newQty = 0;
+            }
+        }
+
+        // Final check for available stock
+        if (newQty > tt.available) {
+            newQty = tt.available;
+        }
+
+        if (newQty !== currentQty) {
             this.quantities[ticketId] = newQty;
             document.getElementById('qty-' + ticketId).textContent = newQty;
 
@@ -1280,8 +1402,6 @@ const EventPage = {
         const totalTickets = Object.values(this.quantities).reduce(function(a, b) { return a + b; }, 0);
         let baseSubtotal = 0;  // Subtotal without commission
         let totalCommission = 0;  // Total commission amount
-        var commissionRate = this.event.commission_rate || 5;
-        var commissionMode = this.event.commission_mode || 'included';
         var self = this;
         var ticketBreakdown = [];  // For showing individual ticket lines
 
@@ -1292,10 +1412,13 @@ const EventPage = {
             var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketId); });
             if (tt) {
                 var ticketBasePrice = tt.price;
+                // Calculate per-ticket commission
+                var ticketComm = self.calculateTicketCommission(tt, ticketBasePrice);
                 var ticketCommission = 0;
 
-                if (commissionMode === 'added_on_top') {
-                    ticketCommission = ticketBasePrice * commissionRate / 100;
+                // Only add commission if it's "added_on_top" mode
+                if (ticketComm.mode === 'added_on_top') {
+                    ticketCommission = ticketComm.amount;
                 }
 
                 baseSubtotal += qty * ticketBasePrice;
@@ -1305,7 +1428,8 @@ const EventPage = {
                     name: tt.name,
                     qty: qty,
                     basePrice: ticketBasePrice,
-                    lineTotal: qty * ticketBasePrice
+                    lineTotal: qty * ticketBasePrice,
+                    commission: ticketComm
                 });
             }
         }
@@ -1340,10 +1464,10 @@ const EventPage = {
                     '</div>';
                 });
 
-                // Show commission as "Taxe procesare" only if on top
-                if (commissionMode === 'added_on_top' && totalCommission > 0) {
+                // Show commission as "Taxe procesare" only if on top and has value
+                if (totalCommission > 0) {
                     breakdownHtml += '<div class="flex justify-between text-sm pt-2 mt-2 border-t border-border">' +
-                        '<span class="text-muted">Taxe procesare (' + commissionRate + '%)</span>' +
+                        '<span class="text-muted">Taxe procesare</span>' +
                         '<span class="font-medium">' + totalCommission.toFixed(2) + ' lei</span>' +
                     '</div>';
                 }
@@ -1441,8 +1565,9 @@ const EventPage = {
     addToCart() {
         var addedAny = false;
         var self = this;
-        var commissionRate = this.event.commission_rate || 5;
-        var commissionMode = this.event.commission_mode || 'included';
+        // Keep event-level defaults for fallback
+        var defaultCommissionRate = this.event.commission_rate || 5;
+        var defaultCommissionMode = this.event.commission_mode || 'included';
 
         console.log('[EventPage] addToCart called');
         console.log('[EventPage] Event taxes to add:', self.event.taxes);
@@ -1464,8 +1589,8 @@ const EventPage = {
                         venue: self.event.venue,
                         taxes: self.event.taxes || [],
                         target_price: targetPrice,
-                        commission_rate: commissionRate,
-                        commission_mode: commissionMode
+                        commission_rate: defaultCommissionRate,
+                        commission_mode: defaultCommissionMode
                     };
                     console.log('[EventPage] eventData for cart:', eventData);
 
@@ -1479,12 +1604,17 @@ const EventPage = {
                         baseOriginalPrice = targetPrice;
                     }
 
+                    // Include per-ticket commission settings if present
                     var ticketTypeData = {
                         id: tt.id,
                         name: tt.name,
                         price: basePrice,
                         original_price: baseOriginalPrice,
-                        description: tt.description
+                        description: tt.description,
+                        min_per_order: tt.min_per_order || 1,
+                        max_per_order: tt.max_per_order || 10,
+                        // Per-ticket commission (null means use event defaults)
+                        commission: tt.commission || null
                     };
                     AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty);
                     addedAny = true;
@@ -1722,6 +1852,24 @@ const EventPage = {
     },
 
     /**
+     * Build a mapping of row ID to ticket type(s) that can use it
+     */
+    buildRowToTicketTypeMap() {
+        var map = {};
+        this.ticketTypes.forEach(function(tt) {
+            if (tt.seating_rows && tt.seating_rows.length > 0) {
+                tt.seating_rows.forEach(function(row) {
+                    if (!map[row.id]) {
+                        map[row.id] = [];
+                    }
+                    map[row.id].push(tt);
+                });
+            }
+        });
+        return map;
+    },
+
+    /**
      * Open seat selection modal - shows ALL available seats
      */
     openSeatSelection(ticketTypeId) {
@@ -1731,8 +1879,9 @@ const EventPage = {
         console.log('[EventPage] Opening seat selection modal');
         console.log('[EventPage] Seating layout:', this.seatingLayout);
 
-        // Build section to ticket type mapping
+        // Build section and row to ticket type mappings
         this.sectionToTicketTypeMap = this.buildSectionToTicketTypeMap();
+        this.rowToTicketTypeMap = this.buildRowToTicketTypeMap();
 
         // Get ALL section IDs that have ticket types assigned
         var allAssignedSectionIds = Object.keys(this.sectionToTicketTypeMap).map(function(id) { return parseInt(id); });
@@ -2025,13 +2174,7 @@ const EventPage = {
         if (this.selectedSeats[ticketTypeId] && this.selectedSeats[ticketTypeId][index]) {
             this.selectedSeats[ticketTypeId].splice(index, 1);
             this.quantities[ticketTypeId] = this.selectedSeats[ticketTypeId].length;
-
-            // Re-render everything
-            var allAssignedSectionIds = Object.keys(this.sectionToTicketTypeMap).map(function(id) { return parseInt(id); });
-            this.renderSeatingMapAllSections(allAssignedSectionIds);
-            this.renderSelectedTicketsPanel();
-            this.renderModalTicketTypes(this.currentTicketTypeId);
-            this.updateSeatSelectionSummary();
+            this.refreshSeatingMap();
         }
     },
 
@@ -2049,12 +2192,7 @@ const EventPage = {
             }
         });
 
-        // Re-render everything
-        var allAssignedSectionIds = Object.keys(this.sectionToTicketTypeMap).map(function(id) { return parseInt(id); });
-        this.renderSeatingMapAllSections(allAssignedSectionIds);
-        this.renderSelectedTicketsPanel();
-        this.renderModalTicketTypes(this.currentTicketTypeId);
-        this.updateSeatSelectionSummary();
+        this.refreshSeatingMap();
     },
 
     /**
@@ -2108,11 +2246,12 @@ const EventPage = {
         layout.sections.forEach(function(section) {
             var isAllowed = allowedSectionIds.includes(section.id);
 
-            // Calculate rotation transform - Konva rotates around top-left corner (x, y)
+            // Calculate rotation transform around section center
             var rotation = section.rotation || 0;
-            var transform = rotation !== 0 ? ' transform="rotate(' + rotation + ' ' + section.x + ' ' + section.y + ')"' : '';
+            var rcx = section.x + section.width / 2;
+            var rcy = section.y + section.height / 2;
+            var transform = rotation !== 0 ? ' transform="rotate(' + rotation + ' ' + rcx + ' ' + rcy + ')"' : '';
 
-            // Create a group for the section with rotation
             svg += '<g' + transform + '>';
 
             // Handle ICON sections differently
@@ -2171,125 +2310,95 @@ const EventPage = {
                 return; // Skip rest of section rendering for icons
             }
 
+            // Section background fill at 25% opacity
+            var sectionBgColor = section.color_hex || '#6B7280';
+            svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionBgColor + '" fill-opacity="0.25" rx="4"/>';
+
             // Section name (positioned ABOVE the section, outside)
             var textY = section.y - 5;
             var textX = section.x + (section.width / 2);
             var textColor = isAllowed ? '#1F2937' : '#9CA3AF';
             svg += '<text x="' + textX + '" y="' + textY + '" text-anchor="middle" font-size="11" font-weight="600" fill="' + textColor + '" style="text-shadow: 0 0 3px white, 0 0 3px white;">' + section.name + '</text>';
 
-            // Render seats for this section
+            // Render seats using actual x/y coordinates
             if (section.rows) {
-                // Get seat size from metadata, with aspect ratio 0.83 (width/height)
-                var metadata = section.metadata || {};
-                var seatSize = metadata.seat_size || 20; // Base size from admin
-                var seatH = seatSize;
-                //var seatW = Math.round(seatH * 0.83); // Aspect ratio 0.83
-                var seatW = seatSize;
-                var cornerR = Math.max(2, Math.round(seatW * 0.17)); // Proportional corner radius
-                var bottomH = Math.max(2, Math.round(seatH * 0.2)); // 3D bottom effect height proportional
+                section.rows.forEach(function(row) {
+                    if (!row.seats || row.seats.length === 0) return;
 
-                // Use metadata values as GAP between seats/rows
-                var seatGap = metadata.seat_spacing || 4; // Gap between seats
-                var rowGap = metadata.row_spacing || 8; // Gap between rows
-                var stepX = seatW + seatGap; // Total horizontal step
-                var stepY = seatH + bottomH + rowGap; // Total vertical step
-                var padding = 10;
-                var startY = section.y + padding;
-
-                section.rows.forEach(function(row, rowIndex) {
-                    if (row.seats) {
-                        var startX = section.x + padding;
-
-                        row.seats.forEach(function(seat, seatIndex) {
-                            // Calculate positions: seat width + gap
-                            var seatX = startX + seatIndex * stepX;
-                            var seatY = startY + rowIndex * stepY;
-
-                            var isSelected = self.isSeatSelected(ticketTypeId, seat.id);
-                            var status = seat.status || 'available';
-
-                            // Determine seat color and interactivity
-                            var seatColor, cursor, isClickable;
-
-                            // Check for disabled (imposibil) seats first
-                            var isDisabled = (status === 'disabled' || seat.base_status === 'imposibil');
-
-                            if (isDisabled) {
-                                seatColor = '#6B7280'; // Gray for imposibil seats
-                                cursor = 'not-allowed';
-                                isClickable = false;
-                            } else if (!isAllowed) {
-                                seatColor = '#E5E7EB'; // Light gray
-                                cursor = 'not-allowed';
-                                isClickable = false;
-                            } else if (isSelected) {
-                                seatColor = '#a51c30'; // Selected - red
-                                cursor = 'pointer';
-                                isClickable = true;
-                            } else if (status === 'available') {
-                                seatColor = '#22C55E'; // Available - green
-                                cursor = 'pointer';
-                                isClickable = true;
-                            } else if (status === 'sold' || status === 'held') {
-                                seatColor = '#9CA3AF'; // Occupied - darker gray
-                                cursor = 'not-allowed';
-                                isClickable = false;
-                            } else {
-                                seatColor = '#E5E7EB'; // Other disabled/blocked - light gray
-                                cursor = 'not-allowed';
-                                isClickable = false;
-                            }
-
-                            var clickHandler = isClickable ?
-                                'onclick="EventPage.toggleSeat(\'' + ticketTypeId + '\', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\', \'' + (seat.seat_uid || '') + '\')"' : '';
-
-                            var strokeColor = isSelected ? '#7a141f' : (isAllowed && status === 'available' ? '#16A34A' : '#D1D5DB');
-
-                            // Tooltip text
-                            var tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
-                            if (isDisabled) {
-                                tooltipText += ' (indisponibil permanent)';
-                            } else if (!isAllowed) {
-                                tooltipText += ' (indisponibil pentru acest bilet)';
-                            } else if (status === 'sold') {
-                                tooltipText += ' (vândut)';
-                            } else if (status === 'held') {
-                                tooltipText += ' (rezervat)';
-                            }
-
-                            // SVG path for seat with rounded top corners only
-                            var seatPath = 'M' + seatX + ',' + (seatY + seatH) +
-                                ' L' + seatX + ',' + (seatY + cornerR) +
-                                ' A' + cornerR + ',' + cornerR + ' 0 0 1 ' + (seatX + cornerR) + ',' + seatY +
-                                ' L' + (seatX + seatW - cornerR) + ',' + seatY +
-                                ' A' + cornerR + ',' + cornerR + ' 0 0 1 ' + (seatX + seatW) + ',' + (seatY + cornerR) +
-                                ' L' + (seatX + seatW) + ',' + (seatY + seatH) +
-                                ' Z';
-
-                            // 3D bottom effect - small rect below main seat
-                            var bottomX = seatX + 2;
-                            var bottomY = seatY + seatH;
-                            var bottomW = seatW - 4;
-
-                            svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + '; transform-origin: ' + (seatX + seatW/2) + 'px ' + (seatY + seatH/2) + 'px;">' +
-                                '<title>' + tooltipText + '</title>' +
-                                '<rect x="' + bottomX + '" y="' + bottomY + '" width="' + bottomW + '" height="' + bottomH + '" rx="2" fill="' + seatColor + '" style="filter: brightness(0.7);"/>' +
-                                '<path d="' + seatPath + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="1"/>';
-
-                            // Add X marker for disabled (imposibil) seats
-                            if (isDisabled) {
-                                var xPadding = 4;
-                                var x1 = seatX + xPadding;
-                                var y1 = seatY + xPadding;
-                                var x2 = seatX + seatW - xPadding;
-                                var y2 = seatY + seatH - xPadding;
-                                svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#374151" stroke-width="2" stroke-linecap="round"/>' +
-                                       '<line x1="' + x2 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y2 + '" stroke="#374151" stroke-width="2" stroke-linecap="round"/>';
-                            }
-
-                            svg += '</g>';
-                        });
+                    // Row label near first seat
+                    var firstSeat = row.seats[0];
+                    if (firstSeat) {
+                        var rlX = section.x + firstSeat.x - 14;
+                        var rlY = section.y + firstSeat.y;
+                        svg += '<text x="' + rlX + '" y="' + (rlY + 3) + '" text-anchor="end" font-size="9" font-weight="500" fill="rgba(0,0,0,0.6)" class="pointer-events-none select-none">' + row.label + '</text>';
                     }
+
+                    row.seats.forEach(function(seat) {
+                        var seatCX = section.x + seat.x;
+                        var seatCY = section.y + seat.y;
+
+                        var isSelected = self.isSeatSelected(ticketTypeId, seat.id);
+                        var status = seat.status || 'available';
+                        var isDisabled = (status === 'disabled' || seat.base_status === 'imposibil');
+
+                        var seatColor, strokeColor, cursor, isClickable;
+
+                        if (isDisabled) {
+                            seatColor = '#D1D5DB';
+                            strokeColor = '#9CA3AF';
+                            cursor = 'not-allowed';
+                            isClickable = false;
+                        } else if (!isAllowed) {
+                            seatColor = '#E5E7EB';
+                            strokeColor = '#D1D5DB';
+                            cursor = 'not-allowed';
+                            isClickable = false;
+                        } else if (isSelected) {
+                            seatColor = '#a51c30';
+                            strokeColor = '#7a141f';
+                            cursor = 'pointer';
+                            isClickable = true;
+                        } else if (status === 'available') {
+                            seatColor = '#22C55E';
+                            strokeColor = '#fff';
+                            cursor = 'pointer';
+                            isClickable = true;
+                        } else if (status === 'sold' || status === 'held') {
+                            seatColor = '#9CA3AF';
+                            strokeColor = '#6B7280';
+                            cursor = 'not-allowed';
+                            isClickable = false;
+                        } else {
+                            seatColor = '#E5E7EB';
+                            strokeColor = '#D1D5DB';
+                            cursor = 'not-allowed';
+                            isClickable = false;
+                        }
+
+                        var clickHandler = isClickable ?
+                            'onclick="EventPage.toggleSeat(\'' + ticketTypeId + '\', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\', \'' + (seat.seat_uid || '') + '\')"' : '';
+
+                        var tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
+                        if (isDisabled) tooltipText += ' — indisponibil';
+                        else if (!isAllowed) tooltipText += ' — indisponibil pentru acest bilet';
+                        else if (status === 'sold') tooltipText += ' — vândut';
+                        else if (status === 'held') tooltipText += ' — rezervat';
+
+                        svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + ';">' +
+                            '<title>' + tooltipText + '</title>' +
+                            '<circle cx="' + seatCX + '" cy="' + seatCY + '" r="6" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="0.5"/>';
+
+                        if (!isDisabled) {
+                            svg += '<text x="' + seatCX + '" y="' + (seatCY + 2.5) + '" text-anchor="middle" font-size="5.5" font-weight="600" fill="white" class="pointer-events-none select-none">' + seat.label + '</text>';
+                        }
+
+                        if (isDisabled) {
+                            svg += '<line x1="' + (seatCX - 3) + '" y1="' + (seatCY - 3) + '" x2="' + (seatCX + 3) + '" y2="' + (seatCY + 3) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/>' +
+                                   '<line x1="' + (seatCX + 3) + '" y1="' + (seatCY - 3) + '" x2="' + (seatCX - 3) + '" y2="' + (seatCY + 3) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/>';
+                        }
+
+                        svg += '</g>';
+                    });
                 });
             }
 
@@ -2303,7 +2412,8 @@ const EventPage = {
     },
 
     /**
-     * Render seating map showing ALL sections (for multi-ticket-type selection)
+     * Render seating map showing ALL sections using actual seat coordinates
+     * Colors seats based on row-level ticket type assignments
      */
     renderSeatingMapAllSections(assignedSectionIds) {
         var self = this;
@@ -2320,8 +2430,8 @@ const EventPage = {
 
         var svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" class="w-full h-full" style="min-width: ' + canvasW + 'px; min-height: ' + canvasH + 'px;" preserveAspectRatio="xMidYMid meet">';
         svg += '<style>' +
-            '.seat-hover { transition: all 0.2s ease; }' +
-            '.seat-hover:hover { transform: scale(1.15); filter: brightness(1.2); }' +
+            '.seat-hover { transition: all 0.15s ease; }' +
+            '.seat-hover:hover { filter: brightness(1.2); }' +
         '</style>';
 
         // Background image if exists
@@ -2337,15 +2447,14 @@ const EventPage = {
 
         // Render ALL sections
         layout.sections.forEach(function(section) {
-            var isAssigned = assignedSectionIds.includes(section.id);
-            var ticketTypesForSection = self.sectionToTicketTypeMap[section.id] || [];
-
             var rotation = section.rotation || 0;
-            var transform = rotation !== 0 ? ' transform="rotate(' + rotation + ' ' + section.x + ' ' + section.y + ')"' : '';
+            var cx = section.x + section.width / 2;
+            var cy = section.y + section.height / 2;
+            var transform = rotation !== 0 ? ' transform="rotate(' + rotation + ' ' + cx + ' ' + cy + ')"' : '';
 
             svg += '<g' + transform + '>';
 
-            // Handle ICON sections differently
+            // Handle ICON sections (unchanged)
             if (section.section_type === 'icon') {
                 var metadata = section.metadata || {};
                 var iconSize = metadata.icon_size || 40;
@@ -2354,15 +2463,12 @@ const EventPage = {
                 var iconX = section.x;
                 var iconY = section.y;
 
-                // Icon background circle
                 var radius = iconSize / 2;
                 svg += '<circle cx="' + (iconX + radius) + '" cy="' + (iconY + radius) + '" r="' + radius + '" fill="' + bgColor + '"/>';
 
-                // Render the SVG icon if available
                 if (section.icon_svg) {
                     var innerSize = iconSize * 0.6;
                     var iconOffset = (iconSize - innerSize) / 2;
-
                     var iconSvgContent = section.icon_svg;
                     if (iconSvgContent.indexOf('<svg') !== -1) {
                         var viewBoxMatch = iconSvgContent.match(/viewBox="([^"]+)"/);
@@ -2383,145 +2489,124 @@ const EventPage = {
                     }
                 }
 
-                // Icon label below
                 var labelY = iconY + iconSize + 12;
                 var labelX = iconX + (iconSize / 2);
                 svg += '<text x="' + labelX + '" y="' + labelY + '" text-anchor="middle" font-size="10" font-weight="500" fill="#1F2937" style="text-shadow: 0 0 3px white, 0 0 3px white;">' + (section.icon_label || section.name) + '</text>';
 
-                svg += '</g>'; // Close section group
-                return; // Skip rest of section rendering for icons
+                svg += '</g>';
+                return;
             }
 
-            // Section name
+            // Section name label
             var textY = section.y - 5;
             var textX = section.x + (section.width / 2);
-            var textColor = isAssigned ? '#1F2937' : '#9CA3AF';
-            svg += '<text x="' + textX + '" y="' + textY + '" text-anchor="middle" font-size="11" font-weight="600" fill="' + textColor + '" style="text-shadow: 0 0 3px white, 0 0 3px white;">' + section.name + '</text>';
+            svg += '<text x="' + textX + '" y="' + textY + '" text-anchor="middle" font-size="11" font-weight="600" fill="rgba(0,0,0,0.5)" style="text-shadow: 0 0 3px white, 0 0 3px white;">' + section.name + '</text>';
 
-            // Render seats
+            // Render seats using actual x/y coordinates from the layout
             if (section.rows) {
-                // Get seat size from metadata, with aspect ratio 0.83 (width/height)
-                var metadata = section.metadata || {};
-                var seatSize = metadata.seat_size || 20; // Base size from admin
-                var seatH = seatSize;
-                var seatW = Math.round(seatH * 0.83); // Aspect ratio 0.83
-                var cornerR = Math.max(2, Math.round(seatW * 0.17)); // Proportional corner radius
-                var bottomH = Math.max(2, Math.round(seatH * 0.2)); // 3D bottom effect height proportional
+                section.rows.forEach(function(row) {
+                    if (!row.seats || row.seats.length === 0) return;
 
-                // Use metadata values as GAP between seats/rows
-                var seatGap = metadata.seat_spacing || 4; // Gap between seats
-                var rowGap = metadata.row_spacing || 8; // Gap between rows
-                var stepX = seatW + seatGap; // Total horizontal step
-                var stepY = seatH + bottomH + rowGap; // Total vertical step
-                var padding = 10;
-                var startY = section.y + padding;
+                    // Row-based ticket type lookup
+                    var ticketTypesForRow = self.rowToTicketTypeMap[row.id] || [];
+                    var isRowAssigned = ticketTypesForRow.length > 0;
 
-                // Determine available seat color from ticket type's seat_color
-                var availableSeatColor = '#22C55E'; // default green
-                if (ticketTypesForSection.length > 0) {
-                    var ttForColor = ticketTypesForSection[0];
-                    var sectionConfig = ttForColor.seating_sections ? ttForColor.seating_sections.find(function(s) { return s.id === section.id; }) : null;
-                    if (sectionConfig && sectionConfig.seat_color) {
-                        availableSeatColor = sectionConfig.seat_color;
+                    // Seat color from ticket type color
+                    var availableSeatColor = '#22C55E';
+                    if (ticketTypesForRow.length > 0) {
+                        availableSeatColor = ticketTypesForRow[0].color || '#22C55E';
                     }
-                }
 
-                section.rows.forEach(function(row, rowIndex) {
-                    if (row.seats) {
-                        var startX = section.x + padding;
-
-                        row.seats.forEach(function(seat, seatIndex) {
-                            // Calculate positions: seat width + gap
-                            var seatX = startX + seatIndex * stepX;
-                            var seatY = startY + rowIndex * stepY;
-
-                            var isSelected = self.isSeatSelectedAny(seat.id);
-                            var status = seat.status || 'available';
-
-                            var seatColor, cursor, isClickable;
-
-                            // Check for disabled (imposibil) seats first
-                            var isDisabled = (status === 'disabled' || seat.base_status === 'imposibil');
-
-                            if (isDisabled) {
-                                seatColor = '#6B7280'; // Gray for imposibil seats
-                                cursor = 'not-allowed';
-                                isClickable = false;
-                            } else if (!isAssigned) {
-                                seatColor = '#E5E7EB';
-                                cursor = 'not-allowed';
-                                isClickable = false;
-                            } else if (isSelected) {
-                                seatColor = '#a51c30'; // Selected - red
-                                cursor = 'pointer';
-                                isClickable = true;
-                            } else if (status === 'available') {
-                                seatColor = availableSeatColor;
-                                cursor = 'pointer';
-                                isClickable = true;
-                            } else if (status === 'sold' || status === 'held') {
-                                seatColor = '#9CA3AF';
-                                cursor = 'not-allowed';
-                                isClickable = false;
-                            } else {
-                                seatColor = '#E5E7EB';
-                                cursor = 'not-allowed';
-                                isClickable = false;
-                            }
-
-                            // Click handler passes section ID to auto-detect ticket type
-                            var clickHandler = isClickable ?
-                                'onclick="EventPage.toggleSeatAuto(' + section.id + ', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\', \'' + (seat.seat_uid || '') + '\')"' : '';
-
-                            var strokeColor = isSelected ? '#7a141f' : (isAssigned && status === 'available' ? '#16A34A' : '#D1D5DB');
-
-                            var tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
-                            if (ticketTypesForSection.length > 0) {
-                                tooltipText += ' (' + ticketTypesForSection[0].name + ')';
-                            }
-                            if (isDisabled) {
-                                tooltipText += ' (indisponibil permanent)';
-                            } else if (!isAssigned) {
-                                tooltipText += ' (indisponibil)';
-                            } else if (status === 'sold') {
-                                tooltipText += ' (vândut)';
-                            } else if (status === 'held') {
-                                tooltipText += ' (rezervat)';
-                            }
-
-                            // SVG path for seat with rounded top corners only
-                            var seatPath = 'M' + seatX + ',' + (seatY + seatH) +
-                                ' L' + seatX + ',' + (seatY + cornerR) +
-                                ' A' + cornerR + ',' + cornerR + ' 0 0 1 ' + (seatX + cornerR) + ',' + seatY +
-                                ' L' + (seatX + seatW - cornerR) + ',' + seatY +
-                                ' A' + cornerR + ',' + cornerR + ' 0 0 1 ' + (seatX + seatW) + ',' + (seatY + cornerR) +
-                                ' L' + (seatX + seatW) + ',' + (seatY + seatH) +
-                                ' Z';
-
-                            // 3D bottom effect - small rect below main seat
-                            var bottomX = seatX + 2;
-                            var bottomY = seatY + seatH;
-                            var bottomW = seatW - 4;
-
-                            svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + '; transform-origin: ' + (seatX + seatW/2) + 'px ' + (seatY + seatH/2) + 'px;">' +
-                                '<title>' + tooltipText + '</title>' +
-                                '<rect x="' + bottomX + '" y="' + bottomY + '" width="' + bottomW + '" height="' + bottomH + '" rx="2" fill="' + seatColor + '" style="filter: brightness(0.7);"/>' +
-                                '<path d="' + seatPath + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="1"/>';
-
-                            // Add X marker for disabled (imposibil) seats
-                            if (isDisabled) {
-                                var xPadding = 4;
-                                var x1 = seatX + xPadding;
-                                var y1 = seatY + xPadding;
-                                var x2 = seatX + seatW - xPadding;
-                                var y2 = seatY + seatH - xPadding;
-                                svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#374151" stroke-width="2" stroke-linecap="round"/>' +
-                                       '<line x1="' + x2 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y2 + '" stroke="#374151" stroke-width="2" stroke-linecap="round"/>';
-                            }
-
-                            svg += '</g>';
-                        });
+                    // Row label near first seat
+                    var firstSeat = row.seats[0];
+                    if (firstSeat) {
+                        var rlX = section.x + firstSeat.x - 14;
+                        var rlY = section.y + firstSeat.y;
+                        svg += '<text x="' + rlX + '" y="' + (rlY + 3) + '" text-anchor="end" font-size="9" font-weight="500" fill="rgba(0,0,0,0.6)" class="pointer-events-none select-none">' + row.label + '</text>';
                     }
+
+                    row.seats.forEach(function(seat) {
+                        // Use actual x/y positions from layout data
+                        var seatCX = section.x + seat.x;
+                        var seatCY = section.y + seat.y;
+
+                        var isSelected = self.isSeatSelectedAny(seat.id);
+                        var status = seat.status || 'available';
+                        var isDisabled = (status === 'disabled' || seat.base_status === 'imposibil');
+
+                        var seatColor, strokeColor, cursor, isClickable;
+
+                        if (isDisabled) {
+                            seatColor = '#D1D5DB';
+                            strokeColor = '#9CA3AF';
+                            cursor = 'not-allowed';
+                            isClickable = false;
+                        } else if (!isRowAssigned) {
+                            seatColor = '#E5E7EB';
+                            strokeColor = '#D1D5DB';
+                            cursor = 'not-allowed';
+                            isClickable = false;
+                        } else if (isSelected) {
+                            seatColor = '#a51c30';
+                            strokeColor = '#7a141f';
+                            cursor = 'pointer';
+                            isClickable = true;
+                        } else if (status === 'available') {
+                            seatColor = availableSeatColor;
+                            strokeColor = '#fff';
+                            cursor = 'pointer';
+                            isClickable = true;
+                        } else if (status === 'sold' || status === 'held') {
+                            seatColor = '#9CA3AF';
+                            strokeColor = '#6B7280';
+                            cursor = 'not-allowed';
+                            isClickable = false;
+                        } else {
+                            seatColor = '#E5E7EB';
+                            strokeColor = '#D1D5DB';
+                            cursor = 'not-allowed';
+                            isClickable = false;
+                        }
+
+                        // Click handler passes row ID for row-based ticket type detection
+                        var clickHandler = isClickable ?
+                            'onclick="EventPage.toggleSeatAuto(' + row.id + ', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\', \'' + (seat.seat_uid || '') + '\')"' : '';
+
+                        // Tooltip with all ticket types for this row
+                        var tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
+                        if (ticketTypesForRow.length === 1) {
+                            tooltipText += ' (' + ticketTypesForRow[0].name + ')';
+                        } else if (ticketTypesForRow.length > 1) {
+                            tooltipText += ' (' + ticketTypesForRow.map(function(t) { return t.name; }).join(' / ') + ')';
+                        }
+                        if (isDisabled) {
+                            tooltipText += ' — indisponibil';
+                        } else if (!isRowAssigned) {
+                            tooltipText += ' — indisponibil';
+                        } else if (status === 'sold') {
+                            tooltipText += ' — vândut';
+                        } else if (status === 'held') {
+                            tooltipText += ' — rezervat';
+                        }
+
+                        // Render seat as circle at actual position (matching admin layout)
+                        svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + ';">' +
+                            '<title>' + tooltipText + '</title>' +
+                            '<circle cx="' + seatCX + '" cy="' + seatCY + '" r="6" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="0.5"/>';
+
+                        // Seat label inside circle
+                        if (!isDisabled) {
+                            svg += '<text x="' + seatCX + '" y="' + (seatCY + 2.5) + '" text-anchor="middle" font-size="5.5" font-weight="600" fill="white" class="pointer-events-none select-none">' + seat.label + '</text>';
+                        }
+
+                        // X marker for disabled (imposibil) seats
+                        if (isDisabled) {
+                            svg += '<line x1="' + (seatCX - 3) + '" y1="' + (seatCY - 3) + '" x2="' + (seatCX + 3) + '" y2="' + (seatCY + 3) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/>' +
+                                   '<line x1="' + (seatCX + 3) + '" y1="' + (seatCY - 3) + '" x2="' + (seatCX - 3) + '" y2="' + (seatCY + 3) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/>';
+                        }
+
+                        svg += '</g>';
+                    });
                 });
             }
 
@@ -2553,57 +2638,137 @@ const EventPage = {
     },
 
     /**
-     * Find which ticket type a seat belongs to (based on section)
+     * Find ticket types for a row (row-based assignment)
      */
-    findTicketTypeForSection(sectionId) {
-        var ticketTypes = this.sectionToTicketTypeMap[sectionId] || [];
-        // Return the first matching ticket type (could be multiple, pick first)
-        return ticketTypes.length > 0 ? ticketTypes[0] : null;
+    findTicketTypesForRow(rowId) {
+        return this.rowToTicketTypeMap[rowId] || [];
     },
 
     /**
-     * Toggle seat selection - auto-detects ticket type from section
+     * Toggle seat selection - auto-detects ticket type from row
+     * If row has multiple ticket types, shows a chooser popup
      */
-    toggleSeatAuto(sectionId, seatId, sectionName, rowLabel, seatLabel, seatUid) {
-        var tt = this.findTicketTypeForSection(sectionId);
+    toggleSeatAuto(rowId, seatId, sectionName, rowLabel, seatLabel, seatUid) {
+        var self = this;
 
-        if (!tt) {
-            console.warn('[EventPage] No ticket type found for section:', sectionId);
+        // First check if seat is already selected in any ticket type — if so, deselect
+        var existingTtId = null;
+        Object.keys(this.selectedSeats).forEach(function(ttId) {
+            var seats = self.selectedSeats[ttId] || [];
+            if (seats.some(function(s) { return s.id === seatId; })) {
+                existingTtId = ttId;
+            }
+        });
+
+        if (existingTtId) {
+            var idx = this.selectedSeats[existingTtId].findIndex(function(s) { return s.id === seatId; });
+            if (idx >= 0) {
+                this.selectedSeats[existingTtId].splice(idx, 1);
+                this.quantities[existingTtId] = this.selectedSeats[existingTtId].length;
+            }
+            this.refreshSeatingMap();
             return;
         }
 
+        // Find ticket types for this row
+        var ticketTypes = this.findTicketTypesForRow(rowId);
+
+        if (!ticketTypes || ticketTypes.length === 0) {
+            console.warn('[EventPage] No ticket type found for row:', rowId);
+            return;
+        }
+
+        if (ticketTypes.length === 1) {
+            // Single ticket type — select directly
+            this.selectSeatForTicketType(ticketTypes[0], seatId, sectionName, rowLabel, seatLabel, seatUid);
+        } else {
+            // Multiple ticket types — show chooser
+            this.showTicketTypeChooser(ticketTypes, seatId, sectionName, rowLabel, seatLabel, seatUid);
+        }
+    },
+
+    /**
+     * Select a seat for a specific ticket type
+     */
+    selectSeatForTicketType(tt, seatId, sectionName, rowLabel, seatLabel, seatUid) {
         var ticketTypeId = String(tt.id);
 
         if (!this.selectedSeats[ticketTypeId]) {
             this.selectedSeats[ticketTypeId] = [];
         }
 
-        var existingIndex = this.selectedSeats[ticketTypeId].findIndex(function(s) { return s.id === seatId; });
+        this.selectedSeats[ticketTypeId].push({
+            id: seatId,
+            seat_uid: seatUid,
+            section: sectionName,
+            row: rowLabel,
+            seat: seatLabel
+        });
 
-        if (existingIndex >= 0) {
-            // Deselect
-            this.selectedSeats[ticketTypeId].splice(existingIndex, 1);
-        } else {
-            // Select
-            this.selectedSeats[ticketTypeId].push({
-                id: seatId,
-                seat_uid: seatUid, // Include seat_uid for API calls
-                section: sectionName,
-                row: rowLabel,
-                seat: seatLabel
-            });
-        }
-
-        // Update quantities
         this.quantities[ticketTypeId] = this.selectedSeats[ticketTypeId].length;
+        console.log('[EventPage] Selected seat for', tt.name, ':', this.selectedSeats[ticketTypeId]);
+        this.refreshSeatingMap();
+    },
 
-        console.log('[EventPage] Selected seats for', tt.name, ':', this.selectedSeats[ticketTypeId]);
+    /**
+     * Show popup for choosing ticket type when a row has multiple types
+     */
+    showTicketTypeChooser(ticketTypes, seatId, sectionName, rowLabel, seatLabel, seatUid) {
+        var existing = document.getElementById('tt-chooser-popup');
+        if (existing) existing.remove();
 
-        // Re-render map and panels
+        var popup = document.createElement('div');
+        popup.id = 'tt-chooser-popup';
+        popup.className = 'fixed inset-0 z-[9999] flex items-center justify-center';
+        popup.style.background = 'rgba(0,0,0,0.4)';
+
+        var html = '<div class="bg-white rounded-xl shadow-2xl p-5 max-w-xs w-full mx-4">';
+        html += '<div class="text-sm font-semibold text-gray-700 mb-1">Alege tipul de bilet</div>';
+        html += '<div class="text-xs text-gray-500 mb-3">' + sectionName + ', Rând ' + rowLabel + ', Loc ' + seatLabel + '</div>';
+
+        ticketTypes.forEach(function(tt) {
+            var color = tt.color || '#22C55E';
+            var sn = sectionName.replace(/'/g, "\\'");
+            html += '<button onclick="EventPage.chooserSelect(' + tt.id + ', ' + seatId + ', \'' + sn + '\', \'' + rowLabel + '\', \'' + seatLabel + '\', \'' + (seatUid || '') + '\')" ' +
+                'class="w-full text-left px-3 py-2.5 mb-1.5 rounded-lg border border-gray-200 hover:border-gray-400 hover:bg-gray-50 flex items-center gap-3 transition-colors">' +
+                '<span class="w-4 h-4 rounded-full flex-shrink-0" style="background:' + color + '"></span>' +
+                '<span class="text-sm font-medium text-gray-800">' + tt.name + '</span>' +
+                '<span class="text-xs text-gray-500 ml-auto">' + tt.price.toFixed(2) + ' lei</span>' +
+                '</button>';
+        });
+
+        html += '<button onclick="document.getElementById(\'tt-chooser-popup\').remove()" class="w-full text-center text-xs text-gray-400 mt-2 py-1 hover:text-gray-600 transition-colors">Anulează</button>';
+        html += '</div>';
+
+        popup.innerHTML = html;
+        popup.addEventListener('click', function(e) {
+            if (e.target === popup) popup.remove();
+        });
+        document.body.appendChild(popup);
+    },
+
+    /**
+     * Handle ticket type selection from chooser popup
+     */
+    chooserSelect(ticketTypeId, seatId, sectionName, rowLabel, seatLabel, seatUid) {
+        var popup = document.getElementById('tt-chooser-popup');
+        if (popup) popup.remove();
+
+        var tt = this.ticketTypes.find(function(t) { return t.id === ticketTypeId; });
+        if (tt) {
+            this.selectSeatForTicketType(tt, seatId, sectionName, rowLabel, seatLabel, seatUid);
+        }
+    },
+
+    /**
+     * Refresh seating map and all related panels
+     */
+    refreshSeatingMap() {
         var allAssignedSectionIds = Object.keys(this.sectionToTicketTypeMap).map(function(id) { return parseInt(id); });
         this.renderSeatingMapAllSections(allAssignedSectionIds);
         this.renderSelectedTicketsPanel();
         this.renderModalTicketTypes(this.currentTicketTypeId);
+        this.updateSeatSelectionSummary();
     },
 
     /**

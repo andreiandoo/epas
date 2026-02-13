@@ -1444,6 +1444,7 @@ class EventResource extends Resource
                                                     ->collapsible()
                                                     ->collapsed()
                                                     ->columns(12)
+                                                    ->columnSpan(12)
                                                     ->schema([
                                                         Forms\Components\Select::make('rule_type')
                                                             ->label($t('Tip regulă', 'Rule type'))
