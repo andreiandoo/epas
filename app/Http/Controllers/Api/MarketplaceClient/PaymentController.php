@@ -377,17 +377,51 @@ class PaymentController extends BaseController
                                 return;
                             }
 
-                            // Build and render the notification email
+                            // Build email content — avoid render() which depends on notification views
                             $notification = new MarketplaceOrderNotification($order, 'confirmed');
                             $mailMessage = $notification->toMail($order);
-                            $html = $mailMessage->render();
-                            $subject = $mailMessage->subject;
+                            $subject = $mailMessage->subject ?? "Order Confirmed - {$order->order_number}";
 
-                            Log::channel('marketplace')->info('Email rendered', [
-                                'order_id' => $orderId,
-                                'subject' => $subject,
-                                'html_length' => strlen((string) $html),
-                            ]);
+                            // Try render() first, fall back to manual HTML
+                            $html = null;
+                            try {
+                                $html = (string) $mailMessage->render();
+                                Log::channel('marketplace')->info('Email rendered via MailMessage::render()', [
+                                    'order_id' => $orderId,
+                                    'html_length' => strlen($html),
+                                ]);
+                            } catch (\Throwable $renderError) {
+                                Log::channel('marketplace')->warning('MailMessage::render() failed, building HTML manually', [
+                                    'order_id' => $orderId,
+                                    'error' => $renderError->getMessage(),
+                                ]);
+                            }
+
+                            // Manual HTML fallback
+                            if (!$html) {
+                                $greeting = $mailMessage->greeting ?? 'Hello!';
+                                $lines = array_merge($mailMessage->introLines ?? [], $mailMessage->outroLines ?? []);
+                                $actionText = $mailMessage->actionText ?? null;
+                                $actionUrl = $mailMessage->actionUrl ?? null;
+
+                                $bodyHtml = "<h2 style=\"color:#1a1a2e;margin-bottom:16px\">{$greeting}</h2>";
+                                foreach ($lines as $line) {
+                                    $bodyHtml .= "<p style=\"color:#333;line-height:1.6;margin:8px 0\">{$line}</p>";
+                                }
+                                if ($actionText && $actionUrl) {
+                                    $bodyHtml .= "<p style=\"margin:24px 0;text-align:center\"><a href=\"{$actionUrl}\" style=\"display:inline-block;padding:12px 24px;background:#A51C30;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold\">{$actionText}</a></p>";
+                                }
+
+                                $html = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc\">"
+                                    . "<div style=\"background:#fff;border-radius:8px;padding:32px;border:1px solid #e2e8f0\">{$bodyHtml}</div>"
+                                    . "<p style=\"text-align:center;color:#94a3b8;font-size:12px;margin-top:16px\">{$marketplace->name}</p>"
+                                    . "</body></html>";
+
+                                Log::channel('marketplace')->info('Email built with manual HTML', [
+                                    'order_id' => $orderId,
+                                    'html_length' => strlen($html),
+                                ]);
+                            }
 
                             // Try marketplace-specific transport first
                             $sent = false;
@@ -408,7 +442,7 @@ class PaymentController extends BaseController
                                             ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
                                             ->to($customerEmail)
                                             ->subject($subject)
-                                            ->html((string) $html);
+                                            ->html($html);
 
                                         $transport->send($email);
                                         $sent = true;
@@ -442,9 +476,13 @@ class PaymentController extends BaseController
                                     'order_id' => $orderId,
                                 ]);
 
-                                \Illuminate\Support\Facades\Mail::html((string) $html, function ($message) use ($customerEmail, $subject) {
+                                \Illuminate\Support\Facades\Mail::html($html, function ($message) use ($customerEmail, $subject, $marketplace) {
                                     $message->to($customerEmail)
-                                            ->subject($subject);
+                                            ->subject($subject)
+                                            ->from(
+                                                $marketplace->getEmailFromAddress(),
+                                                $marketplace->getEmailFromName()
+                                            );
                                 });
 
                                 Log::channel('marketplace')->info('Order confirmation email sent via Laravel default mailer', [
