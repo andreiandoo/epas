@@ -539,9 +539,9 @@ const AmbiletAPI = {
             return `document_id=${encodeURIComponent(organizerDocumentViewMatch[1])}`;
         }
 
-        // Cart item management - extract item key
+        // Cart item management - extract item key (but NOT /cart/items/with-seats)
         const cartItemMatch = endpoint.match(/\/cart\/items\/([^/?]+)$/);
-        if (cartItemMatch) {
+        if (cartItemMatch && cartItemMatch[1] !== 'with-seats') {
             return `item_key=${encodeURIComponent(cartItemMatch[1])}`;
         }
 
