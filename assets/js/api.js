@@ -84,9 +84,9 @@ const AmbiletAPI = {
         if (endpoint === '/customer/verify-email') return 'customer.verify-email';
         if (endpoint === '/customer/resend-verification') return 'customer.resend-verification';
 
-        // Customer orders
-        if (endpoint.match(/\/customer\/orders\/\d+$/)) return 'customer.order';
-        if (endpoint.includes('/customer/orders')) return 'customer.orders';
+        // Customer orders (order ID can be numeric or alphanumeric like MKT-W08ABJWH)
+        if (endpoint.match(/\/customer\/orders\/[\w-]+$/)) return 'customer.order';
+        if (endpoint === '/customer/orders' || endpoint.includes('/customer/orders?')) return 'customer.orders';
 
         // Customer tickets
         if (endpoint.includes('/customer/tickets/all')) return 'customer.tickets.all';
@@ -329,8 +329,8 @@ const AmbiletAPI = {
      * Extract params from endpoint for proxy
      */
     getProxyParams(endpoint) {
-        // Extract order ID from /customer/orders/{id}
-        const orderMatch = endpoint.match(/\/customer\/orders\/(\d+)/);
+        // Extract order ID from /customer/orders/{id} (numeric or alphanumeric like MKT-W08ABJWH)
+        const orderMatch = endpoint.match(/\/customer\/orders\/([\w-]+)$/);
         if (orderMatch) {
             return `id=${encodeURIComponent(orderMatch[1])}`;
         }

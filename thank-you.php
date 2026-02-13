@@ -390,12 +390,14 @@ const ThankYouPage = {
             const eventTitle = event.name || event.title || 'Eveniment';
             const eventDate = event.date ? AmbiletUtils.formatDate(event.date) : '';
             const eventTime = event.doors_open || (event.date ? new Date(event.date).toLocaleTimeString('ro-RO', {hour: '2-digit', minute: '2-digit'}) : '');
+            // Venue may be string or translatable object {en: "...", ro: "..."}
+            const venue = (typeof event.venue === 'object' && event.venue !== null) ? (event.venue.ro || event.venue.en || Object.values(event.venue)[0] || '') : (event.venue || '');
             eventInfo.innerHTML = `
                 <img src="${getStorageUrl(event.image)}" alt="${eventTitle}" class="w-20 h-20 rounded-xl object-cover" loading="lazy" onerror="this.style.display='none'">
                 <div>
                     <h3 class="font-bold text-secondary">${eventTitle}</h3>
                     <p class="text-sm text-muted mt-1">${eventDate}${eventTime ? ' • ' + eventTime : ''}</p>
-                    <p class="text-sm text-muted">${event.venue || ''}${event.city ? ', ' + event.city : ''}</p>
+                    <p class="text-sm text-muted">${venue}${event.city ? ', ' + event.city : ''}</p>
                 </div>
             `;
         }
@@ -517,6 +519,7 @@ const ThankYouPage = {
         const eventTitle = event?.name || event?.title || 'Eveniment';
         const eventDate = event?.date ? AmbiletUtils.formatDate(event.date, 'medium') : '';
         const eventTime = event?.doors_open || (event?.date ? new Date(event.date).toLocaleTimeString('ro-RO', {hour: '2-digit', minute: '2-digit'}) : '');
+        const eventVenue = event?.venue ? (typeof event.venue === 'object' ? (event.venue.ro || event.venue.en || Object.values(event.venue)[0] || '') : event.venue) : '';
 
         return `
             <div class="ticket-card" data-index="${idx}">
@@ -549,7 +552,7 @@ const ThankYouPage = {
                         </div>
                         <div>
                             <p class="text-xs text-muted uppercase tracking-wide">Locație</p>
-                            <p class="font-semibold text-secondary">${event?.venue || ''}${event?.city ? ', ' + event.city : ''}</p>
+                            <p class="font-semibold text-secondary">${eventVenue}${event?.city ? ', ' + event.city : ''}</p>
                         </div>
                         <div class="flex justify-between items-center pt-2">
                             <div>
