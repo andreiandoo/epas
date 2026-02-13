@@ -46,10 +46,17 @@ class ExportTaxonomiesCommand extends Command
         $records = $modelClass::with('parent')->get();
 
         foreach ($records as $record) {
+            $name = method_exists($record, 'getTranslation')
+                ? $record->getTranslation('name', 'en')
+                : $record->name;
+            $description = method_exists($record, 'getTranslation')
+                ? $record->getTranslation('description', 'en')
+                : $record->description;
+
             fputcsv($handle, [
-                $record->name,
+                is_string($name) ? $name : '',
                 $record->slug,
-                $record->description ?? '',
+                is_string($description) ? $description : '',
                 $record->parent?->slug ?? '',
             ]);
         }
