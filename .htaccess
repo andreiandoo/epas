@@ -306,6 +306,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^multumim/?$ thank-you.php [L]
 
+# /thank-you -> thank-you.php (for payment processor redirects)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^thank-you/?$ thank-you.php [L]
+
 # /email-confirmat -> email-confirmed.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
