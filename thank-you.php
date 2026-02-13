@@ -188,8 +188,8 @@ require_once __DIR__ . '/includes/header.php';
                     <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 </div>
                 <div class="text-left">
-                    <p class="font-semibold text-secondary">Descarcă biletele</p>
-                    <p class="text-sm text-muted">Format PDF</p>
+                    <p class="font-semibold text-secondary">Printează biletele</p>
+                    <p class="text-sm text-muted">Printează sau salvează ca PDF</p>
                 </div>
             </a>
             <a href="#" id="calendarBtn" class="flex items-center justify-center gap-3 p-4 bg-white rounded-2xl border border-border hover:border-primary hover:shadow-lg transition-all">
@@ -497,6 +497,111 @@ const ThankYouPage = {
         if (pointsEl) {
             pointsEl.style.display = 'none';
         }
+
+        // Wire up download button
+        const downloadBtn = document.getElementById('downloadBtn');
+        if (downloadBtn && order.can_download_tickets) {
+            downloadBtn.href = '#';
+            downloadBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.downloadTickets();
+            });
+        }
+
+        // Wire up calendar button
+        const calendarBtn = document.getElementById('calendarBtn');
+        if (calendarBtn && order.event) {
+            calendarBtn.href = '#';
+            calendarBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.addToCalendar();
+            });
+        }
+    },
+
+    downloadTickets() {
+        const order = this.order;
+        if (!order || !order.tickets) return;
+
+        const event = order.event;
+        const eventTitle = event?.name || event?.title || 'Eveniment';
+        const eventDate = event?.date ? AmbiletUtils.formatDate(event.date) : '';
+        const venue = typeof event?.venue === 'object' ? (event.venue?.ro || event.venue?.en || '') : (event?.venue || '');
+        const siteName = window.AMBILET?.siteName || 'bilete.online';
+
+        const ticketsHtml = order.tickets.map((ticket, idx) => {
+            const seatInfo = ticket.seat ? [
+                ticket.seat.section_name,
+                ticket.seat.row_label ? 'Rând ' + ticket.seat.row_label : '',
+                ticket.seat.seat_number ? 'Loc ' + ticket.seat.seat_number : ''
+            ].filter(Boolean).join(' | ') : '';
+
+            return `
+                <div style="page-break-inside: avoid; border: 2px solid #1E293B; border-radius: 12px; padding: 24px; margin-bottom: 24px; max-width: 500px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px dashed #E2E8F0;">
+                        <div>
+                            <div style="font-size: 11px; color: #64748B; text-transform: uppercase;">${siteName}</div>
+                            <div style="font-size: 18px; font-weight: 700;">${ticket.type || 'Bilet'}</div>
+                        </div>
+                        <div style="text-align: right; font-size: 12px; color: #64748B;">${idx + 1} / ${order.tickets.length}</div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 11px; color: #64748B;">EVENIMENT</div>
+                        <div style="font-size: 16px; font-weight: 600;">${eventTitle}</div>
+                    </div>
+                    <div style="display: flex; gap: 24px; margin-bottom: 12px;">
+                        <div><div style="font-size: 11px; color: #64748B;">DATA</div><div style="font-weight: 600;">${eventDate}</div></div>
+                        <div><div style="font-size: 11px; color: #64748B;">LOCAȚIE</div><div style="font-weight: 600;">${venue}${event?.city ? ', ' + event.city : ''}</div></div>
+                    </div>
+                    ${seatInfo ? `<div style="margin-bottom: 12px; padding: 8px 12px; background: #F1F5F9; border-radius: 8px; font-weight: 600;">${seatInfo}</div>` : ''}
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <div><div style="font-size: 11px; color: #64748B;">PARTICIPANT</div><div style="font-weight: 500;">${ticket.attendee_name || order.customer_name || ''}</div></div>
+                        <div style="text-align: right;"><div style="font-size: 11px; color: #64748B;">PREȚ</div><div style="font-weight: 700; color: #A51C30;">${AmbiletUtils.formatCurrency(ticket.price)}</div></div>
+                    </div>
+                    <div style="text-align: center; padding-top: 12px; border-top: 1px solid #E2E8F0;">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ticket.barcode || ticket.code || '')}" style="width: 120px; height: 120px;" />
+                        <div style="font-family: monospace; font-size: 12px; color: #64748B; margin-top: 4px;">${ticket.barcode || ''}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`<!DOCTYPE html><html><head><title>Bilete - ${order.order_number}</title>
+            <style>body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; color: #1E293B; }
+            @media print { body { padding: 0; } }</style></head>
+            <body><div style="max-width: 500px; margin: 0 auto;">${ticketsHtml}</div>
+            <script>setTimeout(() => { window.print(); }, 500);</script></body></html>`);
+        printWindow.document.close();
+    },
+
+    addToCalendar() {
+        const event = this.order?.event;
+        if (!event) return;
+
+        const title = event.name || event.title || 'Eveniment';
+        const venue = typeof event.venue === 'object' ? (event.venue?.ro || event.venue?.en || '') : (event.venue || '');
+        const location = venue + (event.city ? ', ' + event.city : '');
+        const startDate = event.date ? new Date(event.date) : null;
+
+        if (!startDate) {
+            if (typeof AmbiletNotifications !== 'undefined') {
+                AmbiletNotifications.info('Data evenimentului nu este disponibilă.');
+            }
+            return;
+        }
+
+        // Format dates for Google Calendar (YYYYMMDDTHHmmssZ)
+        const formatGCal = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+        const endDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000); // +3 hours default
+
+        const gcalUrl = 'https://www.google.com/calendar/render?action=TEMPLATE'
+            + '&text=' + encodeURIComponent(title)
+            + '&dates=' + formatGCal(startDate) + '/' + formatGCal(endDate)
+            + '&location=' + encodeURIComponent(location)
+            + '&details=' + encodeURIComponent('Bilete achiziționate pe ' + (window.AMBILET?.siteName || 'bilete.online'));
+
+        window.open(gcalUrl, '_blank');
     },
 
     renderTickets(tickets) {
