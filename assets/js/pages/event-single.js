@@ -20,6 +20,24 @@ const EventPage = {
     sectionToTicketTypeMap: {},  // sectionId -> [ticketType, ...]
     rowToTicketTypeMap: {},      // rowId -> [ticketType, ...]
 
+    // Default color palette when ticket type has no color set
+    _colorPalette: ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'],
+
+    /**
+     * Get display color for a ticket type (with fallback to palette)
+     */
+    getTicketTypeColor(tt) {
+        if (tt.color) return tt.color;
+        var idx = this.ticketTypes.indexOf(tt);
+        if (idx < 0) {
+            for (var i = 0; i < this.ticketTypes.length; i++) {
+                if (this.ticketTypes[i].id === tt.id) { idx = i; break; }
+            }
+        }
+        if (idx < 0) idx = 0;
+        return this._colorPalette[idx % this._colorPalette.length];
+    },
+
     /**
      * Calculate commission for a ticket type
      * @param {Object} ticketType - The ticket type object
@@ -1904,6 +1922,7 @@ const EventPage = {
 
         console.log('[EventPage] Opening seat selection modal');
         console.log('[EventPage] Seating layout:', this.seatingLayout);
+        console.log('[EventPage] Ticket type colors:', this.ticketTypes.map(function(tt) { return { id: tt.id, name: tt.name, color: tt.color, resolved: EventPage.getTicketTypeColor(tt) }; }));
 
         // Build section and row to ticket type mappings
         this.sectionToTicketTypeMap = this.buildSectionToTicketTypeMap();
@@ -2121,13 +2140,12 @@ const EventPage = {
         var container = document.getElementById('seat-modal-ticket-types');
         if (!container) return;
 
+        var self = this;
         var html = this.ticketTypes.filter(function(tt) {
             return tt.has_seating && !tt.is_sold_out;
         }).map(function(tt) {
             var isActive = String(tt.id) === String(currentTicketTypeId);
-            var seatColor = tt.seating_sections && tt.seating_sections[0] && tt.seating_sections[0].seat_color
-                ? tt.seating_sections[0].seat_color
-                : '#22C55E';
+            var seatColor = self.getTicketTypeColor(tt);
 
             return '<div class="p-3 rounded-xl border-2 cursor-pointer transition-all ' +
                 (isActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50') + '" ' +
@@ -2246,6 +2264,10 @@ const EventPage = {
             container.innerHTML = '<div class="text-center text-muted">Nu există hartă de locuri disponibilă.</div>';
             return;
         }
+
+        // Get ticket type color for available seats
+        var currentTT = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketTypeId); });
+        var ttColor = currentTT ? this.getTicketTypeColor(currentTT) : '#3B82F6';
 
         // Calculate viewBox
         var canvasW = layout.canvas_width || 1920;
@@ -2388,7 +2410,7 @@ const EventPage = {
                             cursor = 'pointer';
                             isClickable = true;
                         } else if (status === 'available') {
-                            seatColor = '#22C55E';
+                            seatColor = ttColor;
                             strokeColor = '#fff';
                             cursor = 'pointer';
                             isClickable = true;
@@ -2543,15 +2565,12 @@ const EventPage = {
                 section.rows.forEach(function(row) {
                     if (!row.seats || row.seats.length === 0) return;
 
-                    // Row-based ticket type lookup
-                    var ticketTypesForRow = self.rowToTicketTypeMap[row.id] || [];
+                    // Row-based ticket type lookup — sort by price so cheapest is first
+                    var ticketTypesForRow = (self.rowToTicketTypeMap[row.id] || []).slice().sort(function(a, b) { return (a.price || 0) - (b.price || 0); });
                     var isRowAssigned = ticketTypesForRow.length > 0;
 
-                    // Seat color from ticket type color
-                    var availableSeatColor = '#22C55E';
-                    if (ticketTypesForRow.length > 0) {
-                        availableSeatColor = ticketTypesForRow[0].color || '#22C55E';
-                    }
+                    // Seat color from cheapest ticket type's color
+                    var availableSeatColor = isRowAssigned ? self.getTicketTypeColor(ticketTypesForRow[0]) : '#E5E7EB';
 
                     // Row label near first seat
                     var firstSeat = row.seats[0];
@@ -2770,8 +2789,9 @@ const EventPage = {
         html += '<div class="text-sm font-semibold text-gray-700 mb-1">Alege tipul de bilet</div>';
         html += '<div class="text-xs text-gray-500 mb-3">' + sectionName + ', Rând ' + rowLabel + ', Loc ' + seatLabel + '</div>';
 
+        var self = this;
         ticketTypes.forEach(function(tt) {
-            var color = tt.color || '#22C55E';
+            var color = self.getTicketTypeColor(tt);
             var sn = sectionName.replace(/'/g, "\\'");
             html += '<button onclick="EventPage.chooserSelect(' + tt.id + ', ' + seatId + ', \'' + sn + '\', \'' + rowLabel + '\', \'' + seatLabel + '\', \'' + (seatUid || '') + '\')" ' +
                 'class="w-full text-left px-3 py-2.5 mb-1.5 rounded-lg border border-gray-200 hover:border-gray-400 hover:bg-gray-50 flex items-center gap-3 transition-colors">' +
