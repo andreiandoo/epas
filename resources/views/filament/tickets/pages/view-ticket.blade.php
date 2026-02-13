@@ -18,6 +18,8 @@
         $seatLabel = $ticket->seat_label ?? null;
         $hasSeatInfo = $seatLabel || $seatSection || $seatRow || $seatNumber;
         $isRefundable = (bool) ($ticket->marketplaceTicketType?->is_refundable ?? $ticket->ticketType?->is_refundable ?? false);
+        $hasInsurance = (bool) ($ticket->meta['has_insurance'] ?? false);
+        $insuranceAmount = $ticket->meta['insurance_amount'] ?? null;
     @endphp
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
@@ -57,13 +59,20 @@
                             @else {{ ucfirst($ticket->status) }}
                             @endif
                         </span>
-                        <div>
-                            <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full
-                                @if($isRefundable) bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300
-                                @else bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400
-                                @endif">
-                                @if($isRefundable) ↩ Returnabil @else ✗ Nereturnabil @endif
-                            </span>
+                        <div class="flex flex-wrap justify-center gap-1">
+                            @if($hasInsurance)
+                                <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                                    ✓ Asigurat{{ $insuranceAmount ? ' (' . number_format($insuranceAmount, 2) . ' ' . ($ticket->order?->currency ?? 'RON') . ')' : '' }}
+                                </span>
+                            @elseif($isRefundable)
+                                <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                                    ↩ Returnabil
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                    ✗ Nereturnabil
+                                </span>
+                            @endif
                         </div>
                     </div>
                 </div>

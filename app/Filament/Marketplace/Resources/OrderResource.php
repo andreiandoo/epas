@@ -519,6 +519,13 @@ class OrderResource extends Resource
                 default => '',
             };
 
+            // Insurance badge
+            $insuranceBadge = '';
+            if (!empty($meta['has_insurance'])) {
+                $insAmt = isset($meta['insurance_amount']) ? number_format((float) $meta['insurance_amount'], 2) . ' ' . $currency : '';
+                $insuranceBadge = '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(167, 139, 250, 0.15); color: #A78BFA;">✓ Asigurat' . ($insAmt ? " ({$insAmt})" : '') . '</span>';
+            }
+
             // Seat info — resolve from meta → EventSeat → seat_uid parsing
             $seatDetails = $ticket->getSeatDetails();
             $seatSection = $seatDetails['section_name'] ?? '';
@@ -561,6 +568,7 @@ class OrderResource extends Resource
                         <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 4px;'>
                             <span style='font-size: 14px; font-weight: 600; color: white;'>" . e($typeName) . "</span>
                             {$statusBadge}
+                            {$insuranceBadge}
                         </div>
                         <div style='font-size: 12px; color: #64748B; display: flex; align-items: center; gap: 4px; margin-bottom: 4px;'>
                             <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='width: 16px; height: 16px;'>
@@ -762,6 +770,17 @@ class OrderResource extends Resource
                 <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
                     <span style='font-size: 13px; color: #94A3B8;'>Reducere{$promoLabel}</span>
                     <span style='font-size: 13px; font-weight: 600; color: #10B981;'>-" . number_format($discount, 2) . " {$currency}</span>
+                </div>
+            ";
+        }
+
+        // Insurance / Taxa de retur (if any)
+        $insuranceAmount = (float) ($record->meta['insurance_amount'] ?? 0);
+        if ($insuranceAmount > 0) {
+            $html .= "
+                <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                    <span style='font-size: 13px; color: #94A3B8;'>Taxa de retur</span>
+                    <span style='font-size: 13px; font-weight: 600; color: #A78BFA;'>" . number_format($insuranceAmount, 2) . " {$currency}</span>
                 </div>
             ";
         }

@@ -460,7 +460,8 @@ class AccountController extends BaseController
         // Service fee: actual extra charges to customer (total - subtotal + discount)
         // Note: commission_amount is the platform commission deducted from organizer payouts, not a customer charge
         $discount = (float) ($order->discount_amount ?? $order->promo_discount ?? 0);
-        $serviceFee = max(0, (float) $order->total - (float) $order->subtotal + $discount);
+        $insuranceAmount = (float) ($order->meta['insurance_amount'] ?? 0);
+        $serviceFee = max(0, (float) $order->total - (float) $order->subtotal + $discount - $insuranceAmount);
 
         return $this->success([
             'order' => [
@@ -473,6 +474,7 @@ class AccountController extends BaseController
                 'date' => $order->created_at->format('d M Y, H:i'),
                 'subtotal' => number_format((float) $order->subtotal, 2, '.', ''),
                 'service_fee' => number_format($serviceFee, 2, '.', ''),
+                'insurance_amount' => number_format($insuranceAmount, 2, '.', ''),
                 'discount' => number_format($discount, 2, '.', ''),
                 'total' => number_format((float) $order->total, 2, '.', ''),
                 'currency' => $order->currency ?? 'RON',
@@ -504,6 +506,7 @@ class AccountController extends BaseController
                         'checked_in' => $ticket->checked_in_at !== null,
                         'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
                         'is_refundable' => (bool) ($ticketType?->is_refundable ?? false),
+                        'has_insurance' => (bool) ($ticket->meta['has_insurance'] ?? false),
                     ];
                 }),
                 'customer_email' => $order->customer_email,

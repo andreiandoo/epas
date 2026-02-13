@@ -350,14 +350,27 @@ class PaymentController extends BaseController
 
                 // Send order confirmation email to customer via marketplace's configured mail transport
                 if ($order->customer_email && $order->marketplaceClient) {
-                    dispatch(function () use ($order) {
+                    $marketplaceId = $order->marketplace_client_id;
+                    $orderId = $order->id;
+                    $customerEmail = $order->customer_email;
+
+                    dispatch(function () use ($orderId, $marketplaceId, $customerEmail) {
                         try {
-                            $marketplace = $order->marketplaceClient;
+                            $order = Order::find($orderId);
+                            $marketplace = \App\Models\MarketplaceClient::find($marketplaceId);
+
+                            if (!$order || !$marketplace) {
+                                Log::channel('marketplace')->warning('Order or marketplace not found for email', [
+                                    'order_id' => $orderId,
+                                    'marketplace_id' => $marketplaceId,
+                                ]);
+                                return;
+                            }
 
                             if (!$marketplace->hasMailConfigured()) {
                                 Log::channel('marketplace')->warning('Mail not configured for marketplace, skipping order confirmation email', [
-                                    'order_id' => $order->id,
-                                    'marketplace_id' => $marketplace->id,
+                                    'order_id' => $orderId,
+                                    'marketplace_id' => $marketplaceId,
                                 ]);
                                 return;
                             }
@@ -365,40 +378,38 @@ class PaymentController extends BaseController
                             $transport = $marketplace->getMailTransport();
                             if (!$transport) {
                                 Log::channel('marketplace')->error('Could not create mail transport for marketplace', [
-                                    'order_id' => $order->id,
-                                    'marketplace_id' => $marketplace->id,
+                                    'order_id' => $orderId,
+                                    'marketplace_id' => $marketplaceId,
                                 ]);
                                 return;
                             }
 
-                            // Build the notification mail message and render it
+                            // Build and render the notification email
                             $notification = new MarketplaceOrderNotification($order, 'confirmed');
                             $mailMessage = $notification->toMail($order);
-
-                            // Render the mail message to HTML using Laravel's markdown renderer
-                            $markdown = app(\Illuminate\Mail\Markdown::class);
-                            $html = $markdown->render('notifications::email', $mailMessage->toArray());
+                            $html = $mailMessage->render();
 
                             $email = (new \Symfony\Component\Mime\Email())
                                 ->from(new \Symfony\Component\Mime\Address(
                                     $marketplace->getEmailFromAddress(),
                                     $marketplace->getEmailFromName()
                                 ))
-                                ->to($order->customer_email)
+                                ->to($customerEmail)
                                 ->subject($mailMessage->subject)
-                                ->html($html);
+                                ->html((string) $html);
 
                             $transport->send($email);
 
                             Log::channel('marketplace')->info('Order confirmation email sent via marketplace transport', [
-                                'order_id' => $order->id,
-                                'customer_email' => $order->customer_email,
-                                'marketplace_id' => $marketplace->id,
+                                'order_id' => $orderId,
+                                'customer_email' => $customerEmail,
+                                'marketplace_id' => $marketplaceId,
                             ]);
                         } catch (\Throwable $e) {
                             Log::channel('marketplace')->error('Failed to send order confirmation email', [
-                                'order_id' => $order->id,
+                                'order_id' => $orderId,
                                 'error' => $e->getMessage(),
+                                'trace' => $e->getTraceAsString(),
                             ]);
                         }
                     })->afterResponse();
