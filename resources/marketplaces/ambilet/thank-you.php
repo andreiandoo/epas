@@ -571,7 +571,7 @@ const ThankYouPage = {
             <style>body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; color: #1E293B; }
             @media print { body { padding: 0; } }</style></head>
             <body><div style="max-width: 500px; margin: 0 auto;">${ticketsHtml}</div>
-            <script>setTimeout(() => { window.print(); }, 500);</script></body></html>`);
+            <scr` + `ipt>setTimeout(() => { window.print(); }, 500);<\/scr` + `ipt></body></html>`);
         printWindow.document.close();
     },
 
