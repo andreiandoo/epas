@@ -347,11 +347,18 @@ const ThankYouPage = {
 
     async loadOrderData() {
         const urlParams = new URLSearchParams(window.location.search);
-        const orderRef = urlParams.get('order');
+        // Read from 'order' param (our param) or 'orderId' (Netopia adds this on redirect)
+        const orderRef = urlParams.get('order') || urlParams.get('orderId');
 
         if (!orderRef) {
             this.showDemoData();
             return;
+        }
+
+        // Clean up duplicate URL params (keep only ?order=)
+        if (urlParams.get('orderId') || urlParams.has('orderId')) {
+            const cleanUrl = window.location.pathname + '?order=' + encodeURIComponent(orderRef);
+            history.replaceState(null, '', cleanUrl);
         }
 
         try {
@@ -406,21 +413,35 @@ const ThankYouPage = {
         const tickets = order.tickets || [];
         this.renderTickets(Array.isArray(tickets) ? tickets : Object.values(tickets));
 
-        // Ticket summary (items grouped by type)
+        // Ticket summary (items grouped by type + individual seat assignments)
         const ticketsSummary = document.getElementById('ticketsSummary');
+        const seatedTickets = (order.tickets || []).filter(t => t.seat);
         if (order.items && order.items.length > 0) {
-            ticketsSummary.innerHTML = `
-                <h4 class="font-semibold text-secondary mb-3">Bilete achiziționate</h4>
-                ${order.items.map(item => `
-                    <div class="flex justify-between items-center py-2 border-b border-border last:border-0">
-                        <div>
-                            <span class="font-medium text-secondary">${item.name}</span>
-                            <span class="text-muted text-sm ml-1">× ${item.quantity}</span>
-                        </div>
-                        <span class="font-semibold">${AmbiletUtils.formatCurrency(item.total)}</span>
+            let html = `<h4 class="font-semibold text-secondary mb-3">Bilete achiziționate</h4>`;
+            html += order.items.map(item => `
+                <div class="flex justify-between items-center py-2 border-b border-border last:border-0">
+                    <div>
+                        <span class="font-medium text-secondary">${item.name}</span>
+                        <span class="text-muted text-sm ml-1">× ${item.quantity}</span>
                     </div>
-                `).join('')}
-            `;
+                    <span class="font-semibold">${AmbiletUtils.formatCurrency(item.total)}</span>
+                </div>
+            `).join('');
+            // Show individual seat assignments if tickets have seats
+            if (seatedTickets.length > 0) {
+                html += `<div class="mt-3 pt-3 border-t border-border">
+                    <p class="text-xs font-medium text-muted uppercase tracking-wide mb-2">Locuri atribuite</p>
+                    ${seatedTickets.map(t => `
+                        <div class="flex items-center gap-2 py-1 text-sm">
+                            <span class="text-muted">${t.type || 'Bilet'}</span>
+                            <span class="text-secondary font-medium">
+                                ${[t.seat.section_name, t.seat.row_label ? 'Rând ' + t.seat.row_label : '', t.seat.seat_number ? 'Loc ' + t.seat.seat_number : ''].filter(Boolean).join(', ')}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>`;
+            }
+            ticketsSummary.innerHTML = html;
         }
 
         // Payment summary
@@ -554,6 +575,25 @@ const ThankYouPage = {
                             <p class="text-xs text-muted uppercase tracking-wide">Locație</p>
                             <p class="font-semibold text-secondary">${eventVenue}${event?.city ? ', ' + event.city : ''}</p>
                         </div>
+                        ${ticket.seat ? `
+                        <div class="flex gap-4 flex-wrap">
+                            ${ticket.seat.section_name ? `
+                            <div>
+                                <p class="text-xs text-muted uppercase tracking-wide">Secțiune</p>
+                                <p class="font-semibold text-secondary">${ticket.seat.section_name}</p>
+                            </div>` : ''}
+                            ${ticket.seat.row_label ? `
+                            <div>
+                                <p class="text-xs text-muted uppercase tracking-wide">Rând</p>
+                                <p class="font-semibold text-secondary">${ticket.seat.row_label}</p>
+                            </div>` : ''}
+                            ${ticket.seat.seat_number ? `
+                            <div>
+                                <p class="text-xs text-muted uppercase tracking-wide">Loc</p>
+                                <p class="font-semibold text-secondary">${ticket.seat.seat_number}</p>
+                            </div>` : ''}
+                        </div>
+                        ` : ''}
                         <div class="flex justify-between items-center pt-2">
                             <div>
                                 <p class="text-xs text-muted">Participant</p>
