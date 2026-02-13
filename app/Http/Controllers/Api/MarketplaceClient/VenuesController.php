@@ -200,6 +200,54 @@ class VenuesController extends BaseController
                 ];
             });
 
+        // Also get upcoming events from Event table (events created via organizer panel)
+        $upcomingCoreEvents = \App\Models\Event::query()
+            ->where('marketplace_client_id', $venue->marketplace_client_id)
+            ->where('status', 'published')
+            ->where('venue_id', $venue->id)
+            ->where(function ($q) {
+                $q->where(function ($inner) {
+                    $inner->whereNotNull('event_date')->where('event_date', '>=', now()->toDateString());
+                })->orWhere(function ($inner) {
+                    $inner->whereNull('event_date')->where('starts_at', '>=', now());
+                });
+            })
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->with(['ticketTypes'])
+            ->orderBy('starts_at')
+            ->limit(10)
+            ->get()
+            ->map(function ($event) use ($language, $client) {
+                $minPrice = $event->ticketTypes
+                    ->filter(fn ($tt) => $tt->status === 'active')
+                    ->map(fn ($tt) => ($tt->sale_price_cents ?? $tt->price_cents) / 100)
+                    ->filter()->min();
+
+                $imageUrl = $this->formatImageUrl($event->image ?? $event->image_url);
+
+                return [
+                    'id' => $event->id,
+                    'name' => $event->getTranslation('title', $language) ?: $event->title,
+                    'slug' => $event->slug,
+                    'starts_at' => ($event->starts_at ?? $event->event_date)?->toIso8601String(),
+                    'price_from' => $minPrice,
+                    'currency' => $event->ticketTypes->first()?->currency ?? 'RON',
+                    'image' => $imageUrl,
+                    'is_sold_out' => $event->is_sold_out ?? false,
+                    'category' => null,
+                    'commission_mode' => $client?->commission_mode ?? 'included',
+                    'commission_rate' => (float) ($client?->commission_rate ?? 5.0),
+                ];
+            });
+
+        // Merge both event sources and sort by starts_at
+        $allUpcomingEvents = $upcomingEvents->concat($upcomingCoreEvents)
+            ->sortBy('starts_at')
+            ->values()
+            ->take(10);
+
         // Build response
         $data = [
             'id' => $venue->id,
@@ -212,23 +260,31 @@ class VenuesController extends BaseController
             'country' => $venue->country,
             'latitude' => $venue->latitude,
             'longitude' => $venue->longitude,
-            'capacity' => $venue->capacity,
+            'capacity' => $venue->capacity_total ?? $venue->capacity,
             'image' => $this->formatImageUrl($venue->image_url),
             'cover_image' => $this->formatImageUrl($venue->cover_image_url),
             'gallery' => $venue->gallery ?? [],
             'schedule' => $venue->schedule,
             'amenities' => $venue->amenities ?? [],
+            'phone' => $venue->phone,
+            'email' => $venue->email,
+            'website' => $venue->website_url,
             'contact' => [
                 'phone' => $venue->phone,
                 'email' => $venue->email,
-                'website' => $venue->website,
+                'website' => $venue->website_url,
+            ],
+            'social' => [
+                'facebook' => $venue->facebook_url,
+                'instagram' => $venue->instagram_url,
+                'tiktok' => $venue->tiktok_url,
             ],
             'categories' => $venue->venueCategories->map(fn ($cat) => [
                 'id' => $cat->id,
                 'name' => $cat->getTranslation('name', $language),
                 'slug' => $cat->slug,
             ]),
-            'upcoming_events' => $upcomingEvents,
+            'upcoming_events' => $allUpcomingEvents,
             'events_count' => $this->countVenueEvents($venue),
         ];
 
