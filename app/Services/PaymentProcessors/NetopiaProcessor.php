@@ -152,18 +152,17 @@ class NetopiaProcessor implements PaymentProcessorInterface
             throw new \Exception('Missing required callback data: env_key=' . ($envKey ? 'present' : 'missing') . ', data=' . ($encryptedData ? 'present' : 'missing'));
         }
 
-        Log::channel('marketplace')->debug('Netopia: Decrypting callback', [
+        Log::channel('marketplace')->info('Netopia: Decrypting callback', [
             'cipher' => $cipher ?: 'auto-detect',
             'has_iv' => !empty($iv),
             'has_private_key' => !empty($this->keys['private_key']),
-            'private_key_starts' => substr($this->keys['private_key'] ?? '', 0, 30),
         ]);
 
         $decryptedData = $this->decryptData($encryptedData, $envKey, $cipher, $iv);
 
-        Log::channel('marketplace')->debug('Netopia: Callback decrypted', [
+        Log::channel('marketplace')->info('Netopia: Callback decrypted OK', [
             'decrypted_length' => strlen($decryptedData),
-            'starts_with' => substr($decryptedData, 0, 80),
+            'starts_with' => substr($decryptedData, 0, 100),
         ]);
 
         // Parse XML with XXE protection
@@ -384,14 +383,20 @@ class NetopiaProcessor implements PaymentProcessorInterface
 
         // Attempt 2: Manual decryption (RSA decrypt envelope key + pure PHP RC4)
         // Required for OpenSSL 3.0+ where RC4 is completely removed
-        Log::channel('marketplace')->debug('Netopia: openssl_open failed, using manual decryption', [
+        Log::channel('marketplace')->info('Netopia: openssl_open failed, using manual decryption', [
             'cipher' => $cipher,
-            'openssl_error' => openssl_error_string(),
+            'env_key_len' => strlen($srcEnvKey),
+            'data_len' => strlen($srcData),
         ]);
 
         if (!openssl_private_decrypt($srcEnvKey, $symmetricKey, $privateKey, OPENSSL_PKCS1_PADDING)) {
             throw new \Exception('Netopia: Failed to decrypt envelope key: ' . openssl_error_string());
         }
+
+        Log::channel('marketplace')->info('Netopia: Envelope key decrypted', [
+            'symmetric_key_len' => strlen($symmetricKey),
+            'symmetric_key_hex' => bin2hex(substr($symmetricKey, 0, 8)) . '...',
+        ]);
 
         if ($cipher === 'rc4') {
             // Use pure PHP RC4 — OpenSSL 3.0+ doesn't support RC4
@@ -403,6 +408,13 @@ class NetopiaProcessor implements PaymentProcessorInterface
                 throw new \Exception('Netopia: Failed to decrypt with ' . $cipher . ': ' . openssl_error_string());
             }
         }
+
+        Log::channel('marketplace')->info('Netopia: Data decrypted', [
+            'output_len' => strlen($data),
+            'starts_with_hex' => bin2hex(substr($data, 0, 20)),
+            'starts_with_text' => substr($data, 0, 80),
+            'looks_like_xml' => str_starts_with(trim($data), '<?xml') || str_starts_with(trim($data), '<order'),
+        ]);
 
         return $data;
     }
