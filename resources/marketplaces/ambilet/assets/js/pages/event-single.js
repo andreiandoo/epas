@@ -503,7 +503,6 @@ const EventPage = {
             artists: artistsData,
             ticket_types: ticketTypesData.map(function(tt) {
                 var available = tt.available_quantity !== undefined ? tt.available_quantity : (tt.available !== undefined ? tt.available : 999);
-                console.log('[EventPage] Processing ticket type:', tt.name, 'price:', tt.price, 'original_price:', tt.original_price, 'has_seating:', tt.has_seating, 'commission:', tt.commission);
                 return {
                     id: tt.id,
                     name: tt.name,
@@ -512,6 +511,7 @@ const EventPage = {
                     original_price: tt.original_price || null,
                     discount_percent: tt.discount_percent || null,
                     currency: tt.currency || 'RON',
+                    color: tt.color || null,
                     available: available,
                     min_per_order: tt.min_per_order || 1,
                     max_per_order: tt.max_per_order || 10,
@@ -519,6 +519,7 @@ const EventPage = {
                     is_sold_out: available <= 0,
                     has_seating: tt.has_seating || false,
                     seating_sections: tt.seating_sections || [],
+                    seating_rows: tt.seating_rows || [],
                     commission: tt.commission || null
                 };
             }),
