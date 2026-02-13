@@ -3,22 +3,24 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\Event;
 use App\Models\MarketplaceCart;
 use App\Models\MarketplaceCustomer;
-use App\Models\MarketplaceEvent;
-use App\Models\MarketplaceTicketType;
 use App\Models\MarketplacePromoCode;
+use App\Models\TicketType;
 use App\Services\Seating\SeatHoldService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class CartController extends BaseController
 {
     public function __construct(
         protected SeatHoldService $seatHoldService
     ) {}
+
     /**
      * Get cart contents
      */
@@ -52,30 +54,21 @@ class CartController extends BaseController
         ]);
 
         // Validate event exists and belongs to this marketplace
-        $event = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('id', $validated['event_id'])
-            ->where('status', 'published')
-            ->first();
+        $event = $this->findEvent($client->id, $validated['event_id']);
 
         if (!$event) {
             return $this->error('Event not found or not available', 404);
         }
 
         // Validate ticket type
-        $ticketType = MarketplaceTicketType::where('marketplace_event_id', $event->id)
-            ->where('id', $validated['ticket_type_id'])
-            ->where('status', 'on_sale')
-            ->where('is_visible', true)
-            ->first();
+        $ticketType = $this->findTicketType($event->id, $validated['ticket_type_id']);
 
         if (!$ticketType) {
             return $this->error('Ticket type not available', 404);
         }
 
         // Check availability
-        $available = $ticketType->quantity === null
-            ? PHP_INT_MAX
-            : $ticketType->quantity - $ticketType->quantity_sold - $ticketType->quantity_reserved;
+        $available = $this->getAvailableQuantity($ticketType);
 
         if ($available < $validated['quantity']) {
             return $this->error('Not enough tickets available', 400, [
@@ -113,14 +106,14 @@ class CartController extends BaseController
         // Add/update item
         $cart->addItem([
             'event_id' => $event->id,
-            'event_name' => $event->name,
-            'event_date' => $event->starts_at->toIso8601String(),
-            'event_image' => $event->image,
+            'event_name' => $this->getEventName($event),
+            'event_date' => $this->getEventDateIso($event),
+            'event_image' => $this->getEventImage($event),
             'ticket_type_id' => $ticketType->id,
             'ticket_type_name' => $ticketType->name,
-            'price' => (float) $ticketType->price,
+            'price' => $this->getTicketPrice($ticketType),
             'quantity' => $validated['quantity'],
-            'currency' => $ticketType->currency,
+            'currency' => $ticketType->currency ?? 'RON',
         ]);
 
         $cart->extendExpiration(30);
@@ -150,21 +143,14 @@ class CartController extends BaseController
         ]);
 
         // Validate event exists and belongs to this marketplace
-        $event = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('id', $validated['event_id'])
-            ->where('status', 'published')
-            ->first();
+        $event = $this->findEvent($client->id, $validated['event_id']);
 
         if (!$event) {
             return $this->error('Event not found or not available', 404);
         }
 
         // Validate ticket type
-        $ticketType = MarketplaceTicketType::where('marketplace_event_id', $event->id)
-            ->where('id', $validated['ticket_type_id'])
-            ->where('status', 'on_sale')
-            ->where('is_visible', true)
-            ->first();
+        $ticketType = $this->findTicketType($event->id, $validated['ticket_type_id']);
 
         if (!$ticketType) {
             return $this->error('Ticket type not available', 404);
@@ -232,14 +218,14 @@ class CartController extends BaseController
             // Add/update item with seat information
             $cart->addItem([
                 'event_id' => $event->id,
-                'event_name' => $event->name,
-                'event_date' => $event->starts_at->toIso8601String(),
-                'event_image' => $event->image,
+                'event_name' => $this->getEventName($event),
+                'event_date' => $this->getEventDateIso($event),
+                'event_image' => $this->getEventImage($event),
                 'ticket_type_id' => $ticketType->id,
                 'ticket_type_name' => $ticketType->name,
-                'price' => (float) $ticketType->price,
+                'price' => $this->getTicketPrice($ticketType),
                 'quantity' => $quantity,
-                'currency' => $ticketType->currency,
+                'currency' => $ticketType->currency ?? 'RON',
                 'event_seating_id' => $validated['event_seating_id'],
                 'seat_uids' => $holdResult['held'],
                 'seats' => $validated['seats'] ?? [], // Display info (section, row, seat labels)
@@ -346,11 +332,9 @@ class CartController extends BaseController
             $cart->removeItem($itemKey);
         } else {
             // Validate availability
-            $ticketType = MarketplaceTicketType::find($items[$itemKey]['ticket_type_id']);
+            $ticketType = TicketType::find($items[$itemKey]['ticket_type_id']);
             if ($ticketType) {
-                $available = $ticketType->quantity === null
-                    ? PHP_INT_MAX
-                    : $ticketType->quantity - $ticketType->quantity_sold - $ticketType->quantity_reserved;
+                $available = $this->getAvailableQuantity($ticketType);
 
                 if ($validated['quantity'] > $available) {
                     return $this->error('Not enough tickets available', 400, [
@@ -566,13 +550,108 @@ class CartController extends BaseController
         ]);
     }
 
+    // =========================================
+    // Helper methods
+    // =========================================
+
+    /**
+     * Find a published event belonging to the marketplace client
+     */
+    protected function findEvent(int $clientId, int $eventId): ?Event
+    {
+        return Event::where('marketplace_client_id', $clientId)
+            ->where('id', $eventId)
+            ->where('is_published', true)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->first();
+    }
+
+    /**
+     * Find an active ticket type for a given event
+     */
+    protected function findTicketType(int $eventId, int $ticketTypeId): ?TicketType
+    {
+        return TicketType::where('event_id', $eventId)
+            ->where('id', $ticketTypeId)
+            ->where('status', 'active')
+            ->first();
+    }
+
+    /**
+     * Get available quantity for a ticket type
+     */
+    protected function getAvailableQuantity(TicketType $ticketType): int
+    {
+        if ($ticketType->quota_total === null) {
+            return PHP_INT_MAX;
+        }
+
+        return max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
+    }
+
+    /**
+     * Get ticket price (sale price or regular price, in currency units)
+     */
+    protected function getTicketPrice(TicketType $ticketType): float
+    {
+        $cents = $ticketType->sale_price_cents ?? $ticketType->price_cents;
+        return $cents ? (float) ($cents / 100) : 0.0;
+    }
+
+    /**
+     * Get event display name
+     */
+    protected function getEventName(Event $event): string
+    {
+        $title = $event->getTranslation('title', 'ro');
+        if (is_array($title)) {
+            return $title['ro'] ?? $title['en'] ?? reset($title) ?: 'Event';
+        }
+        return $title ?: 'Event';
+    }
+
+    /**
+     * Get event date as ISO8601 string
+     */
+    protected function getEventDateIso(Event $event): string
+    {
+        $date = $event->event_date ?? $event->range_start_date;
+        $time = $event->start_time ?? '00:00:00';
+
+        if ($date) {
+            return $date->format('Y-m-d') . 'T' . $time;
+        }
+
+        return now()->toIso8601String();
+    }
+
+    /**
+     * Get event poster image URL
+     */
+    protected function getEventImage(Event $event): ?string
+    {
+        if (!$event->poster_url) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($event->poster_url);
+    }
+
     /**
      * Get session ID from request
      * SECURITY FIX: Generate cryptographically secure session IDs
      */
     protected function getSessionId(Request $request): string
     {
-        // Try Laravel session first (most secure)
+        // Try X-Session-ID header first (sent by proxy)
+        $headerSession = $request->header('X-Session-ID');
+        if ($headerSession && preg_match('/^[a-zA-Z0-9]{32,64}$/', $headerSession)) {
+            return $headerSession;
+        }
+
+        // Try Laravel session
         try {
             if ($request->hasSession() && ($sessionId = $request->session()->getId())) {
                 if (strlen($sessionId) >= 32) {
@@ -590,7 +669,6 @@ class CartController extends BaseController
         }
 
         // SECURITY FIX: Generate cryptographically secure random ID
-        // Previously was: md5($request->ip() . $request->userAgent()) - PREDICTABLE!
         return bin2hex(random_bytes(32));
     }
 
@@ -684,11 +762,11 @@ class CartController extends BaseController
         $modified = false;
 
         foreach ($items as $key => $item) {
-            $ticketType = MarketplaceTicketType::with('event')
+            $ticketType = TicketType::with('event')
                 ->where('id', $item['ticket_type_id'])
                 ->first();
 
-            if (!$ticketType || $ticketType->status !== 'on_sale' || !$ticketType->event || $ticketType->event->status !== 'published') {
+            if (!$ticketType || $ticketType->status !== 'active' || !$ticketType->event || !$ticketType->event->is_published) {
                 // Remove unavailable items
                 unset($items[$key]);
                 $modified = true;
@@ -696,9 +774,7 @@ class CartController extends BaseController
             }
 
             // Check availability
-            $available = $ticketType->quantity === null
-                ? PHP_INT_MAX
-                : $ticketType->quantity - $ticketType->quantity_sold - $ticketType->quantity_reserved;
+            $available = $this->getAvailableQuantity($ticketType);
 
             if ($item['quantity'] > $available) {
                 if ($available <= 0) {
@@ -710,8 +786,9 @@ class CartController extends BaseController
             }
 
             // Update price if changed
-            if ((float) $item['price'] !== (float) $ticketType->price) {
-                $items[$key]['price'] = (float) $ticketType->price;
+            $currentPrice = $this->getTicketPrice($ticketType);
+            if ((float) $item['price'] !== $currentPrice) {
+                $items[$key]['price'] = $currentPrice;
                 $modified = true;
             }
         }
