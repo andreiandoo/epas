@@ -52,6 +52,13 @@
                     <p class="mt-3 font-mono text-xl font-bold text-gray-900 dark:text-white">{{ $ticket->code }}</p>
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Cod scanabil la intrare</p>
 
+                    @if($ticket->barcode)
+                        <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Barcode</p>
+                            <p class="mt-1 font-mono text-xs text-gray-700 dark:text-gray-300 break-all">{{ $ticket->barcode }}</p>
+                        </div>
+                    @endif
+
                     {{-- Status Badge --}}
                     <div class="mt-4">
                         <span class="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-full
@@ -83,12 +90,6 @@
                         <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $ticket->marketplaceTicketType?->name ?? $ticket->ticketType?->name ?? 'N/A' }}</p>
                     </div>
                     @if($hasSeatInfo)
-                        @if($seatLabel)
-                            <div>
-                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Loc</span>
-                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatLabel }}</p>
-                            </div>
-                        @endif
                         @if($seatSection)
                             <div>
                                 <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Secțiune</span>
@@ -103,8 +104,14 @@
                         @endif
                         @if($seatNumber)
                             <div>
-                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Număr loc</span>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Loc</span>
                                 <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatNumber }}</p>
+                            </div>
+                        @endif
+                        @if($seatLabel && !$seatSection && !$seatRow && !$seatNumber)
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Loc (ID)</span>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatLabel }}</p>
                             </div>
                         @endif
                     @endif
@@ -233,9 +240,10 @@
                             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Status comandă</span>
                             <p class="text-base">
                                 <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full
-                                    @if($ticket->order->status === 'paid' || $ticket->order->status === 'confirmed') bg-green-100 text-green-800
-                                    @elseif($ticket->order->status === 'pending') bg-yellow-100 text-yellow-800
-                                    @else bg-gray-100 text-gray-800
+                                    @if(in_array($ticket->order->status, ['paid', 'confirmed', 'completed'])) bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300
+                                    @elseif($ticket->order->status === 'pending') bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300
+                                    @elseif(in_array($ticket->order->status, ['cancelled', 'refunded'])) bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300
+                                    @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
                                     @endif">
                                     {{ ucfirst($ticket->order->status) }}
                                 </span>

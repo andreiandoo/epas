@@ -457,11 +457,10 @@ class AccountController extends BaseController
             ];
         }
 
-        // Service fee (commission)
-        $serviceFee = (float) ($order->commission_amount ?? 0);
-
-        // Discount
+        // Service fee: actual extra charges to customer (total - subtotal + discount)
+        // Note: commission_amount is the platform commission deducted from organizer payouts, not a customer charge
         $discount = (float) ($order->discount_amount ?? $order->promo_discount ?? 0);
+        $serviceFee = max(0, (float) $order->total - (float) $order->subtotal + $discount);
 
         return $this->success([
             'order' => [
@@ -483,6 +482,16 @@ class AccountController extends BaseController
                 'timeline' => $timeline,
                 'tickets' => $order->tickets->map(function ($ticket) {
                     $ticketType = $ticket->marketplaceTicketType ?? $ticket->ticketType;
+                    $seatMeta = $ticket->meta ?? [];
+                    $seatData = null;
+                    if ($ticket->seat_label || !empty($seatMeta['seat_uid'])) {
+                        $seatData = [
+                            'label' => $ticket->seat_label,
+                            'section_name' => $seatMeta['section_name'] ?? null,
+                            'row_label' => $seatMeta['row_label'] ?? null,
+                            'seat_number' => $seatMeta['seat_number'] ?? null,
+                        ];
+                    }
                     return [
                         'id' => $ticket->id,
                         'barcode' => $ticket->barcode,
@@ -490,6 +499,8 @@ class AccountController extends BaseController
                         'price' => (float) ($ticketType?->price ?? $ticket->price ?? 0),
                         'status' => $ticket->status,
                         'attendee_name' => $ticket->attendee_name,
+                        'seat_label' => $ticket->seat_label,
+                        'seat' => $seatData,
                         'checked_in' => $ticket->checked_in_at !== null,
                         'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
                         'is_refundable' => (bool) ($ticketType?->is_refundable ?? false),
