@@ -46,6 +46,7 @@ class ExperienceTransaction extends Model
         'triggered_level_up' => 'boolean',
         'old_level' => 'integer',
         'new_level' => 'integer',
+        'description' => 'array',
     ];
 
     // ==========================================

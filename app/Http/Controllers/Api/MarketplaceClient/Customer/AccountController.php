@@ -263,11 +263,17 @@ class AccountController extends BaseController
     /**
      * Get single order details
      */
-    public function orderDetail(Request $request, int $orderId): JsonResponse
+    public function orderDetail(Request $request, string $orderId): JsonResponse
     {
         $customer = $this->requireCustomer($request);
 
-        $order = Order::where('id', $orderId)
+        $order = Order::where(function ($q) use ($orderId) {
+                if (is_numeric($orderId)) {
+                    $q->where('id', (int) $orderId);
+                } else {
+                    $q->where('order_number', $orderId);
+                }
+            })
             ->where('marketplace_customer_id', $customer->id)
             ->with([
                 'marketplaceEvent',
@@ -489,6 +495,8 @@ class AccountController extends BaseController
                         'is_refundable' => (bool) ($ticketType?->is_refundable ?? false),
                     ];
                 }),
+                'customer_email' => $order->customer_email,
+                'customer_name' => $order->customer_name,
                 'payment_method' => $paymentMethod,
                 'payment_exp' => $order->meta['card_exp'] ?? '',
                 'billing_address' => $order->meta['billing_address'] ?? $order->customer_name ?? '',

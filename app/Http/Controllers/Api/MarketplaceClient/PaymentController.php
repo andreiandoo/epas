@@ -171,8 +171,6 @@ class PaymentController extends BaseController
                 return $this->error('Client not found', 404);
             }
 
-            Log::channel('marketplace')->debug('Callback: client found', ['client_id' => $client->id]);
-
             // Determine processor type
             $defaultPaymentMethod = $client->getDefaultPaymentMethod();
             if (!$defaultPaymentMethod) {
@@ -192,20 +190,7 @@ class PaymentController extends BaseController
                 throw new \Exception('Payment configuration not found for callback');
             }
 
-            Log::channel('marketplace')->debug('Callback: creating processor', [
-                'processor_type' => $processorType,
-                'config_keys' => array_keys($paymentConfig),
-            ]);
-
             $processor = PaymentProcessorFactory::makeFromArray($processorType, $paymentConfig);
-
-            Log::channel('marketplace')->debug('Callback: processing callback data', [
-                'has_env_key' => !empty($request->input('env_key')),
-                'has_data' => !empty($request->input('data')),
-                'cipher' => $request->input('cipher', 'not set'),
-                'env_key_length' => strlen($request->input('env_key', '')),
-                'data_length' => strlen($request->input('data', '')),
-            ]);
 
             // Process the callback (decrypt for Netopia, verify for others)
             try {
