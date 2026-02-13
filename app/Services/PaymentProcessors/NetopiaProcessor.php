@@ -342,7 +342,7 @@ class NetopiaProcessor implements PaymentProcessorInterface
     }
 
     /**
-     * Decrypt callback data using openssl_open() — matches official mobilPay protocol
+     * Decrypt callback data — handles OpenSSL 3.0+ where RC4 is removed
      */
     protected function decryptData(string $encryptedData, string $encryptedKey, string $cipher = '', string $iv = ''): string
     {
@@ -368,9 +368,9 @@ class NetopiaProcessor implements PaymentProcessorInterface
             $cipher = !empty($srcIv) ? 'aes-256-cbc' : 'rc4';
         }
 
-        // Attempt 1: openssl_open with the specified cipher
+        // Attempt 1: openssl_open (works when the cipher is available in OpenSSL)
+        $data = '';
         if ($cipher === 'rc4') {
-            // RC4 has no IV — suppress warnings in case RC4 is disabled in OpenSSL 3.0+
             $result = @openssl_open($srcData, $data, $srcEnvKey, $privateKey, 'rc4');
         } elseif (!empty($srcIv)) {
             $result = @openssl_open($srcData, $data, $srcEnvKey, $privateKey, $cipher, $srcIv);
@@ -382,34 +382,64 @@ class NetopiaProcessor implements PaymentProcessorInterface
             return $data;
         }
 
-        // Attempt 2: Manual decryption (RSA decrypt envelope key + symmetric decrypt)
-        // This handles OpenSSL 3.0+ where RC4 is a legacy cipher not available via openssl_open
-        Log::channel('marketplace')->debug('Netopia: openssl_open failed, trying manual decryption', [
+        // Attempt 2: Manual decryption (RSA decrypt envelope key + pure PHP RC4)
+        // Required for OpenSSL 3.0+ where RC4 is completely removed
+        Log::channel('marketplace')->debug('Netopia: openssl_open failed, using manual decryption', [
             'cipher' => $cipher,
             'openssl_error' => openssl_error_string(),
         ]);
 
-        if (!openssl_private_decrypt($srcEnvKey, $decryptedKey, $privateKey, OPENSSL_PKCS1_PADDING)) {
+        if (!openssl_private_decrypt($srcEnvKey, $symmetricKey, $privateKey, OPENSSL_PKCS1_PADDING)) {
             throw new \Exception('Netopia: Failed to decrypt envelope key: ' . openssl_error_string());
         }
 
         if ($cipher === 'rc4') {
-            // RC4 has no IV
-            $data = @openssl_decrypt($srcData, 'rc4', $decryptedKey, OPENSSL_RAW_DATA);
+            // Use pure PHP RC4 — OpenSSL 3.0+ doesn't support RC4
+            $data = $this->rc4($symmetricKey, $srcData);
         } else {
-            $data = @openssl_decrypt($srcData, $cipher, $decryptedKey, OPENSSL_RAW_DATA, $srcIv);
-        }
-
-        if ($data === false) {
-            // Last resort: check if RC4 is available at all
-            $availableCiphers = openssl_get_cipher_methods();
-            $rc4Available = in_array('rc4', $availableCiphers);
-
-            throw new \Exception('Netopia: Failed to decrypt callback data. cipher=' . $cipher
-                . ', rc4_available=' . ($rc4Available ? 'yes' : 'NO')
-                . ', error=' . openssl_error_string());
+            // For other ciphers, try openssl_decrypt
+            $data = @openssl_decrypt($srcData, $cipher, $symmetricKey, OPENSSL_RAW_DATA, $srcIv);
+            if ($data === false) {
+                throw new \Exception('Netopia: Failed to decrypt with ' . $cipher . ': ' . openssl_error_string());
+            }
         }
 
         return $data;
+    }
+
+    /**
+     * Pure PHP RC4 implementation — works regardless of OpenSSL version
+     * RC4 is a symmetric stream cipher: same function encrypts and decrypts
+     */
+    protected function rc4(string $key, string $data): string
+    {
+        // Key-Scheduling Algorithm (KSA)
+        $s = range(0, 255);
+        $j = 0;
+        $keyLen = strlen($key);
+
+        for ($i = 0; $i < 256; $i++) {
+            $j = ($j + $s[$i] + ord($key[$i % $keyLen])) & 255;
+            $tmp = $s[$i];
+            $s[$i] = $s[$j];
+            $s[$j] = $tmp;
+        }
+
+        // Pseudo-Random Generation Algorithm (PRGA) + XOR
+        $i = 0;
+        $j = 0;
+        $result = '';
+        $dataLen = strlen($data);
+
+        for ($k = 0; $k < $dataLen; $k++) {
+            $i = ($i + 1) & 255;
+            $j = ($j + $s[$i]) & 255;
+            $tmp = $s[$i];
+            $s[$i] = $s[$j];
+            $s[$j] = $tmp;
+            $result .= chr(ord($data[$k]) ^ $s[($s[$i] + $s[$j]) & 255]);
+        }
+
+        return $result;
     }
 }
