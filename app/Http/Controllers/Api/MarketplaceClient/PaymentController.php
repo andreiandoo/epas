@@ -66,8 +66,17 @@ class PaymentController extends BaseController
         try {
             $processor = PaymentProcessorFactory::makeFromArray($processorType, $paymentConfig);
 
-            // Get event title for description
-            $eventTitle = $order->event?->title ?? 'Event';
+            // Get event title for description (title is a translatable JSON field)
+            $event = $order->event;
+            $eventTitle = 'Event';
+            if ($event) {
+                $title = $event->getTranslation('title', 'ro');
+                if (is_string($title) && $title !== '') {
+                    $eventTitle = $title;
+                } elseif (is_array($title)) {
+                    $eventTitle = $title['ro'] ?? $title['en'] ?? reset($title) ?: 'Event';
+                }
+            }
 
             $paymentData = $processor->createPayment([
                 'order_id' => $order->id,
