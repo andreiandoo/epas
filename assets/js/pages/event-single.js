@@ -2011,6 +2011,7 @@ const EventPage = {
                             '<div class="absolute bottom-3 left-3 flex flex-wrap items-center gap-3 md:gap-4 text-xs md:text-sm bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-sm">' +
                                 '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded" style="background-color: #a51c30;"></span> Selectat</div>' +
                                 '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-300"></span> Ocupat</div>' +
+                                '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded relative" style="background-color: #D1D5DB;"><span class="absolute inset-0 flex items-center justify-center text-gray-500 font-bold" style="font-size:8px;line-height:1">&times;</span></span> Indisponibil</div>' +
                             '</div>' +
                         '</div>' +
                     '</div>' +
@@ -2336,15 +2337,12 @@ const EventPage = {
                 return; // Skip rest of section rendering for icons
             }
 
-            // Section background fill at 25% opacity
-            var sectionBgColor = section.color_hex || '#6B7280';
-            svg += '<rect x="' + section.x + '" y="' + section.y + '" width="' + section.width + '" height="' + section.height + '" fill="' + sectionBgColor + '" fill-opacity="0.25" rx="4"/>';
-
-            // Section name (positioned ABOVE the section, outside)
-            var textY = section.y - 5;
-            var textX = section.x + (section.width / 2);
-            var textColor = isAllowed ? '#1F2937' : '#9CA3AF';
-            svg += '<text x="' + textX + '" y="' + textY + '" text-anchor="middle" font-size="11" font-weight="600" fill="' + textColor + '" style="text-shadow: 0 0 3px white, 0 0 3px white;">' + section.name + '</text>';
+            // Seat size from section metadata (matching admin designer)
+            var sectionMeta2 = section.metadata || {};
+            var seatSize2 = parseInt(sectionMeta2.seat_size) || 15;
+            var seatRadius2 = seatSize2 / 2;
+            var seatFontSize2 = Math.round(seatRadius2 * 0.85 * 10) / 10;
+            var xOff2 = Math.round(seatRadius2 * 0.5 * 10) / 10;
 
             // Render seats using actual x/y coordinates
             if (section.rows) {
@@ -2354,7 +2352,7 @@ const EventPage = {
                     // Row label near first seat
                     var firstSeat = row.seats[0];
                     if (firstSeat) {
-                        var rlX = section.x + firstSeat.x - 14;
+                        var rlX = section.x + firstSeat.x - seatRadius2 - 6;
                         var rlY = section.y + firstSeat.y;
                         svg += '<text x="' + rlX + '" y="' + (rlY + 3) + '" text-anchor="end" font-size="9" font-weight="500" fill="rgba(0,0,0,0.6)" class="pointer-events-none select-none">' + row.label + '</text>';
                     }
@@ -2370,6 +2368,11 @@ const EventPage = {
                         var seatColor, strokeColor, cursor, isClickable;
 
                         if (isDisabled) {
+                            seatColor = '#D1D5DB';
+                            strokeColor = '#9CA3AF';
+                            cursor = 'not-allowed';
+                            isClickable = false;
+                        } else if (status === 'blocked') {
                             seatColor = '#D1D5DB';
                             strokeColor = '#9CA3AF';
                             cursor = 'not-allowed';
@@ -2404,23 +2407,28 @@ const EventPage = {
                         var clickHandler = isClickable ?
                             'onclick="EventPage.toggleSeat(\'' + ticketTypeId + '\', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\', \'' + (seat.seat_uid || '') + '\')"' : '';
 
-                        var tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
-                        if (isDisabled) tooltipText += ' — indisponibil';
-                        else if (!isAllowed) tooltipText += ' — indisponibil pentru acest bilet';
-                        else if (status === 'sold') tooltipText += ' — vândut';
-                        else if (status === 'held') tooltipText += ' — rezervat';
+                        // Tooltip
+                        var tooltipText;
+                        if (isDisabled || status === 'blocked') {
+                            tooltipText = 'Indisponibil';
+                        } else {
+                            tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
+                            if (!isAllowed) tooltipText += ' — indisponibil pentru acest bilet';
+                            else if (status === 'sold') tooltipText += ' — vândut';
+                            else if (status === 'held') tooltipText += ' — rezervat';
+                        }
 
                         svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + ';">' +
                             '<title>' + tooltipText + '</title>' +
-                            '<circle cx="' + seatCX + '" cy="' + seatCY + '" r="6" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="0.5"/>';
+                            '<circle cx="' + seatCX + '" cy="' + seatCY + '" r="' + seatRadius2 + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="0.5"/>';
 
-                        if (!isDisabled) {
-                            svg += '<text x="' + seatCX + '" y="' + (seatCY + 2.5) + '" text-anchor="middle" font-size="5.5" font-weight="600" fill="white" class="pointer-events-none select-none">' + seat.label + '</text>';
+                        if (!isDisabled && status !== 'blocked') {
+                            svg += '<text x="' + seatCX + '" y="' + (seatCY + seatRadius2 * 0.35) + '" text-anchor="middle" font-size="' + seatFontSize2 + '" font-weight="600" fill="white" class="pointer-events-none select-none">' + seat.label + '</text>';
                         }
 
-                        if (isDisabled) {
-                            svg += '<line x1="' + (seatCX - 3) + '" y1="' + (seatCY - 3) + '" x2="' + (seatCX + 3) + '" y2="' + (seatCY + 3) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/>' +
-                                   '<line x1="' + (seatCX + 3) + '" y1="' + (seatCY - 3) + '" x2="' + (seatCX - 3) + '" y2="' + (seatCY + 3) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/>';
+                        if (isDisabled || status === 'blocked') {
+                            svg += '<line x1="' + (seatCX - xOff2) + '" y1="' + (seatCY - xOff2) + '" x2="' + (seatCX + xOff2) + '" y2="' + (seatCY + xOff2) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/>' +
+                                   '<line x1="' + (seatCX + xOff2) + '" y1="' + (seatCY - xOff2) + '" x2="' + (seatCX - xOff2) + '" y2="' + (seatCY + xOff2) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/>';
                         }
 
                         svg += '</g>';
@@ -2523,10 +2531,12 @@ const EventPage = {
                 return;
             }
 
-            // Section name label
-            var textY = section.y - 5;
-            var textX = section.x + (section.width / 2);
-            svg += '<text x="' + textX + '" y="' + textY + '" text-anchor="middle" font-size="11" font-weight="600" fill="rgba(0,0,0,0.5)" style="text-shadow: 0 0 3px white, 0 0 3px white;">' + section.name + '</text>';
+            // Seat size from section metadata (matching admin designer)
+            var sectionMeta = section.metadata || {};
+            var seatSize = parseInt(sectionMeta.seat_size) || 15;
+            var seatRadius = seatSize / 2;
+            var seatFontSize = Math.round(seatRadius * 0.85 * 10) / 10;
+            var xOff = Math.round(seatRadius * 0.5 * 10) / 10;
 
             // Render seats using actual x/y coordinates from the layout
             if (section.rows) {
@@ -2546,7 +2556,7 @@ const EventPage = {
                     // Row label near first seat
                     var firstSeat = row.seats[0];
                     if (firstSeat) {
-                        var rlX = section.x + firstSeat.x - 14;
+                        var rlX = section.x + firstSeat.x - seatRadius - 6;
                         var rlY = section.y + firstSeat.y;
                         svg += '<text x="' + rlX + '" y="' + (rlY + 3) + '" text-anchor="end" font-size="9" font-weight="500" fill="rgba(0,0,0,0.6)" class="pointer-events-none select-none">' + row.label + '</text>';
                     }
@@ -2563,6 +2573,11 @@ const EventPage = {
                         var seatColor, strokeColor, cursor, isClickable;
 
                         if (isDisabled) {
+                            seatColor = '#D1D5DB';
+                            strokeColor = '#9CA3AF';
+                            cursor = 'not-allowed';
+                            isClickable = false;
+                        } else if (status === 'blocked') {
                             seatColor = '#D1D5DB';
                             strokeColor = '#9CA3AF';
                             cursor = 'not-allowed';
@@ -2598,37 +2613,40 @@ const EventPage = {
                         var clickHandler = isClickable ?
                             'onclick="EventPage.toggleSeatAuto(' + row.id + ', ' + seat.id + ', \'' + section.name.replace(/'/g, "\\'") + '\', \'' + row.label + '\', \'' + seat.label + '\', \'' + (seat.seat_uid || '') + '\')"' : '';
 
-                        // Tooltip with all ticket types for this row
-                        var tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
-                        if (ticketTypesForRow.length === 1) {
-                            tooltipText += ' (' + ticketTypesForRow[0].name + ')';
-                        } else if (ticketTypesForRow.length > 1) {
-                            tooltipText += ' (' + ticketTypesForRow.map(function(t) { return t.name; }).join(' / ') + ')';
-                        }
-                        if (isDisabled) {
-                            tooltipText += ' — indisponibil';
-                        } else if (!isRowAssigned) {
-                            tooltipText += ' — indisponibil';
-                        } else if (status === 'sold') {
-                            tooltipText += ' — vândut';
-                        } else if (status === 'held') {
-                            tooltipText += ' — rezervat';
+                        // Tooltip
+                        var tooltipText;
+                        if (isDisabled || status === 'blocked') {
+                            tooltipText = 'Indisponibil';
+                        } else {
+                            tooltipText = section.name + ', Rând ' + row.label + ', Loc ' + seat.label;
+                            if (ticketTypesForRow.length === 1) {
+                                tooltipText += ' (' + ticketTypesForRow[0].name + ')';
+                            } else if (ticketTypesForRow.length > 1) {
+                                tooltipText += ' (' + ticketTypesForRow.map(function(t) { return t.name; }).join(' / ') + ')';
+                            }
+                            if (!isRowAssigned) {
+                                tooltipText = 'Indisponibil';
+                            } else if (status === 'sold') {
+                                tooltipText += ' — vândut';
+                            } else if (status === 'held') {
+                                tooltipText += ' — rezervat';
+                            }
                         }
 
                         // Render seat as circle at actual position (matching admin layout)
                         svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + ';">' +
                             '<title>' + tooltipText + '</title>' +
-                            '<circle cx="' + seatCX + '" cy="' + seatCY + '" r="6" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="0.5"/>';
+                            '<circle cx="' + seatCX + '" cy="' + seatCY + '" r="' + seatRadius + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="0.5"/>';
 
                         // Seat label inside circle
-                        if (!isDisabled) {
-                            svg += '<text x="' + seatCX + '" y="' + (seatCY + 2.5) + '" text-anchor="middle" font-size="5.5" font-weight="600" fill="white" class="pointer-events-none select-none">' + seat.label + '</text>';
+                        if (!isDisabled && status !== 'blocked') {
+                            svg += '<text x="' + seatCX + '" y="' + (seatCY + seatRadius * 0.35) + '" text-anchor="middle" font-size="' + seatFontSize + '" font-weight="600" fill="white" class="pointer-events-none select-none">' + seat.label + '</text>';
                         }
 
-                        // X marker for disabled (imposibil) seats
-                        if (isDisabled) {
-                            svg += '<line x1="' + (seatCX - 3) + '" y1="' + (seatCY - 3) + '" x2="' + (seatCX + 3) + '" y2="' + (seatCY + 3) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/>' +
-                                   '<line x1="' + (seatCX + 3) + '" y1="' + (seatCY - 3) + '" x2="' + (seatCX - 3) + '" y2="' + (seatCY + 3) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/>';
+                        // X marker for disabled/blocked seats
+                        if (isDisabled || status === 'blocked') {
+                            svg += '<line x1="' + (seatCX - xOff) + '" y1="' + (seatCY - xOff) + '" x2="' + (seatCX + xOff) + '" y2="' + (seatCY + xOff) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/>' +
+                                   '<line x1="' + (seatCX + xOff) + '" y1="' + (seatCY - xOff) + '" x2="' + (seatCX - xOff) + '" y2="' + (seatCY + xOff) + '" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/>';
                         }
 
                         svg += '</g>';

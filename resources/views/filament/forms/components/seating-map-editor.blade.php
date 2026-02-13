@@ -304,14 +304,17 @@
                 let rid = rg ? rg.dataset.rowId : null;
                 let info = rid ? this.RI[rid] : null;
                 let es = this.ES[uid];
-                let t = info ? info.section + ' \u2014 ' + (/^Mas/i.test(info.label) ? '' : 'R\u00e2nd ') + info.label + ' \u2014 Loc ' + label : 'Loc ' + label;
-                let a = rid ? this.A[rid] : null;
-                if (a && a.length) t += '\n' + a.map(x => x.name).join(', ');
-                else t += '\nNeatribuit';
-                if (es === 'blocked') t += '\n\u26d4 Blocat';
-                else if (es === 'sold') t += '\n\u2714 V\u00e2ndut';
-                else if (es === 'held') t += '\n\u23f3 Re\u021binut';
-                this.tip = t; this.tipX = e.clientX + 14; this.tipY = e.clientY - 10; this.showTip = true;
+                if (es === 'blocked') {
+                    this.tip = '\u26d4 Blocat'; this.tipX = e.clientX + 14; this.tipY = e.clientY - 10; this.showTip = true;
+                } else {
+                    let t = info ? info.section + ' \u2014 ' + (/^Mas/i.test(info.label) ? '' : 'R\u00e2nd ') + info.label + ' \u2014 Loc ' + label : 'Loc ' + label;
+                    let a = rid ? this.A[rid] : null;
+                    if (a && a.length) t += '\n' + a.map(x => x.name).join(', ');
+                    else t += '\nNeatribuit';
+                    if (es === 'sold') t += '\n\u2714 V\u00e2ndut';
+                    else if (es === 'held') t += '\n\u23f3 Re\u021binut';
+                    this.tip = t; this.tipX = e.clientX + 14; this.tipY = e.clientY - 10; this.showTip = true;
+                }
             } else if (rg) {
                 let rid = rg.dataset.rowId, info = this.RI[rid];
                 if (info) {
@@ -511,13 +514,6 @@
         >
             {!! $bgImage !!}
 
-            <defs>
-                <g id="seat-x">
-                    <line x1="-3.5" y1="-3.5" x2="3.5" y2="3.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
-                    <line x1="3.5" y1="-3.5" x2="-3.5" y2="3.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
-                </g>
-            </defs>
-
             @foreach($sections as $section)
                 @php
                     $sX = $section->x_position ?? 0;
@@ -527,6 +523,9 @@
                     $rot = $section->rotation ?? 0;
                     $cx = $sX + $sW / 2;
                     $cy = $sY + $sH / 2;
+                    $seatRadius = (($section->metadata['seat_size'] ?? 15) / 2);
+                    $seatFontSize = round($seatRadius * 0.95, 1);
+                    $xOff = round($seatRadius * 0.5, 1);
                 @endphp
 
                 <g @if($rot != 0) transform="rotate({{ $rot }} {{ $cx }} {{ $cy }})" @endif>
@@ -540,32 +539,35 @@
                                     $seatUid = $seat->seat_uid ?? '';
                                 @endphp
                                 @if($seat->status === 'imposibil')
-                                    <circle cx="{{ $seatX }}" cy="{{ $seatY }}" r="6"
+                                    <circle cx="{{ $seatX }}" cy="{{ $seatY }}" r="{{ $seatRadius }}"
                                             fill="#e5e7eb" stroke="#9ca3af" stroke-width="0.5"
                                             class="pointer-events-none"/>
                                 @else
-                                    <circle cx="{{ $seatX }}" cy="{{ $seatY }}" r="6"
+                                    <circle cx="{{ $seatX }}" cy="{{ $seatY }}" r="{{ $seatRadius }}"
                                             data-seat-uid="{{ $seatUid }}"
                                             data-seat-label="{{ $seat->label }}"
                                             :fill="fc('{{ $seatUid }}', {{ $row->id }})"
                                             :stroke="mode==='block' && selSeats.includes('{{ $seatUid }}') ? '#fbbf24' : '#fff'"
                                             :stroke-width="mode==='block' && selSeats.includes('{{ $seatUid }}') ? '2.5' : '0.5'"
-                                            :r="mode==='block' && selSeats.includes('{{ $seatUid }}') ? '7' : '6'"
+                                            :r="mode==='block' && selSeats.includes('{{ $seatUid }}') ? '{{ $seatRadius + 1 }}' : '{{ $seatRadius }}'"
                                             class="transition-colors duration-100"/>
-                                    <text x="{{ $seatX }}" y="{{ $seatY + 3 }}"
-                                          font-size="7" text-anchor="middle" font-weight="600"
+                                    <text x="{{ $seatX }}" y="{{ $seatY + $seatRadius * 0.4 }}"
+                                          font-size="{{ $seatFontSize }}" text-anchor="middle" font-weight="600"
                                           fill="rgba(255,255,255,0.9)"
                                           class="pointer-events-none select-none"
                                           :style="ES['{{ $seatUid }}'] === 'blocked' && !selSeats.includes('{{ $seatUid }}') ? 'display:none' : ''">{{ $seat->label }}</text>
-                                    <use href="#seat-x" x="{{ $seatX }}" y="{{ $seatY }}"
-                                         class="pointer-events-none"
-                                         :style="ES['{{ $seatUid }}'] === 'blocked' && !selSeats.includes('{{ $seatUid }}') ? '' : 'display:none'"/>
+                                    <line x1="{{ $seatX - $xOff }}" y1="{{ $seatY - $xOff }}" x2="{{ $seatX + $xOff }}" y2="{{ $seatY + $xOff }}"
+                                          stroke="white" stroke-width="1.8" stroke-linecap="round" class="pointer-events-none"
+                                          :style="ES['{{ $seatUid }}'] === 'blocked' && !selSeats.includes('{{ $seatUid }}') ? '' : 'display:none'"/>
+                                    <line x1="{{ $seatX + $xOff }}" y1="{{ $seatY - $xOff }}" x2="{{ $seatX - $xOff }}" y2="{{ $seatY + $xOff }}"
+                                          stroke="white" stroke-width="1.8" stroke-linecap="round" class="pointer-events-none"
+                                          :style="ES['{{ $seatUid }}'] === 'blocked' && !selSeats.includes('{{ $seatUid }}') ? '' : 'display:none'"/>
                                 @endif
                             @endforeach
 
                             @php
                                 $firstSeat = $row->seats->first();
-                                $labelX = $firstSeat ? $sX + ($firstSeat->x ?? 0) - 16 : $sX;
+                                $labelX = $firstSeat ? $sX + ($firstSeat->x ?? 0) - $seatRadius - 8 : $sX;
                                 $labelY = $firstSeat ? $sY + ($firstSeat->y ?? 0) : $sY;
                             @endphp
                             <text x="{{ $labelX }}" y="{{ $labelY + 4 }}"
