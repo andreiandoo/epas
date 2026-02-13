@@ -439,7 +439,21 @@ class CheckoutController extends BaseController
                     MarketplacePromoCode::where('code', $promoCode['code'])->increment('times_used');
                 }
 
-                $eventName = $event->name ?? ($marketplaceEvent ? ($marketplaceEvent->title['ro'] ?? $marketplaceEvent->title['en'] ?? 'Event') : 'Event');
+                // Get translatable event name
+                $eventName = 'Event';
+                if ($event) {
+                    $title = $event->getTranslation('title', 'ro');
+                    if (is_string($title) && $title !== '') {
+                        $eventName = $title;
+                    } elseif (is_array($title)) {
+                        $eventName = $title['ro'] ?? $title['en'] ?? reset($title) ?: 'Event';
+                    }
+                } elseif ($marketplaceEvent) {
+                    $title = $marketplaceEvent->title ?? [];
+                    $eventName = is_array($title)
+                        ? ($title['ro'] ?? $title['en'] ?? reset($title) ?: 'Event')
+                        : ($title ?: 'Event');
+                }
 
                 $orders[] = [
                     'id' => $order->id,
@@ -463,11 +477,33 @@ class CheckoutController extends BaseController
 
             foreach ($seatedItems as $item) {
                 if (!empty($item['event_seating_id']) && !empty($item['seat_uids'])) {
+                    $eventSeatingId = (int) $item['event_seating_id'];
+                    $seatUids = $item['seat_uids'];
                     $totalAmountCents = (int) (($item['price'] ?? 0) * ($item['quantity'] ?? 1) * 100);
 
+                    // DEBUG: Log exact parameters and DB state before confirming
+                    $existingSeats = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeatingId)
+                        ->whereIn('seat_uid', $seatUids)
+                        ->get(['seat_uid', 'status', 'version']);
+
+                    $totalSeatsInLayout = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeatingId)->count();
+
+                    Log::channel('marketplace')->info('Checkout: About to confirm seats', [
+                        'event_seating_id' => $eventSeatingId,
+                        'seat_uids' => $seatUids,
+                        'session_id' => $sessionId,
+                        'total_seats_in_layout' => $totalSeatsInLayout,
+                        'matching_seats_found' => $existingSeats->count(),
+                        'seat_statuses' => $existingSeats->map(fn($s) => [
+                            'uid' => $s->seat_uid,
+                            'status' => $s->status,
+                            'version' => $s->version,
+                        ])->toArray(),
+                    ]);
+
                     $confirmResult = $this->seatHoldService->confirmPurchase(
-                        $item['event_seating_id'],
-                        $item['seat_uids'],
+                        $eventSeatingId,
+                        $seatUids,
                         $sessionId,
                         $totalAmountCents
                     );
@@ -475,8 +511,11 @@ class CheckoutController extends BaseController
                     if (!empty($confirmResult['failed'])) {
                         Log::channel('marketplace')->error('Failed to confirm seat purchase', [
                             'client_id' => $client->id,
-                            'event_seating_id' => $item['event_seating_id'],
+                            'event_seating_id' => $eventSeatingId,
+                            'seat_uids' => $seatUids,
                             'failed_seats' => $confirmResult['failed'],
+                            'confirmed_seats' => $confirmResult['confirmed'] ?? [],
+                            'session_id' => $sessionId,
                         ]);
 
                         throw new \Exception('Failed to confirm seat reservations. Please try again.');
@@ -484,7 +523,7 @@ class CheckoutController extends BaseController
 
                     Log::channel('marketplace')->info('Confirmed seat purchase', [
                         'client_id' => $client->id,
-                        'event_seating_id' => $item['event_seating_id'],
+                        'event_seating_id' => $eventSeatingId,
                         'confirmed_seats' => count($confirmResult['confirmed']),
                     ]);
                 }
@@ -653,7 +692,7 @@ class CheckoutController extends BaseController
                 continue;
             }
 
-            if (!$ticketType->event || $ticketType->event->status !== 'published') {
+            if (!$ticketType->event || !$ticketType->event->is_published) {
                 $errors[$key] = "Event is no longer available";
                 continue;
             }
