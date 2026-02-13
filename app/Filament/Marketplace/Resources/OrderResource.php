@@ -519,15 +519,17 @@ class OrderResource extends Resource
                 default => '',
             };
 
-            // Seat info
-            $seatLabel = $ticket->seat_label ?? '';
-            $seatSection = $meta['section_name'] ?? '';
-            $seatRow = $meta['row_label'] ?? '';
-            $seatNumber = $meta['seat_number'] ?? '';
+            // Seat info — resolve from meta → EventSeat → seat_uid parsing
+            $seatDetails = $ticket->getSeatDetails();
+            $seatSection = $seatDetails['section_name'] ?? '';
+            $seatRow = $seatDetails['row_label'] ?? '';
+            $seatNumber = $seatDetails['seat_number'] ?? '';
             $seatDisplay = '';
-            if ($seatLabel || $seatSection || $seatRow || $seatNumber) {
+            if ($seatSection || $seatRow || $seatNumber) {
                 $parts = array_filter([$seatSection, $seatRow ? "Rând {$seatRow}" : '', $seatNumber ? "Loc {$seatNumber}" : '']);
-                $seatDisplay = implode(', ', $parts) ?: $seatLabel;
+                $seatDisplay = implode(', ', $parts);
+            } elseif ($ticket->seat_label) {
+                $seatDisplay = $ticket->seat_label;
             }
 
             // Generate QR code URL using a simple QR generator API

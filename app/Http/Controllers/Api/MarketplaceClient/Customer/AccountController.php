@@ -482,14 +482,14 @@ class AccountController extends BaseController
                 'timeline' => $timeline,
                 'tickets' => $order->tickets->map(function ($ticket) {
                     $ticketType = $ticket->marketplaceTicketType ?? $ticket->ticketType;
-                    $seatMeta = $ticket->meta ?? [];
+                    $seatDetails = $ticket->getSeatDetails();
                     $seatData = null;
-                    if ($ticket->seat_label || !empty($seatMeta['seat_uid'])) {
+                    if ($seatDetails || $ticket->seat_label) {
                         $seatData = [
                             'label' => $ticket->seat_label,
-                            'section_name' => $seatMeta['section_name'] ?? null,
-                            'row_label' => $seatMeta['row_label'] ?? null,
-                            'seat_number' => $seatMeta['seat_number'] ?? null,
+                            'section_name' => $seatDetails['section_name'] ?? null,
+                            'row_label' => $seatDetails['row_label'] ?? null,
+                            'seat_number' => $seatDetails['seat_number'] ?? null,
                         ];
                     }
                     return [

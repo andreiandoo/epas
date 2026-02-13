@@ -12,7 +12,6 @@ use App\Services\Gamification\ExperienceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
 
 class PaymentController extends BaseController
 {
@@ -349,11 +348,59 @@ class PaymentController extends BaseController
                     })->afterResponse();
                 }
 
-                // Send order confirmation email to customer
-                if ($order->customer_email) {
+                // Send order confirmation email to customer via marketplace's configured mail transport
+                if ($order->customer_email && $order->marketplaceClient) {
                     dispatch(function () use ($order) {
-                        Notification::route('mail', $order->customer_email)
-                            ->notify(new MarketplaceOrderNotification($order, 'confirmed'));
+                        try {
+                            $marketplace = $order->marketplaceClient;
+
+                            if (!$marketplace->hasMailConfigured()) {
+                                Log::channel('marketplace')->warning('Mail not configured for marketplace, skipping order confirmation email', [
+                                    'order_id' => $order->id,
+                                    'marketplace_id' => $marketplace->id,
+                                ]);
+                                return;
+                            }
+
+                            $transport = $marketplace->getMailTransport();
+                            if (!$transport) {
+                                Log::channel('marketplace')->error('Could not create mail transport for marketplace', [
+                                    'order_id' => $order->id,
+                                    'marketplace_id' => $marketplace->id,
+                                ]);
+                                return;
+                            }
+
+                            // Build the notification mail message and render it
+                            $notification = new MarketplaceOrderNotification($order, 'confirmed');
+                            $mailMessage = $notification->toMail($order);
+
+                            // Render the mail message to HTML using Laravel's markdown renderer
+                            $markdown = app(\Illuminate\Mail\Markdown::class);
+                            $html = $markdown->render('notifications::email', $mailMessage->toArray());
+
+                            $email = (new \Symfony\Component\Mime\Email())
+                                ->from(new \Symfony\Component\Mime\Address(
+                                    $marketplace->getEmailFromAddress(),
+                                    $marketplace->getEmailFromName()
+                                ))
+                                ->to($order->customer_email)
+                                ->subject($mailMessage->subject)
+                                ->html($html);
+
+                            $transport->send($email);
+
+                            Log::channel('marketplace')->info('Order confirmation email sent via marketplace transport', [
+                                'order_id' => $order->id,
+                                'customer_email' => $order->customer_email,
+                                'marketplace_id' => $marketplace->id,
+                            ]);
+                        } catch (\Throwable $e) {
+                            Log::channel('marketplace')->error('Failed to send order confirmation email', [
+                                'order_id' => $order->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
                     })->afterResponse();
                 }
 
