@@ -25,12 +25,34 @@ class NetopiaProcessor implements PaymentProcessorInterface
             $mode = $config->mode ?? 'sandbox';
         } elseif ($arrayConfig) {
             // Array-based config (marketplace client)
+            // Determine mode first - config may have test_mode flag or mode string
+            $testMode = $arrayConfig['test_mode'] ?? null;
+            if ($testMode !== null) {
+                // test_mode: true/1/"1" = sandbox, false/0/"0" = live
+                $mode = filter_var($testMode, FILTER_VALIDATE_BOOLEAN) ? 'sandbox' : 'live';
+            } else {
+                $mode = $arrayConfig['mode'] ?? 'sandbox';
+            }
+
+            // Pick credentials based on mode — supports multiple key naming conventions
+            $isLive = ($mode === 'live');
             $this->keys = [
-                'signature' => $arrayConfig['netopia_signature'] ?? $arrayConfig['signature'] ?? null,
-                'private_key' => $arrayConfig['netopia_api_key'] ?? $arrayConfig['private_key'] ?? null,
-                'public_key' => $arrayConfig['netopia_public_key'] ?? $arrayConfig['public_key'] ?? null,
+                'signature' => $arrayConfig['netopia_signature'] ?? $arrayConfig['signature']
+                    ?? ($isLive
+                        ? ($arrayConfig['live_merchant_id'] ?? $arrayConfig['test_merchant_id'] ?? null)
+                        : ($arrayConfig['test_merchant_id'] ?? $arrayConfig['live_merchant_id'] ?? null))
+                    ?? $arrayConfig['merchant_id'] ?? null,
+                'private_key' => $arrayConfig['netopia_api_key'] ?? $arrayConfig['private_key']
+                    ?? ($isLive
+                        ? ($arrayConfig['live_private_key'] ?? $arrayConfig['test_private_key'] ?? null)
+                        : ($arrayConfig['test_private_key'] ?? $arrayConfig['live_private_key'] ?? null))
+                    ?? null,
+                'public_key' => $arrayConfig['netopia_public_key'] ?? $arrayConfig['public_key']
+                    ?? ($isLive
+                        ? ($arrayConfig['live_public_key'] ?? $arrayConfig['test_public_key'] ?? null)
+                        : ($arrayConfig['test_public_key'] ?? $arrayConfig['live_public_key'] ?? null))
+                    ?? null,
             ];
-            $mode = $arrayConfig['mode'] ?? 'sandbox';
         } else {
             throw new \Exception('Either config or arrayConfig must be provided');
         }
