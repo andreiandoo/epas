@@ -10,31 +10,14 @@
         $isAdminPanel = $currentPanelId === 'admin';
         $isMarketplacePanel = $currentPanelId === 'marketplace';
 
-        // Resolve seat info: try meta first, then fallback to EventSeat lookup
-        $seatMeta = $ticket->meta ?? [];
-        $seatUid = $seatMeta['seat_uid'] ?? null;
+        // Resolve seat info using the Ticket model helper (meta → EventSeat → uid parsing)
+        $seatDetails = $ticket->getSeatDetails();
+        $seatSection = $seatDetails['section_name'] ?? null;
+        $seatRow = $seatDetails['row_label'] ?? null;
+        $seatNumber = $seatDetails['seat_number'] ?? null;
         $seatLabel = $ticket->seat_label ?? null;
-        $seatSection = $seatMeta['section_name'] ?? null;
-        $seatRow = $seatMeta['row_label'] ?? null;
-        $seatNumber = $seatMeta['seat_number'] ?? null;
-
-        // Fallback: if we have seat_uid but missing details, look up from EventSeat
-        if ($seatUid && $ticket->marketplace_event_id && (!$seatSection || !$seatRow)) {
-            $eventSeat = \App\Models\Seating\EventSeat::where('seat_uid', $seatUid)
-                ->whereHas('eventSeating', function ($q) use ($ticket) {
-                    $q->where('marketplace_event_id', $ticket->marketplace_event_id);
-                })
-                ->first();
-
-            if ($eventSeat) {
-                $seatSection = $seatSection ?: $eventSeat->section_name;
-                $seatRow = $seatRow ?: $eventSeat->row_label;
-                $seatNumber = $seatNumber ?: $eventSeat->seat_label;
-                $seatLabel = $seatLabel ?: $eventSeat->seat_label;
-            }
-        }
-
         $hasSeatInfo = $seatLabel || $seatSection || $seatRow || $seatNumber;
+        $isRefundable = (bool) ($ticket->marketplaceTicketType?->is_refundable ?? $ticket->ticketType?->is_refundable ?? false);
     @endphp
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
@@ -60,7 +43,7 @@
                     @endif
 
                     {{-- Status Badge --}}
-                    <div class="mt-4">
+                    <div class="mt-4 space-y-2">
                         <span class="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-full
                             @if($ticket->status === 'valid') bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
                             @elseif($ticket->status === 'used') bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
@@ -74,6 +57,14 @@
                             @else {{ ucfirst($ticket->status) }}
                             @endif
                         </span>
+                        <div>
+                            <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full
+                                @if($isRefundable) bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300
+                                @else bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400
+                                @endif">
+                                @if($isRefundable) ↩ Returnabil @else ✗ Nereturnabil @endif
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>

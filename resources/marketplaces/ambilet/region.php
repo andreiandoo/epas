@@ -388,17 +388,38 @@ const RegionPage = {
 
     async loadEvents() {
         try {
-            // Get city slugs for this region
+            // Load events from ALL cities in this region
             const citySlugs = this.cities.map(c => c.slug);
             if (!citySlugs.length) return;
 
-            const response = await AmbiletAPI.get('/events?city=' + citySlugs[0] + '&limit=3');
+            // Fetch events from each city in parallel
+            const promises = citySlugs.map(slug =>
+                AmbiletAPI.get('/events?city=' + encodeURIComponent(slug) + '&per_page=5')
+                    .catch(() => ({ data: [] }))
+            );
+            const responses = await Promise.all(promises);
 
-            if (response.data && response.data.length > 0) {
-                this.renderEvents(response.data);
-            } else {
-                this.renderEvents([]);
-            }
+            // Merge all events, deduplicate by id, sort by date, take first 3
+            const allEvents = [];
+            const seenIds = new Set();
+            responses.forEach(response => {
+                if (response.data && response.data.length > 0) {
+                    response.data.forEach(event => {
+                        if (!seenIds.has(event.id)) {
+                            seenIds.add(event.id);
+                            allEvents.push(event);
+                        }
+                    });
+                }
+            });
+
+            allEvents.sort((a, b) => {
+                const dateA = new Date(a.starts_at || a.event_date || 0);
+                const dateB = new Date(b.starts_at || b.event_date || 0);
+                return dateA - dateB;
+            });
+
+            this.renderEvents(allEvents.slice(0, 3));
         } catch (e) {
             console.error('Failed to load events:', e);
             this.renderEvents([]);
@@ -417,13 +438,15 @@ const RegionPage = {
     },
 
     renderEventCard(event) {
-        const date = new Date(event.start_date || event.date);
+        const date = new Date(event.starts_at || event.event_date);
         const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const gradients = ['from-indigo-500 to-purple-600', 'from-emerald-500 to-teal-600', 'from-pink-500 to-rose-600'];
         const gradient = gradients[Math.floor(Math.random() * gradients.length)];
+        const validDate = !isNaN(date.getTime());
+        const eventName = event.name || event.title || 'Eveniment';
 
-        const imageHtml = event.image
-            ? `<img src="${event.image}" alt="${event.title}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">`
+        const imageHtml = event.image_url
+            ? `<img src="${event.image_url}" alt="${eventName}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">`
             : `<div class="flex items-center justify-center w-full h-full bg-gradient-to-br ${gradient}">
                 <svg class="w-10 h-10 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
@@ -436,8 +459,14 @@ const RegionPage = {
             ? '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 left-3 bg-emerald-500">Nou</span>'
             : '';
 
-        const cityName = event.venue?.city || '';
+        const cityName = event.city || '';
         const cityBadge = cityName ? `<span class="absolute px-2 py-1 text-xs font-semibold text-white rounded backdrop-blur-sm bottom-3 left-3 bg-black/60">${cityName}</span>` : '';
+
+        const dateStr = validDate
+            ? `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}${event.start_time ? ' • ' + event.start_time : ''}`
+            : '';
+
+        const venueName = (typeof event.venue === 'string') ? event.venue : (event.venue?.name || 'Locatie TBA');
 
         return `
             <div class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl">
@@ -453,20 +482,20 @@ const RegionPage = {
                 </div>
                 <div class="p-5">
                     <div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">
-                        ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()} ${event.time ? '• ' + event.time : ''}
+                        ${dateStr}
                     </div>
                     <h3 class="mb-1 font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">
-                        <a href="/bilete/${event.slug}">${event.title}</a>
+                        <a href="/bilete/${event.slug}">${eventName}</a>
                     </h3>
                     <div class="flex items-center gap-1 mb-4 text-sm text-muted">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                         </svg>
-                        ${event.venue?.name || 'Locatie TBA'}
+                        ${venueName}
                     </div>
                     <div class="flex items-center justify-between pt-4 border-t border-slate-100">
                         <div class="font-bold text-secondary">
-                            ${event.min_price || 50} RON <span class="text-xs font-normal text-muted">de la</span>
+                            ${event.price_from ? event.price_from + ' RON' : ''} <span class="text-xs font-normal text-muted">${event.price_from ? 'de la' : ''}</span>
                         </div>
                         <a href="/bilete/${event.slug}" class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-primary to-primary-dark hover:-translate-y-0.5 hover:shadow-md">
                             Cumpara

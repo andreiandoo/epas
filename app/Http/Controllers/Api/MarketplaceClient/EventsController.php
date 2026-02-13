@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Models\Event;
+use App\Models\MarketplaceCity;
 use App\Models\MarketplaceCustomer;
 use App\Models\TicketType;
 use App\Models\Tax\GeneralTax;
@@ -87,9 +88,33 @@ class EventsController extends BaseController
         }
 
         if ($request->has('city')) {
-            $query->whereHas('venue', function ($q) use ($request) {
-                $q->where('city', 'like', '%' . $request->city . '%');
-            });
+            $cityParam = $request->city;
+
+            // Try to resolve city slug to a MarketplaceCity record
+            $marketplaceCity = MarketplaceCity::where('marketplace_client_id', $client->id)
+                ->where('slug', $cityParam)
+                ->first();
+
+            if ($marketplaceCity) {
+                // Match events by marketplace_city_id OR by venue city name
+                $cityName = is_array($marketplaceCity->name)
+                    ? ($marketplaceCity->name['ro'] ?? $marketplaceCity->name['en'] ?? reset($marketplaceCity->name))
+                    : $marketplaceCity->name;
+
+                $query->where(function ($q) use ($marketplaceCity, $cityName) {
+                    $q->where('marketplace_city_id', $marketplaceCity->id)
+                        ->orWhereHas('venue', function ($vq) use ($cityName) {
+                            $vq->where('city', 'like', '%' . $cityName . '%');
+                        });
+                });
+            } else {
+                // Fallback: try matching venue city by name (replace hyphens with spaces for slug-like input)
+                $cityName = str_replace('-', ' ', $cityParam);
+                $query->whereHas('venue', function ($q) use ($cityParam, $cityName) {
+                    $q->where('city', 'like', '%' . $cityParam . '%')
+                        ->orWhere('city', 'like', '%' . $cityName . '%');
+                });
+            }
         }
 
         if ($request->has('from_date')) {
