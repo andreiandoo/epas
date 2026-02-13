@@ -63,6 +63,19 @@ class PaymentController extends BaseController
             default => $defaultPaymentMethod->slug,
         };
 
+        // Log payment config for debugging (mask sensitive values)
+        Log::channel('marketplace')->info('Payment config loaded', [
+            'order_id' => $order->id,
+            'client_id' => $client->id,
+            'microservice_slug' => $defaultPaymentMethod->slug,
+            'processor_type' => $processorType,
+            'config_keys' => array_keys($paymentConfig),
+            'has_signature' => !empty($paymentConfig['netopia_signature'] ?? $paymentConfig['signature'] ?? null),
+            'has_public_key' => !empty($paymentConfig['netopia_public_key'] ?? $paymentConfig['public_key'] ?? null),
+            'has_api_key' => !empty($paymentConfig['netopia_api_key'] ?? $paymentConfig['private_key'] ?? null),
+            'mode' => $paymentConfig['mode'] ?? 'not set',
+        ]);
+
         try {
             $processor = PaymentProcessorFactory::makeFromArray($processorType, $paymentConfig);
 
@@ -129,7 +142,9 @@ class PaymentController extends BaseController
             Log::channel('marketplace')->error('Failed to initiate payment', [
                 'order_id' => $order->id,
                 'client_id' => $client->id,
+                'processor' => $processorType,
                 'error' => $e->getMessage(),
+                'config_keys_present' => array_keys($paymentConfig),
             ]);
 
             return $this->error('Failed to initiate payment: ' . $e->getMessage(), 500);

@@ -13,41 +13,115 @@ use Illuminate\Support\Facades\Log;
 class CleanupExpiredOrders extends Command
 {
     protected $signature = 'marketplace:cleanup-expired-orders
-                            {--dry-run : Preview what would be cleaned up without making changes}';
+                            {--dry-run : Preview what would be cleaned up without making changes}
+                            {--fix-seats : Also release stuck seats from already-expired orders}';
 
-    protected $description = 'Clean up expired pending marketplace orders: release held seats, cancel tickets, restore quota';
+    protected $description = 'Clean up expired pending marketplace orders: release held/sold seats, cancel tickets, restore quota';
 
     public function handle(): int
     {
         $dryRun = $this->option('dry-run');
+        $fixSeats = $this->option('fix-seats');
 
         if ($dryRun) {
             $this->warn('DRY RUN MODE - No changes will be made');
         }
 
-        // Find expired pending orders (status=pending, expires_at has passed)
+        // Find expired pending orders
         $expiredOrders = Order::where('status', 'pending')
             ->where('payment_status', 'pending')
             ->whereNotNull('expires_at')
             ->where('expires_at', '<', now())
             ->get();
 
-        if ($expiredOrders->isEmpty()) {
+        if ($expiredOrders->isEmpty() && !$fixSeats) {
             $this->comment('No expired pending orders found.');
             return 0;
         }
 
-        $this->info("Found {$expiredOrders->count()} expired pending order(s).");
+        if ($expiredOrders->isNotEmpty()) {
+            $this->info("Found {$expiredOrders->count()} expired pending order(s).");
+            $this->processOrders($expiredOrders, $dryRun);
+        }
 
+        // Optionally fix seats from already-expired orders that still have stuck seats
+        if ($fixSeats) {
+            $this->info('');
+            $this->info('Checking already-expired orders for stuck seats...');
+            $expiredWithSeats = Order::where('status', 'expired')
+                ->get();
+
+            $fixed = 0;
+            foreach ($expiredWithSeats as $order) {
+                $seatInfo = $this->extractSeatInfo($order);
+                if (empty($seatInfo)) {
+                    continue;
+                }
+
+                // Check if any of these seats are still held or sold
+                $stuckCount = 0;
+                foreach ($seatInfo as $item) {
+                    $stuckCount += EventSeat::where('event_seating_id', $item['event_seating_id'])
+                        ->whereIn('seat_uid', $item['seat_uids'])
+                        ->whereIn('status', ['held', 'sold'])
+                        ->count();
+                }
+
+                if ($stuckCount === 0) {
+                    continue;
+                }
+
+                $this->line("  Order #{$order->order_number} (ID: {$order->id}) has {$stuckCount} stuck seat(s)");
+
+                if ($dryRun) {
+                    $this->line("    - Would release {$stuckCount} stuck seat(s)");
+                    $fixed++;
+                    continue;
+                }
+
+                foreach ($seatInfo as $item) {
+                    $released = EventSeat::where('event_seating_id', $item['event_seating_id'])
+                        ->whereIn('seat_uid', $item['seat_uids'])
+                        ->whereIn('status', ['held', 'sold'])
+                        ->update([
+                            'status' => 'available',
+                            'version' => DB::raw('version + 1'),
+                            'last_change_at' => now(),
+                        ]);
+
+                    SeatHold::where('event_seating_id', $item['event_seating_id'])
+                        ->whereIn('seat_uid', $item['seat_uids'])
+                        ->delete();
+
+                    if ($released > 0) {
+                        $this->info("    ✓ Released {$released} seat(s) for event_seating_id={$item['event_seating_id']}");
+                    }
+                }
+                $fixed++;
+            }
+
+            if ($fixed > 0) {
+                $this->info("Fixed stuck seats for {$fixed} expired order(s).");
+            } else {
+                $this->comment('No stuck seats found in expired orders.');
+            }
+        }
+
+        return 0;
+    }
+
+    protected function processOrders($orders, bool $dryRun): void
+    {
         $cleaned = 0;
 
-        foreach ($expiredOrders as $order) {
+        foreach ($orders as $order) {
             $this->line("  Processing order #{$order->order_number} (ID: {$order->id}, expired: {$order->expires_at})");
 
             if ($dryRun) {
-                $seatedItems = $order->meta['seated_items'] ?? [];
+                $seatInfo = $this->extractSeatInfo($order);
                 $ticketCount = $order->tickets()->where('status', 'pending')->count();
-                $this->line("    - Would release seats from " . count($seatedItems) . " seated item(s)");
+                $seatCount = collect($seatInfo)->sum(fn($i) => count($i['seat_uids']));
+                $this->line("    - Would release {$seatCount} seat(s) from " . count($seatInfo) . " seated item(s)");
                 $this->line("    - Would cancel {$ticketCount} pending ticket(s)");
                 $this->line("    - Would restore quota for " . $order->items()->count() . " order item(s)");
                 $cleaned++;
@@ -56,35 +130,33 @@ class CleanupExpiredOrders extends Command
 
             try {
                 DB::transaction(function () use ($order) {
-                    // 1. Release held seats back to available
-                    $seatedItems = $order->meta['seated_items'] ?? [];
-                    foreach ($seatedItems as $seatedItem) {
-                        $eventSeatingId = $seatedItem['event_seating_id'] ?? null;
-                        $seatUids = $seatedItem['seat_uids'] ?? [];
+                    // 1. Release seats back to available
+                    $seatInfo = $this->extractSeatInfo($order);
+                    foreach ($seatInfo as $item) {
+                        $eventSeatingId = $item['event_seating_id'];
+                        $seatUids = $item['seat_uids'];
 
-                        if ($eventSeatingId && !empty($seatUids)) {
-                            // Release seats that are still 'held' (not yet sold by another process)
-                            $released = EventSeat::where('event_seating_id', $eventSeatingId)
-                                ->whereIn('seat_uid', $seatUids)
-                                ->where('status', 'held')
-                                ->update([
-                                    'status' => 'available',
-                                    'version' => DB::raw('version + 1'),
-                                    'last_change_at' => now(),
-                                ]);
+                        // Release seats that are held OR sold (old orders used confirmPurchase in checkout)
+                        $released = EventSeat::where('event_seating_id', $eventSeatingId)
+                            ->whereIn('seat_uid', $seatUids)
+                            ->whereIn('status', ['held', 'sold'])
+                            ->update([
+                                'status' => 'available',
+                                'version' => DB::raw('version + 1'),
+                                'last_change_at' => now(),
+                            ]);
 
-                            // Clean up any remaining hold records
-                            SeatHold::where('event_seating_id', $eventSeatingId)
-                                ->whereIn('seat_uid', $seatUids)
-                                ->delete();
+                        // Clean up any remaining hold records
+                        SeatHold::where('event_seating_id', $eventSeatingId)
+                            ->whereIn('seat_uid', $seatUids)
+                            ->delete();
 
-                            if ($released > 0) {
-                                Log::channel('marketplace')->info('CleanupExpiredOrders: Released seats', [
-                                    'order_id' => $order->id,
-                                    'event_seating_id' => $eventSeatingId,
-                                    'released_count' => $released,
-                                ]);
-                            }
+                        if ($released > 0) {
+                            Log::channel('marketplace')->info('CleanupExpiredOrders: Released seats', [
+                                'order_id' => $order->id,
+                                'event_seating_id' => $eventSeatingId,
+                                'released_count' => $released,
+                            ]);
                         }
                     }
 
@@ -126,8 +198,43 @@ class CleanupExpiredOrders extends Command
             }
         }
 
-        $this->info("Done. Cleaned up {$cleaned}/{$expiredOrders->count()} expired orders.");
+        $this->info("Cleaned up {$cleaned}/{$orders->count()} expired orders.");
+    }
 
-        return 0;
+    /**
+     * Extract seat info from order - tries meta first, falls back to ticket meta
+     */
+    protected function extractSeatInfo(Order $order): array
+    {
+        // Try order meta first (new orders store seated_items here)
+        $seatedItems = $order->meta['seated_items'] ?? [];
+        if (!empty($seatedItems)) {
+            return $seatedItems;
+        }
+
+        // Fallback: extract seat info from individual tickets
+        $tickets = $order->tickets()
+            ->whereNotNull('meta')
+            ->get();
+
+        $seatsByLayout = [];
+        foreach ($tickets as $ticket) {
+            $meta = $ticket->meta;
+            $seatUid = $meta['seat_uid'] ?? null;
+            $eventSeatingId = $meta['event_seating_id'] ?? null;
+
+            if ($seatUid && $eventSeatingId) {
+                $key = (string) $eventSeatingId;
+                if (!isset($seatsByLayout[$key])) {
+                    $seatsByLayout[$key] = [
+                        'event_seating_id' => (int) $eventSeatingId,
+                        'seat_uids' => [],
+                    ];
+                }
+                $seatsByLayout[$key]['seat_uids'][] = $seatUid;
+            }
+        }
+
+        return array_values($seatsByLayout);
     }
 }
