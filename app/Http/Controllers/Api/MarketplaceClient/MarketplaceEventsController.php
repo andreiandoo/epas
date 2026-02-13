@@ -490,6 +490,14 @@ class MarketplaceEventsController extends BaseController
                 'verified' => $organizer->verified_at !== null,
             ] : null,
             'ticket_types' => $event->ticketTypes->filter(fn ($tt) => $tt->status === 'active')->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate) {
+                // Debug: log ticket type color and seating row data
+                \Log::info('[MarketplaceEventsController] TicketType #' . $tt->id . ' "' . $tt->name . '"'
+                    . ' | color=' . var_export($tt->color, true)
+                    . ' | seatingRows loaded=' . ($tt->relationLoaded('seatingRows') ? 'yes' : 'no')
+                    . ' | seatingRows count=' . ($tt->relationLoaded('seatingRows') ? $tt->seatingRows->count() : 'N/A')
+                    . ' | seatingSections count=' . ($tt->relationLoaded('seatingSections') ? $tt->seatingSections->count() : 'N/A')
+                );
+
                 $available = max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
                 $basePrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
 

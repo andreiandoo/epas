@@ -1071,6 +1071,7 @@ class EventResource extends Resource
                                             ->columnSpan(4),
                                         Forms\Components\ColorPicker::make('color')
                                             ->label($t('Culoare pe hartă', 'Map color'))
+                                            ->hexColor()
                                             ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
                                             ->live(onBlur: true)
                                             ->columnSpan(3),
