@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Models\Event;
+use App\Models\MarketplaceCity;
 use App\Models\MarketplaceEventCategory;
 use App\Models\MarketplaceOrganizer;
 use App\Models\ServiceOrder;
@@ -73,15 +74,40 @@ class MarketplaceEventsController extends BaseController
         }
 
         if ($request->has('city')) {
-            $city = $request->city;
-            $query->where(function ($q) use ($city) {
-                $q->whereHas('marketplaceCity', function ($mq) use ($city) {
-                    $mq->where('name->ro', 'like', "%{$city}%")
-                        ->orWhere('name->en', 'like', "%{$city}%");
-                })->orWhereHas('venue', function ($vq) use ($city) {
-                    $vq->where('city', 'like', "%{$city}%");
+            $cityParam = $request->city;
+
+            // Try to resolve city slug to a MarketplaceCity record
+            $marketplaceCity = MarketplaceCity::where('marketplace_client_id', $client->id)
+                ->where('slug', $cityParam)
+                ->first();
+
+            if ($marketplaceCity) {
+                // Match events by marketplace_city_id OR by venue city name
+                $cityName = $marketplaceCity->getTranslation('name', $language)
+                    ?: (is_array($marketplaceCity->name)
+                        ? ($marketplaceCity->name['ro'] ?? $marketplaceCity->name['en'] ?? reset($marketplaceCity->name))
+                        : $marketplaceCity->name);
+
+                $query->where(function ($q) use ($marketplaceCity, $cityName) {
+                    $q->where('marketplace_city_id', $marketplaceCity->id)
+                        ->orWhereHas('venue', function ($vq) use ($cityName) {
+                            $vq->where('city', 'like', "%{$cityName}%");
+                        });
                 });
-            });
+            } else {
+                // Fallback: try matching by name (replace hyphens with spaces for slug-like input)
+                $cityName = str_replace('-', ' ', $cityParam);
+                $query->where(function ($q) use ($cityParam, $cityName) {
+                    $q->whereHas('marketplaceCity', function ($mq) use ($cityParam, $cityName) {
+                        $mq->where('name->ro', 'like', "%{$cityName}%")
+                            ->orWhere('name->en', 'like', "%{$cityName}%")
+                            ->orWhere('slug', $cityParam);
+                    })->orWhereHas('venue', function ($vq) use ($cityParam, $cityName) {
+                        $vq->where('city', 'like', "%{$cityParam}%")
+                            ->orWhere('city', 'like', "%{$cityName}%");
+                    });
+                });
+            }
         }
 
         if ($request->has('from_date')) {
