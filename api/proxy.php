@@ -618,6 +618,16 @@ switch ($action) {
         $endpoint = '/events/' . urlencode($slug);
         break;
 
+    case 'tracking.organizer-scripts':
+        $organizerId = $_GET['organizer_id'] ?? '';
+        if (!$organizerId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing organizer_id']);
+            exit;
+        }
+        $endpoint = '/tracking/organizer/' . urlencode($organizerId) . '/scripts';
+        break;
+
     case 'event.track-view':
         $slug = $_GET['slug'] ?? '';
         if (!$slug) {

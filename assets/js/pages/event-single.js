@@ -404,6 +404,10 @@ const EventPage = {
                 console.log('[EventPage] Event taxes:', this.event.taxes);
                 console.log('[EventPage] Event ticket_types:', this.ticketTypes);
                 this.render();
+                // Load organizer tracking scripts (non-blocking)
+                if (this.event.organizer && this.event.organizer.id) {
+                    this.loadOrganizerTracking(this.event.organizer.id);
+                }
             } else {
                 this.showError('Eveniment negăsit');
             }
@@ -529,6 +533,8 @@ const EventPage = {
             commission_rate: apiData.commission_rate || 5,
             commission_mode: apiData.commission_mode || 'included',
             taxes: apiData.taxes || [],
+            // Organizer
+            organizer: apiData.organizer || null,
             // Custom related events
             has_custom_related: eventData.has_custom_related || false,
             custom_related_event_ids: eventData.custom_related_event_ids || [],
@@ -3237,6 +3243,62 @@ const EventPage = {
         }
 
         console.log('[EventPage] Cart after adding seats:', AmbiletCart.getCart());
+    },
+
+    /**
+     * Load and inject organizer-specific tracking scripts
+     */
+    async loadOrganizerTracking(organizerId) {
+        try {
+            var response = await fetch(
+                window.AMBILET.apiUrl + '?action=tracking.organizer-scripts&organizer_id=' + organizerId
+            );
+            var data = await response.json();
+            if (!data.success || !data.data) return;
+
+            // Inject head scripts
+            if (data.data.head_scripts) {
+                var headDiv = document.createElement('div');
+                headDiv.innerHTML = data.data.head_scripts;
+                var scripts = headDiv.querySelectorAll('script');
+                scripts.forEach(function(origScript) {
+                    var newScript = document.createElement('script');
+                    if (origScript.src) {
+                        newScript.src = origScript.src;
+                        newScript.async = true;
+                    } else {
+                        newScript.textContent = origScript.textContent;
+                    }
+                    document.head.appendChild(newScript);
+                });
+                // Append noscript/img elements too
+                headDiv.querySelectorAll('noscript').forEach(function(el) {
+                    document.head.appendChild(el.cloneNode(true));
+                });
+            }
+
+            // Inject body scripts
+            if (data.data.body_scripts) {
+                var bodyDiv = document.createElement('div');
+                bodyDiv.innerHTML = data.data.body_scripts;
+                var bodyScripts = bodyDiv.querySelectorAll('script');
+                bodyScripts.forEach(function(origScript) {
+                    var newScript = document.createElement('script');
+                    if (origScript.src) {
+                        newScript.src = origScript.src;
+                        newScript.async = true;
+                    } else {
+                        newScript.textContent = origScript.textContent;
+                    }
+                    document.body.appendChild(newScript);
+                });
+            }
+
+            console.log('[EventPage] Organizer tracking scripts loaded for organizer #' + organizerId);
+        } catch (e) {
+            // Silently fail - tracking should never break the page
+            console.warn('[EventPage] Failed to load organizer tracking:', e.message);
+        }
     }
 };
 

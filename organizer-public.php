@@ -289,6 +289,10 @@ const OrganizerPage = {
             const response = await AmbiletAPI.get('/api/proxy.php?action=organizer&slug=' + slug);
             if (response.success && response.data) {
                 this.renderOrganizer(response.data);
+                // Load organizer tracking scripts
+                if (response.data.id) {
+                    this.loadOrganizerTracking(response.data.id);
+                }
                 return;
             }
         } catch (e) {
@@ -490,6 +494,37 @@ const OrganizerPage = {
                 tab.classList.add('bg-primary', 'text-white');
             });
         });
+    },
+
+    async loadOrganizerTracking(organizerId) {
+        try {
+            var response = await fetch(
+                window.AMBILET.apiUrl + '?action=tracking.organizer-scripts&organizer_id=' + organizerId
+            );
+            var data = await response.json();
+            if (!data.success || !data.data) return;
+            if (data.data.head_scripts) {
+                var div = document.createElement('div');
+                div.innerHTML = data.data.head_scripts;
+                div.querySelectorAll('script').forEach(function(orig) {
+                    var s = document.createElement('script');
+                    if (orig.src) { s.src = orig.src; s.async = true; } else { s.textContent = orig.textContent; }
+                    document.head.appendChild(s);
+                });
+                div.querySelectorAll('noscript').forEach(function(el) { document.head.appendChild(el.cloneNode(true)); });
+            }
+            if (data.data.body_scripts) {
+                var div2 = document.createElement('div');
+                div2.innerHTML = data.data.body_scripts;
+                div2.querySelectorAll('script').forEach(function(orig) {
+                    var s = document.createElement('script');
+                    if (orig.src) { s.src = orig.src; s.async = true; } else { s.textContent = orig.textContent; }
+                    document.body.appendChild(s);
+                });
+            }
+        } catch (e) {
+            console.warn('[OrganizerPage] Failed to load organizer tracking:', e.message);
+        }
     }
 };
 

@@ -37,6 +37,26 @@
     <!-- Page-specific scripts -->
     <?php if (isset($scriptsExtra)) echo $scriptsExtra; ?>
 
+    <!-- EPAS Tracking -->
+    <script src="<?= asset('assets/js/tracking.js') ?>"></script>
+    <?php
+    // Get marketplace client ID from cached config
+    if (!isset($trackingClientId)) {
+        require_once __DIR__ . '/api.php';
+        $configData = api_cached('client_config', fn() => api_get('/config'), 3600);
+        $trackingClientId = $configData['data']['client']['id'] ?? null;
+    }
+    if ($trackingClientId): ?>
+    <script>
+    EPASTracking.init({
+        apiUrl: '/api/tracking.php',
+        marketplaceClientId: <?= (int) $trackingClientId ?>,
+        autoTrackPageViews: true,
+        autoTrackClicks: true
+    });
+    </script>
+    <?php endif; ?>
+
     <!-- Tracking Scripts (body) -->
     <?php if (!empty($trackingBodyScripts)) echo $trackingBodyScripts . "\n"; ?>
 </body>

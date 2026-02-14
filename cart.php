@@ -232,6 +232,7 @@ const CartPage = {
     async init() {
         await this.loadTaxes();
         this.setupTimer();
+        this.loadExistingPromo();
         this.render();
     },
 
@@ -423,6 +424,8 @@ const CartPage = {
         const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
         const quantity = item.quantity || 1;
         const seats = item.seats || [];
+        const hasSeats = seats.length > 0 || (item.seat_uids && item.seat_uids.length > 0);
+        const eventSlug = item.event?.slug || '';
 
         // Get per-ticket commission or fall back to event-level
         const commission = AmbiletCart.calculateItemCommission(item);
@@ -492,6 +495,14 @@ const CartPage = {
                             (seats.length > 0 ? '<p class="mt-1 text-xs text-primary"><svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
                             '<div class="absolute left-0 z-10 p-4 mt-2 text-white shadow-xl tooltip top-full w-72 bg-secondary rounded-xl">' + tooltipHtml + '</div>' +
                         '</div>' +
+                        (hasSeats ?
+                        '<div class="flex items-center gap-2 ml-auto mr-8">' +
+                            '<span class="w-8 font-semibold text-center">' + quantity + '</span>' +
+                            '<a href="/bilete/' + eventSlug + '" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors">' +
+                                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+                                'Adaugă locuri' +
+                            '</a>' +
+                        '</div>' :
                         '<div class="flex items-center gap-2 ml-auto mr-8">' +
                             '<button onclick="CartPage.updateQuantity(' + index + ', -1)" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
                                 '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
@@ -504,7 +515,7 @@ const CartPage = {
                                     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>' +
                                 '</svg>' +
                             '</button>' +
-                        '</div>' +
+                        '</div>') +
                         '<div class="text-right">' +
                             (hasDiscount ? '<div class="text-sm line-through text-muted">' + AmbiletUtils.formatCurrency(originalPrice * quantity) + '</div>' : '') +
                             '<div class="font-bold text-primary">' + AmbiletUtils.formatCurrency(price * quantity) + '</div>' +
@@ -781,38 +792,55 @@ const CartPage = {
             return;
         }
 
-        // TODO: Validate promo code via API
-        // For now, demo codes
-        const validCodes = {
-            'ROCK2024': 0.10,
-            'WELCOME10': 0.10,
-            'VIP20': 0.20
-        };
+        // Disable button during validation
+        const btn = document.querySelector('#promo-section button');
+        if (btn) { btn.disabled = true; btn.textContent = 'Se verifică...'; }
 
-        if (validCodes[code]) {
-            const items = AmbiletCart.getItems();
-            const subtotal = items.reduce((sum, item) => {
-                const price = item.ticketType?.price || item.price || 0;
-                const qty = item.quantity || 1;
-                return sum + (price * qty);
-            }, 0);
-            this.discount = subtotal * validCodes[code];
+        const result = await AmbiletCart.applyPromoCode(code);
+
+        if (result.success) {
+            const promo = result.promo;
+            this.discount = AmbiletCart.getPromoDiscount();
             this.appliedPromo = code;
 
-            messageEl.innerHTML = `✓ Cod aplicat! -${Math.round(validCodes[code] * 100)}% reducere`;
+            const label = promo.type === 'percentage'
+                ? `-${promo.value}% reducere`
+                : `-${AmbiletUtils.formatCurrency(promo.value)} reducere`;
+            messageEl.innerHTML = `✓ Cod aplicat! ${label}`;
             messageEl.className = 'mt-2 text-sm text-success';
             messageEl.classList.remove('hidden');
 
             document.getElementById('promoCode').disabled = true;
-            document.querySelector('#promo-section button').textContent = 'Aplicat';
-            document.querySelector('#promo-section button').disabled = true;
+            if (btn) { btn.textContent = 'Aplicat'; btn.disabled = true; }
 
             this.updateSummary();
         } else {
-            messageEl.textContent = '✗ Cod invalid sau expirat';
+            messageEl.textContent = '✗ ' + (result.message || 'Cod invalid sau expirat');
             messageEl.className = 'mt-2 text-sm text-primary';
             messageEl.classList.remove('hidden');
+            if (btn) { btn.disabled = false; btn.textContent = 'Aplică'; }
         }
+    },
+
+    loadExistingPromo() {
+        const promo = AmbiletCart.getPromoCode();
+        if (!promo) return;
+        this.discount = AmbiletCart.getPromoDiscount();
+        this.appliedPromo = promo.code;
+
+        const messageEl = document.getElementById('promoMessage');
+        if (messageEl) {
+            const label = promo.type === 'percentage'
+                ? `-${promo.value}% reducere`
+                : `-${AmbiletUtils.formatCurrency(promo.value)} reducere`;
+            messageEl.innerHTML = `✓ Cod aplicat: ${promo.code} (${label})`;
+            messageEl.className = 'mt-2 text-sm text-success';
+            messageEl.classList.remove('hidden');
+        }
+        const input = document.getElementById('promoCode');
+        if (input) { input.value = promo.code; input.disabled = true; }
+        const btn = document.querySelector('#promo-section button');
+        if (btn) { btn.textContent = 'Aplicat'; btn.disabled = true; }
     }
 };
 

@@ -952,12 +952,15 @@ const CheckoutPage = {
             insuranceAmount = this.calculateInsuranceAmount();
         }
 
-        // Total = base prices + commission + insurance (no other taxes)
+        // Promo code discount
+        const promoDiscount = AmbiletCart.getPromoDiscount();
+
+        // Total = base prices + commission + insurance - discount
         const subtotalWithCommission = baseSubtotal + totalCommission;
-        const total = subtotalWithCommission + insuranceAmount;
+        const total = Math.max(0, subtotalWithCommission + insuranceAmount - promoDiscount);
         const points = Math.floor(total / 10);
 
-        this.totals = { subtotal: subtotalWithCommission, tax: 0, discount: 0, insurance: insuranceAmount, total, savings };
+        this.totals = { subtotal: subtotalWithCommission, tax: 0, discount: promoDiscount, insurance: insuranceAmount, total, savings };
 
         // Update DOM
         document.getElementById('summary-items').textContent = totalQty;
@@ -984,6 +987,19 @@ const CheckoutPage = {
                 document.getElementById('insurance-row-amount').textContent = '+' + AmbiletUtils.formatCurrency(insuranceAmount);
             } else {
                 insuranceRow.classList.add('hidden');
+            }
+        }
+
+        // Show/hide discount row (promo code)
+        const discountRow = document.getElementById('discount-row');
+        if (discountRow) {
+            if (promoDiscount > 0) {
+                const promo = AmbiletCart.getPromoCode();
+                discountRow.classList.remove('hidden');
+                document.getElementById('discount-label').textContent = 'Reducere' + (promo ? ' (' + promo.code + ')' : '');
+                document.getElementById('discount-amount').textContent = '-' + AmbiletUtils.formatCurrency(promoDiscount);
+            } else {
+                discountRow.classList.add('hidden');
             }
         }
 
@@ -1108,6 +1124,12 @@ const CheckoutPage = {
                 newsletter,
                 accept_terms: acceptTerms
             };
+
+            // Add promo code if applied
+            const promo = AmbiletCart.getPromoCode();
+            if (promo && promo.code) {
+                checkoutData.promo_code = promo.code;
+            }
 
             // Add ticket insurance if selected
             if (this.insuranceSelected && this.totals.insurance > 0) {

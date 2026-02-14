@@ -20,7 +20,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Page Hero -->
-<section class="bg-gradient-to-br from-primary to-[#7f1627] py-16 text-center relative overflow-hidden">
+<section class="bg-gradient-to-br from-primary to-[#7f1627] py-16 text-center relative overflow-hidden pt-40 mobile:pt-24">
     <div class="absolute -top-24 -right-24 w-[400px] h-[400px] bg-gradient-radial from-white/10 to-transparent rounded-full"></div>
     <div class="max-w-[700px] mx-auto px-6 relative z-10">
         <h1 class="text-[42px] font-extrabold text-white mb-4">Contactează-ne</h1>

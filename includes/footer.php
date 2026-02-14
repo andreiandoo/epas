@@ -159,6 +159,7 @@ $currentYear = date('Y');
                             <li class="hidden"><a href="/parteneri" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Parteneri</a></li>
                             <li><a href="/ajutor" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Centru de ajutor</a></li>
                             <li><a href="/faq" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Întrebări frecvente</a></li>
+                            <li><a href="/contact" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Contact</a></li>
                         </ul>
                     </div>
 
