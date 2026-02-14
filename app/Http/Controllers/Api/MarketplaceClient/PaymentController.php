@@ -348,157 +348,134 @@ class PaymentController extends BaseController
                     })->afterResponse();
                 }
 
-                // Send order confirmation email to customer via marketplace's configured mail transport
+                // Send order confirmation email synchronously (IPN callback — no user waiting)
                 if ($order->customer_email && $order->marketplaceClient) {
-                    $marketplaceId = $order->marketplace_client_id;
-                    $orderId = $order->id;
-                    $customerEmail = $order->customer_email;
+                    try {
+                        $marketplace = $order->marketplaceClient;
+                        $customerEmail = $order->customer_email;
 
-                    Log::channel('marketplace')->info('Scheduling order confirmation email', [
-                        'order_id' => $orderId,
-                        'customer_email' => $customerEmail,
-                        'marketplace_id' => $marketplaceId,
-                    ]);
+                        Log::channel('marketplace')->info('Sending order confirmation email', [
+                            'order_id' => $order->id,
+                            'customer_email' => $customerEmail,
+                            'marketplace_id' => $marketplace->id,
+                        ]);
 
-                    dispatch(function () use ($orderId, $marketplaceId, $customerEmail) {
+                        // Build email content
+                        $notification = new MarketplaceOrderNotification($order, 'confirmed');
+                        $mailMessage = $notification->toMail($order);
+                        $subject = $mailMessage->subject ?? "Order Confirmed - {$order->order_number}";
+
+                        // Try render() first, fall back to manual HTML
+                        $html = null;
                         try {
-                            Log::channel('marketplace')->info('Email closure executing', ['order_id' => $orderId]);
-
-                            $order = Order::find($orderId);
-                            $marketplace = \App\Models\MarketplaceClient::find($marketplaceId);
-
-                            if (!$order || !$marketplace) {
-                                Log::channel('marketplace')->warning('Order or marketplace not found for email', [
-                                    'order_id' => $orderId,
-                                    'marketplace_id' => $marketplaceId,
-                                    'order_found' => (bool) $order,
-                                    'marketplace_found' => (bool) $marketplace,
-                                ]);
-                                return;
-                            }
-
-                            // Build email content — avoid render() which depends on notification views
-                            $notification = new MarketplaceOrderNotification($order, 'confirmed');
-                            $mailMessage = $notification->toMail($order);
-                            $subject = $mailMessage->subject ?? "Order Confirmed - {$order->order_number}";
-
-                            // Try render() first, fall back to manual HTML
-                            $html = null;
-                            try {
-                                $html = (string) $mailMessage->render();
-                                Log::channel('marketplace')->info('Email rendered via MailMessage::render()', [
-                                    'order_id' => $orderId,
-                                    'html_length' => strlen($html),
-                                ]);
-                            } catch (\Throwable $renderError) {
-                                Log::channel('marketplace')->warning('MailMessage::render() failed, building HTML manually', [
-                                    'order_id' => $orderId,
-                                    'error' => $renderError->getMessage(),
-                                ]);
-                            }
-
-                            // Manual HTML fallback
-                            if (!$html) {
-                                $greeting = $mailMessage->greeting ?? 'Hello!';
-                                $lines = array_merge($mailMessage->introLines ?? [], $mailMessage->outroLines ?? []);
-                                $actionText = $mailMessage->actionText ?? null;
-                                $actionUrl = $mailMessage->actionUrl ?? null;
-
-                                $bodyHtml = "<h2 style=\"color:#1a1a2e;margin-bottom:16px\">{$greeting}</h2>";
-                                foreach ($lines as $line) {
-                                    $bodyHtml .= "<p style=\"color:#333;line-height:1.6;margin:8px 0\">{$line}</p>";
-                                }
-                                if ($actionText && $actionUrl) {
-                                    $bodyHtml .= "<p style=\"margin:24px 0;text-align:center\"><a href=\"{$actionUrl}\" style=\"display:inline-block;padding:12px 24px;background:#A51C30;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold\">{$actionText}</a></p>";
-                                }
-
-                                $html = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc\">"
-                                    . "<div style=\"background:#fff;border-radius:8px;padding:32px;border:1px solid #e2e8f0\">{$bodyHtml}</div>"
-                                    . "<p style=\"text-align:center;color:#94a3b8;font-size:12px;margin-top:16px\">{$marketplace->name}</p>"
-                                    . "</body></html>";
-
-                                Log::channel('marketplace')->info('Email built with manual HTML', [
-                                    'order_id' => $orderId,
-                                    'html_length' => strlen($html),
-                                ]);
-                            }
-
-                            // Try marketplace-specific transport first
-                            $sent = false;
-                            if ($marketplace->hasMailConfigured()) {
-                                try {
-                                    $transport = $marketplace->getMailTransport();
-                                    if ($transport) {
-                                        $fromAddress = $marketplace->getEmailFromAddress();
-                                        $fromName = $marketplace->getEmailFromName();
-
-                                        Log::channel('marketplace')->info('Sending via marketplace transport', [
-                                            'order_id' => $orderId,
-                                            'from' => $fromAddress,
-                                            'from_name' => $fromName,
-                                        ]);
-
-                                        $email = (new \Symfony\Component\Mime\Email())
-                                            ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
-                                            ->to($customerEmail)
-                                            ->subject($subject)
-                                            ->html($html);
-
-                                        $transport->send($email);
-                                        $sent = true;
-
-                                        Log::channel('marketplace')->info('Order confirmation email sent via marketplace transport', [
-                                            'order_id' => $orderId,
-                                            'customer_email' => $customerEmail,
-                                        ]);
-                                    } else {
-                                        Log::channel('marketplace')->warning('Marketplace transport returned null', [
-                                            'order_id' => $orderId,
-                                            'marketplace_id' => $marketplaceId,
-                                        ]);
-                                    }
-                                } catch (\Throwable $transportError) {
-                                    Log::channel('marketplace')->error('Marketplace transport failed, will try fallback', [
-                                        'order_id' => $orderId,
-                                        'error' => $transportError->getMessage(),
-                                    ]);
-                                }
-                            } else {
-                                Log::channel('marketplace')->warning('Mail not configured for marketplace', [
-                                    'order_id' => $orderId,
-                                    'marketplace_id' => $marketplaceId,
-                                ]);
-                            }
-
-                            // Fallback: use Laravel's default mailer
-                            if (!$sent) {
-                                Log::channel('marketplace')->info('Trying fallback: Laravel default mailer', [
-                                    'order_id' => $orderId,
-                                ]);
-
-                                \Illuminate\Support\Facades\Mail::html($html, function ($message) use ($customerEmail, $subject, $marketplace) {
-                                    $message->to($customerEmail)
-                                            ->subject($subject)
-                                            ->from(
-                                                $marketplace->getEmailFromAddress(),
-                                                $marketplace->getEmailFromName()
-                                            );
-                                });
-
-                                Log::channel('marketplace')->info('Order confirmation email sent via Laravel default mailer', [
-                                    'order_id' => $orderId,
-                                    'customer_email' => $customerEmail,
-                                ]);
-                            }
-                        } catch (\Throwable $e) {
-                            Log::channel('marketplace')->error('Failed to send order confirmation email (all methods)', [
-                                'order_id' => $orderId,
-                                'error' => $e->getMessage(),
-                                'file' => $e->getFile() . ':' . $e->getLine(),
-                                'trace' => $e->getTraceAsString(),
+                            $html = (string) $mailMessage->render();
+                            Log::channel('marketplace')->info('Email rendered via MailMessage::render()', [
+                                'order_id' => $order->id,
+                                'html_length' => strlen($html),
+                            ]);
+                        } catch (\Throwable $renderError) {
+                            Log::channel('marketplace')->warning('MailMessage::render() failed, building HTML manually', [
+                                'order_id' => $order->id,
+                                'error' => $renderError->getMessage(),
                             ]);
                         }
-                    })->afterResponse();
+
+                        // Manual HTML fallback
+                        if (!$html) {
+                            $greeting = $mailMessage->greeting ?? 'Hello!';
+                            $lines = array_merge($mailMessage->introLines ?? [], $mailMessage->outroLines ?? []);
+                            $actionText = $mailMessage->actionText ?? null;
+                            $actionUrl = $mailMessage->actionUrl ?? null;
+
+                            $bodyHtml = "<h2 style=\"color:#1a1a2e;margin-bottom:16px\">{$greeting}</h2>";
+                            foreach ($lines as $line) {
+                                $bodyHtml .= "<p style=\"color:#333;line-height:1.6;margin:8px 0\">{$line}</p>";
+                            }
+                            if ($actionText && $actionUrl) {
+                                $bodyHtml .= "<p style=\"margin:24px 0;text-align:center\"><a href=\"{$actionUrl}\" style=\"display:inline-block;padding:12px 24px;background:#A51C30;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold\">{$actionText}</a></p>";
+                            }
+
+                            $html = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc\">"
+                                . "<div style=\"background:#fff;border-radius:8px;padding:32px;border:1px solid #e2e8f0\">{$bodyHtml}</div>"
+                                . "<p style=\"text-align:center;color:#94a3b8;font-size:12px;margin-top:16px\">{$marketplace->name}</p>"
+                                . "</body></html>";
+
+                            Log::channel('marketplace')->info('Email built with manual HTML', [
+                                'order_id' => $order->id,
+                                'html_length' => strlen($html),
+                            ]);
+                        }
+
+                        // Try marketplace-specific transport first
+                        $sent = false;
+                        if ($marketplace->hasMailConfigured()) {
+                            try {
+                                $transport = $marketplace->getMailTransport();
+                                if ($transport) {
+                                    $fromAddress = $marketplace->getEmailFromAddress();
+                                    $fromName = $marketplace->getEmailFromName();
+
+                                    Log::channel('marketplace')->info('Sending via marketplace transport', [
+                                        'order_id' => $order->id,
+                                        'from' => $fromAddress,
+                                        'from_name' => $fromName,
+                                    ]);
+
+                                    $email = (new \Symfony\Component\Mime\Email())
+                                        ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
+                                        ->to($customerEmail)
+                                        ->subject($subject)
+                                        ->html($html);
+
+                                    $transport->send($email);
+                                    $sent = true;
+
+                                    Log::channel('marketplace')->info('Order confirmation email sent via marketplace transport', [
+                                        'order_id' => $order->id,
+                                        'customer_email' => $customerEmail,
+                                    ]);
+                                } else {
+                                    Log::channel('marketplace')->warning('Marketplace transport returned null', [
+                                        'order_id' => $order->id,
+                                        'marketplace_id' => $marketplace->id,
+                                    ]);
+                                }
+                            } catch (\Throwable $transportError) {
+                                Log::channel('marketplace')->error('Marketplace transport failed, will try fallback', [
+                                    'order_id' => $order->id,
+                                    'error' => $transportError->getMessage(),
+                                ]);
+                            }
+                        } else {
+                            Log::channel('marketplace')->info('No marketplace mail configured, using Laravel default', [
+                                'order_id' => $order->id,
+                                'marketplace_id' => $marketplace->id,
+                            ]);
+                        }
+
+                        // Fallback: use Laravel's default mailer
+                        if (!$sent) {
+                            \Illuminate\Support\Facades\Mail::html($html, function ($message) use ($customerEmail, $subject, $marketplace) {
+                                $message->to($customerEmail)
+                                        ->subject($subject)
+                                        ->from(
+                                            $marketplace->getEmailFromAddress(),
+                                            $marketplace->getEmailFromName()
+                                        );
+                            });
+
+                            Log::channel('marketplace')->info('Order confirmation email sent via Laravel default mailer', [
+                                'order_id' => $order->id,
+                                'customer_email' => $customerEmail,
+                            ]);
+                        }
+                    } catch (\Throwable $e) {
+                        Log::channel('marketplace')->error('Failed to send order confirmation email', [
+                            'order_id' => $order->id,
+                            'error' => $e->getMessage(),
+                            'file' => $e->getFile() . ':' . $e->getLine(),
+                        ]);
+                    }
                 } else {
                     Log::channel('marketplace')->warning('Cannot send order confirmation email - missing data', [
                         'order_id' => $order->id,
