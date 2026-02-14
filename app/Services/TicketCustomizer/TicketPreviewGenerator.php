@@ -79,6 +79,281 @@ class TicketPreviewGenerator
     }
 
     /**
+     * Render template to a DomPDF-compatible HTML string.
+     * Uses absolute-positioned divs instead of SVG for reliable PDF generation.
+     */
+    public function renderToHtml(array $templateData, ?array $data = null): string
+    {
+        $data = $data ?? $this->variableService->getSampleData();
+
+        $meta = $templateData['meta'] ?? [];
+        $sizeW = $meta['size_mm']['w'] ?? 80;
+        $sizeH = $meta['size_mm']['h'] ?? 200;
+        $layers = $templateData['layers'] ?? [];
+
+        // Sort layers by z-index
+        usort($layers, fn($a, $b) => ($a['z'] ?? 0) <=> ($b['z'] ?? 0));
+
+        // Background
+        $background = $meta['background'] ?? [];
+        $bgColor = $background['color'] ?? '#ffffff';
+        $bgImage = $background['image'] ?? '';
+
+        $bgStyle = "background-color: {$bgColor};";
+        if (!empty($bgImage)) {
+            $bgDataUri = $this->fetchImageAsDataUri($bgImage);
+            if ($bgDataUri) {
+                $posX = $background['positionX'] ?? 50;
+                $posY = $background['positionY'] ?? 50;
+                $bgStyle .= " background-image: url('{$bgDataUri}'); background-size: cover; background-position: {$posX}% {$posY}%;";
+            }
+        }
+
+        $html = '';
+
+        foreach ($layers as $index => $layer) {
+            if (isset($layer['visible']) && $layer['visible'] === false) {
+                continue;
+            }
+            $html .= $this->renderLayerAsHtml($layer, $data, $index);
+        }
+
+        return <<<HTML
+<div style="position: relative; width: {$sizeW}mm; height: {$sizeH}mm; overflow: hidden; {$bgStyle}">
+{$html}
+</div>
+HTML;
+    }
+
+    /**
+     * Render a single layer as HTML/CSS (for DomPDF)
+     */
+    private function renderLayerAsHtml(array $layer, array $data, int $zIndex): string
+    {
+        $type = $layer['type'] ?? 'text';
+        $frame = $layer['frame'] ?? [];
+
+        $x = $frame['x'] ?? 0;
+        $y = $frame['y'] ?? 0;
+        $w = $frame['w'] ?? 0;
+        $h = $frame['h'] ?? 0;
+        $opacity = $layer['opacity'] ?? 1;
+        $rotation = $layer['rotation'] ?? 0;
+
+        $transform = $rotation != 0 ? "transform: rotate({$rotation}deg);" : '';
+
+        switch ($type) {
+            case 'text':
+                return $this->renderTextLayerHtml($layer, $data, $x, $y, $w, $h, $opacity, $transform, $zIndex);
+            case 'shape':
+                return $this->renderShapeLayerHtml($layer, $x, $y, $w, $h, $opacity, $transform, $zIndex);
+            case 'qr':
+                return $this->renderQRLayerHtml($layer, $data, $x, $y, $w, $h, $opacity, $transform, $zIndex);
+            case 'barcode':
+                return $this->renderBarcodeLayerHtml($layer, $data, $x, $y, $w, $h, $opacity, $transform, $zIndex);
+            case 'image':
+                return $this->renderImageLayerHtml($layer, $data, $x, $y, $w, $h, $opacity, $transform, $zIndex);
+            default:
+                return '';
+        }
+    }
+
+    private function renderTextLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform, int $zIndex): string
+    {
+        $content = $layer['content'] ?? '';
+        $content = $this->replacePlaceholders($content, $data);
+        $content = htmlspecialchars($content, ENT_QUOTES, 'UTF-8');
+
+        $fontSize = $layer['fontSize'] ?? 12;
+        $color = $layer['color'] ?? '#000000';
+        $align = $layer['textAlign'] ?? 'left';
+        $fontWeight = $layer['fontWeight'] ?? 'normal';
+        $fontFamily = htmlspecialchars($layer['fontFamily'] ?? 'sans-serif', ENT_QUOTES, 'UTF-8');
+
+        // Vertical alignment
+        $lineHeight = $h;
+        $display = 'flex';
+
+        return <<<HTML
+<div style="position: absolute; left: {$x}mm; top: {$y}mm; width: {$w}mm; height: {$h}mm; overflow: hidden; opacity: {$opacity}; z-index: {$zIndex}; {$transform}
+    font-size: {$fontSize}mm; color: {$color}; text-align: {$align}; font-weight: {$fontWeight}; font-family: '{$fontFamily}', sans-serif;
+    line-height: {$h}mm; white-space: nowrap;">{$content}</div>
+
+HTML;
+    }
+
+    private function renderShapeLayerHtml(array $layer, float $x, float $y, float $w, float $h, float $opacity, string $transform, int $zIndex): string
+    {
+        $kind = $layer['shapeKind'] ?? 'rect';
+        $fill = $layer['fillColor'] ?? '#e5e7eb';
+        $stroke = $layer['borderColor'] ?? 'transparent';
+        $strokeWidth = $layer['borderWidth'] ?? 0;
+        $borderRadius = $layer['borderRadius'] ?? 0;
+
+        $borderStyle = $strokeWidth > 0 ? "border: {$strokeWidth}mm solid {$stroke};" : '';
+        $radiusStyle = '';
+
+        if ($kind === 'circle' || $kind === 'ellipse') {
+            $radiusStyle = 'border-radius: 50%;';
+        } elseif ($borderRadius > 0) {
+            $radiusStyle = "border-radius: {$borderRadius}mm;";
+        }
+
+        if ($kind === 'line') {
+            $lineY = $y + $h / 2;
+            $lineH = max($strokeWidth, 0.3);
+            return <<<HTML
+<div style="position: absolute; left: {$x}mm; top: {$lineY}mm; width: {$w}mm; height: {$lineH}mm; background-color: {$stroke}; opacity: {$opacity}; z-index: {$zIndex}; {$transform}"></div>
+
+HTML;
+        }
+
+        return <<<HTML
+<div style="position: absolute; left: {$x}mm; top: {$y}mm; width: {$w}mm; height: {$h}mm; background-color: {$fill}; {$borderStyle} {$radiusStyle} opacity: {$opacity}; z-index: {$zIndex}; {$transform}"></div>
+
+HTML;
+    }
+
+    private function renderQRLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform, int $zIndex): string
+    {
+        $codeData = $layer['qrData'] ?? $layer['props']['data'] ?? 'QR';
+        $codeData = $this->replacePlaceholders($codeData, $data);
+
+        $size = min($w, $h);
+        $qrX = $x + ($w - $size) / 2;
+        $qrY = $y + ($h - $size) / 2;
+
+        // Fetch real QR code image as base64 data URI
+        $qrDataUri = $this->fetchQrAsDataUri($codeData);
+
+        return <<<HTML
+<div style="position: absolute; left: {$qrX}mm; top: {$qrY}mm; width: {$size}mm; height: {$size}mm; opacity: {$opacity}; z-index: {$zIndex}; {$transform}">
+    <img src="{$qrDataUri}" style="width: 100%; height: 100%;">
+</div>
+
+HTML;
+    }
+
+    private function renderBarcodeLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform, int $zIndex): string
+    {
+        $codeData = $layer['barcodeData'] ?? $layer['props']['data'] ?? '123456789';
+        $codeData = $this->replacePlaceholders($codeData, $data);
+
+        // Fetch barcode image as base64 data URI
+        $barcodeDataUri = $this->fetchBarcodeAsDataUri($codeData);
+
+        return <<<HTML
+<div style="position: absolute; left: {$x}mm; top: {$y}mm; width: {$w}mm; height: {$h}mm; opacity: {$opacity}; z-index: {$zIndex}; {$transform} text-align: center;">
+    <img src="{$barcodeDataUri}" style="width: 100%; height: 80%;">
+    <div style="font-family: 'Courier New', monospace; font-size: 2.5mm; text-align: center; margin-top: 0.5mm;">{$codeData}</div>
+</div>
+
+HTML;
+    }
+
+    private function renderImageLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform, int $zIndex): string
+    {
+        $src = $layer['src'] ?? '';
+        $objectFit = $layer['objectFit'] ?? 'contain';
+
+        if (!empty($src)) {
+            $src = $this->replacePlaceholders($src, $data);
+        }
+
+        if (empty($src)) {
+            return <<<HTML
+<div style="position: absolute; left: {$x}mm; top: {$y}mm; width: {$w}mm; height: {$h}mm; background-color: #f3f4f6; border: 0.3mm solid #d1d5db; opacity: {$opacity}; z-index: {$zIndex}; {$transform}"></div>
+
+HTML;
+        }
+
+        // Try to fetch image as data URI for reliable PDF embedding
+        $dataUri = $this->fetchImageAsDataUri($src);
+        $imgSrc = $dataUri ?: $src;
+
+        return <<<HTML
+<div style="position: absolute; left: {$x}mm; top: {$y}mm; width: {$w}mm; height: {$h}mm; overflow: hidden; opacity: {$opacity}; z-index: {$zIndex}; {$transform}">
+    <img src="{$imgSrc}" style="width: 100%; height: 100%; object-fit: {$objectFit};">
+</div>
+
+HTML;
+    }
+
+    /**
+     * Fetch an image URL and return as base64 data URI
+     */
+    private function fetchImageAsDataUri(string $url): ?string
+    {
+        if (empty($url)) {
+            return null;
+        }
+
+        // Already a data URI
+        if (str_starts_with($url, 'data:')) {
+            return $url;
+        }
+
+        try {
+            $context = stream_context_create([
+                'http' => ['timeout' => 10],
+                'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
+            ]);
+            $imageData = @file_get_contents($url, false, $context);
+            if ($imageData !== false) {
+                $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                $mimeType = $finfo->buffer($imageData) ?: 'image/png';
+                return "data:{$mimeType};base64," . base64_encode($imageData);
+            }
+        } catch (\Throwable $e) {
+            // Fail silently
+        }
+
+        return null;
+    }
+
+    /**
+     * Fetch a QR code image as base64 data URI
+     */
+    private function fetchQrAsDataUri(string $data): string
+    {
+        $url = 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
+            'size' => '400x400',
+            'data' => $data,
+            'color' => '000000',
+            'margin' => '0',
+            'format' => 'png',
+        ]);
+
+        $result = $this->fetchImageAsDataUri($url);
+        if ($result) {
+            return $result;
+        }
+
+        // Fallback: simple black square placeholder
+        return 'data:image/svg+xml;base64,' . base64_encode(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#f3f4f6"/><text x="100" y="100" text-anchor="middle" font-size="14" fill="#666">QR</text></svg>'
+        );
+    }
+
+    /**
+     * Fetch a barcode image as base64 data URI
+     */
+    private function fetchBarcodeAsDataUri(string $data): string
+    {
+        $url = 'https://barcodeapi.org/api/128/' . urlencode($data);
+
+        $result = $this->fetchImageAsDataUri($url);
+        if ($result) {
+            return $result;
+        }
+
+        // Fallback placeholder
+        return 'data:image/svg+xml;base64,' . base64_encode(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100"><rect width="300" height="100" fill="#f3f4f6"/><text x="150" y="50" text-anchor="middle" font-size="14" fill="#666">' . htmlspecialchars($data) . '</text></svg>'
+        );
+    }
+
+    /**
      * Generate SVG from template data
      */
     private function generateSVG(array $templateData, array $data, int $width, int $height, int $scale): string

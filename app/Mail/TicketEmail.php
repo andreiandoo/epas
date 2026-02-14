@@ -102,7 +102,7 @@ class TicketEmail extends Mailable
     }
 
     /**
-     * Generate PDF data using a custom TicketTemplate (SVG-based)
+     * Generate PDF data using a custom TicketTemplate (HTML-based)
      */
     protected function generateCustomPdfData(Ticket $ticket, $template): string
     {
@@ -110,7 +110,7 @@ class TicketEmail extends Mailable
         $generator = app(TicketPreviewGenerator::class);
 
         $data = $variableService->resolveTicketData($ticket);
-        $svg = $generator->renderToSvg($template->template_data, $data);
+        $content = $generator->renderToHtml($template->template_data, $data);
 
         $size = $template->getSize();
         $widthPt = round($size['width'] * 2.8346, 2);
@@ -127,11 +127,11 @@ class TicketEmail extends Mailable
         * { margin: 0; padding: 0; box-sizing: border-box; }
         @page { size: {$widthMm}mm {$heightMm}mm; margin: 0; }
         body { width: {$widthMm}mm; height: {$heightMm}mm; overflow: hidden; }
-        svg { display: block; width: {$widthMm}mm; height: {$heightMm}mm; }
+        img { display: block; }
     </style>
 </head>
 <body>
-{$svg}
+{$content}
 </body>
 </html>
 HTML;

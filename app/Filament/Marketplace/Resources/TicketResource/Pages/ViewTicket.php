@@ -3,6 +3,7 @@
 namespace App\Filament\Marketplace\Resources\TicketResource\Pages;
 
 use App\Filament\Marketplace\Resources\TicketResource;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Mail\TicketEmail;
 use App\Models\Event;
 use App\Models\Ticket;
@@ -142,7 +143,7 @@ class ViewTicket extends ViewRecord
     }
 
     /**
-     * Download ticket using a custom TicketTemplate (SVG-based PDF)
+     * Download ticket using a custom TicketTemplate (HTML-based PDF)
      */
     protected function downloadCustomTemplate(Ticket $ticket, TicketTemplate $template)
     {
@@ -152,8 +153,8 @@ class ViewTicket extends ViewRecord
         // Resolve real ticket data
         $data = $variableService->resolveTicketData($ticket);
 
-        // Generate SVG from template with real data
-        $svg = $generator->renderToSvg($template->template_data, $data);
+        // Generate HTML from template with real data (DomPDF-compatible)
+        $content = $generator->renderToHtml($template->template_data, $data);
 
         // Get paper dimensions from template (mm to points: 1mm = 2.8346pt)
         $size = $template->getSize();
@@ -162,7 +163,6 @@ class ViewTicket extends ViewRecord
         $widthMm = $size['width'];
         $heightMm = $size['height'];
 
-        // Wrap SVG in minimal HTML for DomPDF
         $html = <<<HTML
 <!DOCTYPE html>
 <html>
@@ -172,11 +172,11 @@ class ViewTicket extends ViewRecord
         * { margin: 0; padding: 0; box-sizing: border-box; }
         @page { size: {$widthMm}mm {$heightMm}mm; margin: 0; }
         body { width: {$widthMm}mm; height: {$heightMm}mm; overflow: hidden; }
-        svg { display: block; width: {$widthMm}mm; height: {$heightMm}mm; }
+        img { display: block; }
     </style>
 </head>
 <body>
-{$svg}
+{$content}
 </body>
 </html>
 HTML;
