@@ -21,6 +21,8 @@ use Symfony\Component\Mime\Address as SymfonyAddress;
 
 class ViewTicket extends ViewRecord
 {
+    use HasMarketplaceContext;
+
     protected static string $resource = TicketResource::class;
 
     protected string $view = 'filament.tickets.pages.view-ticket';

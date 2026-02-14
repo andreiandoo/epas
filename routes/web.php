@@ -269,6 +269,14 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
         ->name('marketplace.ticket-customizer.update');
 });
 
+// Public Ticket Verification (QR code landing page)
+Route::get('/t/{code}', [\App\Http\Controllers\Public\TicketVerificationController::class, 'show'])
+    ->name('ticket.verify');
+
+// Gate Scanner (organizer check-in interface)
+Route::get('/gate', [\App\Http\Controllers\Public\GateController::class, 'show'])
+    ->name('gate.scanner');
+
 // Public Contract Signing Routes (no auth required - token-based)
 Route::prefix('contract')->group(function () {
     Route::get('/{token}', [ContractSigningController::class, 'view'])->name('contract.view');

@@ -189,4 +189,15 @@ class Ticket extends Model
             'status' => 'cancelled',
         ]);
     }
+
+    /**
+     * Get the public verification URL for this ticket's QR code
+     */
+    public function getVerifyUrl(): string
+    {
+        $client = \App\Models\MarketplaceClient::find($this->marketplace_client_id);
+        $domain = $client?->domain ?? config('app.url');
+        $scheme = str_contains($domain, 'localhost') ? 'http' : 'https';
+        return "{$scheme}://{$domain}/t/{$this->code}";
+    }
 }

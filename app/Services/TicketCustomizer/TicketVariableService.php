@@ -230,6 +230,13 @@ class TicketVariableService
                         'type' => 'text',
                         'example' => 'Prețul include 5% Timbru Muzical, 2% Taxa de Monument Istoric',
                     ],
+                    [
+                        'path' => 'ticket.verify_url',
+                        'label' => 'Verification URL',
+                        'description' => 'Public URL for ticket verification (use as QR code data)',
+                        'type' => 'url',
+                        'example' => 'https://tickets.example.com/t/WLMVWB2G',
+                    ],
                 ],
             ],
 
@@ -470,6 +477,7 @@ class TicketVariableService
                 'insurance_label' => 'Bilet asigurat',
                 'price_detail' => 'Preț: 299,00 lei + 5% taxă procesare (313,95 lei)',
                 'fees_text' => 'Prețul include 5% Timbru Muzical, 2% Taxa de Monument Istoric',
+                'verify_url' => 'https://tickets.example.com/t/WLMVWB2G',
             ],
             'buyer' => [
                 'name' => 'Ion Popescu',
@@ -636,6 +644,7 @@ class TicketVariableService
                 'insurance_label' => $isInsured ? 'Bilet asigurat' : '',
                 'price_detail' => $priceDetail,
                 'fees_text' => $feesText,
+                'verify_url' => $ticket->getVerifyUrl(),
             ],
             'buyer' => [
                 'name' => $buyerName,

@@ -158,6 +158,11 @@ Route::prefix('v1/public')->middleware(['api.key'])->group(function () {
 |
 */
 
+// Public Ticket Status API (no auth, rate limited)
+Route::get('/public/ticket/{code}', [\App\Http\Controllers\Api\PublicApi\TicketStatusController::class, 'show'])
+    ->middleware('throttle:60,1')
+    ->name('api.public.ticket.status');
+
 Route::prefix('public')->middleware(['seating.session'])->group(function () {
 
     // Get seating layout and metadata for an event

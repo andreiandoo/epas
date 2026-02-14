@@ -78,7 +78,7 @@
                             <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e5e7eb;">
                                 <tr>
                                     <td align="center" style="padding: 30px;">
-                                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($ticket->code) }}&color=181622&margin=0&format=png" alt="QR Code" style="width: 160px; height: 160px; margin-bottom: 12px;">
+                                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($ticket->getVerifyUrl()) }}&color=181622&margin=0&format=png" alt="QR Code" style="width: 160px; height: 160px; margin-bottom: 12px;">
                                         <p style="margin: 0; font-family: 'Courier New', monospace; font-size: 22px; font-weight: bold; color: #181622; letter-spacing: 3px;">{{ $ticket->code }}</p>
                                         <p style="margin: 8px 0 0; font-size: 12px; color: #9ca3af;">Prezinta acest cod QR la intrare</p>
                                     </td>
