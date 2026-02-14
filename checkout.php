@@ -896,17 +896,22 @@ const CheckoutPage = {
         const eventIds = Object.keys(eventGroups);
         const hasMultipleEvents = eventIds.length > 1;
 
-        // Event info - show first event (even if multiple)
+        // Event info - only show for single event
         const eventInfo = document.getElementById('event-info');
-        const firstGroup = eventGroups[eventIds[0]];
-        eventInfo.innerHTML = `
-            <img src="${firstGroup.image}" alt="Event" class="object-cover w-20 h-20 rounded-xl" loading="lazy">
-            <div>
-                <h3 class="font-bold text-secondary">${firstGroup.title}</h3>
-                <p class="text-sm text-muted">${firstGroup.date ? AmbiletUtils.formatDate(firstGroup.date) : ''}</p>
-                <p class="text-sm text-muted">${firstGroup.venue}</p>
-            </div>
-        `;
+        if (hasMultipleEvents) {
+            eventInfo.style.display = 'none';
+        } else {
+            eventInfo.style.display = '';
+            const firstGroup = eventGroups[eventIds[0]];
+            eventInfo.innerHTML = `
+                <img src="${firstGroup.image}" alt="Event" class="object-cover w-20 h-20 rounded-xl" loading="lazy">
+                <div>
+                    <h3 class="font-bold text-secondary">${firstGroup.title}</h3>
+                    <p class="text-sm text-muted">${firstGroup.date ? AmbiletUtils.formatDate(firstGroup.date) : ''}</p>
+                    <p class="text-sm text-muted">${firstGroup.venue}</p>
+                </div>
+            `;
+        }
 
         // Items summary - grouped by event
         const itemsSummary = document.getElementById('items-summary');

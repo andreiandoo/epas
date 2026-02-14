@@ -14,7 +14,7 @@ $page = max(1, (int) ($_GET['page'] ?? 1));
 $sort = in_array($_GET['sort'] ?? '', ['events', 'name', 'newest']) ? $_GET['sort'] : 'events';
 $search = trim($_GET['search'] ?? '');
 
-$queryParams = ['sort' => $sort, 'with_events' => '1', 'per_page' => '18', 'page' => $page];
+$queryParams = ['sort' => $sort, 'per_page' => '18', 'page' => $page];
 if ($search !== '') {
     $queryParams['search'] = $search;
 }

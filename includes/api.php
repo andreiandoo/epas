@@ -111,10 +111,17 @@ function api_request(string $method, string $url, ?array $data = null): array
         ];
     }
 
-    return [
+    $result = [
         'success' => true,
         'data' => $decoded['data'] ?? $decoded,
     ];
+
+    // Preserve pagination meta if present
+    if (isset($decoded['meta'])) {
+        $result['meta'] = $decoded['meta'];
+    }
+
+    return $result;
 }
 
 /**

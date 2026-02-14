@@ -1307,12 +1307,30 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             const basePrice = item.ticketType?.price || item.price || 0;
             const quantity = item.quantity || 1;
             const itemKey = item.key || index;
+            const itemSeats = item.seats || [];
+            const hasSeats = itemSeats.length > 0 || (item.seat_uids && item.seat_uids.length > 0);
+            const eventSlug = item.event?.slug || '';
 
             // Calculate per-ticket commission
             const commission = calculateItemCommission(item);
             let displayPrice = basePrice;
             if (commission.mode === 'added_on_top') {
                 displayPrice = basePrice + commission.amount;
+            }
+
+            // Quantity controls: seating items get read-only + link, others get +/- buttons
+            let qtyHtml;
+            if (hasSeats) {
+                qtyHtml = '<span class="text-sm font-semibold">' + quantity + ' loc' + (quantity > 1 ? 'uri' : '') + '</span>' +
+                    (eventSlug ? ' <a href="/bilete/' + escapeHtml(eventSlug) + '" class="text-xs font-semibold underline text-primary">Modifică</a>' : '');
+            } else {
+                qtyHtml = '<button type="button" class="flex items-center justify-center w-6 h-6 transition-colors bg-gray-100 rounded hover:bg-gray-200 cart-qty-btn" data-action="decrease" data-index="' + index + '">' +
+                        '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>' +
+                    '</button>' +
+                    '<span class="w-6 text-sm font-semibold text-center">' + quantity + '</span>' +
+                    '<button type="button" class="flex items-center justify-center w-6 h-6 transition-colors bg-gray-100 rounded hover:bg-gray-200 cart-qty-btn" data-action="increase" data-index="' + index + '">' +
+                        '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+                    '</button>';
             }
 
             return '<div class="p-3 bg-white border border-gray-200 rounded-xl" data-cart-item="' + index + '" data-item-key="' + escapeHtml(String(itemKey)) + '">' +
@@ -1331,13 +1349,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                         (locationText ? '<p class="text-xs text-gray-400 truncate">' + escapeHtml(locationText) + '</p>' : '') +
                         '<div class="flex items-center justify-between mt-2">' +
                             '<div class="flex items-center gap-2">' +
-                                '<button type="button" class="flex items-center justify-center w-6 h-6 transition-colors bg-gray-100 rounded hover:bg-gray-200 cart-qty-btn" data-action="decrease" data-index="' + index + '">' +
-                                    '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>' +
-                                '</button>' +
-                                '<span class="w-6 text-sm font-semibold text-center">' + quantity + '</span>' +
-                                '<button type="button" class="flex items-center justify-center w-6 h-6 transition-colors bg-gray-100 rounded hover:bg-gray-200 cart-qty-btn" data-action="increase" data-index="' + index + '">' +
-                                    '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
-                                '</button>' +
+                                qtyHtml +
                             '</div>' +
                             '<span class="font-bold text-primary">' + (displayPrice * quantity).toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei</span>' +
                         '</div>' +

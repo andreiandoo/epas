@@ -24,7 +24,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once dirname(__DIR__) . '/includes/config.php';
 
+// Extract path info from REQUEST_URI, falling back to PATH_INFO
 $pathInfo = $_SERVER['PATH_INFO'] ?? '';
+if (empty($pathInfo)) {
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+    // Remove query string
+    $requestPath = strtok($requestUri, '?');
+    // Extract path after the script name
+    if ($scriptName && str_starts_with($requestPath, $scriptName)) {
+        $pathInfo = substr($requestPath, strlen($scriptName));
+    }
+}
+
 $coreEndpoint = match ($pathInfo) {
     '/track' => '/marketplace-tracking/track',
     '/batch' => '/marketplace-tracking/batch',
@@ -33,7 +45,7 @@ $coreEndpoint = match ($pathInfo) {
 
 if (!$coreEndpoint) {
     http_response_code(404);
-    echo json_encode(['error' => 'Not found']);
+    echo json_encode(['error' => 'Not found', 'debug_path' => $pathInfo]);
     exit;
 }
 
