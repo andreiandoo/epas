@@ -197,6 +197,12 @@ class Ticket extends Model
     {
         $client = \App\Models\MarketplaceClient::find($this->marketplace_client_id);
         $domain = $client?->domain ?? config('app.url');
+
+        // If domain already has a scheme, use it as-is
+        if (str_starts_with($domain, 'http://') || str_starts_with($domain, 'https://')) {
+            return rtrim($domain, '/') . "/t/{$this->code}";
+        }
+
         $scheme = str_contains($domain, 'localhost') ? 'http' : 'https';
         return "{$scheme}://{$domain}/t/{$this->code}";
     }
