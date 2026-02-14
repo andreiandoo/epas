@@ -12,44 +12,44 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- Progress Steps - All Complete -->
     <div class="bg-white border-b border-gray-200 mt-28 mobile:mt-20">
-        <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="px-4 py-4 mx-auto max-w-7xl">
             <div class="flex items-center justify-center gap-4">
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center">
+                    <div class="flex items-center justify-center w-8 h-8 text-white bg-green-500 rounded-full">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
                     <span class="text-sm font-medium text-green-600">Coș</span>
                 </div>
                 <div class="w-12 h-px bg-green-500"></div>
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center">
+                    <div class="flex items-center justify-center w-8 h-8 text-white bg-green-500 rounded-full">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
                     <span class="text-sm font-medium text-green-600">Checkout</span>
                 </div>
                 <div class="w-12 h-px bg-green-500"></div>
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center">
+                    <div class="flex items-center justify-center w-8 h-8 text-white bg-green-500 rounded-full">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
                     <span class="text-sm font-semibold text-green-600">Confirmare</span>
                 </div>
             </div>
             <?php if ($orderRef): ?>
-            <p class="text-center text-sm text-gray-500 mt-2">Comandă #<?= htmlspecialchars($orderRef) ?></p>
+            <p class="mt-2 text-sm text-center text-gray-500">Comandă #<?= htmlspecialchars($orderRef) ?></p>
             <?php endif; ?>
         </div>
     </div>
 
     <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 py-6">
+    <main class="max-w-4xl px-4 py-6 mx-auto">
         <!-- Success Message -->
-        <div class="text-center mb-6">
-            <div class="inline-flex items-center justify-center w-20 h-20 bg-success/20 rounded-full mb-4">
+        <div class="mb-6 text-center">
+            <div class="inline-flex items-center justify-center w-20 h-20 mb-4 rounded-full bg-success/20">
                 <svg class="w-10 h-10 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
             </div>
-            <h1 class="text-3xl md:text-4xl font-extrabold text-secondary mb-2">Plata a fost procesată!</h1>
-            <p id="printingText" class="text-muted text-lg">Biletele tale se printează...</p>
+            <h1 class="mb-2 text-3xl font-extrabold md:text-4xl text-secondary">Plata a fost procesată!</h1>
+            <p id="printingText" class="text-lg text-muted">Biletele tale se printează...</p>
         </div>
 
         <!-- Printer Section -->
@@ -80,9 +80,9 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <!-- Tickets Carousel (appears after printing) -->
-        <div class="tickets-carousel mt-6" id="ticketsCarousel">
-            <div class="text-center mb-4">
-                <h2 class="text-xl font-bold text-secondary mb-1">Biletele tale sunt gata!</h2>
+        <div class="mt-6 tickets-carousel" id="ticketsCarousel">
+            <div class="mb-4 text-center">
+                <h2 class="mb-1 text-xl font-bold text-secondary">Biletele tale sunt gata!</h2>
                 <p id="ticketsCount" class="text-sm text-muted">Se încarcă...</p>
             </div>
 
@@ -101,71 +101,71 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <!-- Email Confirmation -->
-        <div class="email-animation mt-8 p-4 bg-white rounded-2xl border border-border flex items-center gap-4">
-            <div class="w-12 h-12 bg-success/10 rounded-xl flex items-center justify-center flex-shrink-0">
+        <div class="flex items-center gap-4 p-4 mt-8 bg-white border email-animation rounded-2xl border-border">
+            <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-success/10 rounded-xl">
                 <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             </div>
             <div class="flex-1">
                 <p class="font-semibold text-secondary">Biletele au fost trimise pe email</p>
                 <p id="buyerEmail" class="text-sm text-muted">Se încarcă...</p>
             </div>
-            <svg class="w-6 h-6 text-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <svg class="flex-shrink-0 w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         </div>
 
         <!-- Order Details -->
-        <div class="content-section delay-1 bg-white rounded-3xl border border-border overflow-hidden mt-8" id="orderDetails">
+        <div class="mt-8 overflow-hidden bg-white border content-section delay-1 rounded-3xl border-border" id="orderDetails">
             <div class="p-6 border-b border-border">
                 <div class="flex items-center justify-between">
                     <h2 class="text-xl font-bold text-secondary">Detalii comandă</h2>
-                    <span class="px-3 py-1 bg-success/10 text-success text-sm font-semibold rounded-full">Confirmată</span>
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-success/10 text-success">Confirmată</span>
                 </div>
             </div>
 
             <div class="p-6">
                 <!-- Event Info -->
                 <div id="eventInfo" class="flex gap-4 mb-6">
-                    <div class="skeleton w-20 h-20 rounded-xl"></div>
+                    <div class="w-20 h-20 skeleton rounded-xl"></div>
                     <div class="flex-1">
-                        <div class="skeleton h-5 w-3/4 mb-2 rounded"></div>
-                        <div class="skeleton h-4 w-1/2 mb-1 rounded"></div>
-                        <div class="skeleton h-4 w-2/3 rounded"></div>
+                        <div class="w-3/4 h-5 mb-2 rounded skeleton"></div>
+                        <div class="w-1/2 h-4 mb-1 rounded skeleton"></div>
+                        <div class="w-2/3 h-4 rounded skeleton"></div>
                     </div>
                 </div>
 
                 <!-- Tickets Summary -->
-                <div id="ticketsSummary" class="bg-surface rounded-xl p-4 mb-6">
-                    <h4 class="font-semibold text-secondary mb-3">Bilete achiziționate</h4>
-                    <div class="skeleton h-16 rounded"></div>
+                <div id="ticketsSummary" class="p-4 mb-6 bg-surface rounded-xl">
+                    <h4 class="mb-3 font-semibold text-secondary">Bilete achiziționate</h4>
+                    <div class="h-16 rounded skeleton"></div>
                 </div>
 
                 <!-- Payment Summary -->
-                <div class="border-t border-border pt-6">
-                    <div class="grid md:grid-cols-2 gap-6">
+                <div class="pt-6 border-t border-border">
+                    <div class="grid gap-6 md:grid-cols-2">
                         <div>
-                            <h4 class="font-semibold text-secondary mb-3">Metoda de plată</h4>
+                            <h4 class="mb-3 font-semibold text-secondary">Metoda de plată</h4>
                             <div class="flex items-center gap-3 p-3 bg-surface rounded-xl">
-                                <div class="w-12 h-8 bg-gradient-to-r from-blue-600 to-blue-800 rounded flex items-center justify-center">
+                                <div class="flex items-center justify-center w-12 h-8 rounded bg-gradient-to-r from-blue-600 to-blue-800">
                                     <span class="text-white text-[8px] font-bold">NETOPIA</span>
                                 </div>
                                 <div>
-                                    <p class="font-medium text-secondary text-sm">Card bancar</p>
+                                    <p class="text-sm font-medium text-secondary">Card bancar</p>
                                     <p id="cardNumber" class="text-xs text-muted">**** **** **** ****</p>
                                 </div>
                             </div>
                         </div>
                         <div id="paymentSummary">
-                            <h4 class="font-semibold text-secondary mb-3">Sumar plată</h4>
+                            <h4 class="mb-3 font-semibold text-secondary">Sumar plată</h4>
                             <div class="space-y-2 text-sm">
-                                <div class="skeleton h-4 rounded"></div>
-                                <div class="skeleton h-4 rounded"></div>
-                                <div class="skeleton h-6 rounded"></div>
+                                <div class="h-4 rounded skeleton"></div>
+                                <div class="h-4 rounded skeleton"></div>
+                                <div class="h-6 rounded skeleton"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Points Earned -->
-                <div id="pointsEarned" class="mt-6 p-4 bg-accent/10 rounded-xl flex items-center justify-between">
+                <div id="pointsEarned" class="flex items-center justify-between p-4 mt-6 bg-accent/10 rounded-xl">
                     <div class="flex items-center gap-3">
                         <span class="text-3xl">🎁</span>
                         <div>
@@ -182,9 +182,9 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <!-- Actions -->
-        <div class="content-section delay-2 grid md:grid-cols-2 gap-4 mt-8">
-            <a href="#" id="downloadBtn" class="flex items-center justify-center gap-3 p-4 bg-white rounded-2xl border border-border hover:border-primary hover:shadow-lg transition-all">
-                <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+        <div class="grid gap-4 mt-8 content-section delay-2 md:grid-cols-2">
+            <a href="#" id="downloadBtn" class="flex items-center justify-center gap-3 p-4 transition-all bg-white border rounded-2xl border-border hover:border-primary hover:shadow-lg">
+                <div class="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-xl">
                     <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 </div>
                 <div class="text-left">
@@ -192,8 +192,8 @@ require_once __DIR__ . '/includes/header.php';
                     <p class="text-sm text-muted">Printează sau salvează ca PDF</p>
                 </div>
             </a>
-            <a href="#" id="calendarBtn" class="flex items-center justify-center gap-3 p-4 bg-white rounded-2xl border border-border hover:border-primary hover:shadow-lg transition-all">
-                <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+            <a href="#" id="calendarBtn" class="flex items-center justify-center gap-3 p-4 transition-all bg-white border rounded-2xl border-border hover:border-primary hover:shadow-lg">
+                <div class="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-xl">
                     <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </div>
                 <div class="text-left">
@@ -204,8 +204,8 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <!-- Share Section -->
-        <div class="content-section delay-3 text-center mt-8">
-            <p class="text-muted mb-4">Spune-le și prietenilor despre eveniment!</p>
+        <div class="mt-8 text-center content-section delay-3">
+            <p class="mb-4 text-muted">Spune-le și prietenilor despre eveniment!</p>
             <div class="flex items-center justify-center gap-3">
                 <a href="#" id="shareFb" class="w-12 h-12 bg-[#1877F2] text-white rounded-xl flex items-center justify-center hover:scale-110 transition-transform">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
@@ -213,15 +213,15 @@ require_once __DIR__ . '/includes/header.php';
                 <a href="#" id="shareWa" class="w-12 h-12 bg-[#25D366] text-white rounded-xl flex items-center justify-center hover:scale-110 transition-transform">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                 </a>
-                <button onclick="ThankYouPage.copyLink()" class="w-12 h-12 bg-surface text-secondary rounded-xl flex items-center justify-center hover:bg-primary hover:text-white transition-all border border-border">
+                <button onclick="ThankYouPage.copyLink()" class="flex items-center justify-center w-12 h-12 transition-all border bg-surface text-secondary rounded-xl hover:bg-primary hover:text-white border-border">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                 </button>
             </div>
         </div>
 
         <!-- Back to Home -->
-        <div class="content-section delay-4 text-center mt-12">
-            <a href="/" class="btn-primary inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-white text-lg">
+        <div class="mt-12 text-center content-section delay-4">
+            <a href="/" class="inline-flex items-center gap-2 px-8 py-4 text-lg font-bold text-white btn-primary rounded-xl">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                 Înapoi la pagina principală
             </a>
@@ -278,7 +278,7 @@ $scriptsExtra = <<<'SCRIPTS'
     .tickets-carousel { opacity: 0; transform: translateY(30px); animation: showCarousel 0.8s ease forwards; animation-delay: 2.5s; }
     @keyframes showCarousel { to { opacity: 1; transform: translateY(0); } }
 
-    .tickets-scroll { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding: 20px 0; scrollbar-width: none; }
+    .tickets-scroll { display: flex; gap: 16px; overflow-x: visible; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding: 20px 0; scrollbar-width: none; }
     .tickets-scroll::-webkit-scrollbar { display: none; }
 
     .ticket-card { flex-shrink: 0; scroll-snap-align: center; width: 280px; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.12); transition: transform 0.3s ease, box-shadow 0.3s ease; }
@@ -400,10 +400,10 @@ const ThankYouPage = {
             // Venue may be string or translatable object {en: "...", ro: "..."}
             const venue = (typeof event.venue === 'object' && event.venue !== null) ? (event.venue.ro || event.venue.en || Object.values(event.venue)[0] || '') : (event.venue || '');
             eventInfo.innerHTML = `
-                <img src="${getStorageUrl(event.image)}" alt="${eventTitle}" class="w-20 h-20 rounded-xl object-cover" loading="lazy" onerror="this.style.display='none'">
+                <img src="${getStorageUrl(event.image)}" alt="${eventTitle}" class="object-cover w-20 h-20 rounded-xl" loading="lazy" onerror="this.style.display='none'">
                 <div>
                     <h3 class="font-bold text-secondary">${eventTitle}</h3>
-                    <p class="text-sm text-muted mt-1">${eventDate}${eventTime ? ' • ' + eventTime : ''}</p>
+                    <p class="mt-1 text-sm text-muted">${eventDate}${eventTime ? ' • ' + eventTime : ''}</p>
                     <p class="text-sm text-muted">${venue}${event.city ? ', ' + event.city : ''}</p>
                 </div>
             `;
@@ -417,12 +417,12 @@ const ThankYouPage = {
         const ticketsSummary = document.getElementById('ticketsSummary');
         const seatedTickets = (order.tickets || []).filter(t => t.seat);
         if (order.items && order.items.length > 0) {
-            let html = `<h4 class="font-semibold text-secondary mb-3">Bilete achiziționate</h4>`;
+            let html = `<h4 class="mb-3 font-semibold text-secondary">Bilete achiziționate</h4>`;
             html += order.items.map(item => `
-                <div class="flex justify-between items-center py-2 border-b border-border last:border-0">
+                <div class="flex items-center justify-between py-2 border-b border-border last:border-0">
                     <div>
                         <span class="font-medium text-secondary">${item.name}</span>
-                        <span class="text-muted text-sm ml-1">× ${item.quantity}</span>
+                        <span class="ml-1 text-sm text-muted">× ${item.quantity}</span>
                     </div>
                     <span class="font-semibold">${AmbiletUtils.formatCurrency(item.total)}</span>
                 </div>
@@ -430,21 +430,21 @@ const ThankYouPage = {
             // Show insurance info if any ticket has insurance
             const insuredTickets = (order.tickets || []).filter(t => t.has_insurance);
             if (insuredTickets.length > 0) {
-                html += `<div class="mt-3 pt-3 border-t border-border">
+                html += `<div class="pt-3 mt-3 border-t border-border">
                     <div class="flex items-center gap-2 text-sm text-green-700">
-                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                         <span class="font-medium">${insuredTickets.length} bilet${insuredTickets.length > 1 ? 'e' : ''} asigurat${insuredTickets.length > 1 ? 'e' : ''} cu taxa de retur</span>
                     </div>
                 </div>`;
             }
             // Show individual seat assignments if tickets have seats
             if (seatedTickets.length > 0) {
-                html += `<div class="mt-3 pt-3 border-t border-border">
-                    <p class="text-xs font-medium text-muted uppercase tracking-wide mb-2">Locuri atribuite</p>
+                html += `<div class="pt-3 mt-3 border-t border-border">
+                    <p class="mb-2 text-xs font-medium tracking-wide uppercase text-muted">Locuri atribuite</p>
                     ${seatedTickets.map(t => `
                         <div class="flex items-center gap-2 py-1 text-sm">
                             <span class="text-muted">${t.type || 'Bilet'}</span>
-                            <span class="text-secondary font-medium">
+                            <span class="font-medium text-secondary">
                                 ${[t.seat.section_name, t.seat.row_label ? 'Rând ' + t.seat.row_label : '', t.seat.seat_number ? 'Loc ' + t.seat.seat_number : ''].filter(Boolean).join(', ')}
                             </span>
                         </div>
@@ -463,7 +463,7 @@ const ThankYouPage = {
         const currency = order.currency || 'RON';
 
         document.getElementById('paymentSummary').innerHTML = `
-            <h4 class="font-semibold text-secondary mb-3">Sumar plată</h4>
+            <h4 class="mb-3 font-semibold text-secondary">Sumar plată</h4>
             <div class="space-y-2 text-sm">
                 <div class="flex justify-between">
                     <span class="text-muted">Subtotal</span>
@@ -487,7 +487,7 @@ const ThankYouPage = {
                     <span>-${AmbiletUtils.formatCurrency(discount)}</span>
                 </div>
                 ` : ''}
-                <div class="flex justify-between pt-2 border-t border-border font-bold text-lg">
+                <div class="flex justify-between pt-2 text-lg font-bold border-t border-border">
                     <span>Total plătit</span>
                     <span class="text-primary">${AmbiletUtils.formatCurrency(total)}</span>
                 </div>
@@ -704,55 +704,55 @@ const ThankYouPage = {
                         <span class="text-xs opacity-70">${SITE_NAME} TICKET</span>
                         <span class="text-xs font-bold bg-white/20 px-2 py-0.5 rounded">${idx + 1} / ${total}</span>
                     </div>
-                    <h3 class="font-bold text-lg">${ticket.type || ticket.type_name || 'Bilet'}</h3>
+                    <h3 class="text-lg font-bold">${ticket.type || ticket.type_name || 'Bilet'}</h3>
                 </div>
                 <div class="ticket-card-body">
                     <div class="ticket-dashed-line"></div>
 
-                    <div class="space-y-3 mt-4">
+                    <div class="mt-4 space-y-3">
                         <div>
-                            <p class="text-xs text-muted uppercase tracking-wide">Eveniment</p>
+                            <p class="text-xs tracking-wide uppercase text-muted">Eveniment</p>
                             <p class="font-bold text-secondary">${eventTitle}</p>
                         </div>
                         <div class="flex gap-4">
                             <div>
-                                <p class="text-xs text-muted uppercase tracking-wide">Data</p>
+                                <p class="text-xs tracking-wide uppercase text-muted">Data</p>
                                 <p class="font-semibold text-secondary">${eventDate}</p>
                             </div>
                             ${eventTime ? `
                             <div>
-                                <p class="text-xs text-muted uppercase tracking-wide">Ora</p>
+                                <p class="text-xs tracking-wide uppercase text-muted">Ora</p>
                                 <p class="font-semibold text-secondary">${eventTime}</p>
                             </div>
                             ` : ''}
                         </div>
                         <div>
-                            <p class="text-xs text-muted uppercase tracking-wide">Locație</p>
+                            <p class="text-xs tracking-wide uppercase text-muted">Locație</p>
                             <p class="font-semibold text-secondary">${eventVenue}${event?.city ? ', ' + event.city : ''}</p>
                         </div>
                         ${ticket.seat ? `
-                        <div class="flex gap-4 flex-wrap">
+                        <div class="flex flex-wrap gap-4">
                             ${ticket.seat.section_name ? `
                             <div>
-                                <p class="text-xs text-muted uppercase tracking-wide">Secțiune</p>
+                                <p class="text-xs tracking-wide uppercase text-muted">Secțiune</p>
                                 <p class="font-semibold text-secondary">${ticket.seat.section_name}</p>
                             </div>` : ''}
                             ${ticket.seat.row_label ? `
                             <div>
-                                <p class="text-xs text-muted uppercase tracking-wide">Rând</p>
+                                <p class="text-xs tracking-wide uppercase text-muted">Rând</p>
                                 <p class="font-semibold text-secondary">${ticket.seat.row_label}</p>
                             </div>` : ''}
                             ${ticket.seat.seat_number ? `
                             <div>
-                                <p class="text-xs text-muted uppercase tracking-wide">Loc</p>
+                                <p class="text-xs tracking-wide uppercase text-muted">Loc</p>
                                 <p class="font-semibold text-secondary">${ticket.seat.seat_number}</p>
                             </div>` : ''}
                         </div>
                         ` : ''}
-                        <div class="flex justify-between items-center pt-2">
+                        <div class="flex items-center justify-between pt-2">
                             <div>
                                 <p class="text-xs text-muted">Participant</p>
-                                <p class="font-semibold text-secondary text-sm">${ticket.attendee_name || this.order?.billing_address || 'Participant'}</p>
+                                <p class="text-sm font-semibold text-secondary">${ticket.attendee_name || this.order?.billing_address || 'Participant'}</p>
                             </div>
                             <div class="text-right">
                                 <p class="text-xs text-muted">Preț</p>
@@ -760,7 +760,7 @@ const ThankYouPage = {
                             </div>
                         </div>
                         ${ticket.has_insurance ? `
-                        <div class="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                        <div class="inline-flex items-center gap-1 px-2 py-1 mt-2 text-xs font-medium text-green-700 rounded-full bg-green-50">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                             Asigurat - Taxa de retur
                         </div>
