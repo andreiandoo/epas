@@ -36,5 +36,8 @@
 
     <!-- Page-specific scripts -->
     <?php if (isset($scriptsExtra)) echo $scriptsExtra; ?>
+
+    <!-- Tracking Scripts (body) -->
+    <?php if (!empty($trackingBodyScripts)) echo $trackingBodyScripts . "\n"; ?>
 </body>
 </html>
