@@ -49,8 +49,18 @@ class TicketResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('order.id')
                     ->label('Nr. Comandă')
-                    ->formatStateUsing(fn ($state) => $state ? '#' . str_pad($state, 6, '0', STR_PAD_LEFT) : '-')
-                    ->searchable()
+                    ->formatStateUsing(fn ($state, $record) =>
+                        $state
+                            ? '#' . str_pad($state, 6, '0', STR_PAD_LEFT) .
+                              ($record->order?->order_number ? " ({$record->order->order_number})" : '')
+                            : '-'
+                    )
+                    ->searchable(query: function ($query, $search) {
+                        $query->whereHas('order', function ($q) use ($search) {
+                            $q->where('id', 'like', "%{$search}%")
+                              ->orWhere('order_number', 'like', "%{$search}%");
+                        });
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('beneficiary_name')
                     ->label('Beneficiar')

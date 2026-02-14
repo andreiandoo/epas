@@ -33,7 +33,7 @@ class MarketplaceOrderNotification extends Notification
     protected function confirmedMail($notifiable): MailMessage
     {
         $event = $this->order->event ?? $this->order->marketplaceEvent;
-        $eventName = $event?->title ?? $event?->name ?? 'Event';
+        $eventName = $this->resolveEventName($event);
         $ticketCount = $this->order->tickets()->count();
 
         return (new MailMessage)
@@ -53,7 +53,7 @@ class MarketplaceOrderNotification extends Notification
     protected function refundedMail($notifiable): MailMessage
     {
         $event = $this->order->event ?? $this->order->marketplaceEvent;
-        $eventName = $event?->title ?? $event?->name ?? 'Event';
+        $eventName = $this->resolveEventName($event);
 
         $mail = (new MailMessage)
             ->subject("Order Refunded - {$this->order->order_number}")
@@ -75,7 +75,7 @@ class MarketplaceOrderNotification extends Notification
     protected function cancelledMail($notifiable): MailMessage
     {
         $event = $this->order->event ?? $this->order->marketplaceEvent;
-        $eventName = $event?->title ?? $event?->name ?? 'Event';
+        $eventName = $this->resolveEventName($event);
 
         return (new MailMessage)
             ->subject("Order Cancelled - {$this->order->order_number}")
@@ -89,7 +89,7 @@ class MarketplaceOrderNotification extends Notification
     protected function eventCancelledMail($notifiable): MailMessage
     {
         $event = $this->order->event ?? $this->order->marketplaceEvent;
-        $eventName = $event?->title ?? $event?->name ?? 'Event';
+        $eventName = $this->resolveEventName($event);
 
         return (new MailMessage)
             ->subject("Event Cancelled - Automatic Refund Issued")
@@ -110,6 +110,20 @@ class MarketplaceOrderNotification extends Notification
             ->line("There's an update to your order.")
             ->line("**Order Number:** {$this->order->order_number}")
             ->line("**Status:** {$this->order->status}");
+    }
+
+    protected function resolveEventName($event): string
+    {
+        if (!$event) {
+            return 'Event';
+        }
+
+        $title = $event->title ?? $event->name ?? null;
+        if (is_array($title)) {
+            return $title['ro'] ?? $title['en'] ?? reset($title) ?: 'Event';
+        }
+
+        return $title ?: 'Event';
     }
 
     protected function getTicketsUrl(): string

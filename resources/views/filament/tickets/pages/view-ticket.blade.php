@@ -187,14 +187,23 @@
                                     <a href="{{ \App\Filament\Resources\Orders\OrderResource::getUrl('view', ['record' => $ticket->order]) }}" class="text-primary-600 hover:underline">
                                         #{{ str_pad($ticket->order->id, 6, '0', STR_PAD_LEFT) }}
                                     </a>
+                                    @if($ticket->order->order_number)
+                                        <span class="ml-1 text-sm text-gray-500 dark:text-gray-400">({{ $ticket->order->order_number }})</span>
+                                    @endif
                                 @elseif($isMarketplacePanel)
                                     <a href="{{ \App\Filament\Marketplace\Resources\OrderResource::getUrl('view', ['record' => $ticket->order]) }}" class="text-primary-600 hover:underline">
                                         #{{ str_pad($ticket->order->id, 6, '0', STR_PAD_LEFT) }}
                                     </a>
+                                    @if($ticket->order->order_number)
+                                        <span class="ml-1 text-sm text-gray-500 dark:text-gray-400">({{ $ticket->order->order_number }})</span>
+                                    @endif
                                 @else
                                     <a href="{{ \App\Filament\Tenant\Resources\OrderResource::getUrl('view', ['record' => $ticket->order]) }}" class="text-primary-600 hover:underline">
                                         #{{ str_pad($ticket->order->id, 6, '0', STR_PAD_LEFT) }}
                                     </a>
+                                    @if($ticket->order->order_number)
+                                        <span class="ml-1 text-sm text-gray-500 dark:text-gray-400">({{ $ticket->order->order_number }})</span>
+                                    @endif
                                 @endif
                             </p>
                         </div>

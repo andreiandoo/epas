@@ -229,8 +229,16 @@ class OrderResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('Nr. Comandă')
-                    ->formatStateUsing(fn ($state) => '#' . str_pad($state, 6, '0', STR_PAD_LEFT))
-                    ->searchable()
+                    ->formatStateUsing(fn ($state, $record) =>
+                        '#' . str_pad($state, 6, '0', STR_PAD_LEFT) .
+                        ($record->order_number ? " ({$record->order_number})" : '')
+                    )
+                    ->searchable(query: function ($query, $search) {
+                        $query->where(function ($q) use ($search) {
+                            $q->where('id', 'like', "%{$search}%")
+                              ->orWhere('order_number', 'like', "%{$search}%");
+                        });
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('customer_email')
                     ->label('Client')
