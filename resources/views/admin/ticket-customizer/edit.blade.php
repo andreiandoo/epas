@@ -1441,7 +1441,8 @@
                 async saveTemplate() {
                     this.saving = true;
                     try {
-                        const response = await fetch(`/admin/ticket-customizer/${this.templateId}`, {
+                        const saveUrl = @json($saveUrl ?? "/admin/ticket-customizer/{$template->id}");
+                        const response = await fetch(saveUrl, {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',

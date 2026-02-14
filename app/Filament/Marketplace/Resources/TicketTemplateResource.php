@@ -164,7 +164,7 @@ class TicketTemplateResource extends Resource
                             ->label('')
                             ->content(fn ($record) => $record
                                 ? new \Illuminate\Support\HtmlString(
-                                    '<a href="/tenant/ticket-customizer/' . $record->id . '/editor"
+                                    '<a href="/marketplace/ticket-customizer/' . $record->id . '/editor"
                                        target="_blank"
                                        class="inline-flex items-center gap-2 px-4 py-2 font-medium text-white transition bg-orange-600 rounded-lg hover:bg-orange-700">
                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
@@ -232,7 +232,7 @@ class TicketTemplateResource extends Resource
                     ->label('Visual Editor')
                     ->icon('heroicon-o-pencil-square')
                     ->color('warning')
-                    ->url(fn ($record) => "/tenant/ticket-customizer/{$record->id}/editor")
+                    ->url(fn ($record) => "/marketplace/ticket-customizer/{$record->id}/editor")
                     ->openUrlInNewTab(),
                 Actions\Action::make('set_default')
                     ->label('Set Default')

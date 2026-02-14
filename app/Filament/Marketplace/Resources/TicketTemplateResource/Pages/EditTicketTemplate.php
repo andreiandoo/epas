@@ -17,7 +17,7 @@ class EditTicketTemplate extends EditRecord
                 ->label('Open Visual Editor')
                 ->icon('heroicon-o-pencil-square')
                 ->color('warning')
-                ->url(fn () => "/tenant/ticket-customizer/{$this->record->id}/editor")
+                ->url(fn () => "/marketplace/ticket-customizer/{$this->record->id}/editor")
                 ->openUrlInNewTab(),
             Actions\DeleteAction::make(),
         ];

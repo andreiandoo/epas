@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tenant;
+namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
 use App\Models\TicketTemplate;
@@ -9,29 +9,19 @@ use Illuminate\Http\Request;
 class TicketCustomizerController extends Controller
 {
     /**
-     * Show the visual editor for a ticket template (tenant access)
+     * Show the visual editor for a ticket template (marketplace admin access)
      */
     public function edit(TicketTemplate $template)
     {
-        $user = auth()->user();
-        $tenant = $user->tenant;
+        $user = auth('marketplace_admin')->user();
+        $clientId = $user->marketplace_client_id;
 
-        // Verify the template belongs to this tenant
-        if (!$tenant || $template->tenant_id !== $tenant->id) {
-            abort(403, 'Access denied. This template does not belong to your organization.');
+        // Verify the template belongs to this marketplace client
+        if ($template->marketplace_client_id !== $clientId) {
+            abort(403, 'Access denied. This template does not belong to your marketplace.');
         }
 
-        // Verify the tenant has the ticket-customizer microservice enabled
-        $hasAccess = $tenant->microservices()
-            ->where('slug', 'ticket-customizer')
-            ->wherePivot('is_active', true)
-            ->exists();
-
-        if (!$hasAccess) {
-            abort(403, 'The Ticket Customizer feature is not enabled for your organization.');
-        }
-
-        // Load the template with tenant relation
+        // Load the template
         $template->load('tenant');
 
         // Get available variables
@@ -76,23 +66,23 @@ class TicketCustomizerController extends Controller
             'variables' => $variables,
             'sampleData' => $sampleData,
             'presets' => $presets,
-            'saveUrl' => "/tenant/ticket-customizer/{$template->id}/editor",
+            'saveUrl' => "/marketplace/ticket-customizer/{$template->id}/editor",
         ]);
     }
 
     /**
-     * Save the template data via AJAX (tenant access)
+     * Save the template data via AJAX (marketplace admin access)
      */
     public function update(Request $request, TicketTemplate $template)
     {
-        $user = auth()->user();
-        $tenant = $user->tenant;
+        $user = auth('marketplace_admin')->user();
+        $clientId = $user->marketplace_client_id;
 
-        // Verify the template belongs to this tenant
-        if (!$tenant || $template->tenant_id !== $tenant->id) {
+        // Verify the template belongs to this marketplace client
+        if ($template->marketplace_client_id !== $clientId) {
             return response()->json([
                 'success' => false,
-                'message' => 'Access denied. This template does not belong to your organization.',
+                'message' => 'Access denied. This template does not belong to your marketplace.',
             ], 403);
         }
 

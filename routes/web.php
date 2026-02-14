@@ -19,6 +19,7 @@ use App\Http\Controllers\Public\DocsController as PublicDocsController;
 use App\Http\Controllers\Tenant\PreviewProxyController;
 use App\Http\Controllers\Admin\TicketCustomizerController;
 use App\Http\Controllers\Tenant\TicketCustomizerController as TenantTicketCustomizerController;
+use App\Http\Controllers\Marketplace\TicketCustomizerController as MarketplaceTicketCustomizerController;
 use App\Http\Controllers\ApplePayVerificationController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
@@ -258,6 +259,14 @@ Route::middleware(['web', 'auth'])->prefix('tenant')->group(function () {
         ->name('tenant.ticket-customizer.edit');
     Route::put('/ticket-customizer/{template}/editor', [TenantTicketCustomizerController::class, 'update'])
         ->name('tenant.ticket-customizer.update');
+});
+
+// Marketplace Ticket Customizer (Visual Editor) Routes
+Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->group(function () {
+    Route::get('/ticket-customizer/{template}/editor', [MarketplaceTicketCustomizerController::class, 'edit'])
+        ->name('marketplace.ticket-customizer.edit');
+    Route::put('/ticket-customizer/{template}/editor', [MarketplaceTicketCustomizerController::class, 'update'])
+        ->name('marketplace.ticket-customizer.update');
 });
 
 // Public Contract Signing Routes (no auth required - token-based)

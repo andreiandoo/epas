@@ -996,6 +996,12 @@ switch ($action) {
         $endpoint = '/customer/cart/promo-code';
         break;
 
+    case 'promo-codes.validate':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/promo-codes/validate';
+        break;
+
     case 'checkout.features':
         $endpoint = '/checkout/features';
         break;

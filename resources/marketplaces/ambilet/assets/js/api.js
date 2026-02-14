@@ -183,6 +183,7 @@ const AmbiletAPI = {
         if (endpoint.includes('/cart/items')) return 'cart.items.add';
         if (endpoint.includes('/cart/promo-code')) return 'cart.promo-code';
         if (endpoint.includes('/cart')) return 'cart';
+        if (endpoint === '/promo-codes/validate') return 'promo-codes.validate';
         if (endpoint === '/checkout.features' || endpoint === '/checkout/features') return 'checkout.features';
         if (endpoint.includes('/checkout')) return 'checkout';
 
