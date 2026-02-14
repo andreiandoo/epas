@@ -16,6 +16,8 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Symfony\Component\Mime\Email as SymfonyEmail;
+use Symfony\Component\Mime\Address as SymfonyAddress;
 
 class ViewTicket extends ViewRecord
 {
@@ -96,18 +98,68 @@ class ViewTicket extends ViewRecord
                         return;
                     }
 
+                    // Get marketplace client for mail transport
+                    $marketplaceClient = static::getMarketplaceClient();
+
+                    if (!$marketplaceClient?->hasMailConfigured()) {
+                        Notification::make()
+                            ->title('Email neconfigurat')
+                            ->body('Configurați SMTP-ul în setările marketplace-ului pentru a trimite emailuri.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    $transport = $marketplaceClient->getMailTransport();
+                    if (!$transport) {
+                        Notification::make()
+                            ->title('Eroare transport email')
+                            ->body('Nu s-a putut crea transportul de email. Verificați configurarea SMTP.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
                     Log::channel('marketplace')->info('Ticket email: starting send', [
                         'ticket_id' => $ticket->id,
                         'ticket_code' => $ticket->code,
                         'to' => $email,
+                        'mail_driver' => $marketplaceClient->getMailSettings()['driver'] ?? 'unknown',
                     ]);
 
                     try {
-                        Mail::to($email)->send(new TicketEmail($ticket));
+                        // Build ticket email content
+                        $ticketMail = new TicketEmail($ticket);
+
+                        // Render email HTML body
+                        $emailBody = view('emails.ticket', [
+                            'ticket' => $ticket,
+                            'eventTitle' => $ticketMail->eventTitle,
+                            'ticketTypeName' => $ticketMail->ticketTypeName,
+                            'venueName' => $ticketMail->venueName,
+                            'event' => $ticketMail->resolvedEvent,
+                        ])->render();
+
+                        // Generate PDF attachment
+                        $pdfData = $ticketMail->generatePdfData();
+
+                        // Send via marketplace client's mail transport
+                        $symfonyEmail = (new SymfonyEmail())
+                            ->from(new SymfonyAddress(
+                                $marketplaceClient->getEmailFromAddress(),
+                                $marketplaceClient->getEmailFromName()
+                            ))
+                            ->to($email)
+                            ->subject("Biletul tău pentru {$ticketMail->eventTitle}")
+                            ->html($emailBody)
+                            ->attach($pdfData, "ticket-{$ticket->code}.pdf", 'application/pdf');
+
+                        $transport->send($symfonyEmail);
 
                         Log::channel('marketplace')->info('Ticket email: sent successfully', [
                             'ticket_id' => $ticket->id,
                             'to' => $email,
+                            'from' => $marketplaceClient->getEmailFromAddress(),
                         ]);
 
                         Notification::make()
@@ -150,18 +202,13 @@ class ViewTicket extends ViewRecord
         $variableService = app(TicketVariableService::class);
         $generator = app(TicketPreviewGenerator::class);
 
-        // Resolve real ticket data
         $data = $variableService->resolveTicketData($ticket);
-
-        // Generate HTML from template with real data (DomPDF-compatible)
         $content = $generator->renderToHtml($template->template_data, $data);
 
-        // Get paper dimensions from template (mm to points: 1mm = 2.8346pt)
         $size = $template->getSize();
         $widthPt = round($size['width'] * 2.8346, 2);
         $heightPt = round($size['height'] * 2.8346, 2);
-        $widthMm = $size['width'];
-        $heightMm = $size['height'];
+        $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
 
         $html = <<<HTML
 <!DOCTYPE html>
@@ -169,10 +216,9 @@ class ViewTicket extends ViewRecord
 <head>
     <meta charset="UTF-8">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        @page { size: {$widthMm}mm {$heightMm}mm; margin: 0; }
-        body { width: {$widthMm}mm; height: {$heightMm}mm; overflow: hidden; }
-        img { display: block; }
+        @page { margin: 0; }
+        * { margin: 0; padding: 0; }
+        body { margin: 0; padding: 0; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; }
     </style>
 </head>
 <body>
@@ -181,10 +227,20 @@ class ViewTicket extends ViewRecord
 </html>
 HTML;
 
-        $pdf = Pdf::loadHTML($html)
-            ->setPaper([0, 0, $widthPt, $heightPt]);
+        Log::channel('marketplace')->debug('Ticket PDF HTML generated', [
+            'ticket_id' => $ticket->id,
+            'template_id' => $template->id,
+            'paper_pt' => [$widthPt, $heightPt],
+            'html_length' => strlen($html),
+            'layers_count' => count($template->template_data['layers'] ?? []),
+        ]);
+        @file_put_contents(storage_path('app/debug-ticket.html'), $html);
 
-        // Mark template as used
+        $pdf = Pdf::loadHTML($html)
+            ->setPaper([0, 0, $widthPt, $heightPt])
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('isHtml5ParserEnabled', true);
+
         $template->markAsUsed();
 
         return response()->streamDownload(

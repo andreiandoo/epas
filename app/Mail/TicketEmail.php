@@ -86,7 +86,7 @@ class TicketEmail extends Mailable
         ];
     }
 
-    protected function generatePdfData(): string
+    public function generatePdfData(): string
     {
         $ticket = $this->ticket;
         $event = $this->resolvedEvent;
@@ -115,8 +115,7 @@ class TicketEmail extends Mailable
         $size = $template->getSize();
         $widthPt = round($size['width'] * 2.8346, 2);
         $heightPt = round($size['height'] * 2.8346, 2);
-        $widthMm = $size['width'];
-        $heightMm = $size['height'];
+        $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
 
         $html = <<<HTML
 <!DOCTYPE html>
@@ -124,10 +123,9 @@ class TicketEmail extends Mailable
 <head>
     <meta charset="UTF-8">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        @page { size: {$widthMm}mm {$heightMm}mm; margin: 0; }
-        body { width: {$widthMm}mm; height: {$heightMm}mm; overflow: hidden; }
-        img { display: block; }
+        @page { margin: 0; }
+        * { margin: 0; padding: 0; }
+        body { margin: 0; padding: 0; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; }
     </style>
 </head>
 <body>
@@ -137,7 +135,9 @@ class TicketEmail extends Mailable
 HTML;
 
         $pdf = Pdf::loadHTML($html)
-            ->setPaper([0, 0, $widthPt, $heightPt]);
+            ->setPaper([0, 0, $widthPt, $heightPt])
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('isHtml5ParserEnabled', true);
 
         $template->markAsUsed();
 

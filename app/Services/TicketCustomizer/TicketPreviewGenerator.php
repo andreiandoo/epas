@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Storage;
  */
 class TicketPreviewGenerator
 {
+    private const MM_TO_PT = 2.8346;
+
     public function __construct(
         private TicketVariableService $variableService
     ) {}
@@ -79,8 +81,11 @@ class TicketPreviewGenerator
     }
 
     /**
-     * Render template to a DomPDF-compatible HTML string.
-     * Uses absolute-positioned divs instead of SVG for reliable PDF generation.
+     * Render template to DomPDF-compatible HTML string.
+     *
+     * Uses position:fixed with pt units for maximum DomPDF compatibility.
+     * Returns raw HTML elements without a wrapper - caller must provide
+     * the HTML document wrapper with @page size and body background-color.
      */
     public function renderToHtml(array $templateData, ?array $data = null): string
     {
@@ -89,194 +94,156 @@ class TicketPreviewGenerator
         $meta = $templateData['meta'] ?? [];
         $sizeW = $meta['size_mm']['w'] ?? 80;
         $sizeH = $meta['size_mm']['h'] ?? 200;
-        $layers = $templateData['layers'] ?? [];
+        $wPt = round($sizeW * self::MM_TO_PT, 2);
+        $hPt = round($sizeH * self::MM_TO_PT, 2);
 
-        // Sort layers by z-index
+        $layers = $templateData['layers'] ?? [];
         usort($layers, fn($a, $b) => ($a['z'] ?? 0) <=> ($b['z'] ?? 0));
 
-        // Background
         $background = $meta['background'] ?? [];
-        $bgColor = $background['color'] ?? '#ffffff';
         $bgImage = $background['image'] ?? '';
-
-        $bgStyle = "background-color: {$bgColor};";
-        if (!empty($bgImage)) {
-            $bgDataUri = $this->fetchImageAsDataUri($bgImage);
-            if ($bgDataUri) {
-                $posX = $background['positionX'] ?? 50;
-                $posY = $background['positionY'] ?? 50;
-                $bgStyle .= " background-image: url('{$bgDataUri}'); background-size: cover; background-position: {$posX}% {$posY}%;";
-            }
-        }
 
         $html = '';
 
-        foreach ($layers as $index => $layer) {
+        // Background image as fixed-positioned img covering the full page
+        if (!empty($bgImage)) {
+            $bgDataUri = $this->fetchImageAsDataUri($bgImage);
+            if ($bgDataUri) {
+                $html .= "<img src=\"{$bgDataUri}\" style=\"position: fixed; left: 0; top: 0; width: {$wPt}pt; height: {$hPt}pt;\">\n";
+            }
+        }
+
+        foreach ($layers as $layer) {
             if (isset($layer['visible']) && $layer['visible'] === false) {
                 continue;
             }
-            $html .= $this->renderLayerAsHtml($layer, $data, $index);
+            $html .= $this->renderLayerAsHtml($layer, $data);
         }
 
-        return <<<HTML
-<div style="position: relative; width: {$sizeW}mm; height: {$sizeH}mm; overflow: hidden; {$bgStyle}">
-{$html}
-</div>
-HTML;
+        return $html;
     }
 
     /**
-     * Render a single layer as HTML/CSS (for DomPDF)
+     * Render a single layer as DomPDF-safe HTML/CSS.
+     * All coordinates converted from mm to pt.
      */
-    private function renderLayerAsHtml(array $layer, array $data, int $zIndex): string
+    private function renderLayerAsHtml(array $layer, array $data): string
     {
         $type = $layer['type'] ?? 'text';
         $frame = $layer['frame'] ?? [];
 
-        $x = $frame['x'] ?? 0;
-        $y = $frame['y'] ?? 0;
-        $w = $frame['w'] ?? 0;
-        $h = $frame['h'] ?? 0;
-        $opacity = $layer['opacity'] ?? 1;
-        $rotation = $layer['rotation'] ?? 0;
-
-        $transform = $rotation != 0 ? "transform: rotate({$rotation}deg);" : '';
+        // Convert mm to pt for DomPDF compatibility
+        $x = round(($frame['x'] ?? 0) * self::MM_TO_PT, 2);
+        $y = round(($frame['y'] ?? 0) * self::MM_TO_PT, 2);
+        $w = round(($frame['w'] ?? 0) * self::MM_TO_PT, 2);
+        $h = round(($frame['h'] ?? 0) * self::MM_TO_PT, 2);
 
         switch ($type) {
             case 'text':
-                return $this->renderTextLayerHtml($layer, $data, $x, $y, $w, $h, $opacity, $transform, $zIndex);
+                return $this->renderTextLayerHtml($layer, $data, $x, $y, $w, $h);
             case 'shape':
-                return $this->renderShapeLayerHtml($layer, $x, $y, $w, $h, $opacity, $transform, $zIndex);
+                return $this->renderShapeLayerHtml($layer, $x, $y, $w, $h);
             case 'qr':
-                return $this->renderQRLayerHtml($layer, $data, $x, $y, $w, $h, $opacity, $transform, $zIndex);
+                return $this->renderQRLayerHtml($layer, $data, $x, $y, $w, $h);
             case 'barcode':
-                return $this->renderBarcodeLayerHtml($layer, $data, $x, $y, $w, $h, $opacity, $transform, $zIndex);
+                return $this->renderBarcodeLayerHtml($layer, $data, $x, $y, $w, $h);
             case 'image':
-                return $this->renderImageLayerHtml($layer, $data, $x, $y, $w, $h, $opacity, $transform, $zIndex);
+                return $this->renderImageLayerHtml($layer, $data, $x, $y, $w, $h);
             default:
                 return '';
         }
     }
 
-    private function renderTextLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform, int $zIndex): string
+    private function renderTextLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h): string
     {
         $content = $layer['content'] ?? '';
         $content = $this->replacePlaceholders($content, $data);
         $content = htmlspecialchars($content, ENT_QUOTES, 'UTF-8');
 
-        $fontSize = $layer['fontSize'] ?? 12;
+        // fontSize in template is in mm, convert to pt
+        $fontSizePt = round(($layer['fontSize'] ?? 12) * self::MM_TO_PT, 1);
         $color = $layer['color'] ?? '#000000';
         $align = $layer['textAlign'] ?? 'left';
         $fontWeight = $layer['fontWeight'] ?? 'normal';
-        $fontFamily = htmlspecialchars($layer['fontFamily'] ?? 'sans-serif', ENT_QUOTES, 'UTF-8');
+        $lineHeightPt = round($h, 1);
 
-        // Vertical alignment
-        $lineHeight = $h;
-        $display = 'flex';
-
-        return <<<HTML
-<div style="position: absolute; left: {$x}mm; top: {$y}mm; width: {$w}mm; height: {$h}mm; overflow: hidden; opacity: {$opacity}; z-index: {$zIndex}; {$transform}
-    font-size: {$fontSize}mm; color: {$color}; text-align: {$align}; font-weight: {$fontWeight}; font-family: '{$fontFamily}', sans-serif;
-    line-height: {$h}mm; white-space: nowrap;">{$content}</div>
-
-HTML;
+        // Use DejaVu Sans (DomPDF built-in) to guarantee rendering
+        return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; font-size: {$fontSizePt}pt; color: {$color}; text-align: {$align}; font-weight: {$fontWeight}; font-family: 'DejaVu Sans', sans-serif; line-height: {$lineHeightPt}pt;\">{$content}</div>\n";
     }
 
-    private function renderShapeLayerHtml(array $layer, float $x, float $y, float $w, float $h, float $opacity, string $transform, int $zIndex): string
+    private function renderShapeLayerHtml(array $layer, float $x, float $y, float $w, float $h): string
     {
         $kind = $layer['shapeKind'] ?? 'rect';
         $fill = $layer['fillColor'] ?? '#e5e7eb';
         $stroke = $layer['borderColor'] ?? 'transparent';
-        $strokeWidth = $layer['borderWidth'] ?? 0;
-        $borderRadius = $layer['borderRadius'] ?? 0;
+        $strokeWidthPt = round(($layer['borderWidth'] ?? 0) * self::MM_TO_PT, 2);
+        $borderRadiusPt = round(($layer['borderRadius'] ?? 0) * self::MM_TO_PT, 2);
 
-        $borderStyle = $strokeWidth > 0 ? "border: {$strokeWidth}mm solid {$stroke};" : '';
+        $borderStyle = $strokeWidthPt > 0 ? "border: {$strokeWidthPt}pt solid {$stroke};" : '';
         $radiusStyle = '';
 
         if ($kind === 'circle' || $kind === 'ellipse') {
             $radiusStyle = 'border-radius: 50%;';
-        } elseif ($borderRadius > 0) {
-            $radiusStyle = "border-radius: {$borderRadius}mm;";
+        } elseif ($borderRadiusPt > 0) {
+            $radiusStyle = "border-radius: {$borderRadiusPt}pt;";
         }
 
         if ($kind === 'line') {
-            $lineY = $y + $h / 2;
-            $lineH = max($strokeWidth, 0.3);
-            return <<<HTML
-<div style="position: absolute; left: {$x}mm; top: {$lineY}mm; width: {$w}mm; height: {$lineH}mm; background-color: {$stroke}; opacity: {$opacity}; z-index: {$zIndex}; {$transform}"></div>
-
-HTML;
+            $lineY = round($y + $h / 2, 2);
+            $lineH = max($strokeWidthPt, 0.85);
+            return "<div style=\"position: fixed; left: {$x}pt; top: {$lineY}pt; width: {$w}pt; height: {$lineH}pt; background-color: {$stroke};\"></div>\n";
         }
 
-        return <<<HTML
-<div style="position: absolute; left: {$x}mm; top: {$y}mm; width: {$w}mm; height: {$h}mm; background-color: {$fill}; {$borderStyle} {$radiusStyle} opacity: {$opacity}; z-index: {$zIndex}; {$transform}"></div>
-
-HTML;
+        return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; background-color: {$fill}; {$borderStyle} {$radiusStyle}\"></div>\n";
     }
 
-    private function renderQRLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform, int $zIndex): string
+    private function renderQRLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h): string
     {
         $codeData = $layer['qrData'] ?? $layer['props']['data'] ?? 'QR';
         $codeData = $this->replacePlaceholders($codeData, $data);
 
         $size = min($w, $h);
-        $qrX = $x + ($w - $size) / 2;
-        $qrY = $y + ($h - $size) / 2;
+        $qrX = round($x + ($w - $size) / 2, 2);
+        $qrY = round($y + ($h - $size) / 2, 2);
 
-        // Fetch real QR code image as base64 data URI
         $qrDataUri = $this->fetchQrAsDataUri($codeData);
 
-        return <<<HTML
-<div style="position: absolute; left: {$qrX}mm; top: {$qrY}mm; width: {$size}mm; height: {$size}mm; opacity: {$opacity}; z-index: {$zIndex}; {$transform}">
-    <img src="{$qrDataUri}" style="width: 100%; height: 100%;">
-</div>
-
-HTML;
+        return "<img src=\"{$qrDataUri}\" style=\"position: fixed; left: {$qrX}pt; top: {$qrY}pt; width: {$size}pt; height: {$size}pt;\">\n";
     }
 
-    private function renderBarcodeLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform, int $zIndex): string
+    private function renderBarcodeLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h): string
     {
         $codeData = $layer['barcodeData'] ?? $layer['props']['data'] ?? '123456789';
         $codeData = $this->replacePlaceholders($codeData, $data);
+        $displayData = htmlspecialchars($codeData, ENT_QUOTES, 'UTF-8');
 
-        // Fetch barcode image as base64 data URI
         $barcodeDataUri = $this->fetchBarcodeAsDataUri($codeData);
 
-        return <<<HTML
-<div style="position: absolute; left: {$x}mm; top: {$y}mm; width: {$w}mm; height: {$h}mm; opacity: {$opacity}; z-index: {$zIndex}; {$transform} text-align: center;">
-    <img src="{$barcodeDataUri}" style="width: 100%; height: 80%;">
-    <div style="font-family: 'Courier New', monospace; font-size: 2.5mm; text-align: center; margin-top: 0.5mm;">{$codeData}</div>
-</div>
+        $barH = round($h * 0.8, 2);
+        $textTopPt = round($y + $barH, 2);
+        $textH = round($h - $barH, 2);
+        $textFontPt = round(2.5 * self::MM_TO_PT, 1);
 
-HTML;
+        return "<img src=\"{$barcodeDataUri}\" style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$barH}pt;\">\n" .
+               "<div style=\"position: fixed; left: {$x}pt; top: {$textTopPt}pt; width: {$w}pt; height: {$textH}pt; text-align: center; font-family: 'DejaVu Sans Mono', 'Courier New', monospace; font-size: {$textFontPt}pt; line-height: {$textH}pt;\">{$displayData}</div>\n";
     }
 
-    private function renderImageLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform, int $zIndex): string
+    private function renderImageLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h): string
     {
         $src = $layer['src'] ?? '';
-        $objectFit = $layer['objectFit'] ?? 'contain';
 
         if (!empty($src)) {
             $src = $this->replacePlaceholders($src, $data);
         }
 
         if (empty($src)) {
-            return <<<HTML
-<div style="position: absolute; left: {$x}mm; top: {$y}mm; width: {$w}mm; height: {$h}mm; background-color: #f3f4f6; border: 0.3mm solid #d1d5db; opacity: {$opacity}; z-index: {$zIndex}; {$transform}"></div>
-
-HTML;
+            return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; background-color: #f3f4f6; border: 1pt solid #d1d5db;\"></div>\n";
         }
 
-        // Try to fetch image as data URI for reliable PDF embedding
         $dataUri = $this->fetchImageAsDataUri($src);
         $imgSrc = $dataUri ?: $src;
 
-        return <<<HTML
-<div style="position: absolute; left: {$x}mm; top: {$y}mm; width: {$w}mm; height: {$h}mm; overflow: hidden; opacity: {$opacity}; z-index: {$zIndex}; {$transform}">
-    <img src="{$imgSrc}" style="width: 100%; height: 100%; object-fit: {$objectFit};">
-</div>
-
-HTML;
+        return "<img src=\"{$imgSrc}\" style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt;\">\n";
     }
 
     /**
