@@ -201,26 +201,59 @@ class ViewTicket extends ViewRecord
      */
     protected function downloadCustomTemplate(Ticket $ticket, TicketTemplate $template)
     {
-        $variableService = app(TicketVariableService::class);
-        $generator = app(TicketPreviewGenerator::class);
+        try {
+            $variableService = app(TicketVariableService::class);
+            $generator = app(TicketPreviewGenerator::class);
 
-        $data = $variableService->resolveTicketData($ticket);
-        $content = $generator->renderToHtml($template->template_data, $data);
+            $data = $variableService->resolveTicketData($ticket);
+            $layers = $template->template_data['layers'] ?? [];
 
-        $size = $template->getSize();
-        $widthPt = round($size['width'] * 2.8346, 2);
-        $heightPt = round($size['height'] * 2.8346, 2);
-        $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
+            Log::channel('marketplace')->debug('Ticket custom PDF: resolving template', [
+                'ticket_id' => $ticket->id,
+                'template_id' => $template->id,
+                'template_name' => $template->name,
+                'layers_count' => count($layers),
+                'visible_layers' => count(array_filter($layers, fn($l) => !isset($l['visible']) || $l['visible'] !== false)),
+                'data_keys' => array_keys($data),
+            ]);
 
-        $html = <<<HTML
+            // If template has no visible layers, fall back to generic
+            $visibleLayers = array_filter($layers, fn($l) => !isset($l['visible']) || $l['visible'] !== false);
+            if (empty($visibleLayers)) {
+                Log::channel('marketplace')->warning('Ticket custom PDF: no visible layers, falling back to generic', [
+                    'ticket_id' => $ticket->id,
+                    'template_id' => $template->id,
+                ]);
+                $event = $ticket->resolveEvent();
+                return $this->downloadGenericTemplate($ticket, $event);
+            }
+
+            $content = $generator->renderToHtml($template->template_data, $data);
+
+            // If rendered content is empty/whitespace, fall back to generic
+            if (empty(trim($content))) {
+                Log::channel('marketplace')->warning('Ticket custom PDF: renderToHtml produced empty content, falling back to generic', [
+                    'ticket_id' => $ticket->id,
+                    'template_id' => $template->id,
+                ]);
+                $event = $ticket->resolveEvent();
+                return $this->downloadGenericTemplate($ticket, $event);
+            }
+
+            $size = $template->getSize();
+            $widthPt = round($size['width'] * 2.8346, 2);
+            $heightPt = round($size['height'] * 2.8346, 2);
+            $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
+
+            $html = <<<HTML
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <style>
-        @page { margin: 0; }
+        @page { margin: 0; size: {$widthPt}pt {$heightPt}pt; }
         * { margin: 0; padding: 0; }
-        body { margin: 0; padding: 0; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; }
+        body { margin: 0; padding: 0; width: {$widthPt}pt; height: {$heightPt}pt; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; overflow: hidden; }
     </style>
 </head>
 <body>
@@ -229,26 +262,48 @@ class ViewTicket extends ViewRecord
 </html>
 HTML;
 
-        Log::channel('marketplace')->debug('Ticket PDF HTML generated', [
-            'ticket_id' => $ticket->id,
-            'template_id' => $template->id,
-            'paper_pt' => [$widthPt, $heightPt],
-            'html_length' => strlen($html),
-            'layers_count' => count($template->template_data['layers'] ?? []),
-        ]);
-        @file_put_contents(storage_path('app/debug-ticket.html'), $html);
+            Log::channel('marketplace')->debug('Ticket PDF HTML generated', [
+                'ticket_id' => $ticket->id,
+                'template_id' => $template->id,
+                'paper_pt' => [$widthPt, $heightPt],
+                'html_length' => strlen($html),
+                'content_length' => strlen($content),
+                'layers_count' => count($layers),
+            ]);
+            @file_put_contents(storage_path('app/debug-ticket.html'), $html);
 
-        $pdf = Pdf::loadHTML($html)
-            ->setPaper([0, 0, $widthPt, $heightPt])
-            ->setOption('isRemoteEnabled', true)
-            ->setOption('isHtml5ParserEnabled', true);
+            $pdf = Pdf::loadHTML($html)
+                ->setPaper([0, 0, $widthPt, $heightPt])
+                ->setOption('isRemoteEnabled', true)
+                ->setOption('isHtml5ParserEnabled', true);
 
-        $template->markAsUsed();
+            $pdfOutput = $pdf->output();
 
-        return response()->streamDownload(
-            fn () => print($pdf->output()),
-            "ticket-{$ticket->code}.pdf"
-        );
+            if (empty($pdfOutput)) {
+                Log::channel('marketplace')->error('Ticket custom PDF: DomPDF produced empty output, falling back to generic', [
+                    'ticket_id' => $ticket->id,
+                    'template_id' => $template->id,
+                ]);
+                $event = $ticket->resolveEvent();
+                return $this->downloadGenericTemplate($ticket, $event);
+            }
+
+            $template->markAsUsed();
+
+            return response()->streamDownload(
+                fn () => print($pdfOutput),
+                "ticket-{$ticket->code}.pdf"
+            );
+        } catch (\Throwable $e) {
+            Log::channel('marketplace')->error('Ticket custom PDF: exception, falling back to generic', [
+                'ticket_id' => $ticket->id,
+                'template_id' => $template->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            $event = $ticket->resolveEvent();
+            return $this->downloadGenericTemplate($ticket, $event);
+        }
     }
 
     /**
@@ -257,11 +312,19 @@ HTML;
     protected function downloadGenericTemplate(Ticket $ticket, ?Event $event)
     {
         $venue = $event?->venue;
-        $marketplace = $ticket->order?->tenant;
+        $marketplace = $ticket->order?->tenant ?? $ticket->order?->marketplaceClient;
 
         $eventTitle = is_array($event?->title)
             ? ($event->title['en'] ?? $event->title['ro'] ?? reset($event->title))
             : ($event?->title ?? 'Event');
+
+        Log::channel('marketplace')->debug('Ticket generic PDF: generating', [
+            'ticket_id' => $ticket->id,
+            'event_id' => $event?->id,
+            'event_title' => $eventTitle,
+            'has_venue' => !is_null($venue),
+            'has_marketplace' => !is_null($marketplace),
+        ]);
 
         $venueName = $venue?->getTranslation('name', app()->getLocale()) ?? null;
 

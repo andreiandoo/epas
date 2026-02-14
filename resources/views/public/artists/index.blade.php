@@ -88,8 +88,8 @@
                 <div class="bg-white rounded-2xl border overflow-hidden hover:shadow-lg transition">
                     @if ($artist->portrait_url ?? false)
                         <img src="{{ $artist->portrait_url }}" alt="{{ $artist->name }}" class="w-full h-64 object-cover group-hover:scale-105 transition duration-300">
-                    @elseif ($artist->hero_image_url ?? false)
-                        <img src="{{ $artist->hero_image_url }}" alt="{{ $artist->name }}" class="w-full h-64 object-cover group-hover:scale-105 transition duration-300">
+                    @elseif ($artist->main_image_full_url ?? false)
+                        <img src="{{ $artist->main_image_full_url }}" alt="{{ $artist->name }}" class="w-full h-64 object-cover group-hover:scale-105 transition duration-300">
                     @else
                         <div class="w-full h-64 bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center">
                             <span class="text-4xl">🎤</span>

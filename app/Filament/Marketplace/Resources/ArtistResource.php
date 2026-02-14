@@ -80,7 +80,6 @@ class ArtistResource extends Resource
                                 Forms\Components\FileUpload::make('main_image_url')
                                     ->label('Imagine principală')
                                     ->image()
-                                    ->imagePreviewHeight('200')
                                     ->disk('public')
                                     ->directory('artists')
                                     ->visibility('public'),

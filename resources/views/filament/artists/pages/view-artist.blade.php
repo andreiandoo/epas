@@ -240,7 +240,7 @@ canvas{width:100% !important; height:240px !important;}
                 {{-- Hero + Portrait --}}
                 <div class="av-card av-hero">
                     <div class="av-hero-wrap">
-                        <img src="{{ $record->hero_image_url ?: ($record->portrait_url ?: 'https://picsum.photos/1200/400') }}" alt="{{ $record->name }}">
+                        <img src="{{ $record->main_image_full_url ?: ($record->portrait_full_url ?: 'https://picsum.photos/1200/400') }}" alt="{{ $record->name }}">
                         @if($record->portrait_url)
                             <img class="av-portrait" src="{{ $record->portrait_url }}" alt="{{ $record->name }}">
                         @endif

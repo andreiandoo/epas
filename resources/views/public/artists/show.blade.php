@@ -5,9 +5,9 @@
 @section('content')
 {{-- Hero Section --}}
 <div class="relative bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-    @if ($artist->hero_image_url ?? false)
+    @if ($artist->main_image_full_url ?? false)
         <div class="absolute inset-0 opacity-30">
-            <img src="{{ $artist->hero_image_url }}" alt="{{ $artist->name }}" class="w-full h-full object-cover">
+            <img src="{{ $artist->main_image_full_url }}" alt="{{ $artist->name }}" class="w-full h-full object-cover">
         </div>
     @endif
     <div class="relative max-w-7xl mx-auto px-4 py-16">
