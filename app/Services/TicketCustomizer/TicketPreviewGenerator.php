@@ -155,7 +155,7 @@ SVG;
             case 'barcode':
                 return $this->renderBarcodeLayer($layer, $data, $x, $y, $w, $h, $opacity, $transform);
             case 'image':
-                return $this->renderImageLayer($layer, $x, $y, $w, $h, $opacity, $transform);
+                return $this->renderImageLayer($layer, $data, $x, $y, $w, $h, $opacity, $transform);
             default:
                 return '';
         }
@@ -539,11 +539,16 @@ SVG;
     /**
      * Render image layer
      */
-    private function renderImageLayer(array $layer, float $x, float $y, float $w, float $h, float $opacity, string $transform): string
+    private function renderImageLayer(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform): string
     {
         // Get src directly from layer (new structure)
         $src = $layer['src'] ?? '';
         $objectFit = $layer['objectFit'] ?? 'contain';
+
+        // Replace placeholders in image src (e.g. {{event.image}})
+        if (!empty($src)) {
+            $src = $this->replacePlaceholders($src, $data);
+        }
 
         if (empty($src)) {
             // Placeholder for missing image
