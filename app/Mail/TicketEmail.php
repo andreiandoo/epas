@@ -19,23 +19,46 @@ class TicketEmail extends Mailable
 
     public Ticket $ticket;
     public string $eventTitle;
+    public string $ticketTypeName;
     public ?string $venueName;
+    public $resolvedEvent;
 
     public function __construct(Ticket $ticket)
     {
         $this->ticket = $ticket;
-        $event = $ticket->ticketType?->event;
-        $this->eventTitle = is_array($event?->title)
-            ? ($event->title['en'] ?? $event->title['ro'] ?? reset($event->title))
-            : ($event?->title ?? 'Event');
-        $venue = $event?->venue;
+        $this->resolvedEvent = $ticket->resolveEvent();
+        $this->eventTitle = $this->resolveEventTitle();
+        $this->ticketTypeName = $ticket->resolveTicketTypeName();
+        $venue = $this->resolvedEvent?->venue;
         $this->venueName = $venue?->getTranslation('name', app()->getLocale()) ?? null;
+    }
+
+    private function resolveEventTitle(): string
+    {
+        $event = $this->resolvedEvent;
+        if (!$event) {
+            return 'Event';
+        }
+
+        if (method_exists($event, 'getTranslation')) {
+            $title = $event->getTranslation('title', 'ro')
+                ?? $event->getTranslation('title', 'en');
+            if ($title) {
+                return $title;
+            }
+        }
+
+        if (is_array($event->title)) {
+            return $event->title['ro'] ?? $event->title['en'] ?? reset($event->title) ?: 'Event';
+        }
+
+        return $event->title ?? 'Event';
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "Your Ticket for {$this->eventTitle}",
+            subject: "Biletul tău pentru {$this->eventTitle}",
         );
     }
 
@@ -46,8 +69,9 @@ class TicketEmail extends Mailable
             with: [
                 'ticket' => $this->ticket,
                 'eventTitle' => $this->eventTitle,
+                'ticketTypeName' => $this->ticketTypeName,
                 'venueName' => $this->venueName,
-                'event' => $this->ticket->ticketType?->event,
+                'event' => $this->resolvedEvent,
             ],
         );
     }
@@ -65,7 +89,7 @@ class TicketEmail extends Mailable
     protected function generatePdfData(): string
     {
         $ticket = $this->ticket;
-        $event = $ticket->ticketType?->event;
+        $event = $this->resolvedEvent;
 
         // Check for custom ticket template
         $template = $event?->ticketTemplate;

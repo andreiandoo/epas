@@ -81,6 +81,55 @@ class Ticket extends Model
     }
 
     /**
+     * Resolve the Event model through all available paths.
+     * Marketplace tickets may have ticket_type_id=null, so we fall back to event_id.
+     */
+    public function resolveEvent(): ?Event
+    {
+        // 1. Try via TicketType relationship
+        if ($this->ticket_type_id) {
+            $event = $this->ticketType?->event;
+            if ($event) {
+                return $event;
+            }
+        }
+
+        // 2. Fall back to direct event_id column
+        if ($this->event_id) {
+            return Event::find($this->event_id);
+        }
+
+        // 3. Try marketplace_event_id (same table as events)
+        if ($this->marketplace_event_id) {
+            return Event::find($this->marketplace_event_id);
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the ticket type name from either TicketType or MarketplaceTicketType.
+     */
+    public function resolveTicketTypeName(): string
+    {
+        if ($this->ticket_type_id) {
+            $name = $this->ticketType?->name;
+            if ($name) {
+                return is_array($name) ? ($name['ro'] ?? $name['en'] ?? reset($name) ?: '') : $name;
+            }
+        }
+
+        if ($this->marketplace_ticket_type_id) {
+            $name = $this->marketplaceTicketType?->name;
+            if ($name) {
+                return is_array($name) ? ($name['ro'] ?? $name['en'] ?? reset($name) ?: '') : $name;
+            }
+        }
+
+        return '';
+    }
+
+    /**
      * Resolve seat details from meta, EventSeat lookup, or seat_uid parsing.
      * Returns ['section_name' => ?, 'row_label' => ?, 'seat_number' => ?] or null.
      */

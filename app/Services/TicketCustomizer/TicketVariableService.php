@@ -535,7 +535,7 @@ class TicketVariableService
     {
         $order = $ticket->order;
         $ticketType = $ticket->ticketType;
-        $event = $ticketType?->event;
+        $event = $ticket->resolveEvent();
         $venue = $event?->venue;
         $marketplaceEvent = $ticket->marketplaceEvent;
         $organizer = $order?->marketplaceOrganizer;

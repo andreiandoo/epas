@@ -13,6 +13,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class ViewTicket extends ViewRecord
@@ -35,10 +36,21 @@ class ViewTicket extends ViewRecord
                 ->icon('heroicon-o-arrow-down-tray')
                 ->action(function () {
                     $ticket = $this->record;
-                    $event = $ticket->ticketType?->event;
+                    $event = $ticket->resolveEvent();
 
                     // Check for custom ticket template
                     $template = $event?->ticketTemplate;
+
+                    Log::channel('marketplace')->info('Ticket download', [
+                        'ticket_id' => $ticket->id,
+                        'event_id' => $event?->id,
+                        'ticket_type_id' => $ticket->ticket_type_id,
+                        'event_id_column' => $ticket->event_id,
+                        'template_id' => $template?->id,
+                        'template_status' => $template?->status,
+                        'has_template_data' => !empty($template?->template_data),
+                        'using_custom' => $template && !empty($template->template_data) && $template->status === 'active',
+                    ]);
 
                     if ($template && !empty($template->template_data) && $template->status === 'active') {
                         return $this->downloadCustomTemplate($ticket, $template);
@@ -76,23 +88,33 @@ class ViewTicket extends ViewRecord
 
                     if (!$email) {
                         Notification::make()
-                            ->title('No Email Address')
-                            ->body('No email address available for this ticket.')
+                            ->title('Adresă email lipsă')
+                            ->body('Nu există o adresă de email asociată acestui bilet.')
                             ->danger()
                             ->send();
                         return;
                     }
 
+                    Log::channel('marketplace')->info('Ticket email: starting send', [
+                        'ticket_id' => $ticket->id,
+                        'ticket_code' => $ticket->code,
+                        'to' => $email,
+                    ]);
+
                     try {
                         Mail::to($email)->send(new TicketEmail($ticket));
 
+                        Log::channel('marketplace')->info('Ticket email: sent successfully', [
+                            'ticket_id' => $ticket->id,
+                            'to' => $email,
+                        ]);
+
                         Notification::make()
-                            ->title('Ticket Sent!')
-                            ->body("Ticket has been sent to {$email}")
+                            ->title('Bilet trimis!')
+                            ->body("Biletul a fost trimis la {$email}")
                             ->success()
                             ->send();
 
-                        // Log activity
                         activity('tenant')
                             ->performedOn($ticket)
                             ->withProperties([
@@ -101,10 +123,17 @@ class ViewTicket extends ViewRecord
                             ])
                             ->log('Ticket emailed');
 
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
+                        Log::channel('marketplace')->error('Ticket email: failed', [
+                            'ticket_id' => $ticket->id,
+                            'to' => $email,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
+                        ]);
+
                         Notification::make()
-                            ->title('Email Failed')
-                            ->body('Failed to send email: ' . $e->getMessage())
+                            ->title('Eroare trimitere email')
+                            ->body('Nu s-a putut trimite emailul: ' . $e->getMessage())
                             ->danger()
                             ->send();
                     }
