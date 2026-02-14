@@ -109,7 +109,7 @@ require_once __DIR__ . '/includes/header.php';
 
                         <div class="flex items-center justify-between p-4 mb-4 bg-surface rounded-xl">
                             
-                            <div class="flex items-start gap-3 p-4 mb-4 bg-surface rounded-xl" id="allTicketsToEmail">
+                            <div class="flex items-start gap-3" id="allTicketsToEmail">
                                 <svg class="w-5 h-5 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 <div class="text-sm text-muted">
                                     <p class="font-medium text-secondary">Toate biletele vor fi trimise pe emailul tău</p>
@@ -152,7 +152,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
 
                     <!-- Terms -->
-                    <div class="p-6 bg-white border rounded-2xl border-border">
+                    <div class="p-6 mb-6 bg-white border rounded-2xl border-border">
                         <label class="flex items-start gap-3 cursor-pointer">
                             <input type="checkbox" id="termsCheckbox" class="checkbox-custom mt-0.5" required>
                             <span class="text-sm text-muted">
@@ -171,7 +171,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
 
                     <!-- Payment Method -->
-                    <div class="p-6 mb-6 bg-white border rounded-2xl border-border">
+                    <div class="p-6 bg-white border rounded-2xl border-border">
                         <h2 class="flex items-center gap-2 mb-4 text-lg font-bold text-secondary">
                             <span class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-lg bg-primary/10 text-primary">3</span>
                             Metodă de plată
