@@ -241,9 +241,10 @@ class MarketplaceEmailService
         }
 
         // Render template
-        $subject = $template->render($template->subject, $variables);
-        $bodyHtml = $template->render($template->body_html, $variables);
-        $bodyText = $template->body_text ? $template->render($template->body_text, $variables) : null;
+        $rendered = $template->render($variables);
+        $subject = $rendered['subject'];
+        $bodyHtml = $rendered['body_html'];
+        $bodyText = $rendered['body_text'] ?? null;
 
         // Create log entry
         $log = MarketplaceEmailLog::create([

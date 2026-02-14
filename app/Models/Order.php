@@ -2,9 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Seating\EventSeat;
+use App\Models\Seating\SeatHold;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -173,9 +177,10 @@ class Order extends Model
                 if (in_array($newStatus, ['paid', 'confirmed', 'completed'])) {
                     $order->tickets()->update(['status' => 'valid']);
                 }
-                // When order is cancelled/refunded, tickets become cancelled
-                elseif (in_array($newStatus, ['cancelled', 'refunded'])) {
+                // When order is cancelled/refunded, tickets become cancelled + release seats + restore stock
+                elseif (in_array($newStatus, ['cancelled', 'refunded', 'expired'])) {
                     $order->tickets()->update(['status' => 'cancelled']);
+                    $order->releaseSeatsAndRestoreStock();
                 }
                 // When order is pending, tickets stay pending
                 elseif ($newStatus === 'pending') {
@@ -183,6 +188,108 @@ class Order extends Model
                 }
             }
         });
+
+        static::deleting(function (Order $order) {
+            // Release seats and restore stock before deletion
+            $order->releaseSeatsAndRestoreStock();
+        });
+    }
+
+    /**
+     * Release held/sold seats and restore ticket stock for this order
+     */
+    public function releaseSeatsAndRestoreStock(): void
+    {
+        try {
+            // 1. Release seats from order meta or ticket meta
+            $seatInfo = $this->extractSeatInfo();
+            foreach ($seatInfo as $item) {
+                $eventSeatingId = $item['event_seating_id'];
+                $seatUids = $item['seat_uids'];
+
+                $released = EventSeat::where('event_seating_id', $eventSeatingId)
+                    ->whereIn('seat_uid', $seatUids)
+                    ->whereIn('status', ['held', 'sold'])
+                    ->update([
+                        'status' => 'available',
+                        'version' => DB::raw('version + 1'),
+                        'last_change_at' => now(),
+                    ]);
+
+                SeatHold::where('event_seating_id', $eventSeatingId)
+                    ->whereIn('seat_uid', $seatUids)
+                    ->delete();
+
+                if ($released > 0) {
+                    Log::channel('marketplace')->info('Order: Released seats', [
+                        'order_id' => $this->id,
+                        'order_number' => $this->order_number,
+                        'event_seating_id' => $eventSeatingId,
+                        'released_count' => $released,
+                    ]);
+                }
+            }
+
+            // 2. Restore stock for ticket types
+            $this->load('items');
+            foreach ($this->items as $orderItem) {
+                if ($orderItem->quantity > 0) {
+                    // Try MarketplaceTicketType first
+                    $mtt = MarketplaceTicketType::find($orderItem->ticket_type_id);
+                    if ($mtt) {
+                        $mtt->decrement('quantity_sold', min($orderItem->quantity, $mtt->quantity_sold ?? 0));
+                        if ($mtt->status === 'sold_out' && $mtt->quantity_sold < ($mtt->quantity ?? PHP_INT_MAX)) {
+                            $mtt->update(['status' => 'active']);
+                        }
+                    } else {
+                        // Fallback to TicketType
+                        TicketType::where('id', $orderItem->ticket_type_id)
+                            ->where('quota_sold', '>=', $orderItem->quantity)
+                            ->decrement('quota_sold', $orderItem->quantity);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Order: Failed to release seats/stock', [
+                'order_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Extract seat info from order meta or ticket meta
+     */
+    protected function extractSeatInfo(): array
+    {
+        // Try order meta first
+        $seatedItems = $this->meta['seated_items'] ?? [];
+        if (!empty($seatedItems)) {
+            return $seatedItems;
+        }
+
+        // Fallback: extract from individual tickets
+        $tickets = $this->tickets()->whereNotNull('meta')->get();
+        $seatsByLayout = [];
+
+        foreach ($tickets as $ticket) {
+            $meta = $ticket->meta;
+            $seatUid = $meta['seat_uid'] ?? null;
+            $eventSeatingId = $meta['event_seating_id'] ?? null;
+
+            if ($seatUid && $eventSeatingId) {
+                $key = (string) $eventSeatingId;
+                if (!isset($seatsByLayout[$key])) {
+                    $seatsByLayout[$key] = [
+                        'event_seating_id' => (int) $eventSeatingId,
+                        'seat_uids' => [],
+                    ];
+                }
+                $seatsByLayout[$key]['seat_uids'][] = $seatUid;
+            }
+        }
+
+        return array_values($seatsByLayout);
     }
 
     /**

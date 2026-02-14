@@ -30,6 +30,22 @@ Schedule::command('invoices:send-overdue-reminders')
         \Log::error('Failed to send overdue invoice reminders');
     });
 
+// Release expired seat holds (every minute)
+Schedule::command('seating:release-expired-holds')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        // Silent success - only log if seats were released (handled in command)
+    });
+
+// Clean up expired pending marketplace orders (every 2 minutes)
+Schedule::command('marketplace:cleanup-expired-orders')
+    ->everyTwoMinutes()
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        // Silent success
+    });
+
 // Schedule invoice status transition from 'new' to 'outstanding' (daily at 1 AM)
 Schedule::command('invoices:transition-new --grace-days=3')
     ->dailyAt('01:00')

@@ -348,127 +348,10 @@ class PaymentController extends BaseController
                     })->afterResponse();
                 }
 
-                // Send order confirmation email synchronously (IPN callback — no user waiting)
+                // Send order confirmation email with embedded tickets
                 if ($order->customer_email && $order->marketplaceClient) {
                     try {
-                        $marketplace = $order->marketplaceClient;
-                        $customerEmail = $order->customer_email;
-
-                        Log::channel('marketplace')->info('Sending order confirmation email', [
-                            'order_id' => $order->id,
-                            'customer_email' => $customerEmail,
-                            'marketplace_id' => $marketplace->id,
-                        ]);
-
-                        // Build email content
-                        $notification = new MarketplaceOrderNotification($order, 'confirmed');
-                        $mailMessage = $notification->toMail($order);
-                        $subject = $mailMessage->subject ?? "Order Confirmed - {$order->order_number}";
-
-                        // Try render() first, fall back to manual HTML
-                        $html = null;
-                        try {
-                            $html = (string) $mailMessage->render();
-                            Log::channel('marketplace')->info('Email rendered via MailMessage::render()', [
-                                'order_id' => $order->id,
-                                'html_length' => strlen($html),
-                            ]);
-                        } catch (\Throwable $renderError) {
-                            Log::channel('marketplace')->warning('MailMessage::render() failed, building HTML manually', [
-                                'order_id' => $order->id,
-                                'error' => $renderError->getMessage(),
-                            ]);
-                        }
-
-                        // Manual HTML fallback
-                        if (!$html) {
-                            $greeting = $mailMessage->greeting ?? 'Hello!';
-                            $lines = array_merge($mailMessage->introLines ?? [], $mailMessage->outroLines ?? []);
-                            $actionText = $mailMessage->actionText ?? null;
-                            $actionUrl = $mailMessage->actionUrl ?? null;
-
-                            $bodyHtml = "<h2 style=\"color:#1a1a2e;margin-bottom:16px\">{$greeting}</h2>";
-                            foreach ($lines as $line) {
-                                $bodyHtml .= "<p style=\"color:#333;line-height:1.6;margin:8px 0\">{$line}</p>";
-                            }
-                            if ($actionText && $actionUrl) {
-                                $bodyHtml .= "<p style=\"margin:24px 0;text-align:center\"><a href=\"{$actionUrl}\" style=\"display:inline-block;padding:12px 24px;background:#A51C30;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold\">{$actionText}</a></p>";
-                            }
-
-                            $html = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc\">"
-                                . "<div style=\"background:#fff;border-radius:8px;padding:32px;border:1px solid #e2e8f0\">{$bodyHtml}</div>"
-                                . "<p style=\"text-align:center;color:#94a3b8;font-size:12px;margin-top:16px\">{$marketplace->name}</p>"
-                                . "</body></html>";
-
-                            Log::channel('marketplace')->info('Email built with manual HTML', [
-                                'order_id' => $order->id,
-                                'html_length' => strlen($html),
-                            ]);
-                        }
-
-                        // Try marketplace-specific transport first
-                        $sent = false;
-                        if ($marketplace->hasMailConfigured()) {
-                            try {
-                                $transport = $marketplace->getMailTransport();
-                                if ($transport) {
-                                    $fromAddress = $marketplace->getEmailFromAddress();
-                                    $fromName = $marketplace->getEmailFromName();
-
-                                    Log::channel('marketplace')->info('Sending via marketplace transport', [
-                                        'order_id' => $order->id,
-                                        'from' => $fromAddress,
-                                        'from_name' => $fromName,
-                                    ]);
-
-                                    $email = (new \Symfony\Component\Mime\Email())
-                                        ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
-                                        ->to($customerEmail)
-                                        ->subject($subject)
-                                        ->html($html);
-
-                                    $transport->send($email);
-                                    $sent = true;
-
-                                    Log::channel('marketplace')->info('Order confirmation email sent via marketplace transport', [
-                                        'order_id' => $order->id,
-                                        'customer_email' => $customerEmail,
-                                    ]);
-                                } else {
-                                    Log::channel('marketplace')->warning('Marketplace transport returned null', [
-                                        'order_id' => $order->id,
-                                        'marketplace_id' => $marketplace->id,
-                                    ]);
-                                }
-                            } catch (\Throwable $transportError) {
-                                Log::channel('marketplace')->error('Marketplace transport failed, will try fallback', [
-                                    'order_id' => $order->id,
-                                    'error' => $transportError->getMessage(),
-                                ]);
-                            }
-                        } else {
-                            Log::channel('marketplace')->info('No marketplace mail configured, using Laravel default', [
-                                'order_id' => $order->id,
-                                'marketplace_id' => $marketplace->id,
-                            ]);
-                        }
-
-                        // Fallback: use Laravel's default mailer
-                        if (!$sent) {
-                            \Illuminate\Support\Facades\Mail::html($html, function ($message) use ($customerEmail, $subject, $marketplace) {
-                                $message->to($customerEmail)
-                                        ->subject($subject)
-                                        ->from(
-                                            $marketplace->getEmailFromAddress(),
-                                            $marketplace->getEmailFromName()
-                                        );
-                            });
-
-                            Log::channel('marketplace')->info('Order confirmation email sent via Laravel default mailer', [
-                                'order_id' => $order->id,
-                                'customer_email' => $customerEmail,
-                            ]);
-                        }
+                        $this->sendOrderConfirmationEmail($order);
                     } catch (\Throwable $e) {
                         Log::channel('marketplace')->error('Failed to send order confirmation email', [
                             'order_id' => $order->id,
@@ -476,12 +359,6 @@ class PaymentController extends BaseController
                             'file' => $e->getFile() . ':' . $e->getLine(),
                         ]);
                     }
-                } else {
-                    Log::channel('marketplace')->warning('Cannot send order confirmation email - missing data', [
-                        'order_id' => $order->id,
-                        'has_email' => (bool) $order->customer_email,
-                        'has_client' => (bool) $order->marketplaceClient,
-                    ]);
                 }
 
                 // Award XP for ticket purchase (gamification)
@@ -565,6 +442,236 @@ class PaymentController extends BaseController
             'expires_at' => $order->expires_at?->toIso8601String(),
             'is_expired' => $order->expires_at && $order->expires_at->isPast(),
         ]);
+    }
+
+    /**
+     * Send order confirmation email with embedded ticket details
+     */
+    protected function sendOrderConfirmationEmail(Order $order): void
+    {
+        $marketplace = $order->marketplaceClient;
+        $order->load(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType']);
+
+        $customerName = $order->customer_name ?? 'Client';
+        $customerEmail = $order->customer_email;
+        $marketplaceName = $marketplace->name;
+        $orderNumber = $order->order_number;
+        $totalAmount = number_format($order->total, 2, ',', '.') . ' ' . ($order->currency ?? 'RON');
+
+        // Group tickets by marketplace event
+        $ticketsByEvent = [];
+        foreach ($order->tickets as $ticket) {
+            $eventId = $ticket->marketplace_event_id ?? 0;
+            if (!isset($ticketsByEvent[$eventId])) {
+                $ticketsByEvent[$eventId] = [
+                    'event' => $ticket->marketplaceEvent,
+                    'tickets' => [],
+                ];
+            }
+            $ticketsByEvent[$eventId]['tickets'][] = $ticket;
+        }
+
+        // Build tickets HTML
+        $ticketsHtml = '';
+        foreach ($ticketsByEvent as $group) {
+            $event = $group['event'];
+            $eventName = $event->name ?? 'Eveniment';
+            $eventDate = $event?->starts_at?->format('d.m.Y') ?? '';
+            $eventStartTime = $event?->starts_at?->format('H:i') ?? '';
+            $doorsOpenTime = $event?->doors_open_at?->format('H:i') ?? '';
+            $venueName = $event->venue_name ?? '';
+            $venueCity = $event->venue_city ?? '';
+
+            $ticketsHtml .= '<div style="margin-bottom:30px;border:1px solid #e0e0e0;border-radius:12px;overflow:hidden;">';
+
+            // Event header
+            $ticketsHtml .= '<div style="background:#1a1a2e;color:#ffffff;padding:20px 24px;">';
+            $ticketsHtml .= '<h2 style="margin:0 0 8px;font-size:20px;font-weight:700;">' . e($eventName) . '</h2>';
+            $locationParts = array_filter([$venueName, $venueCity]);
+            if ($locationParts) {
+                $ticketsHtml .= '<p style="margin:0 0 4px;font-size:14px;color:#b0b0cc;">' . e(implode(', ', $locationParts)) . '</p>';
+            }
+            $dateParts = [];
+            if ($eventDate) $dateParts[] = $eventDate;
+            if ($doorsOpenTime) $dateParts[] = 'Deschidere porți: ' . $doorsOpenTime;
+            if ($eventStartTime) $dateParts[] = 'Ora început: ' . $eventStartTime;
+            if ($dateParts) {
+                $ticketsHtml .= '<p style="margin:0;font-size:14px;color:#b0b0cc;">' . e(implode(' | ', $dateParts)) . '</p>';
+            }
+            $ticketsHtml .= '</div>';
+
+            // Individual tickets
+            foreach ($group['tickets'] as $ticket) {
+                $ticketCode = $ticket->code ?? $ticket->barcode ?? '';
+                $attendeeName = $ticket->attendee_name ?? $customerName;
+                $ticketTypeName = $ticket->marketplaceTicketType?->name ?? '';
+                $ticketPrice = number_format($ticket->price ?? 0, 2, ',', '.') . ' ' . ($order->currency ?? 'RON');
+                $seatDetails = $ticket->getSeatDetails();
+
+                $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
+                    'size' => '180x180',
+                    'data' => $ticketCode,
+                    'color' => '1a1a2e',
+                    'margin' => '0',
+                    'format' => 'png',
+                ]);
+
+                // Use table layout for email client compatibility (Outlook, Gmail don't support flexbox)
+                $ticketsHtml .= '<table style="width:100%;border-top:1px dashed #d0d0d0;" cellpadding="0" cellspacing="0"><tr>';
+
+                // Left: QR code
+                $ticketsHtml .= '<td style="padding:20px 20px 20px 24px;width:170px;vertical-align:top;text-align:center;">';
+                $ticketsHtml .= '<img src="' . $qrUrl . '" alt="QR Code" width="150" height="150" style="display:block;border:1px solid #eee;border-radius:8px;" />';
+                $ticketsHtml .= '<p style="margin:6px 0 0;font-size:12px;color:#666;font-family:monospace;">' . e($ticketCode) . '</p>';
+                $ticketsHtml .= '</td>';
+
+                // Right: ticket details
+                $ticketsHtml .= '<td style="padding:20px 24px 20px 0;vertical-align:top;">';
+                if ($ticketTypeName) {
+                    $ticketsHtml .= '<p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#1a1a2e;">' . e($ticketTypeName) . '</p>';
+                }
+                $ticketsHtml .= '<table style="border-collapse:collapse;font-size:14px;color:#333;" cellpadding="0" cellspacing="0">';
+
+                $ticketsHtml .= '<tr><td style="padding:3px 12px 3px 0;color:#888;">Beneficiar:</td><td style="padding:3px 0;font-weight:600;">' . e($attendeeName) . '</td></tr>';
+                $ticketsHtml .= '<tr><td style="padding:3px 12px 3px 0;color:#888;">Preț:</td><td style="padding:3px 0;">' . $ticketPrice . '</td></tr>';
+
+                if ($seatDetails) {
+                    $seatParts = [];
+                    if (!empty($seatDetails['section_name'])) $seatParts[] = $seatDetails['section_name'];
+                    if (!empty($seatDetails['row_label'])) $seatParts[] = 'Rând ' . $seatDetails['row_label'];
+                    if (!empty($seatDetails['seat_number'])) $seatParts[] = 'Loc ' . $seatDetails['seat_number'];
+                    if ($seatParts) {
+                        $ticketsHtml .= '<tr><td style="padding:3px 12px 3px 0;color:#888;">Loc:</td><td style="padding:3px 0;font-weight:600;">' . e(implode(' / ', $seatParts)) . '</td></tr>';
+                    }
+                }
+
+                $ticketsHtml .= '</table>';
+                $ticketsHtml .= '</td>';
+                $ticketsHtml .= '</tr></table>';
+            }
+
+            $ticketsHtml .= '</div>';
+        }
+
+        // Build full email HTML
+        $subject = "Confirmare comandă #{$orderNumber} — {$marketplaceName}";
+
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>';
+        $html .= '<body style="margin:0;padding:0;background:#f4f4f8;font-family:Arial,Helvetica,sans-serif;">';
+        $html .= '<div style="max-width:640px;margin:0 auto;padding:24px 16px;">';
+
+        // Header
+        $html .= '<div style="text-align:center;padding:20px 0;">';
+        $html .= '<h1 style="margin:0;font-size:24px;color:#1a1a2e;">' . e($marketplaceName) . '</h1>';
+        $html .= '</div>';
+
+        // Greeting
+        $html .= '<div style="background:#ffffff;border-radius:12px;padding:24px;margin-bottom:20px;">';
+        $html .= '<p style="margin:0 0 12px;font-size:16px;color:#333;">Salut, <strong>' . e($customerName) . '</strong>!</p>';
+        $html .= '<p style="margin:0 0 12px;font-size:15px;color:#555;">Mulțumim pentru achiziție! Comanda ta <strong>#' . e($orderNumber) . '</strong> a fost confirmată.</p>';
+        $html .= '<p style="margin:0;font-size:15px;color:#555;">Mai jos găsești biletele tale. Prezintă codul QR la intrarea în eveniment.</p>';
+        $html .= '</div>';
+
+        // Tickets
+        $html .= $ticketsHtml;
+
+        // Order summary
+        $html .= '<div style="background:#ffffff;border-radius:12px;padding:20px 24px;margin-top:20px;">';
+        $html .= '<table style="width:100%;border-collapse:collapse;font-size:14px;" cellpadding="0" cellspacing="0">';
+        $html .= '<tr><td style="padding:6px 0;color:#888;">Comandă:</td><td style="padding:6px 0;text-align:right;font-weight:600;">#' . e($orderNumber) . '</td></tr>';
+        $html .= '<tr><td style="padding:6px 0;color:#888;">Bilete:</td><td style="padding:6px 0;text-align:right;">' . $order->tickets->count() . '</td></tr>';
+        $html .= '<tr style="border-top:1px solid #eee;"><td style="padding:10px 0 6px;font-weight:700;font-size:16px;">Total:</td><td style="padding:10px 0 6px;text-align:right;font-weight:700;font-size:16px;color:#1a1a2e;">' . $totalAmount . '</td></tr>';
+        $html .= '</table>';
+        $html .= '</div>';
+
+        // Footer
+        $html .= '<div style="text-align:center;padding:24px 0;font-size:12px;color:#999;">';
+        $html .= '<p style="margin:0;">Acest email a fost trimis de ' . e($marketplaceName) . '</p>';
+        $html .= '</div>';
+
+        $html .= '</div></body></html>';
+
+        // Try to use marketplace email template for subject customization
+        $template = \App\Models\MarketplaceEmailTemplate::where('marketplace_client_id', $marketplace->id)
+            ->where('slug', 'ticket_purchase')
+            ->where('is_active', true)
+            ->first();
+
+        if ($template) {
+            $vars = [
+                'customer_name' => $customerName,
+                'order_number' => $orderNumber,
+                'total_amount' => $totalAmount,
+                'marketplace_name' => $marketplaceName,
+                'tickets_list' => $ticketsHtml,
+            ];
+            $rendered = $template->render($vars);
+            if (!empty($rendered['subject'])) {
+                $subject = $rendered['subject'];
+            }
+            // If template has body_html, use it (with tickets_list injected via variable)
+            if (!empty($rendered['body_html'])) {
+                $html = $rendered['body_html'];
+            }
+        }
+
+        // Send email
+        $fromAddress = $marketplace->getEmailFromAddress();
+        $fromName = $marketplace->getEmailFromName();
+
+        // Create email log
+        $log = \App\Models\MarketplaceEmailLog::create([
+            'marketplace_client_id' => $marketplace->id,
+            'marketplace_customer_id' => $order->marketplace_customer_id,
+            'order_id' => $order->id,
+            'template_slug' => 'ticket_purchase',
+            'to_email' => $customerEmail,
+            'to_name' => $customerName,
+            'from_email' => $fromAddress,
+            'from_name' => $fromName,
+            'subject' => $subject,
+            'body_html' => $html,
+            'status' => 'pending',
+        ]);
+
+        try {
+            if ($marketplace->hasMailConfigured()) {
+                $transport = $marketplace->getMailTransport();
+                if ($transport) {
+                    $email = (new \Symfony\Component\Mime\Email())
+                        ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
+                        ->to(new \Symfony\Component\Mime\Address($customerEmail, $customerName))
+                        ->subject($subject)
+                        ->html($html);
+
+                    $transport->send($email);
+                    $log->markSent();
+
+                    Log::channel('marketplace')->info('Order confirmation email sent via marketplace transport', [
+                        'order_id' => $order->id,
+                        'to' => $customerEmail,
+                    ]);
+                    return;
+                }
+            }
+
+            // Fallback to Laravel default mailer
+            \Illuminate\Support\Facades\Mail::html($html, function ($message) use ($customerEmail, $customerName, $subject) {
+                $message->to($customerEmail, $customerName)
+                        ->subject($subject);
+            });
+
+            $log->markSent();
+
+            Log::channel('marketplace')->info('Order confirmation email sent via Laravel default mailer', [
+                'order_id' => $order->id,
+                'to' => $customerEmail,
+            ]);
+
+        } catch (\Exception $e) {
+            $log->markFailed($e->getMessage());
+            throw $e;
+        }
     }
 
     /**

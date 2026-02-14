@@ -12,16 +12,14 @@ use App\Services\GeoIpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Jenssegers\Agent\Agent;
 
 class MarketplaceTrackingController extends Controller
 {
-    protected Agent $agent;
     protected RedisAnalyticsService $redisAnalytics;
+    protected ?string $userAgent = null;
 
     public function __construct(RedisAnalyticsService $redisAnalytics)
     {
-        $this->agent = new Agent();
         $this->redisAnalytics = $redisAnalytics;
     }
 
@@ -61,7 +59,8 @@ class MarketplaceTrackingController extends Controller
         $sessionId = $request->input('session_id') ?: Str::uuid()->toString();
 
         // Parse user agent
-        $this->agent->setUserAgent($request->userAgent());
+        $this->userAgent = $request->userAgent() ?? '';
+        $uaParsed = $this->parseUserAgent($this->userAgent);
 
         // Get location from IP (uses multi-provider fallback: ipgeolocation.io -> ip-api.com -> ipwhois.io)
         $geoIpService = app(GeoIpService::class);
@@ -102,12 +101,12 @@ class MarketplaceTrackingController extends Controller
             'gclid' => $request->input('gclid'),
             'fbclid' => $request->input('fbclid'),
             'ttclid' => $request->input('ttclid'),
-            'device_type' => $this->getDeviceType(),
-            'device_brand' => $this->agent->device() ?: null,
-            'browser' => $this->agent->browser() ?: null,
-            'browser_version' => $this->agent->version($this->agent->browser()) ?: null,
-            'os' => $this->agent->platform() ?: null,
-            'os_version' => $this->agent->version($this->agent->platform()) ?: null,
+            'device_type' => $uaParsed['device_type'],
+            'device_brand' => $uaParsed['device_brand'],
+            'browser' => $uaParsed['browser'],
+            'browser_version' => $uaParsed['browser_version'],
+            'os' => $uaParsed['os'],
+            'os_version' => $uaParsed['os_version'],
             'screen_width' => $request->input('screen_width'),
             'screen_height' => $request->input('screen_height'),
             'ip_address' => $request->ip(),
@@ -213,17 +212,51 @@ class MarketplaceTrackingController extends Controller
     }
 
     /**
-     * Get device type from user agent
+     * Parse user agent string into device/browser/OS info
      */
-    protected function getDeviceType(): string
+    protected function parseUserAgent(string $ua): array
     {
-        if ($this->agent->isTablet()) {
-            return 'tablet';
+        // Device type
+        $deviceType = 'desktop';
+        if (preg_match('/iPad|Android(?!.*Mobile)|Tablet/i', $ua)) {
+            $deviceType = 'tablet';
+        } elseif (preg_match('/Mobile|iPhone|iPod|Android.*Mobile|webOS|BlackBerry|Opera Mini|IEMobile/i', $ua)) {
+            $deviceType = 'mobile';
         }
-        if ($this->agent->isMobile()) {
-            return 'mobile';
-        }
-        return 'desktop';
+
+        // Device brand
+        $deviceBrand = null;
+        if (preg_match('/iPhone|iPad|iPod|Macintosh/i', $ua)) $deviceBrand = 'Apple';
+        elseif (preg_match('/Samsung/i', $ua)) $deviceBrand = 'Samsung';
+        elseif (preg_match('/Huawei/i', $ua)) $deviceBrand = 'Huawei';
+        elseif (preg_match('/Xiaomi|Redmi|POCO/i', $ua)) $deviceBrand = 'Xiaomi';
+
+        // Browser
+        $browser = null;
+        $browserVersion = null;
+        if (preg_match('/Edg(?:e|A|iOS)?\/(\S+)/i', $ua, $m)) { $browser = 'Edge'; $browserVersion = $m[1]; }
+        elseif (preg_match('/OPR\/(\S+)/i', $ua, $m)) { $browser = 'Opera'; $browserVersion = $m[1]; }
+        elseif (preg_match('/Chrome\/(\S+)/i', $ua, $m)) { $browser = 'Chrome'; $browserVersion = $m[1]; }
+        elseif (preg_match('/Firefox\/(\S+)/i', $ua, $m)) { $browser = 'Firefox'; $browserVersion = $m[1]; }
+        elseif (preg_match('/Safari\/(\S+)/i', $ua, $m) && preg_match('/Version\/(\S+)/i', $ua, $v)) { $browser = 'Safari'; $browserVersion = $v[1]; }
+
+        // OS
+        $os = null;
+        $osVersion = null;
+        if (preg_match('/Windows NT (\d+\.\d+)/i', $ua, $m)) { $os = 'Windows'; $osVersion = $m[1]; }
+        elseif (preg_match('/Mac OS X (\d+[._]\d+[._]?\d*)/i', $ua, $m)) { $os = 'macOS'; $osVersion = str_replace('_', '.', $m[1]); }
+        elseif (preg_match('/Android (\d+[\.\d]*)/i', $ua, $m)) { $os = 'Android'; $osVersion = $m[1]; }
+        elseif (preg_match('/iPhone OS (\d+[._]\d+)/i', $ua, $m)) { $os = 'iOS'; $osVersion = str_replace('_', '.', $m[1]); }
+        elseif (preg_match('/Linux/i', $ua)) { $os = 'Linux'; }
+
+        return [
+            'device_type' => $deviceType,
+            'device_brand' => $deviceBrand,
+            'browser' => $browser,
+            'browser_version' => $browserVersion ? explode('.', $browserVersion)[0] . '.' . (explode('.', $browserVersion)[1] ?? '0') : null,
+            'os' => $os,
+            'os_version' => $osVersion,
+        ];
     }
 
     /**
@@ -281,9 +314,9 @@ class MarketplaceTrackingController extends Controller
                 'gclid' => $request->input('gclid'),
                 'fbclid' => $request->input('fbclid'),
                 'ttclid' => $request->input('ttclid'),
-                'device_type' => $this->getDeviceType(),
-                'browser' => $this->agent->browser() ?: null,
-                'os' => $this->agent->platform() ?: null,
+                'device_type' => $this->parseUserAgent($request->userAgent() ?? '')['device_type'],
+                'browser' => $this->parseUserAgent($request->userAgent() ?? '')['browser'],
+                'os' => $this->parseUserAgent($request->userAgent() ?? '')['os'],
                 'country_code' => $event->country_code,
                 'city' => $event->city,
             ]);

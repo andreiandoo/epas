@@ -67,6 +67,7 @@ class TicketCustomizerController extends Controller
             'sampleData' => $sampleData,
             'presets' => $presets,
             'saveUrl' => "/marketplace/ticket-customizer/{$template->id}/editor",
+            'backUrl' => "/marketplace/ticket-templates/{$template->id}/edit",
         ]);
     }
 

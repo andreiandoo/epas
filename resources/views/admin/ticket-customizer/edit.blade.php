@@ -37,13 +37,13 @@
         <!-- Top Bar -->
         <header class="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <a href="{{ route('filament.admin.resources.ticket-templates.edit', $template) }}" class="text-gray-400 hover:text-white">
+                <a href="{{ $backUrl ?? route('filament.admin.resources.ticket-templates.edit', $template) }}" class="text-gray-400 hover:text-white">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
                 </a>
                 <h1 class="text-lg font-semibold">{{ $template->name }}</h1>
-                <span class="px-2 py-1 text-xs rounded bg-gray-700 text-gray-300">{{ $template->tenant->name }}</span>
+                <span class="px-2 py-1 text-xs rounded bg-gray-700 text-gray-300">{{ $template->tenant?->name ?? $template->marketplaceClient?->name ?? 'Template' }}</span>
             </div>
             <div class="flex items-center gap-3">
                 <span x-show="hasUnsavedChanges" class="text-yellow-400 text-sm">Unsaved changes</span>
