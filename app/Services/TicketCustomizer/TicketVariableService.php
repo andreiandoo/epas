@@ -2,6 +2,10 @@
 
 namespace App\Services\TicketCustomizer;
 
+use App\Models\Event;
+use App\Models\Tax\GeneralTax;
+use App\Models\Ticket;
+
 /**
  * Ticket Variable Service
  *
@@ -521,5 +525,223 @@ class TicketVariableService
         }
 
         return $value;
+    }
+
+    /**
+     * Resolve real ticket data from a Ticket model
+     * Maps actual database values to the same variable paths used by getSampleData()
+     */
+    public function resolveTicketData(Ticket $ticket): array
+    {
+        $order = $ticket->order;
+        $ticketType = $ticket->ticketType;
+        $event = $ticketType?->event;
+        $venue = $event?->venue;
+        $marketplaceEvent = $ticket->marketplaceEvent;
+        $organizer = $order?->marketplaceOrganizer;
+        $meta = $ticket->meta ?? [];
+        $orderMeta = $order?->meta ?? [];
+
+        // Resolve event title (translatable)
+        $eventTitle = '';
+        if ($event) {
+            $eventTitle = $event->getTranslation('title', 'ro')
+                ?? $event->getTranslation('title', 'en')
+                ?? (is_array($event->title) ? (reset($event->title) ?: '') : ($event->title ?? ''));
+        }
+
+        // Resolve event subtitle/description
+        $eventDescription = '';
+        if ($event) {
+            $eventDescription = $event->getTranslation('subtitle', 'ro')
+                ?? $event->getTranslation('subtitle', 'en')
+                ?? $event->getTranslation('short_description', 'ro')
+                ?? '';
+        }
+
+        // Resolve venue name (translatable)
+        $venueName = '';
+        if ($venue) {
+            $venueName = $venue->getTranslation('name', 'ro')
+                ?? $venue->getTranslation('name', 'en')
+                ?? '';
+        }
+        if (!$venueName) {
+            $venueName = $marketplaceEvent?->venue_name ?? '';
+        }
+
+        // Event date info
+        $eventDate = $event?->event_date;
+        $startTime = $event?->start_time ?? '';
+        $doorTime = $event?->door_time ?? '';
+
+        // Seat details
+        $seatDetails = $ticket->getSeatDetails();
+
+        // Insurance
+        $isInsured = !empty($meta['has_insurance']) || !empty($orderMeta['ticket_insurance']);
+
+        // Commission
+        $commissionMode = $orderMeta['commission_mode']
+            ?? $event?->commission_mode
+            ?? $organizer?->getEffectiveCommissionMode()
+            ?? 'included';
+        $commissionRate = (float) ($order?->commission_rate
+            ?? $event?->commission_rate
+            ?? $organizer?->getEffectiveCommissionRate()
+            ?? 5);
+        $ticketPrice = (float) ($ticket->price ?? $ticketType?->display_price ?? 0);
+        $currency = $order?->currency ?? $ticketType?->currency ?? 'RON';
+
+        // Build computed fields
+        $priceDetail = $this->buildPriceDetail($ticketPrice, $commissionRate, $commissionMode, $currency);
+        $feesText = $this->buildFeesText($event);
+        $serial = $this->buildSerialNumber($ticket);
+
+        // Buyer info
+        $buyerName = $order?->customer_name ?? $ticket->attendee_name ?? '';
+        $nameParts = explode(' ', $buyerName, 2);
+
+        return [
+            'event' => [
+                'name' => $eventTitle,
+                'description' => $eventDescription,
+                'category' => $marketplaceEvent?->category ?? '',
+                'image' => $marketplaceEvent?->image_url ?? '',
+            ],
+            'venue' => [
+                'name' => $venueName,
+                'address' => $venue?->address ?? $marketplaceEvent?->venue_address ?? '',
+                'city' => $venue?->city ?? $marketplaceEvent?->venue_city ?? '',
+            ],
+            'date' => [
+                'start' => $eventDate ? $eventDate->format('Y-m-d') : '',
+                'start_formatted' => $eventDate ? $eventDate->translatedFormat('j F Y') : '',
+                'time' => $startTime,
+                'doors_open' => $doorTime,
+                'day_name' => $eventDate ? $eventDate->dayName : '',
+            ],
+            'ticket' => [
+                'type' => $ticketType?->name ?? $ticket->marketplaceTicketType?->name ?? '',
+                'price' => number_format($ticketPrice, 2) . ' ' . $currency,
+                'section' => $seatDetails['section_name'] ?? '',
+                'row' => $seatDetails['row_label'] ?? '',
+                'seat' => $seatDetails['seat_number'] ?? '',
+                'number' => $serial,
+                'code_short' => $ticket->code ?? '',
+                'code_long' => $ticket->barcode ?? '',
+                'serial' => $serial,
+                'is_insured' => $isInsured ? 'true' : 'false',
+                'insurance_badge' => $isInsured ? "\u{1F6E1}\u{FE0F}" : '',
+                'insurance_label' => $isInsured ? 'Bilet asigurat' : '',
+                'price_detail' => $priceDetail,
+                'fees_text' => $feesText,
+            ],
+            'buyer' => [
+                'name' => $buyerName,
+                'first_name' => $nameParts[0] ?? '',
+                'last_name' => $nameParts[1] ?? '',
+                'email' => $order?->customer_email ?? $ticket->attendee_email ?? '',
+            ],
+            'order' => [
+                'code' => $order?->order_number ?? '',
+                'date' => $order?->created_at?->format('Y-m-d') ?? '',
+                'total' => $order ? number_format((float) $order->total, 2) . ' ' . $currency : '',
+            ],
+            'barcode' => $ticket->barcode ?? $ticket->code ?? '',
+            'qrcode' => $ticket->code ?? $ticket->barcode ?? '',
+            'organizer' => [
+                'name' => $organizer?->name ?? '',
+                'company_name' => $organizer?->company_name ?? '',
+                'tax_id' => $organizer?->company_tax_id ?? '',
+                'company_address' => $organizer?->company_address ?? '',
+                'city' => $organizer?->company_city ?? '',
+                'website' => $organizer?->website ?? '',
+                'phone' => $organizer?->phone ?? '',
+                'email' => $organizer?->email ?? '',
+                'ticket_terms' => $organizer?->ticket_terms ?? '',
+            ],
+            'legal' => [
+                'terms' => $organizer?->ticket_terms
+                    ?? $event?->getTranslation('ticket_terms', 'ro')
+                    ?? '',
+                'disclaimer' => '',
+            ],
+        ];
+    }
+
+    /**
+     * Build the smart price detail text based on commission mode
+     */
+    private function buildPriceDetail(float $price, float $commissionRate, string $commissionMode, string $currency): string
+    {
+        $currencyLabel = strtolower($currency) === 'ron' ? 'lei' : $currency;
+        $formattedPrice = number_format($price, 2, ',', '.');
+
+        if (in_array($commissionMode, ['added_on_top', 'on_top'])) {
+            $totalWithCommission = $price * (1 + $commissionRate / 100);
+            $formattedTotal = number_format($totalWithCommission, 2, ',', '.');
+            $rateFormatted = rtrim(rtrim(number_format($commissionRate, 2), '0'), '.');
+            return "Preț: {$formattedPrice} {$currencyLabel} + {$rateFormatted}% taxă procesare ({$formattedTotal} {$currencyLabel})";
+        }
+
+        return "Preț: {$formattedPrice} {$currencyLabel} (taxă procesare inclusă)";
+    }
+
+    /**
+     * Build the fees text listing all visible-on-ticket taxes
+     */
+    private function buildFeesText(?Event $event): string
+    {
+        if (!$event || !$event->tenant_id) {
+            return '';
+        }
+
+        $taxes = GeneralTax::query()
+            ->forTenant($event->tenant_id)
+            ->active()
+            ->visibleOnTicket()
+            ->get();
+
+        if ($taxes->isEmpty()) {
+            return '';
+        }
+
+        $parts = $taxes->map(fn ($tax) => $tax->getFormattedValue() . ' ' . $tax->name)->all();
+
+        return 'Prețul include ' . implode(', ', $parts);
+    }
+
+    /**
+     * Build serial number from ticket type series configuration
+     */
+    private function buildSerialNumber(Ticket $ticket): string
+    {
+        $ticketType = $ticket->ticketType;
+        $mktTicketType = $ticket->marketplaceTicketType;
+
+        $eventSeries = $ticketType?->event_series ?? $mktTicketType?->event_series ?? '';
+        $seriesStart = (int) ($ticketType?->series_start ?? $mktTicketType?->series_start ?? 1);
+
+        // Calculate position based on ticket_type_id or marketplace_ticket_type_id
+        if ($ticket->ticket_type_id) {
+            $position = Ticket::where('ticket_type_id', $ticket->ticket_type_id)
+                ->where('id', '<=', $ticket->id)
+                ->count();
+        } elseif ($ticket->marketplace_ticket_type_id) {
+            $position = Ticket::where('marketplace_ticket_type_id', $ticket->marketplace_ticket_type_id)
+                ->where('id', '<=', $ticket->id)
+                ->count();
+        } else {
+            return '';
+        }
+
+        $serialNum = $seriesStart + $position - 1;
+
+        if ($eventSeries) {
+            return $eventSeries . '-' . str_pad((string) $serialNum, 4, '0', STR_PAD_LEFT);
+        }
+
+        return (string) $serialNum;
     }
 }

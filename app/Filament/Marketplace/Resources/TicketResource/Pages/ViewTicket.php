@@ -4,6 +4,11 @@ namespace App\Filament\Marketplace\Resources\TicketResource\Pages;
 
 use App\Filament\Marketplace\Resources\TicketResource;
 use App\Mail\TicketEmail;
+use App\Models\Event;
+use App\Models\Ticket;
+use App\Models\TicketTemplate;
+use App\Services\TicketCustomizer\TicketPreviewGenerator;
+use App\Services\TicketCustomizer\TicketVariableService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions;
 use Filament\Notifications\Notification;
@@ -31,34 +36,16 @@ class ViewTicket extends ViewRecord
                 ->action(function () {
                     $ticket = $this->record;
                     $event = $ticket->ticketType?->event;
-                    $venue = $event?->venue;
-                    $marketplace = $ticket->order?->tenant;
 
-                    $eventTitle = is_array($event?->title)
-                        ? ($event->title['en'] ?? $event->title['ro'] ?? reset($event->title))
-                        : ($event?->title ?? 'Event');
+                    // Check for custom ticket template
+                    $template = $event?->ticketTemplate;
 
-                    $venueName = $venue?->getTranslation('name', app()->getLocale()) ?? null;
+                    if ($template && !empty($template->template_data) && $template->status === 'active') {
+                        return $this->downloadCustomTemplate($ticket, $template);
+                    }
 
-                    // Generate QR code as base64 data URI
-                    $qrCodeDataUri = $this->generateQrCodeDataUri($ticket->code);
-
-                    $pdf = Pdf::loadView('pdf.ticket', [
-                        'ticket' => $ticket,
-                        'event' => $event,
-                        'eventTitle' => $eventTitle,
-                        'venue' => $venue,
-                        'venueName' => $venueName,
-                        'beneficiary' => $ticket->meta['beneficiary'] ?? null,
-                        'tenant' => $marketplace,
-                        'ticketTerms' => $marketplace?->ticket_terms ?? null,
-                        'qrCodeDataUri' => $qrCodeDataUri,
-                    ]);
-
-                    return response()->streamDownload(
-                        fn () => print($pdf->output()),
-                        "ticket-{$ticket->code}.pdf"
-                    );
+                    // Fallback to generic PDF template
+                    return $this->downloadGenericTemplate($ticket, $event);
                 }),
 
             Actions\Action::make('email')
@@ -123,6 +110,93 @@ class ViewTicket extends ViewRecord
                     }
                 }),
         ];
+    }
+
+    /**
+     * Download ticket using a custom TicketTemplate (SVG-based PDF)
+     */
+    protected function downloadCustomTemplate(Ticket $ticket, TicketTemplate $template)
+    {
+        $variableService = app(TicketVariableService::class);
+        $generator = app(TicketPreviewGenerator::class);
+
+        // Resolve real ticket data
+        $data = $variableService->resolveTicketData($ticket);
+
+        // Generate SVG from template with real data
+        $svg = $generator->renderToSvg($template->template_data, $data);
+
+        // Get paper dimensions from template (mm to points: 1mm = 2.8346pt)
+        $size = $template->getSize();
+        $widthPt = round($size['width'] * 2.8346, 2);
+        $heightPt = round($size['height'] * 2.8346, 2);
+        $widthMm = $size['width'];
+        $heightMm = $size['height'];
+
+        // Wrap SVG in minimal HTML for DomPDF
+        $html = <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page { size: {$widthMm}mm {$heightMm}mm; margin: 0; }
+        body { width: {$widthMm}mm; height: {$heightMm}mm; overflow: hidden; }
+        svg { display: block; width: {$widthMm}mm; height: {$heightMm}mm; }
+    </style>
+</head>
+<body>
+{$svg}
+</body>
+</html>
+HTML;
+
+        $pdf = Pdf::loadHTML($html)
+            ->setPaper([0, 0, $widthPt, $heightPt]);
+
+        // Mark template as used
+        $template->markAsUsed();
+
+        return response()->streamDownload(
+            fn () => print($pdf->output()),
+            "ticket-{$ticket->code}.pdf"
+        );
+    }
+
+    /**
+     * Download ticket using the generic PDF template (fallback)
+     */
+    protected function downloadGenericTemplate(Ticket $ticket, ?Event $event)
+    {
+        $venue = $event?->venue;
+        $marketplace = $ticket->order?->tenant;
+
+        $eventTitle = is_array($event?->title)
+            ? ($event->title['en'] ?? $event->title['ro'] ?? reset($event->title))
+            : ($event?->title ?? 'Event');
+
+        $venueName = $venue?->getTranslation('name', app()->getLocale()) ?? null;
+
+        // Generate QR code as base64 data URI
+        $qrCodeDataUri = $this->generateQrCodeDataUri($ticket->code);
+
+        $pdf = Pdf::loadView('pdf.ticket', [
+            'ticket' => $ticket,
+            'event' => $event,
+            'eventTitle' => $eventTitle,
+            'venue' => $venue,
+            'venueName' => $venueName,
+            'beneficiary' => $ticket->meta['beneficiary'] ?? null,
+            'tenant' => $marketplace,
+            'ticketTerms' => $marketplace?->ticket_terms ?? null,
+            'qrCodeDataUri' => $qrCodeDataUri,
+        ]);
+
+        return response()->streamDownload(
+            fn () => print($pdf->output()),
+            "ticket-{$ticket->code}.pdf"
+        );
     }
 
     /**

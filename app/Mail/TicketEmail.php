@@ -3,6 +3,8 @@
 namespace App\Mail;
 
 use App\Models\Ticket;
+use App\Services\TicketCustomizer\TicketPreviewGenerator;
+use App\Services\TicketCustomizer\TicketVariableService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -64,6 +66,65 @@ class TicketEmail extends Mailable
     {
         $ticket = $this->ticket;
         $event = $ticket->ticketType?->event;
+
+        // Check for custom ticket template
+        $template = $event?->ticketTemplate;
+
+        if ($template && !empty($template->template_data) && $template->status === 'active') {
+            return $this->generateCustomPdfData($ticket, $template);
+        }
+
+        return $this->generateGenericPdfData($ticket, $event);
+    }
+
+    /**
+     * Generate PDF data using a custom TicketTemplate (SVG-based)
+     */
+    protected function generateCustomPdfData(Ticket $ticket, $template): string
+    {
+        $variableService = app(TicketVariableService::class);
+        $generator = app(TicketPreviewGenerator::class);
+
+        $data = $variableService->resolveTicketData($ticket);
+        $svg = $generator->renderToSvg($template->template_data, $data);
+
+        $size = $template->getSize();
+        $widthPt = round($size['width'] * 2.8346, 2);
+        $heightPt = round($size['height'] * 2.8346, 2);
+        $widthMm = $size['width'];
+        $heightMm = $size['height'];
+
+        $html = <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page { size: {$widthMm}mm {$heightMm}mm; margin: 0; }
+        body { width: {$widthMm}mm; height: {$heightMm}mm; overflow: hidden; }
+        svg { display: block; width: {$widthMm}mm; height: {$heightMm}mm; }
+    </style>
+</head>
+<body>
+{$svg}
+</body>
+</html>
+HTML;
+
+        $pdf = Pdf::loadHTML($html)
+            ->setPaper([0, 0, $widthPt, $heightPt]);
+
+        $template->markAsUsed();
+
+        return $pdf->output();
+    }
+
+    /**
+     * Generate PDF data using the generic template (fallback)
+     */
+    protected function generateGenericPdfData(Ticket $ticket, $event): string
+    {
         $venue = $event?->venue;
         $tenant = $ticket->order?->tenant;
 

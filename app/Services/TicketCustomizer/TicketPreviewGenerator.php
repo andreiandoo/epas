@@ -56,6 +56,29 @@ class TicketPreviewGenerator
     }
 
     /**
+     * Render template to SVG string (for PDF generation or inline use)
+     *
+     * @param array $templateData Template JSON
+     * @param array|null $data Custom data or use sample data
+     * @param int $scale Scale factor (1 = 1:1, 2 = 2x for retina)
+     * @return string SVG markup
+     */
+    public function renderToSvg(array $templateData, ?array $data = null, int $scale = 1): string
+    {
+        $data = $data ?? $this->variableService->getSampleData();
+
+        $meta = $templateData['meta'] ?? [];
+        $dpi = $meta['dpi'] ?? 300;
+        $sizeW = $meta['size_mm']['w'] ?? 80;
+        $sizeH = $meta['size_mm']['h'] ?? 200;
+
+        $widthPx = (int) round(($sizeW / 25.4) * $dpi * $scale);
+        $heightPx = (int) round(($sizeH / 25.4) * $dpi * $scale);
+
+        return $this->generateSVG($templateData, $data, $widthPx, $heightPx, $scale);
+    }
+
+    /**
      * Generate SVG from template data
      */
     private function generateSVG(array $templateData, array $data, int $width, int $height, int $scale): string
