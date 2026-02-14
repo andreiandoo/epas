@@ -5,6 +5,45 @@
         </div>
     @else
 
+    @php
+        // Helper to render delta badge inline
+        $renderDelta = function(?float $delta) {
+            if ($delta === null) return '';
+            $isPositive = $delta >= 0;
+            $sign = $isPositive ? '+' : '';
+            $colorClass = $isPositive
+                ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
+                : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20';
+            $icon = $isPositive ? '&#9650;' : '&#9660;';
+            return '<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold ' . $colorClass . '">'
+                . $icon . ' ' . $sign . number_format(abs($delta), 1) . '%</span>';
+        };
+
+        // Color map for breakdown items (static classes for Tailwind JIT)
+        $colorMap = [
+            'emerald' => [
+                'bg' => 'bg-emerald-100 dark:bg-emerald-900/30',
+                'text' => 'text-emerald-600 dark:text-emerald-400',
+                'bar' => 'bg-emerald-500',
+            ],
+            'amber' => [
+                'bg' => 'bg-amber-100 dark:bg-amber-900/30',
+                'text' => 'text-amber-600 dark:text-amber-400',
+                'bar' => 'bg-amber-500',
+            ],
+            'pink' => [
+                'bg' => 'bg-pink-100 dark:bg-pink-900/30',
+                'text' => 'text-pink-600 dark:text-pink-400',
+                'bar' => 'bg-pink-500',
+            ],
+            'violet' => [
+                'bg' => 'bg-violet-100 dark:bg-violet-900/30',
+                'text' => 'text-violet-600 dark:text-violet-400',
+                'bar' => 'bg-violet-500',
+            ],
+        ];
+    @endphp
+
     {{-- Filters Row --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div class="flex flex-wrap items-end gap-4">
@@ -58,17 +97,29 @@
             @endif
 
             {{-- Organizer Filter --}}
-            <div class="ml-auto">
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Organizator</label>
-                <select
-                    wire:model.live="organizerId"
-                    class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 min-w-[200px]"
+            <div class="ml-auto flex items-end gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Organizator</label>
+                    <select
+                        wire:model.live="organizerId"
+                        class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 min-w-[200px]"
+                    >
+                        <option value="">Toti organizatorii</option>
+                        @foreach($organizers as $id => $name)
+                            <option value="{{ $id }}">{{ $name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Export CSV Button --}}
+                <button
+                    wire:click="exportCsv"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    title="Export CSV"
                 >
-                    <option value="">Toti organizatorii</option>
-                    @foreach($organizers as $id => $name)
-                        <option value="{{ $id }}">{{ $name }}</option>
-                    @endforeach
-                </select>
+                    <x-heroicon-o-arrow-down-tray class="w-4 h-4" />
+                    CSV
+                </button>
             </div>
         </div>
 
@@ -94,7 +145,10 @@
                     <x-heroicon-o-shopping-cart class="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div class="min-w-0">
-                    <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['total_sales'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['total_sales'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                        {!! $renderDelta($deltas['total_sales'] ?? null) !!}
+                    </div>
                     <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Vanzari Totale</p>
                     <p class="text-xs text-gray-400 dark:text-gray-500">{{ number_format($stats['total_orders']) }} comenzi</p>
                 </div>
@@ -108,7 +162,10 @@
                     <x-heroicon-o-receipt-percent class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div class="min-w-0">
-                    <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['total_commissions'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['total_commissions'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                        {!! $renderDelta($deltas['total_commissions'] ?? null) !!}
+                    </div>
                     <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Comisioane</p>
                     <p class="text-xs text-gray-400 dark:text-gray-500">rata: {{ number_format($stats['effective_commission_rate'], 1) }}%</p>
                 </div>
@@ -122,7 +179,10 @@
                     <x-heroicon-o-gift class="w-5 h-5 text-pink-600 dark:text-pink-400" />
                 </div>
                 <div class="min-w-0">
-                    <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['gift_card_revenue'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['gift_card_revenue'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                        {!! $renderDelta($deltas['gift_card_revenue'] ?? null) !!}
+                    </div>
                     <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Carduri Cadou</p>
                 </div>
             </div>
@@ -135,7 +195,10 @@
                     <x-heroicon-o-bolt class="w-5 h-5 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div class="min-w-0">
-                    <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['services_revenue'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['services_revenue'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                        {!! $renderDelta($deltas['services_revenue'] ?? null) !!}
+                    </div>
                     <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Servicii Extra</p>
                 </div>
             </div>
@@ -148,7 +211,10 @@
                     <x-heroicon-o-currency-dollar class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div class="min-w-0">
-                    <p class="text-xl font-bold text-emerald-700 dark:text-emerald-400 truncate">{{ number_format($stats['grand_total'], 2) }} <span class="text-sm font-medium">RON</span></p>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <p class="text-xl font-bold text-emerald-700 dark:text-emerald-400 truncate">{{ number_format($stats['grand_total'], 2) }} <span class="text-sm font-medium">RON</span></p>
+                        {!! $renderDelta($deltas['grand_total'] ?? null) !!}
+                    </div>
                     <p class="text-xs font-medium text-emerald-600 dark:text-emerald-500 uppercase tracking-wide">Venit Total Marketplace</p>
                 </div>
             </div>
@@ -212,10 +278,11 @@
                 @foreach($breakdown as $item)
                     @php
                         $percentage = $stats['grand_total'] > 0 ? ($item['value'] / $stats['grand_total']) * 100 : 0;
+                        $colors = $colorMap[$item['color']] ?? $colorMap['emerald'];
                     @endphp
                     <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                        <div class="p-2 rounded-lg bg-{{ $item['color'] }}-100 dark:bg-{{ $item['color'] }}-900/30">
-                            <x-dynamic-component :component="$item['icon']" class="w-5 h-5 text-{{ $item['color'] }}-600 dark:text-{{ $item['color'] }}-400" />
+                        <div class="p-2 rounded-lg {{ $colors['bg'] }}">
+                            <x-dynamic-component :component="$item['icon']" class="w-5 h-5 {{ $colors['text'] }}" />
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between mb-1">
@@ -223,7 +290,7 @@
                                 <span class="text-sm font-bold text-gray-900 dark:text-white">{{ number_format($item['value'], 2) }} RON</span>
                             </div>
                             <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
-                                <div class="bg-{{ $item['color'] }}-500 h-1.5 rounded-full" style="width: {{ min($percentage, 100) }}%"></div>
+                                <div class="{{ $colors['bar'] }} h-1.5 rounded-full" style="width: {{ min($percentage, 100) }}%"></div>
                             </div>
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ $item['detail'] }} &middot; {{ number_format($percentage, 1) }}% din total</p>
                         </div>
@@ -327,6 +394,7 @@
         @if($period === 'custom' && $customFrom && $customTo)
             ({{ $customFrom }} &mdash; {{ $customTo }})
         @endif
+        &middot; Comparatie vs {{ $daysInRange }} zile anterioare
     </div>
 
     @push('scripts')
