@@ -128,7 +128,6 @@ $currentYear = date('Y');
                             <li><a href="/evenimente-copii" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Evenimente copii</a></li>
                             <li><a href="/comedie" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Stand-up Comedy</a></li>
                             <li><a href="/calendar" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Calendar evenimente</a></li>
-                            <li><a href="/evenimente-trecute" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Evenimente trecute</a></li>
                         </ul>
                     </div>
 
@@ -146,6 +145,7 @@ $currentYear = date('Y');
                                     <span class="px-2 py-0.5 bg-primary rounded text-[10px] font-bold text-white uppercase">Nou</span>
                                 </a>
                             </li>
+                            <li><a href="/evenimente-trecute" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Evenimente trecute</a></li>
                         </ul>
                     </div>
 
@@ -156,7 +156,7 @@ $currentYear = date('Y');
                             <li><a href="/despre" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Despre noi</a></li>
                             <li><a href="/press-kit" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Press Kit</a></li>
                             <li><a href="/blog" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Blog</a></li>
-                            <li><a href="/parteneri" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Parteneri</a></li>
+                            <li class="hidden"><a href="/parteneri" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Parteneri</a></li>
                             <li><a href="/ajutor" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Centru de ajutor</a></li>
                             <li><a href="/faq" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Întrebări frecvente</a></li>
                         </ul>
