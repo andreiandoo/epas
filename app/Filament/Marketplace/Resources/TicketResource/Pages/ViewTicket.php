@@ -43,8 +43,8 @@ class ViewTicket extends ViewRecord
                     $ticket = $this->record;
                     $event = $ticket->resolveEvent();
 
-                    // Check for custom ticket template
-                    $template = $event?->ticketTemplate;
+                    // Resolve the best template: event → marketplace client default → none
+                    $template = $this->resolveTicketTemplate($ticket, $event);
 
                     Log::channel('marketplace')->info('Ticket download', [
                         'ticket_id' => $ticket->id,
@@ -52,8 +52,10 @@ class ViewTicket extends ViewRecord
                         'ticket_type_id' => $ticket->ticket_type_id,
                         'event_id_column' => $ticket->event_id,
                         'template_id' => $template?->id,
+                        'template_name' => $template?->name,
                         'template_status' => $template?->status,
                         'has_template_data' => !empty($template?->template_data),
+                        'layers_count' => count($template?->template_data['layers'] ?? []),
                         'using_custom' => $template && !empty($template->template_data) && $template->status === 'active',
                     ]);
 
@@ -197,6 +199,89 @@ class ViewTicket extends ViewRecord
     }
 
     /**
+     * Resolve the best ticket template for a ticket.
+     * Priority: event's assigned template → marketplace client's default template
+     * Only returns templates with visible layers.
+     */
+    protected function resolveTicketTemplate(Ticket $ticket, ?Event $event): ?TicketTemplate
+    {
+        // 1. Try the event's directly assigned template
+        $template = $event?->ticketTemplate;
+        if ($template && $this->isTemplateUsable($template)) {
+            Log::channel('marketplace')->debug('Template resolved from event assignment', [
+                'template_id' => $template->id,
+                'template_name' => $template->name,
+            ]);
+            return $template;
+        }
+
+        // 2. Fall back to marketplace client's default active template
+        $clientId = $ticket->marketplace_client_id
+            ?? $event?->marketplace_client_id
+            ?? $ticket->order?->marketplace_client_id;
+
+        if ($clientId) {
+            $defaultTemplate = TicketTemplate::where('marketplace_client_id', $clientId)
+                ->where('status', 'active')
+                ->where('is_default', true)
+                ->first();
+
+            if ($defaultTemplate && $this->isTemplateUsable($defaultTemplate)) {
+                Log::channel('marketplace')->debug('Template resolved from marketplace client default', [
+                    'template_id' => $defaultTemplate->id,
+                    'template_name' => $defaultTemplate->name,
+                    'marketplace_client_id' => $clientId,
+                ]);
+                return $defaultTemplate;
+            }
+
+            // 3. Try any active template with layers for this marketplace client
+            $anyTemplate = TicketTemplate::where('marketplace_client_id', $clientId)
+                ->where('status', 'active')
+                ->orderByDesc('is_default')
+                ->orderByDesc('last_used_at')
+                ->get()
+                ->first(fn ($t) => $this->isTemplateUsable($t));
+
+            if ($anyTemplate) {
+                Log::channel('marketplace')->debug('Template resolved from marketplace client (any active)', [
+                    'template_id' => $anyTemplate->id,
+                    'template_name' => $anyTemplate->name,
+                    'marketplace_client_id' => $clientId,
+                ]);
+                return $anyTemplate;
+            }
+        }
+
+        Log::channel('marketplace')->debug('No usable ticket template found', [
+            'ticket_id' => $ticket->id,
+            'event_template_id' => $event?->ticket_template_id,
+            'marketplace_client_id' => $clientId ?? null,
+        ]);
+
+        return null;
+    }
+
+    /**
+     * Check if a template is usable (active, has template_data with visible layers)
+     */
+    protected function isTemplateUsable(?TicketTemplate $template): bool
+    {
+        if (!$template || $template->status !== 'active' || empty($template->template_data)) {
+            return false;
+        }
+
+        $layers = $template->template_data['layers'] ?? [];
+        if (empty($layers)) {
+            return false;
+        }
+
+        // Check for at least one visible layer
+        $visibleLayers = array_filter($layers, fn($l) => !isset($l['visible']) || $l['visible'] !== false);
+        return !empty($visibleLayers);
+    }
+
+    /**
      * Download ticket using a custom TicketTemplate (HTML-based PDF)
      */
     protected function downloadCustomTemplate(Ticket $ticket, TicketTemplate $template)
@@ -206,28 +291,6 @@ class ViewTicket extends ViewRecord
             $generator = app(TicketPreviewGenerator::class);
 
             $data = $variableService->resolveTicketData($ticket);
-            $layers = $template->template_data['layers'] ?? [];
-
-            Log::channel('marketplace')->debug('Ticket custom PDF: resolving template', [
-                'ticket_id' => $ticket->id,
-                'template_id' => $template->id,
-                'template_name' => $template->name,
-                'layers_count' => count($layers),
-                'visible_layers' => count(array_filter($layers, fn($l) => !isset($l['visible']) || $l['visible'] !== false)),
-                'data_keys' => array_keys($data),
-            ]);
-
-            // If template has no visible layers, fall back to generic
-            $visibleLayers = array_filter($layers, fn($l) => !isset($l['visible']) || $l['visible'] !== false);
-            if (empty($visibleLayers)) {
-                Log::channel('marketplace')->warning('Ticket custom PDF: no visible layers, falling back to generic', [
-                    'ticket_id' => $ticket->id,
-                    'template_id' => $template->id,
-                ]);
-                $event = $ticket->resolveEvent();
-                return $this->downloadGenericTemplate($ticket, $event);
-            }
-
             $content = $generator->renderToHtml($template->template_data, $data);
 
             // If rendered content is empty/whitespace, fall back to generic
