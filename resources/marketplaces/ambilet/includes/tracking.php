@@ -15,6 +15,9 @@
 $trackingHeadScripts = '';
 $trackingBodyScripts = '';
 
+// Ensure api.php is loaded (provides api_cached, api_get)
+require_once __DIR__ . '/api.php';
+
 try {
     $trackingData = api_cached('tracking_scripts', function () {
         $response = api_get('/tracking/scripts');
