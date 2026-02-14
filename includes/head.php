@@ -291,6 +291,14 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <!-- Tailwind CSS CDN & Config -->
     <?php require_once __DIR__ . '/tailwind-config.php'; ?>
 
+    <!-- Tracking Scripts (head) -->
+    <?php
+    if (!isset($trackingHeadScripts)) {
+        require_once __DIR__ . '/tracking.php';
+    }
+    if (!empty($trackingHeadScripts)) echo $trackingHeadScripts . "\n";
+    ?>
+
     <!-- Page-specific head content -->
     <?php if (isset($headExtra)) echo $headExtra; ?>
 </head>
