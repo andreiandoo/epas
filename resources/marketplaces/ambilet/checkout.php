@@ -107,25 +107,28 @@ require_once __DIR__ . '/includes/header.php';
                             <span id="beneficiaries-count" class="text-sm text-muted">0 bilete</span>
                         </div>
 
-                        <div class="flex items-start gap-3 p-4 mb-4 bg-surface rounded-xl">
-                            <svg class="w-5 h-5 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <div class="text-sm text-muted">
-                                <p class="font-medium text-secondary">Toate biletele vor fi trimise pe emailul tău</p>
+                        <div class="flex items-center justify-between p-4 mb-4 bg-surface rounded-xl">
+                            
+                            <div class="flex items-start gap-3" id="allTicketsToEmail">
+                                <svg class="w-5 h-5 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <div class="text-sm text-muted">
+                                    <p class="font-medium text-secondary">Toate biletele vor fi trimise pe emailul tău</p>
+                                </div>
                             </div>
-                        </div>
 
-                        <!-- Different beneficiaries toggle -->
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" id="differentBeneficiaries" class="checkbox-custom" onchange="CheckoutPage.toggleBeneficiaries()">
-                            <span class="text-sm font-medium text-secondary">Folosește date diferite pentru fiecare bilet</span>
-                        </label>
+                            <!-- Different beneficiaries toggle -->
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" id="differentBeneficiaries" class="checkbox-custom" onchange="CheckoutPage.toggleBeneficiaries()">
+                                <span class="text-sm font-medium text-secondary">Folosește date diferite pentru fiecare bilet</span>
+                            </label>
+                        </div>
 
                         <!-- Beneficiaries List (hidden by default) -->
                         <div id="beneficiariesList" class="hidden mt-6 space-y-4"></div>
                     </div>
 
                     <!-- Ticket Insurance (shown dynamically if enabled) -->
-                    <div id="insurance-section" class="hidden p-6 mb-6 bg-white border rounded-2xl border-border">
+                    <div id="insurance-section" class="hidden mb-6 bg-white">
                         <h2 class="flex items-center gap-2 mb-4 text-lg font-bold text-secondary">
                             <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-success/10">
                                 <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
@@ -148,8 +151,27 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                     </div>
 
-                    <!-- Payment Method -->
+                    <!-- Terms -->
                     <div class="p-6 mb-6 bg-white border rounded-2xl border-border">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" id="termsCheckbox" class="checkbox-custom mt-0.5" required>
+                            <span class="text-sm text-muted">
+                                Am citit și sunt de acord cu <a href="/termeni" class="text-primary">Termenii și condițiile</a>,
+                                <a href="/confidentialitate" class="text-primary">Politica de confidențialitate</a> și
+                                <a href="/retur" class="text-primary">Politica de returnare</a>.
+                            </span>
+                        </label>
+
+                        <label class="flex items-start gap-3 mt-4 cursor-pointer">
+                            <input type="checkbox" id="newsletterCheckbox" class="checkbox-custom mt-0.5">
+                            <span class="text-sm text-muted">
+                                Doresc să primesc newsletter-ul <?= SITE_NAME ?> cu noutăți și oferte speciale.
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div class="p-6 bg-white border rounded-2xl border-border">
                         <h2 class="flex items-center gap-2 mb-4 text-lg font-bold text-secondary">
                             <span class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-lg bg-primary/10 text-primary">3</span>
                             Metodă de plată
@@ -228,25 +250,6 @@ require_once __DIR__ . '/includes/header.php';
                                 Plățile sunt procesate securizat
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Terms -->
-                    <div class="p-6 bg-white border rounded-2xl border-border">
-                        <label class="flex items-start gap-3 cursor-pointer">
-                            <input type="checkbox" id="termsCheckbox" class="checkbox-custom mt-0.5" required>
-                            <span class="text-sm text-muted">
-                                Am citit și sunt de acord cu <a href="/termeni" class="text-primary">Termenii și condițiile</a>,
-                                <a href="/confidentialitate" class="text-primary">Politica de confidențialitate</a> și
-                                <a href="/retur" class="text-primary">Politica de returnare</a>.
-                            </span>
-                        </label>
-
-                        <label class="flex items-start gap-3 mt-4 cursor-pointer">
-                            <input type="checkbox" id="newsletterCheckbox" class="checkbox-custom mt-0.5">
-                            <span class="text-sm text-muted">
-                                Doresc să primesc newsletter-ul <?= SITE_NAME ?> cu noutăți și oferte speciale.
-                            </span>
-                        </label>
                     </div>
                 </div>
 
@@ -809,13 +812,16 @@ const CheckoutPage = {
     toggleBeneficiaries() {
         const checkbox = document.getElementById('differentBeneficiaries');
         const beneficiariesList = document.getElementById('beneficiariesList');
+        const allTicketsToEmail = document.getElementById('allTicketsToEmail');
 
         if (checkbox.checked) {
             // Show beneficiaries form
             beneficiariesList.classList.remove('hidden');
+            allTicketsToEmail.classList.add('hidden');
         } else {
             // Hide beneficiaries form - use buyer data for all
             beneficiariesList.classList.add('hidden');
+            allTicketsToEmail.classList.remove('hidden');
         }
     },
 
@@ -946,12 +952,15 @@ const CheckoutPage = {
             insuranceAmount = this.calculateInsuranceAmount();
         }
 
-        // Total = base prices + commission + insurance (no other taxes)
+        // Promo code discount
+        const promoDiscount = AmbiletCart.getPromoDiscount();
+
+        // Total = base prices + commission + insurance - discount
         const subtotalWithCommission = baseSubtotal + totalCommission;
-        const total = subtotalWithCommission + insuranceAmount;
+        const total = Math.max(0, subtotalWithCommission + insuranceAmount - promoDiscount);
         const points = Math.floor(total / 10);
 
-        this.totals = { subtotal: subtotalWithCommission, tax: 0, discount: 0, insurance: insuranceAmount, total, savings };
+        this.totals = { subtotal: subtotalWithCommission, tax: 0, discount: promoDiscount, insurance: insuranceAmount, total, savings };
 
         // Update DOM
         document.getElementById('summary-items').textContent = totalQty;
@@ -978,6 +987,19 @@ const CheckoutPage = {
                 document.getElementById('insurance-row-amount').textContent = '+' + AmbiletUtils.formatCurrency(insuranceAmount);
             } else {
                 insuranceRow.classList.add('hidden');
+            }
+        }
+
+        // Show/hide discount row (promo code)
+        const discountRow = document.getElementById('discount-row');
+        if (discountRow) {
+            if (promoDiscount > 0) {
+                const promo = AmbiletCart.getPromoCode();
+                discountRow.classList.remove('hidden');
+                document.getElementById('discount-label').textContent = 'Reducere' + (promo ? ' (' + promo.code + ')' : '');
+                document.getElementById('discount-amount').textContent = '-' + AmbiletUtils.formatCurrency(promoDiscount);
+            } else {
+                discountRow.classList.add('hidden');
             }
         }
 
@@ -1102,6 +1124,12 @@ const CheckoutPage = {
                 newsletter,
                 accept_terms: acceptTerms
             };
+
+            // Add promo code if applied
+            const promo = AmbiletCart.getPromoCode();
+            if (promo && promo.code) {
+                checkoutData.promo_code = promo.code;
+            }
 
             // Add ticket insurance if selected
             if (this.insuranceSelected && this.totals.insurance > 0) {

@@ -70,10 +70,14 @@ class MarketplaceTrackingController extends Controller
         // Determine event category
         $eventCategory = $this->determineEventCategory($request->input('event_type'));
 
+        // Resolve marketplace client ID from authenticated client (middleware) or request body
+        $authenticatedClient = $request->attributes->get('marketplace_client');
+        $clientId = $request->input('marketplace_client_id') ?? $authenticatedClient?->id;
+
         // Create the tracking event
         $event = CoreCustomerEvent::create([
             'marketplace_event_id' => $request->input('marketplace_event_id'),
-            'marketplace_client_id' => $request->input('marketplace_client_id'),
+            'marketplace_client_id' => $clientId,
             'visitor_id' => $visitorId,
             'session_id' => $sessionId,
             'event_type' => $request->input('event_type'),
@@ -154,6 +158,10 @@ class MarketplaceTrackingController extends Controller
             $subRequest->setUserResolver(fn () => $request->user());
             $subRequest->headers->replace($request->headers->all());
             $subRequest->server->set('REMOTE_ADDR', $request->ip());
+            // Forward the authenticated marketplace client from middleware
+            if ($client = $request->attributes->get('marketplace_client')) {
+                $subRequest->attributes->set('marketplace_client', $client);
+            }
 
             try {
                 $response = $this->track($subRequest);

@@ -12,6 +12,7 @@ class TrackingIntegration extends Model
     protected $fillable = [
         'marketplace_client_id',
         'tenant_id',
+        'marketplace_organizer_id',
         'provider',
         'enabled',
         'consent_category',
@@ -29,6 +30,14 @@ class TrackingIntegration extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    /**
+     * Get the marketplace organizer that owns this integration
+     */
+    public function marketplaceOrganizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class);
     }
 
     /**

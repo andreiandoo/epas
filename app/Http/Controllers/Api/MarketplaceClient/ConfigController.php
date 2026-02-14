@@ -86,9 +86,32 @@ class ConfigController extends BaseController
         $client = $this->requireClient($request);
 
         $integrations = TrackingIntegration::where('marketplace_client_id', $client->id)
+            ->whereNull('marketplace_organizer_id')
             ->where('enabled', true)
             ->get();
 
+        return $this->success($this->buildScriptResponse($integrations));
+    }
+
+    /**
+     * Get tracking scripts for a specific organizer's event pages
+     */
+    public function organizerTrackingScripts(Request $request, int $organizerId): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $integrations = TrackingIntegration::where('marketplace_organizer_id', $organizerId)
+            ->where('enabled', true)
+            ->get();
+
+        return $this->success($this->buildScriptResponse($integrations));
+    }
+
+    /**
+     * Build head/body script response from integrations
+     */
+    protected function buildScriptResponse($integrations): array
+    {
         $headScripts = [];
         $bodyScripts = [];
 
@@ -114,10 +137,10 @@ class ConfigController extends BaseController
             }
         }
 
-        return $this->success([
+        return [
             'head_scripts' => implode("\n", $headScripts),
             'body_scripts' => implode("\n", $bodyScripts),
-        ]);
+        ];
     }
 
     /**
