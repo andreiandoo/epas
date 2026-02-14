@@ -510,7 +510,7 @@ class PaymentController extends BaseController
 
                 $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
                     'size' => '180x180',
-                    'data' => $ticketCode,
+                    'data' => $ticket->getVerifyUrl(),
                     'color' => '1a1a2e',
                     'margin' => '0',
                     'format' => 'png',

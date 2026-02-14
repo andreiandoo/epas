@@ -29,7 +29,7 @@
                 <div class="text-center">
                     <div class="inline-block p-3 bg-white border-2 border-gray-100 rounded-lg">
                         <img
-                            src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($ticket->code) }}&color=181622&margin=0"
+                            src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($ticket->getVerifyUrl()) }}&color=181622&margin=0"
                             alt="QR Code"
                             class="w-40 h-40"
                         />

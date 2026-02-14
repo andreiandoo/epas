@@ -266,7 +266,7 @@ HTML;
         $venueName = $venue?->getTranslation('name', app()->getLocale()) ?? null;
 
         // Generate QR code as base64 data URI
-        $qrCodeDataUri = $this->generateQrCodeDataUri($ticket->code);
+        $qrCodeDataUri = $this->generateQrCodeDataUri($ticket->getVerifyUrl());
 
         $pdf = Pdf::loadView('pdf.ticket', [
             'ticket' => $ticket,

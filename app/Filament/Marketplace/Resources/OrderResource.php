@@ -547,8 +547,8 @@ class OrderResource extends Resource
                 $seatDisplay = $ticket->seat_label;
             }
 
-            // Generate QR code URL using a simple QR generator API
-            $qrData = urlencode($barcode);
+            // Generate QR code URL using verification URL
+            $qrData = urlencode($ticket->getVerifyUrl());
             $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=80x80&data={$qrData}";
 
             // View URL for ticket
@@ -587,7 +587,7 @@ class OrderResource extends Resource
                         <!-- Barcode display -->
                         <div style='display: flex; align-items: center; gap: 8px;'>
                             <span style='font-size: 11px; color: #64748B;'>Cod:</span>
-                            <span style='padding: 2px 8px; background: #334155; border-radius: 4px; font-size: 11px; font-family: monospace; color: #94A3B8; letter-spacing: 1px;'>" . e($barcode) . "</span>
+                            <span style='padding: 2px 8px; background: #334155; border-radius: 4px; font-size: 11px; font-family: monospace; color: #94A3B8; letter-spacing: 1px;'>" . e($code) . "</span>
                         </div>
                         {$seatHtml}
                     </div>
