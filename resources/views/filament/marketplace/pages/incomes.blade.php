@@ -259,12 +259,15 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Structura Venituri Marketplace</h3>
             <div class="h-72 flex items-center justify-center">
-                <canvas id="revenueDonutChart" data-breakdown='@json([
-                    ["Comisioane", $stats["total_commissions"]],
-                    ["Taxa Refund", $stats["refund_fee_revenue"]],
-                    ["Carduri Cadou", $stats["gift_card_revenue"]],
-                    ["Servicii Extra", $stats["services_revenue"]],
-                ])'></canvas>
+                @php
+                    $donutBreakdown = [
+                        ['Comisioane', $stats['total_commissions']],
+                        ['Taxa Refund', $stats['refund_fee_revenue']],
+                        ['Carduri Cadou', $stats['gift_card_revenue']],
+                        ['Servicii Extra', $stats['services_revenue']],
+                    ];
+                @endphp
+                <canvas id="revenueDonutChart" data-breakdown='@json($donutBreakdown)'></canvas>
             </div>
         </div>
     </div>
