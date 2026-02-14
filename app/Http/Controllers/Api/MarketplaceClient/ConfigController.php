@@ -172,6 +172,8 @@ n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
 n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
 document,'script','https://connect.facebook.net/en_US/fbevents.js');
+(function(){var c=null;try{c=JSON.parse(localStorage.getItem('ambilet_cookie_consent'))}catch(e){}
+if(!c||!c.marketing)fbq('consent','revoke');})();
 fbq('init','{$id}');fbq('track','PageView');
 </script>
 <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={$id}&ev=PageView&noscript=1"/></noscript>
@@ -196,7 +198,10 @@ o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},
 ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var a=document.createElement("script");
 a.type="text/javascript",a.async=!0,a.src=r+"?sdkid="+e+"&lib="+t;var s=
 document.getElementsByTagName("script")[0];s.parentNode.insertBefore(a,s)};
-ttq.load('{$id}');ttq.page();
+ttq.load('{$id}');
+(function(){var c=null;try{c=JSON.parse(localStorage.getItem('ambilet_cookie_consent'))}catch(e){}
+if(!c||!c.marketing){ttq.disableCookie();ttq.revokeConsent();}})();
+ttq.page();
 }(window,document,'ttq');
 </script>
 <!-- End TikTok Pixel -->

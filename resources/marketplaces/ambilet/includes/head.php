@@ -291,6 +291,28 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <!-- Tailwind CSS CDN & Config -->
     <?php require_once __DIR__ . '/tailwind-config.php'; ?>
 
+    <!-- Google Consent Mode v2 — MUST be before any tracking scripts -->
+    <script>
+    window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+    (function(){
+        var c=null;
+        try{c=JSON.parse(localStorage.getItem('ambilet_cookie_consent'))}catch(e){}
+        var m=c&&c.marketing,a=c&&c.analytics,f=c&&c.functional;
+        gtag('consent','default',{
+            'ad_storage':m?'granted':'denied',
+            'ad_user_data':m?'granted':'denied',
+            'ad_personalization':m?'granted':'denied',
+            'analytics_storage':a?'granted':'denied',
+            'functionality_storage':f?'granted':'denied',
+            'personalization_storage':f?'granted':'denied',
+            'security_storage':'granted',
+            'wait_for_update':c?0:500
+        });
+        gtag('set','ads_data_redaction',true);
+        gtag('set','url_passthrough',true);
+    })();
+    </script>
+
     <!-- Tracking Scripts (head) -->
     <?php
     if (!isset($trackingHeadScripts)) {

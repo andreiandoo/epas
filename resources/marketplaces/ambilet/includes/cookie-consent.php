@@ -220,12 +220,32 @@ const CookieConsent = {
         // Dispatch event for other scripts to listen
         window.dispatchEvent(new CustomEvent('cookieConsentUpdated', { detail: consent }));
 
-        // Enable/disable tracking based on consent
-        if (consent.analytics && typeof gtag !== 'undefined') {
-            gtag('consent', 'update', { analytics_storage: 'granted' });
+        // Google Consent Mode v2 — update all consent signals
+        if (typeof gtag !== 'undefined') {
+            gtag('consent', 'update', {
+                'ad_storage': consent.marketing ? 'granted' : 'denied',
+                'ad_user_data': consent.marketing ? 'granted' : 'denied',
+                'ad_personalization': consent.marketing ? 'granted' : 'denied',
+                'analytics_storage': consent.analytics ? 'granted' : 'denied',
+                'functionality_storage': consent.functional ? 'granted' : 'denied',
+                'personalization_storage': consent.functional ? 'granted' : 'denied'
+            });
         }
-        if (consent.marketing && typeof fbq !== 'undefined') {
-            fbq('consent', 'grant');
+
+        // Meta Pixel consent
+        if (typeof fbq !== 'undefined') {
+            fbq('consent', consent.marketing ? 'grant' : 'revoke');
+        }
+
+        // TikTok Pixel consent
+        if (typeof ttq !== 'undefined') {
+            if (consent.marketing) {
+                ttq.enableCookie();
+                ttq.grantConsent();
+            } else {
+                ttq.disableCookie();
+                ttq.revokeConsent();
+            }
         }
     },
 
