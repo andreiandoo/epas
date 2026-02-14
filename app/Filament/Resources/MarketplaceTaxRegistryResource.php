@@ -84,8 +84,12 @@ class MarketplaceTaxRegistryResource extends Resource
                                 return $locationService->getCities($country, $county);
                             })
                             ->searchable(),
+
+                        Forms\Components\TextInput::make('commune')
+                            ->label('Comună')
+                            ->maxLength(255),
                     ])
-                    ->columns(3),
+                    ->columns(4),
 
                 Section::make('Registry Details')
                     ->schema([
@@ -104,6 +108,11 @@ class MarketplaceTaxRegistryResource extends Resource
                             ->rows(2)
                             ->columnSpanFull(),
 
+                        Forms\Components\Textarea::make('directions')
+                            ->label('Indicații')
+                            ->rows(3)
+                            ->columnSpanFull(),
+
                         Forms\Components\TextInput::make('phone')
                             ->label('Phone')
                             ->tel()
@@ -114,6 +123,16 @@ class MarketplaceTaxRegistryResource extends Resource
                             ->email()
                             ->maxLength(255),
 
+                        Forms\Components\TextInput::make('email2')
+                            ->label('Email 2')
+                            ->email()
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('website_url')
+                            ->label('Website URL')
+                            ->url()
+                            ->maxLength(255),
+
                         Forms\Components\TextInput::make('cif')
                             ->label('CIF / Tax ID')
                             ->maxLength(50)
@@ -121,6 +140,10 @@ class MarketplaceTaxRegistryResource extends Resource
 
                         Forms\Components\TextInput::make('iban')
                             ->label('IBAN')
+                            ->maxLength(50),
+
+                        Forms\Components\TextInput::make('siruta_code')
+                            ->label('Cod SIRUTA')
                             ->maxLength(50),
                     ])
                     ->columns(2),

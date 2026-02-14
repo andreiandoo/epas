@@ -24,8 +24,8 @@ class ListTaxRegistries extends ListRecords
                 ->color('gray')
                 ->action(function (): StreamedResponse {
                     return response()->streamDownload(function () {
-                        $header = ['name', 'subname', 'country', 'county', 'city', 'address', 'phone', 'email', 'cif', 'iban', 'is_active'];
-                        $example = ['SC Exemplu SRL', 'Departament Vanzari', 'Romania', 'București', 'București', 'Str. Exemplu nr. 1', '0721000000', 'contact@exemplu.ro', 'RO12345678', 'RO49AAAA1B31007593840000', '1'];
+                        $header = ['name', 'subname', 'country', 'county', 'city', 'commune', 'address', 'directions', 'phone', 'email', 'email2', 'website_url', 'cif', 'iban', 'siruta_code', 'is_active'];
+                        $example = ['SC Exemplu SRL', 'Departament Vanzari', 'Romania', 'București', 'București', '', 'Str. Exemplu nr. 1', 'Etaj 2, intrarea B', '0721000000', 'contact@exemplu.ro', 'financiar@exemplu.ro', 'https://exemplu.ro', 'RO12345678', 'RO49AAAA1B31007593840000', '123456', '1'];
 
                         $out = fopen('php://output', 'w');
                         // UTF-8 BOM for Excel compatibility
@@ -49,7 +49,7 @@ class ListTaxRegistries extends ListRecords
                         ->required()
                         ->disk('local')
                         ->directory('temp-imports')
-                        ->helperText('Coloane acceptate: name, subname, country, county, city, address, phone, email, cif, iban, is_active. Câmpul CIF este folosit ca identificator unic.'),
+                        ->helperText('Coloane acceptate: name, subname, country, county, city, commune, address, directions, phone, email, email2, website_url, cif, iban, siruta_code, is_active. Câmpul CIF este folosit ca identificator unic.'),
 
                     Forms\Components\Toggle::make('overwrite')
                         ->label('Suprascrie înregistrările existente (pe baza CIF)')
@@ -103,7 +103,7 @@ class ListTaxRegistries extends ListRecords
         $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
         $header = array_map('trim', array_map('strtolower', $header));
 
-        $allowedColumns = ['name', 'subname', 'country', 'county', 'city', 'address', 'phone', 'email', 'cif', 'iban', 'is_active'];
+        $allowedColumns = ['name', 'subname', 'country', 'county', 'city', 'commune', 'address', 'directions', 'phone', 'email', 'email2', 'website_url', 'cif', 'iban', 'siruta_code', 'is_active'];
         $headerMap = [];
         foreach ($header as $index => $col) {
             if (in_array($col, $allowedColumns)) {
@@ -149,11 +149,16 @@ class ListTaxRegistries extends ListRecords
                 'country' => $getValue('country') ?: 'Romania',
                 'county' => $getValue('county') ?: null,
                 'city' => $getValue('city') ?: null,
+                'commune' => $getValue('commune') ?: null,
                 'address' => $getValue('address') ?: null,
+                'directions' => $getValue('directions') ?: null,
                 'phone' => $getValue('phone') ?: null,
                 'email' => $getValue('email') ?: null,
+                'email2' => $getValue('email2') ?: null,
+                'website_url' => $getValue('website_url') ?: null,
                 'cif' => $cif,
                 'iban' => $getValue('iban') ?: null,
+                'siruta_code' => $getValue('siruta_code') ?: null,
                 'is_active' => in_array(strtolower($getValue('is_active')), ['1', 'true', 'yes', 'da'], true),
             ];
 

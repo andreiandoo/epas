@@ -14,13 +14,18 @@ class MarketplaceTaxRegistry extends Model
         'country',
         'county',
         'city',
+        'commune',
         'name',
         'subname',
         'address',
+        'directions',
         'phone',
         'email',
+        'email2',
+        'website_url',
         'cif',
         'iban',
+        'siruta_code',
         'is_active',
     ];
 
@@ -72,6 +77,7 @@ class MarketplaceTaxRegistry extends Model
     public function getLocationAttribute(): string
     {
         $parts = array_filter([
+            $this->commune,
             $this->city,
             $this->county,
             $this->country,
@@ -89,13 +95,18 @@ class MarketplaceTaxRegistry extends Model
             'tax_registry_country' => $this->country ?? '',
             'tax_registry_county' => $this->county ?? '',
             'tax_registry_city' => $this->city ?? '',
+            'tax_registry_commune' => $this->commune ?? '',
             'tax_registry_name' => $this->name ?? '',
             'tax_registry_subname' => $this->subname ?? '',
             'tax_registry_address' => $this->address ?? '',
+            'tax_registry_directions' => $this->directions ?? '',
             'tax_registry_phone' => $this->phone ?? '',
             'tax_registry_email' => $this->email ?? '',
+            'tax_registry_email2' => $this->email2 ?? '',
+            'tax_registry_website_url' => $this->website_url ?? '',
             'tax_registry_cif' => $this->cif ?? '',
             'tax_registry_iban' => $this->iban ?? '',
+            'tax_registry_siruta_code' => $this->siruta_code ?? '',
         ];
     }
 }

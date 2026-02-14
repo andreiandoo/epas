@@ -98,8 +98,13 @@ class TaxRegistryResource extends Resource
                                 return $locationService->getCities($countryCode, $county);
                             })
                             ->searchable(),
+
+                        Forms\Components\TextInput::make('commune')
+                            ->label('Comună')
+                            ->maxLength(255)
+                            ->placeholder('ex: Comuna Berceni'),
                     ])
-                    ->columns(3),
+                    ->columns(4),
 
                 Section::make('Registry Information')
                     ->icon('heroicon-o-identification')
@@ -120,6 +125,12 @@ class TaxRegistryResource extends Resource
                             ->rows(2)
                             ->columnSpanFull(),
 
+                        Forms\Components\Textarea::make('directions')
+                            ->label('Indicații')
+                            ->rows(3)
+                            ->columnSpanFull()
+                            ->placeholder('Indicații de acces, puncte de reper, etc.'),
+
                         Forms\Components\TextInput::make('phone')
                             ->label('Phone')
                             ->tel()
@@ -130,6 +141,17 @@ class TaxRegistryResource extends Resource
                             ->email()
                             ->maxLength(255),
 
+                        Forms\Components\TextInput::make('email2')
+                            ->label('Email 2')
+                            ->email()
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('website_url')
+                            ->label('Website URL')
+                            ->url()
+                            ->maxLength(255)
+                            ->placeholder('https://...'),
+
                         Forms\Components\TextInput::make('cif')
                             ->label('CIF / Tax ID')
                             ->maxLength(50)
@@ -139,6 +161,10 @@ class TaxRegistryResource extends Resource
                             ->label('IBAN')
                             ->maxLength(50)
                             ->placeholder('e.g., RO49AAAA1B31007593840000'),
+
+                        Forms\Components\TextInput::make('siruta_code')
+                            ->label('Cod SIRUTA')
+                            ->maxLength(50),
 
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
