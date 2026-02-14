@@ -5,7 +5,6 @@ namespace App\Filament\Marketplace\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\MarketplaceGiftCard;
 use App\Models\MarketplaceOrganizer;
-use App\Models\MarketplaceRefundRequest;
 use App\Models\Order;
 use App\Models\ServiceOrder;
 use BackedEnum;
@@ -63,7 +62,10 @@ class Incomes extends Page
 
     public function updatedOrganizerId(): void
     {
-        // triggers re-render
+        // Convert empty string to null so URL param is removed entirely
+        if ($this->organizerId === '' || $this->organizerId === '0') {
+            $this->organizerId = null;
+        }
     }
 
     /**
@@ -159,18 +161,16 @@ class Incomes extends Page
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->sum('commission_amount');
 
-        // ─── Refund Fee Revenue ───
-        // fees_refund represents the non-refundable fee the marketplace keeps from refunds
-        $refundFeeQuery = MarketplaceRefundRequest::where('marketplace_client_id', $marketplaceId)
-            ->whereIn('status', ['refunded', 'partially_refunded'])
-            ->whereBetween('completed_at', [$startDate, $endDate]);
+        // ─── Ticket Insurance Revenue (Taxa Retur) ───
+        // Insurance amount is stored in order meta as 'insurance_amount'
+        $insuranceQuery = $this->baseOrderQuery()
+            ->whereBetween('paid_at', [$startDate, $endDate])
+            ->whereRaw("json_extract(meta, '$.ticket_insurance') = true");
 
-        if ($this->organizerId) {
-            $refundFeeQuery->where('marketplace_organizer_id', $this->organizerId);
-        }
-
-        $refundFeeRevenue = (float) $refundFeeQuery->sum('fees_refund');
-        $totalRefunds = (int) $refundFeeQuery->count();
+        $refundFeeRevenue = (float) (clone $insuranceQuery)
+            ->selectRaw("COALESCE(SUM(json_extract(meta, '$.insurance_amount')), 0) as total")
+            ->value('total');
+        $totalRefunds = (int) (clone $insuranceQuery)->count();
 
         // ─── Gift Card Revenue ───
         // Revenue from gift card purchases (initial_amount when purchased)
@@ -266,11 +266,11 @@ class Incomes extends Page
                 'detail' => $totalOrders . ' comenzi | rata efectiva: ' . number_format($effectiveCommissionRate, 1) . '%',
             ],
             [
-                'label' => 'Taxa refund (nerambursabila)',
+                'label' => 'Taxa retur (asigurare bilet)',
                 'value' => $refundFeeRevenue,
-                'icon' => 'heroicon-o-arrow-uturn-left',
+                'icon' => 'heroicon-o-shield-check',
                 'color' => 'amber',
-                'detail' => $totalRefunds . ' refunduri procesate',
+                'detail' => $totalRefunds . ' comenzi cu asigurare',
             ],
             [
                 'label' => 'Carduri cadou',
@@ -399,9 +399,12 @@ class Incomes extends Page
             ->get()
             ->map(function ($row) {
                 $organizer = MarketplaceOrganizer::find($row->marketplace_organizer_id);
+                $displayName = $organizer?->name ?? 'Unknown';
+                $companyName = $organizer?->company_name;
                 return [
                     'id' => $row->marketplace_organizer_id,
-                    'name' => $organizer?->company_name ?? $organizer?->name ?? 'Unknown',
+                    'name' => $displayName,
+                    'company_name' => $companyName,
                     'total_sales' => (float) $row->total_sales,
                     'total_commissions' => (float) $row->total_commissions,
                     'order_count' => (int) $row->order_count,
@@ -440,11 +443,10 @@ class Incomes extends Page
         $prevCommissions = (float) (clone $prevOrderQuery)->sum('commission_amount');
         $prevOrders = (int) (clone $prevOrderQuery)->count();
 
-        $prevRefundFees = (float) MarketplaceRefundRequest::where('marketplace_client_id', $marketplaceId)
-            ->whereIn('status', ['refunded', 'partially_refunded'])
-            ->whereBetween('completed_at', [$prevStart, $prevEnd])
-            ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
-            ->sum('fees_refund');
+        $prevRefundFees = (float) (clone $prevOrderQuery)
+            ->whereRaw("json_extract(meta, '$.ticket_insurance') = true")
+            ->selectRaw("COALESCE(SUM(json_extract(meta, '$.insurance_amount')), 0) as total")
+            ->value('total');
 
         $prevGiftCards = (float) MarketplaceGiftCard::where('marketplace_client_id', $marketplaceId)
             ->whereNotIn('status', ['cancelled', 'revoked'])
@@ -508,7 +510,7 @@ class Incomes extends Page
             fputcsv($handle, ['Vanzari Totale', number_format($stats['total_sales'], 2), $this->formatDelta($deltas['total_sales'] ?? null)]);
             fputcsv($handle, ['Nr. Comenzi', $stats['total_orders'], $this->formatDelta($deltas['total_orders'] ?? null)]);
             fputcsv($handle, ['Comisioane', number_format($stats['total_commissions'], 2), $this->formatDelta($deltas['total_commissions'] ?? null)]);
-            fputcsv($handle, ['Taxa Refund', number_format($stats['refund_fee_revenue'], 2), $this->formatDelta($deltas['refund_fee_revenue'] ?? null)]);
+            fputcsv($handle, ['Taxa Retur (Asigurare)', number_format($stats['refund_fee_revenue'], 2), $this->formatDelta($deltas['refund_fee_revenue'] ?? null)]);
             fputcsv($handle, ['Carduri Cadou', number_format($stats['gift_card_revenue'], 2), $this->formatDelta($deltas['gift_card_revenue'] ?? null)]);
             fputcsv($handle, ['Servicii Extra', number_format($stats['services_revenue'], 2), $this->formatDelta($deltas['services_revenue'] ?? null)]);
             fputcsv($handle, ['TOTAL VENIT MARKETPLACE', number_format($stats['grand_total'], 2), $this->formatDelta($deltas['grand_total'] ?? null)]);

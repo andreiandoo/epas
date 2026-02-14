@@ -128,7 +128,7 @@
             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
                 <x-heroicon-s-user class="w-3.5 h-3.5" />
                 {{ $selectedOrganizerName }}
-                <button wire:click="$set('organizerId', '')" class="ml-1 hover:text-emerald-900 dark:hover:text-emerald-200">
+                <button wire:click="$set('organizerId', null)" class="ml-1 hover:text-emerald-900 dark:hover:text-emerald-200">
                     <x-heroicon-s-x-mark class="w-3.5 h-3.5" />
                 </button>
             </span>
@@ -137,7 +137,7 @@
     </div>
 
     {{-- Top KPI Cards --}}
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         {{-- Vanzari totale (Gross Sales) --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
             <div class="flex items-center gap-3">
@@ -168,6 +168,22 @@
                     </div>
                     <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Comisioane</p>
                     <p class="text-xs text-gray-400 dark:text-gray-500">rata: {{ number_format($stats['effective_commission_rate'], 1) }}%</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Ticket Insurance Revenue (Taxa Retur) --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                    <x-heroicon-o-shield-check class="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['refund_fee_revenue'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                        {!! $renderDelta($deltas['refund_fee_revenue'] ?? null) !!}
+                    </div>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Taxa Retur</p>
                 </div>
             </div>
         </div>
@@ -245,29 +261,14 @@
         </div>
     </div>
 
-    {{-- Charts --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6" wire:key="charts-{{ $period }}-{{ $organizerId }}-{{ $customFrom }}-{{ $customTo }}">
-        {{-- Sales & Commissions Chart --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+    {{-- Chart --}}
+    <div class="mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5"
+             wire:key="chart-{{ $period }}-{{ $organizerId }}-{{ $customFrom }}-{{ $customTo }}"
+             x-data x-init="$nextTick(() => initSalesCommissionsChart())">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Vanzari vs Comisioane</h3>
             <div class="h-72">
                 <canvas id="salesCommissionsChart" data-chart='@json($chartData)'></canvas>
-            </div>
-        </div>
-
-        {{-- Revenue Breakdown Donut --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Structura Venituri Marketplace</h3>
-            <div class="h-72 flex items-center justify-center">
-                @php
-                    $donutBreakdown = [
-                        ['Comisioane', $stats['total_commissions']],
-                        ['Taxa Refund', $stats['refund_fee_revenue']],
-                        ['Carduri Cadou', $stats['gift_card_revenue']],
-                        ['Servicii Extra', $stats['services_revenue']],
-                    ];
-                @endphp
-                <canvas id="revenueDonutChart" data-breakdown='@json($donutBreakdown)'></canvas>
             </div>
         </div>
     </div>
@@ -360,7 +361,7 @@
                 </thead>
                 <tbody>
                     @foreach($topOrganizers as $index => $org)
-                    <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                    <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
                         <td class="py-3 px-4 text-gray-500 dark:text-gray-400">{{ $index + 1 }}</td>
                         <td class="py-3 px-4">
                             <div class="flex items-center gap-2.5">
@@ -369,7 +370,12 @@
                                         {{ strtoupper(substr($org['name'], 0, 1)) }}
                                     </span>
                                 </div>
-                                <span class="font-medium text-gray-900 dark:text-white">{{ $org['name'] }}</span>
+                                <div>
+                                    <span class="font-medium text-gray-900 dark:text-white block">{{ $org['name'] }}</span>
+                                    @if(!empty($org['company_name']) && $org['company_name'] !== $org['name'])
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ $org['company_name'] }}</span>
+                                    @endif
+                                </div>
                             </div>
                         </td>
                         <td class="py-3 px-4 text-right text-gray-600 dark:text-gray-300">{{ number_format($org['order_count']) }}</td>
@@ -404,23 +410,12 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            initIncomesCharts();
+            initSalesCommissionsChart();
         });
 
         document.addEventListener('livewire:navigated', function() {
-            initIncomesCharts();
-        });
-
-        Livewire.hook('morph.updated', ({ el }) => {
-            if (el.querySelector && (el.querySelector('#salesCommissionsChart') || el.querySelector('#revenueDonutChart'))) {
-                setTimeout(() => initIncomesCharts(), 100);
-            }
-        });
-
-        function initIncomesCharts() {
             initSalesCommissionsChart();
-            initRevenueDonutChart();
-        }
+        });
 
         function initSalesCommissionsChart() {
             const ctx = document.getElementById('salesCommissionsChart');
@@ -530,90 +525,6 @@
             });
         }
 
-        function initRevenueDonutChart() {
-            const ctx = document.getElementById('revenueDonutChart');
-            if (!ctx) return;
-
-            const existingChart = Chart.getChart(ctx);
-            if (existingChart) existingChart.destroy();
-
-            const isDark = document.documentElement.classList.contains('dark');
-            const breakdownStr = ctx.getAttribute('data-breakdown');
-            if (!breakdownStr) return;
-
-            const breakdown = JSON.parse(breakdownStr);
-            const labels = breakdown.map(b => b[0]);
-            const values = breakdown.map(b => b[1]);
-            const total = values.reduce((a, b) => a + b, 0);
-
-            const colors = ['#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
-            const hoverColors = ['#059669', '#d97706', '#db2777', '#7c3aed'];
-
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: values,
-                        backgroundColor: colors,
-                        hoverBackgroundColor: hoverColors,
-                        borderWidth: 0,
-                        borderRadius: 4,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '65%',
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                color: isDark ? '#d1d5db' : '#374151',
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                                padding: 12,
-                                font: { size: 12 },
-                                generateLabels: function(chart) {
-                                    const data = chart.data;
-                                    return data.labels.map(function(label, i) {
-                                        const value = data.datasets[0].data[i];
-                                        const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
-                                        return {
-                                            text: label + ' (' + pct + '%)',
-                                            fillStyle: data.datasets[0].backgroundColor[i],
-                                            strokeStyle: 'transparent',
-                                            lineWidth: 0,
-                                            hidden: false,
-                                            index: i,
-                                            pointStyle: 'circle',
-                                        };
-                                    });
-                                }
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: isDark ? '#1f2937' : '#fff',
-                            titleColor: isDark ? '#f3f4f6' : '#111827',
-                            bodyColor: isDark ? '#d1d5db' : '#4b5563',
-                            borderColor: isDark ? '#374151' : '#e5e7eb',
-                            borderWidth: 1,
-                            padding: 12,
-                            callbacks: {
-                                label: function(context) {
-                                    const value = context.parsed;
-                                    const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
-                                    return context.label + ': ' + new Intl.NumberFormat('ro-RO', {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2
-                                    }).format(value) + ' RON (' + pct + '%)';
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
     </script>
     @endpush
 
