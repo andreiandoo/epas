@@ -29,8 +29,17 @@ $allOrganizers = [];
 $meta = ['total' => 0, 'last_page' => 1, 'current_page' => 1];
 
 if (!empty($apiResponse['success'])) {
-    $allOrganizers = $apiResponse['data'] ?? [];
-    $meta = $apiResponse['meta'] ?? $meta;
+    $data = $apiResponse['data'] ?? [];
+    // Handle potential nested data (paginated response may nest data inside 'data' key)
+    if (isset($data['data']) && is_array($data['data'])) {
+        $allOrganizers = $data['data'];
+        $meta = array_merge($meta, array_intersect_key($data, array_flip(['total', 'last_page', 'current_page', 'per_page'])));
+    } else {
+        $allOrganizers = is_array($data) ? $data : [];
+    }
+    if (!empty($apiResponse['meta'])) {
+        $meta = $apiResponse['meta'];
+    }
 }
 
 $totalOrganizers = $meta['total'] ?? count($allOrganizers);
