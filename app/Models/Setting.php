@@ -247,6 +247,40 @@ class Setting extends Model
         return !empty($this->zoom_client_id) && !empty($this->zoom_client_secret);
     }
 
+    // ==========================================
+    // ADS CAMPAIGN MARKETING API CHECKS
+    // ==========================================
+
+    public function isFacebookMarketingConfigured(): bool
+    {
+        return !empty($this->facebook_app_id)
+            && !empty($this->facebook_access_token)
+            && !empty($this->meta['facebook_ad_account_id'] ?? null)
+            && !empty($this->meta['facebook_page_id'] ?? null);
+    }
+
+    public function isGoogleAdsCampaignConfigured(): bool
+    {
+        return !empty($this->google_ads_client_id)
+            && !empty($this->google_ads_client_secret)
+            && !empty($this->google_ads_developer_token)
+            && !empty($this->meta['google_ads_customer_id'] ?? null)
+            && !empty($this->meta['google_ads_refresh_token'] ?? null);
+    }
+
+    public function getConfiguredAdsPlatforms(): array
+    {
+        $platforms = [];
+        if ($this->isFacebookMarketingConfigured()) {
+            $platforms[] = 'facebook';
+            $platforms[] = 'instagram'; // Uses same Meta credentials
+        }
+        if ($this->isGoogleAdsCampaignConfigured()) {
+            $platforms[] = 'google';
+        }
+        return $platforms;
+    }
+
     /**
      * Get the base URL for OAuth callbacks
      */

@@ -7,4 +7,5 @@ return [
     App\Providers\Filament\MarketplacePanelProvider::class,
     App\Providers\SeatingServiceProvider::class,
     App\Providers\MicroservicesServiceProvider::class,
+    App\Providers\AdsCampaignServiceProvider::class,
 ];
