@@ -133,7 +133,7 @@ class ViewTicket extends ViewRecord
 
                     try {
                         // Build ticket email content
-                        $ticketMail = new TicketEmail($ticket);
+                        $ticketMail = new TicketEmail($ticket, static::getMarketplaceClientId());
 
                         // Render email HTML body
                         $emailBody = view('emails.ticket', [
@@ -218,7 +218,16 @@ class ViewTicket extends ViewRecord
         // 2. Fall back to marketplace client's default active template
         $clientId = $ticket->marketplace_client_id
             ?? $event?->marketplace_client_id
-            ?? $ticket->order?->marketplace_client_id;
+            ?? $ticket->order?->marketplace_client_id
+            ?? static::getMarketplaceClientId();
+
+        Log::channel('marketplace')->debug('Template resolution: clientId lookup', [
+            'ticket_marketplace_client_id' => $ticket->marketplace_client_id,
+            'event_marketplace_client_id' => $event?->marketplace_client_id,
+            'order_marketplace_client_id' => $ticket->order?->marketplace_client_id,
+            'context_marketplace_client_id' => static::getMarketplaceClientId(),
+            'resolved_client_id' => $clientId,
+        ]);
 
         if ($clientId) {
             $defaultTemplate = TicketTemplate::where('marketplace_client_id', $clientId)

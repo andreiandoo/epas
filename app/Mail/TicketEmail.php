@@ -24,10 +24,12 @@ class TicketEmail extends Mailable
     public string $ticketTypeName;
     public ?string $venueName;
     public $resolvedEvent;
+    protected ?int $marketplaceClientId = null;
 
-    public function __construct(Ticket $ticket)
+    public function __construct(Ticket $ticket, ?int $marketplaceClientId = null)
     {
         $this->ticket = $ticket;
+        $this->marketplaceClientId = $marketplaceClientId;
         $this->resolvedEvent = $ticket->resolveEvent();
         $this->eventTitle = $this->resolveEventTitle();
         $this->ticketTypeName = $ticket->resolveTicketTypeName();
@@ -134,7 +136,8 @@ class TicketEmail extends Mailable
         // 2. Fall back to marketplace client's default active template
         $clientId = $ticket->marketplace_client_id
             ?? $event?->marketplace_client_id
-            ?? $ticket->order?->marketplace_client_id;
+            ?? $ticket->order?->marketplace_client_id
+            ?? $this->marketplaceClientId;
 
         if ($clientId) {
             $defaultTemplate = TicketTemplate::where('marketplace_client_id', $clientId)
