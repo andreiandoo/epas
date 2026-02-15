@@ -48,6 +48,9 @@ class Event extends Model
         'has_custom_related', 'custom_related_event_ids',
         'homepage_featured_image', 'featured_image',
 
+        // affiliate
+        'is_affiliate', 'affiliate_event_source_id', 'affiliate_url', 'affiliate_data',
+
         // single day
         'event_date', 'start_time', 'door_time', 'end_time',
 
@@ -110,6 +113,7 @@ class Event extends Model
         'is_general_featured'   => 'bool',
         'is_category_featured'  => 'bool',
         'is_published'          => 'bool',
+        'is_affiliate'          => 'bool',
         'has_custom_related'    => 'bool',
         'custom_related_event_ids' => 'array',
         'is_template'       => 'bool',
@@ -121,6 +125,7 @@ class Event extends Model
         // json
         'multi_slots'       => 'array',
         'seo'               => 'array',
+        'affiliate_data'    => 'array',
 
         // marketplace pricing & tracking
         'target_price'      => 'decimal:2',
@@ -195,6 +200,19 @@ class Event extends Model
     public function marketplaceEventCategory(): BelongsTo
     {
         return $this->belongsTo(MarketplaceEventCategory::class);
+    }
+
+    public function affiliateEventSource(): BelongsTo
+    {
+        return $this->belongsTo(AffiliateEventSource::class);
+    }
+
+    /**
+     * Check if this event is an affiliate event (sale happens externally)
+     */
+    public function isAffiliate(): bool
+    {
+        return (bool) $this->is_affiliate;
     }
 
     /* Taxonomies (normalized) */

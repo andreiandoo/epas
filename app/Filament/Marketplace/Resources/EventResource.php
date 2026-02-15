@@ -87,7 +87,10 @@ class EventResource extends Resource
         $marketplace = static::getMarketplaceClient();
 
         return parent::getEloquentQuery()
-            ->where('marketplace_client_id', $marketplace?->id);
+            ->where('marketplace_client_id', $marketplace?->id)
+            ->where(function ($q) {
+                $q->where('is_affiliate', false)->orWhereNull('is_affiliate');
+            });
     }
 
     public static function form(Schema $schema): Schema
