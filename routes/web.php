@@ -277,6 +277,17 @@ Route::get('/t/{code}', [\App\Http\Controllers\Public\TicketVerificationControll
 Route::get('/gate', [\App\Http\Controllers\Public\GateController::class, 'show'])
     ->name('gate.scanner');
 
+// Android APK Download
+Route::get('/download-android', function () {
+    $path = storage_path('app/public/downloads/tixello-staff.apk');
+    if (!file_exists($path)) {
+        abort(404, 'APK not available yet');
+    }
+    return response()->download($path, 'tixello-staff.apk', [
+        'Content-Type' => 'application/vnd.android.package-archive',
+    ]);
+})->name('download.android');
+
 // Public Contract Signing Routes (no auth required - token-based)
 Route::prefix('contract')->group(function () {
     Route::get('/{token}', [ContractSigningController::class, 'view'])->name('contract.view');
