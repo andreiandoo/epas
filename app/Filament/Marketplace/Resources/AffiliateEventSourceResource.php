@@ -96,6 +96,20 @@ class AffiliateEventSourceResource extends Resource
                                     ->placeholder('https://www.exemplu.ro/logo.png'),
                             ])
                             ->collapsible(),
+
+                        SC\Section::make('Configurare API')
+                            ->description('Setările pentru importul automat de evenimente din această sursă.')
+                            ->icon('heroicon-o-key')
+                            ->schema([
+                                Forms\Components\TextInput::make('settings.ticketmaster_api_key')
+                                    ->label('TicketMaster API Key')
+                                    ->helperText('Obține un API key gratuit de pe developer.ticketmaster.com')
+                                    ->password()
+                                    ->revealable()
+                                    ->maxLength(255)
+                                    ->placeholder('Introdu API key-ul TicketMaster'),
+                            ])
+                            ->collapsible(),
                     ]),
 
                 // ========== RIGHT COLUMN (1/4) ==========
