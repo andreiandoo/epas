@@ -81,4 +81,23 @@ class EditTicketTemplate extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    /**
+     * Preserve layers, assets, and other visual editor data when saving
+     * the form. The Filament form only has template_data.meta.* fields,
+     * so without this merge the layers/assets would be wiped on save.
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (isset($data['template_data']) && $this->record) {
+            $existing = $this->record->template_data ?? [];
+            $formMeta = $data['template_data']['meta'] ?? [];
+
+            $data['template_data'] = array_merge($existing, [
+                'meta' => array_merge($existing['meta'] ?? [], $formMeta),
+            ]);
+        }
+
+        return $data;
+    }
 }

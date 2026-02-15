@@ -206,22 +206,9 @@ class ViewTicket extends ViewRecord
     protected function resolveTicketTemplate(Ticket $ticket, ?Event $event): ?TicketTemplate
     {
         // 1. Try the event's directly assigned template
-        $eventTemplate = $event?->ticketTemplate;
-        $eventTemplateUsable = $eventTemplate ? $this->isTemplateUsable($eventTemplate) : false;
-
-        Log::channel('marketplace')->info('Template resolution: step 1 - event template', [
-            'ticket_id' => $ticket->id,
-            'event_ticket_template_id' => $event?->ticket_template_id,
-            'event_template_found' => !is_null($eventTemplate),
-            'event_template_id' => $eventTemplate?->id,
-            'event_template_status' => $eventTemplate?->status,
-            'event_template_has_data' => !empty($eventTemplate?->template_data),
-            'event_template_layers' => count($eventTemplate?->template_data['layers'] ?? []),
-            'event_template_usable' => $eventTemplateUsable,
-        ]);
-
-        if ($eventTemplate && $eventTemplateUsable) {
-            return $eventTemplate;
+        $template = $event?->ticketTemplate;
+        if ($template && $this->isTemplateUsable($template)) {
+            return $template;
         }
 
         // 2. Fall back to marketplace client's default active template
@@ -230,58 +217,30 @@ class ViewTicket extends ViewRecord
             ?? $ticket->order?->marketplace_client_id
             ?? static::getMarketplaceClientId();
 
-        Log::channel('marketplace')->info('Template resolution: step 2 - clientId lookup', [
-            'ticket_marketplace_client_id' => $ticket->marketplace_client_id,
-            'event_marketplace_client_id' => $event?->marketplace_client_id,
-            'order_marketplace_client_id' => $ticket->order?->marketplace_client_id,
-            'context_marketplace_client_id' => static::getMarketplaceClientId(),
-            'resolved_client_id' => $clientId,
-        ]);
-
         if ($clientId) {
-            // Count all templates for this client (for debugging)
-            $allTemplatesCount = TicketTemplate::where('marketplace_client_id', $clientId)->count();
-            $activeTemplatesCount = TicketTemplate::where('marketplace_client_id', $clientId)->where('status', 'active')->count();
             $defaultTemplate = TicketTemplate::where('marketplace_client_id', $clientId)
                 ->where('status', 'active')
                 ->where('is_default', true)
                 ->first();
-
-            Log::channel('marketplace')->info('Template resolution: step 2 - query results', [
-                'client_id' => $clientId,
-                'all_templates_count' => $allTemplatesCount,
-                'active_templates_count' => $activeTemplatesCount,
-                'default_template_id' => $defaultTemplate?->id,
-                'default_template_name' => $defaultTemplate?->name,
-                'default_template_usable' => $defaultTemplate ? $this->isTemplateUsable($defaultTemplate) : false,
-            ]);
 
             if ($defaultTemplate && $this->isTemplateUsable($defaultTemplate)) {
                 return $defaultTemplate;
             }
 
             // 3. Try any active template with layers for this marketplace client
-            $allActive = TicketTemplate::where('marketplace_client_id', $clientId)
+            $anyTemplate = TicketTemplate::where('marketplace_client_id', $clientId)
                 ->where('status', 'active')
                 ->orderByDesc('is_default')
                 ->orderByDesc('last_used_at')
-                ->get();
-
-            Log::channel('marketplace')->info('Template resolution: step 3 - any active', [
-                'client_id' => $clientId,
-                'active_found' => $allActive->count(),
-                'active_ids' => $allActive->pluck('id')->toArray(),
-                'active_names' => $allActive->pluck('name')->toArray(),
-            ]);
-
-            $anyTemplate = $allActive->first(fn ($t) => $this->isTemplateUsable($t));
+                ->get()
+                ->first(fn ($t) => $this->isTemplateUsable($t));
 
             if ($anyTemplate) {
                 return $anyTemplate;
             }
         }
 
-        Log::channel('marketplace')->info('Template resolution: FAILED - no usable template', [
+        Log::channel('marketplace')->warning('Template resolution: no usable template found', [
             'ticket_id' => $ticket->id,
             'event_template_id' => $event?->ticket_template_id,
             'resolved_client_id' => $clientId ?? null,
