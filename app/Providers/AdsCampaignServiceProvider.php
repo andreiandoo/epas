@@ -9,6 +9,7 @@ use App\Jobs\AdsCampaign\SyncAdsAudienceSegments;
 use App\Services\AdsCampaign\AdsCampaignManager;
 use App\Services\AdsCampaign\BudgetAllocator;
 use App\Services\AdsCampaign\CampaignOptimizer;
+use App\Services\AdsCampaign\CampaignTemplateService;
 use App\Services\AdsCampaign\FacebookMarketingService;
 use App\Services\AdsCampaign\GoogleAdsCampaignService;
 use App\Services\AdsCampaign\MetricsAggregator;
@@ -28,6 +29,7 @@ class AdsCampaignServiceProvider extends ServiceProvider
         $this->app->singleton(FacebookMarketingService::class);
         $this->app->singleton(GoogleAdsCampaignService::class);
         $this->app->singleton(BudgetAllocator::class);
+        $this->app->singleton(CampaignTemplateService::class);
 
         $this->app->singleton(MetricsAggregator::class, function ($app) {
             return new MetricsAggregator(

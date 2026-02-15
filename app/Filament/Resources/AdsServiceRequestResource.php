@@ -5,6 +5,8 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AdsServiceRequestResource\Pages;
 use App\Models\AdsCampaign\AdsServiceRequest;
 use App\Models\Event;
+use App\Notifications\AdsCampaignNotification;
+use App\Services\AdsCampaign\CampaignTemplateService;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -245,6 +247,14 @@ class AdsServiceRequestResource extends Resource
                     ->requiresConfirmation()
                     ->action(function (AdsServiceRequest $record) {
                         $record->approve(auth()->user());
+
+                        // Notify organizer
+                        if ($record->tenant && $record->tenant->users()->first()) {
+                            $record->tenant->users()->first()->notify(
+                                new AdsCampaignNotification('request_approved', serviceRequest: $record)
+                            );
+                        }
+
                         Notification::make()->success()->title('Request Approved')->send();
                     }),
                 Actions\Action::make('reject')
@@ -259,6 +269,14 @@ class AdsServiceRequestResource extends Resource
                     ])
                     ->action(function (AdsServiceRequest $record, array $data) {
                         $record->reject(auth()->user(), $data['reason']);
+
+                        // Notify organizer
+                        if ($record->tenant && $record->tenant->users()->first()) {
+                            $record->tenant->users()->first()->notify(
+                                new AdsCampaignNotification('request_rejected', serviceRequest: $record, data: ['reason' => $data['reason']])
+                            );
+                        }
+
                         Notification::make()->success()->title('Request Rejected')->send();
                     }),
                 Actions\Action::make('create_campaign')
@@ -266,12 +284,34 @@ class AdsServiceRequestResource extends Resource
                     ->icon('heroicon-o-rocket-launch')
                     ->color('primary')
                     ->visible(fn ($record) => $record->canCreateCampaign() && !$record->campaign)
-                    ->action(function (AdsServiceRequest $record) {
-                        $campaign = app(\App\Services\AdsCampaign\AdsCampaignManager::class)
-                            ->createFromServiceRequest($record, auth()->user());
+                    ->form([
+                        Forms\Components\Select::make('template')
+                            ->label('Apply Campaign Template')
+                            ->options(CampaignTemplateService::TEMPLATES)
+                            ->default(function () use (&$record) {
+                                // Cannot access $record here, will use auto-detect at action time
+                                return 'default';
+                            })
+                            ->helperText('Pre-fills targeting, creatives, and optimization rules based on event type'),
+                    ])
+                    ->action(function (AdsServiceRequest $record, array $data) {
+                        $manager = app(\App\Services\AdsCampaign\AdsCampaignManager::class);
+                        $templateService = app(CampaignTemplateService::class);
+
+                        $campaign = $manager->createFromServiceRequest($record, auth()->user());
+
+                        // Apply template if selected
+                        $templateKey = $data['template'] ?? 'default';
+                        if ($templateKey === 'default' && $record->event) {
+                            // Auto-detect the best template from event content
+                            $templateKey = $templateService->suggestTemplate($record->event);
+                        }
+                        $templateService->applyTemplate($campaign, $templateKey, $record->event);
+
                         Notification::make()->success()
-                            ->title('Campaign Created')
-                            ->body("Campaign #{$campaign->id} created. Configure creatives and targeting, then launch.")
+                            ->title('Campaign Created with Template')
+                            ->body("Campaign #{$campaign->id} created with '{$templateKey}' template. Review creatives and targeting, then launch.")
+                            ->persistent()
                             ->send();
                     }),
             ])

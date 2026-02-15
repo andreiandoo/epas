@@ -9,6 +9,7 @@ use App\Models\AdsCampaign\AdsOptimizationLog;
 use App\Models\AdsCampaign\AdsPlatformCampaign;
 use App\Models\AdsCampaign\AdsServiceRequest;
 use App\Models\User;
+use App\Notifications\AdsCampaignNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -149,6 +150,9 @@ class AdsCampaignManager
             if ($campaign->service_request_id) {
                 $campaign->serviceRequest->update(['status' => AdsServiceRequest::STATUS_COMPLETED]);
             }
+
+            // Notify the organizer that campaign is live
+            $this->notifyOrganizer($campaign, 'campaign_launched');
         } else {
             $campaign->update([
                 'status' => AdsCampaign::STATUS_FAILED,
@@ -185,6 +189,8 @@ class AdsCampaignManager
             'source' => $user ? 'manual' : 'auto',
             'performed_by' => $user?->id,
         ]);
+
+        $this->notifyOrganizer($campaign, 'campaign_paused', ['reason' => $reason ?? 'Manual pause']);
     }
 
     /**
@@ -236,6 +242,8 @@ class AdsCampaignManager
         $campaign->recalculateAggregates();
 
         $campaign->update(['status' => AdsCampaign::STATUS_COMPLETED]);
+
+        $this->notifyOrganizer($campaign, 'campaign_completed');
     }
 
     // ==========================================
@@ -262,8 +270,27 @@ class AdsCampaignManager
 
                 // Check budget exhaustion
                 if ($campaign->isBudgetExhausted()) {
+                    $this->notifyOrganizer($campaign, 'budget_alert', [
+                        'percent_used' => 100,
+                        'remaining' => 0,
+                    ]);
                     $this->complete($campaign);
                     continue;
+                }
+
+                // Budget warning at 80%
+                if ($campaign->total_budget > 0) {
+                    $usedPct = ((float) $campaign->spent_budget / (float) $campaign->total_budget) * 100;
+                    $remaining = (float) $campaign->total_budget - (float) $campaign->spent_budget;
+                    if ($usedPct >= 80 && $usedPct < 100 && !($campaign->status_notes && str_contains($campaign->status_notes, 'budget_warning_sent'))) {
+                        $daysRemaining = $campaign->daily_budget > 0 ? ceil($remaining / (float) $campaign->daily_budget) : null;
+                        $this->notifyOrganizer($campaign, 'budget_alert', [
+                            'percent_used' => round($usedPct),
+                            'remaining' => $remaining,
+                            'days_remaining' => $daysRemaining,
+                        ]);
+                        $campaign->update(['status_notes' => ($campaign->status_notes ? $campaign->status_notes . ' | ' : '') . 'budget_warning_sent']);
+                    }
                 }
 
                 // Check end date
@@ -394,6 +421,34 @@ class AdsCampaignManager
         }
 
         AdsCampaignTargeting::create($targeting);
+    }
+
+    /**
+     * Notify the organizer (tenant owner) about campaign events.
+     */
+    protected function notifyOrganizer(AdsCampaign $campaign, string $action, array $data = []): void
+    {
+        try {
+            $tenant = $campaign->tenant;
+            if (!$tenant) return;
+
+            // Find the tenant owner/primary user to notify
+            $notifiable = $tenant->users()->first();
+            if (!$notifiable) return;
+
+            $notifiable->notify(new AdsCampaignNotification(
+                action: $action,
+                campaign: $campaign,
+                serviceRequest: $campaign->serviceRequest,
+                data: $data,
+            ));
+        } catch (\Exception $e) {
+            Log::warning("Failed to send campaign notification", [
+                'campaign_id' => $campaign->id,
+                'action' => $action,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

@@ -2,12 +2,14 @@
 
 namespace App\Providers;
 
+use App\Events\OrderConfirmed;
 use App\Events\PromoCodes\PromoCodeCreated;
 use App\Events\PromoCodes\PromoCodeUsed;
 use App\Events\PromoCodes\PromoCodeExpired;
 use App\Events\PromoCodes\PromoCodeDepleted;
 use App\Events\PromoCodes\PromoCodeUpdated;
 use App\Events\PromoCodes\PromoCodeDeactivated;
+use App\Listeners\AdsCampaign\OrderConversionListener;
 use App\Listeners\PromoCodes\LogPromoCodeActivity;
 use App\Listeners\PromoCodes\SendPromoCodeAlerts;
 use App\Listeners\PromoCodes\UpdatePromoCodeMetrics;
@@ -31,6 +33,9 @@ class EventServiceProvider extends ServiceProvider
      * @var array<class-string, array<int, class-string>>
      */
     protected $listen = [
+        OrderConfirmed::class => [
+            OrderConversionListener::class,
+        ],
         PromoCodeCreated::class => [
             [LogPromoCodeActivity::class, 'handleCreated'],
         ],
