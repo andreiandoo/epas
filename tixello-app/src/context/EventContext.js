@@ -53,6 +53,9 @@ export function EventProvider({ children }) {
       const data = await getParticipants(eventId, { per_page: 1 });
       if (data.meta?.stats) {
         setEventStats(data.meta.stats);
+      } else if (data.meta) {
+        // Some APIs return stats at top level of meta
+        setEventStats(data.meta);
       }
     } catch (e) {
       console.error('Failed to fetch event stats:', e);
@@ -62,17 +65,23 @@ export function EventProvider({ children }) {
 
   const fetchTicketTypes = useCallback(async (eventId) => {
     try {
-      const data = await getEvent(eventId);
-      if (data.success && data.data?.ticket_types) {
-        const colors = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];
-        setTicketTypes(data.data.ticket_types.map((t, i) => ({
+      const response = await getEvent(eventId);
+      // Handle both { success: true, data: { ticket_types: [] } } and { data: { ticket_types: [] } }
+      const event = response.data || response;
+      const types = event.ticket_types || [];
+      if (types.length > 0) {
+        const colorPalette = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];
+        setTicketTypes(types.map((t, i) => ({
           ...t,
-          color: colors[i % colors.length],
+          color: colorPalette[i % colorPalette.length],
           available: t.quota_available ?? t.quota - (t.quota_sold || 0),
         })));
+      } else {
+        setTicketTypes([]);
       }
     } catch (e) {
       console.error('Failed to fetch ticket types:', e);
+      setTicketTypes([]);
     }
   }, []);
 
