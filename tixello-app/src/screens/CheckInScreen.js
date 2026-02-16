@@ -202,7 +202,7 @@ function extractTicketCode(input) {
 
 export default function CheckInScreen({ navigation }) {
   const { user } = useAuth();
-  const { selectedEvent, eventStats, isReportsOnlyMode, refreshStats } = useEvent();
+  const { selectedEvent, eventStats, isReportsOnlyMode, refreshStats, incrementCheckedIn } = useEvent();
   const {
     isShiftPaused,
     setIsShiftPaused,
@@ -403,6 +403,7 @@ export default function CheckInScreen({ navigation }) {
           code: code,
         });
 
+        incrementCheckedIn();
         refreshStats();
 
         // Auto-clear behavior depends on autoConfirmValid setting
@@ -490,7 +491,7 @@ export default function CheckInScreen({ navigation }) {
         }, 3000);
       }
     }
-  }, [selectedEvent, vibrationFeedback, autoConfirmValid, addScan, refreshStats, startScanLineAnimation, stopScanLineAnimation]);
+  }, [selectedEvent, vibrationFeedback, autoConfirmValid, addScan, refreshStats, incrementCheckedIn, startScanLineAnimation, stopScanLineAnimation]);
 
   const handleBarcodeScan = useCallback(({ data }) => {
     if (scannedLock || isScanning) return;
