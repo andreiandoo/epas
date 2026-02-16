@@ -92,7 +92,7 @@ function StatusBadge({ label, connected }) {
             { color: connected ? colors.green : colors.textTertiary },
           ]}
         >
-          {connected ? 'Connected' : 'Not Connected'}
+          {connected ? 'Conectat' : 'Neconectat'}
         </Text>
       </View>
     </View>
@@ -127,7 +127,7 @@ function AdminRow({ label, badgeCount, onPress }) {
   );
 }
 
-export default function SettingsScreen() {
+export default function SettingsScreen({ onShowGateManager, onShowStaffAssignment }) {
   const { user, userRole, logout } = useAuth();
   const {
     vibrationFeedback,
@@ -141,7 +141,7 @@ export default function SettingsScreen() {
     cachedTickets,
   } = useApp();
 
-  const staffName = user?.name || user?.public_name || 'Staff Member';
+  const staffName = user?.name || user?.public_name || 'Membru Echipă';
   const staffRole = userRole || 'staff';
   const assignedGate = user?.assigned_gate || 'Gate A';
 
@@ -157,43 +157,43 @@ export default function SettingsScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={styles.headerTitle}>Setări</Text>
       </View>
 
       {/* Account Section */}
-      <SectionHeader title="Account" />
+      <SectionHeader title="Cont" />
       <View style={styles.sectionCard}>
-        <InfoRow label="Name" value={staffName} />
+        <InfoRow label="Nume" value={staffName} />
         <View style={styles.divider} />
-        <InfoRow label="Role" value={staffRole.charAt(0).toUpperCase() + staffRole.slice(1)} />
+        <InfoRow label="Rol" value={staffRole.charAt(0).toUpperCase() + staffRole.slice(1)} />
         <View style={styles.divider} />
-        <InfoRow label="Assigned Gate" value={assignedGate} />
+        <InfoRow label="Poartă Asignată" value={assignedGate} />
       </View>
 
       {/* Scanner Section */}
       <SectionHeader title="Scanner" />
       <View style={styles.sectionCard}>
         <SettingRow
-          label="Vibration Feedback"
+          label="Vibrație"
           right={<Toggle value={vibrationFeedback} onPress={toggleVibration} />}
         />
         <View style={styles.divider} />
         <SettingRow
-          label="Sound Effects"
+          label="Efecte Sonore"
           right={<Toggle value={soundEffects} onPress={toggleSound} />}
         />
         <View style={styles.divider} />
         <SettingRow
-          label="Auto-confirm Valid"
+          label="Auto-confirmare Valide"
           right={<Toggle value={autoConfirmValid} onPress={toggleAutoConfirm} />}
         />
       </View>
 
       {/* Offline Mode Section */}
-      <SectionHeader title="Offline Mode" />
+      <SectionHeader title="Mod Offline" />
       <View style={styles.sectionCard}>
         <SettingRow
-          label="Enable Offline Mode"
+          label="Activează Modul Offline"
           right={<Toggle value={offlineMode} onPress={toggleOfflineMode} />}
         />
         <View style={styles.divider} />
@@ -208,7 +208,7 @@ export default function SettingsScreen() {
             />
           </Svg>
           <Text style={styles.offlineInfoText}>
-            {cachedTickets} tickets cached for offline scanning
+            {cachedTickets} bilete salvate pentru scanare offline
           </Text>
         </View>
       </View>
@@ -216,15 +216,15 @@ export default function SettingsScreen() {
       {/* Hardware Section */}
       <SectionHeader title="Hardware" />
       <View style={styles.sectionCard}>
-        <StatusBadge label="Card Reader" connected={false} />
+        <StatusBadge label="Cititor Card" connected={false} />
         <View style={styles.divider} />
-        <StatusBadge label="Receipt Printer" connected={false} />
+        <StatusBadge label="Imprimantă Bon" connected={false} />
       </View>
 
       {/* Admin Controls (only for admin role) */}
       {userRole === 'admin' && (
         <>
-          <SectionHeader title="Admin Controls" />
+          <SectionHeader title="Comenzi Admin" />
           <View style={styles.sectionCard}>
             {/* Admin badge */}
             <View style={styles.adminBadge}>
@@ -237,19 +237,19 @@ export default function SettingsScreen() {
                   strokeLinejoin="round"
                 />
               </Svg>
-              <Text style={styles.adminBadgeText}>Administrator Access</Text>
+              <Text style={styles.adminBadgeText}>Acces Administrator</Text>
             </View>
             <View style={styles.divider} />
             <AdminRow
-              label="Gate Management"
+              label="Administrare Porți"
               badgeCount={4}
-              onPress={() => {}}
+              onPress={() => onShowGateManager?.()}
             />
             <View style={styles.divider} />
             <AdminRow
-              label="Staff Assignment"
+              label="Asignare Personal"
               badgeCount={8}
-              onPress={() => {}}
+              onPress={() => onShowStaffAssignment?.()}
             />
           </View>
         </>
@@ -270,7 +270,7 @@ export default function SettingsScreen() {
             strokeLinejoin="round"
           />
         </Svg>
-        <Text style={styles.logoutButtonText}>End Shift & Logout</Text>
+        <Text style={styles.logoutButtonText}>Încheie Tura & Deconectare</Text>
       </TouchableOpacity>
 
       <View style={styles.bottomSpacer} />

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import Svg, { Polyline, Rect, Defs, LinearGradient, Stop, Path } from 'react-nat
 import { colors } from '../theme/colors';
 import { useEvent } from '../context/EventContext';
 import { formatCurrency } from '../utils/formatCurrency';
+import { getDashboard } from '../api/dashboard';
+import { getParticipants } from '../api/participants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -113,7 +115,7 @@ function GateBar({ name, scans, percentage }) {
         <Text style={styles.gateName}>{name}</Text>
         <View style={styles.gateStats}>
           <Text style={styles.gatePercentage}>{percentage}%</Text>
-          <Text style={styles.gateScanCount}>{scans.toLocaleString()} scans</Text>
+          <Text style={styles.gateScanCount}>{scans.toLocaleString()} scanări</Text>
         </View>
       </View>
       <View style={styles.gateBarTrack}>
@@ -227,10 +229,10 @@ export default function ReportsScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Live Reports</Text>
+        <Text style={styles.headerTitle}>Rapoarte Live</Text>
         <View style={styles.headerSubRow}>
           <PulsingDot />
-          <Text style={styles.headerSubText}>Live - Updated just now</Text>
+          <Text style={styles.headerSubText}>Live - Actualizat acum</Text>
         </View>
       </View>
 
@@ -238,7 +240,7 @@ export default function ReportsScreen() {
       <View style={styles.metricsGrid}>
         {/* Check-in Rate - full width */}
         <MetricCard
-          label="Check-in Rate"
+          label="Rata Check-in"
           value={checkinRate}
           suffix="/min"
           trend="+12%"
@@ -266,14 +268,14 @@ export default function ReportsScreen() {
 
         {/* Sales Rate + Peak Hour side by side */}
         <View style={styles.metricsRow}>
-          <MetricCard label="Sales Rate" value={salesRate} suffix="/min" />
-          <MetricCard label="Peak Hour" value={peakHour} />
+          <MetricCard label="Rata Vânzări" value={salesRate} suffix="/min" />
+          <MetricCard label="Ora de Vârf" value={peakHour} />
         </View>
       </View>
 
       {/* Gate Performance */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Gate Performance</Text>
+        <Text style={styles.sectionTitle}>Performanța Porților</Text>
         <View style={styles.sectionCard}>
           {GATE_DATA.map((gate, index) => (
             <View key={gate.name}>
@@ -290,7 +292,7 @@ export default function ReportsScreen() {
 
       {/* Revenue Breakdown */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Revenue Breakdown</Text>
+        <Text style={styles.sectionTitle}>Detalii Venituri</Text>
         <View style={styles.sectionCard}>
           {revenueData.map((item, index) => (
             <View key={item.name}>
@@ -304,14 +306,14 @@ export default function ReportsScreen() {
             </View>
           ))}
           {revenueData.length === 0 && (
-            <Text style={styles.emptyText}>No ticket types available</Text>
+            <Text style={styles.emptyText}>Niciun tip de bilet disponibil</Text>
           )}
         </View>
       </View>
 
       {/* Hourly Distribution */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Hourly Distribution</Text>
+        <Text style={styles.sectionTitle}>Distribuție Orară</Text>
         <View style={styles.sectionCard}>
           <HourlyChart data={HOURLY_DATA} />
         </View>
@@ -328,7 +330,7 @@ export default function ReportsScreen() {
             strokeLinejoin="round"
           />
         </Svg>
-        <Text style={styles.exportButtonText}>Export Report</Text>
+        <Text style={styles.exportButtonText}>Exportă Raport</Text>
       </TouchableOpacity>
 
       <View style={styles.bottomSpacer} />

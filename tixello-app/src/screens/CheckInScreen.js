@@ -320,7 +320,7 @@ export default function CheckInScreen({ navigation }) {
         const result = {
           type: 'valid',
           data: {
-            name: participant.full_name || participant.name || 'Attendee',
+            name: participant.full_name || participant.name || 'Participant',
             ticketType: participant.ticket_type_name || participant.ticket_type || 'General',
             seat: participant.seat || null,
             code: code,
@@ -355,8 +355,8 @@ export default function CheckInScreen({ navigation }) {
         const result = {
           type: 'duplicate',
           data: {
-            message: 'This ticket has already been scanned',
-            checkedInAt: error.checked_in_at || 'Earlier today',
+            message: 'Acest bilet a fost deja scanat',
+            checkedInAt: error.checked_in_at || 'Mai devreme azi',
           },
         };
         setScanResult(result);
@@ -377,7 +377,7 @@ export default function CheckInScreen({ navigation }) {
         const result = {
           type: 'invalid',
           data: {
-            message: message || 'Ticket not found or invalid code',
+            message: message || 'Bilet negăsit sau cod invalid',
           },
         };
         setScanResult(result);
@@ -424,9 +424,9 @@ export default function CheckInScreen({ navigation }) {
             <View style={styles.reportsIconContainer}>
               <BarChartIcon size={48} color={colors.purple} />
             </View>
-            <Text style={styles.reportsTitle}>Past Event</Text>
+            <Text style={styles.reportsTitle}>Eveniment Trecut</Text>
             <Text style={styles.reportsDescription}>
-              This event has ended. Check-in is no longer available, but you can still view the event reports and statistics.
+              Acest eveniment s-a încheiat. Check-in-ul nu mai este disponibil, dar puteți vizualiza rapoartele și statisticile.
             </Text>
             <TouchableOpacity
               style={styles.reportsButton}
@@ -434,7 +434,7 @@ export default function CheckInScreen({ navigation }) {
               onPress={() => navigation?.navigate?.('Reports')}
             >
               <BarChartIcon size={18} color={colors.white} />
-              <Text style={styles.reportsButtonText}>View Reports</Text>
+              <Text style={styles.reportsButtonText}>Vezi Rapoarte</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -453,9 +453,9 @@ export default function CheckInScreen({ navigation }) {
           <View style={styles.pausedIconContainer}>
             <PauseIcon size={48} color={colors.purple} />
           </View>
-          <Text style={styles.pausedTitle}>Shift Paused</Text>
+          <Text style={styles.pausedTitle}>Tură Întreruptă</Text>
           <Text style={styles.pausedDescription}>
-            Your shift is currently paused. Resume to continue scanning tickets.
+            Tura dvs. este momentan întreruptă. Reluați pentru a continua scanarea biletelor.
           </Text>
           <TouchableOpacity
             style={styles.resumeButton}
@@ -471,7 +471,7 @@ export default function CheckInScreen({ navigation }) {
                 strokeLinejoin="round"
               />
             </Svg>
-            <Text style={styles.resumeButtonText}>Resume</Text>
+            <Text style={styles.resumeButtonText}>Continuă</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -489,7 +489,7 @@ export default function CheckInScreen({ navigation }) {
         borderColor: colors.greenBorder,
         iconBg: colors.green,
         icon: <CheckIcon size={28} color={colors.white} />,
-        title: 'ACCESS GRANTED',
+        title: 'ACCES APROBAT',
         titleColor: colors.green,
       },
       duplicate: {
@@ -497,7 +497,7 @@ export default function CheckInScreen({ navigation }) {
         borderColor: colors.amberBorder,
         iconBg: colors.amber,
         icon: <WarningIcon size={28} color={colors.white} />,
-        title: 'ALREADY SCANNED',
+        title: 'DEJA SCANAT',
         titleColor: colors.amber,
       },
       invalid: {
@@ -505,7 +505,7 @@ export default function CheckInScreen({ navigation }) {
         borderColor: colors.redBorder,
         iconBg: colors.red,
         icon: <XIcon size={28} color={colors.white} />,
-        title: 'INVALID TICKET',
+        title: 'BILET INVALID',
         titleColor: colors.red,
       },
     };
@@ -585,7 +585,7 @@ export default function CheckInScreen({ navigation }) {
             {/* Camera placeholder background */}
             <View style={styles.scannerPlaceholder}>
               <ScannerIcon size={48} color={colors.textQuaternary} />
-              <Text style={styles.scannerPlaceholderText}>Tap below to scan</Text>
+              <Text style={styles.scannerPlaceholderText}>Apasă mai jos pentru a scana</Text>
             </View>
 
             {/* Animated scan line */}
@@ -647,7 +647,7 @@ export default function CheckInScreen({ navigation }) {
               />
             </Svg>
             <Text style={styles.scanButtonText}>
-              {isScanning ? 'Scanning...' : scanResult ? 'Scan Next' : 'Start Scanning'}
+              {isScanning ? 'Se scanează...' : scanResult ? 'Scanează Următorul' : 'Începe Scanarea'}
             </Text>
           </TouchableOpacity>
 
@@ -658,7 +658,7 @@ export default function CheckInScreen({ navigation }) {
             onPress={() => setShowManualEntry(true)}
           >
             <EditIcon size={16} color={colors.textSecondary} />
-            <Text style={styles.manualEntryText}>Manual Entry</Text>
+            <Text style={styles.manualEntryText}>Cod Manual</Text>
           </TouchableOpacity>
         </View>
 
@@ -666,22 +666,22 @@ export default function CheckInScreen({ navigation }) {
         <View style={styles.statsRow}>
           <View style={styles.statPill}>
             <Text style={styles.statValue}>{scansPerMinute}</Text>
-            <Text style={styles.statLabel}>scans/min</Text>
+            <Text style={styles.statLabel}>scanări/min</Text>
           </View>
           <View style={styles.statPill}>
             <Text style={styles.statValue}>{avgWaitTime}s</Text>
-            <Text style={styles.statLabel}>avg wait</Text>
+            <Text style={styles.statLabel}>așteptare</Text>
           </View>
           <View style={styles.statPill}>
             <Text style={styles.statValue}>{totalChecked}</Text>
-            <Text style={styles.statLabel}>checked in</Text>
+            <Text style={styles.statLabel}>intrați</Text>
           </View>
         </View>
 
         {/* Recent Scans */}
         {recentScans.length > 0 && (
           <View style={styles.recentSection}>
-            <Text style={styles.recentTitle}>Recent Scans</Text>
+            <Text style={styles.recentTitle}>Scanări Recente</Text>
             {recentScans.map((scan) => (
               <View key={scan.id} style={styles.recentItem}>
                 <View
@@ -724,13 +724,13 @@ export default function CheckInScreen({ navigation }) {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.manualEntryModal}>
-              <Text style={styles.modalTitle}>Enter Ticket Code</Text>
+              <Text style={styles.modalTitle}>Introduceți Codul Biletului</Text>
               <Text style={styles.modalDescription}>
-                Type or paste the ticket code, barcode, or verification URL
+                Tastați sau lipiți codul biletului, codul de bare sau URL-ul de verificare
               </Text>
               <TextInput
                 style={styles.codeInput}
-                placeholder="e.g. ABC123 or scan URL"
+                placeholder="ex. ABC123 sau URL scanare"
                 placeholderTextColor={colors.textQuaternary}
                 value={manualCode}
                 onChangeText={setManualCode}
@@ -746,14 +746,14 @@ export default function CheckInScreen({ navigation }) {
                 activeOpacity={0.7}
                 disabled={!manualCode.trim() || isScanning}
               >
-                <Text style={styles.checkInSubmitButtonText}>Check In</Text>
+                <Text style={styles.checkInSubmitButtonText}>Check-in</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => { setShowManualEntry(false); setManualCode(''); }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>Anulare</Text>
               </TouchableOpacity>
             </View>
           </View>

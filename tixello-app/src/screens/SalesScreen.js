@@ -191,9 +191,9 @@ function ReportsOnlyPlaceholder({ onViewReports }) {
       <View style={styles.placeholderIconWrap}>
         <CartIcon size={48} color={colors.textTertiary} />
       </View>
-      <Text style={styles.placeholderTitle}>Past Event</Text>
+      <Text style={styles.placeholderTitle}>Eveniment Trecut</Text>
       <Text style={styles.placeholderDescription}>
-        Ticket sales are not available for past events
+        Vânzarea biletelor nu este disponibilă pentru evenimentele trecute
       </Text>
       <TouchableOpacity
         style={styles.placeholderButton}
@@ -201,7 +201,7 @@ function ReportsOnlyPlaceholder({ onViewReports }) {
         activeOpacity={0.7}
       >
         <ChartIcon size={20} color={colors.white} />
-        <Text style={styles.placeholderButtonText}>View Reports</Text>
+        <Text style={styles.placeholderButtonText}>Vezi Rapoarte</Text>
       </TouchableOpacity>
     </View>
   );
@@ -228,9 +228,9 @@ function TicketTypeCard({ ticket, onAdd }) {
         </Text>
         <Text style={styles.ticketPrice}>{formatCurrency(ticket.price)}</Text>
         {isSoldOut ? (
-          <Text style={styles.soldOutText}>Sold Out</Text>
+          <Text style={styles.soldOutText}>Epuizat</Text>
         ) : (
-          <Text style={styles.ticketAvailable}>{ticket.available} available</Text>
+          <Text style={styles.ticketAvailable}>{ticket.available} disponibile</Text>
         )}
       </View>
       {!isSoldOut && (
@@ -262,7 +262,7 @@ function RecentSaleItem({ sale }) {
         <Text style={styles.saleDescription} numberOfLines={1}>
           {sale.description || `${sale.qty || 1}x ${sale.type || 'Ticket'}`}
         </Text>
-        <Text style={styles.saleTime}>{sale.time || 'Just now'}</Text>
+        <Text style={styles.saleTime}>{sale.time || 'Chiar acum'}</Text>
       </View>
       <Text style={styles.saleAmount}>{formatCurrency(sale.total)}</Text>
     </View>
@@ -277,7 +277,7 @@ function CartItemRow({ item, onUpdateQuantity }) {
       <View style={[styles.cartItemColorBar, { backgroundColor: item.color }]} />
       <View style={styles.cartItemInfo}>
         <Text style={styles.cartItemName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.cartItemPrice}>{formatCurrency(item.price)} each</Text>
+        <Text style={styles.cartItemPrice}>{formatCurrency(item.price)} fiecare</Text>
       </View>
       <View style={styles.quantityControls}>
         <TouchableOpacity
@@ -462,7 +462,7 @@ export default function SalesScreen({ navigation }) {
           >
             <ArrowLeftIcon size={22} color={colors.white} />
           </TouchableOpacity>
-          <Text style={styles.cartTitle}>Cart</Text>
+          <Text style={styles.cartTitle}>Coș</Text>
           <View style={styles.cartCountBadge}>
             <Text style={styles.cartCountBadgeText}>{cartCount}</Text>
           </View>
@@ -505,9 +505,9 @@ export default function SalesScreen({ navigation }) {
 
           {/* Payment Methods */}
           <View style={styles.paymentSection}>
-            <Text style={styles.paymentSectionTitle}>Payment Method</Text>
+            <Text style={styles.paymentSectionTitle}>Metodă de Plată</Text>
 
-            {/* Tap to Pay */}
+            {/* Plată Card */}
             <TouchableOpacity
               style={[
                 styles.paymentButton,
@@ -538,9 +538,9 @@ export default function SalesScreen({ navigation }) {
                         paymentMethod === 'tap' && styles.paymentMethodNameActive,
                       ]}
                     >
-                      Tap to Pay
+                      Plată Card
                     </Text>
-                    <Text style={styles.paymentPoweredBy}>Powered by Stripe</Text>
+                    <Text style={styles.paymentPoweredBy}>Furnizat de Stripe</Text>
                   </View>
                 </View>
               )}
@@ -571,7 +571,7 @@ export default function SalesScreen({ navigation }) {
                         paymentMethod === 'cash' && styles.paymentMethodNameActive,
                       ]}
                     >
-                      Cash
+                      Numerar
                     </Text>
                   </View>
                 </View>
@@ -587,7 +587,7 @@ export default function SalesScreen({ navigation }) {
               <View style={styles.successIconWrap}>
                 <CheckIcon size={64} color={colors.green} />
               </View>
-              <Text style={styles.successTitle}>Payment Successful!</Text>
+              <Text style={styles.successTitle}>Plată Reușită!</Text>
               <Text style={styles.successAmount}>
                 {formatCurrency(lastPaymentAmount)}
               </Text>
@@ -602,7 +602,7 @@ export default function SalesScreen({ navigation }) {
               >
                 <MailIcon size={20} color={colors.white} />
                 <Text style={styles.sendEmailButtonText}>
-                  Send Tickets to Email
+                  Trimite Biletele pe Email
                 </Text>
               </TouchableOpacity>
 
@@ -611,7 +611,7 @@ export default function SalesScreen({ navigation }) {
                 onPress={finishPayment}
                 activeOpacity={0.7}
               >
-                <Text style={styles.skipButtonText}>Skip & Finish</Text>
+                <Text style={styles.skipButtonText}>Omite & Finalizează</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -635,9 +635,9 @@ export default function SalesScreen({ navigation }) {
               <View style={styles.emailModalIconWrap}>
                 <MailIcon size={32} color={colors.purple} />
               </View>
-              <Text style={styles.emailModalTitle}>Send Tickets via Email</Text>
+              <Text style={styles.emailModalTitle}>Trimite Biletele pe Email</Text>
               <Text style={styles.emailModalDescription}>
-                Enter the buyer's email address to send their tickets digitally.
+                Introduceți adresa de email a cumpărătorului pentru a trimite biletele digital.
               </Text>
 
               <TextInput
@@ -663,7 +663,7 @@ export default function SalesScreen({ navigation }) {
                 {sendingEmail ? (
                   <ActivityIndicator size="small" color={colors.white} />
                 ) : (
-                  <Text style={styles.sendTicketsButtonText}>Send Tickets</Text>
+                  <Text style={styles.sendTicketsButtonText}>Trimite Biletele</Text>
                 )}
               </TouchableOpacity>
 
@@ -672,7 +672,7 @@ export default function SalesScreen({ navigation }) {
                 onPress={finishPayment}
                 activeOpacity={0.7}
               >
-                <Text style={styles.emailSkipButtonText}>Skip</Text>
+                <Text style={styles.emailSkipButtonText}>Omite</Text>
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
@@ -691,7 +691,7 @@ export default function SalesScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
         {/* Select Tickets Heading */}
-        <Text style={styles.sectionHeading}>Select Tickets</Text>
+        <Text style={styles.sectionHeading}>Selectează Bilete</Text>
 
         {/* Ticket Types Grid */}
         <View style={styles.ticketGrid}>
@@ -705,7 +705,7 @@ export default function SalesScreen({ navigation }) {
           {ticketTypes.length === 0 && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>
-                No ticket types available
+                Niciun tip de bilet disponibil
               </Text>
             </View>
           )}
@@ -715,7 +715,7 @@ export default function SalesScreen({ navigation }) {
         {recentSales.length > 0 && (
           <View style={styles.salesSection}>
             <View style={styles.salesHeader}>
-              <Text style={styles.sectionHeading}>Today's Sales</Text>
+              <Text style={styles.sectionHeading}>Vânzări Azi</Text>
               <View style={styles.salesTotalBadge}>
                 <Text style={styles.salesTotalText}>
                   {formatCurrency(salesTodayTotal)}

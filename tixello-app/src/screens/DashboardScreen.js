@@ -159,7 +159,7 @@ function ReportsOnlyBanner() {
     <View style={styles.reportsBanner}>
       <Icon name="alert-circle" size={20} color={colors.amber} />
       <Text style={styles.reportsBannerText}>
-        This event has ended. Only reports are available.
+        Acest eveniment s-a încheiat. Doar rapoartele sunt disponibile.
       </Text>
     </View>
   );
@@ -174,7 +174,7 @@ function ReportsStatsGrid({ stats }) {
 
   const cards = [
     {
-      label: 'Total Sold',
+      label: 'Total Vândute',
       value: totalSold.toLocaleString(),
       icon: 'ticket',
       color: colors.purple,
@@ -182,7 +182,7 @@ function ReportsStatsGrid({ stats }) {
       border: colors.purpleBorder,
     },
     {
-      label: 'Checked In',
+      label: 'Intrați',
       value: checkedIn.toLocaleString(),
       icon: 'check-circle',
       color: colors.green,
@@ -190,7 +190,7 @@ function ReportsStatsGrid({ stats }) {
       border: colors.greenBorder,
     },
     {
-      label: 'Revenue',
+      label: 'Venituri',
       value: formatCurrency(revenue),
       icon: 'cash',
       color: colors.cyan,
@@ -198,7 +198,7 @@ function ReportsStatsGrid({ stats }) {
       border: colors.cyanBorder,
     },
     {
-      label: 'Check-in Rate',
+      label: 'Rata Check-in',
       value: `${checkInRate}%`,
       icon: 'chart',
       color: colors.amber,
@@ -243,7 +243,7 @@ function AdminLiveStats({ stats }) {
           <View style={styles.primaryStatIconWrap}>
             <Icon name="people" size={20} color={colors.purple} />
           </View>
-          <Text style={styles.primaryStatLabel}>Checked In</Text>
+          <Text style={styles.primaryStatLabel}>Intrați</Text>
           <View style={styles.trendBadge}>
             <Icon name="trending-up" size={12} color={colors.green} />
             <Text style={styles.trendText}>{checkedInPct}%</Text>
@@ -289,7 +289,7 @@ function QuickActions({ navigation, onShowGuestList, onShowStaff }) {
   const actions = [
     {
       key: 'scan',
-      label: 'Scan',
+      label: 'Scanare',
       icon: 'qr-code',
       color: colors.purple,
       bg: colors.purpleBg,
@@ -298,7 +298,7 @@ function QuickActions({ navigation, onShowGuestList, onShowStaff }) {
     },
     {
       key: 'sell',
-      label: 'Sell',
+      label: 'Vânzare',
       icon: 'cart',
       color: colors.green,
       bg: colors.greenBg,
@@ -307,7 +307,7 @@ function QuickActions({ navigation, onShowGuestList, onShowStaff }) {
     },
     {
       key: 'guests',
-      label: 'Guest List',
+      label: 'Listă Invitați',
       icon: 'list',
       color: colors.cyan,
       bg: colors.cyanBg,
@@ -316,7 +316,7 @@ function QuickActions({ navigation, onShowGuestList, onShowStaff }) {
     },
     {
       key: 'staff',
-      label: 'Staff',
+      label: 'Echipă',
       icon: 'people',
       color: colors.amber,
       bg: colors.amberBg,
@@ -327,7 +327,7 @@ function QuickActions({ navigation, onShowGuestList, onShowStaff }) {
 
   return (
     <View style={styles.quickActionsSection}>
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
+      <Text style={styles.sectionTitle}>Acțiuni Rapide</Text>
       <View style={styles.quickActionsGrid}>
         {actions.map((action) => (
           <TouchableOpacity
@@ -354,10 +354,10 @@ function RecentActivity({ recentScans }) {
   if (!recentScans || recentScans.length === 0) {
     return (
       <View style={styles.recentSection}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <Text style={styles.sectionTitle}>Activitate Recentă</Text>
         <View style={styles.emptyState}>
           <Icon name="clock" size={32} color={colors.textQuaternary} />
-          <Text style={styles.emptyStateText}>No recent activity</Text>
+          <Text style={styles.emptyStateText}>Nicio activitate recentă</Text>
         </View>
       </View>
     );
@@ -365,7 +365,7 @@ function RecentActivity({ recentScans }) {
 
   return (
     <View style={styles.recentSection}>
-      <Text style={styles.sectionTitle}>Recent Activity</Text>
+      <Text style={styles.sectionTitle}>Activitate Recentă</Text>
       {recentScans.slice(0, 10).map((scan, index) => (
         <View
           key={scan.id ?? `scan-${index}`}
@@ -427,14 +427,14 @@ function AdminDashboard({ navigation, eventStats, isReportsOnlyMode, recentScans
 function TurnoverCard({ cashTurnover, cardTurnover }) {
   return (
     <View style={styles.turnoverCard}>
-      <Text style={styles.turnoverTitle}>Turnover</Text>
+      <Text style={styles.turnoverTitle}>Încasări</Text>
       <View style={styles.turnoverRow}>
         <View style={styles.turnoverItem}>
           <View style={[styles.turnoverIconWrap, { backgroundColor: colors.greenBg }]}>
             <Icon name="cash" size={20} color={colors.green} />
           </View>
           <View>
-            <Text style={styles.turnoverLabel}>Cash</Text>
+            <Text style={styles.turnoverLabel}>Numerar</Text>
             <Text style={[styles.turnoverAmount, { color: colors.green }]}>
               {formatCurrency(cashTurnover)}
             </Text>
@@ -469,7 +469,7 @@ function ScannerStats({ myScans, mySales, shiftStartTime }) {
 
   const statItems = [
     {
-      label: 'My Scans',
+      label: 'Scanările Mele',
       value: myScans.toLocaleString(),
       icon: 'scan',
       color: colors.purple,
@@ -477,7 +477,7 @@ function ScannerStats({ myScans, mySales, shiftStartTime }) {
       border: colors.purpleBorder,
     },
     {
-      label: 'My Sales',
+      label: 'Vânzările Mele',
       value: mySales.toLocaleString(),
       icon: 'cart',
       color: colors.green,
@@ -485,7 +485,7 @@ function ScannerStats({ myScans, mySales, shiftStartTime }) {
       border: colors.greenBorder,
     },
     {
-      label: 'Shift Duration',
+      label: 'Durata Turei',
       value: shiftDuration,
       icon: 'clock',
       color: colors.amber,
@@ -530,7 +530,7 @@ function ScannerDashboard({ navigation, cashTurnover, cardTurnover, myScans, myS
           activeOpacity={0.8}
         >
           <Icon name="qr-code" size={28} color={colors.white} />
-          <Text style={styles.scannerActionBtnText}>Start Scanning</Text>
+          <Text style={styles.scannerActionBtnText}>Începe Scanarea</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -539,7 +539,7 @@ function ScannerDashboard({ navigation, cashTurnover, cardTurnover, myScans, myS
           activeOpacity={0.8}
         >
           <Icon name="cart" size={28} color={colors.white} />
-          <Text style={styles.scannerActionBtnText}>Start Selling</Text>
+          <Text style={styles.scannerActionBtnText}>Începe Vânzarea</Text>
         </TouchableOpacity>
       </View>
     </>
@@ -573,7 +573,7 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
       {/* Event header */}
       <View style={styles.eventHeader}>
         <Text style={styles.eventName} numberOfLines={1}>
-          {selectedEvent?.title || selectedEvent?.name || 'No Event Selected'}
+          {selectedEvent?.title || selectedEvent?.name || 'Niciun Eveniment Selectat'}
         </Text>
         {selectedEvent && (
           <Text style={styles.eventMeta}>

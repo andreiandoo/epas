@@ -141,7 +141,7 @@ function MainTabs() {
           },
         })}
       >
-        <Tab.Screen name="Dashboard" options={{ tabBarLabel: 'Dashboard' }}>
+        <Tab.Screen name="Dashboard" options={{ tabBarLabel: 'Panou' }}>
           {(props) => (
             <DashboardScreen
               {...props}
@@ -150,12 +150,12 @@ function MainTabs() {
             />
           )}
         </Tab.Screen>
-        <Tab.Screen name="CheckIn" component={CheckInScreen} options={{ tabBarLabel: 'Scan' }} />
-        <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Sell' }} />
+        <Tab.Screen name="CheckIn" component={CheckInScreen} options={{ tabBarLabel: 'Scanare' }} />
+        <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Vânzare' }} />
         {isAdmin && (
-          <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Reports' }} />
+          <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Rapoarte' }} />
         )}
-        <Tab.Screen name="Settings" options={{ tabBarLabel: 'Settings' }}>
+        <Tab.Screen name="Settings" options={{ tabBarLabel: 'Setări' }}>
           {(props) => (
             <SettingsScreen
               {...props}

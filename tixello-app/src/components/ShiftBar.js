@@ -137,7 +137,7 @@ export default function ShiftBar({ onEmergencyPress }) {
             <Text style={styles.durationText}>{duration}</Text>
             {isShiftPaused && (
               <View style={styles.pausedBadge}>
-                <Text style={styles.pausedBadgeText}>PAUSED</Text>
+                <Text style={styles.pausedBadgeText}>PAUZĂ</Text>
               </View>
             )}
           </View>

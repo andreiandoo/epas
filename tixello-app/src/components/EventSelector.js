@@ -8,7 +8,7 @@ function StatusBadge({ timeCategory }) {
   const isLive = timeCategory === 'live';
   const isPast = timeCategory === 'past';
 
-  let label = 'Upcoming';
+  let label = 'Viitor';
   let dotColor = colors.textTertiary;
   let bgColor = colors.surface;
   let borderColor = colors.border;
@@ -21,7 +21,7 @@ function StatusBadge({ timeCategory }) {
     borderColor = colors.greenBorder;
     textColor = colors.green;
   } else if (isPast) {
-    label = 'Ended';
+    label = 'Încheiat';
   }
 
   return (
@@ -114,8 +114,8 @@ export default function EventSelector({ onPress }) {
       <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
         <View style={styles.inner}>
           <View style={styles.content}>
-            <Text style={styles.noEventText}>No event selected</Text>
-            <Text style={styles.metaText}>Tap to choose an event</Text>
+            <Text style={styles.noEventText}>Niciun eveniment selectat</Text>
+            <Text style={styles.metaText}>Apasă pentru a alege un eveniment</Text>
           </View>
           <ChevronRight />
         </View>
@@ -134,7 +134,7 @@ export default function EventSelector({ onPress }) {
         <View style={styles.content}>
           <View style={styles.titleRow}>
             <Text style={styles.eventName} numberOfLines={1}>
-              {selectedEvent.title || selectedEvent.name || 'Untitled Event'}
+              {selectedEvent.title || selectedEvent.name || 'Eveniment Fără Titlu'}
             </Text>
             <StatusBadge timeCategory={timeCategory} />
           </View>
