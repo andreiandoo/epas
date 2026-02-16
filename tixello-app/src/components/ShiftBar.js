@@ -69,15 +69,15 @@ function AlertIcon() {
   );
 }
 
-function CashIcon() {
+function CoinIcon() {
   return (
     <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={9} stroke={colors.green} strokeWidth={1.8} />
       <Path
-        d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
+        d="M9 12h6M12 9v6"
         stroke={colors.green}
-        strokeWidth={2}
+        strokeWidth={1.8}
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
     </Svg>
   );
@@ -104,6 +104,7 @@ export default function ShiftBar({ onEmergencyPress }) {
     isShiftPaused,
     setIsShiftPaused,
     cashTurnover,
+    cardTurnover,
   } = useApp();
 
   const [duration, setDuration] = useState('00:00:00');
@@ -143,9 +144,9 @@ export default function ShiftBar({ onEmergencyPress }) {
           </View>
 
           <View style={styles.turnoverInfo}>
-            <CashIcon />
+            <CoinIcon />
             <Text style={styles.turnoverText}>
-              {formatCurrency(cashTurnover)}
+              {formatCurrency(cashTurnover + cardTurnover)}
             </Text>
           </View>
         </View>
@@ -168,7 +169,7 @@ export default function ShiftBar({ onEmergencyPress }) {
                 isShiftPaused ? styles.resumeButtonText : styles.pauseButtonText,
               ]}
             >
-              {isShiftPaused ? 'Resume' : 'Pause'}
+              {isShiftPaused ? 'Continuă' : 'Pauză'}
             </Text>
           </TouchableOpacity>
 

@@ -51,13 +51,21 @@ export function EventProvider({ children }) {
     setIsLoadingStats(true);
     try {
       const data = await getParticipants(eventId, { per_page: 1 });
-      if (data.stats) {
-        setEventStats(data.stats);
-      } else if (data.meta?.stats) {
-        setEventStats(data.meta.stats);
-      } else if (data.meta) {
-        setEventStats(data.meta);
-      }
+      // API returns { data: { participants: [], stats: { total, checked_in, not_checked_in, check_in_rate } } }
+      const rawStats = data.data?.stats || data.stats || data.meta?.stats || data.meta || {};
+      // Also get event-level data for revenue/capacity/tickets_sold
+      const eventResponse = await getEvent(eventId);
+      const eventData = eventResponse.data?.event || eventResponse.data || {};
+      setEventStats({
+        total: rawStats.total ?? 0,
+        checked_in: rawStats.checked_in ?? 0,
+        not_checked_in: rawStats.not_checked_in ?? 0,
+        check_in_rate: rawStats.check_in_rate ?? 0,
+        // Event-level stats
+        total_sold: eventData.tickets_sold ?? rawStats.total ?? 0,
+        revenue: eventData.revenue ?? rawStats.revenue ?? 0,
+        capacity: eventData.capacity ?? 0,
+      });
     } catch (e) {
       console.error('Failed to fetch event stats:', e);
     }
@@ -75,7 +83,7 @@ export function EventProvider({ children }) {
         setTicketTypes(types.map((t, i) => ({
           ...t,
           color: colorPalette[i % colorPalette.length],
-          available: t.quota_available ?? t.quota - (t.quota_sold || 0),
+          available: t.available ?? (t.quantity != null && t.quantity_sold != null ? t.quantity - t.quantity_sold : 0),
         })));
       } else {
         setTicketTypes([]);

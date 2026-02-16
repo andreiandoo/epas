@@ -10,6 +10,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
+import { useEvent } from '../context/EventContext';
 import { useApp } from '../context/AppContext';
 
 function Toggle({ value, onPress }) {
@@ -129,6 +130,7 @@ function AdminRow({ label, badgeCount, onPress }) {
 
 export default function SettingsScreen({ onShowGateManager, onShowStaffAssignment }) {
   const { user, userRole, logout } = useAuth();
+  const { selectedEvent } = useEvent();
   const {
     vibrationFeedback,
     soundEffects,
@@ -139,6 +141,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
     toggleAutoConfirm,
     toggleOfflineMode,
     cachedTickets,
+    isDownloadingOffline,
   } = useApp();
 
   const staffName = user?.name || user?.public_name || 'Membru Echipă';
@@ -194,7 +197,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
       <View style={styles.sectionCard}>
         <SettingRow
           label="Activează Modul Offline"
-          right={<Toggle value={offlineMode} onPress={toggleOfflineMode} />}
+          right={<Toggle value={offlineMode} onPress={() => toggleOfflineMode(selectedEvent?.id)} />}
         />
         <View style={styles.divider} />
         <View style={styles.offlineInfoBox}>
@@ -208,7 +211,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
             />
           </Svg>
           <Text style={styles.offlineInfoText}>
-            {cachedTickets} bilete salvate pentru scanare offline
+            {isDownloadingOffline ? 'Se descarcă biletele...' : `${cachedTickets} bilete salvate pentru scanare offline`}
           </Text>
         </View>
       </View>

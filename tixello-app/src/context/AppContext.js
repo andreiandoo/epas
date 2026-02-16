@@ -85,10 +85,17 @@ export function AppProvider({ children }) {
     saveSettings({ autoConfirmValid: newVal });
   };
 
-  const toggleOfflineMode = () => {
+  const [isDownloadingOffline, setIsDownloadingOffline] = useState(false);
+
+  const toggleOfflineMode = async (eventId) => {
     const newVal = !offlineMode;
     setOfflineMode(newVal);
     saveSettings({ offlineMode: newVal });
+    if (newVal && eventId) {
+      setIsDownloadingOffline(true);
+      await downloadParticipantsForOffline(eventId);
+      setIsDownloadingOffline(false);
+    }
   };
 
   // Shift management
@@ -236,6 +243,7 @@ export function AppProvider({ children }) {
       // Cache
       cachedTickets,
       setCachedTickets,
+      isDownloadingOffline,
 
       // Offline
       downloadParticipantsForOffline,
