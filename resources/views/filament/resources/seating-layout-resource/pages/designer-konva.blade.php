@@ -4129,17 +4129,17 @@
                         <div class="flex gap-1" x-show="getSelectedSectionData()?.section_type === 'standard'">
                             <button x-on:click="addSeatsMode = true; rowSelectMode = false; seatSelectMode = false; clearMultiRowSelection(); clearSeatSelection();" type="button"
                                 class="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold rounded"
-                                :class="addSeatsMode ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
+                                :class="addSeatsMode ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600'">
                                 <x-svg-icon name="konvaseats" class="w-4 h-4" /> Adaugă
                             </button>
                             <button x-on:click="rowSelectMode = !rowSelectMode; if(rowSelectMode) { addSeatsMode = false; seatSelectMode = false; clearSeatSelection(); } else { clearMultiRowSelection(); deselectRow(); }" type="button"
                                 class="flex-1 px-2 py-1.5 text-xs font-semibold rounded"
-                                :class="rowSelectMode ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
+                                :class="rowSelectMode ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600'">
                                 Rânduri
                             </button>
                             <button x-on:click="seatSelectMode = !seatSelectMode; if(seatSelectMode) { addSeatsMode = false; rowSelectMode = false; clearMultiRowSelection(); deselectRow(); } else { clearSeatSelection(); }" type="button"
                                 class="flex-1 px-2 py-1.5 text-xs font-semibold rounded"
-                                :class="seatSelectMode ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
+                                :class="seatSelectMode ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600'">
                                 Locuri
                             </button>
                         </div>
