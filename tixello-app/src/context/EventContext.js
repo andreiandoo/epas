@@ -12,6 +12,7 @@ export function EventProvider({ children }) {
   const [ticketTypes, setTicketTypes] = useState([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [eventCommission, setEventCommission] = useState(null);
 
   const isReportsOnlyMode = selectedEvent?.timeCategory === 'past';
 
@@ -77,6 +78,11 @@ export function EventProvider({ children }) {
       const response = await getEvent(eventId);
       // Handle { data: { event: { ticket_types: [] } } } and { data: { ticket_types: [] } }
       const event = response.data?.event || response.data || response;
+      setEventCommission({
+        rate: event.effective_commission_rate || event.commission_rate || 0,
+        mode: event.commission_mode || 'included',
+        useFixed: event.use_fixed_commission || false,
+      });
       const types = event.ticket_types || [];
       if (types.length > 0) {
         const colorPalette = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];
@@ -92,6 +98,20 @@ export function EventProvider({ children }) {
       console.error('Failed to fetch ticket types:', e);
       setTicketTypes([]);
     }
+  }, []);
+
+  const incrementCheckedIn = useCallback(() => {
+    setEventStats(prev => {
+      if (!prev) return prev;
+      const newCheckedIn = (prev.checked_in || 0) + 1;
+      const total = prev.total || 0;
+      return {
+        ...prev,
+        checked_in: newCheckedIn,
+        not_checked_in: Math.max(0, total - newCheckedIn),
+        check_in_rate: total > 0 ? (newCheckedIn / total) * 100 : 0,
+      };
+    });
   }, []);
 
   const refreshStats = useCallback(() => {
@@ -112,9 +132,11 @@ export function EventProvider({ children }) {
       isLoadingEvents,
       isLoadingStats,
       isReportsOnlyMode,
+      eventCommission,
       fetchEvents,
       selectEvent,
       refreshStats,
+      incrementCheckedIn,
     }}>
       {children}
     </EventContext.Provider>

@@ -308,7 +308,7 @@ function CartItemRow({ item, onUpdateQuantity }) {
 // ─── Main SalesScreen Component ───────────────────────────────────────────────
 
 export default function SalesScreen({ navigation }) {
-  const { ticketTypes, isReportsOnlyMode, selectedEvent, refreshStats } = useEvent();
+  const { ticketTypes, isReportsOnlyMode, selectedEvent, refreshStats, eventCommission } = useEvent();
   const { user } = useAuth();
   const { recentSales, addSale } = useApp();
 
@@ -344,6 +344,10 @@ export default function SalesScreen({ navigation }) {
   );
 
   const subtotal = cartTotal;
+  const commissionRate = eventCommission?.rate || 0;
+  const commissionMode = eventCommission?.mode || 'included';
+  const commissionAmount = commissionMode === 'added_on_top' ? Math.round(subtotal * commissionRate) / 100 : 0;
+  const total = subtotal + commissionAmount;
 
   // Animate FAB in/out
   useEffect(() => {
@@ -533,11 +537,24 @@ export default function SalesScreen({ navigation }) {
               <Text style={styles.summaryLabel}>Subtotal</Text>
               <Text style={styles.summaryValue}>{formatCurrency(subtotal)}</Text>
             </View>
+            {commissionRate > 0 && commissionMode === 'added_on_top' && (
+              <>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Comision {commissionRate}%</Text>
+                  <Text style={styles.summaryValue}>{formatCurrency(commissionAmount)}</Text>
+                </View>
+              </>
+            )}
+            {commissionRate > 0 && commissionMode === 'included' && (
+              <Text style={[styles.summaryLabel, { fontSize: 11, marginTop: 4 }]}>
+                Include comision {commissionRate}%
+              </Text>
+            )}
             <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
               <Text style={styles.summaryTotalLabel}>Total</Text>
               <Text style={styles.summaryTotalValue}>
-                {formatCurrency(cartTotal)}
+                {formatCurrency(total)}
               </Text>
             </View>
           </View>
