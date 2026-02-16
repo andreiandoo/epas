@@ -138,7 +138,8 @@ class ArtistResource extends Resource
                                     ->directory('artists')
                                     ->visibility('public')
                                     ->maxSize(10240)
-                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                                 Forms\Components\FileUpload::make('logo_url')
                                     ->label('Logo')
                                     ->image()
@@ -146,7 +147,8 @@ class ArtistResource extends Resource
                                     ->directory('artists/logos')
                                     ->visibility('public')
                                     ->maxSize(10240)
-                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                                 Forms\Components\FileUpload::make('portrait_url')
                                     ->label('Portret')
                                     ->image()
@@ -154,7 +156,8 @@ class ArtistResource extends Resource
                                     ->directory('artists/portraits')
                                     ->visibility('public')
                                     ->maxSize(10240)
-                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                             ])->columns(3),
                     ]),
                     // BIOGRAPHY - EN/RO

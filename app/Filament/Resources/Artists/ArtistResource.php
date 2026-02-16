@@ -241,7 +241,8 @@ class ArtistResource extends Resource
                         ->disk('public')->visibility('public')
                         ->maxSize(4096)
                         ->rules(['image','mimes:jpg,jpeg,png,webp','dimensions:min_width=1600,min_height=900'])
-                        ->helperText('Min 1600×900 px (JPG/PNG/WebP).'),
+                        ->helperText('Min 1600×900 px (JPG/PNG/WebP).')
+                        ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
 
                     Forms\Components\FileUpload::make('logo_url')
                         ->label('Logo (horizontal)')
@@ -250,7 +251,8 @@ class ArtistResource extends Resource
                         ->disk('public')->visibility('public')
                         ->maxSize(2048)
                         ->rules(['image','mimes:png,webp,jpg,jpeg','dimensions:min_width=800,min_height=300'])
-                        ->helperText('Min 800×300 px (PNG/JPG/WebP).'),
+                        ->helperText('Min 800×300 px (PNG/JPG/WebP).')
+                        ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
 
                     Forms\Components\FileUpload::make('portrait_url')
                         ->label('Portrait (vertical)')
@@ -259,7 +261,8 @@ class ArtistResource extends Resource
                         ->disk('public')->visibility('public')
                         ->maxSize(4096)
                         ->rules(['image','mimes:jpg,jpeg,png,webp','dimensions:min_width=900,min_height=1200'])
-                        ->helperText('Min 900×1200 px (JPG/PNG/WebP).'),
+                        ->helperText('Min 900×1200 px (JPG/PNG/WebP).')
+                        ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                 ])
                 ->columns(3),
 
