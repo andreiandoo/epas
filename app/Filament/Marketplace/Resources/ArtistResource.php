@@ -59,7 +59,7 @@ class ArtistResource extends Resource
                                     ->label('Nume artist')
                                     ->required()
                                     ->maxLength(255)
-                                    ->live(debounce: '500ms')
+                                    ->live(onBlur: true)
                                     ->afterStateUpdated(function ($state, SSet $set, $context) {
                                         if ($state && $context === 'create') $set('slug', Str::slug($state));
                                     }),
