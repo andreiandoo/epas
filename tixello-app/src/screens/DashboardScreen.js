@@ -6,12 +6,149 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path, Circle, Line, Rect, Polyline } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useEvent } from '../context/EventContext';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/formatCurrency';
 import { colors } from '../theme/colors';
+
+// ---------------------------------------------------------------------------
+// SVG Icon component (replaces Ionicons)
+// ---------------------------------------------------------------------------
+
+function Icon({ name, size = 20, color = '#fff' }) {
+  const s = size;
+  switch (name) {
+    case 'alert-circle':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Circle cx="12" cy="12" r="10" />
+          <Line x1="12" y1="8" x2="12" y2="12" />
+          <Line x1="12" y1="16" x2="12.01" y2="16" />
+        </Svg>
+      );
+    case 'ticket':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+          <Path d="M13 5v2M13 17v2M13 11v2" />
+        </Svg>
+      );
+    case 'check-circle':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <Polyline points="22 4 12 14.01 9 11.01" />
+        </Svg>
+      );
+    case 'cash':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Line x1="12" y1="1" x2="12" y2="23" />
+          <Path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+        </Svg>
+      );
+    case 'chart':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Path d="M18 20V10M12 20V4M6 20v-6" />
+        </Svg>
+      );
+    case 'people':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <Circle cx="9" cy="7" r="4" />
+          <Path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <Path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </Svg>
+      );
+    case 'trending-up':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+          <Polyline points="17 6 23 6 23 12" />
+        </Svg>
+      );
+    case 'hourglass':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Path d="M5 22h14M5 2h14M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" />
+        </Svg>
+      );
+    case 'speedometer':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z" />
+          <Path d="M12 12l4-4" />
+          <Circle cx="12" cy="12" r="1" />
+        </Svg>
+      );
+    case 'qr-code':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Rect x="3" y="3" width="7" height="7" />
+          <Rect x="14" y="3" width="7" height="7" />
+          <Rect x="3" y="14" width="7" height="7" />
+          <Rect x="14" y="14" width="3" height="3" />
+          <Line x1="21" y1="14" x2="21" y2="14.01" />
+          <Line x1="21" y1="21" x2="21" y2="21.01" />
+          <Line x1="17" y1="21" x2="17" y2="21.01" />
+        </Svg>
+      );
+    case 'cart':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Circle cx="9" cy="21" r="1" />
+          <Circle cx="20" cy="21" r="1" />
+          <Path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        </Svg>
+      );
+    case 'list':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Line x1="8" y1="6" x2="21" y2="6" />
+          <Line x1="8" y1="12" x2="21" y2="12" />
+          <Line x1="8" y1="18" x2="21" y2="18" />
+          <Line x1="3" y1="6" x2="3.01" y2="6" />
+          <Line x1="3" y1="12" x2="3.01" y2="12" />
+          <Line x1="3" y1="18" x2="3.01" y2="18" />
+        </Svg>
+      );
+    case 'clock':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Circle cx="12" cy="12" r="10" />
+          <Polyline points="12 6 12 12 16 14" />
+        </Svg>
+      );
+    case 'x-circle':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Circle cx="12" cy="12" r="10" />
+          <Line x1="15" y1="9" x2="9" y2="15" />
+          <Line x1="9" y1="9" x2="15" y2="15" />
+        </Svg>
+      );
+    case 'scan':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+          <Line x1="7" y1="12" x2="17" y2="12" />
+        </Svg>
+      );
+    case 'credit-card':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+          <Line x1="1" y1="10" x2="23" y2="10" />
+        </Svg>
+      );
+    default:
+      return <View style={{ width: s, height: s }} />;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Admin Dashboard
@@ -20,7 +157,7 @@ import { colors } from '../theme/colors';
 function ReportsOnlyBanner() {
   return (
     <View style={styles.reportsBanner}>
-      <Ionicons name="alert-circle" size={20} color={colors.amber} />
+      <Icon name="alert-circle" size={20} color={colors.amber} />
       <Text style={styles.reportsBannerText}>
         This event has ended. Only reports are available.
       </Text>
@@ -39,7 +176,7 @@ function ReportsStatsGrid({ stats }) {
     {
       label: 'Total Sold',
       value: totalSold.toLocaleString(),
-      icon: 'ticket-outline',
+      icon: 'ticket',
       color: colors.purple,
       bg: colors.purpleBg,
       border: colors.purpleBorder,
@@ -47,7 +184,7 @@ function ReportsStatsGrid({ stats }) {
     {
       label: 'Checked In',
       value: checkedIn.toLocaleString(),
-      icon: 'checkmark-circle-outline',
+      icon: 'check-circle',
       color: colors.green,
       bg: colors.greenBg,
       border: colors.greenBorder,
@@ -55,7 +192,7 @@ function ReportsStatsGrid({ stats }) {
     {
       label: 'Revenue',
       value: formatCurrency(revenue),
-      icon: 'cash-outline',
+      icon: 'cash',
       color: colors.cyan,
       bg: colors.cyanBg,
       border: colors.cyanBorder,
@@ -63,7 +200,7 @@ function ReportsStatsGrid({ stats }) {
     {
       label: 'Check-in Rate',
       value: `${checkInRate}%`,
-      icon: 'analytics-outline',
+      icon: 'chart',
       color: colors.amber,
       bg: colors.amberBg,
       border: colors.amberBorder,
@@ -77,7 +214,7 @@ function ReportsStatsGrid({ stats }) {
           key={card.label}
           style={[styles.reportsCard, { backgroundColor: card.bg, borderColor: card.border }]}
         >
-          <Ionicons name={card.icon} size={22} color={card.color} />
+          <Icon name={card.icon} size={22} color={card.color} />
           <Text style={[styles.reportsCardValue, { color: card.color }]}>
             {card.value}
           </Text>
@@ -104,11 +241,11 @@ function AdminLiveStats({ stats }) {
       <View style={styles.primaryStatCard}>
         <View style={styles.primaryStatHeader}>
           <View style={styles.primaryStatIconWrap}>
-            <Ionicons name="people" size={20} color={colors.purple} />
+            <Icon name="people" size={20} color={colors.purple} />
           </View>
           <Text style={styles.primaryStatLabel}>Checked In</Text>
           <View style={styles.trendBadge}>
-            <Ionicons name="trending-up" size={12} color={colors.green} />
+            <Icon name="trending-up" size={12} color={colors.green} />
             <Text style={styles.trendText}>{checkedInPct}%</Text>
           </View>
         </View>
@@ -124,22 +261,22 @@ function AdminLiveStats({ stats }) {
       {/* Secondary stats (2 columns) */}
       <View style={styles.statsGrid}>
         <View style={[styles.statCard, { borderColor: colors.greenBorder }]}>
-          <Ionicons name="ticket-outline" size={18} color={colors.green} />
+          <Icon name="ticket" size={18} color={colors.green} />
           <Text style={styles.statCardValue}>{totalSold.toLocaleString()}</Text>
           <Text style={styles.statCardLabel}>Sold</Text>
         </View>
         <View style={[styles.statCard, { borderColor: colors.cyanBorder }]}>
-          <Ionicons name="cash-outline" size={18} color={colors.cyan} />
+          <Icon name="cash" size={18} color={colors.cyan} />
           <Text style={styles.statCardValue}>{formatCurrency(revenue)}</Text>
           <Text style={styles.statCardLabel}>Revenue</Text>
         </View>
         <View style={[styles.statCard, { borderColor: colors.amberBorder }]}>
-          <Ionicons name="hourglass-outline" size={18} color={colors.amber} />
+          <Icon name="hourglass" size={18} color={colors.amber} />
           <Text style={styles.statCardValue}>{remaining.toLocaleString()}</Text>
           <Text style={styles.statCardLabel}>Remaining</Text>
         </View>
         <View style={[styles.statCard, { borderColor: colors.purpleBorder }]}>
-          <Ionicons name="speedometer-outline" size={18} color={colors.purple} />
+          <Icon name="speedometer" size={18} color={colors.purple} />
           <Text style={styles.statCardValue}>{capacityPct}%</Text>
           <Text style={styles.statCardLabel}>Capacity</Text>
         </View>
@@ -148,43 +285,43 @@ function AdminLiveStats({ stats }) {
   );
 }
 
-function QuickActions({ navigation }) {
+function QuickActions({ navigation, onShowGuestList, onShowStaff }) {
   const actions = [
     {
       key: 'scan',
       label: 'Scan',
-      icon: 'qr-code-outline',
+      icon: 'qr-code',
       color: colors.purple,
       bg: colors.purpleBg,
       border: colors.purpleBorder,
-      route: 'CheckIn',
+      onPress: () => navigation.navigate('CheckIn'),
     },
     {
       key: 'sell',
       label: 'Sell',
-      icon: 'cart-outline',
+      icon: 'cart',
       color: colors.green,
       bg: colors.greenBg,
       border: colors.greenBorder,
-      route: 'Sales',
+      onPress: () => navigation.navigate('Sales'),
     },
     {
       key: 'guests',
       label: 'Guest List',
-      icon: 'list-outline',
+      icon: 'list',
       color: colors.cyan,
       bg: colors.cyanBg,
       border: colors.cyanBorder,
-      route: 'GuestList',
+      onPress: onShowGuestList,
     },
     {
       key: 'staff',
       label: 'Staff',
-      icon: 'people-outline',
+      icon: 'people',
       color: colors.amber,
       bg: colors.amberBg,
       border: colors.amberBorder,
-      route: 'Staff',
+      onPress: onShowStaff,
     },
   ];
 
@@ -199,10 +336,10 @@ function QuickActions({ navigation }) {
               styles.quickActionBtn,
               { backgroundColor: action.bg, borderColor: action.border },
             ]}
-            onPress={() => navigation.navigate(action.route)}
+            onPress={action.onPress}
             activeOpacity={0.7}
           >
-            <Ionicons name={action.icon} size={24} color={action.color} />
+            <Icon name={action.icon} size={24} color={action.color} />
             <Text style={[styles.quickActionLabel, { color: action.color }]}>
               {action.label}
             </Text>
@@ -219,7 +356,7 @@ function RecentActivity({ recentScans }) {
       <View style={styles.recentSection}>
         <Text style={styles.sectionTitle}>Recent Activity</Text>
         <View style={styles.emptyState}>
-          <Ionicons name="time-outline" size={32} color={colors.textQuaternary} />
+          <Icon name="clock" size={32} color={colors.textQuaternary} />
           <Text style={styles.emptyStateText}>No recent activity</Text>
         </View>
       </View>
@@ -254,8 +391,8 @@ function RecentActivity({ recentScans }) {
               {scan.ticket_type || 'Ticket'} - {scan.time || 'Just now'}
             </Text>
           </View>
-          <Ionicons
-            name={scan.status === 'valid' ? 'checkmark-circle' : 'close-circle'}
+          <Icon
+            name={scan.status === 'valid' ? 'check-circle' : 'x-circle'}
             size={18}
             color={scan.status === 'valid' ? colors.green : colors.red}
           />
@@ -265,7 +402,7 @@ function RecentActivity({ recentScans }) {
   );
 }
 
-function AdminDashboard({ navigation, eventStats, isReportsOnlyMode, recentScans }) {
+function AdminDashboard({ navigation, eventStats, isReportsOnlyMode, recentScans, onShowGuestList, onShowStaff }) {
   return (
     <>
       {isReportsOnlyMode && <ReportsOnlyBanner />}
@@ -275,7 +412,7 @@ function AdminDashboard({ navigation, eventStats, isReportsOnlyMode, recentScans
       ) : (
         <>
           <AdminLiveStats stats={eventStats} />
-          <QuickActions navigation={navigation} />
+          <QuickActions navigation={navigation} onShowGuestList={onShowGuestList} onShowStaff={onShowStaff} />
           <RecentActivity recentScans={recentScans} />
         </>
       )}
@@ -294,7 +431,7 @@ function TurnoverCard({ cashTurnover, cardTurnover }) {
       <View style={styles.turnoverRow}>
         <View style={styles.turnoverItem}>
           <View style={[styles.turnoverIconWrap, { backgroundColor: colors.greenBg }]}>
-            <Ionicons name="cash-outline" size={20} color={colors.green} />
+            <Icon name="cash" size={20} color={colors.green} />
           </View>
           <View>
             <Text style={styles.turnoverLabel}>Cash</Text>
@@ -306,7 +443,7 @@ function TurnoverCard({ cashTurnover, cardTurnover }) {
         <View style={styles.turnoverDivider} />
         <View style={styles.turnoverItem}>
           <View style={[styles.turnoverIconWrap, { backgroundColor: colors.cyanBg }]}>
-            <Ionicons name="card-outline" size={20} color={colors.cyan} />
+            <Icon name="credit-card" size={20} color={colors.cyan} />
           </View>
           <View>
             <Text style={styles.turnoverLabel}>Card</Text>
@@ -334,7 +471,7 @@ function ScannerStats({ myScans, mySales, shiftStartTime }) {
     {
       label: 'My Scans',
       value: myScans.toLocaleString(),
-      icon: 'scan-outline',
+      icon: 'scan',
       color: colors.purple,
       bg: colors.purpleBg,
       border: colors.purpleBorder,
@@ -342,7 +479,7 @@ function ScannerStats({ myScans, mySales, shiftStartTime }) {
     {
       label: 'My Sales',
       value: mySales.toLocaleString(),
-      icon: 'cart-outline',
+      icon: 'cart',
       color: colors.green,
       bg: colors.greenBg,
       border: colors.greenBorder,
@@ -350,7 +487,7 @@ function ScannerStats({ myScans, mySales, shiftStartTime }) {
     {
       label: 'Shift Duration',
       value: shiftDuration,
-      icon: 'time-outline',
+      icon: 'clock',
       color: colors.amber,
       bg: colors.amberBg,
       border: colors.amberBorder,
@@ -364,7 +501,7 @@ function ScannerStats({ myScans, mySales, shiftStartTime }) {
           key={item.label}
           style={[styles.scannerStatCard, { backgroundColor: item.bg, borderColor: item.border }]}
         >
-          <Ionicons name={item.icon} size={20} color={item.color} />
+          <Icon name={item.icon} size={20} color={item.color} />
           <Text style={[styles.scannerStatValue, { color: item.color }]}>
             {item.value}
           </Text>
@@ -392,7 +529,7 @@ function ScannerDashboard({ navigation, cashTurnover, cardTurnover, myScans, myS
           onPress={() => navigation.navigate('CheckIn')}
           activeOpacity={0.8}
         >
-          <Ionicons name="qr-code-outline" size={28} color={colors.white} />
+          <Icon name="qr-code" size={28} color={colors.white} />
           <Text style={styles.scannerActionBtnText}>Start Scanning</Text>
         </TouchableOpacity>
 
@@ -401,7 +538,7 @@ function ScannerDashboard({ navigation, cashTurnover, cardTurnover, myScans, myS
           onPress={() => navigation.navigate('Sales')}
           activeOpacity={0.8}
         >
-          <Ionicons name="cart-outline" size={28} color={colors.white} />
+          <Icon name="cart" size={28} color={colors.white} />
           <Text style={styles.scannerActionBtnText}>Start Selling</Text>
         </TouchableOpacity>
       </View>
@@ -413,7 +550,7 @@ function ScannerDashboard({ navigation, cashTurnover, cardTurnover, myScans, myS
 // Main Screen
 // ---------------------------------------------------------------------------
 
-export default function DashboardScreen({ navigation }) {
+export default function DashboardScreen({ navigation, onShowStaff, onShowGuestList }) {
   const { userRole } = useAuth();
   const { selectedEvent, eventStats, isReportsOnlyMode } = useEvent();
   const {
@@ -436,7 +573,7 @@ export default function DashboardScreen({ navigation }) {
       {/* Event header */}
       <View style={styles.eventHeader}>
         <Text style={styles.eventName} numberOfLines={1}>
-          {selectedEvent?.name || 'No Event Selected'}
+          {selectedEvent?.title || selectedEvent?.name || 'No Event Selected'}
         </Text>
         {selectedEvent && (
           <Text style={styles.eventMeta}>
@@ -451,6 +588,8 @@ export default function DashboardScreen({ navigation }) {
           eventStats={eventStats}
           isReportsOnlyMode={isReportsOnlyMode}
           recentScans={recentScans}
+          onShowGuestList={onShowGuestList}
+          onShowStaff={onShowStaff}
         />
       ) : (
         <ScannerDashboard
