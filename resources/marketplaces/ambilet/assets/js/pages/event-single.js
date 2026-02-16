@@ -439,8 +439,8 @@ const EventPage = {
             return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
         }
 
-        var mainImage = eventData.image_url || eventData.cover_image_url || null;
-        var coverImage = eventData.cover_image_url || eventData.image_url || null;
+        var mainImage = eventData.hero_image_url || eventData.cover_image_url || eventData.image_url || null;
+        var coverImage = eventData.hero_image_url || eventData.cover_image_url || eventData.image_url || null;
 
         return {
             id: eventData.id,

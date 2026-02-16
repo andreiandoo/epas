@@ -3,20 +3,35 @@
 namespace App\Filament\Marketplace\Resources\ArtistResource\Pages;
 
 use App\Filament\Marketplace\Resources\ArtistResource;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditArtist extends EditRecord
 {
     protected static string $resource = ArtistResource::class;
 
+    protected bool $shouldClose = false;
+
     protected function getHeaderActions(): array
     {
-        // No delete action for marketplace users - they cannot delete artists
-        return [];
+        return [
+            Actions\Action::make('saveAndClose')
+                ->label('Salvează și închide')
+                ->action(function () {
+                    $this->shouldClose = true;
+                    $this->save();
+                })
+                ->color('gray')
+                ->icon('heroicon-o-check'),
+        ];
     }
 
     protected function getRedirectUrl(): string
     {
-        return $this->getResource()::getUrl('index');
+        if ($this->shouldClose) {
+            return $this->getResource()::getUrl('index');
+        }
+
+        return $this->getResource()::getUrl('edit', ['record' => $this->getRecord()]);
     }
 }

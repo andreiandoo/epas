@@ -465,6 +465,8 @@ class MarketplaceEventsController extends BaseController
                 // Image fields - provide both naming conventions for compatibility
                 'image' => $posterImage,
                 'image_url' => $posterImage,
+                'poster_url' => $posterImage,
+                'hero_image_url' => $coverImage,
                 'cover_image' => $coverImage,
                 'cover_image_url' => $coverImage ?? $posterImage,
                 'category' => $event->marketplaceEventCategory?->getTranslation('name', $language),
@@ -1098,6 +1100,8 @@ class MarketplaceEventsController extends BaseController
             'slug' => $event->slug,
             'short_description' => $event->getTranslation('short_description', $language),
             'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
+            'poster_url' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
+            'hero_image_url' => $event->hero_image_url ? Storage::disk('public')->url($event->hero_image_url) : null,
             'category' => $category ? [
                 'id' => $category->id,
                 'name' => $category->getTranslation('name', $language),

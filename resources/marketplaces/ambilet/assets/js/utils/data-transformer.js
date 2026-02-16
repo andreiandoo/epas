@@ -22,8 +22,8 @@ const AmbiletDataTransformer = {
         // Extract title - handle variations
         const title = apiEvent.name || apiEvent.title || 'Eveniment';
 
-        // Extract image - handle variations and ensure full URL
-        let image = apiEvent.image_url || apiEvent.featured_image || apiEvent.image || apiEvent.cover_image_url || null;
+        // Extract image - prefer poster for card displays
+        let image = apiEvent.poster_url || apiEvent.image_url || apiEvent.featured_image || apiEvent.image || apiEvent.cover_image_url || null;
         if (image && !image.startsWith('http') && !image.startsWith('/')) {
             image = '/storage/' + image;
         }
