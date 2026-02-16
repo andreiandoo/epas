@@ -191,11 +191,11 @@ function extractTicketCode(input) {
   const trimmed = input.trim();
   // Try to extract from URL like https://...tixello.com/t/CODE or /verify/CODE
   const urlMatch = trimmed.match(/\/t\/([A-Za-z0-9_-]+)/);
-  if (urlMatch) return urlMatch[1];
+  if (urlMatch) return urlMatch[1].toUpperCase();
   const verifyMatch = trimmed.match(/\/verify\/([A-Za-z0-9_-]+)/);
-  if (verifyMatch) return verifyMatch[1];
+  if (verifyMatch) return verifyMatch[1].toUpperCase();
   // Use raw input as code
-  return trimmed;
+  return trimmed.toUpperCase();
 }
 
 // ─── Main Component ──────────────────────────────────────────
@@ -229,7 +229,7 @@ export default function CheckInScreen({ navigation }) {
   const scanLineLoop = useRef(null);
   const resultTimeout = useRef(null);
   const scanTimestamps = useRef([]);
-  const scannedCodes = useRef(new Set());
+  const scannedCodes = useRef(new Map());
 
   // ── Scan line animation ──
 
@@ -323,15 +323,16 @@ export default function CheckInScreen({ navigation }) {
 
     // LOCAL duplicate detection - check before calling API
     if (scannedCodes.current.has(code)) {
-      setCameraActive(false);
+      const storedData = scannedCodes.current.get(code);
       const result = {
         type: 'duplicate',
         data: {
           message: 'Acest bilet a fost deja scanat',
-          checkedInAt: 'În această sesiune',
+          checkedInAt: storedData?.checkedInAt || 'În această sesiune',
           code: code,
-          name: 'N/A',
-          ticketType: 'N/A',
+          name: storedData?.name || 'N/A',
+          ticketType: storedData?.ticketType || 'N/A',
+          gate: storedData?.gate || 'N/A',
         },
       };
       setScanResult(result);
@@ -343,8 +344,8 @@ export default function CheckInScreen({ navigation }) {
       addScan({
         id: Date.now(),
         type: 'duplicate',
-        name: 'Deja scanat',
-        ticketType: 'N/A',
+        name: storedData?.name || 'Deja scanat',
+        ticketType: storedData?.ticketType || 'N/A',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         code: code,
       });
@@ -357,7 +358,6 @@ export default function CheckInScreen({ navigation }) {
     }
 
     setIsScanning(true);
-    setCameraActive(false);
     startScanLineAnimation();
 
     try {
@@ -381,7 +381,12 @@ export default function CheckInScreen({ navigation }) {
         setScanResult(result);
 
         // Track locally for duplicate detection
-        scannedCodes.current.add(code);
+        scannedCodes.current.set(code, {
+          name: result.data.name,
+          ticketType: result.data.ticketType,
+          checkedInAt: result.data.checkedInAt || new Date().toISOString(),
+          gate: 'N/A',
+        });
 
         if (vibrationFeedback) {
           Vibration.vibrate(200);
@@ -432,7 +437,12 @@ export default function CheckInScreen({ navigation }) {
         setScanResult(result);
 
         // Also track locally so next scan of same code is caught locally
-        scannedCodes.current.add(code);
+        scannedCodes.current.set(code, {
+          name: result.data.name,
+          ticketType: result.data.ticketType,
+          checkedInAt: checkedInAt,
+          gate: 'N/A',
+        });
 
         if (vibrationFeedback) {
           Vibration.vibrate([0, 100, 100, 100]);
@@ -485,10 +495,9 @@ export default function CheckInScreen({ navigation }) {
   const handleBarcodeScan = useCallback(({ data }) => {
     if (scannedLock || isScanning) return;
     setScannedLock(true);
-    setCameraActive(false);
     handleCheckIn(data);
-    // Reset lock after processing
-    setTimeout(() => setScannedLock(false), 2000);
+    // Reset lock after auto-clear time so user can keep scanning
+    setTimeout(() => setScannedLock(false), 3000);
   }, [scannedLock, isScanning, handleCheckIn]);
 
   // ── Scan line translateY interpolation ──
@@ -659,7 +668,7 @@ export default function CheckInScreen({ navigation }) {
                 name: scanResult.data.name || 'N/A',
                 ticketType: scanResult.data.ticketType || 'N/A',
                 code: scanResult.data.code || 'N/A',
-                staff: user?.name || user?.full_name || 'N/A',
+                staff: user?.name || user?.public_name || 'N/A',
               });
               setShowScanDetails(true);
             }}
