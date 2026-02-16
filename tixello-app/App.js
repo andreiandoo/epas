@@ -3,7 +3,11 @@ import { View, StyleSheet, StatusBar, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as ExpoSplashScreen from 'expo-splash-screen';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
+
+// Prevent native splash from auto-hiding
+ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { EventProvider, useEvent } from './src/context/EventContext';
@@ -177,10 +181,26 @@ function MainTabs() {
 function AuthNavigator() {
   const { isAuthenticated, checkAuth } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
+  const [nativeSplashHidden, setNativeSplashHidden] = useState(false);
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    // Hide native splash screen after first render so our custom splash is visible
+    if (!nativeSplashHidden) {
+      const timer = setTimeout(async () => {
+        try {
+          await ExpoSplashScreen.hideAsync();
+        } catch (e) {
+          // ignore
+        }
+        setNativeSplashHidden(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [nativeSplashHidden]);
 
   if (showSplash) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;

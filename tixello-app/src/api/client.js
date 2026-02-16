@@ -2,13 +2,15 @@ import * as SecureStore from 'expo-secure-store';
 
 const BASE_URL = 'https://core.tixello.com/api/marketplace-client';
 const PUBLIC_API_URL = 'https://core.tixello.com/api';
+const DEFAULT_API_KEY = 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCISPFB';
 
 let _token = null;
-let _apiKey = null;
+let _apiKey = DEFAULT_API_KEY;
 
 export async function initApiClient() {
   _token = await SecureStore.getItemAsync('auth_token');
-  _apiKey = await SecureStore.getItemAsync('api_key');
+  const storedKey = await SecureStore.getItemAsync('api_key');
+  _apiKey = storedKey || DEFAULT_API_KEY;
 }
 
 export function setToken(token) {
@@ -52,12 +54,15 @@ async function request(url, options = {}) {
     headers,
   });
 
-  if (response.status === 401) {
-    setToken(null);
-    throw new Error('Unauthorized');
-  }
-
   const data = await response.json();
+
+  if (response.status === 401) {
+    // Only clear token if we had one (not during login)
+    if (_token) {
+      setToken(null);
+    }
+    throw new Error(data.message || 'Invalid email or password');
+  }
 
   if (!response.ok) {
     throw new Error(data.message || `HTTP ${response.status}`);
