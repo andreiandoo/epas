@@ -312,15 +312,13 @@ class ViewTicket extends ViewRecord
 </html>
 HTML;
 
-            Log::channel('marketplace')->debug('Ticket PDF HTML generated', [
+            Log::channel('marketplace')->info('Ticket PDF HTML generated', [
                 'ticket_id' => $ticket->id,
                 'template_id' => $template->id,
                 'paper_pt' => [$widthPt, $heightPt],
                 'html_length' => strlen($html),
                 'content_length' => strlen($content),
-                'layers_count' => count($layers),
             ]);
-            @file_put_contents(storage_path('app/debug-ticket.html'), $html);
 
             $pdf = Pdf::loadHTML($html)
                 ->setPaper([0, 0, $widthPt, $heightPt])
