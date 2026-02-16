@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,19 +8,15 @@ import {
   ScrollView,
   TextInput,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
+import { useEvent } from '../../context/EventContext';
+import { getParticipants } from '../../api/participants';
+import { checkinByBarcode } from '../../api/participants';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const MOCK_GUESTS = [
-  { id: '1', name: 'Alexandra Ionescu', type: 'VIP', checkedIn: true },
-  { id: '2', name: 'DJ Markus', type: 'Artist', checkedIn: true },
-  { id: '3', name: 'Elena Popescu', type: 'Press', checkedIn: false },
-  { id: '4', name: 'Mihai Stanescu', type: 'VIP', checkedIn: false },
-  { id: '5', name: 'Cristina Dumitrescu', type: 'Guest', checkedIn: false },
-];
 
 function getInitials(name) {
   if (!name) return '??';
@@ -45,7 +41,7 @@ function TypeBadge({ type }) {
   );
 }
 
-function GuestItem({ guest, onCheckIn }) {
+function GuestItem({ guest, onCheckIn, isCheckingIn }) {
   const isChecked = guest.checkedIn;
 
   return (
@@ -79,10 +75,15 @@ function GuestItem({ guest, onCheckIn }) {
       ) : (
         <TouchableOpacity
           style={styles.checkInButton}
-          onPress={() => onCheckIn(guest.id)}
+          onPress={() => onCheckIn(guest)}
           activeOpacity={0.7}
+          disabled={isCheckingIn}
         >
-          <Text style={styles.checkInButtonText}>Check In</Text>
+          {isCheckingIn ? (
+            <ActivityIndicator size="small" color={colors.purple} />
+          ) : (
+            <Text style={styles.checkInButtonText}>Check In</Text>
+          )}
         </TouchableOpacity>
       )}
     </View>
@@ -90,18 +91,64 @@ function GuestItem({ guest, onCheckIn }) {
 }
 
 export default function GuestListModal({ visible, onClose }) {
+  const { selectedEvent } = useEvent();
   const [searchQuery, setSearchQuery] = useState('');
-  const [guests, setGuests] = useState(MOCK_GUESTS);
+  const [guests, setGuests] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [checkingInId, setCheckingInId] = useState(null);
+
+  // Fetch participants when modal opens
+  useEffect(() => {
+    if (visible && selectedEvent) {
+      fetchGuests();
+    }
+  }, [visible, selectedEvent?.id]);
+
+  const fetchGuests = async () => {
+    if (!selectedEvent) return;
+    setIsLoading(true);
+    try {
+      const response = await getParticipants(selectedEvent.id, { per_page: 200 });
+      const participants = response.data || [];
+      const mapped = participants.map(p => ({
+        id: p.id || String(Math.random()),
+        name: p.full_name || p.name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Unknown',
+        type: p.ticket_type_name || p.ticket_type || 'Guest',
+        checkedIn: !!p.checked_in_at || !!p.checked_in || p.status === 'checked_in',
+        barcode: p.barcode || p.ticket_code || p.code || '',
+        checkedInAt: p.checked_in_at || null,
+      }));
+      setGuests(mapped);
+    } catch (e) {
+      console.error('Failed to fetch guests:', e);
+    }
+    setIsLoading(false);
+  };
 
   const filteredGuests = guests.filter(guest =>
     guest.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     guest.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleCheckIn = (guestId) => {
-    setGuests(prev =>
-      prev.map(g => g.id === guestId ? { ...g, checkedIn: true } : g)
-    );
+  const handleCheckIn = async (guest) => {
+    if (!selectedEvent || !guest.barcode) return;
+    setCheckingInId(guest.id);
+    try {
+      await checkinByBarcode(selectedEvent.id, guest.barcode);
+      // Update local state on success
+      setGuests(prev =>
+        prev.map(g => g.id === guest.id ? { ...g, checkedIn: true } : g)
+      );
+    } catch (e) {
+      console.error('Check-in failed:', e);
+      // If already checked in, mark as such
+      if (e.message?.toLowerCase().includes('already')) {
+        setGuests(prev =>
+          prev.map(g => g.id === guest.id ? { ...g, checkedIn: true } : g)
+        );
+      }
+    }
+    setCheckingInId(null);
   };
 
   const handleClose = () => {
@@ -189,7 +236,12 @@ export default function GuestListModal({ visible, onClose }) {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {filteredGuests.length === 0 ? (
+            {isLoading ? (
+              <View style={styles.emptyState}>
+                <ActivityIndicator size="large" color={colors.purple} />
+                <Text style={styles.emptyText}>Loading guests...</Text>
+              </View>
+            ) : filteredGuests.length === 0 ? (
               <View style={styles.emptyState}>
                 <Svg width={48} height={48} viewBox="0 0 24 24" fill="none">
                   <Path
@@ -200,7 +252,9 @@ export default function GuestListModal({ visible, onClose }) {
                     strokeLinejoin="round"
                   />
                 </Svg>
-                <Text style={styles.emptyText}>No guests found</Text>
+                <Text style={styles.emptyText}>
+                  {searchQuery ? 'No guests found' : 'No participants yet'}
+                </Text>
               </View>
             ) : (
               filteredGuests.map(guest => (
@@ -208,6 +262,7 @@ export default function GuestListModal({ visible, onClose }) {
                   key={guest.id}
                   guest={guest}
                   onCheckIn={handleCheckIn}
+                  isCheckingIn={checkingInId === guest.id}
                 />
               ))
             )}
@@ -395,6 +450,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.purpleLight,
     borderWidth: 1,
     borderColor: colors.purpleBorder,
+    minWidth: 70,
+    alignItems: 'center',
   },
   checkInButtonText: {
     fontSize: 12,
