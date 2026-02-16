@@ -207,6 +207,7 @@ export default function CheckInScreen({ navigation }) {
     isShiftPaused,
     setIsShiftPaused,
     vibrationFeedback,
+    autoConfirmValid,
     addScan,
     recentScans,
     myScans,
@@ -221,11 +222,14 @@ export default function CheckInScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraActive, setCameraActive] = useState(false);
   const [scannedLock, setScannedLock] = useState(false);
+  const [showScanDetails, setShowScanDetails] = useState(false);
+  const [scanDetailsData, setScanDetailsData] = useState(null);
 
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const scanLineLoop = useRef(null);
   const resultTimeout = useRef(null);
   const scanTimestamps = useRef([]);
+  const scannedCodes = useRef(new Set());
 
   // ── Scan line animation ──
 
@@ -307,11 +311,53 @@ export default function CheckInScreen({ navigation }) {
     const code = extractTicketCode(inputCode);
     if (!code) return;
 
+    // Clear any existing auto-clear timeout
+    if (resultTimeout.current) {
+      clearTimeout(resultTimeout.current);
+      resultTimeout.current = null;
+    }
+
     setShowManualEntry(false);
     setManualCode('');
+    setScanResult(null);
+
+    // LOCAL duplicate detection - check before calling API
+    if (scannedCodes.current.has(code)) {
+      setCameraActive(false);
+      const result = {
+        type: 'duplicate',
+        data: {
+          message: 'Acest bilet a fost deja scanat',
+          checkedInAt: 'În această sesiune',
+          code: code,
+          name: 'N/A',
+          ticketType: 'N/A',
+        },
+      };
+      setScanResult(result);
+
+      if (vibrationFeedback) {
+        Vibration.vibrate([0, 100, 100, 100]);
+      }
+
+      addScan({
+        id: Date.now(),
+        type: 'duplicate',
+        name: 'Deja scanat',
+        ticketType: 'N/A',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        code: code,
+      });
+
+      // Auto-clear after 3 seconds
+      resultTimeout.current = setTimeout(() => {
+        setScanResult(null);
+      }, 3000);
+      return;
+    }
+
     setIsScanning(true);
     setCameraActive(false);
-    setScanResult(null);
     startScanLineAnimation();
 
     try {
@@ -321,20 +367,24 @@ export default function CheckInScreen({ navigation }) {
       setIsScanning(false);
 
       if (response.success || response.data) {
-        const participant = response.data || response;
+        const data = response.data || response;
         const result = {
           type: 'valid',
           data: {
-            name: participant.full_name || participant.name || 'Participant',
-            ticketType: participant.ticket_type_name || participant.ticket_type || 'General',
-            seat: participant.seat || null,
+            name: data.customer?.name || data.ticket?.customer_name || 'Participant',
+            ticketType: data.ticket?.ticket_type || 'Bilet',
+            seat: data.ticket?.seat || data.seat || null,
+            checkedInAt: data.ticket?.checked_in_at || null,
             code: code,
           },
         };
         setScanResult(result);
 
+        // Track locally for duplicate detection
+        scannedCodes.current.add(code);
+
         if (vibrationFeedback) {
-          Vibration.vibrate(100);
+          Vibration.vibrate(200);
         }
 
         scanTimestamps.current.push(Date.now());
@@ -349,6 +399,14 @@ export default function CheckInScreen({ navigation }) {
         });
 
         refreshStats();
+
+        // Auto-clear behavior depends on autoConfirmValid setting
+        if (autoConfirmValid) {
+          resultTimeout.current = setTimeout(() => {
+            setScanResult(null);
+          }, 3000);
+        }
+        // When autoConfirmValid is false, do NOT auto-clear - user must tap "Scanează Următorul"
       }
     } catch (error) {
       stopScanLineAnimation();
@@ -357,14 +415,24 @@ export default function CheckInScreen({ navigation }) {
       const message = error.message || '';
 
       if (message.toLowerCase().includes('already') || message.toLowerCase().includes('checked')) {
+        // Parse datetime from error message like "Ticket already checked in at 2024-03-15 19:30:00"
+        const dateMatch = message.match(/at\s+(.+)$/i);
+        const checkedInAt = dateMatch ? dateMatch[1].trim() : (error.checked_in_at || 'Mai devreme');
+
         const result = {
           type: 'duplicate',
           data: {
             message: 'Acest bilet a fost deja scanat',
-            checkedInAt: error.checked_in_at || 'Mai devreme azi',
+            checkedInAt: checkedInAt,
+            code: code,
+            name: error.attendee_name || error.data?.customer?.name || 'N/A',
+            ticketType: error.ticket_type || error.data?.ticket?.ticket_type || 'N/A',
           },
         };
         setScanResult(result);
+
+        // Also track locally so next scan of same code is caught locally
+        scannedCodes.current.add(code);
 
         if (vibrationFeedback) {
           Vibration.vibrate([0, 100, 100, 100]);
@@ -373,40 +441,46 @@ export default function CheckInScreen({ navigation }) {
         addScan({
           id: Date.now(),
           type: 'duplicate',
-          name: error.attendee_name || 'Unknown',
-          ticketType: error.ticket_type || 'Ticket',
+          name: result.data.name,
+          ticketType: result.data.ticketType,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           code: code,
         });
+
+        // Auto-clear after 3 seconds for duplicates
+        resultTimeout.current = setTimeout(() => {
+          setScanResult(null);
+        }, 3000);
       } else {
         const result = {
           type: 'invalid',
           data: {
             message: message || 'Bilet negăsit sau cod invalid',
+            code: code,
           },
         };
         setScanResult(result);
 
         if (vibrationFeedback) {
-          Vibration.vibrate([0, 200, 100, 200]);
+          Vibration.vibrate([0, 200, 100, 200, 100, 200]);
         }
 
         addScan({
           id: Date.now(),
           type: 'invalid',
-          name: 'Invalid Ticket',
+          name: 'Bilet Invalid',
           ticketType: '-',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           code: code,
         });
+
+        // Auto-clear after 3 seconds for invalid
+        resultTimeout.current = setTimeout(() => {
+          setScanResult(null);
+        }, 3000);
       }
     }
-
-    // Auto-clear result after 3 seconds
-    resultTimeout.current = setTimeout(() => {
-      setScanResult(null);
-    }, 3000);
-  }, [selectedEvent, vibrationFeedback, addScan, refreshStats, startScanLineAnimation, stopScanLineAnimation]);
+  }, [selectedEvent, vibrationFeedback, autoConfirmValid, addScan, refreshStats, startScanLineAnimation, stopScanLineAnimation]);
 
   const handleBarcodeScan = useCallback(({ data }) => {
     if (scannedLock || isScanning) return;
@@ -556,12 +630,15 @@ export default function CheckInScreen({ navigation }) {
               </>
             )}
             {scanResult.type === 'duplicate' && (
-              <View style={styles.resultDetails}>
-                <ClockIcon size={14} color={colors.amber} />
-                <Text style={[styles.resultDetail, { color: colors.amber, marginLeft: 4 }]}>
-                  Checked in: {scanResult.data.checkedInAt}
-                </Text>
-              </View>
+              <>
+                <Text style={styles.resultName}>{scanResult.data.name !== 'N/A' ? scanResult.data.name : ''}</Text>
+                <View style={styles.resultDetails}>
+                  <ClockIcon size={14} color={colors.amber} />
+                  <Text style={[styles.resultDetail, { color: colors.amber, marginLeft: 4 }]}>
+                    Scanat: {scanResult.data.checkedInAt}
+                  </Text>
+                </View>
+              </>
             )}
             {scanResult.type === 'invalid' && (
               <Text style={[styles.resultDetail, { color: colors.red }]}>
@@ -570,6 +647,42 @@ export default function CheckInScreen({ navigation }) {
             )}
           </View>
         </View>
+        {/* Show "Afișează Scanarea" button for duplicate scans */}
+        {scanResult.type === 'duplicate' && (
+          <TouchableOpacity
+            style={styles.showScanDetailsButton}
+            activeOpacity={0.7}
+            onPress={() => {
+              setScanDetailsData({
+                checkedInAt: scanResult.data.checkedInAt || 'N/A',
+                gate: scanResult.data.gate || 'N/A',
+                name: scanResult.data.name || 'N/A',
+                ticketType: scanResult.data.ticketType || 'N/A',
+                code: scanResult.data.code || 'N/A',
+                staff: user?.name || user?.full_name || 'N/A',
+              });
+              setShowScanDetails(true);
+            }}
+          >
+            <Text style={styles.showScanDetailsButtonText}>Afișează Scanarea</Text>
+          </TouchableOpacity>
+        )}
+        {/* Show "Scanează Următorul" button for valid scans when autoConfirmValid is off */}
+        {scanResult.type === 'valid' && !autoConfirmValid && (
+          <TouchableOpacity
+            style={styles.nextScanButton}
+            activeOpacity={0.7}
+            onPress={() => {
+              setScanResult(null);
+              if (resultTimeout.current) {
+                clearTimeout(resultTimeout.current);
+                resultTimeout.current = null;
+              }
+            }}
+          >
+            <Text style={styles.nextScanButtonText}>Scanează Următorul</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -740,7 +853,7 @@ export default function CheckInScreen({ navigation }) {
                     {scan.name}
                   </Text>
                   <Text style={styles.recentTicketType} numberOfLines={1}>
-                    {scan.ticketType}
+                    {scan.ticketType} {'\u2022'} {scan.code}
                   </Text>
                 </View>
                 <Text style={styles.recentTime}>{scan.time}</Text>
@@ -748,6 +861,55 @@ export default function CheckInScreen({ navigation }) {
             ))}
           </View>
         )}
+
+        {/* Scan Details Modal */}
+        <Modal
+          visible={showScanDetails}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowScanDetails(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.scanDetailsModal}>
+              <Text style={styles.scanDetailsTitle}>Detalii Scanare</Text>
+              {scanDetailsData && (
+                <View style={styles.scanDetailsRows}>
+                  <View style={styles.scanDetailsRow}>
+                    <Text style={styles.scanDetailsLabel}>Ora scanării</Text>
+                    <Text style={styles.scanDetailsValue}>{scanDetailsData.checkedInAt}</Text>
+                  </View>
+                  <View style={styles.scanDetailsRow}>
+                    <Text style={styles.scanDetailsLabel}>Poarta</Text>
+                    <Text style={styles.scanDetailsValue}>{scanDetailsData.gate}</Text>
+                  </View>
+                  <View style={styles.scanDetailsRow}>
+                    <Text style={styles.scanDetailsLabel}>Nume beneficiar</Text>
+                    <Text style={styles.scanDetailsValue}>{scanDetailsData.name}</Text>
+                  </View>
+                  <View style={styles.scanDetailsRow}>
+                    <Text style={styles.scanDetailsLabel}>Tip bilet</Text>
+                    <Text style={styles.scanDetailsValue}>{scanDetailsData.ticketType}</Text>
+                  </View>
+                  <View style={styles.scanDetailsRow}>
+                    <Text style={styles.scanDetailsLabel}>Cod bilet</Text>
+                    <Text style={styles.scanDetailsValue}>{scanDetailsData.code}</Text>
+                  </View>
+                  <View style={styles.scanDetailsRow}>
+                    <Text style={styles.scanDetailsLabel}>Personal</Text>
+                    <Text style={styles.scanDetailsValue}>{scanDetailsData.staff}</Text>
+                  </View>
+                </View>
+              )}
+              <TouchableOpacity
+                style={styles.scanDetailsCloseButton}
+                onPress={() => setShowScanDetails(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.scanDetailsCloseButtonText}>Închide</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* Manual Entry Modal */}
         <Modal
@@ -1196,5 +1358,89 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     fontWeight: '500',
+  },
+
+  // ── Scan Details Modal ──
+
+  showScanDetailsButton: {
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.amberBorder,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+  },
+  showScanDetailsButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.amber,
+  },
+  nextScanButton: {
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: colors.purple,
+    alignItems: 'center',
+  },
+  nextScanButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  scanDetailsModal: {
+    backgroundColor: '#16161F',
+    borderRadius: 20,
+    padding: 28,
+    marginHorizontal: 24,
+    width: '90%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  scanDetailsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  scanDetailsRows: {
+    marginBottom: 20,
+  },
+  scanDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  scanDetailsLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  scanDetailsValue: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    maxWidth: '55%',
+    textAlign: 'right',
+  },
+  scanDetailsCloseButton: {
+    width: '100%',
+    height: 48,
+    backgroundColor: colors.purple,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanDetailsCloseButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
   },
 });
