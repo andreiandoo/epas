@@ -94,7 +94,7 @@ function GateBar({ name, scans, percentage }) {
         <Text style={styles.gateName}>{name}</Text>
         <View style={styles.gateStats}>
           <Text style={styles.gatePercentage}>{percentage}%</Text>
-          <Text style={styles.gateScanCount}>{scans.toLocaleString()} scanări</Text>
+          <Text style={styles.gateScanCount}>{scans.toLocaleString()} intrați</Text>
         </View>
       </View>
       <View style={styles.gateBarTrack}>
@@ -209,8 +209,10 @@ export default function ReportsScreen() {
   // Derive metrics from real data
   const totalCheckedIn = eventStats?.checked_in || eventStats?.total_checked_in || 0;
   const totalParticipants = eventStats?.total || eventStats?.total_participants || 0;
-  const checkinRate = totalParticipants > 0 ? Math.round((totalCheckedIn / totalParticipants) * 100) : 0;
-  const salesRate = dashboardData?.sales?.total_orders || eventStats?.sales_rate || 0;
+  const totalSold = eventStats?.total_sold || 0;
+  const checkinRate = eventStats?.check_in_rate != null
+    ? Math.round(eventStats.check_in_rate)
+    : (totalParticipants > 0 ? Math.round((totalCheckedIn / totalParticipants) * 100) : 0);
   const peakHour = eventStats?.peak_hour || '—';
 
   // Revenue from real ticket type sold counts
@@ -221,14 +223,16 @@ export default function ReportsScreen() {
   }));
   const maxRevenue = Math.max(...revenueData.map(r => r.amount), 1);
 
-  // Gate data from ticket type distribution
+  // Gate data - show check-in/sold ratios per ticket type
+  // Estimate check-ins proportionally from overall check-in rate
+  const overallCheckInRatio = totalSold > 0 ? totalCheckedIn / totalSold : 0;
   const gateData = ticketTypes.map(tt => {
     const sold = tt.quantity_sold || tt.quota_sold || 0;
-    const total = tt.quantity || tt.quota || 1;
+    const estimatedCheckedIn = Math.round(sold * overallCheckInRatio);
     return {
       name: tt.name || 'Necunoscut',
-      scans: sold,
-      percentage: Math.round((sold / total) * 100),
+      scans: estimatedCheckedIn,
+      percentage: sold > 0 ? Math.round((estimatedCheckedIn / sold) * 100) : 0,
     };
   });
 
@@ -243,8 +247,9 @@ export default function ReportsScreen() {
     { hour: '22:00', value: Math.round(totalCheckedIn * 0.05) },
   ];
 
-  // Sparkline fallback
-  const sparkPoints = '0,28 20,22 40,18 60,15 80,12 100,10 120,8 140,5';
+  // Sparkline - flat line at check-in rate level (no real hourly data available)
+  const sparkY = checkinRate > 0 ? Math.round(36 - (checkinRate / 100) * 32) : 28;
+  const sparkPoints = `0,${sparkY} 20,${sparkY} 40,${sparkY} 60,${sparkY} 80,${sparkY} 100,${sparkY} 120,${sparkY} 140,${sparkY}`;
 
   return (
     <ScrollView
@@ -292,7 +297,7 @@ export default function ReportsScreen() {
 
         {/* Sales Rate + Peak Hour side by side */}
         <View style={styles.metricsRow}>
-          <MetricCard label="Rata Vânzări" value={salesRate} suffix="/min" />
+          <MetricCard label="Total Vândute" value={totalSold} />
           <MetricCard label="Ora de Vârf" value={peakHour} />
         </View>
       </View>

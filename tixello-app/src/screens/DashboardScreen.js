@@ -169,8 +169,8 @@ function ReportsStatsGrid({ stats }) {
   const totalSold = stats?.total_sold ?? 0;
   const checkedIn = stats?.checked_in ?? 0;
   const revenue = stats?.revenue ?? 0;
-  const checkInRate =
-    totalSold > 0 ? ((checkedIn / totalSold) * 100).toFixed(1) : '0.0';
+  const checkInRate = stats?.check_in_rate?.toFixed(1) ??
+    (totalSold > 0 ? ((checkedIn / totalSold) * 100).toFixed(1) : '0.0');
 
   const cards = [
     {
@@ -263,22 +263,22 @@ function AdminLiveStats({ stats }) {
         <View style={[styles.statCard, { borderColor: colors.greenBorder }]}>
           <Icon name="ticket" size={18} color={colors.green} />
           <Text style={styles.statCardValue}>{totalSold.toLocaleString()}</Text>
-          <Text style={styles.statCardLabel}>Sold</Text>
+          <Text style={styles.statCardLabel}>Vândute</Text>
         </View>
         <View style={[styles.statCard, { borderColor: colors.cyanBorder }]}>
           <Icon name="cash" size={18} color={colors.cyan} />
           <Text style={styles.statCardValue}>{formatCurrency(revenue)}</Text>
-          <Text style={styles.statCardLabel}>Revenue</Text>
+          <Text style={styles.statCardLabel}>Venituri</Text>
         </View>
         <View style={[styles.statCard, { borderColor: colors.amberBorder }]}>
           <Icon name="hourglass" size={18} color={colors.amber} />
           <Text style={styles.statCardValue}>{remaining.toLocaleString()}</Text>
-          <Text style={styles.statCardLabel}>Remaining</Text>
+          <Text style={styles.statCardLabel}>Rămase</Text>
         </View>
         <View style={[styles.statCard, { borderColor: colors.purpleBorder }]}>
           <Icon name="speedometer" size={18} color={colors.purple} />
           <Text style={styles.statCardValue}>{capacityPct}%</Text>
-          <Text style={styles.statCardLabel}>Capacity</Text>
+          <Text style={styles.statCardLabel}>Capacitate</Text>
         </View>
       </View>
     </View>
