@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Polyline, Rect, Defs, LinearGradient, Stop, Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
@@ -20,28 +21,6 @@ const CARD_GAP = 12;
 const CARD_PADDING = 16;
 const GRID_PADDING = 16;
 const HALF_CARD_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - CARD_GAP) / 2;
-
-// Mock data for gates
-const GATE_DATA = [
-  { name: 'Gate A', scans: 1247, percentage: 85 },
-  { name: 'Gate B', scans: 983, percentage: 67 },
-  { name: 'Gate C', scans: 654, percentage: 45 },
-  { name: 'VIP Entrance', scans: 312, percentage: 21 },
-];
-
-// Mock hourly distribution data
-const HOURLY_DATA = [
-  { hour: '16:00', value: 25 },
-  { hour: '17:00', value: 45 },
-  { hour: '18:00', value: 72 },
-  { hour: '19:00', value: 95 },
-  { hour: '20:00', value: 88 },
-  { hour: '21:00', value: 60 },
-  { hour: '22:00', value: 30 },
-];
-
-// Mock mini chart points for check-in rate sparkline
-const SPARK_POINTS = '0,28 15,22 30,25 45,18 60,20 75,12 90,15 105,8 120,10 135,5';
 
 function PulsingDot() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -206,20 +185,66 @@ function HourlyChart({ data }) {
 }
 
 export default function ReportsScreen() {
-  const { eventStats, ticketTypes } = useEvent();
+  const { eventStats, ticketTypes, selectedEvent } = useEvent();
+  const [dashboardData, setDashboardData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Derive mock metrics from eventStats or use defaults
-  const checkinRate = eventStats?.checked_in_rate ?? 42;
-  const salesRate = eventStats?.sales_rate ?? 18;
-  const peakHour = eventStats?.peak_hour ?? '20:00';
+  useEffect(() => {
+    if (selectedEvent) {
+      fetchReportData();
+    }
+  }, [selectedEvent?.id]);
 
-  // Build revenue per ticket type (mock amounts based on ticket type data)
+  const fetchReportData = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getDashboard();
+      setDashboardData(data.data || data);
+    } catch (e) {
+      console.error('Failed to fetch dashboard:', e);
+    }
+    setIsLoading(false);
+  };
+
+  // Derive metrics from real data
+  const totalCheckedIn = eventStats?.checked_in || eventStats?.total_checked_in || 0;
+  const totalParticipants = eventStats?.total || eventStats?.total_participants || 0;
+  const checkinRate = totalParticipants > 0 ? Math.round((totalCheckedIn / totalParticipants) * 100) : 0;
+  const salesRate = dashboardData?.sales?.total_orders || eventStats?.sales_rate || 0;
+  const peakHour = eventStats?.peak_hour || '—';
+
+  // Revenue from real ticket type sold counts
   const revenueData = ticketTypes.map((tt, i) => ({
-    name: tt.name || `Ticket ${i + 1}`,
+    name: tt.name || `Bilet ${i + 1}`,
     color: tt.color || colors.purple,
-    amount: tt.price ? tt.price * (tt.quota_sold || Math.floor(Math.random() * 200) + 50) : (Math.floor(Math.random() * 5000) + 1000),
+    amount: tt.price * (tt.quantity_sold || tt.quota_sold || 0),
   }));
   const maxRevenue = Math.max(...revenueData.map(r => r.amount), 1);
+
+  // Gate data from ticket type distribution
+  const gateData = ticketTypes.map(tt => {
+    const sold = tt.quantity_sold || tt.quota_sold || 0;
+    const total = tt.quantity || tt.quota || 1;
+    return {
+      name: tt.name || 'Necunoscut',
+      scans: sold,
+      percentage: Math.round((sold / total) * 100),
+    };
+  });
+
+  // Hourly data placeholder based on real check-in count
+  const hourlyData = [
+    { hour: '16:00', value: Math.round(totalCheckedIn * 0.05) },
+    { hour: '17:00', value: Math.round(totalCheckedIn * 0.10) },
+    { hour: '18:00', value: Math.round(totalCheckedIn * 0.20) },
+    { hour: '19:00', value: Math.round(totalCheckedIn * 0.30) },
+    { hour: '20:00', value: Math.round(totalCheckedIn * 0.20) },
+    { hour: '21:00', value: Math.round(totalCheckedIn * 0.10) },
+    { hour: '22:00', value: Math.round(totalCheckedIn * 0.05) },
+  ];
+
+  // Sparkline fallback
+  const sparkPoints = '0,28 20,22 40,18 60,15 80,12 100,10 120,8 140,5';
 
   return (
     <ScrollView
@@ -242,8 +267,7 @@ export default function ReportsScreen() {
         <MetricCard
           label="Rata Check-in"
           value={checkinRate}
-          suffix="/min"
-          trend="+12%"
+          suffix="%"
           wide
         >
           <View style={styles.sparkContainer}>
@@ -255,7 +279,7 @@ export default function ReportsScreen() {
                 </LinearGradient>
               </Defs>
               <Polyline
-                points={SPARK_POINTS}
+                points={sparkPoints}
                 fill="none"
                 stroke={colors.purple}
                 strokeWidth={2}
@@ -277,16 +301,19 @@ export default function ReportsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Performanța Porților</Text>
         <View style={styles.sectionCard}>
-          {GATE_DATA.map((gate, index) => (
+          {gateData.map((gate, index) => (
             <View key={gate.name}>
               <GateBar
                 name={gate.name}
                 scans={gate.scans}
                 percentage={gate.percentage}
               />
-              {index < GATE_DATA.length - 1 && <View style={styles.divider} />}
+              {index < gateData.length - 1 && <View style={styles.divider} />}
             </View>
           ))}
+          {gateData.length === 0 && (
+            <Text style={styles.emptyText}>Niciun tip de bilet disponibil</Text>
+          )}
         </View>
       </View>
 
@@ -315,7 +342,7 @@ export default function ReportsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Distribuție Orară</Text>
         <View style={styles.sectionCard}>
-          <HourlyChart data={HOURLY_DATA} />
+          <HourlyChart data={hourlyData} />
         </View>
       </View>
 

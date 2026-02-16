@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getParticipants } from '../api/participants';
 
 const AppContext = createContext(null);
 
@@ -108,11 +109,17 @@ export function AppProvider({ children }) {
   };
 
   const addScan = (scan) => {
+    if (!shiftStartTime) {
+      setShiftStartTime(Date.now());
+    }
     setRecentScans(prev => [scan, ...prev].slice(0, 20));
     setMyScans(prev => prev + 1);
   };
 
   const addSale = (sale) => {
+    if (!shiftStartTime) {
+      setShiftStartTime(Date.now());
+    }
     setRecentSales(prev => [sale, ...prev].slice(0, 20));
     setMySales(prev => prev + 1);
     if (sale.method === 'cash') {
@@ -134,6 +141,59 @@ export function AppProvider({ children }) {
   const markAllRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
   };
+ 
+ // Offline: download all participants for offline check-in
+  const downloadParticipantsForOffline = useCallback(async (eventId) => {
+    if (!eventId) return;
+    try {
+      let allParticipants = [];
+      let page = 1;
+      let hasMore = true;
+      while (hasMore) {
+        const response = await getParticipants(eventId, { per_page: 200, page });
+        const participants = response.data || [];
+        allParticipants = [...allParticipants, ...participants];
+        const meta = response.meta || {};
+        hasMore = meta.current_page < meta.last_page;
+        page++;
+      }
+      await AsyncStorage.setItem(
+        `offline_participants_${eventId}`,
+        JSON.stringify(allParticipants)
+      );
+      setCachedTickets(allParticipants.length);
+    } catch (e) {
+      console.error("Failed to cache participants:", e);
+    }
+  }, []);
+  // Offline: check in a ticket from cached data
+  const offlineCheckIn = useCallback(async (eventId, ticketCode) => {
+    try {
+      const stored = await AsyncStorage.getItem(`offline_participants_${eventId}`);
+      if (!stored) return { success: false, message: "Nu există date offline" };
+      const participants = JSON.parse(stored);
+      const match = participants.find(p =>
+        p.barcode === ticketCode || p.code === ticketCode || p.ticket_code === ticketCode
+      );
+      if (!match) return { success: false, message: "Bilet negăsit sau cod invalid" };
+      if (match.checked_in_at || match.status === "checked_in") {
+        return { success: false, message: "Acest bilet a fost deja scanat", type: "duplicate" };
+      }
+      // Mark as checked in locally
+      const updated = participants.map(p =>
+        p === match ? { ...p, checked_in_at: new Date().toISOString(), status: "checked_in" } : p
+      );
+      await AsyncStorage.setItem(`offline_participants_${eventId}`, JSON.stringify(updated));
+      // Queue for sync
+      const queue = JSON.parse(await AsyncStorage.getItem("offline_checkin_queue") || "[]");
+      queue.push({ eventId, ticketCode, timestamp: Date.now() });
+      await AsyncStorage.setItem("offline_checkin_queue", JSON.stringify(queue));
+      setCachedTickets(updated.length);
+      return { success: true, data: match };
+    } catch (e) {
+      return { success: false, message: "Eroare la scanarea offline" };
+    }
+  }, []);
 
   return (
     <AppContext.Provider value={{
@@ -176,6 +236,10 @@ export function AppProvider({ children }) {
       // Cache
       cachedTickets,
       setCachedTickets,
+
+      // Offline
+      downloadParticipantsForOffline,
+      offlineCheckIn,
     }}>
       {children}
     </AppContext.Provider>
