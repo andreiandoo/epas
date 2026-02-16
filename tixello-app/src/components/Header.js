@@ -1,32 +1,22 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import Svg, { Rect, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Rect, Line } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useApp } from '../context/AppContext';
 
-function TixelloLogo() {
+function AmBiletLogo() {
   return (
-    <Svg width={32} height={32} viewBox="0 0 32 32">
+    <Svg width={28} height={28} viewBox="0 0 48 48" fill="none">
       <Defs>
-        <LinearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#8B5CF6" />
-          <Stop offset="1" stopColor="#6366F1" />
+        <LinearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38">
+          <Stop stopColor="#A51C30" />
+          <Stop offset="1" stopColor="#C41E3A" />
         </LinearGradient>
       </Defs>
-      <Rect x={0} y={0} width={32} height={32} rx={8} fill="url(#logoGrad)" />
-      <Path
-        d="M8 12 L16 8 L24 12 L24 20 L16 24 L8 20 Z"
-        stroke="#FFFFFF"
-        strokeWidth={1.5}
-        fill="none"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M16 8 L16 24 M8 12 L24 12 M8 20 L24 20"
-        stroke="#FFFFFF"
-        strokeWidth={1}
-        opacity={0.6}
-      />
+      <Path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#logoGrad)" />
+      <Line x1="17" y1="15" x2="31" y2="15" stroke="white" strokeOpacity="0.25" strokeWidth="1.5" strokeLinecap="round" />
+      <Line x1="15" y1="19" x2="33" y2="19" stroke="white" strokeOpacity="0.35" strokeWidth="1.5" strokeLinecap="round" />
+      <Rect x="20" y="27" width="8" height="8" rx="1.5" fill="white" />
     </Svg>
   );
 }
@@ -72,8 +62,9 @@ export default function Header({ onNotificationPress }) {
       <View style={styles.inner}>
         {/* Left: Logo + Name */}
         <View style={styles.left}>
-          <TixelloLogo />
-          <Text style={styles.brandText}>Tixello</Text>
+          <AmBiletLogo />
+          <Text style={styles.logoTextAm}>Am</Text>
+          <Text style={styles.logoTextBilet}>Bilet</Text>
         </View>
 
         {/* Right: Connection Status + Notifications */}
@@ -143,13 +134,18 @@ const styles = StyleSheet.create({
   left: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 4,
   },
-  brandText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: 0.5,
+  logoTextAm: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.85)',
+    marginLeft: 6,
+  },
+  logoTextBilet: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#C41E3A',
   },
   right: {
     flexDirection: 'row',

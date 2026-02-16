@@ -6,7 +6,7 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
-import Svg, { Rect, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Rect, Line } from 'react-native-svg';
 import { colors } from '../theme/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -101,28 +101,28 @@ export default function SplashScreen({ onFinish }) {
             ]}
           />
           <View style={styles.iconWrap}>
-            <Svg viewBox="0 0 64 64" width={80} height={80}>
+            <Svg width={64} height={64} viewBox="0 0 48 48" fill="none">
               <Defs>
-                <LinearGradient id="splashGrad" x1="0" y1="0" x2="64" y2="64">
-                  <Stop offset="0" stopColor="#8B5CF6" />
-                  <Stop offset="1" stopColor="#6366F1" />
+                <LinearGradient id="splashGrad" x1="6" y1="10" x2="42" y2="38">
+                  <Stop stopColor="#A51C30" />
+                  <Stop offset="1" stopColor="#C41E3A" />
                 </LinearGradient>
               </Defs>
-              <Rect width="64" height="64" rx="16" fill="url(#splashGrad)" />
-              <Path
-                d="M16 24h32M16 32h24M16 40h16"
-                stroke="white"
-                strokeWidth="4"
-                strokeLinecap="round"
-              />
+              <Path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#splashGrad)" />
+              <Line x1="17" y1="15" x2="31" y2="15" stroke="white" strokeOpacity="0.25" strokeWidth="1.5" strokeLinecap="round" />
+              <Line x1="15" y1="19" x2="33" y2="19" stroke="white" strokeOpacity="0.35" strokeWidth="1.5" strokeLinecap="round" />
+              <Rect x="20" y="27" width="8" height="8" rx="1.5" fill="white" />
             </Svg>
           </View>
         </Animated.View>
 
         {/* Brand text */}
+        <Animated.View style={[styles.brandRow, { opacity: textOpacity }]}>
+          <Text style={styles.brandTextAm}>Am</Text>
+          <Text style={styles.brandTextBilet}>Bilet</Text>
+        </Animated.View>
         <Animated.View style={{ opacity: textOpacity }}>
-          <Text style={styles.brandText}>Tixello</Text>
-          <Text style={styles.tagline}>Event Staff Platform</Text>
+          <Text style={styles.tagline}>Scanare & Vânzare Bilete</Text>
         </Animated.View>
 
         {/* Loading bar */}
@@ -140,7 +140,7 @@ export default function SplashScreen({ onFinish }) {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Powered by Tixello</Text>
+        <Text style={styles.footerText}>Powered by AmBilet</Text>
       </View>
     </View>
   );
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: colors.purpleGlow,
+    backgroundColor: 'rgba(196,30,58,0.4)',
   },
   iconWrap: {
     width: 80,
@@ -176,12 +176,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brandText: {
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  brandTextAm: {
     fontSize: 36,
     fontWeight: '700',
-    color: colors.textPrimary,
+    color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
-    marginBottom: 8,
+  },
+  brandTextBilet: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#C41E3A',
+    textAlign: 'center',
   },
   tagline: {
     fontSize: 16,
@@ -203,7 +214,7 @@ const styles = StyleSheet.create({
   loaderBar: {
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.purple,
+    backgroundColor: '#C41E3A',
   },
   footer: {
     paddingBottom: 48,

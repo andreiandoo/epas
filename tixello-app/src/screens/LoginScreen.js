@@ -10,7 +10,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import Svg, { Rect, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Rect, Line } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,7 +27,7 @@ export default function LoginScreen({ onLoginSuccess }) {
     setError('');
 
     if (!email.trim() || !password.trim()) {
-      setError('Please enter email and password');
+      setError('Te rugăm să introduci emailul și parola');
       return;
     }
 
@@ -38,12 +38,12 @@ export default function LoginScreen({ onLoginSuccess }) {
         if (onLoginSuccess) onLoginSuccess();
       } else {
         setError(
-          (result && result.message) || 'Invalid email or password. Please try again.'
+          (result && result.message) || 'Email sau parolă incorectă. Te rugăm să încerci din nou.'
         );
       }
     } catch (err) {
       setError(
-        err.message || 'An error occurred. Please check your connection and try again.'
+        err.message || 'A apărut o eroare. Te rugăm să verifici conexiunea și să încerci din nou.'
       );
     } finally {
       setIsLoading(false);
@@ -63,26 +63,24 @@ export default function LoginScreen({ onLoginSuccess }) {
         {/* Header with logo */}
         <View style={styles.header}>
           <View style={styles.logoRow}>
-            <Svg viewBox="0 0 48 48" width={48} height={48}>
+            <Svg width={36} height={36} viewBox="0 0 48 48" fill="none">
               <Defs>
-                <LinearGradient id="loginGrad" x1="0" y1="0" x2="48" y2="48">
-                  <Stop offset="0" stopColor="#8B5CF6" />
-                  <Stop offset="1" stopColor="#6366F1" />
+                <LinearGradient id="loginGrad" x1="6" y1="10" x2="42" y2="38">
+                  <Stop stopColor="#A51C30" />
+                  <Stop offset="1" stopColor="#C41E3A" />
                 </LinearGradient>
               </Defs>
-              <Rect width="48" height="48" rx="12" fill="url(#loginGrad)" />
-              <Path
-                d="M12 18h24M12 24h18M12 30h12"
-                stroke="white"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
+              <Path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#loginGrad)" />
+              <Line x1="17" y1="15" x2="31" y2="15" stroke="white" strokeOpacity="0.25" strokeWidth="1.5" strokeLinecap="round" />
+              <Line x1="15" y1="19" x2="33" y2="19" stroke="white" strokeOpacity="0.35" strokeWidth="1.5" strokeLinecap="round" />
+              <Rect x="20" y="27" width="8" height="8" rx="1.5" fill="white" />
             </Svg>
-            <Text style={styles.brandText}>Tixello</Text>
+            <Text style={styles.brandTextAm}>Am</Text>
+            <Text style={styles.brandTextBilet}>Bilet</Text>
           </View>
 
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to manage your events</Text>
+          <Text style={styles.title}>Bine ai revenit</Text>
+          <Text style={styles.subtitle}>Conectează-te pentru a gestiona evenimentele</Text>
         </View>
 
         {/* Form */}
@@ -92,7 +90,7 @@ export default function LoginScreen({ onLoginSuccess }) {
             <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
-              placeholder="you@example.com"
+              placeholder="tu@exemplu.com"
               placeholderTextColor={colors.textQuaternary}
               value={email}
               onChangeText={setEmail}
@@ -105,11 +103,11 @@ export default function LoginScreen({ onLoginSuccess }) {
 
           {/* Password field */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>Parolă</Text>
             <View style={styles.passwordWrap}>
               <TextInput
                 style={styles.passwordInput}
-                placeholder="Enter your password"
+                placeholder="Introdu parola"
                 placeholderTextColor={colors.textQuaternary}
                 value={password}
                 onChangeText={setPassword}
@@ -126,7 +124,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                 activeOpacity={0.7}
               >
                 <Text style={styles.showPassText}>
-                  {showPassword ? 'Hide' : 'Show'}
+                  {showPassword ? 'Ascunde' : 'Arată'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -149,7 +147,7 @@ export default function LoginScreen({ onLoginSuccess }) {
             {isLoading ? (
               <ActivityIndicator color={colors.white} size="small" />
             ) : (
-              <Text style={styles.loginBtnText}>Sign In</Text>
+              <Text style={styles.loginBtnText}>Conectare</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -176,12 +174,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 32,
+    gap: 4,
   },
-  brandText: {
+  brandTextAm: {
     fontSize: 24,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginLeft: 12,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.85)',
+    marginLeft: 10,
+  },
+  brandTextBilet: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#C41E3A',
   },
   title: {
     fontSize: 28,
@@ -237,7 +241,7 @@ const styles = StyleSheet.create({
   showPassText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.purple,
+    color: '#C41E3A',
   },
   errorContainer: {
     backgroundColor: colors.redBg,
@@ -254,7 +258,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   loginBtn: {
-    backgroundColor: colors.purple,
+    backgroundColor: '#C41E3A',
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
