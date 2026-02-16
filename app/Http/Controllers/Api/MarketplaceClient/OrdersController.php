@@ -44,7 +44,19 @@ class OrdersController extends BaseController
             return $this->error('Event not available', 400);
         }
 
-        if (!$client->canSellForTenant($event->tenant_id)) {
+        // Derive tenant_id: prefer event's, then try organizer's, then client's first tenant
+        $tenantId = $event->tenant_id;
+        if (!$tenantId && $event->marketplace_organizer_id) {
+            $organizer = \App\Models\MarketplaceOrganizer::find($event->marketplace_organizer_id);
+            $tenantId = $organizer?->tenant_id;
+        }
+        if (!$tenantId) {
+            // Try the client's first active tenant as fallback
+            $firstTenant = $client->activeTenants()->first();
+            $tenantId = $firstTenant?->id;
+        }
+
+        if ($tenantId && !$client->canSellForTenant($tenantId)) {
             return $this->error('Not authorized to sell tickets for this event', 403);
         }
 
@@ -55,7 +67,7 @@ class OrdersController extends BaseController
             $customer = Customer::firstOrCreate(
                 [
                     'email' => $request->input('customer.email'),
-                    'tenant_id' => $event->tenant_id,
+                    'tenant_id' => $tenantId,
                 ],
                 [
                     'first_name' => $request->input('customer.first_name'),
@@ -67,7 +79,7 @@ class OrdersController extends BaseController
             // Calculate totals and validate availability
             $orderItems = [];
             $subtotal = 0;
-            $commission = $client->getCommissionForTenant($event->tenant_id);
+            $commission = $client->getCommissionForTenant($tenantId);
 
             foreach ($request->tickets as $ticketRequest) {
                 $ticketType = TicketType::where('id', $ticketRequest['ticket_type_id'])
@@ -110,7 +122,7 @@ class OrdersController extends BaseController
 
             // Create order
             $order = Order::create([
-                'tenant_id' => $event->tenant_id,
+                'tenant_id' => $tenantId,
                 'event_id' => $event->id,
                 'customer_id' => $customer->id,
                 'order_number' => 'MPC-' . strtoupper(Str::random(8)),
@@ -146,7 +158,7 @@ class OrdersController extends BaseController
                 // Create pending tickets
                 for ($i = 0; $i < $item['quantity']; $i++) {
                     Ticket::create([
-                        'tenant_id' => $event->tenant_id,
+                        'tenant_id' => $tenantId,
                         'order_id' => $order->id,
                         'order_item_id' => $orderItem->id,
                         'event_id' => $event->id,
@@ -164,7 +176,7 @@ class OrdersController extends BaseController
             Log::info('Marketplace order created', [
                 'order_id' => $order->id,
                 'marketplace_client_id' => $client->id,
-                'tenant_id' => $event->tenant_id,
+                'tenant_id' => $tenantId,
                 'total' => $total,
             ]);
 
