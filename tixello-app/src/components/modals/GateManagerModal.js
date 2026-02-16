@@ -16,20 +16,20 @@ import { colors } from '../../theme/colors';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const GATE_TYPES = ['Entry', 'VIP', 'POS', 'Exit'];
+const GATE_TYPES = ['Intrare', 'VIP', 'POS', 'Ieșire'];
 
 const DEFAULT_GATES = [
-  { id: '1', name: 'Gate A', type: 'Entry', location: 'North Entrance', active: true },
-  { id: '2', name: 'Gate B', type: 'Entry', location: 'South Entrance', active: true },
-  { id: '3', name: 'VIP Entrance', type: 'VIP', location: 'East Wing', active: true },
-  { id: '4', name: 'Box Office 1', type: 'POS', location: 'Main Hall', active: true },
-  { id: '5', name: 'Box Office 2', type: 'POS', location: 'West Wing', active: false },
+  { id: '1', name: 'Poarta A', type: 'Intrare', location: 'Intrarea Nord', active: true },
+  { id: '2', name: 'Poarta B', type: 'Intrare', location: 'Intrarea Sud', active: true },
+  { id: '3', name: 'Intrare VIP', type: 'VIP', location: 'Aripa Est', active: true },
+  { id: '4', name: 'Casierie 1', type: 'POS', location: 'Sala Principală', active: true },
+  { id: '5', name: 'Casierie 2', type: 'POS', location: 'Aripa Vest', active: false },
 ];
 
 function GateTypeIcon({ type, size = 18 }) {
   const iconColor = getTypeColor(type);
   switch (type) {
-    case 'Entry':
+    case 'Intrare':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <Path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" stroke={iconColor} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
@@ -47,7 +47,7 @@ function GateTypeIcon({ type, size = 18 }) {
           <Path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6" stroke={iconColor} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
         </Svg>
       );
-    case 'Exit':
+    case 'Ieșire':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <Path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke={iconColor} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
@@ -60,30 +60,30 @@ function GateTypeIcon({ type, size = 18 }) {
 
 function getTypeColor(type) {
   switch (type) {
-    case 'Entry': return colors.green;
+    case 'Intrare': return colors.green;
     case 'VIP': return colors.amber;
     case 'POS': return colors.cyan;
-    case 'Exit': return colors.red;
+    case 'Ieșire': return colors.red;
     default: return colors.textSecondary;
   }
 }
 
 function getTypeBg(type) {
   switch (type) {
-    case 'Entry': return colors.greenLight;
+    case 'Intrare': return colors.greenLight;
     case 'VIP': return colors.amberLight;
     case 'POS': return colors.cyanLight;
-    case 'Exit': return colors.redLight;
+    case 'Ieșire': return colors.redLight;
     default: return 'rgba(255,255,255,0.05)';
   }
 }
 
 function getTypeBorder(type) {
   switch (type) {
-    case 'Entry': return colors.greenBorder;
+    case 'Intrare': return colors.greenBorder;
     case 'VIP': return colors.amberBorder;
     case 'POS': return colors.cyanBorder;
-    case 'Exit': return colors.redBorder;
+    case 'Ieșire': return colors.redBorder;
     default: return 'rgba(255,255,255,0.08)';
   }
 }
@@ -151,7 +151,7 @@ function GateCard({ gate, onToggle, onDelete }) {
       <View style={styles.gateCardBottom}>
         {/* Active toggle */}
         <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>{gate.active ? 'Active' : 'Inactive'}</Text>
+          <Text style={styles.toggleLabel}>{gate.active ? 'Activă' : 'Inactivă'}</Text>
           <Switch
             value={gate.active}
             onValueChange={() => onToggle(gate.id)}
@@ -184,7 +184,7 @@ function GateCard({ gate, onToggle, onDelete }) {
 export default function GateManagerModal({ visible, onClose }) {
   const [gates, setGates] = useState(DEFAULT_GATES);
   const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState('Entry');
+  const [newType, setNewType] = useState('Intrare');
   const [newLocation, setNewLocation] = useState('');
 
   const handleAddGate = () => {
@@ -194,14 +194,14 @@ export default function GateManagerModal({ visible, onClose }) {
       id: String(Date.now()),
       name: newName.trim(),
       type: newType,
-      location: newLocation.trim() || 'Not specified',
+      location: newLocation.trim() || 'Nespecificat',
       active: true,
     };
 
     setGates(prev => [...prev, newGate]);
     setNewName('');
     setNewLocation('');
-    setNewType('Entry');
+    setNewType('Intrare');
   };
 
   const handleToggle = (gateId) => {
@@ -228,7 +228,7 @@ export default function GateManagerModal({ visible, onClose }) {
           <View style={styles.header}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={styles.title}>Gate Management</Text>
+              <Text style={styles.title}>Administrare Porți</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                   <Path
@@ -250,14 +250,14 @@ export default function GateManagerModal({ visible, onClose }) {
           >
             {/* Add New Gate Form */}
             <View style={styles.addForm}>
-              <Text style={styles.sectionTitle}>Add New Gate</Text>
+              <Text style={styles.sectionTitle}>Adaugă Poartă Nouă</Text>
 
               {/* Name + Type row */}
               <View style={styles.formRow}>
                 <View style={styles.formFieldFlex}>
                   <TextInput
                     style={styles.formInput}
-                    placeholder="Gate name"
+                    placeholder="Numele porții"
                     placeholderTextColor={colors.textQuaternary}
                     value={newName}
                     onChangeText={setNewName}
@@ -266,7 +266,7 @@ export default function GateManagerModal({ visible, onClose }) {
               </View>
 
               {/* Type picker */}
-              <Text style={styles.formLabel}>Type</Text>
+              <Text style={styles.formLabel}>Tip</Text>
               <TypePicker selected={newType} onSelect={setNewType} />
 
               {/* Location + Add button row */}
@@ -274,7 +274,7 @@ export default function GateManagerModal({ visible, onClose }) {
                 <View style={styles.formFieldFlex}>
                   <TextInput
                     style={styles.formInput}
-                    placeholder="Location"
+                    placeholder="Locație"
                     placeholderTextColor={colors.textQuaternary}
                     value={newLocation}
                     onChangeText={setNewLocation}
@@ -294,7 +294,7 @@ export default function GateManagerModal({ visible, onClose }) {
                       strokeLinecap="round"
                     />
                   </Svg>
-                  <Text style={styles.addButtonText}>Add Gate</Text>
+                  <Text style={styles.addButtonText}>Adaugă Poartă</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -305,7 +305,7 @@ export default function GateManagerModal({ visible, onClose }) {
             {/* Current Gates */}
             <View style={styles.gatesSection}>
               <View style={styles.gatesSectionHeader}>
-                <Text style={styles.sectionTitle}>Current Gates</Text>
+                <Text style={styles.sectionTitle}>Porți Curente</Text>
                 <View style={styles.gateCountBadge}>
                   <Text style={styles.gateCountText}>{gates.length}</Text>
                 </View>
@@ -313,7 +313,7 @@ export default function GateManagerModal({ visible, onClose }) {
 
               {gates.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyText}>No gates configured</Text>
+                  <Text style={styles.emptyText}>Nicio poartă configurată</Text>
                 </View>
               ) : (
                 gates.map(gate => (

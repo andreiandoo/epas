@@ -16,7 +16,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const EMERGENCY_OPTIONS = [
   {
     id: 'medical',
-    label: 'Medical Emergency',
+    label: 'Urgență Medicală',
     severity: 'high',
     icon: (color) => (
       <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -26,7 +26,7 @@ const EMERGENCY_OPTIONS = [
   },
   {
     id: 'fire',
-    label: 'Fire / Evacuation',
+    label: 'Incendiu / Evacuare',
     severity: 'high',
     icon: (color) => (
       <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -36,7 +36,7 @@ const EMERGENCY_OPTIONS = [
   },
   {
     id: 'security',
-    label: 'Security Issue',
+    label: 'Problemă de Securitate',
     severity: 'high',
     icon: (color) => (
       <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -46,7 +46,7 @@ const EMERGENCY_OPTIONS = [
   },
   {
     id: 'technical',
-    label: 'Technical Problem',
+    label: 'Problemă Tehnică',
     severity: 'medium',
     icon: (color) => (
       <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -56,7 +56,7 @@ const EMERGENCY_OPTIONS = [
   },
   {
     id: 'crowd',
-    label: 'Crowd Control',
+    label: 'Control Mulțime',
     severity: 'medium',
     icon: (color) => (
       <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -66,7 +66,7 @@ const EMERGENCY_OPTIONS = [
   },
   {
     id: 'equipment',
-    label: 'Equipment Failure',
+    label: 'Defecțiune Echipament',
     severity: 'medium',
     icon: (color) => (
       <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -77,7 +77,7 @@ const EMERGENCY_OPTIONS = [
   },
   {
     id: 'weather',
-    label: 'Weather Alert',
+    label: 'Alertă Meteo',
     severity: 'low',
     icon: (color) => (
       <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -87,7 +87,7 @@ const EMERGENCY_OPTIONS = [
   },
   {
     id: 'other',
-    label: 'Other Issue',
+    label: 'Altele',
     severity: 'low',
     icon: (color) => (
       <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -159,8 +159,8 @@ function SuccessState() {
           />
         </Svg>
       </View>
-      <Text style={styles.successTitle}>Alert Sent!</Text>
-      <Text style={styles.successSubtitle}>Supervisors have been notified</Text>
+      <Text style={styles.successTitle}>Alertă Trimisă!</Text>
+      <Text style={styles.successSubtitle}>Supervizorii au fost notificați</Text>
     </Animated.View>
   );
 }
@@ -214,7 +214,7 @@ export default function EmergencyModal({ visible, onClose }) {
                         strokeLinejoin="round"
                       />
                     </Svg>
-                    <Text style={styles.title}>Report Issue</Text>
+                    <Text style={styles.title}>Raportează Problemă</Text>
                   </View>
                   <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
                     <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -228,7 +228,7 @@ export default function EmergencyModal({ visible, onClose }) {
                     </Svg>
                   </TouchableOpacity>
                 </View>
-                <Text style={styles.description}>Select an issue to notify supervisors</Text>
+                <Text style={styles.description}>Selectează o problemă pentru a notifica supervizorii</Text>
               </>
             )}
           </View>

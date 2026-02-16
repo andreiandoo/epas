@@ -47,9 +47,9 @@ function PulsingDot() {
 function StatusBadge({ category }) {
   const configs = {
     live: { label: 'LIVE', color: colors.green, bg: colors.greenLight, border: colors.greenBorder, pulse: true },
-    today: { label: 'Today', color: colors.amber, bg: colors.amberLight, border: colors.amberBorder, pulse: false },
-    past: { label: 'Ended', color: colors.textTertiary, bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.08)', pulse: false },
-    future: { label: 'Upcoming', color: colors.purple, bg: colors.purpleLight, border: colors.purpleBorder, pulse: false },
+    today: { label: 'Azi', color: colors.amber, bg: colors.amberLight, border: colors.amberBorder, pulse: false },
+    past: { label: 'Încheiat', color: colors.textTertiary, bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.08)', pulse: false },
+    future: { label: 'Viitor', color: colors.purple, bg: colors.purpleLight, border: colors.purpleBorder, pulse: false },
   };
   const config = configs[category] || configs.future;
 
@@ -154,7 +154,7 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent })
           <View style={styles.header}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={styles.title}>Select Event</Text>
+              <Text style={styles.title}>Selectează Eveniment</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                   <Path
@@ -186,7 +186,7 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent })
                     strokeLinejoin="round"
                   />
                 </Svg>
-                <Text style={styles.emptyText}>No events available</Text>
+                <Text style={styles.emptyText}>Niciun eveniment disponibil</Text>
               </View>
             ) : (
               categories.map(category => {

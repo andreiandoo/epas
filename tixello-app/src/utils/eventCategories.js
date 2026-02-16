@@ -47,10 +47,10 @@ export function groupEventsByCategory(events) {
 
 export function getCategoryLabel(category) {
   switch (category) {
-    case 'live': return 'LIVE NOW';
-    case 'today': return 'TODAY';
-    case 'past': return 'PAST EVENTS';
-    case 'future': return 'UPCOMING';
+    case 'live': return 'LIVE ACUM';
+    case 'today': return 'AZI';
+    case 'past': return 'EVENIMENTE TRECUTE';
+    case 'future': return 'VIITOARE';
     default: return category.toUpperCase();
   }
 }

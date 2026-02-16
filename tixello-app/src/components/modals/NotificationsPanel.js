@@ -97,7 +97,7 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <Text style={styles.title}>Notifications</Text>
+              <Text style={styles.title}>Notificări</Text>
               {unreadCount > 0 && (
                 <View style={styles.unreadBadge}>
                   <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
@@ -110,7 +110,7 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
                 activeOpacity={0.7}
                 style={styles.markAllButton}
               >
-                <Text style={styles.markAllText}>Mark all read</Text>
+                <Text style={styles.markAllText}>Marchează toate citite</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -132,7 +132,7 @@ export default function NotificationsPanel({ visible, onClose, notifications = [
                     strokeLinejoin="round"
                   />
                 </Svg>
-                <Text style={styles.emptyText}>No notifications</Text>
+                <Text style={styles.emptyText}>Nicio notificare</Text>
               </View>
             ) : (
               notifications.map((notification, index) => (

@@ -14,8 +14,8 @@ import { colors } from '../../theme/colors';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const GATES = ['Gate A', 'Gate B', 'VIP Entrance', 'Box Office 1', 'Box Office 2'];
-const ROLES = ['Scanner', 'POS', 'Supervisor'];
+const GATES = ['Poarta A', 'Poarta B', 'Intrare VIP', 'Casierie 1', 'Casierie 2'];
+const ROLES = ['Scanner', 'POS', 'Supervizor'];
 
 function getInitials(name) {
   if (!name) return '??';
@@ -28,7 +28,7 @@ function getRoleColor(role) {
   switch (role) {
     case 'Scanner': return colors.green;
     case 'POS': return colors.cyan;
-    case 'Supervisor': return colors.amber;
+    case 'Supervizor': return colors.amber;
     default: return colors.textSecondary;
   }
 }
@@ -37,7 +37,7 @@ function getRoleBg(role) {
   switch (role) {
     case 'Scanner': return colors.greenLight;
     case 'POS': return colors.cyanLight;
-    case 'Supervisor': return colors.amberLight;
+    case 'Supervizor': return colors.amberLight;
     default: return 'rgba(255,255,255,0.05)';
   }
 }
@@ -46,7 +46,7 @@ function getRoleBorder(role) {
   switch (role) {
     case 'Scanner': return colors.greenBorder;
     case 'POS': return colors.cyanBorder;
-    case 'Supervisor': return colors.amberBorder;
+    case 'Supervizor': return colors.amberBorder;
     default: return 'rgba(255,255,255,0.08)';
   }
 }
@@ -201,7 +201,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
           <View style={styles.header}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={styles.title}>Staff Assignment & Scheduling</Text>
+              <Text style={styles.title}>Asignare Personal & Programare</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                   <Path
@@ -223,20 +223,20 @@ export default function StaffAssignmentModal({ visible, onClose }) {
           >
             {/* Add Assignment Form */}
             <View style={styles.addForm}>
-              <Text style={styles.sectionTitle}>Add Assignment</Text>
+              <Text style={styles.sectionTitle}>Adaugă Asignare</Text>
 
               {/* Staff Name */}
-              <Text style={styles.formLabel}>Staff Name</Text>
+              <Text style={styles.formLabel}>Numele Personalului</Text>
               <TextInput
                 style={styles.formInput}
-                placeholder="Enter staff member name"
+                placeholder="Introduceți numele personalului"
                 placeholderTextColor={colors.textQuaternary}
                 value={staffName}
                 onChangeText={setStaffName}
               />
 
               {/* Gate Picker */}
-              <Text style={styles.formLabel}>Gate</Text>
+              <Text style={styles.formLabel}>Poartă</Text>
               <OptionPicker
                 options={GATES}
                 selected={selectedGate}
@@ -244,7 +244,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
               />
 
               {/* Role Picker */}
-              <Text style={styles.formLabel}>Role</Text>
+              <Text style={styles.formLabel}>Rol</Text>
               <OptionPicker
                 options={ROLES}
                 selected={selectedRole}
@@ -255,10 +255,10 @@ export default function StaffAssignmentModal({ visible, onClose }) {
               />
 
               {/* Shift Times */}
-              <Text style={styles.formLabel}>Shift Times</Text>
+              <Text style={styles.formLabel}>Program Tură</Text>
               <View style={styles.timeRow}>
                 <View style={styles.timeField}>
-                  <Text style={styles.timeFieldLabel}>Start</Text>
+                  <Text style={styles.timeFieldLabel}>Început</Text>
                   <TextInput
                     style={styles.formInput}
                     placeholder="09:00"
@@ -269,10 +269,10 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                   />
                 </View>
                 <View style={styles.timeSeparator}>
-                  <Text style={styles.timeSeparatorText}>to</Text>
+                  <Text style={styles.timeSeparatorText}>până la</Text>
                 </View>
                 <View style={styles.timeField}>
-                  <Text style={styles.timeFieldLabel}>End</Text>
+                  <Text style={styles.timeFieldLabel}>Sfârșit</Text>
                   <TextInput
                     style={styles.formInput}
                     placeholder="17:00"
@@ -299,7 +299,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                     strokeLinecap="round"
                   />
                 </Svg>
-                <Text style={styles.addButtonText}>Add Assignment</Text>
+                <Text style={styles.addButtonText}>Adaugă Asignare</Text>
               </TouchableOpacity>
             </View>
 
@@ -309,7 +309,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
             {/* Current Assignments */}
             <View style={styles.assignmentsSection}>
               <View style={styles.assignmentsSectionHeader}>
-                <Text style={styles.sectionTitle}>Current Assignments</Text>
+                <Text style={styles.sectionTitle}>Asignări Curente</Text>
                 <View style={styles.countBadge}>
                   <Text style={styles.countBadgeText}>{assignments.length}</Text>
                 </View>
@@ -326,8 +326,8 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                       strokeLinejoin="round"
                     />
                   </Svg>
-                  <Text style={styles.emptyText}>No staff assignments yet</Text>
-                  <Text style={styles.emptySubtext}>Add staff members using the form above</Text>
+                  <Text style={styles.emptyText}>Nicio asignare de personal încă</Text>
+                  <Text style={styles.emptySubtext}>Adăugați personal folosind formularul de mai sus</Text>
                 </View>
               ) : (
                 assignments.map(assignment => (

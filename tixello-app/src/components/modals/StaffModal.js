@@ -36,7 +36,7 @@ function StatusBadge({ status }) {
     <View style={[styles.statusBadge, isActive ? styles.statusBadgeActive : styles.statusBadgeBreak]}>
       <View style={[styles.statusDot, { backgroundColor: isActive ? colors.green : colors.textTertiary }]} />
       <Text style={[styles.statusBadgeText, { color: isActive ? colors.green : colors.textTertiary }]}>
-        {isActive ? 'Active' : 'Break'}
+        {isActive ? 'Activ' : 'Pauză'}
       </Text>
     </View>
   );
@@ -75,12 +75,12 @@ function StaffCard({ member }) {
 
       {/* Details grid */}
       <View style={styles.detailsGrid}>
-        <DetailItem label="Gate" value={member.gate || '--'} />
-        <DetailItem label="Shift Start" value={member.shiftStart || '--'} />
-        <DetailItem label="Last Active" value={member.lastActive || '--'} />
-        <DetailItem label="Scans" value={member.scans != null ? String(member.scans) : '0'} />
-        <DetailItem label="Sales" value={member.sales != null ? String(member.sales) : '0'} />
-        <DetailItem label="Cash" value={member.cashAmount != null ? formatCurrency(member.cashAmount) : formatCurrency(0)} />
+        <DetailItem label="Poartă" value={member.gate || '--'} />
+        <DetailItem label="Început Tură" value={member.shiftStart || '--'} />
+        <DetailItem label="Ultima Activitate" value={member.lastActive || '--'} />
+        <DetailItem label="Scanări" value={member.scans != null ? String(member.scans) : '0'} />
+        <DetailItem label="Vânzări" value={member.sales != null ? String(member.sales) : '0'} />
+        <DetailItem label="Numerar" value={member.cashAmount != null ? formatCurrency(member.cashAmount) : formatCurrency(0)} />
         <DetailItem label="Card" value={member.cardAmount != null ? formatCurrency(member.cardAmount) : formatCurrency(0)} />
       </View>
     </View>
@@ -106,7 +106,7 @@ export default function StaffModal({ visible, onClose, staffMembers = [] }) {
           <View style={styles.header}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={styles.title}>Staff Overview</Text>
+              <Text style={styles.title}>Prezentare Echipă</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                   <Path
@@ -123,9 +123,9 @@ export default function StaffModal({ visible, onClose, staffMembers = [] }) {
 
           {/* Summary Row */}
           <View style={styles.summaryRow}>
-            <SummaryCard label="Active" value={String(activeCount)} color={colors.green} />
-            <SummaryCard label="Total Scans" value={String(totalScans)} color={colors.purple} />
-            <SummaryCard label="Total Sales" value={String(totalSales)} color={colors.amber} />
+            <SummaryCard label="Activi" value={String(activeCount)} color={colors.green} />
+            <SummaryCard label="Total Scanări" value={String(totalScans)} color={colors.purple} />
+            <SummaryCard label="Total Vânzări" value={String(totalSales)} color={colors.amber} />
           </View>
 
           {/* Staff List */}
@@ -145,7 +145,7 @@ export default function StaffModal({ visible, onClose, staffMembers = [] }) {
                     strokeLinejoin="round"
                   />
                 </Svg>
-                <Text style={styles.emptyText}>No staff members assigned</Text>
+                <Text style={styles.emptyText}>Niciun membru al echipei asignat</Text>
               </View>
             ) : (
               staffMembers.map((member, index) => (

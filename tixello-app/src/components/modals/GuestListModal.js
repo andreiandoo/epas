@@ -82,7 +82,7 @@ function GuestItem({ guest, onCheckIn, isCheckingIn }) {
           {isCheckingIn ? (
             <ActivityIndicator size="small" color={colors.purple} />
           ) : (
-            <Text style={styles.checkInButtonText}>Check In</Text>
+            <Text style={styles.checkInButtonText}>Check-in</Text>
           )}
         </TouchableOpacity>
       )}
@@ -175,7 +175,7 @@ export default function GuestListModal({ visible, onClose }) {
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <View style={styles.titleRow}>
-                <Text style={styles.title}>Guest List</Text>
+                <Text style={styles.title}>Listă Invitați</Text>
                 <View style={styles.countBadge}>
                   <Text style={styles.countBadgeText}>{checkedCount}/{guests.length}</Text>
                 </View>
@@ -208,7 +208,7 @@ export default function GuestListModal({ visible, onClose }) {
               </Svg>
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search guests..."
+                placeholder="Caută invitați..."
                 placeholderTextColor={colors.textQuaternary}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -239,7 +239,7 @@ export default function GuestListModal({ visible, onClose }) {
             {isLoading ? (
               <View style={styles.emptyState}>
                 <ActivityIndicator size="large" color={colors.purple} />
-                <Text style={styles.emptyText}>Loading guests...</Text>
+                <Text style={styles.emptyText}>Se încarcă invitații...</Text>
               </View>
             ) : filteredGuests.length === 0 ? (
               <View style={styles.emptyState}>
@@ -253,7 +253,7 @@ export default function GuestListModal({ visible, onClose }) {
                   />
                 </Svg>
                 <Text style={styles.emptyText}>
-                  {searchQuery ? 'No guests found' : 'No participants yet'}
+                  {searchQuery ? 'Niciun invitat găsit' : 'Niciun participant încă'}
                 </Text>
               </View>
             ) : (
