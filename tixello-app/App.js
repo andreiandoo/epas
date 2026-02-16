@@ -3,6 +3,7 @@ import { View, StyleSheet, StatusBar, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -93,6 +94,7 @@ function TabIcon({ name, focused }) {
 
 function MainTabs() {
   const { userRole } = useAuth();
+  const insets = useSafeAreaInsets();
   const { groupedEvents, selectEvent, fetchEvents } = useEvent();
   const { notifications, markAllRead, shiftStartTime } = useApp();
 
@@ -129,9 +131,9 @@ function MainTabs() {
             backgroundColor: colors.background,
             borderTopColor: 'rgba(255,255,255,0.05)',
             borderTopWidth: 1,
-            paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+            paddingBottom: Math.max(insets.bottom, 8),
             paddingTop: 8,
-            height: Platform.OS === 'ios' ? 85 : 65,
+            height: 56 + Math.max(insets.bottom, 8),
           },
           tabBarLabelStyle: {
             fontSize: 11,
