@@ -18,6 +18,7 @@ import { useEvent } from '../context/EventContext';
 import { useApp } from '../context/AppContext';
 import { checkinByCode } from '../api/participants';
 import { publicApiGet } from '../api/client';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SCANNER_SIZE = 280;
@@ -217,6 +218,9 @@ export default function CheckInScreen({ navigation }) {
   const [avgWaitTime, setAvgWaitTime] = useState(0);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualCode, setManualCode] = useState('');
+  const [permission, requestPermission] = useCameraPermissions();
+  const [cameraActive, setCameraActive] = useState(false);
+  const [scannedLock, setScannedLock] = useState(false);
 
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const scanLineLoop = useRef(null);
@@ -306,6 +310,7 @@ export default function CheckInScreen({ navigation }) {
     setShowManualEntry(false);
     setManualCode('');
     setIsScanning(true);
+    setCameraActive(false);
     setScanResult(null);
     startScanLineAnimation();
 
@@ -402,6 +407,15 @@ export default function CheckInScreen({ navigation }) {
       setScanResult(null);
     }, 3000);
   }, [selectedEvent, vibrationFeedback, addScan, refreshStats, startScanLineAnimation, stopScanLineAnimation]);
+
+  const handleBarcodeScan = useCallback(({ data }) => {
+    if (scannedLock || isScanning) return;
+    setScannedLock(true);
+    setCameraActive(false);
+    handleCheckIn(data);
+    // Reset lock after processing
+    setTimeout(() => setScannedLock(false), 2000);
+  }, [scannedLock, isScanning, handleCheckIn]);
 
   // ── Scan line translateY interpolation ──
 
@@ -582,11 +596,24 @@ export default function CheckInScreen({ navigation }) {
               getScannerGlowStyle(),
             ]}
           >
-            {/* Camera placeholder background */}
-            <View style={styles.scannerPlaceholder}>
-              <ScannerIcon size={48} color={colors.textQuaternary} />
-              <Text style={styles.scannerPlaceholderText}>Apasă mai jos pentru a scana</Text>
-            </View>
+            {/* Camera or placeholder */}
+            {cameraActive && permission?.granted ? (
+              <CameraView
+                style={StyleSheet.absoluteFillObject}
+                facing="back"
+                barcodeScannerSettings={{
+                  barcodeTypes: ['qr', 'code128', 'code39', 'ean13', 'ean8'],
+                }}
+                onBarcodeScanned={handleBarcodeScan}
+              />
+            ) : (
+              <View style={styles.scannerPlaceholder}>
+                <ScannerIcon size={48} color={colors.textQuaternary} />
+                <Text style={styles.scannerPlaceholderText}>
+                  {permission?.granted ? 'Apasă pentru a scana' : 'Cameră necesară pentru scanare'}
+                </Text>
+              </View>
+            )}
 
             {/* Animated scan line */}
             {isScanning && (
@@ -634,7 +661,14 @@ export default function CheckInScreen({ navigation }) {
               isScanning && styles.scanButtonScanning,
             ]}
             activeOpacity={0.8}
-            onPress={() => setShowManualEntry(true)}
+            onPress={async () => {
+              if (!permission?.granted) {
+                const result = await requestPermission();
+                if (!result.granted) return;
+              }
+              setCameraActive(!cameraActive);
+              setScanResult(null);
+            }}
             disabled={isShiftPaused}
           >
             <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
@@ -647,7 +681,7 @@ export default function CheckInScreen({ navigation }) {
               />
             </Svg>
             <Text style={styles.scanButtonText}>
-              {isScanning ? 'Se scanează...' : scanResult ? 'Scanează Următorul' : 'Începe Scanarea'}
+              {isScanning ? 'Se scanează...' : cameraActive ? 'Oprește Camera' : scanResult ? 'Scanează Următorul' : 'Începe Scanarea'}
             </Text>
           </TouchableOpacity>
 
