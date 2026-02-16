@@ -395,7 +395,7 @@ const AmbiletEventCard = {
             id: apiEvent.id,
             slug: apiEvent.slug || '',
             title: apiEvent.name || apiEvent.title || 'Eveniment',
-            image: apiEvent.image_url || apiEvent.featured_image || apiEvent.image || null,
+            image: apiEvent.poster_url || apiEvent.image_url || apiEvent.featured_image || apiEvent.image || null,
             date: date,
             day: date ? date.getDate() : '',
             month: date ? this.MONTHS[date.getMonth()] : '',
