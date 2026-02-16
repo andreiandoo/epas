@@ -59,9 +59,9 @@ class ArtistResource extends Resource
                                     ->label('Nume artist')
                                     ->required()
                                     ->maxLength(255)
-                                    ->live(onBlur: true)
-                                    ->afterStateUpdated(function ($state, SSet $set) {
-                                        if ($state) $set('slug', Str::slug($state));
+                                    ->live(debounce: '500ms')
+                                    ->afterStateUpdated(function ($state, SSet $set, $context) {
+                                        if ($state && $context === 'create') $set('slug', Str::slug($state));
                                     }),
                                 Forms\Components\TextInput::make('slug')
                                     ->label('Slug')
@@ -70,6 +70,60 @@ class ArtistResource extends Resource
                                     ->unique(ignoreRecord: true)
                                     ->rule('alpha_dash')
                                     ->placeholder('auto-generated-from-name'),
+
+                                // Real-time search for existing artists in core DB (only on create)
+                                Forms\Components\Placeholder::make('existing_artists_search')
+                                    ->label('')
+                                    ->content(function ($get) use ($marketplace) {
+                                        $name = $get('name');
+                                        if (empty($name) || mb_strlen($name) < 2) {
+                                            return '';
+                                        }
+
+                                        $artists = Artist::where('name', 'LIKE', "%{$name}%")
+                                            ->where(function ($q) use ($marketplace) {
+                                                $q->whereNull('marketplace_client_id')
+                                                    ->orWhere('marketplace_client_id', $marketplace?->id);
+                                            })
+                                            ->limit(5)
+                                            ->get();
+
+                                        if ($artists->isEmpty()) {
+                                            return new \Illuminate\Support\HtmlString(
+                                                '<div class="text-xs text-gray-400 italic py-1">Niciun artist existent găsit pentru „' . e($name) . '"</div>'
+                                            );
+                                        }
+
+                                        $html = '<div class="space-y-1 py-1">'
+                                            . '<div class="text-xs font-medium text-amber-600 mb-1">⚠ Artiști existenți cu nume similar:</div>';
+
+                                        foreach ($artists as $artist) {
+                                            $isPartner = $artist->marketplace_client_id === $marketplace?->id;
+                                            $city = $artist->city ? ' — ' . e($artist->city) : '';
+
+                                            if ($isPartner) {
+                                                // Already a partner - link to edit
+                                                $editUrl = ArtistResource::getUrl('edit', ['record' => $artist]);
+                                                $html .= '<div class="flex items-center justify-between gap-2 px-2 py-1 rounded bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">'
+                                                    . '<span class="text-xs"><strong>' . e($artist->name) . '</strong>' . $city . '</span>'
+                                                    . '<a href="' . $editUrl . '" class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200">'
+                                                    . '✓ Partener — Editează</a>'
+                                                    . '</div>';
+                                            } else {
+                                                // Available to add as partner
+                                                $partnerUrl = \App\Filament\Marketplace\Pages\PartnerArtists::getUrl();
+                                                $html .= '<div class="flex items-center justify-between gap-2 px-2 py-1 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">'
+                                                    . '<span class="text-xs"><strong>' . e($artist->name) . '</strong>' . $city . '</span>'
+                                                    . '<a href="' . $partnerUrl . '?tableSearch=' . urlencode($artist->name) . '" class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-100 rounded hover:bg-amber-200">'
+                                                    . '+ Adaugă partener</a>'
+                                                    . '</div>';
+                                            }
+                                        }
+
+                                        $html .= '</div>';
+                                        return new \Illuminate\Support\HtmlString($html);
+                                    })
+                                    ->visible(fn ($context) => $context === 'create'),
                             ])->columns(1),
 
                         // IMAGES
@@ -82,19 +136,25 @@ class ArtistResource extends Resource
                                     ->image()
                                     ->disk('public')
                                     ->directory('artists')
-                                    ->visibility('public'),
+                                    ->visibility('public')
+                                    ->maxSize(10240)
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
                                 Forms\Components\FileUpload::make('logo_url')
                                     ->label('Logo')
                                     ->image()
                                     ->disk('public')
                                     ->directory('artists/logos')
-                                    ->visibility('public'),
+                                    ->visibility('public')
+                                    ->maxSize(10240)
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
                                 Forms\Components\FileUpload::make('portrait_url')
                                     ->label('Portret')
                                     ->image()
                                     ->disk('public')
                                     ->directory('artists/portraits')
-                                    ->visibility('public'),
+                                    ->visibility('public')
+                                    ->maxSize(10240)
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
                             ])->columns(3),
                     ]),
                     // BIOGRAPHY - EN/RO

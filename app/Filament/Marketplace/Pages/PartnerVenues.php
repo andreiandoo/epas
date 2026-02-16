@@ -105,9 +105,12 @@ class PartnerVenues extends Page implements HasForms, HasTable
                     ),
                 Tables\Filters\SelectFilter::make('city')
                     ->label('Oraș')
-                    ->options(fn () => Venue::whereNull('marketplace_client_id')
-                        ->orWhere('marketplace_client_id', $marketplace?->id)
+                    ->options(fn () => Venue::where(function (Builder $q) use ($marketplace) {
+                            $q->whereNull('marketplace_client_id')
+                                ->orWhere('marketplace_client_id', $marketplace?->id);
+                        })
                         ->whereNotNull('city')
+                        ->where('city', '!=', '')
                         ->distinct()
                         ->pluck('city', 'city')
                         ->toArray()
