@@ -8,6 +8,8 @@ import {
   Animated,
   Dimensions,
   Vibration,
+  Modal,
+  TextInput,
 } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Rect, Line } from 'react-native-svg';
 import { colors } from '../theme/colors';
@@ -182,6 +184,19 @@ function ScannerCorner({ position, color }) {
   );
 }
 
+// ─── Extract Ticket Code Helper ─────────────────────────────────────────────
+function extractTicketCode(input) {
+  if (!input) return null;
+  const trimmed = input.trim();
+  // Try to extract from URL like https://...tixello.com/t/CODE or /verify/CODE
+  const urlMatch = trimmed.match(/\/t\/([A-Za-z0-9_-]+)/);
+  if (urlMatch) return urlMatch[1];
+  const verifyMatch = trimmed.match(/\/verify\/([A-Za-z0-9_-]+)/);
+  if (verifyMatch) return verifyMatch[1];
+  // Use raw input as code
+  return trimmed;
+}
+
 // ─── Main Component ──────────────────────────────────────────
 
 export default function CheckInScreen({ navigation }) {
@@ -200,6 +215,8 @@ export default function CheckInScreen({ navigation }) {
   const [scanResult, setScanResult] = useState(null); // { type: 'valid'|'duplicate'|'invalid', data: {} }
   const [scansPerMinute, setScansPerMinute] = useState(0);
   const [avgWaitTime, setAvgWaitTime] = useState(0);
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [manualCode, setManualCode] = useState('');
 
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const scanLineLoop = useRef(null);
@@ -278,39 +295,35 @@ export default function CheckInScreen({ navigation }) {
     };
   };
 
-  // ── Handle scan ──
+  // ── Handle check-in ──
 
-  const handleScan = useCallback(async () => {
-    if (!selectedEvent) return;
+  const handleCheckIn = useCallback(async (inputCode) => {
+    if (!selectedEvent || !inputCode) return;
 
+    const code = extractTicketCode(inputCode);
+    if (!code) return;
+
+    setShowManualEntry(false);
+    setManualCode('');
     setIsScanning(true);
     setScanResult(null);
     startScanLineAnimation();
 
-    // Simulate scan delay (will be replaced with camera)
-    const simulatedCodes = [
-      'TICKET-VALID-001',
-      'TICKET-VALID-002',
-      'TICKET-DUP-001',
-      'TICKET-INVALID-999',
-    ];
-    const randomCode = simulatedCodes[Math.floor(Math.random() * simulatedCodes.length)];
-
     try {
-      const response = await checkinByCode(randomCode);
+      const response = await checkinByCode(code);
 
       stopScanLineAnimation();
       setIsScanning(false);
 
-      if (response.success) {
-        const participant = response.data;
+      if (response.success || response.data) {
+        const participant = response.data || response;
         const result = {
           type: 'valid',
           data: {
             name: participant.full_name || participant.name || 'Attendee',
             ticketType: participant.ticket_type_name || participant.ticket_type || 'General',
             seat: participant.seat || null,
-            code: randomCode,
+            code: code,
           },
         };
         setScanResult(result);
@@ -327,7 +340,7 @@ export default function CheckInScreen({ navigation }) {
           name: result.data.name,
           ticketType: result.data.ticketType,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          code: randomCode,
+          code: code,
         });
 
         refreshStats();
@@ -358,13 +371,13 @@ export default function CheckInScreen({ navigation }) {
           name: error.attendee_name || 'Unknown',
           ticketType: error.ticket_type || 'Ticket',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          code: randomCode,
+          code: code,
         });
       } else {
         const result = {
           type: 'invalid',
           data: {
-            message: message || 'Ticket not found or event cancelled',
+            message: message || 'Ticket not found or invalid code',
           },
         };
         setScanResult(result);
@@ -379,7 +392,7 @@ export default function CheckInScreen({ navigation }) {
           name: 'Invalid Ticket',
           ticketType: '-',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          code: randomCode,
+          code: code,
         });
       }
     }
@@ -572,7 +585,7 @@ export default function CheckInScreen({ navigation }) {
             {/* Camera placeholder background */}
             <View style={styles.scannerPlaceholder}>
               <ScannerIcon size={48} color={colors.textQuaternary} />
-              <Text style={styles.scannerPlaceholderText}>Camera Preview</Text>
+              <Text style={styles.scannerPlaceholderText}>Tap below to scan</Text>
             </View>
 
             {/* Animated scan line */}
@@ -621,8 +634,8 @@ export default function CheckInScreen({ navigation }) {
               isScanning && styles.scanButtonScanning,
             ]}
             activeOpacity={0.8}
-            onPress={handleScan}
-            disabled={isScanning || isShiftPaused}
+            onPress={() => setShowManualEntry(true)}
+            disabled={isShiftPaused}
           >
             <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
               <Path
@@ -642,6 +655,7 @@ export default function CheckInScreen({ navigation }) {
             style={styles.manualEntryButton}
             activeOpacity={0.7}
             disabled={isShiftPaused}
+            onPress={() => setShowManualEntry(true)}
           >
             <EditIcon size={16} color={colors.textSecondary} />
             <Text style={styles.manualEntryText}>Manual Entry</Text>
@@ -700,6 +714,50 @@ export default function CheckInScreen({ navigation }) {
             ))}
           </View>
         )}
+
+        {/* Manual Entry Modal */}
+        <Modal
+          visible={showManualEntry}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowManualEntry(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.manualEntryModal}>
+              <Text style={styles.modalTitle}>Enter Ticket Code</Text>
+              <Text style={styles.modalDescription}>
+                Type or paste the ticket code, barcode, or verification URL
+              </Text>
+              <TextInput
+                style={styles.codeInput}
+                placeholder="e.g. ABC123 or scan URL"
+                placeholderTextColor={colors.textQuaternary}
+                value={manualCode}
+                onChangeText={setManualCode}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus={true}
+                returnKeyType="go"
+                onSubmitEditing={() => manualCode.trim() && handleCheckIn(manualCode)}
+              />
+              <TouchableOpacity
+                style={[styles.checkInSubmitButton, !manualCode.trim() && styles.checkInSubmitButtonDisabled]}
+                onPress={() => handleCheckIn(manualCode)}
+                activeOpacity={0.7}
+                disabled={!manualCode.trim() || isScanning}
+              >
+                <Text style={styles.checkInSubmitButtonText}>Check In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => { setShowManualEntry(false); setManualCode(''); }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* Bottom spacing */}
         <View style={{ height: 32 }} />
@@ -1032,6 +1090,77 @@ const styles = StyleSheet.create({
   recentTime: {
     fontSize: 12,
     color: colors.textQuaternary,
+    fontWeight: '500',
+  },
+
+  // ── Manual Entry Modal ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualEntryModal: {
+    backgroundColor: '#16161F',
+    borderRadius: 20,
+    padding: 28,
+    marginHorizontal: 24,
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  codeInput: {
+    width: '100%',
+    height: 48,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: colors.textPrimary,
+    marginBottom: 16,
+    textAlign: 'center',
+    letterSpacing: 1,
+  },
+  checkInSubmitButton: {
+    width: '100%',
+    height: 48,
+    backgroundColor: colors.purple,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  checkInSubmitButtonDisabled: {
+    opacity: 0.5,
+  },
+  checkInSubmitButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  cancelButton: {
+    paddingVertical: 10,
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    color: colors.textSecondary,
     fontWeight: '500',
   },
 });
