@@ -15,7 +15,9 @@ import {
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useEvent } from '../context/EventContext';
+import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
+import { apiPost } from '../api/client';
 import { formatCurrency } from '../utils/formatCurrency';
 
 // ─── SVG Icon Components ──────────────────────────────────────────────────────
@@ -306,7 +308,8 @@ function CartItemRow({ item, onUpdateQuantity }) {
 // ─── Main SalesScreen Component ───────────────────────────────────────────────
 
 export default function SalesScreen({ navigation }) {
-  const { ticketTypes, isReportsOnlyMode } = useEvent();
+  const { ticketTypes, isReportsOnlyMode, selectedEvent, refreshStats } = useEvent();
+  const { user } = useAuth();
   const { recentSales, addSale } = useApp();
 
   // State
@@ -319,6 +322,7 @@ export default function SalesScreen({ navigation }) {
   const [buyerEmail, setBuyerEmail] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [lastPaymentAmount, setLastPaymentAmount] = useState(0);
+  const [lastOrderData, setLastOrderData] = useState(null);
 
   // FAB animation
   const fabScale = useRef(new Animated.Value(0)).current;
@@ -340,7 +344,6 @@ export default function SalesScreen({ navigation }) {
   );
 
   const subtotal = cartTotal;
-  const tva = Math.round(subtotal * 0.19 * 100) / 100;
 
   // Animate FAB in/out
   useEffect(() => {
@@ -392,29 +395,63 @@ export default function SalesScreen({ navigation }) {
     setPaymentMethod(method);
     setIsProcessing(true);
 
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      // Create order via API
+      const orderPayload = {
+        event_id: selectedEvent?.id,
+        tickets: cartItems.map(item => ({
+          ticket_type_id: item.id,
+          quantity: item.quantity,
+        })),
+        customer: {
+          email: 'pos@ambilet.ro',
+          first_name: 'POS',
+          last_name: method === 'cash' ? 'Numerar' : 'Card',
+        },
+        payment_method: method,
+        source: 'pos_app',
+      };
+
+      const response = await apiPost('/orders', orderPayload);
+
+      if (response.success) {
+        const orderData = response.data?.order || null;
+
+        // For card payments, check if Stripe payment_url is available
+        if (method === 'tap' && !orderData?.payment_url) {
+          alert('Plata prin Stripe nu este disponibilă momentan. Folosiți plata cu numerar.');
+          setIsProcessing(false);
+          setPaymentMethod(null);
+          return;
+        }
+
+        setLastPaymentAmount(cartTotal);
+        setShowPaymentSuccess(true);
+        setLastOrderData(orderData);
+
+        // Record the sale locally
+        const saleDescription = cartItems
+          .map((item) => `${item.quantity}x ${item.name}`)
+          .join(', ');
+
+        addSale({
+          method,
+          total: cartTotal,
+          description: saleDescription,
+          qty: cartCount,
+          type: cartItems.length === 1 ? cartItems[0].name : 'Mixt',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        });
+
+        refreshStats();
+      } else {
+        throw new Error(response.message || 'Eroare la crearea comenzii');
+      }
+    } catch (error) {
+      alert(error.message || 'Eroare la procesarea plății');
+    } finally {
       setIsProcessing(false);
-      setLastPaymentAmount(cartTotal);
-      setShowPaymentSuccess(true);
-
-      // Record the sale
-      const saleDescription = cartItems
-        .map((item) => `${item.quantity}x ${item.name}`)
-        .join(', ');
-
-      addSale({
-        method,
-        total: cartTotal,
-        description: saleDescription,
-        qty: cartCount,
-        type: cartItems.length === 1 ? cartItems[0].name : 'Mixed',
-        time: new Date().toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-      });
-    }, 2000);
+    }
   };
 
   const finishPayment = () => {
@@ -423,17 +460,23 @@ export default function SalesScreen({ navigation }) {
     setCartItems([]);
     setPaymentMethod(null);
     setBuyerEmail('');
+    setLastOrderData(null);
     setActiveView('tickets');
   };
 
   const sendTicketsEmail = async () => {
-    if (!buyerEmail.trim()) return;
+    if (!buyerEmail.trim() || !lastOrderData) return;
     setSendingEmail(true);
-    // Simulate sending email
-    setTimeout(() => {
-      setSendingEmail(false);
-      finishPayment();
-    }, 1500);
+    try {
+      await apiPost(`/orders/${lastOrderData.id}/send-tickets`, {
+        email: buyerEmail.trim(),
+      });
+    } catch (e) {
+      // Silently fail - best effort
+      console.error('Failed to send ticket email:', e);
+    }
+    setSendingEmail(false);
+    finishPayment();
   };
 
   // ─── Reports Only Mode ────────────────────────────────────────────────────
@@ -489,10 +532,6 @@ export default function SalesScreen({ navigation }) {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal</Text>
               <Text style={styles.summaryValue}>{formatCurrency(subtotal)}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>TVA 19%</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(tva)}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
