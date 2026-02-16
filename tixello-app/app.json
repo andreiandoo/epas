@@ -14,10 +14,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.tixello.staff",
-      "infoPlist": {
-        "NSCameraUsageDescription": "Tixello needs camera access to scan QR codes on tickets"
-      }
+      "bundleIdentifier": "com.tixello.staff"
     },
     "android": {
       "adaptiveIcon": {
@@ -26,18 +23,10 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.tixello.staff",
-      "permissions": ["CAMERA", "VIBRATE", "INTERNET", "ACCESS_NETWORK_STATE"]
+      "permissions": ["VIBRATE", "INTERNET", "ACCESS_NETWORK_STATE"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Tixello needs camera access to scan QR codes on tickets"
-        }
-      ]
-    ]
+    }
   }
 }

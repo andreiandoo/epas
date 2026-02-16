@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
 
+import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { EventProvider, useEvent } from './src/context/EventContext';
 import { AppProvider, useApp } from './src/context/AppContext';
@@ -30,6 +31,16 @@ import GateManagerModal from './src/components/modals/GateManagerModal';
 import StaffAssignmentModal from './src/components/modals/StaffAssignmentModal';
 
 import { colors } from './src/theme/colors';
+
+// Global error handler — prevents native crash on unhandled JS errors
+const originalHandler = ErrorUtils.getGlobalHandler();
+ErrorUtils.setGlobalHandler((error, isFatal) => {
+  console.error('Global JS error:', isFatal ? 'FATAL' : 'non-fatal', error);
+  // Call original handler but don't let it crash the app
+  if (originalHandler && !isFatal) {
+    originalHandler(error, isFatal);
+  }
+});
 
 const Tab = createBottomTabNavigator();
 
@@ -153,23 +164,38 @@ function MainTabs() {
         </Tab.Screen>
       </Tab.Navigator>
 
-      <EventsModal
-        visible={showEventsModal}
-        onClose={() => setShowEventsModal(false)}
-        events={groupedEvents}
-        onSelectEvent={(event) => { selectEvent(event); setShowEventsModal(false); }}
-      />
-      <NotificationsPanel
-        visible={showNotifications}
-        onClose={() => setShowNotifications(false)}
-        notifications={notifications}
-        onMarkAllRead={markAllRead}
-      />
-      <EmergencyModal visible={showEmergency} onClose={() => setShowEmergency(false)} />
-      <StaffModal visible={showStaff} onClose={() => setShowStaff(false)} staffMembers={[]} />
-      <GuestListModal visible={showGuestList} onClose={() => setShowGuestList(false)} />
-      <GateManagerModal visible={showGateManager} onClose={() => setShowGateManager(false)} />
-      <StaffAssignmentModal visible={showStaffAssignment} onClose={() => setShowStaffAssignment(false)} />
+      {/* Lazy modals — only mount when visible */}
+      {showEventsModal && (
+        <EventsModal
+          visible={showEventsModal}
+          onClose={() => setShowEventsModal(false)}
+          events={groupedEvents}
+          onSelectEvent={(event) => { selectEvent(event); setShowEventsModal(false); }}
+        />
+      )}
+      {showNotifications && (
+        <NotificationsPanel
+          visible={showNotifications}
+          onClose={() => setShowNotifications(false)}
+          notifications={notifications}
+          onMarkAllRead={markAllRead}
+        />
+      )}
+      {showEmergency && (
+        <EmergencyModal visible={showEmergency} onClose={() => setShowEmergency(false)} />
+      )}
+      {showStaff && (
+        <StaffModal visible={showStaff} onClose={() => setShowStaff(false)} staffMembers={[]} />
+      )}
+      {showGuestList && (
+        <GuestListModal visible={showGuestList} onClose={() => setShowGuestList(false)} />
+      )}
+      {showGateManager && (
+        <GateManagerModal visible={showGateManager} onClose={() => setShowGateManager(false)} />
+      )}
+      {showStaffAssignment && (
+        <StaffAssignmentModal visible={showStaffAssignment} onClose={() => setShowStaffAssignment(false)} />
+      )}
     </View>
   );
 }
@@ -196,27 +222,35 @@ function AuthNavigator() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <AppProvider>
-          <EventProvider>
-            <NavigationContainer
-              theme={{
-                dark: true,
-                colors: {
-                  primary: colors.purple,
-                  background: colors.background,
-                  card: colors.background,
-                  text: colors.textPrimary,
-                  border: colors.border,
-                  notification: colors.red,
-                },
-              }}
-            >
-              <AuthNavigator />
-            </NavigationContainer>
-          </EventProvider>
-        </AppProvider>
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <AppProvider>
+            <EventProvider>
+              <NavigationContainer
+                theme={{
+                  dark: true,
+                  colors: {
+                    primary: colors.purple,
+                    background: colors.background,
+                    card: colors.background,
+                    text: colors.textPrimary,
+                    border: colors.border,
+                    notification: colors.red,
+                  },
+                  fonts: {
+                    regular: { fontFamily: 'System', fontWeight: '400' },
+                    medium: { fontFamily: 'System', fontWeight: '500' },
+                    bold: { fontFamily: 'System', fontWeight: '700' },
+                    heavy: { fontFamily: 'System', fontWeight: '900' },
+                  },
+                }}
+              >
+                <AuthNavigator />
+              </NavigationContainer>
+            </EventProvider>
+          </AppProvider>
+        </AuthProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }
