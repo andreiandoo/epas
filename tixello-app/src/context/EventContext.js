@@ -51,10 +51,11 @@ export function EventProvider({ children }) {
     setIsLoadingStats(true);
     try {
       const data = await getParticipants(eventId, { per_page: 1 });
-      if (data.meta?.stats) {
+      if (data.stats) {
+        setEventStats(data.stats);
+      } else if (data.meta?.stats) {
         setEventStats(data.meta.stats);
       } else if (data.meta) {
-        // Some APIs return stats at top level of meta
         setEventStats(data.meta);
       }
     } catch (e) {
@@ -66,8 +67,8 @@ export function EventProvider({ children }) {
   const fetchTicketTypes = useCallback(async (eventId) => {
     try {
       const response = await getEvent(eventId);
-      // Handle both { success: true, data: { ticket_types: [] } } and { data: { ticket_types: [] } }
-      const event = response.data || response;
+      // Handle { data: { event: { ticket_types: [] } } } and { data: { ticket_types: [] } }
+      const event = response.data?.event || response.data || response;
       const types = event.ticket_types || [];
       if (types.length > 0) {
         const colorPalette = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];

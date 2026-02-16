@@ -1,12 +1,20 @@
 {
   "expo": {
-    "name": "Tixello Staff",
-    "slug": "tixello-staff",
-    "version": "1.0.0",
+    "name": "AmBilet Scan",
+    "slug": "ambilet-scan",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": false,
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permite accesul la cameră pentru scanarea codurilor QR ale biletelor."
+        }
+      ]
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -14,7 +22,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.tixello.staff"
+      "bundleIdentifier": "com.ambilet.scan",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Permite accesul la cameră pentru scanarea codurilor QR ale biletelor."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,8 +33,8 @@
         "backgroundColor": "#0A0A0F"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.tixello.staff",
-      "permissions": ["VIBRATE", "INTERNET", "ACCESS_NETWORK_STATE"]
+      "package": "com.ambilet.scan",
+      "permissions": ["VIBRATE", "INTERNET", "ACCESS_NETWORK_STATE", "CAMERA"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
