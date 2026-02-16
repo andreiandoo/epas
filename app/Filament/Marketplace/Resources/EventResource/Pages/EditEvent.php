@@ -32,6 +32,24 @@ class EditEvent extends EditRecord
         }
     }
 
+    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        $marketplace = static::getMarketplaceClient();
+        $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
+
+        $title = $this->record->getTranslation('title', $lang)
+            ?? $this->record->getTranslation('title', 'ro')
+            ?? $this->record->getTranslation('title', 'en')
+            ?? '';
+
+        return $title ?: 'Edit Event';
+    }
+
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
+
     protected function getHeaderActions(): array
     {
         $marketplace = static::getMarketplaceClient();

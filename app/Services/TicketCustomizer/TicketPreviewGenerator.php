@@ -165,10 +165,11 @@ class TicketPreviewGenerator
         $color = $layer['color'] ?? '#000000';
         $align = $layer['textAlign'] ?? 'left';
         $fontWeight = $layer['fontWeight'] ?? 'normal';
-        $lineHeightPt = round($h, 1);
+        // Line-height proportional to font size (1.3x) for proper multi-line text wrapping
+        $lineHeightPt = round($fontSizePt * 1.3, 1);
 
         // Use DejaVu Sans (DomPDF built-in) to guarantee rendering
-        return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; font-size: {$fontSizePt}pt; color: {$color}; text-align: {$align}; font-weight: {$fontWeight}; font-family: 'DejaVu Sans', sans-serif; line-height: {$lineHeightPt}pt;\">{$content}</div>\n";
+        return "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; font-size: {$fontSizePt}pt; color: {$color}; text-align: {$align}; font-weight: {$fontWeight}; font-family: 'DejaVu Sans', sans-serif; line-height: {$lineHeightPt}pt; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word;\">{$content}</div>\n";
     }
 
     private function renderShapeLayerHtml(array $layer, float $x, float $y, float $w, float $h): string
@@ -231,6 +232,7 @@ class TicketPreviewGenerator
     private function renderImageLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h): string
     {
         $src = $layer['src'] ?? '';
+        $objectFit = $layer['objectFit'] ?? 'fill';
 
         if (!empty($src)) {
             $src = $this->replacePlaceholders($src, $data);
@@ -243,7 +245,44 @@ class TicketPreviewGenerator
         $dataUri = $this->fetchImageAsDataUri($src);
         $imgSrc = $dataUri ?: $src;
 
+        // For 'contain' mode, calculate scaled dimensions preserving aspect ratio
+        if ($objectFit === 'contain' && $dataUri) {
+            $imgDimensions = $this->getImageDimensionsFromDataUri($dataUri);
+            if ($imgDimensions) {
+                [$imgW, $imgH] = $imgDimensions;
+                $scaleX = $w / $imgW;
+                $scaleY = $h / $imgH;
+                $scale = min($scaleX, $scaleY);
+                $renderW = round($imgW * $scale, 2);
+                $renderH = round($imgH * $scale, 2);
+                // Center within the container
+                $renderX = round($x + ($w - $renderW) / 2, 2);
+                $renderY = round($y + ($h - $renderH) / 2, 2);
+                return "<img src=\"{$imgSrc}\" style=\"position: fixed; left: {$renderX}pt; top: {$renderY}pt; width: {$renderW}pt; height: {$renderH}pt;\">\n";
+            }
+        }
+
         return "<img src=\"{$imgSrc}\" style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt;\">\n";
+    }
+
+    /**
+     * Extract image dimensions from a base64 data URI
+     */
+    private function getImageDimensionsFromDataUri(string $dataUri): ?array
+    {
+        try {
+            $parts = explode(',', $dataUri, 2);
+            if (count($parts) !== 2) return null;
+            $imageData = base64_decode($parts[1]);
+            if ($imageData === false) return null;
+            $size = @getimagesizefromstring($imageData);
+            if ($size && $size[0] > 0 && $size[1] > 0) {
+                return [$size[0], $size[1]];
+            }
+        } catch (\Throwable $e) {
+            // Fail silently
+        }
+        return null;
     }
 
     /**

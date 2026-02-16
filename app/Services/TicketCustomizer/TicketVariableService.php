@@ -624,10 +624,10 @@ class TicketVariableService
             ],
             'date' => [
                 'start' => $eventDate ? $eventDate->format('Y-m-d') : '',
-                'start_formatted' => $eventDate ? $eventDate->translatedFormat('j F Y') : '',
+                'start_formatted' => $eventDate ? $eventDate->locale('ro')->translatedFormat('j F Y') : '',
                 'time' => $startTime,
                 'doors_open' => $doorTime,
-                'day_name' => $eventDate ? $eventDate->dayName : '',
+                'day_name' => $eventDate ? $eventDate->locale('ro')->dayName : '',
             ],
             'ticket' => [
                 'type' => $ticketType?->name ?? $ticket->marketplaceTicketType?->name ?? '',
@@ -702,15 +702,32 @@ class TicketVariableService
      */
     private function buildFeesText(?Event $event): string
     {
-        if (!$event || !$event->tenant_id) {
+        if (!$event) {
             return '';
         }
 
-        $taxes = GeneralTax::query()
-            ->forTenant($event->tenant_id)
-            ->active()
-            ->visibleOnTicket()
-            ->get();
+        $taxes = collect();
+
+        if ($event->tenant_id) {
+            // Tenant context: query taxes by tenant
+            $taxes = GeneralTax::query()
+                ->forTenant($event->tenant_id)
+                ->active()
+                ->visibleOnTicket()
+                ->get();
+        } else {
+            // Marketplace context: query global taxes by event types
+            $eventTypeIds = $event->eventTypes?->pluck('id')->all() ?? [];
+            if (!empty($eventTypeIds)) {
+                $taxes = GeneralTax::query()
+                    ->whereNull('tenant_id')
+                    ->active()
+                    ->visibleOnTicket()
+                    ->forEventTypes($eventTypeIds)
+                    ->get()
+                    ->unique('id');
+            }
+        }
 
         if ($taxes->isEmpty()) {
             return '';
@@ -730,6 +747,19 @@ class TicketVariableService
         $mktTicketType = $ticket->marketplaceTicketType;
 
         $eventSeries = $ticketType?->event_series ?? $mktTicketType?->event_series ?? '';
+
+        // Fall back to the event's event_series + ticket type ID
+        if (empty($eventSeries)) {
+            $event = $ticket->resolveEvent();
+            $eventSeriesPrefix = $event?->event_series ?? '';
+            $typeId = $ticketType?->id ?? $mktTicketType?->id ?? '';
+            if ($eventSeriesPrefix && $typeId) {
+                $eventSeries = $eventSeriesPrefix . '-' . $typeId;
+            } elseif ($eventSeriesPrefix) {
+                $eventSeries = $eventSeriesPrefix;
+            }
+        }
+
         $seriesStart = (int) ($ticketType?->series_start ?? $mktTicketType?->series_start ?? 1);
 
         // Calculate position based on ticket_type_id or marketplace_ticket_type_id
@@ -748,7 +778,7 @@ class TicketVariableService
         $serialNum = $seriesStart + $position - 1;
 
         if ($eventSeries) {
-            return $eventSeries . '-' . str_pad((string) $serialNum, 4, '0', STR_PAD_LEFT);
+            return $eventSeries . '-' . str_pad((string) $serialNum, 5, '0', STR_PAD_LEFT);
         }
 
         return (string) $serialNum;
