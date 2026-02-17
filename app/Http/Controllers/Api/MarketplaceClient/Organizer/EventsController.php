@@ -2738,9 +2738,14 @@ class EventsController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
+        // Try with marketplace_client_id first, then fallback to just venue id
         $venue = \App\Models\Venue::where('id', $venueId)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
+
+        if (!$venue) {
+            $venue = \App\Models\Venue::find($venueId);
+        }
 
         if (!$venue) {
             return $this->error('Venue not found', 404);
@@ -2774,9 +2779,14 @@ class EventsController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
+        // Try with marketplace_client_id first, then fallback to just venue id
         $venue = \App\Models\Venue::where('id', $venueId)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
+
+        if (!$venue) {
+            $venue = \App\Models\Venue::find($venueId);
+        }
 
         if (!$venue) {
             return $this->error('Venue not found', 404);
@@ -2825,6 +2835,10 @@ class EventsController extends BaseController
             ->first();
 
         if (!$venue) {
+            $venue = \App\Models\Venue::find($venueId);
+        }
+
+        if (!$venue) {
             return $this->error('Venue not found', 404);
         }
 
@@ -2864,6 +2878,10 @@ class EventsController extends BaseController
         $venue = \App\Models\Venue::where('id', $venueId)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->first();
+
+        if (!$venue) {
+            $venue = \App\Models\Venue::find($venueId);
+        }
 
         if (!$venue) {
             return $this->error('Venue not found', 404);

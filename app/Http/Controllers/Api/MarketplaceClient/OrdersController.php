@@ -177,6 +177,7 @@ class OrdersController extends BaseController
                         'event_id' => $event->id,
                         'ticket_type_id' => $item['ticket_type']->id,
                         'customer_id' => $customer->id,
+                        'code' => strtoupper(Str::random(12)),
                         'barcode' => Str::uuid()->toString(),
                         'status' => 'pending',
                         'price' => $item['unit_price'],
