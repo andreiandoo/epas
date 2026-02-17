@@ -14,7 +14,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 import { useEvent } from '../../context/EventContext';
-import { getTeamMembers, inviteTeamMember, removeTeamMember } from '../../api/team';
+import { getTeamMembers, inviteTeamMember, removeTeamMember, updateTeamMember } from '../../api/team';
 import { getVenueGates } from '../../api/gates';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -94,7 +94,7 @@ function getStatusBorder(status) {
 function getStatusLabel(status) {
   switch (status) {
     case 'active': return 'Activ';
-    case 'pending': return '\u00cen a\u0219teptare';
+    case 'pending': return 'În așteptare';
     case 'inactive': return 'Inactiv';
     default: return status;
   }
@@ -138,11 +138,17 @@ function OptionPicker({ options, selected, onSelect, getColor, getBg, getBorder,
   );
 }
 
-function MemberCard({ member, onRemove }) {
+function MemberCard({ member, gates, isExpanded, onToggleExpand, onAssignGate, onRemove }) {
   const isOwner = member.role === 'owner';
+  const assignedGate = gates.find(g => g.id === member.gate_id);
+
   return (
-    <View style={styles.memberCard}>
-      <View style={styles.memberTop}>
+    <View style={[styles.memberCard, isExpanded && styles.memberCardExpanded]}>
+      <TouchableOpacity
+        style={styles.memberTop}
+        onPress={onToggleExpand}
+        activeOpacity={0.7}
+      >
         {/* Avatar */}
         <View style={[styles.avatar, { backgroundColor: getRoleColor(member.role) }]}>
           <Text style={styles.avatarText}>{getInitials(member.name)}</Text>
@@ -179,7 +185,7 @@ function MemberCard({ member, onRemove }) {
             </Svg>
           </TouchableOpacity>
         )}
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.memberBottom}>
         {/* Status badge */}
@@ -198,6 +204,24 @@ function MemberCard({ member, onRemove }) {
           </Text>
         </View>
 
+        {/* Gate badge */}
+        {assignedGate ? (
+          <View style={[styles.gateBadge, { backgroundColor: colors.cyanLight, borderColor: colors.cyanBorder }]}>
+            <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
+              <Path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" stroke={colors.cyan} strokeWidth={2} strokeLinecap="round" />
+            </Svg>
+            <Text style={[styles.gateBadgeText, { color: colors.cyan }]}>{assignedGate.name}</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.gateBadge, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: colors.border }]}
+            onPress={onToggleExpand}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.gateBadgeText, { color: colors.textTertiary }]}>+ Poartă</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Role badge */}
         <View
           style={[
@@ -213,6 +237,52 @@ function MemberCard({ member, onRemove }) {
           </Text>
         </View>
       </View>
+
+      {/* Gate assignment picker (expanded) */}
+      {isExpanded && gates.length > 0 && (
+        <View style={styles.gatePickerSection}>
+          <Text style={styles.gatePickerLabel}>Alocă la poartă:</Text>
+          <View style={styles.gatePickerRow}>
+            <TouchableOpacity
+              style={[
+                styles.gatePickerItem,
+                !member.gate_id && styles.gatePickerItemSelected,
+              ]}
+              onPress={() => onAssignGate(member.id, null)}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.gatePickerItemText,
+                !member.gate_id && { color: colors.purple },
+              ]}>Niciuna</Text>
+            </TouchableOpacity>
+            {gates.map(gate => {
+              const isSelected = member.gate_id === gate.id;
+              return (
+                <TouchableOpacity
+                  key={gate.id}
+                  style={[
+                    styles.gatePickerItem,
+                    isSelected && styles.gatePickerItemSelected,
+                  ]}
+                  onPress={() => onAssignGate(member.id, gate.id)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.gatePickerItemText,
+                    isSelected && { color: colors.purple },
+                  ]}>{gate.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
+      {isExpanded && gates.length === 0 && (
+        <View style={styles.gatePickerSection}>
+          <Text style={styles.gatePickerLabel}>Nu există porți configurate. Adaugă porți din Administrare Porți.</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -223,6 +293,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
   const [gates, setGates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [expandedMemberId, setExpandedMemberId] = useState(null);
 
   // Invite form state
   const [inviteName, setInviteName] = useState('');
@@ -260,7 +331,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
       }
     } catch (e) {
       console.error('Failed to fetch team:', e);
-      Alert.alert('Eroare', 'Nu s-au putut \u00eenc\u0103rca membrii echipei.');
+      Alert.alert('Eroare', 'Nu s-au putut încărca membrii echipei.');
     }
     setLoading(false);
   };
@@ -291,22 +362,40 @@ export default function StaffAssignmentModal({ visible, onClose }) {
       setInviteEmail('');
       setInviteRole('staff');
       setInviteGate(null);
-      Alert.alert('Succes', 'Invita\u021bia a fost trimis\u0103.');
+      Alert.alert('Succes', 'Invitația a fost trimisă.');
     } catch (e) {
       console.error('Failed to invite member:', e);
-      Alert.alert('Eroare', e.message || 'Nu s-a putut trimite invita\u021bia.');
+      Alert.alert('Eroare', e.message || 'Nu s-a putut trimite invitația.');
     }
     setInviting(false);
   };
 
+  const handleAssignGate = async (memberId, gateId) => {
+    // Optimistic update
+    setMembers(prev =>
+      prev.map(m => m.id === memberId ? { ...m, gate_id: gateId } : m)
+    );
+    setExpandedMemberId(null);
+
+    try {
+      await updateTeamMember({ member_id: memberId, gate_id: gateId });
+    } catch (e) {
+      console.error('Failed to assign gate:', e);
+      // Revert on error
+      setMembers(prev =>
+        prev.map(m => m.id === memberId ? { ...m, gate_id: null } : m)
+      );
+    }
+  };
+
   const handleRemove = async (memberId) => {
     Alert.alert(
-      'Elimin\u0103 membru',
-      'Sigur dori\u021bi s\u0103 elimina\u021bi acest membru din echip\u0103?',
+      'Elimină membru',
+      'Sigur doriți să eliminați acest membru din echipă?',
       [
-        { text: 'Anuleaz\u0103', style: 'cancel' },
+        { text: 'Anulează', style: 'cancel' },
         {
-          text: 'Elimin\u0103',
+          text: 'Elimină',
           style: 'destructive',
           onPress: async () => {
             const previousMembers = [...members];
@@ -339,7 +428,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
           <View style={styles.header}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={styles.title}>Echip\u0103 & Personal</Text>
+              <Text style={styles.title}>Echipă & Personal</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                   <Path
@@ -357,7 +446,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.purple} />
-              <Text style={styles.loadingText}>Se \u00eencarc\u0103 echipa...</Text>
+              <Text style={styles.loadingText}>Se încarcă echipa...</Text>
             </View>
           ) : (
             <ScrollView
@@ -368,7 +457,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
               {/* Existing Team Members */}
               <View style={styles.membersSection}>
                 <View style={styles.membersSectionHeader}>
-                  <Text style={styles.sectionTitle}>Echip\u0103 Existent\u0103</Text>
+                  <Text style={styles.sectionTitle}>Echipă Existentă</Text>
                   <View style={styles.countBadge}>
                     <Text style={styles.countBadgeText}>{members.length}</Text>
                   </View>
@@ -385,14 +474,20 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                         strokeLinejoin="round"
                       />
                     </Svg>
-                    <Text style={styles.emptyText}>Niciun membru \u00een echip\u0103</Text>
-                    <Text style={styles.emptySubtext}>Invita\u021bi personal folosind formularul de mai jos</Text>
+                    <Text style={styles.emptyText}>Niciun membru în echipă</Text>
+                    <Text style={styles.emptySubtext}>Invitați personal folosind formularul de mai jos</Text>
                   </View>
                 ) : (
                   members.map(member => (
                     <MemberCard
                       key={member.id}
                       member={member}
+                      gates={gates}
+                      isExpanded={expandedMemberId === member.id}
+                      onToggleExpand={() => setExpandedMemberId(
+                        expandedMemberId === member.id ? null : member.id
+                      )}
+                      onAssignGate={handleAssignGate}
                       onRemove={handleRemove}
                     />
                   ))
@@ -404,7 +499,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
 
               {/* Invite New Staff Form */}
               <View style={styles.addForm}>
-                <Text style={styles.sectionTitle}>Invit\u0103 Personal Nou</Text>
+                <Text style={styles.sectionTitle}>Invită Personal Nou</Text>
 
                 {/* Name */}
                 <Text style={styles.formLabel}>Nume</Text>
@@ -443,7 +538,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                 {/* Gate Picker (optional) */}
                 {gates.length > 0 && (
                   <>
-                    <Text style={styles.formLabel}>Poart\u0103 (op\u021bional)</Text>
+                    <Text style={styles.formLabel}>Poartă (opțional)</Text>
                     <View style={styles.optionPicker}>
                       <TouchableOpacity
                         style={[
@@ -515,7 +610,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                       />
                     </Svg>
                   )}
-                  <Text style={styles.addButtonText}>Trimite Invita\u021bie</Text>
+                  <Text style={styles.addButtonText}>Trimite Invitație</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -639,6 +734,9 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
   },
+  memberCardExpanded: {
+    borderColor: colors.purpleBorder,
+  },
   memberTop: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -736,6 +834,56 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.3,
+  },
+  // Gate badge on member card
+  gateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  gateBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  // Gate picker (expanded)
+  gatePickerSection: {
+    paddingTop: 12,
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  gatePickerLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textTertiary,
+    marginBottom: 8,
+  },
+  gatePickerRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  gatePickerItem: {
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  gatePickerItemSelected: {
+    backgroundColor: colors.purpleLight,
+    borderColor: colors.purpleBorder,
+  },
+  gatePickerItemText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textTertiary,
   },
   // Divider
   divider: {

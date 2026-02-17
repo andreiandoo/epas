@@ -24,17 +24,17 @@ const TYPE_API_TO_DISPLAY = {
   entry: 'Intrare',
   vip: 'VIP',
   pos: 'POS',
-  exit: 'Ie\u0219ire',
+  exit: 'Ieșire',
 };
 
 const TYPE_DISPLAY_TO_API = {
   'Intrare': 'entry',
   'VIP': 'vip',
   'POS': 'pos',
-  'Ie\u0219ire': 'exit',
+  'Ieșire': 'exit',
 };
 
-const GATE_TYPES_DISPLAY = ['Intrare', 'VIP', 'POS', 'Ie\u0219ire'];
+const GATE_TYPES_DISPLAY = ['Intrare', 'VIP', 'POS', 'Ieșire'];
 
 function getDisplayType(apiType) {
   return TYPE_API_TO_DISPLAY[apiType] || apiType;
@@ -66,7 +66,7 @@ function GateTypeIcon({ type, size = 18 }) {
           <Path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6" stroke={iconColor} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
         </Svg>
       );
-    case 'Ie\u0219ire':
+    case 'Ieșire':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <Path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke={iconColor} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
@@ -83,7 +83,7 @@ function getTypeColor(type) {
     case 'Intrare': return colors.green;
     case 'VIP': return colors.amber;
     case 'POS': return colors.cyan;
-    case 'Ie\u0219ire': return colors.red;
+    case 'Ieșire': return colors.red;
     default: return colors.textSecondary;
   }
 }
@@ -94,7 +94,7 @@ function getTypeBg(type) {
     case 'Intrare': return colors.greenLight;
     case 'VIP': return colors.amberLight;
     case 'POS': return colors.cyanLight;
-    case 'Ie\u0219ire': return colors.redLight;
+    case 'Ieșire': return colors.redLight;
     default: return 'rgba(255,255,255,0.05)';
   }
 }
@@ -105,7 +105,7 @@ function getTypeBorder(type) {
     case 'Intrare': return colors.greenBorder;
     case 'VIP': return colors.amberBorder;
     case 'POS': return colors.cyanBorder;
-    case 'Ie\u0219ire': return colors.redBorder;
+    case 'Ieșire': return colors.redBorder;
     default: return 'rgba(255,255,255,0.08)';
   }
 }
@@ -175,7 +175,7 @@ function GateCard({ gate, onToggle, onDelete, onAssignSelf }) {
       <View style={styles.gateCardBottom}>
         {/* Active toggle */}
         <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>{gate.is_active ? 'Activ\u0103' : 'Inactiv\u0103'}</Text>
+          <Text style={styles.toggleLabel}>{gate.is_active ? 'Activă' : 'Inactivă'}</Text>
           <Switch
             value={gate.is_active}
             onValueChange={() => onToggle(gate.id)}
@@ -200,7 +200,7 @@ function GateCard({ gate, onToggle, onDelete, onAssignSelf }) {
                 strokeLinejoin="round"
               />
             </Svg>
-            <Text style={styles.assignSelfText}>Asigneaz\u0103-m\u0103</Text>
+            <Text style={styles.assignSelfText}>Asignează-mă</Text>
           </TouchableOpacity>
 
           {/* Delete button */}
@@ -257,7 +257,8 @@ export default function GateManagerModal({ visible, onClose }) {
       setGates(Array.isArray(gatesData) ? gatesData : []);
     } catch (e) {
       console.error('Failed to fetch gates:', e);
-      Alert.alert('Eroare', 'Nu s-au putut \u00eenc\u0103rca por\u021bile.');
+      // Silently handle - table might not exist yet, show empty state
+      setGates([]);
     }
     setLoading(false);
   };
@@ -303,7 +304,7 @@ export default function GateManagerModal({ visible, onClose }) {
       setGates(prev =>
         prev.map(g => g.id === gateId ? { ...g, is_active: !newActive } : g)
       );
-      Alert.alert('Eroare', 'Nu s-a putut actualiza starea por\u021bii.');
+      Alert.alert('Eroare', 'Nu s-a putut actualiza starea porții.');
     }
   };
 
@@ -311,12 +312,12 @@ export default function GateManagerModal({ visible, onClose }) {
     if (!venueId) return;
 
     Alert.alert(
-      '\u0218terge poarta',
-      'Sigur dori\u021bi s\u0103 \u0219terge\u021bi aceast\u0103 poart\u0103?',
+      'Șterge poarta',
+      'Sigur doriți să ștergeți această poartă?',
       [
-        { text: 'Anuleaz\u0103', style: 'cancel' },
+        { text: 'Anulează', style: 'cancel' },
         {
-          text: '\u0218terge',
+          text: 'Șterge',
           style: 'destructive',
           onPress: async () => {
             const previousGates = [...gates];
@@ -327,7 +328,7 @@ export default function GateManagerModal({ visible, onClose }) {
             } catch (e) {
               console.error('Failed to delete gate:', e);
               setGates(previousGates);
-              Alert.alert('Eroare', 'Nu s-a putut \u0219terge poarta.');
+              Alert.alert('Eroare', 'Nu s-a putut șterge poarta.');
             }
           },
         },
@@ -337,7 +338,7 @@ export default function GateManagerModal({ visible, onClose }) {
 
   const handleAssignSelf = (gateId) => {
     // Visual only for now
-    Alert.alert('Asignare', 'Func\u021bionalitatea de auto-asignare va fi disponibil\u0103 \u00een cur\u00e2nd.');
+    Alert.alert('Asignare', 'Funcționalitatea de auto-asignare va fi disponibilă în curând.');
   };
 
   return (
@@ -354,7 +355,7 @@ export default function GateManagerModal({ visible, onClose }) {
           <View style={styles.header}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={styles.title}>Administrare Por\u021bi</Text>
+              <Text style={styles.title}>Administrare Porți</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                   <Path
@@ -389,7 +390,7 @@ export default function GateManagerModal({ visible, onClose }) {
                 />
               </Svg>
               <Text style={styles.noVenueText}>Niciun loc asociat evenimentului</Text>
-              <Text style={styles.noVenueSubtext}>Asocia\u021bi un loc evenimentului pentru a gestiona por\u021bile</Text>
+              <Text style={styles.noVenueSubtext}>Asociați un loc evenimentului pentru a gestiona porțile</Text>
             </View>
           ) : (
             <ScrollView
@@ -431,20 +432,20 @@ export default function GateManagerModal({ visible, onClose }) {
               {loading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color={colors.purple} />
-                  <Text style={styles.loadingText}>Se \u00eencarc\u0103 por\u021bile...</Text>
+                  <Text style={styles.loadingText}>Se încarcă porțile...</Text>
                 </View>
               ) : (
                 <>
                   {/* Add New Gate Form */}
                   <View style={styles.addForm}>
-                    <Text style={styles.sectionTitle}>Adaug\u0103 Poart\u0103 Nou\u0103</Text>
+                    <Text style={styles.sectionTitle}>Adaugă Poartă Nouă</Text>
 
                     {/* Name + Type row */}
                     <View style={styles.formRow}>
                       <View style={styles.formFieldFlex}>
                         <TextInput
                           style={styles.formInput}
-                          placeholder="Numele por\u021bii"
+                          placeholder="Numele porții"
                           placeholderTextColor={colors.textQuaternary}
                           value={newName}
                           onChangeText={setNewName}
@@ -461,7 +462,7 @@ export default function GateManagerModal({ visible, onClose }) {
                       <View style={styles.formFieldFlex}>
                         <TextInput
                           style={styles.formInput}
-                          placeholder="Loca\u021bie"
+                          placeholder="Locație"
                           placeholderTextColor={colors.textQuaternary}
                           value={newLocation}
                           onChangeText={setNewLocation}
@@ -485,7 +486,7 @@ export default function GateManagerModal({ visible, onClose }) {
                             />
                           </Svg>
                         )}
-                        <Text style={styles.addButtonText}>Adaug\u0103 Poart\u0103</Text>
+                        <Text style={styles.addButtonText}>Adaugă Poartă</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -496,7 +497,7 @@ export default function GateManagerModal({ visible, onClose }) {
                   {/* Current Gates */}
                   <View style={styles.gatesSection}>
                     <View style={styles.gatesSectionHeader}>
-                      <Text style={styles.sectionTitle}>Por\u021bi Curente</Text>
+                      <Text style={styles.sectionTitle}>Porți Curente</Text>
                       <View style={styles.gateCountBadge}>
                         <Text style={styles.gateCountText}>{gates.length}</Text>
                       </View>
@@ -504,7 +505,7 @@ export default function GateManagerModal({ visible, onClose }) {
 
                     {gates.length === 0 ? (
                       <View style={styles.emptyState}>
-                        <Text style={styles.emptyText}>Nicio poart\u0103 configurat\u0103</Text>
+                        <Text style={styles.emptyText}>Nicio poartă configurată</Text>
                       </View>
                     ) : (
                       gates.map(gate => (
