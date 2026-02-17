@@ -357,6 +357,11 @@ class Venue extends Model
         return $this->hasMany(\App\Models\Seating\SeatingLayout::class);
     }
 
+    public function gates(): HasMany
+    {
+        return $this->hasMany(VenueGate::class)->orderBy('sort_order');
+    }
+
     /**
      * Get tag info (label and icon) for current venue_tag
      */

@@ -2708,4 +2708,149 @@ class EventsController extends BaseController
 
         return $maskedLocal . '@' . $maskedDomainFull;
     }
+
+    /**
+     * List gates for a venue
+     */
+    public function venueGates(Request $request, int $venueId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $venue = \App\Models\Venue::where('id', $venueId)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->first();
+
+        if (!$venue) {
+            return $this->error('Venue not found', 404);
+        }
+
+        $gates = $venue->gates()->get();
+
+        return $this->success([
+            'venue' => [
+                'id' => $venue->id,
+                'name' => $venue->getTranslation('name', 'ro') ?? $venue->name,
+                'address' => $venue->address,
+                'city' => $venue->city,
+            ],
+            'gates' => $gates->map(fn($g) => [
+                'id' => $g->id,
+                'name' => $g->name,
+                'type' => $g->type,
+                'location' => $g->location,
+                'is_active' => $g->is_active,
+                'sort_order' => $g->sort_order,
+            ]),
+        ]);
+    }
+
+    /**
+     * Create a gate for a venue
+     */
+    public function createVenueGate(Request $request, int $venueId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $venue = \App\Models\Venue::where('id', $venueId)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->first();
+
+        if (!$venue) {
+            return $this->error('Venue not found', 404);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|string|in:entry,vip,pos,exit',
+            'location' => 'nullable|string|max:255',
+        ]);
+
+        $maxSort = $venue->gates()->max('sort_order') ?? 0;
+
+        $gate = \App\Models\VenueGate::create([
+            'venue_id' => $venue->id,
+            'name' => $request->name,
+            'type' => $request->type,
+            'location' => $request->location,
+            'is_active' => true,
+            'sort_order' => $maxSort + 1,
+        ]);
+
+        return $this->success([
+            'gate' => [
+                'id' => $gate->id,
+                'name' => $gate->name,
+                'type' => $gate->type,
+                'location' => $gate->location,
+                'is_active' => $gate->is_active,
+                'sort_order' => $gate->sort_order,
+            ],
+        ], 'Gate created', 201);
+    }
+
+    /**
+     * Update a gate
+     */
+    public function updateVenueGate(Request $request, int $venueId, int $gateId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $venue = \App\Models\Venue::where('id', $venueId)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->first();
+
+        if (!$venue) {
+            return $this->error('Venue not found', 404);
+        }
+
+        $gate = $venue->gates()->where('id', $gateId)->first();
+        if (!$gate) {
+            return $this->error('Gate not found', 404);
+        }
+
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'type' => 'sometimes|string|in:entry,vip,pos,exit',
+            'location' => 'nullable|string|max:255',
+            'is_active' => 'sometimes|boolean',
+        ]);
+
+        $gate->update($request->only(['name', 'type', 'location', 'is_active']));
+
+        return $this->success([
+            'gate' => [
+                'id' => $gate->id,
+                'name' => $gate->name,
+                'type' => $gate->type,
+                'location' => $gate->location,
+                'is_active' => $gate->is_active,
+                'sort_order' => $gate->sort_order,
+            ],
+        ]);
+    }
+
+    /**
+     * Delete a gate
+     */
+    public function deleteVenueGate(Request $request, int $venueId, int $gateId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $venue = \App\Models\Venue::where('id', $venueId)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->first();
+
+        if (!$venue) {
+            return $this->error('Venue not found', 404);
+        }
+
+        $gate = $venue->gates()->where('id', $gateId)->first();
+        if (!$gate) {
+            return $this->error('Gate not found', 404);
+        }
+
+        $gate->delete();
+
+        return $this->success(null, 'Gate deleted');
+    }
 }

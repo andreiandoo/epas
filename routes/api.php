@@ -1644,6 +1644,16 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::post('/artists', [OrganizerEventsController::class, 'storeArtist'])
             ->name('api.marketplace-client.organizer.artists.store');
 
+        // Venue gates
+        Route::get('/venues/{venue_id}/gates', [OrganizerEventsController::class, 'venueGates'])
+            ->name('api.marketplace-client.organizer.venue-gates');
+        Route::post('/venues/{venue_id}/gates', [OrganizerEventsController::class, 'createVenueGate'])
+            ->name('api.marketplace-client.organizer.venue-gates.store');
+        Route::put('/venues/{venue_id}/gates/{gate_id}', [OrganizerEventsController::class, 'updateVenueGate'])
+            ->name('api.marketplace-client.organizer.venue-gates.update');
+        Route::delete('/venues/{venue_id}/gates/{gate_id}', [OrganizerEventsController::class, 'deleteVenueGate'])
+            ->name('api.marketplace-client.organizer.venue-gates.delete');
+
         // Payouts & Balance
         Route::get('/balance', [OrganizerPayoutController::class, 'balance'])
             ->name('api.marketplace-client.organizer.balance');
