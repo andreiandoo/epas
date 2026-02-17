@@ -20,6 +20,12 @@ class EmailSettings extends Page
     protected static \UnitEnum|string|null $navigationGroup = 'Communications';
     protected static ?int $navigationSort = 10;
     protected static ?string $navigationLabel = 'Email Settings';
+
+    // Hidden: email settings are now managed in Settings > Emails tab
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
     protected string $view = 'filament.marketplace.pages.email-settings';
 
     public ?array $smtpData = [];

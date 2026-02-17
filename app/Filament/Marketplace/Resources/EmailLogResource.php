@@ -89,18 +89,30 @@ class EmailLogResource extends Resource
 
                 SC\Section::make('Content')
                     ->schema([
-                        Forms\Components\Textarea::make('body_html')
+                        Forms\Components\Placeholder::make('body_html_rendered')
                             ->label('HTML Body')
-                            ->disabled()
-                            ->rows(10)
+                            ->content(function ($record) {
+                                if (empty($record?->body_html)) {
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<p class="text-sm text-gray-500">No HTML body</p>'
+                                    );
+                                }
+                                $encoded = htmlspecialchars($record->body_html, ENT_QUOTES, 'UTF-8');
+                                return new \Illuminate\Support\HtmlString(
+                                    '<iframe
+                                        srcdoc="' . $encoded . '"
+                                        sandbox="allow-same-origin"
+                                        style="width:100%; min-height:500px; border:1px solid #e5e7eb; border-radius:0.5rem; background:#fff;"
+                                    ></iframe>'
+                                );
+                            })
                             ->columnSpanFull(),
                         Forms\Components\Textarea::make('error_message')
                             ->label('Error Message')
                             ->disabled()
                             ->visible(fn ($record) => !empty($record?->error_message))
                             ->columnSpanFull(),
-                    ])
-                    ->collapsed(),
+                    ]),
             ]);
     }
 

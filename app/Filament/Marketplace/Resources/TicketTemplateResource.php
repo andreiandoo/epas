@@ -234,6 +234,25 @@ class TicketTemplateResource extends Resource
                     ->color('warning')
                     ->url(fn ($record) => "/marketplace/ticket-customizer/{$record->id}/editor")
                     ->openUrlInNewTab(),
+                Actions\Action::make('duplicate')
+                    ->label('Duplicate')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->color('gray')
+                    ->requiresConfirmation()
+                    ->modalDescription('This will create a copy of the template with status set to Draft.')
+                    ->action(function ($record) {
+                        $duplicate = $record->replicate();
+                        $duplicate->name = '[Duplicat] ' . $record->name;
+                        $duplicate->status = 'draft';
+                        $duplicate->is_default = false;
+                        $duplicate->last_used_at = null;
+                        $duplicate->save();
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Template duplicated')
+                            ->success()
+                            ->send();
+                    }),
                 Actions\Action::make('set_default')
                     ->label('Set Default')
                     ->icon('heroicon-o-star')

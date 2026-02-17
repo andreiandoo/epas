@@ -30,21 +30,27 @@ class ActivityLog extends Page
             return ['activities' => collect()];
         }
 
-        // Get activities for this tenant from the 'tenant' log channel
-        // Activities are scoped via tenant_id stored in properties JSON
-        $activities = Activity::where('log_name', 'tenant')
-            ->where(function ($query) use ($marketplace) {
-                // Match by tenant_id in properties JSON
-                $query->whereJsonContains('properties->tenant_id', $marketplace->id)
-                    // Also match activities caused by users belonging to this tenant
-                    ->orWhere(function ($q) use ($marketplace) {
-                        $q->where('causer_type', 'App\\Models\\User')
-                          ->whereIn('causer_id', function ($subQuery) use ($marketplace) {
-                              $subQuery->select('id')
-                                  ->from('users')
-                                  ->where('marketplace_client_id', $marketplace->id);
-                          });
-                    });
+        // Get tenant IDs associated with this marketplace
+        $tenantIds = $marketplace->tenants()->pluck('tenants.id')->toArray();
+
+        $activities = Activity::where(function ($query) use ($marketplace, $tenantIds) {
+                // Activities for tenants belonging to this marketplace
+                if (!empty($tenantIds)) {
+                    $query->whereIn('properties->tenant_id', $tenantIds);
+                }
+
+                // Activities caused by marketplace users
+                $query->orWhere(function ($q) use ($marketplace) {
+                    $q->where('causer_type', 'App\\Models\\User')
+                      ->whereIn('causer_id', function ($subQuery) use ($marketplace) {
+                          $subQuery->select('id')
+                              ->from('users')
+                              ->where('marketplace_client_id', $marketplace->id);
+                      });
+                });
+
+                // Activities that explicitly logged marketplace_client_id
+                $query->orWhere('properties->marketplace_client_id', $marketplace->id);
             })
             ->orderBy('created_at', 'desc')
             ->limit(100)
