@@ -185,6 +185,23 @@ function ScannerCorner({ position, color }) {
   );
 }
 
+// ─── Date Formatting Helper ─────────────────────────────────────────────
+function formatScanDate(isoString) {
+  if (!isoString) return 'N/A';
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${hours}:${minutes} (${day}-${month}-${year})`;
+  } catch {
+    return isoString;
+  }
+}
+
 // ─── Extract Ticket Code Helper ─────────────────────────────────────────────
 function extractTicketCode(input) {
   if (!input) return null;
@@ -331,7 +348,14 @@ export default function CheckInScreen({ navigation }) {
           checkedInAt: storedData?.checkedInAt || 'În această sesiune',
           code: code,
           name: storedData?.name || 'N/A',
+          attendeeName: storedData?.attendeeName || storedData?.name || 'N/A',
+          customerName: storedData?.customerName || storedData?.name || 'N/A',
           ticketType: storedData?.ticketType || 'N/A',
+          checkedInBy: storedData?.checkedInBy || null,
+          section: storedData?.section || null,
+          row: storedData?.row || null,
+          seat: storedData?.seat || null,
+          orderSource: storedData?.orderSource || null,
           gate: storedData?.gate || 'N/A',
         },
       };
@@ -372,9 +396,15 @@ export default function CheckInScreen({ navigation }) {
           type: 'valid',
           data: {
             name: data.customer?.name || data.ticket?.customer_name || 'Participant',
+            attendeeName: data.ticket?.attendee_name || data.customer?.name || 'Participant',
+            customerName: data.order?.customer_name || data.customer?.name || 'Participant',
             ticketType: data.ticket?.ticket_type || 'Bilet',
-            seat: data.ticket?.seat || data.seat || null,
+            section: data.ticket?.section || null,
+            row: data.ticket?.row || null,
+            seat: data.ticket?.seat || null,
             checkedInAt: data.ticket?.checked_in_at || null,
+            checkedInBy: data.ticket?.checked_in_by || null,
+            orderSource: data.order?.source || null,
             code: code,
           },
         };
@@ -383,8 +413,15 @@ export default function CheckInScreen({ navigation }) {
         // Track locally for duplicate detection
         scannedCodes.current.set(code, {
           name: result.data.name,
+          attendeeName: result.data.attendeeName,
+          customerName: result.data.customerName,
           ticketType: result.data.ticketType,
+          section: result.data.section,
+          row: result.data.row,
+          seat: result.data.seat,
           checkedInAt: result.data.checkedInAt || new Date().toISOString(),
+          checkedInBy: result.data.checkedInBy,
+          orderSource: result.data.orderSource,
           gate: 'N/A',
         });
 
@@ -423,7 +460,7 @@ export default function CheckInScreen({ navigation }) {
       if (message.toLowerCase().includes('already') || message.toLowerCase().includes('checked')) {
         // Parse datetime from error message like "Ticket already checked in at 2024-03-15 19:30:00"
         const dateMatch = message.match(/at\s+(.+)$/i);
-        const checkedInAt = dateMatch ? dateMatch[1].trim() : (error.checked_in_at || 'Mai devreme');
+        const checkedInAt = error.data?.ticket?.checked_in_at || (dateMatch ? dateMatch[1].trim() : (error.checked_in_at || 'Mai devreme'));
 
         const result = {
           type: 'duplicate',
@@ -431,8 +468,15 @@ export default function CheckInScreen({ navigation }) {
             message: 'Acest bilet a fost deja scanat',
             checkedInAt: checkedInAt,
             code: code,
-            name: error.attendee_name || error.data?.customer?.name || 'N/A',
-            ticketType: error.ticket_type || error.data?.ticket?.ticket_type || 'N/A',
+            name: error.data?.customer?.name || error.attendee_name || 'N/A',
+            attendeeName: error.data?.ticket?.attendee_name || error.data?.customer?.name || error.attendee_name || 'N/A',
+            customerName: error.data?.order?.customer_name || error.data?.customer?.name || 'N/A',
+            ticketType: error.data?.ticket?.ticket_type || error.ticket_type || 'N/A',
+            checkedInBy: error.data?.ticket?.checked_in_by || null,
+            section: error.data?.ticket?.section || null,
+            row: error.data?.ticket?.row || null,
+            seat: error.data?.ticket?.seat || null,
+            orderSource: error.data?.order?.source || null,
           },
         };
         setScanResult(result);
@@ -440,8 +484,15 @@ export default function CheckInScreen({ navigation }) {
         // Also track locally so next scan of same code is caught locally
         scannedCodes.current.set(code, {
           name: result.data.name,
+          attendeeName: result.data.attendeeName,
+          customerName: result.data.customerName,
           ticketType: result.data.ticketType,
           checkedInAt: checkedInAt,
+          checkedInBy: result.data.checkedInBy,
+          section: result.data.section,
+          row: result.data.row,
+          seat: result.data.seat,
+          orderSource: result.data.orderSource,
           gate: 'N/A',
         });
 
@@ -630,13 +681,16 @@ export default function CheckInScreen({ navigation }) {
                 <Text style={styles.resultName}>{scanResult.data.name}</Text>
                 <View style={styles.resultDetails}>
                   <Text style={styles.resultDetail}>{scanResult.data.ticketType}</Text>
-                  {scanResult.data.seat && (
-                    <>
-                      <Text style={styles.resultDetailDot}>{'\u2022'}</Text>
-                      <Text style={styles.resultDetail}>Seat {scanResult.data.seat}</Text>
-                    </>
-                  )}
                 </View>
+                {(scanResult.data.section || scanResult.data.row || scanResult.data.seat) && (
+                  <Text style={styles.resultDetail}>
+                    {[
+                      scanResult.data.section ? `Secțiune ${scanResult.data.section}` : null,
+                      scanResult.data.row ? `Rând ${scanResult.data.row}` : null,
+                      scanResult.data.seat ? `Loc ${scanResult.data.seat}` : null,
+                    ].filter(Boolean).join(', ')}
+                  </Text>
+                )}
               </>
             )}
             {scanResult.type === 'duplicate' && (
@@ -663,13 +717,26 @@ export default function CheckInScreen({ navigation }) {
             style={styles.showScanDetailsButton}
             activeOpacity={0.7}
             onPress={() => {
+              const hasSeatInfo = scanResult.data.section || scanResult.data.row || scanResult.data.seat;
+              const seatInfoStr = hasSeatInfo
+                ? [
+                    scanResult.data.section ? `Secțiune ${scanResult.data.section}` : null,
+                    scanResult.data.row ? `Rând ${scanResult.data.row}` : null,
+                    scanResult.data.seat ? `Loc ${scanResult.data.seat}` : null,
+                  ].filter(Boolean).join(', ')
+                : null;
+              const orderSource = scanResult.data.orderSource;
+              const acquisitionMode = orderSource === 'pos_app' ? 'La intrare' : 'Online';
               setScanDetailsData({
                 checkedInAt: scanResult.data.checkedInAt || 'N/A',
                 gate: scanResult.data.gate || 'N/A',
-                name: scanResult.data.name || 'N/A',
+                attendeeName: scanResult.data.attendeeName || scanResult.data.name || 'N/A',
+                customerName: scanResult.data.customerName || scanResult.data.name || 'N/A',
                 ticketType: scanResult.data.ticketType || 'N/A',
                 code: scanResult.data.code || 'N/A',
-                staff: user?.name || user?.public_name || 'N/A',
+                seatInfo: seatInfoStr,
+                acquisitionMode: acquisitionMode,
+                staff: scanResult.data.checkedInBy || user?.name || user?.public_name || 'N/A',
               });
               setShowScanDetails(true);
             }}
@@ -886,15 +953,19 @@ export default function CheckInScreen({ navigation }) {
                 <View style={styles.scanDetailsRows}>
                   <View style={styles.scanDetailsRow}>
                     <Text style={styles.scanDetailsLabel}>Ora scanării</Text>
-                    <Text style={styles.scanDetailsValue}>{scanDetailsData.checkedInAt}</Text>
+                    <Text style={styles.scanDetailsValue}>{formatScanDate(scanDetailsData.checkedInAt)}</Text>
                   </View>
                   <View style={styles.scanDetailsRow}>
-                    <Text style={styles.scanDetailsLabel}>Poarta</Text>
+                    <Text style={styles.scanDetailsLabel}>Poartă</Text>
                     <Text style={styles.scanDetailsValue}>{scanDetailsData.gate}</Text>
                   </View>
                   <View style={styles.scanDetailsRow}>
-                    <Text style={styles.scanDetailsLabel}>Nume beneficiar</Text>
-                    <Text style={styles.scanDetailsValue}>{scanDetailsData.name}</Text>
+                    <Text style={styles.scanDetailsLabel}>Beneficiar</Text>
+                    <Text style={styles.scanDetailsValue}>{scanDetailsData.attendeeName}</Text>
+                  </View>
+                  <View style={styles.scanDetailsRow}>
+                    <Text style={styles.scanDetailsLabel}>Client</Text>
+                    <Text style={styles.scanDetailsValue}>{scanDetailsData.customerName}</Text>
                   </View>
                   <View style={styles.scanDetailsRow}>
                     <Text style={styles.scanDetailsLabel}>Tip bilet</Text>
@@ -904,8 +975,18 @@ export default function CheckInScreen({ navigation }) {
                     <Text style={styles.scanDetailsLabel}>Cod bilet</Text>
                     <Text style={styles.scanDetailsValue}>{scanDetailsData.code}</Text>
                   </View>
+                  {scanDetailsData.seatInfo && (
+                    <View style={styles.scanDetailsRow}>
+                      <Text style={styles.scanDetailsLabel}>Secțiune / Rând / Loc</Text>
+                      <Text style={styles.scanDetailsValue}>{scanDetailsData.seatInfo}</Text>
+                    </View>
+                  )}
                   <View style={styles.scanDetailsRow}>
-                    <Text style={styles.scanDetailsLabel}>Personal</Text>
+                    <Text style={styles.scanDetailsLabel}>Mod achiziție</Text>
+                    <Text style={styles.scanDetailsValue}>{scanDetailsData.acquisitionMode}</Text>
+                  </View>
+                  <View style={styles.scanDetailsRow}>
+                    <Text style={styles.scanDetailsLabel}>Staff</Text>
                     <Text style={styles.scanDetailsValue}>{scanDetailsData.staff}</Text>
                   </View>
                 </View>
