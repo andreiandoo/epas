@@ -44,19 +44,30 @@ class OrdersController extends BaseController
             return $this->error('Event not available', 400);
         }
 
-        // Derive tenant_id: prefer event's, then try organizer's, then client's first tenant
+        // Derive tenant_id: prefer event's, then fallback chain
         $tenantId = $event->tenant_id;
-        if (!$tenantId && $event->marketplace_organizer_id) {
-            $organizer = \App\Models\MarketplaceOrganizer::find($event->marketplace_organizer_id);
-            $tenantId = $organizer?->tenant_id;
+        if (!$tenantId) {
+            // Try other events from same organizer that have tenant_id
+            if ($event->marketplace_organizer_id) {
+                $tenantId = Event::where('marketplace_organizer_id', $event->marketplace_organizer_id)
+                    ->whereNotNull('tenant_id')
+                    ->value('tenant_id');
+            }
         }
         if (!$tenantId) {
-            // Try the client's first active tenant as fallback
-            $firstTenant = $client->activeTenants()->first();
-            $tenantId = $firstTenant?->id;
+            // Try the client's tenant list (active or any)
+            $tenantId = $client->activeTenants()->first()?->id
+                ?? $client->tenants()->first()?->id;
+        }
+        if (!$tenantId) {
+            // Last resort: find any tenant in the system (single-tenant setups)
+            $tenantId = \App\Models\Tenant::first()?->id;
+        }
+        if (!$tenantId) {
+            return $this->error('No tenant configured. Please contact support.', 400);
         }
 
-        if ($tenantId && !$client->canSellForTenant($tenantId)) {
+        if (!$client->canSellForTenant($tenantId)) {
             return $this->error('Not authorized to sell tickets for this event', 403);
         }
 

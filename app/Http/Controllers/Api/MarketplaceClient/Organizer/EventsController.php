@@ -902,7 +902,31 @@ class EventsController extends BaseController
         }
 
         if ($ticket->checked_in_at) {
-            return $this->error('Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'), 400);
+            $dupCustomer = $ticket->order->marketplaceCustomer;
+            $dupSeatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
+            return response()->json([
+                'success' => false,
+                'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'),
+                'ticket' => [
+                    'barcode' => $ticket->barcode,
+                    'ticket_type' => $ticket->ticketType?->name,
+                    'checked_in_at' => $ticket->checked_in_at->toIso8601String(),
+                    'checked_in_by' => $ticket->checked_in_by,
+                    'section' => $dupSeatDetails['section_name'] ?? null,
+                    'row' => $dupSeatDetails['row_label'] ?? null,
+                    'seat' => $dupSeatDetails['seat_number'] ?? null,
+                    'attendee_name' => $ticket->attendee_name,
+                ],
+                'customer' => [
+                    'name' => $dupCustomer
+                        ? $dupCustomer->first_name . ' ' . $dupCustomer->last_name
+                        : $ticket->order->customer_name,
+                ],
+                'order' => [
+                    'source' => $ticket->order->source ?? 'online',
+                    'customer_name' => $ticket->order->customer_name,
+                ],
+            ], 400);
         }
 
         $ticket->update([
@@ -911,6 +935,8 @@ class EventsController extends BaseController
         ]);
 
         $customer = $ticket->order->marketplaceCustomer;
+        $seatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
+        $orderSource = $ticket->order->source ?? 'online';
 
         return $this->success([
             'ticket' => [
@@ -919,12 +945,21 @@ class EventsController extends BaseController
                 'ticket_type' => $ticket->ticketType?->name,
                 'status' => $ticket->status,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
+                'seat_label' => $ticket->seat_label,
+                'section' => $seatDetails['section_name'] ?? null,
+                'row' => $seatDetails['row_label'] ?? null,
+                'seat' => $seatDetails['seat_number'] ?? null,
+                'attendee_name' => $ticket->attendee_name,
             ],
             'customer' => [
                 'name' => $customer
                     ? $customer->first_name . ' ' . $customer->last_name
                     : $ticket->order->customer_name,
                 'email' => $customer?->email ?? $ticket->order->customer_email,
+            ],
+            'order' => [
+                'source' => $orderSource,
+                'customer_name' => $ticket->order->customer_name,
             ],
         ], 'Ticket checked in successfully');
     }
@@ -964,7 +999,31 @@ class EventsController extends BaseController
         }
 
         if ($ticket->checked_in_at) {
-            return $this->error('Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'), 400);
+            $dupCustomer = $ticket->order->marketplaceCustomer;
+            $dupSeatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
+            return response()->json([
+                'success' => false,
+                'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'),
+                'ticket' => [
+                    'barcode' => $ticket->barcode,
+                    'ticket_type' => $ticket->ticketType?->name,
+                    'checked_in_at' => $ticket->checked_in_at->toIso8601String(),
+                    'checked_in_by' => $ticket->checked_in_by,
+                    'section' => $dupSeatDetails['section_name'] ?? null,
+                    'row' => $dupSeatDetails['row_label'] ?? null,
+                    'seat' => $dupSeatDetails['seat_number'] ?? null,
+                    'attendee_name' => $ticket->attendee_name,
+                ],
+                'customer' => [
+                    'name' => $dupCustomer
+                        ? $dupCustomer->first_name . ' ' . $dupCustomer->last_name
+                        : $ticket->order->customer_name,
+                ],
+                'order' => [
+                    'source' => $ticket->order->source ?? 'online',
+                    'customer_name' => $ticket->order->customer_name,
+                ],
+            ], 400);
         }
 
         $ticket->update([
@@ -973,6 +1032,8 @@ class EventsController extends BaseController
         ]);
 
         $customer = $ticket->order->marketplaceCustomer;
+        $seatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
+        $orderSource = $ticket->order->source ?? 'online';
 
         return $this->success([
             'ticket' => [
@@ -981,12 +1042,21 @@ class EventsController extends BaseController
                 'ticket_type' => $ticket->ticketType?->name,
                 'status' => $ticket->status,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
+                'seat_label' => $ticket->seat_label,
+                'section' => $seatDetails['section_name'] ?? null,
+                'row' => $seatDetails['row_label'] ?? null,
+                'seat' => $seatDetails['seat_number'] ?? null,
+                'attendee_name' => $ticket->attendee_name,
             ],
             'customer' => [
                 'name' => $customer
                     ? $customer->first_name . ' ' . $customer->last_name
                     : $ticket->order->customer_name,
                 'email' => $customer?->email ?? $ticket->order->customer_email,
+            ],
+            'order' => [
+                'source' => $orderSource,
+                'customer_name' => $ticket->order->customer_name,
             ],
         ], 'Ticket checked in successfully');
     }
