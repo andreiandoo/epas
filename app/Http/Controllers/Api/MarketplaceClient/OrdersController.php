@@ -95,7 +95,7 @@ class OrdersController extends BaseController
             foreach ($request->tickets as $ticketRequest) {
                 $ticketType = TicketType::where('id', $ticketRequest['ticket_type_id'])
                     ->where('event_id', $event->id)
-                    ->where('status', 'on_sale')
+                    ->whereIn('status', ['active', 'on_sale', 'published'])
                     ->lockForUpdate()
                     ->first();
 

@@ -30,12 +30,15 @@ class Ticket extends Model
         'cancelled_at',
         'cancellation_reason',
         'refund_request_id',
+        'checked_in_at',
+        'checked_in_by',
     ];
 
     protected $casts = [
         'meta' => 'array',
         'is_cancelled' => 'boolean',
         'cancelled_at' => 'datetime',
+        'checked_in_at' => 'datetime',
     ];
 
     public function order(): BelongsTo
