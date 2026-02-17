@@ -499,6 +499,16 @@ export default function SalesScreen({ navigation }) {
     finishPayment();
   };
 
+  // ─── Ticket List View (inline, keeps tab bar visible) ──────────────────────
+
+  if (showTicketList) {
+    return (
+      <View style={styles.container}>
+        <TicketListScreen onClose={() => setShowTicketList(false)} />
+      </View>
+    );
+  }
+
   // ─── Reports Only Mode ────────────────────────────────────────────────────
 
   if (isReportsOnlyMode) {
@@ -520,7 +530,6 @@ export default function SalesScreen({ navigation }) {
         <ReportsOnlyPlaceholder
           onViewReports={() => navigation?.navigate?.('Reports')}
         />
-        <TicketListScreen visible={showTicketList} onClose={() => setShowTicketList(false)} />
       </View>
     );
   }
@@ -867,7 +876,6 @@ export default function SalesScreen({ navigation }) {
         </TouchableOpacity>
       </Animated.View>
 
-      <TicketListScreen visible={showTicketList} onClose={() => setShowTicketList(false)} />
     </View>
   );
 }

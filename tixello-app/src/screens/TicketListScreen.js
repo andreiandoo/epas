@@ -8,7 +8,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Dimensions,
-  Modal,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
@@ -113,7 +112,7 @@ function TicketCard({ item }) {
 
 // ─── Main TicketListScreen Component ─────────────────────────────────────────
 
-export default function TicketListScreen({ visible, onClose }) {
+export default function TicketListScreen({ onClose }) {
   const { selectedEvent } = useEvent();
   const [participants, setParticipants] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -151,26 +150,23 @@ export default function TicketListScreen({ visible, onClose }) {
     }
   }, [selectedEvent?.id]);
 
-  // Initial load when modal becomes visible
+  // Initial load
   useEffect(() => {
-    if (visible && selectedEvent?.id) {
+    if (selectedEvent?.id) {
       fetchAllParticipants(false);
     }
-    if (!visible) {
-      setSearchQuery('');
-    }
-  }, [visible, selectedEvent?.id]);
+  }, [selectedEvent?.id]);
 
   // Auto-refresh every 10 seconds
   useEffect(() => {
-    if (!visible || !selectedEvent?.id) return;
+    if (!selectedEvent?.id) return;
 
     const interval = setInterval(() => {
       fetchAllParticipants(true);
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [visible, selectedEvent?.id, fetchAllParticipants]);
+  }, [selectedEvent?.id, fetchAllParticipants]);
 
   // Filter by search query
   const filteredParticipants = participants.filter((p) => {
@@ -202,84 +198,77 @@ export default function TicketListScreen({ visible, onClose }) {
   );
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="fullScreen"
-      onRequestClose={onClose}
-    >
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={onClose}
-            activeOpacity={0.7}
-          >
-            <CloseIcon size={22} color={colors.white} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleWrap}>
-            <TicketIcon size={20} color={colors.purple} />
-            <Text style={styles.headerTitle}>Bilete Eveniment</Text>
-          </View>
-          <View style={styles.headerSpacer} />
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={onClose}
+          activeOpacity={0.7}
+        >
+          <CloseIcon size={22} color={colors.white} />
+        </TouchableOpacity>
+        <View style={styles.headerTitleWrap}>
+          <TicketIcon size={20} color={colors.purple} />
+          <Text style={styles.headerTitle}>Bilete Eveniment</Text>
         </View>
+        <View style={styles.headerSpacer} />
+      </View>
 
-        {/* Stats bar */}
-        <View style={styles.statsBar}>
-          <Text style={styles.statsText}>
-            {totalCount} bilete ({checkedInCount} intrați)
-          </Text>
-          {isRefreshing && (
-            <ActivityIndicator size="small" color={colors.purple} style={{ marginLeft: 8 }} />
-          )}
-        </View>
-
-        {/* Search bar */}
-        <View style={styles.searchContainer}>
-          <SearchIcon size={18} color={colors.textTertiary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Caută după nume sau cod..."
-            placeholderTextColor={colors.textQuaternary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
-              <CloseIcon size={16} color={colors.textTertiary} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Content */}
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.purple} />
-            <Text style={styles.loadingText}>Se încarcă biletele...</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={sortedParticipants}
-            renderItem={renderItem}
-            keyExtractor={keyExtractor}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>
-                  {searchQuery.trim()
-                    ? 'Niciun bilet găsit pentru căutarea ta'
-                    : 'Niciun bilet pentru acest eveniment'}
-                </Text>
-              </View>
-            }
-          />
+      {/* Stats bar */}
+      <View style={styles.statsBar}>
+        <Text style={styles.statsText}>
+          {totalCount} bilete ({checkedInCount} intrați)
+        </Text>
+        {isRefreshing && (
+          <ActivityIndicator size="small" color={colors.purple} style={{ marginLeft: 8 }} />
         )}
       </View>
-    </Modal>
+
+      {/* Search bar */}
+      <View style={styles.searchContainer}>
+        <SearchIcon size={18} color={colors.textTertiary} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Caută după nume sau cod..."
+          placeholderTextColor={colors.textQuaternary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
+            <CloseIcon size={16} color={colors.textTertiary} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Content */}
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.purple} />
+          <Text style={styles.loadingText}>Se încarcă biletele...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={sortedParticipants}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                {searchQuery.trim()
+                  ? 'Niciun bilet găsit pentru căutarea ta'
+                  : 'Niciun bilet pentru acest eveniment'}
+              </Text>
+            </View>
+          }
+        />
+      )}
+    </View>
   );
 }
 
@@ -296,7 +285,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 52,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
