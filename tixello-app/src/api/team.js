@@ -1,9 +1,17 @@
 import { apiGet, apiPost } from './client';
 
-export async function getTeam() {
+export function getTeamMembers() {
   return apiGet('/organizer/team');
 }
 
-export async function inviteTeamMember(data) {
+export function inviteTeamMember(data) {
   return apiPost('/organizer/team/invite', data);
+}
+
+export function updateTeamMember(data) {
+  return apiPost('/organizer/team/update', data);
+}
+
+export function removeTeamMember(memberId) {
+  return apiPost('/organizer/team/remove', { member_id: memberId });
 }

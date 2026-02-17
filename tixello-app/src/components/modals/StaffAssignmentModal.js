@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,19 @@ import {
   ScrollView,
   TextInput,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
+import { useEvent } from '../../context/EventContext';
+import { getTeamMembers, inviteTeamMember, removeTeamMember } from '../../api/team';
+import { getVenueGates } from '../../api/gates';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const GATES = ['Poarta A', 'Poarta B', 'Intrare VIP', 'Casierie 1', 'Casierie 2'];
-const ROLES = ['Scanner', 'POS', 'Supervizor'];
+const ROLES = ['admin', 'manager', 'staff'];
+const ROLE_DISPLAY = { admin: 'Admin', manager: 'Manager', staff: 'Staff' };
 
 function getInitials(name) {
   if (!name) return '??';
@@ -26,32 +31,76 @@ function getInitials(name) {
 
 function getRoleColor(role) {
   switch (role) {
-    case 'Scanner': return colors.green;
-    case 'POS': return colors.cyan;
-    case 'Supervizor': return colors.amber;
+    case 'admin': return colors.amber;
+    case 'manager': return colors.cyan;
+    case 'staff': return colors.green;
+    case 'owner': return colors.purple;
     default: return colors.textSecondary;
   }
 }
 
 function getRoleBg(role) {
   switch (role) {
-    case 'Scanner': return colors.greenLight;
-    case 'POS': return colors.cyanLight;
-    case 'Supervizor': return colors.amberLight;
+    case 'admin': return colors.amberLight;
+    case 'manager': return colors.cyanLight;
+    case 'staff': return colors.greenLight;
+    case 'owner': return colors.purpleLight;
     default: return 'rgba(255,255,255,0.05)';
   }
 }
 
 function getRoleBorder(role) {
   switch (role) {
-    case 'Scanner': return colors.greenBorder;
-    case 'POS': return colors.cyanBorder;
-    case 'Supervizor': return colors.amberBorder;
+    case 'admin': return colors.amberBorder;
+    case 'manager': return colors.cyanBorder;
+    case 'staff': return colors.greenBorder;
+    case 'owner': return colors.purpleBorder;
     default: return 'rgba(255,255,255,0.08)';
   }
 }
 
-function OptionPicker({ options, selected, onSelect, getColor, getBg, getBorder }) {
+function getRoleDisplayLabel(role) {
+  if (role === 'owner') return 'Proprietar';
+  return ROLE_DISPLAY[role] || role;
+}
+
+function getStatusColor(status) {
+  switch (status) {
+    case 'active': return colors.green;
+    case 'pending': return colors.amber;
+    case 'inactive': return colors.textTertiary;
+    default: return colors.textSecondary;
+  }
+}
+
+function getStatusBg(status) {
+  switch (status) {
+    case 'active': return colors.greenLight;
+    case 'pending': return colors.amberLight;
+    case 'inactive': return 'rgba(255,255,255,0.05)';
+    default: return 'rgba(255,255,255,0.05)';
+  }
+}
+
+function getStatusBorder(status) {
+  switch (status) {
+    case 'active': return colors.greenBorder;
+    case 'pending': return colors.amberBorder;
+    case 'inactive': return 'rgba(255,255,255,0.08)';
+    default: return 'rgba(255,255,255,0.08)';
+  }
+}
+
+function getStatusLabel(status) {
+  switch (status) {
+    case 'active': return 'Activ';
+    case 'pending': return '\u00cen a\u0219teptare';
+    case 'inactive': return 'Inactiv';
+    default: return status;
+  }
+}
+
+function OptionPicker({ options, selected, onSelect, getColor, getBg, getBorder, getLabel }) {
   return (
     <View style={styles.optionPicker}>
       {options.map((option) => {
@@ -59,6 +108,7 @@ function OptionPicker({ options, selected, onSelect, getColor, getBg, getBorder 
         const optionColor = getColor ? getColor(option) : colors.purple;
         const optionBg = getBg ? getBg(option) : colors.purpleLight;
         const optionBorder = getBorder ? getBorder(option) : colors.purpleBorder;
+        const label = getLabel ? getLabel(option) : option;
 
         return (
           <TouchableOpacity
@@ -79,7 +129,7 @@ function OptionPicker({ options, selected, onSelect, getColor, getBg, getBorder 
                 isSelected && { color: optionColor },
               ]}
             >
-              {option}
+              {label}
             </Text>
           </TouchableOpacity>
         );
@@ -88,53 +138,63 @@ function OptionPicker({ options, selected, onSelect, getColor, getBg, getBorder 
   );
 }
 
-function AssignmentCard({ assignment, onRemove }) {
+function MemberCard({ member, onRemove }) {
+  const isOwner = member.role === 'owner';
   return (
-    <View style={styles.assignmentCard}>
-      <View style={styles.assignmentTop}>
+    <View style={styles.memberCard}>
+      <View style={styles.memberTop}>
         {/* Avatar */}
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{getInitials(assignment.name)}</Text>
+        <View style={[styles.avatar, { backgroundColor: getRoleColor(member.role) }]}>
+          <Text style={styles.avatarText}>{getInitials(member.name)}</Text>
         </View>
 
         {/* Info */}
-        <View style={styles.assignmentInfo}>
-          <Text style={styles.assignmentName}>{assignment.name}</Text>
-          <Text style={styles.assignmentGate}>{assignment.gate}</Text>
+        <View style={styles.memberInfo}>
+          <View style={styles.memberNameRow}>
+            <Text style={styles.memberName}>{member.name}</Text>
+            {isOwner && (
+              <View style={[styles.ownerBadge]}>
+                <Text style={styles.ownerBadgeText}>Proprietar</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.memberEmail}>{member.email}</Text>
         </View>
 
-        {/* Remove button */}
-        <TouchableOpacity
-          style={styles.removeButton}
-          onPress={() => onRemove(assignment.id)}
-          activeOpacity={0.7}
-        >
-          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M18 6L6 18M6 6l12 12"
-              stroke={colors.red}
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-        </TouchableOpacity>
+        {/* Remove button - only for non-owner */}
+        {!isOwner && (
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => onRemove(member.id)}
+            activeOpacity={0.7}
+          >
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M18 6L6 18M6 6l12 12"
+                stroke={colors.red}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </TouchableOpacity>
+        )}
       </View>
 
-      <View style={styles.assignmentBottom}>
-        {/* Shift time */}
-        <View style={styles.shiftInfo}>
-          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 6v6l4 2"
-              stroke={colors.textTertiary}
-              strokeWidth={1.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-          <Text style={styles.shiftText}>
-            {assignment.shiftStart} - {assignment.shiftEnd}
+      <View style={styles.memberBottom}>
+        {/* Status badge */}
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor: getStatusBg(member.status),
+              borderColor: getStatusBorder(member.status),
+            },
+          ]}
+        >
+          <View style={[styles.statusDot, { backgroundColor: getStatusColor(member.status) }]} />
+          <Text style={[styles.statusBadgeText, { color: getStatusColor(member.status) }]}>
+            {getStatusLabel(member.status)}
           </Text>
         </View>
 
@@ -143,13 +203,13 @@ function AssignmentCard({ assignment, onRemove }) {
           style={[
             styles.roleBadge,
             {
-              backgroundColor: getRoleBg(assignment.role),
-              borderColor: getRoleBorder(assignment.role),
+              backgroundColor: getRoleBg(member.role),
+              borderColor: getRoleBorder(member.role),
             },
           ]}
         >
-          <Text style={[styles.roleBadgeText, { color: getRoleColor(assignment.role) }]}>
-            {assignment.role}
+          <Text style={[styles.roleBadgeText, { color: getRoleColor(member.role) }]}>
+            {getRoleDisplayLabel(member.role)}
           </Text>
         </View>
       </View>
@@ -158,33 +218,111 @@ function AssignmentCard({ assignment, onRemove }) {
 }
 
 export default function StaffAssignmentModal({ visible, onClose }) {
-  const [assignments, setAssignments] = useState([]);
-  const [staffName, setStaffName] = useState('');
-  const [selectedGate, setSelectedGate] = useState(GATES[0]);
-  const [selectedRole, setSelectedRole] = useState(ROLES[0]);
-  const [shiftStart, setShiftStart] = useState('');
-  const [shiftEnd, setShiftEnd] = useState('');
+  const { selectedEvent } = useEvent();
+  const [members, setMembers] = useState([]);
+  const [gates, setGates] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [inviting, setInviting] = useState(false);
 
-  const handleAdd = () => {
-    if (!staffName.trim()) return;
+  // Invite form state
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('staff');
+  const [inviteGate, setInviteGate] = useState(null);
 
-    const newAssignment = {
-      id: String(Date.now()),
-      name: staffName.trim(),
-      gate: selectedGate,
-      role: selectedRole,
-      shiftStart: shiftStart.trim() || '09:00',
-      shiftEnd: shiftEnd.trim() || '17:00',
-    };
+  const venueId = selectedEvent?.venue_id;
 
-    setAssignments(prev => [...prev, newAssignment]);
-    setStaffName('');
-    setShiftStart('');
-    setShiftEnd('');
+  // Fetch team members and gates when modal opens
+  useEffect(() => {
+    if (visible) {
+      fetchData();
+    }
+  }, [visible]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch team members
+      const teamResponse = await getTeamMembers();
+      const teamData = teamResponse.data?.members || teamResponse.data || teamResponse.members || [];
+      setMembers(Array.isArray(teamData) ? teamData : []);
+
+      // Fetch gates if venue exists
+      if (venueId) {
+        try {
+          const gatesResponse = await getVenueGates(venueId);
+          const gatesData = gatesResponse.data?.gates || gatesResponse.data || gatesResponse.gates || [];
+          setGates(Array.isArray(gatesData) ? gatesData : []);
+        } catch (e) {
+          console.error('Failed to fetch gates:', e);
+          setGates([]);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch team:', e);
+      Alert.alert('Eroare', 'Nu s-au putut \u00eenc\u0103rca membrii echipei.');
+    }
+    setLoading(false);
   };
 
-  const handleRemove = (assignmentId) => {
-    setAssignments(prev => prev.filter(a => a.id !== assignmentId));
+  const handleInvite = async () => {
+    if (!inviteName.trim() || !inviteEmail.trim()) return;
+
+    setInviting(true);
+    try {
+      const payload = {
+        name: inviteName.trim(),
+        email: inviteEmail.trim(),
+        role: inviteRole,
+        permissions: ['checkin'],
+      };
+
+      const response = await inviteTeamMember(payload);
+      const newMember = response.data?.member || response.data || response.member || {
+        id: String(Date.now()),
+        name: inviteName.trim(),
+        email: inviteEmail.trim(),
+        role: inviteRole,
+        status: 'pending',
+        permissions: ['checkin'],
+      };
+      setMembers(prev => [...prev, newMember]);
+      setInviteName('');
+      setInviteEmail('');
+      setInviteRole('staff');
+      setInviteGate(null);
+      Alert.alert('Succes', 'Invita\u021bia a fost trimis\u0103.');
+    } catch (e) {
+      console.error('Failed to invite member:', e);
+      Alert.alert('Eroare', e.message || 'Nu s-a putut trimite invita\u021bia.');
+    }
+    setInviting(false);
+  };
+
+  const handleRemove = async (memberId) => {
+    Alert.alert(
+      'Elimin\u0103 membru',
+      'Sigur dori\u021bi s\u0103 elimina\u021bi acest membru din echip\u0103?',
+      [
+        { text: 'Anuleaz\u0103', style: 'cancel' },
+        {
+          text: 'Elimin\u0103',
+          style: 'destructive',
+          onPress: async () => {
+            const previousMembers = [...members];
+            setMembers(prev => prev.filter(m => m.id !== memberId));
+
+            try {
+              await removeTeamMember(memberId);
+            } catch (e) {
+              console.error('Failed to remove member:', e);
+              setMembers(previousMembers);
+              Alert.alert('Eroare', 'Nu s-a putut elimina membrul.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -201,7 +339,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
           <View style={styles.header}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={styles.title}>Asignare Personal & Programare</Text>
+              <Text style={styles.title}>Echip\u0103 & Personal</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                   <Path
@@ -216,130 +354,172 @@ export default function StaffAssignmentModal({ visible, onClose }) {
             </View>
           </View>
 
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Add Assignment Form */}
-            <View style={styles.addForm}>
-              <Text style={styles.sectionTitle}>Adaugă Asignare</Text>
-
-              {/* Staff Name */}
-              <Text style={styles.formLabel}>Numele Personalului</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="Introduceți numele personalului"
-                placeholderTextColor={colors.textQuaternary}
-                value={staffName}
-                onChangeText={setStaffName}
-              />
-
-              {/* Gate Picker */}
-              <Text style={styles.formLabel}>Poartă</Text>
-              <OptionPicker
-                options={GATES}
-                selected={selectedGate}
-                onSelect={setSelectedGate}
-              />
-
-              {/* Role Picker */}
-              <Text style={styles.formLabel}>Rol</Text>
-              <OptionPicker
-                options={ROLES}
-                selected={selectedRole}
-                onSelect={setSelectedRole}
-                getColor={getRoleColor}
-                getBg={getRoleBg}
-                getBorder={getRoleBorder}
-              />
-
-              {/* Shift Times */}
-              <Text style={styles.formLabel}>Program Tură</Text>
-              <View style={styles.timeRow}>
-                <View style={styles.timeField}>
-                  <Text style={styles.timeFieldLabel}>Început</Text>
-                  <TextInput
-                    style={styles.formInput}
-                    placeholder="09:00"
-                    placeholderTextColor={colors.textQuaternary}
-                    value={shiftStart}
-                    onChangeText={setShiftStart}
-                    keyboardType="numbers-and-punctuation"
-                  />
-                </View>
-                <View style={styles.timeSeparator}>
-                  <Text style={styles.timeSeparatorText}>până la</Text>
-                </View>
-                <View style={styles.timeField}>
-                  <Text style={styles.timeFieldLabel}>Sfârșit</Text>
-                  <TextInput
-                    style={styles.formInput}
-                    placeholder="17:00"
-                    placeholderTextColor={colors.textQuaternary}
-                    value={shiftEnd}
-                    onChangeText={setShiftEnd}
-                    keyboardType="numbers-and-punctuation"
-                  />
-                </View>
-              </View>
-
-              {/* Add Button */}
-              <TouchableOpacity
-                style={[styles.addButton, !staffName.trim() && styles.addButtonDisabled]}
-                onPress={handleAdd}
-                activeOpacity={0.8}
-                disabled={!staffName.trim()}
-              >
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M12 5v14M5 12h14"
-                    stroke={colors.white}
-                    strokeWidth={2.5}
-                    strokeLinecap="round"
-                  />
-                </Svg>
-                <Text style={styles.addButtonText}>Adaugă Asignare</Text>
-              </TouchableOpacity>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.purple} />
+              <Text style={styles.loadingText}>Se \u00eencarc\u0103 echipa...</Text>
             </View>
-
-            {/* Divider */}
-            <View style={styles.divider} />
-
-            {/* Current Assignments */}
-            <View style={styles.assignmentsSection}>
-              <View style={styles.assignmentsSectionHeader}>
-                <Text style={styles.sectionTitle}>Asignări Curente</Text>
-                <View style={styles.countBadge}>
-                  <Text style={styles.countBadgeText}>{assignments.length}</Text>
+          ) : (
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Existing Team Members */}
+              <View style={styles.membersSection}>
+                <View style={styles.membersSectionHeader}>
+                  <Text style={styles.sectionTitle}>Echip\u0103 Existent\u0103</Text>
+                  <View style={styles.countBadge}>
+                    <Text style={styles.countBadgeText}>{members.length}</Text>
+                  </View>
                 </View>
-              </View>
 
-              {assignments.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Svg width={40} height={40} viewBox="0 0 24 24" fill="none">
-                    <Path
-                      d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
-                      stroke={colors.textTertiary}
-                      strokeWidth={1.5}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                {members.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Svg width={40} height={40} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+                        stroke={colors.textTertiary}
+                        strokeWidth={1.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                    <Text style={styles.emptyText}>Niciun membru \u00een echip\u0103</Text>
+                    <Text style={styles.emptySubtext}>Invita\u021bi personal folosind formularul de mai jos</Text>
+                  </View>
+                ) : (
+                  members.map(member => (
+                    <MemberCard
+                      key={member.id}
+                      member={member}
+                      onRemove={handleRemove}
                     />
-                  </Svg>
-                  <Text style={styles.emptyText}>Nicio asignare de personal încă</Text>
-                  <Text style={styles.emptySubtext}>Adăugați personal folosind formularul de mai sus</Text>
-                </View>
-              ) : (
-                assignments.map(assignment => (
-                  <AssignmentCard
-                    key={assignment.id}
-                    assignment={assignment}
-                    onRemove={handleRemove}
-                  />
-                ))
-              )}
-            </View>
-          </ScrollView>
+                  ))
+                )}
+              </View>
+
+              {/* Divider */}
+              <View style={styles.divider} />
+
+              {/* Invite New Staff Form */}
+              <View style={styles.addForm}>
+                <Text style={styles.sectionTitle}>Invit\u0103 Personal Nou</Text>
+
+                {/* Name */}
+                <Text style={styles.formLabel}>Nume</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Numele complet"
+                  placeholderTextColor={colors.textQuaternary}
+                  value={inviteName}
+                  onChangeText={setInviteName}
+                />
+
+                {/* Email */}
+                <Text style={styles.formLabel}>Email</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="adresa@email.com"
+                  placeholderTextColor={colors.textQuaternary}
+                  value={inviteEmail}
+                  onChangeText={setInviteEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+
+                {/* Role Picker */}
+                <Text style={styles.formLabel}>Rol</Text>
+                <OptionPicker
+                  options={ROLES}
+                  selected={inviteRole}
+                  onSelect={setInviteRole}
+                  getColor={getRoleColor}
+                  getBg={getRoleBg}
+                  getBorder={getRoleBorder}
+                  getLabel={getRoleDisplayLabel}
+                />
+
+                {/* Gate Picker (optional) */}
+                {gates.length > 0 && (
+                  <>
+                    <Text style={styles.formLabel}>Poart\u0103 (op\u021bional)</Text>
+                    <View style={styles.optionPicker}>
+                      <TouchableOpacity
+                        style={[
+                          styles.optionItem,
+                          inviteGate === null && {
+                            backgroundColor: colors.purpleLight,
+                            borderColor: colors.purpleBorder,
+                          },
+                        ]}
+                        onPress={() => setInviteGate(null)}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.optionItemText,
+                            inviteGate === null && { color: colors.purple },
+                          ]}
+                        >
+                          Niciuna
+                        </Text>
+                      </TouchableOpacity>
+                      {gates.map((gate) => {
+                        const isSelected = inviteGate === gate.id;
+                        return (
+                          <TouchableOpacity
+                            key={gate.id}
+                            style={[
+                              styles.optionItem,
+                              isSelected && {
+                                backgroundColor: colors.purpleLight,
+                                borderColor: colors.purpleBorder,
+                              },
+                            ]}
+                            onPress={() => setInviteGate(gate.id)}
+                            activeOpacity={0.7}
+                          >
+                            <Text
+                              style={[
+                                styles.optionItemText,
+                                isSelected && { color: colors.purple },
+                              ]}
+                            >
+                              {gate.name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
+
+                {/* Invite Button */}
+                <TouchableOpacity
+                  style={[styles.addButton, (!inviteName.trim() || !inviteEmail.trim() || inviting) && styles.addButtonDisabled]}
+                  onPress={handleInvite}
+                  activeOpacity={0.8}
+                  disabled={!inviteName.trim() || !inviteEmail.trim() || inviting}
+                >
+                  {inviting ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
+                        stroke={colors.white}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  )}
+                  <Text style={styles.addButtonText}>Trimite Invita\u021bie</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          )}
         </View>
       </View>
     </Modal>
@@ -409,18 +589,167 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 20,
   },
-  addForm: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
+  // Loading state
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: colors.textTertiary,
+  },
+  // Members section
+  membersSection: {
+    marginBottom: 12,
+  },
+  membersSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: 12,
+  },
+  countBadge: {
+    backgroundColor: colors.purpleLight,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: colors.purpleBorder,
+    marginBottom: 12,
+  },
+  countBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.purple,
+  },
+  // Member card
+  memberCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginBottom: 10,
+  },
+  memberTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  memberInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  memberNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
+  memberName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  memberEmail: {
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
+  ownerBadge: {
+    backgroundColor: colors.purpleLight,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: colors.purpleBorder,
+  },
+  ownerBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.purple,
+    letterSpacing: 0.3,
+  },
+  removeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.redBg,
+    borderWidth: 1,
+    borderColor: colors.redBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memberBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  roleBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  roleBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  // Divider
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 20,
+  },
+  // Add / Invite form
+  addForm: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
   },
   formLabel: {
     fontSize: 12,
@@ -460,29 +789,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textTertiary,
   },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    marginBottom: 8,
-  },
-  timeField: {
-    flex: 1,
-  },
-  timeFieldLabel: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: colors.textQuaternary,
-    marginBottom: 4,
-    letterSpacing: 0.3,
-  },
-  timeSeparator: {
-    paddingBottom: 14,
-  },
-  timeSeparatorText: {
-    fontSize: 12,
-    color: colors.textTertiary,
-  },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -501,112 +807,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.white,
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: 20,
-  },
-  assignmentsSection: {
-    marginBottom: 12,
-  },
-  assignmentsSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
-  },
-  countBadge: {
-    backgroundColor: colors.purpleLight,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: colors.purpleBorder,
-  },
-  countBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.purple,
-  },
-  assignmentCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
-    marginBottom: 10,
-  },
-  assignmentTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.purple,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  assignmentInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  assignmentName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  assignmentGate: {
-    fontSize: 12,
-    color: colors.textTertiary,
-  },
-  removeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: colors.redBg,
-    borderWidth: 1,
-    borderColor: colors.redBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  assignmentBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  shiftInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  shiftText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  roleBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  roleBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
+  // Empty state
   emptyState: {
     alignItems: 'center',
     paddingVertical: 40,

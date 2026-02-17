@@ -87,6 +87,13 @@ export function apiPost(path, body = {}) {
   });
 }
 
+export function apiPut(path, body = {}) {
+  return request(`${BASE_URL}${path}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
 export function apiDelete(path) {
   return request(`${BASE_URL}${path}`, {
     method: 'DELETE',
