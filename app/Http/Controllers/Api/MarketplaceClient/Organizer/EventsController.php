@@ -2726,7 +2726,12 @@ class EventsController extends BaseController
             return $this->error('Venue not found', 404);
         }
 
-        $gates = $venue->gates()->get();
+        // Handle gracefully if venue_gates table doesn't exist yet (migration not run)
+        try {
+            $gates = $venue->gates()->get();
+        } catch (\Illuminate\Database\QueryException $e) {
+            $gates = collect([]);
+        }
 
         return $this->success([
             'venue' => [

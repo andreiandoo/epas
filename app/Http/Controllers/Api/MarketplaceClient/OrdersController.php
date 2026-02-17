@@ -113,13 +113,15 @@ class OrdersController extends BaseController
                     throw new \Exception("Maximum {$ticketType->max_per_order} tickets per order for {$ticketType->name}");
                 }
 
-                $itemTotal = $ticketType->price * $quantity;
+                // Use display_price which falls back to price_cents when sale_price_cents is null
+                $unitPrice = $ticketType->display_price ?? ($ticketType->price_cents / 100) ?? 0;
+                $itemTotal = $unitPrice * $quantity;
                 $subtotal += $itemTotal;
 
                 $orderItems[] = [
                     'ticket_type' => $ticketType,
                     'quantity' => $quantity,
-                    'unit_price' => $ticketType->price,
+                    'unit_price' => $unitPrice,
                     'total' => $itemTotal,
                 ];
 
