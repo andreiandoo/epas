@@ -13,6 +13,7 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ArtistGenreResource extends Resource
 {
@@ -33,8 +34,15 @@ class ArtistGenreResource extends Resource
                     Forms\Components\TextInput::make('slug')->maxLength(190),
                     Forms\Components\Select::make('parent_id')
                         ->label('Parent')
-                        ->relationship('parent', 'name->en')
-                        ->searchable()->preload(),
+                        ->relationship('parent', 'id')
+                        ->getOptionLabelFromRecordUsing(fn ($record) =>
+                            $record->getTranslation('name', 'en')
+                                ?: $record->getTranslation('name', 'ro')
+                                ?: $record->slug
+                                ?? ('ID: ' . $record->id)
+                        )
+                        ->searchable()
+                        ->preload(),
                     TranslatableField::textarea('description', 'Description', 3)
                         ->columnSpanFull(),
                 ])->columns(2),
@@ -47,7 +55,9 @@ class ArtistGenreResource extends Resource
             Tables\Columns\TextColumn::make('name.en')
                     ->label('Artist Genre')
                     ->sortable()
-                    ->searchable()
+                    ->searchable(query: fn (Builder $query, string $search) =>
+                        $query->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%'])
+                    )
                     ->url(fn ($record) => static::getUrl('edit', ['record' => $record])),
             Tables\Columns\TextColumn::make('slug')->sortable()->toggleable(),
             Tables\Columns\TextColumn::make('parent.name')->label('Parent')->toggleable(),

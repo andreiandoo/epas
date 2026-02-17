@@ -13,6 +13,7 @@ use Filament\Schemas\Components as SC;
 use Filament\Forms;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 class EventGenreResource extends Resource
@@ -40,8 +41,15 @@ class EventGenreResource extends Resource
 
                     Forms\Components\Select::make('parent_id')
                         ->label('Parent')
-                        ->relationship('parent', 'name->en')
-                        ->searchable()->preload(),
+                        ->relationship('parent', 'id')
+                        ->getOptionLabelFromRecordUsing(fn ($record) =>
+                            $record->getTranslation('name', 'en')
+                                ?: $record->getTranslation('name', 'ro')
+                                ?: $record->slug
+                                ?? ('ID: ' . $record->id)
+                        )
+                        ->searchable()
+                        ->preload(),
 
                     TranslatableField::textarea('description', 'Description', 3)
                         ->columnSpanFull(),
@@ -56,7 +64,9 @@ class EventGenreResource extends Resource
                 Tables\Columns\TextColumn::make('name.en')
                     ->label('Genre')
                     ->sortable()
-                    ->searchable()
+                    ->searchable(query: fn (Builder $query, string $search) =>
+                        $query->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%'])
+                    )
                     ->url(fn ($record) => static::getUrl('edit', ['record' => $record])),
                 Tables\Columns\TextColumn::make('parent.name')->label('Parent'),
                 Tables\Columns\TextColumn::make('slug'),
