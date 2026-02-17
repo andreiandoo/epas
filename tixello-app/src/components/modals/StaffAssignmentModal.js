@@ -421,11 +421,12 @@ export default function StaffAssignmentModal({ visible, onClose }) {
       visible={visible}
       transparent
       animationType="slide"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         <TouchableOpacity style={styles.overlayTouchable} onPress={onClose} activeOpacity={1} />
         <View style={styles.sheet}>
@@ -688,7 +689,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 20,
+    paddingBottom: 120,
   },
   // Loading state
   loadingContainer: {

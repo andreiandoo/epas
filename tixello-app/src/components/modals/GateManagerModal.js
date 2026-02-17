@@ -11,6 +11,8 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
@@ -281,7 +283,8 @@ export default function GateManagerModal({ visible, onClose }) {
       setNewType('Intrare');
     } catch (e) {
       console.error('Failed to create gate:', e);
-      Alert.alert('Eroare', 'Nu s-a putut crea poarta.');
+      const msg = e?.response?.data?.message || e?.message || 'Nu s-a putut crea poarta.';
+      Alert.alert('Eroare', msg);
     }
     setAdding(false);
   };
@@ -346,9 +349,13 @@ export default function GateManagerModal({ visible, onClose }) {
       visible={visible}
       transparent
       animationType="slide"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior="padding"
+      >
         <TouchableOpacity style={styles.overlayTouchable} onPress={onClose} activeOpacity={1} />
         <View style={styles.sheet}>
           {/* Header */}
@@ -397,6 +404,7 @@ export default function GateManagerModal({ visible, onClose }) {
               style={styles.scrollView}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
               {/* Venue Info */}
               <View style={styles.venueInfo}>
@@ -524,7 +532,7 @@ export default function GateManagerModal({ visible, onClose }) {
             </ScrollView>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -588,7 +596,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 20,
+    paddingBottom: 120,
   },
   // Venue info section
   venueInfo: {

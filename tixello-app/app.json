@@ -33,6 +33,7 @@
         "backgroundColor": "#0A0A0F"
       },
       "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "pan",
       "package": "com.ambilet.scan",
       "permissions": ["VIBRATE", "INTERNET", "ACCESS_NETWORK_STATE", "CAMERA"]
     },
