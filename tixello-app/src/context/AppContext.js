@@ -173,6 +173,23 @@ export function AppProvider({ children }) {
       console.error("Failed to cache participants:", e);
     }
   }, []);
+  // Offline: ensure offline data exists when offline mode is already enabled
+  const ensureOfflineData = useCallback(async (eventId) => {
+    if (!offlineMode || !eventId) return;
+    try {
+      const stored = await AsyncStorage.getItem(`offline_participants_${eventId}`);
+      if (!stored || JSON.parse(stored).length === 0) {
+        setIsDownloadingOffline(true);
+        await downloadParticipantsForOffline(eventId);
+        setIsDownloadingOffline(false);
+      } else {
+        setCachedTickets(JSON.parse(stored).length);
+      }
+    } catch (e) {
+      console.error('Failed to ensure offline data:', e);
+    }
+  }, [offlineMode, downloadParticipantsForOffline]);
+
   // Offline: check in a ticket from cached data
   const offlineCheckIn = useCallback(async (eventId, ticketCode) => {
     try {
@@ -248,6 +265,7 @@ export function AppProvider({ children }) {
       // Offline
       downloadParticipantsForOffline,
       offlineCheckIn,
+      ensureOfflineData,
     }}>
       {children}
     </AppContext.Provider>

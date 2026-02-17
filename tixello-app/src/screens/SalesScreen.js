@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { apiPost } from '../api/client';
 import { formatCurrency } from '../utils/formatCurrency';
+import TicketListScreen from './TicketListScreen';
 
 // ─── SVG Icon Components ──────────────────────────────────────────────────────
 
@@ -185,6 +186,20 @@ function ChartIcon({ size = 24, color = colors.purple }) {
   );
 }
 
+function ListIcon({ size = 18, color = colors.purple }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 // ─── Reports Only Placeholder ─────────────────────────────────────────────────
 
 function ReportsOnlyPlaceholder({ onViewReports }) {
@@ -313,6 +328,7 @@ export default function SalesScreen({ navigation }) {
   const { recentSales, addSale } = useApp();
 
   // State
+  const [showTicketList, setShowTicketList] = useState(false);
   const [activeView, setActiveView] = useState('tickets'); // 'tickets' | 'cart'
   const [cartItems, setCartItems] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState(null); // 'tap' | 'cash'
@@ -488,9 +504,23 @@ export default function SalesScreen({ navigation }) {
   if (isReportsOnlyMode) {
     return (
       <View style={styles.container}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
+          <TouchableOpacity
+            style={styles.ticketListBar}
+            onPress={() => setShowTicketList(true)}
+            activeOpacity={0.7}
+          >
+            <ListIcon size={18} color={colors.purple} />
+            <Text style={styles.ticketListBarText}>Bilete eveniment</Text>
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+              <Path d="M9 18l6-6-6-6" stroke={colors.textTertiary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+          </TouchableOpacity>
+        </View>
         <ReportsOnlyPlaceholder
           onViewReports={() => navigation?.navigate?.('Reports')}
         />
+        <TicketListScreen visible={showTicketList} onClose={() => setShowTicketList(false)} />
       </View>
     );
   }
@@ -746,6 +776,19 @@ export default function SalesScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Ticket List Bar */}
+        <TouchableOpacity
+          style={styles.ticketListBar}
+          onPress={() => setShowTicketList(true)}
+          activeOpacity={0.7}
+        >
+          <ListIcon size={18} color={colors.purple} />
+          <Text style={styles.ticketListBarText}>Bilete eveniment</Text>
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+            <Path d="M9 18l6-6-6-6" stroke={colors.textTertiary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+        </TouchableOpacity>
+
         {/* Select Tickets Heading */}
         <Text style={styles.sectionHeading}>Selectează Bilete</Text>
 
@@ -823,6 +866,8 @@ export default function SalesScreen({ navigation }) {
           </View>
         </TouchableOpacity>
       </Animated.View>
+
+      <TicketListScreen visible={showTicketList} onClose={() => setShowTicketList(false)} />
     </View>
   );
 }
@@ -892,6 +937,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.white,
+  },
+
+  // ── Ticket List Bar ──────────────────────────────────────────────────────
+  ticketListBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.purpleBg,
+    borderWidth: 1,
+    borderColor: colors.purpleBorder,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 16,
+    gap: 10,
+  },
+  ticketListBarText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.purple,
   },
 
   // ── Section Heading ───────────────────────────────────────────────────────
