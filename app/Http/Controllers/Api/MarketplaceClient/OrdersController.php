@@ -123,8 +123,8 @@ class OrdersController extends BaseController
                     'total' => $itemTotal,
                 ];
 
-                // Reserve tickets
-                $ticketType->decrement('available_quantity', $quantity);
+                // Reserve tickets (increment quota_sold; available_quantity is computed)
+                $ticketType->increment('quota_sold', $quantity);
             }
 
             // Calculate commission
@@ -144,7 +144,7 @@ class OrdersController extends BaseController
                 'commission_amount' => $commissionAmount,
                 'total' => $total,
                 'currency' => 'RON',
-                'source' => 'marketplace',
+                'source' => $request->input('source', 'marketplace'),
                 'marketplace_client_id' => $client->id,
                 'customer_email' => $customer->email,
                 'customer_name' => $customer->first_name . ' ' . $customer->last_name,
@@ -182,7 +182,23 @@ class OrdersController extends BaseController
                 }
             }
 
+            // Auto-confirm POS cash orders immediately
+            $paymentMethod = $request->input('payment_method');
+            $source = $request->input('source', 'marketplace');
+            if ($paymentMethod === 'cash' && $source === 'pos_app') {
+                $order->update([
+                    'status' => 'confirmed',
+                    'payment_status' => 'paid',
+                    'paid_at' => now(),
+                ]);
+                // Mark tickets as valid
+                $order->tickets()->update(['status' => 'valid']);
+            }
+
             DB::commit();
+
+            // Reload order to get updated status
+            $order->refresh();
 
             Log::info('Marketplace order created', [
                 'order_id' => $order->id,
