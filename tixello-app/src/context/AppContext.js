@@ -115,7 +115,7 @@ export function AppProvider({ children }) {
     setIsShiftPaused(false);
   };
 
-  const addScan = (scan) => {
+  const addScan = useCallback((scan) => {
     if (!shiftStartTime) {
       setShiftStartTime(Date.now());
     }
@@ -128,21 +128,24 @@ export function AppProvider({ children }) {
       return updated;
     });
     setMyScans(prev => prev + 1);
-  };
+  }, [shiftStartTime]);
 
-  const loadScanHistory = async (eventId) => {
+  const loadScanHistory = useCallback(async (eventId) => {
     if (!eventId) return;
     try {
       const stored = await AsyncStorage.getItem(`scan_history_${eventId}`);
       if (stored) {
-        setRecentScans(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setRecentScans(parsed);
+        // Restore myScans count from persisted history
+        setMyScans(parsed.length);
       } else {
         setRecentScans([]);
       }
     } catch (e) {
       setRecentScans([]);
     }
-  };
+  }, []);
 
   const addSale = (sale) => {
     if (!shiftStartTime) {
