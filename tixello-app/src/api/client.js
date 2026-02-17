@@ -65,7 +65,10 @@ async function request(url, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(data.message || `HTTP ${response.status}`);
+    const error = new Error(data.message || `HTTP ${response.status}`);
+    error.data = data;
+    error.status = response.status;
+    throw error;
   }
 
   return data;

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -142,7 +142,15 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
     toggleOfflineMode,
     cachedTickets,
     isDownloadingOffline,
+    ensureOfflineData,
   } = useApp();
+
+  // Auto-download offline data when event is selected and offline mode is already on
+  useEffect(() => {
+    if (selectedEvent?.id && offlineMode) {
+      ensureOfflineData(selectedEvent.id);
+    }
+  }, [selectedEvent?.id, offlineMode]);
 
   const staffName = user?.name || user?.public_name || 'Membru Echipă';
   const staffRole = userRole || 'staff';
