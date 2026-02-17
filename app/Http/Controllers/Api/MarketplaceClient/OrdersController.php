@@ -150,7 +150,7 @@ class OrdersController extends BaseController
                 'customer_name' => $customer->first_name . ' ' . $customer->last_name,
                 'customer_phone' => $customer->phone,
                 'expires_at' => now()->addMinutes(15), // 15 minute reservation
-                'metadata' => [
+                'meta' => [
                     'marketplace_client' => $client->name,
                     'ip_address' => $request->ip(),
                 ],
@@ -354,10 +354,10 @@ class OrdersController extends BaseController
         try {
             DB::beginTransaction();
 
-            // Restore ticket availability
+            // Restore ticket availability (decrement quota_sold; available_quantity is computed)
             foreach ($order->items as $item) {
                 TicketType::where('id', $item->ticket_type_id)
-                    ->increment('available_quantity', $item->quantity);
+                    ->decrement('quota_sold', $item->quantity);
             }
 
             // Update order status
@@ -452,10 +452,10 @@ class OrdersController extends BaseController
             if ($refundType === 'full') {
                 $order->tickets()->update(['status' => 'refunded']);
 
-                // Restore ticket availability
+                // Restore ticket availability (decrement quota_sold; available_quantity is computed)
                 foreach ($order->items as $item) {
                     TicketType::where('id', $item->ticket_type_id)
-                        ->increment('available_quantity', $item->quantity);
+                        ->decrement('quota_sold', $item->quantity);
                 }
             }
 
