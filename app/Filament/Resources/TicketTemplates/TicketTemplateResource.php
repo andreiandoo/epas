@@ -11,6 +11,7 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use BackedEnum;
 use UnitEnum;
+use Illuminate\Database\Eloquent\Builder;
 
 class TicketTemplateResource extends Resource
 {
@@ -217,10 +218,24 @@ class TicketTemplateResource extends Resource
                     ->weight('bold')
                     ->url(fn ($record) => static::getUrl('edit', ['record' => $record])),
 
-                Tables\Columns\TextColumn::make('tenant.name')
-                    ->label('Tenant')
-                    ->searchable()
-                    ->sortable()
+                Tables\Columns\TextColumn::make('owner_name')
+                    ->label('Tenant / Marketplace')
+                    ->getStateUsing(fn ($record) =>
+                        $record->tenant?->name
+                            ?? $record->marketplaceClient?->name
+                            ?? '-'
+                    )
+                    ->description(fn ($record) =>
+                        $record->tenant_id
+                            ? 'Tenant'
+                            : ($record->marketplace_client_id ? 'Marketplace' : null)
+                    )
+                    ->searchable(query: fn (Builder $query, string $search) =>
+                        $query->where(function ($q) use ($search) {
+                            $q->whereHas('tenant', fn ($tq) => $tq->where('name', 'like', "%{$search}%"))
+                              ->orWhereHas('marketplaceClient', fn ($mq) => $mq->where('name', 'like', "%{$search}%"));
+                        })
+                    )
                     ->toggleable(),
 
                 Tables\Columns\BadgeColumn::make('status')
@@ -280,6 +295,12 @@ class TicketTemplateResource extends Resource
                 Tables\Filters\SelectFilter::make('tenant_id')
                     ->label('Tenant')
                     ->relationship('tenant', 'name')
+                    ->searchable()
+                    ->preload(),
+
+                Tables\Filters\SelectFilter::make('marketplace_client_id')
+                    ->label('Marketplace')
+                    ->relationship('marketplaceClient', 'name')
                     ->searchable()
                     ->preload(),
             ])

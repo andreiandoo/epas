@@ -48,6 +48,18 @@ class EventGenreResource extends Resource
                                 ?: $record->slug
                                 ?? ('ID: ' . $record->id)
                         )
+                        ->getSearchResultsUsing(function (string $search) {
+                            return EventGenre::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%'])
+                                ->orWhere('slug', 'like', '%' . strtolower($search) . '%')
+                                ->limit(50)
+                                ->get()
+                                ->mapWithKeys(fn ($record) => [
+                                    $record->id => $record->getTranslation('name', 'en')
+                                        ?: $record->getTranslation('name', 'ro')
+                                        ?: $record->slug
+                                        ?? ('ID: ' . $record->id),
+                                ]);
+                        })
                         ->searchable()
                         ->preload(),
 

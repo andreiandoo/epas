@@ -41,6 +41,18 @@ class ArtistGenreResource extends Resource
                                 ?: $record->slug
                                 ?? ('ID: ' . $record->id)
                         )
+                        ->getSearchResultsUsing(function (string $search) {
+                            return ArtistGenre::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%'])
+                                ->orWhere('slug', 'like', '%' . strtolower($search) . '%')
+                                ->limit(50)
+                                ->get()
+                                ->mapWithKeys(fn ($record) => [
+                                    $record->id => $record->getTranslation('name', 'en')
+                                        ?: $record->getTranslation('name', 'ro')
+                                        ?: $record->slug
+                                        ?? ('ID: ' . $record->id),
+                                ]);
+                        })
                         ->searchable()
                         ->preload(),
                     TranslatableField::textarea('description', 'Description', 3)
