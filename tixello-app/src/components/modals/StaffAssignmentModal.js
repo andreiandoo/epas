@@ -10,6 +10,8 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
@@ -421,7 +423,10 @@ export default function StaffAssignmentModal({ visible, onClose }) {
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <TouchableOpacity style={styles.overlayTouchable} onPress={onClose} activeOpacity={1} />
         <View style={styles.sheet}>
           {/* Header */}
@@ -453,6 +458,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
               style={styles.scrollView}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
               {/* Existing Team Members */}
               <View style={styles.membersSection}>
@@ -616,7 +622,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
             </ScrollView>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
