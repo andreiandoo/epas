@@ -45,8 +45,8 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
 
 const Tab = createBottomTabNavigator();
 
-function TabIcon({ name, focused }) {
-  const color = focused ? colors.purple : 'rgba(255,255,255,0.4)';
+function TabIcon({ name, focused, disabled }) {
+  const color = disabled ? 'rgba(255,255,255,0.15)' : (focused ? colors.purple : 'rgba(255,255,255,0.4)');
   const size = 22;
 
   switch (name) {
@@ -95,7 +95,7 @@ function TabIcon({ name, focused }) {
 function MainTabs() {
   const { userRole } = useAuth();
   const insets = useSafeAreaInsets();
-  const { groupedEvents, selectEvent, fetchEvents } = useEvent();
+  const { groupedEvents, selectEvent, fetchEvents, isReportsOnlyMode } = useEvent();
   const { notifications, markAllRead, shiftStartTime } = useApp();
 
   const [showEventsModal, setShowEventsModal] = useState(false);
@@ -122,24 +122,28 @@ function MainTabs() {
       )}
 
       <Tab.Navigator
-        screenOptions={({ route }) => ({
-          headerShown: false,
-          tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} />,
-          tabBarActiveTintColor: colors.purple,
-          tabBarInactiveTintColor: 'rgba(255,255,255,0.4)',
-          tabBarStyle: {
-            backgroundColor: colors.background,
-            borderTopColor: 'rgba(255,255,255,0.05)',
-            borderTopWidth: 1,
-            paddingBottom: Math.max(insets.bottom, 8),
-            paddingTop: 8,
-            height: 56 + Math.max(insets.bottom, 8),
-          },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '500',
-          },
-        })}
+        screenOptions={({ route }) => {
+          const isDisabledTab = isReportsOnlyMode && (route.name === 'CheckIn' || route.name === 'Sales');
+          return {
+            headerShown: false,
+            tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} disabled={isDisabledTab} />,
+            tabBarActiveTintColor: colors.purple,
+            tabBarInactiveTintColor: 'rgba(255,255,255,0.4)',
+            tabBarStyle: {
+              backgroundColor: colors.background,
+              borderTopColor: 'rgba(255,255,255,0.05)',
+              borderTopWidth: 1,
+              paddingBottom: Math.max(insets.bottom, 8),
+              paddingTop: 8,
+              height: 56 + Math.max(insets.bottom, 8),
+            },
+            tabBarLabelStyle: {
+              fontSize: 11,
+              fontWeight: '500',
+              ...(isDisabledTab ? { color: 'rgba(255,255,255,0.15)' } : {}),
+            },
+          };
+        }}
       >
         <Tab.Screen name="Dashboard" options={{ tabBarLabel: 'Panou' }}>
           {(props) => (

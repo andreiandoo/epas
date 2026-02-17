@@ -98,6 +98,23 @@ function EventItem({ event, category, onPress }) {
   const isLive = category === 'live';
   const isPast = category === 'past';
 
+  const venueName = event.venue_name || event.venue?.name || '';
+  const eventDate = event.event_date || event.date || event.start_date || '';
+  let formattedDate = '';
+  if (eventDate) {
+    try {
+      const d = new Date(eventDate);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      formattedDate = `${day}.${month}.${year}`;
+      if (event.start_time) {
+        formattedDate += ` \u00B7 ${event.start_time.slice(0, 5)}`;
+      }
+    } catch { formattedDate = eventDate; }
+  }
+  const metaParts = [venueName, formattedDate].filter(Boolean);
+
   return (
     <TouchableOpacity
       style={[
@@ -114,7 +131,7 @@ function EventItem({ event, category, onPress }) {
             {event.name || event.title}
           </Text>
           <Text style={styles.eventMeta} numberOfLines={1}>
-            {event.date || event.event_date} {event.venue ? `\u2022 ${event.venue}` : ''}
+            {metaParts.join(' \u2022 ')}
           </Text>
         </View>
         <View style={styles.eventItemRight}>

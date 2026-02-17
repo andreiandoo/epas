@@ -96,6 +96,7 @@ export default function GuestListModal({ visible, onClose }) {
   const [guests, setGuests] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [checkingInId, setCheckingInId] = useState(null);
+  const [showingAll, setShowingAll] = useState(false);
 
   // Fetch participants when modal opens
   useEffect(() => {
@@ -103,6 +104,14 @@ export default function GuestListModal({ visible, onClose }) {
       fetchGuests();
     }
   }, [visible, selectedEvent?.id]);
+
+  const isInvitation = (p) => {
+    const typeName = (p.ticket_type_name || p.ticket_type || '').toLowerCase();
+    if (typeName.includes('invit')) return true;
+    if (p.is_invitation) return true;
+    if (p.source === 'invitation' || p.source === 'comp') return true;
+    return false;
+  };
 
   const fetchGuests = async () => {
     if (!selectedEvent) return;
@@ -117,8 +126,19 @@ export default function GuestListModal({ visible, onClose }) {
         checkedIn: !!p.checked_in_at || !!p.checked_in || p.status === 'checked_in',
         barcode: p.barcode || p.ticket_code || p.code || '',
         checkedInAt: p.checked_in_at || null,
+        _raw: p,
       }));
-      setGuests(mapped);
+
+      // Filter for invitations only
+      const invitations = mapped.filter(g => isInvitation(g._raw));
+      if (invitations.length > 0) {
+        setGuests(invitations);
+        setShowingAll(false);
+      } else {
+        // Fallback: show all participants if no invitations found
+        setGuests(mapped);
+        setShowingAll(true);
+      }
     } catch (e) {
       console.error('Failed to fetch guests:', e);
     }
@@ -236,6 +256,11 @@ export default function GuestListModal({ visible, onClose }) {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
+            {showingAll && !isLoading && guests.length > 0 && (
+              <View style={styles.fallbackNotice}>
+                <Text style={styles.fallbackNoticeText}>Se afișează toți participanții</Text>
+              </View>
+            )}
             {isLoading ? (
               <View style={styles.emptyState}>
                 <ActivityIndicator size="large" color={colors.purple} />
@@ -457,6 +482,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.purple,
+  },
+  fallbackNotice: {
+    backgroundColor: 'rgba(251, 191, 36, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.2)',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  fallbackNoticeText: {
+    fontSize: 12,
+    color: colors.amber || '#FBBF24',
+    fontWeight: '500',
   },
   emptyState: {
     alignItems: 'center',
