@@ -2712,6 +2712,26 @@ class EventsController extends BaseController
     }
 
     /**
+     * Ensure the venue_gates table exists, auto-create if migration not yet run
+     */
+    private function ensureVenueGatesTable(): void
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('venue_gates')) {
+            \Illuminate\Support\Facades\Schema::create('venue_gates', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->id();
+                $table->foreignId('venue_id')->constrained()->cascadeOnDelete();
+                $table->string('name');
+                $table->string('type')->default('entry');
+                $table->string('location')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->integer('sort_order')->default(0);
+                $table->timestamps();
+                $table->index(['venue_id', 'type']);
+            });
+        }
+    }
+
+    /**
      * List gates for a venue
      */
     public function venueGates(Request $request, int $venueId): JsonResponse
@@ -2726,12 +2746,8 @@ class EventsController extends BaseController
             return $this->error('Venue not found', 404);
         }
 
-        // Handle gracefully if venue_gates table doesn't exist yet (migration not run)
-        try {
-            $gates = $venue->gates()->get();
-        } catch (\Illuminate\Database\QueryException $e) {
-            $gates = collect([]);
-        }
+        $this->ensureVenueGatesTable();
+        $gates = $venue->gates()->get();
 
         return $this->success([
             'venue' => [
@@ -2771,6 +2787,8 @@ class EventsController extends BaseController
             'type' => 'required|string|in:entry,vip,pos,exit',
             'location' => 'nullable|string|max:255',
         ]);
+
+        $this->ensureVenueGatesTable();
 
         $maxSort = $venue->gates()->max('sort_order') ?? 0;
 
