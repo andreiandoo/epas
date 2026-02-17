@@ -95,6 +95,7 @@
             rowSeatSize: 15,
             rowSeatSpacing: 20,
             rowSpacing: 20,
+            addRowCurve: 0,
             tableSeats: 5,
             tableSeatsRect: 6,
             tableWidth: 80,
@@ -683,6 +684,9 @@
                 // Draw seats if they exist
                 if (section.rows) {
                     section.rows.forEach(row => {
+                        // Safety net: re-apply curve if curve_offset is set but seat Y values are flat
+                        this.ensureRowCurveApplied(row);
+
                         const metadata = row.metadata || {};
                         const isTable = metadata.is_table;
                         const isRowSelected = this.selectedRowData?.id === row.id;
@@ -1673,6 +1677,31 @@
                 });
                 // Note: handleLayoutUpdated will refresh original seats when the event is received
             },
+            ensureRowCurveApplied(row) {
+                // Safety net: if a row has curve_offset but seats are all at the same Y,
+                // the curve was not persisted to individual seat positions — apply it for rendering
+                const curveOffset = parseFloat(row.curve_offset) || 0;
+                if (curveOffset === 0 || !row.seats || row.seats.length < 2) return;
+
+                const ys = row.seats.map(s => parseFloat(s.y) || 0);
+                const allSameY = ys.every(y => Math.abs(y - ys[0]) < 0.5);
+                if (!allSameY) return; // Y values differ — curve is already applied
+
+                const sortedSeats = [...row.seats].sort((a, b) => (parseFloat(a.x) || 0) - (parseFloat(b.x) || 0));
+                const minX = parseFloat(sortedSeats[0].x) || 0;
+                const maxX = parseFloat(sortedSeats[sortedSeats.length - 1].x) || 0;
+                const centerX = (minX + maxX) / 2;
+                const rowWidth = maxX - minX;
+                const baseY = ys[0]; // All same Y, use first
+
+                if (rowWidth > 0) {
+                    row.seats.forEach(seat => {
+                        const normalizedX = ((parseFloat(seat.x) || 0) - centerX) / (rowWidth / 2);
+                        const curveY = curveOffset * (1 - (normalizedX * normalizedX));
+                        seat.y = baseY + curveY;
+                    });
+                }
+            },
             updateRowCurve() {
                 if (!this.selectedRowData) return;
                 const wire = this.getWire();
@@ -2486,13 +2515,35 @@
                 const numSeats = Math.max(1, Math.min(100, Math.floor(length / spacing))); // Max 100 seats per row
                 const direction = dx >= 0 ? 1 : -1;
 
+                // Calculate all seat positions first (for curve calculation)
+                const seatPositions = [];
                 for (let i = 0; i < numSeats; i++) {
-                    const x = this.rowDrawStart.x + (i * spacing * direction);
-                    const y = this.rowDrawStart.y; // Keep Y fixed (horizontal row)
+                    seatPositions.push({
+                        x: this.rowDrawStart.x + (i * spacing * direction),
+                        y: this.rowDrawStart.y
+                    });
+                }
 
+                // Apply curve offset if set
+                const curveOffset = this.addRowCurve || 0;
+                if (curveOffset !== 0 && seatPositions.length > 1) {
+                    const sortedByX = [...seatPositions].sort((a, b) => a.x - b.x);
+                    const minX = sortedByX[0].x;
+                    const maxX = sortedByX[sortedByX.length - 1].x;
+                    const centerX = (minX + maxX) / 2;
+                    const rowWidth = maxX - minX;
+                    if (rowWidth > 0) {
+                        seatPositions.forEach(sp => {
+                            const normalizedX = (sp.x - centerX) / (rowWidth / 2);
+                            sp.y += curveOffset * (1 - (normalizedX * normalizedX));
+                        });
+                    }
+                }
+
+                for (let i = 0; i < seatPositions.length; i++) {
                     const seat = new Konva.Circle({
-                        x: x,
-                        y: y,
+                        x: seatPositions[i].x,
+                        y: seatPositions[i].y,
                         radius: this.rowSeatSize / 2,
                         fill: 'rgba(34, 197, 94, 0.5)',
                         stroke: '#166534',
@@ -2500,7 +2551,8 @@
                         name: 'temp-seat'
                     });
                     this.drawLayer.add(seat);
-                    this.tempRowSeats.push({ x, y });
+                    // Store original (straight) Y for backend — curve is applied server-side
+                    this.tempRowSeats.push({ x: seatPositions[i].x, y: this.rowDrawStart.y });
                 }
 
                 // Add count label above the row
@@ -2544,7 +2596,7 @@
                             y: seat.y - sectionY
                         }));
 
-                        // Pass all settings to backend including seat size and spacing
+                        // Pass all settings to backend including seat size, spacing, and curvature
                         const wire = this.getWire();
                         if (wire) {
                             wire.addRowWithSeats(this.selectedSection, relativeSeats, {
@@ -2554,7 +2606,8 @@
                                 seatNumberingDirection: this.rowNumberingDirection,
                                 customLabel: this.customRowLabel || null,
                                 seatSize: this.rowSeatSize,
-                                seatSpacing: this.rowSeatSpacing
+                                seatSpacing: this.rowSeatSpacing,
+                                curveOffset: this.addRowCurve || 0
                             });
                         }
 
@@ -2589,14 +2642,29 @@
                 const numRows = Math.max(1, Math.floor(height / this.rowSpacing));
                 const seatsPerRow = Math.max(1, Math.floor(width / this.rowSeatSpacing));
                 const totalSeats = numRows * seatsPerRow;
+                const curveOffset = this.addRowCurve || 0;
+
+                // Calculate curve parameters for the row width
+                const rowMinX = startX + this.rowSeatSpacing / 2;
+                const rowMaxX = startX + (seatsPerRow - 1) * this.rowSeatSpacing + this.rowSeatSpacing / 2;
+                const rowCenterX = (rowMinX + rowMaxX) / 2;
+                const rowWidth = rowMaxX - rowMinX;
 
                 for (let row = 0; row < numRows; row++) {
                     const rowY = startY + row * this.rowSpacing + this.rowSpacing / 2;
                     for (let col = 0; col < seatsPerRow; col++) {
                         const seatX = startX + col * this.rowSeatSpacing + this.rowSeatSpacing / 2;
+
+                        // Apply curve preview
+                        let seatY = rowY;
+                        if (curveOffset !== 0 && rowWidth > 0 && seatsPerRow > 1) {
+                            const normalizedX = (seatX - rowCenterX) / (rowWidth / 2);
+                            seatY += curveOffset * (1 - (normalizedX * normalizedX));
+                        }
+
                         const seat = new Konva.Circle({
                             x: seatX,
-                            y: rowY,
+                            y: seatY,
                             radius: this.rowSeatSize / 2,
                             fill: 'rgba(34, 197, 94, 0.5)',
                             stroke: '#166534',
@@ -2604,6 +2672,7 @@
                             name: 'temp-multi-seat'
                         });
                         this.drawLayer.add(seat);
+                        // Store original (straight) Y for backend — curve is applied server-side
                         this.tempMultiRowSeats.push({ x: seatX, y: rowY, row: row });
                     }
                 }
@@ -2673,7 +2742,8 @@
                                 seatNumberingDirection: this.rowNumberingDirection,
                                 seatSize: this.rowSeatSize,
                                 seatSpacing: this.rowSeatSpacing,
-                                rowSpacing: this.rowSpacing
+                                rowSpacing: this.rowSpacing,
+                                curveOffset: this.addRowCurve || 0
                             });
                         }
                     }
@@ -3950,6 +4020,22 @@
                                 <label class="block text-xs text-purple-600">Spațiu între rânduri</label>
                                 <input type="number" x-model.number="rowSpacing" min="20" max="150" class="w-full px-2 py-1 text-sm text-gray-900 bg-white border border-gray-300 rounded">
                                 <div class="mt-1 text-xs text-gray-500" x-text="`${rowSpacing}px`"></div>
+                            </div>
+                        </div>
+
+                        {{-- Curvature Settings --}}
+                        <div class="p-3 space-y-3 border border-orange-200 rounded-lg bg-orange-50">
+                            <div class="text-xs font-semibold text-orange-700 uppercase">Curbură Rând</div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <input type="range" x-model.number="addRowCurve" min="-50" max="50" class="flex-1">
+                                    <span class="w-10 text-xs text-center font-medium text-orange-700" x-text="addRowCurve"></span>
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-400 mt-1">
+                                    <span>-50</span>
+                                    <button x-on:click="addRowCurve = 0" type="button" class="text-orange-500 hover:text-orange-700 font-medium">Reset 0</button>
+                                    <span>+50</span>
+                                </div>
                             </div>
                         </div>
 

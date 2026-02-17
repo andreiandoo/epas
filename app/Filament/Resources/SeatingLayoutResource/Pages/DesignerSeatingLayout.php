@@ -1094,6 +1094,13 @@ class DesignerSeatingLayout extends Page
             ]);
         }
 
+        // Apply curvature if specified
+        $curveOffset = (float) ($settings['curveOffset'] ?? 0);
+        if ($curveOffset != 0) {
+            $row->update(['curve_offset' => $curveOffset]);
+            $this->applyCurveToRow($row, $curveOffset);
+        }
+
         // Reload sections and update state
         $this->reloadSections();
         $this->dispatch('layout-updated', sections: $this->sections);
@@ -1306,6 +1313,13 @@ class DesignerSeatingLayout extends Page
                 ]);
 
                 $totalSeats++;
+            }
+
+            // Apply curvature if specified
+            $curveOffset = (float) ($settings['curveOffset'] ?? 0);
+            if ($curveOffset != 0) {
+                $row->update(['curve_offset' => $curveOffset]);
+                $this->applyCurveToRow($row, $curveOffset);
             }
 
             $rowsCreated++;
@@ -2027,25 +2041,30 @@ class DesignerSeatingLayout extends Page
      */
     private function applyCurveToRow(SeatingRow $row, float $curveOffset): void
     {
-        $seats = $row->seats()->orderBy('x')->get();
+        $seats = $row->seats()->orderByRaw('CAST(x AS REAL) ASC')->get();
         if ($seats->isEmpty()) return;
 
-        $minX = $seats->first()->x;
-        $maxX = $seats->last()->x;
+        $minX = (float) $seats->first()->x;
+        $maxX = (float) $seats->last()->x;
         $centerX = ($minX + $maxX) / 2;
         $rowWidth = $maxX - $minX;
-        $baseY = $seats->avg('y');
+
+        // Use the row's stored Y as baseline
+        $baseY = (float) $row->y;
+        if ($baseY == 0) {
+            $baseY = (float) $seats->avg('y');
+        }
 
         foreach ($seats as $seat) {
             if ($rowWidth > 0) {
-                $normalizedX = ($seat->x - $centerX) / ($rowWidth / 2);
+                $normalizedX = ((float) $seat->x - $centerX) / ($rowWidth / 2);
                 $curveY = $curveOffset * (1 - ($normalizedX * $normalizedX));
                 $newY = $baseY + $curveY;
             } else {
                 $newY = $baseY;
             }
 
-            $seat->update(['y' => round($newY, 2)]);
+            SeatingSeat::where('id', $seat->id)->update(['y' => round($newY, 2)]);
         }
     }
 
@@ -2855,8 +2874,8 @@ class DesignerSeatingLayout extends Page
         // Clamp curve to reasonable limits
         $curveOffset = max(-50, min(50, $curveOffset));
 
-        // Get seats ordered by X position
-        $seats = $row->seats->sortBy('x')->values();
+        // Get seats ordered by X position (use fresh query for reliable numeric sorting)
+        $seats = $row->seats()->orderByRaw('CAST(x AS REAL) ASC')->get();
         if ($seats->isEmpty()) {
             Notification::make()
                 ->warning()
@@ -2865,24 +2884,31 @@ class DesignerSeatingLayout extends Page
             return;
         }
 
-        // Calculate the center X and base Y
-        $minX = $seats->first()->x;
-        $maxX = $seats->last()->x;
+        // Calculate the center X
+        $minX = (float) $seats->first()->x;
+        $maxX = (float) $seats->last()->x;
         $centerX = ($minX + $maxX) / 2;
         $rowWidth = $maxX - $minX;
-        $baseY = $seats->avg('y');
+
+        // Use the row's stored Y as baseline (set at creation, before any curve)
+        // Fall back to average of seat Y values if row.y is 0
+        $baseY = (float) $row->y;
+        if ($baseY == 0) {
+            $baseY = (float) $seats->avg('y');
+        }
 
         // Apply parabolic curve: y = baseY + curveOffset * (1 - ((x - centerX) / (rowWidth/2))^2)
+        // Use direct query builder for reliable DB persistence
         foreach ($seats as $seat) {
             if ($rowWidth > 0) {
-                $normalizedX = ($seat->x - $centerX) / ($rowWidth / 2); // -1 to 1
+                $normalizedX = ((float) $seat->x - $centerX) / ($rowWidth / 2); // -1 to 1
                 $curveY = $curveOffset * (1 - ($normalizedX * $normalizedX)); // Parabola
                 $newY = $baseY + $curveY;
             } else {
                 $newY = $baseY;
             }
 
-            $seat->update([
+            SeatingSeat::where('id', $seat->id)->update([
                 'y' => round($newY, 2),
             ]);
         }

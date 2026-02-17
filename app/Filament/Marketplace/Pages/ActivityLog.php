@@ -30,16 +30,36 @@ class ActivityLog extends Page
             return ['activities' => collect()];
         }
 
-        // Get tenant IDs associated with this marketplace
-        $tenantIds = $marketplace->tenants()->pluck('tenants.id')->toArray();
+        // Determine which tenant IDs this marketplace can access
+        // Priority: allowed_tenants JSON > pivot table > all tenants (when null)
+        $tenantIds = null; // null means "all tenants"
 
-        $activities = Activity::where(function ($query) use ($marketplace, $tenantIds) {
-                // Activities for tenants belonging to this marketplace
-                if (!empty($tenantIds)) {
-                    $query->whereIn('properties->tenant_id', $tenantIds);
+        if (!is_null($marketplace->allowed_tenants)) {
+            // Explicit tenant list from JSON column
+            $tenantIds = $marketplace->allowed_tenants;
+        }
+
+        // Also merge in tenants from pivot table
+        $pivotTenantIds = $marketplace->tenants()->pluck('tenants.id')->toArray();
+        if (!empty($pivotTenantIds)) {
+            $tenantIds = array_unique(array_merge($tenantIds ?? [], $pivotTenantIds));
+        }
+
+        $activities = Activity::where('log_name', 'tenant')
+            ->where(function ($query) use ($marketplace, $tenantIds) {
+                if (is_null($tenantIds)) {
+                    // Marketplace has access to ALL tenants — show all tenant activities
+                    $query->whereNotNull('id');
+                } else {
+                    // Show activities for specific tenants using whereJsonContains
+                    $query->where(function ($q) use ($tenantIds) {
+                        foreach ($tenantIds as $tenantId) {
+                            $q->orWhereJsonContains('properties->tenant_id', (int) $tenantId);
+                        }
+                    });
                 }
 
-                // Activities caused by marketplace users
+                // Also include activities caused by marketplace users
                 $query->orWhere(function ($q) use ($marketplace) {
                     $q->where('causer_type', 'App\\Models\\User')
                       ->whereIn('causer_id', function ($subQuery) use ($marketplace) {
@@ -48,9 +68,6 @@ class ActivityLog extends Page
                               ->where('marketplace_client_id', $marketplace->id);
                       });
                 });
-
-                // Activities that explicitly logged marketplace_client_id
-                $query->orWhere('properties->marketplace_client_id', $marketplace->id);
             })
             ->orderBy('created_at', 'desc')
             ->limit(100)
