@@ -118,13 +118,14 @@ export default function GuestListModal({ visible, onClose }) {
     setIsLoading(true);
     try {
       const response = await getParticipants(selectedEvent.id, { per_page: 200 });
-      const participants = response.data || [];
-      const mapped = participants.map(p => ({
+      const rawData = response.data || [];
+      const participantList = Array.isArray(rawData) ? rawData : (rawData.participants || []);
+      const mapped = participantList.map(p => ({
         id: p.id || String(Math.random()),
-        name: p.full_name || p.name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Unknown',
-        type: p.ticket_type_name || p.ticket_type || 'Guest',
+        name: p.customer?.name || p.name || p.full_name || 'Unknown',
+        type: p.ticket_type || p.ticket_type_name || 'Guest',
         checkedIn: !!p.checked_in_at || !!p.checked_in || p.status === 'checked_in',
-        barcode: p.barcode || p.ticket_code || p.code || '',
+        barcode: p.barcode || p.ticket_code || '',
         checkedInAt: p.checked_in_at || null,
         _raw: p,
       }));

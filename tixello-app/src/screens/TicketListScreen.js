@@ -92,11 +92,9 @@ function StatusBadge({ status, checkedInAt }) {
 // ─── Ticket Card Component ───────────────────────────────────────────────────
 
 function TicketCard({ item }) {
-  const name = item.full_name ||
-    [item.first_name, item.last_name].filter(Boolean).join(' ') ||
-    'Anonim';
-  const code = item.barcode || item.code || item.ticket_code || '—';
-  const ticketType = item.ticket_type_name || item.ticket_type || '—';
+  const name = item.customer?.name || item.name || item.full_name || 'Anonim';
+  const code = item.barcode || item.ticket_code || '—';
+  const ticketType = item.ticket_type || item.ticket_type_name || '—';
 
   return (
     <View style={styles.ticketCard}>
@@ -172,9 +170,11 @@ export default function TicketListScreen({ onClose }) {
   const filteredParticipants = participants.filter((p) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
-    const name = (p.full_name || `${p.first_name || ''} ${p.last_name || ''}`).toLowerCase();
-    const code = (p.barcode || p.code || p.ticket_code || '').toLowerCase();
-    return name.includes(query) || code.includes(query);
+    const name = (p.customer?.name || p.name || p.full_name || '').toLowerCase();
+    const code = (p.barcode || p.ticket_code || '').toLowerCase();
+    const email = (p.customer?.email || '').toLowerCase();
+    const orderNum = (p.order_number || '').toLowerCase();
+    return name.includes(query) || code.includes(query) || email.includes(query) || orderNum.includes(query);
   });
 
   // Sort: unchecked first, checked-in last

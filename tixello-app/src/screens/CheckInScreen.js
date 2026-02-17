@@ -228,7 +228,15 @@ export default function CheckInScreen({ navigation }) {
     addScan,
     recentScans,
     myScans,
+    loadScanHistory,
   } = useApp();
+
+  // Load persisted scan history when event changes
+  useEffect(() => {
+    if (selectedEvent?.id) {
+      loadScanHistory(selectedEvent.id);
+    }
+  }, [selectedEvent?.id]);
 
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null); // { type: 'valid'|'duplicate'|'invalid', data: {} }
@@ -372,6 +380,7 @@ export default function CheckInScreen({ navigation }) {
         ticketType: storedData?.ticketType || 'N/A',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         code: code,
+        eventId: selectedEvent?.id,
       });
 
       // Auto-clear after 3 seconds
@@ -438,6 +447,7 @@ export default function CheckInScreen({ navigation }) {
           ticketType: result.data.ticketType,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           code: code,
+          eventId: selectedEvent?.id,
         });
 
         incrementCheckedIn();
@@ -507,6 +517,7 @@ export default function CheckInScreen({ navigation }) {
           ticketType: result.data.ticketType,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           code: code,
+          eventId: selectedEvent?.id,
         });
 
         // Auto-clear after 3 seconds for duplicates
@@ -534,6 +545,7 @@ export default function CheckInScreen({ navigation }) {
           ticketType: '-',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           code: code,
+          eventId: selectedEvent?.id,
         });
 
         // Auto-clear after 3 seconds for invalid

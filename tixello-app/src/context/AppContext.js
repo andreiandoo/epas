@@ -119,8 +119,29 @@ export function AppProvider({ children }) {
     if (!shiftStartTime) {
       setShiftStartTime(Date.now());
     }
-    setRecentScans(prev => [scan, ...prev].slice(0, 20));
+    setRecentScans(prev => {
+      const updated = [scan, ...prev].slice(0, 50);
+      // Persist scan history per event
+      if (scan.eventId) {
+        AsyncStorage.setItem(`scan_history_${scan.eventId}`, JSON.stringify(updated)).catch(() => {});
+      }
+      return updated;
+    });
     setMyScans(prev => prev + 1);
+  };
+
+  const loadScanHistory = async (eventId) => {
+    if (!eventId) return;
+    try {
+      const stored = await AsyncStorage.getItem(`scan_history_${eventId}`);
+      if (stored) {
+        setRecentScans(JSON.parse(stored));
+      } else {
+        setRecentScans([]);
+      }
+    } catch (e) {
+      setRecentScans([]);
+    }
   };
 
   const addSale = (sale) => {
@@ -247,6 +268,7 @@ export function AppProvider({ children }) {
       recentSales,
       addScan,
       addSale,
+      loadScanHistory,
 
       // Notifications
       notifications,
