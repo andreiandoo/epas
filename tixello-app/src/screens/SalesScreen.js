@@ -474,7 +474,18 @@ export default function SalesScreen({ navigation }) {
     }
   };
 
-  const finishPayment = () => {
+  const finishPayment = async (skipEmail = false) => {
+    // Auto check-in tickets when skipping email on cash POS orders
+    if (skipEmail && lastOrderData?.id && paymentMethod === 'cash') {
+      try {
+        await apiPost(`/orders/${lastOrderData.id}/pos-complete`, {
+          auto_checkin: true,
+          checked_in_by: user?.name || 'POS',
+        });
+      } catch (e) {
+        console.error('Failed to auto check-in:', e);
+      }
+    }
     setShowPaymentSuccess(false);
     setShowEmailCapture(false);
     setCartItems([]);
@@ -496,7 +507,7 @@ export default function SalesScreen({ navigation }) {
       console.error('Failed to send ticket email:', e);
     }
     setSendingEmail(false);
-    finishPayment();
+    finishPayment(false);
   };
 
   // ─── Ticket List View (inline, keeps tab bar visible) ──────────────────────
@@ -703,7 +714,7 @@ export default function SalesScreen({ navigation }) {
 
               <TouchableOpacity
                 style={styles.skipButton}
-                onPress={finishPayment}
+                onPress={() => finishPayment(true)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.skipButtonText}>Omite & Finalizează</Text>
@@ -719,7 +730,7 @@ export default function SalesScreen({ navigation }) {
           animationType="fade"
           onRequestClose={() => {
             setShowEmailCapture(false);
-            finishPayment();
+            finishPayment(true);
           }}
         >
           <KeyboardAvoidingView
@@ -764,7 +775,7 @@ export default function SalesScreen({ navigation }) {
 
               <TouchableOpacity
                 style={styles.emailSkipButton}
-                onPress={finishPayment}
+                onPress={() => finishPayment(true)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.emailSkipButtonText}>Omite</Text>
