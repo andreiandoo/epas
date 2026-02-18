@@ -1416,6 +1416,10 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.orders.cancel');
     Route::post('/orders/{order}/refund', [MarketplaceOrdersController::class, 'refund'])
         ->name('api.marketplace-client.orders.refund');
+    Route::post('/orders/{order}/send-tickets', [MarketplaceOrdersController::class, 'sendTickets'])
+        ->name('api.marketplace-client.orders.send-tickets');
+    Route::post('/orders/{order}/pos-complete', [MarketplaceOrdersController::class, 'posComplete'])
+        ->name('api.marketplace-client.orders.pos-complete');
 
     // Payment
     Route::post('/orders/{order}/pay', [MarketplacePaymentController::class, 'initiate'])

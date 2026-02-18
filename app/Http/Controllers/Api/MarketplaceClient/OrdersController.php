@@ -221,7 +221,9 @@ class OrdersController extends BaseController
                 ]);
             })->afterResponse();
 
-            return $this->success([
+            $isPosConfirmed = $paymentMethod === 'cash' && $source === 'pos_app';
+
+            $responseData = [
                 'order' => [
                     'id' => $order->id,
                     'order_number' => $order->order_number,
@@ -230,10 +232,24 @@ class OrdersController extends BaseController
                     'commission_amount' => $order->commission_amount,
                     'total' => $order->total,
                     'currency' => $order->currency,
-                    'expires_at' => $order->expires_at->toIso8601String(),
+                    'expires_at' => $order->expires_at?->toIso8601String(),
                 ],
-                'payment_url' => route('marketplace.payment', ['order' => $order->id]),
-            ], 'Order created successfully', 201);
+                'payment_url' => null,
+            ];
+
+            // Include ticket barcodes for POS confirmed orders
+            if ($isPosConfirmed) {
+                $order->load('tickets.ticketType');
+                $responseData['tickets'] = $order->tickets->map(fn($t) => [
+                    'id' => $t->id,
+                    'barcode' => $t->barcode,
+                    'code' => $t->code,
+                    'ticket_type' => $t->ticketType?->name,
+                    'status' => $t->status,
+                ]);
+            }
+
+            return $this->success($responseData, 'Order created successfully', 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -523,5 +539,144 @@ class OrdersController extends BaseController
             ]);
             return $this->error('Failed to refund order: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Send tickets to an email address (POS flow)
+     */
+    public function sendTickets(Request $request, int $orderId): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $order = Order::with(['tickets.ticketType', 'event'])
+            ->where('id', $orderId)
+            ->where('marketplace_client_id', $client->id)
+            ->first();
+
+        if (!$order) {
+            return $this->error('Order not found', 404);
+        }
+
+        $email = $request->input('email');
+
+        // Update customer email on order
+        $order->update(['customer_email' => $email]);
+
+        // Update customer record if exists
+        if ($order->customer_id) {
+            Customer::where('id', $order->customer_id)->update(['email' => $email]);
+        }
+
+        // Send ticket email
+        try {
+            $this->sendPosTicketEmail($order, $email, $client);
+        } catch (\Exception $e) {
+            Log::error('Failed to send POS ticket email', [
+                'order_id' => $order->id,
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+            // Don't fail the request - email updated successfully even if send fails
+        }
+
+        return $this->success(null, 'Tickets sent to ' . $email);
+    }
+
+    /**
+     * Complete a POS order with optional auto check-in
+     */
+    public function posComplete(Request $request, int $orderId): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $order = Order::with('tickets.ticketType')
+            ->where('id', $orderId)
+            ->where('marketplace_client_id', $client->id)
+            ->first();
+
+        if (!$order) {
+            return $this->error('Order not found', 404);
+        }
+
+        $autoCheckin = $request->boolean('auto_checkin', false);
+        $checkedIn = [];
+
+        if ($autoCheckin) {
+            $checkinBy = $request->input('checked_in_by', 'POS');
+            $now = now();
+
+            foreach ($order->tickets as $ticket) {
+                if ($ticket->status === 'valid' && !$ticket->checked_in_at) {
+                    $ticket->update([
+                        'checked_in_at' => $now,
+                        'checked_in_by' => $checkinBy,
+                    ]);
+                    $checkedIn[] = [
+                        'id' => $ticket->id,
+                        'barcode' => $ticket->barcode,
+                        'code' => $ticket->code,
+                        'ticket_type' => $ticket->ticketType?->name,
+                        'checked_in_at' => $now->toIso8601String(),
+                    ];
+                }
+            }
+        }
+
+        return $this->success([
+            'order_id' => $order->id,
+            'checked_in' => $checkedIn,
+            'checked_in_count' => count($checkedIn),
+        ], $autoCheckin ? 'Tickets checked in' : 'Order completed');
+    }
+
+    /**
+     * Send a simple ticket email for POS orders
+     */
+    private function sendPosTicketEmail(Order $order, string $email, $client): void
+    {
+        $order->load(['tickets.ticketType', 'event']);
+        $event = $order->event;
+        $eventName = $event?->title ?? 'Eveniment';
+
+        // Build ticket list HTML
+        $ticketRows = '';
+        foreach ($order->tickets as $ticket) {
+            $typeName = $ticket->ticketType?->name ?? 'Bilet';
+            $code = $ticket->code;
+            $barcode = $ticket->barcode;
+            $ticketRows .= "<tr><td style='padding:8px;border-bottom:1px solid #eee;'>{$typeName}</td><td style='padding:8px;border-bottom:1px solid #eee;font-family:monospace;'>{$code}</td></tr>";
+        }
+
+        $totalFormatted = number_format($order->total, 2, ',', '.') . ' ' . ($order->currency ?? 'RON');
+        $marketplaceName = $client->name ?? 'AmBilet';
+
+        $html = "
+        <div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;'>
+            <h2 style='color:#333;'>Biletele tale pentru {$eventName}</h2>
+            <p>Comanda: <strong>{$order->order_number}</strong></p>
+            <p>Total: <strong>{$totalFormatted}</strong></p>
+            <table style='width:100%;border-collapse:collapse;margin:20px 0;'>
+                <tr style='background:#f5f5f5;'>
+                    <th style='padding:10px;text-align:left;'>Tip bilet</th>
+                    <th style='padding:10px;text-align:left;'>Cod</th>
+                </tr>
+                {$ticketRows}
+            </table>
+            <p style='color:#666;font-size:13px;'>Prezintă acest email sau codurile la intrare.</p>
+            <p style='color:#999;font-size:12px;margin-top:30px;'>Trimis de {$marketplaceName}</p>
+        </div>";
+
+        $fromEmail = $client->getEmailFromAddress() ?? 'noreply@ambilet.ro';
+        $fromName = $client->getEmailFromName() ?? $marketplaceName;
+
+        \Illuminate\Support\Facades\Mail::html($html, function ($message) use ($email, $fromEmail, $fromName, $eventName) {
+            $message->to($email)
+                ->from($fromEmail, $fromName)
+                ->subject("Biletele tale - {$eventName}");
+        });
     }
 }
