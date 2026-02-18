@@ -123,6 +123,43 @@ class MarketplacePanelProvider extends PanelProvider
             ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.marketplace-support-card')->render())
 
             // Set dark mode as default if not already set
-            ->renderHook('panels::head.end', fn () => '<script>if(!localStorage.getItem("theme")){localStorage.setItem("theme","dark");document.documentElement.classList.add("dark");}</script>');
+            ->renderHook('panels::head.end', fn () => '<script>if(!localStorage.getItem("theme")){localStorage.setItem("theme","dark");document.documentElement.classList.add("dark");}</script>')
+
+            // Preserve scroll position during Livewire morph updates (fixes Repeater scroll jump)
+            ->renderHook('panels::body.end', fn () => <<<'HTML'
+            <script>
+            document.addEventListener('livewire:init', () => {
+                let savedScrollY = null;
+                let isFormSubmit = false;
+
+                Livewire.hook('commit.prepare', ({ component }) => {
+                    savedScrollY = window.scrollY;
+                    isFormSubmit = false;
+                });
+
+                Livewire.hook('commit', ({ component, commit, respond, succeed, fail }) => {
+                    // Detect form submissions (save, delete, etc.) — don't block their scroll
+                    const calls = commit?.calls || [];
+                    if (calls.length > 0) {
+                        const methodNames = calls.map(c => c.method || '');
+                        if (methodNames.some(m => m === 'save' || m === 'create' || m === 'delete' || m.startsWith('mount'))) {
+                            isFormSubmit = true;
+                        }
+                    }
+
+                    succeed(({ snapshot, effects }) => {
+                        if (savedScrollY !== null && !isFormSubmit) {
+                            requestAnimationFrame(() => {
+                                window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+                                savedScrollY = null;
+                            });
+                        } else {
+                            savedScrollY = null;
+                        }
+                    });
+                });
+            });
+            </script>
+            HTML);
     }
 }
