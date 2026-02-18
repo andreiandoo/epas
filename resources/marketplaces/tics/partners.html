@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parteneri — TICS.ro | Devino partener</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}.anim{animation:fadeInUp .6s ease forwards;opacity:0}.anim-d1{animation-delay:.1s}.anim-d2{animation-delay:.2s}.anim-d3{animation-delay:.3s}.anim-d4{animation-delay:.4s}
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}.float{animation:float 5s ease-in-out infinite}
+        @keyframes count{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.count-anim{animation:count .5s ease forwards}
+        .plan-card{transition:all .3s ease}.plan-card:hover{transform:translateY(-6px);box-shadow:0 24px 48px -12px rgba(0,0,0,.12)}
+        .logo-card{transition:all .2s ease}.logo-card:hover{transform:scale(1.05);border-color:#d1d5db}
+        .feature-card{transition:all .25s ease}.feature-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px -8px rgba(0,0,0,.08)}
+        .faq-content{max-height:0;overflow:hidden;transition:max-height .3s ease}.faq-content.open{max-height:300px}.faq-icon{transition:transform .2s ease}.faq-icon.open{transform:rotate(45deg)}
+    </style>
+</head>
+<body class="bg-white">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-lg border-b border-gray-200">
+        <div class="max-w-6xl mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="/" class="flex items-center gap-2 group"><div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform"><span class="text-white font-bold text-sm">T</span></div><span class="font-bold text-lg">TICS</span></a>
+                <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
+                    <a href="#benefits" class="hover:text-gray-900 transition-colors">Beneficii</a>
+                    <a href="#plans" class="hover:text-gray-900 transition-colors">Planuri</a>
+                    <a href="#partners" class="hover:text-gray-900 transition-colors">Parteneri</a>
+                    <a href="#faq" class="hover:text-gray-900 transition-colors">FAQ</a>
+                </nav>
+                <a href="#contact" class="px-5 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors">Contactează-ne</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
+        <div class="absolute top-20 right-10 w-72 h-72 bg-indigo-100 rounded-full blur-3xl opacity-40 float"></div>
+        <div class="absolute bottom-10 left-10 w-60 h-60 bg-violet-100 rounded-full blur-3xl opacity-40 float" style="animation-delay:2s"></div>
+        <div class="max-w-6xl mx-auto px-4 lg:px-8 py-16 lg:py-24 relative">
+            <div class="max-w-3xl mx-auto text-center">
+                <div class="anim inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-full mb-6"><span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span><span class="text-sm font-medium text-indigo-700">Acceptăm noi parteneri</span></div>
+                <h1 class="anim anim-d1 text-4xl lg:text-5xl font-bold text-gray-900 leading-tight mb-5">Crește-ți afacerea cu <span class="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">TICS.ro</span></h1>
+                <p class="anim anim-d2 text-lg text-gray-600 leading-relaxed mb-8 max-w-2xl mx-auto">Alătură-te ecosistemului de ticketing cu cel mai mic comision din România. Oferim organizatorilor de evenimente controlul complet asupra vânzărilor, cashflow-ului și datelor.</p>
+                <div class="anim anim-d3 flex items-center justify-center gap-3">
+                    <a href="#contact" class="px-7 py-3.5 bg-gray-900 text-white text-sm font-semibold rounded-full hover:bg-gray-800 transition-colors shadow-lg shadow-gray-900/20">Devino partener</a>
+                    <a href="#benefits" class="px-7 py-3.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-full hover:bg-gray-50 transition-colors">Află mai multe</a>
+                </div>
+            </div>
+            <!-- Stats -->
+            <div class="anim anim-d4 grid grid-cols-2 md:grid-cols-4 gap-4 mt-16 max-w-3xl mx-auto">
+                <div class="text-center p-5 bg-white rounded-2xl border border-gray-100 shadow-sm"><p class="text-3xl font-bold text-gray-900">1%</p><p class="text-sm text-gray-500 mt-1">Comision</p></div>
+                <div class="text-center p-5 bg-white rounded-2xl border border-gray-100 shadow-sm"><p class="text-3xl font-bold text-gray-900">500+</p><p class="text-sm text-gray-500 mt-1">Evenimente</p></div>
+                <div class="text-center p-5 bg-white rounded-2xl border border-gray-100 shadow-sm"><p class="text-3xl font-bold text-gray-900">100+</p><p class="text-sm text-gray-500 mt-1">Parteneri</p></div>
+                <div class="text-center p-5 bg-white rounded-2xl border border-gray-100 shadow-sm"><p class="text-3xl font-bold text-gray-900">24h</p><p class="text-sm text-gray-500 mt-1">Cashflow direct</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits -->
+    <section id="benefits" class="py-16 bg-gray-50">
+        <div class="max-w-6xl mx-auto px-4 lg:px-8">
+            <div class="text-center mb-12"><p class="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-2">De ce TICS</p><h2 class="text-2xl lg:text-3xl font-bold text-gray-900">Tot ce ai nevoie, fără compromisuri</h2></div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div class="feature-card bg-white rounded-2xl border border-gray-200 p-6"><div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4 text-xl">💰</div><h3 class="font-semibold text-gray-900 mb-2">Comision de doar 1%</h3><p class="text-sm text-gray-600 leading-relaxed">Cel mai mic comision din piață. Competitorii cer 5-10%. La un eveniment de 100.000 RON, economisești între 4.000 și 9.000 RON.</p></div>
+                <div class="feature-card bg-white rounded-2xl border border-gray-200 p-6"><div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4 text-xl">⚡</div><h3 class="font-semibold text-gray-900 mb-2">Cashflow direct</h3><p class="text-sm text-gray-600 leading-relaxed">Banii ajung direct în contul tău. Nu mai aștepți 30-60 de zile după eveniment — ai acces imediat la fonduri.</p></div>
+                <div class="feature-card bg-white rounded-2xl border border-gray-200 p-6"><div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4 text-xl">🏷️</div><h3 class="font-semibold text-gray-900 mb-2">White-label complet</h3><p class="text-sm text-gray-600 leading-relaxed">Vinde bilete pe domeniul tău, cu branding-ul tău. Publicul tău nu va ști niciodată că TICS e în spate.</p></div>
+                <div class="feature-card bg-white rounded-2xl border border-gray-200 p-6"><div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-4 text-xl">📊</div><h3 class="font-semibold text-gray-900 mb-2">Dashboard & Analytics</h3><p class="text-sm text-gray-600 leading-relaxed">Dashboard în timp real cu vânzări, conversii și date demografice. Export CSV, integrare Google Analytics.</p></div>
+                <div class="feature-card bg-white rounded-2xl border border-gray-200 p-6"><div class="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center mb-4 text-xl">🧾</div><h3 class="font-semibold text-gray-900 mb-2">Fiscalizare automată</h3><p class="text-sm text-gray-600 leading-relaxed">Facturi și bonuri fiscale generate automat conform legislației românești. Integrare ANAF completă.</p></div>
+                <div class="feature-card bg-white rounded-2xl border border-gray-200 p-6"><div class="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center mb-4 text-xl">📱</div><h3 class="font-semibold text-gray-900 mb-2">Scanare & Check-in</h3><p class="text-sm text-gray-600 leading-relaxed">Aplicație mobilă pentru staff cu scanare QR, statistici live la poartă și managementul accesului.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison -->
+    <section class="py-16 bg-white">
+        <div class="max-w-4xl mx-auto px-4 lg:px-8">
+            <div class="text-center mb-10"><h2 class="text-2xl font-bold text-gray-900">TICS vs. competiție</h2></div>
+            <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead><tr class="bg-gray-50 border-b border-gray-200"><th class="text-left py-4 px-5 font-medium text-gray-500">Funcționalitate</th><th class="py-4 px-4 text-center"><span class="inline-flex items-center gap-1.5 font-semibold text-gray-900"><div class="w-5 h-5 bg-gray-900 rounded flex items-center justify-center"><span class="text-white text-xs font-bold">T</span></div>TICS</span></th><th class="py-4 px-4 text-center font-medium text-gray-400">iaBilet</th><th class="py-4 px-4 text-center font-medium text-gray-400">Eventim</th></tr></thead>
+                    <tbody>
+                        <tr class="border-b border-gray-100"><td class="py-3.5 px-5 text-gray-700">Comision</td><td class="py-3.5 px-4 text-center"><span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">1%</span></td><td class="py-3.5 px-4 text-center text-gray-400">5-8%</td><td class="py-3.5 px-4 text-center text-gray-400">7-10%</td></tr>
+                        <tr class="border-b border-gray-100"><td class="py-3.5 px-5 text-gray-700">Cashflow direct</td><td class="py-3.5 px-4 text-center text-green-600">✓</td><td class="py-3.5 px-4 text-center text-red-400">✗</td><td class="py-3.5 px-4 text-center text-red-400">✗</td></tr>
+                        <tr class="border-b border-gray-100"><td class="py-3.5 px-5 text-gray-700">White-label</td><td class="py-3.5 px-4 text-center text-green-600">✓</td><td class="py-3.5 px-4 text-center text-red-400">✗</td><td class="py-3.5 px-4 text-center text-gray-400">Parțial</td></tr>
+                        <tr class="border-b border-gray-100"><td class="py-3.5 px-5 text-gray-700">Fiscalizare RO</td><td class="py-3.5 px-4 text-center text-green-600">✓</td><td class="py-3.5 px-4 text-center text-green-600">✓</td><td class="py-3.5 px-4 text-center text-red-400">✗</td></tr>
+                        <tr class="border-b border-gray-100"><td class="py-3.5 px-5 text-gray-700">API & Integrări</td><td class="py-3.5 px-4 text-center text-green-600">✓</td><td class="py-3.5 px-4 text-center text-gray-400">Limitat</td><td class="py-3.5 px-4 text-center text-red-400">✗</td></tr>
+                        <tr><td class="py-3.5 px-5 text-gray-700">Carduri beneficii</td><td class="py-3.5 px-4 text-center text-green-600">✓</td><td class="py-3.5 px-4 text-center text-red-400">✗</td><td class="py-3.5 px-4 text-center text-red-400">✗</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Partner Plans -->
+    <section id="plans" class="py-16 bg-gray-50">
+        <div class="max-w-6xl mx-auto px-4 lg:px-8">
+            <div class="text-center mb-12"><p class="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-2">Planuri</p><h2 class="text-2xl lg:text-3xl font-bold text-gray-900">Alege planul potrivit</h2></div>
+            <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div class="plan-card bg-white rounded-2xl border border-gray-200 p-7">
+                    <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Starter</p>
+                    <p class="text-3xl font-bold text-gray-900 mb-1">Gratuit</p>
+                    <p class="text-sm text-gray-500 mb-6">pentru evenimente mici</p>
+                    <ul class="space-y-3 mb-8 text-sm text-gray-600">
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Comision 1%</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Până la 500 bilete/ev.</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Dashboard de bază</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Suport email</li>
+                    </ul>
+                    <a href="#contact" class="block w-full py-3 border border-gray-200 text-gray-700 text-sm font-semibold rounded-full text-center hover:bg-gray-50 transition-colors">Începe gratuit</a>
+                </div>
+                <div class="plan-card bg-gray-900 rounded-2xl p-7 text-white relative overflow-hidden">
+                    <div class="absolute top-0 right-0 px-4 py-1.5 bg-indigo-500 text-white text-xs font-bold rounded-bl-xl">Popular</div>
+                    <p class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Pro</p>
+                    <p class="text-3xl font-bold mb-1">199 RON<span class="text-base font-normal text-gray-400">/lună</span></p>
+                    <p class="text-sm text-gray-400 mb-6">pentru organizatori activi</p>
+                    <ul class="space-y-3 mb-8 text-sm text-gray-300">
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Comision 1%</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Bilete nelimitate</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>White-label</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Analytics avansat</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Suport prioritar</li>
+                    </ul>
+                    <a href="#contact" class="block w-full py-3 bg-indigo-500 text-white text-sm font-semibold rounded-full text-center hover:bg-indigo-400 transition-colors">Începe acum</a>
+                </div>
+                <div class="plan-card bg-white rounded-2xl border border-gray-200 p-7">
+                    <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Enterprise</p>
+                    <p class="text-3xl font-bold text-gray-900 mb-1">Custom</p>
+                    <p class="text-sm text-gray-500 mb-6">pentru festivaluri & rețele</p>
+                    <ul class="space-y-3 mb-8 text-sm text-gray-600">
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Comision negociabil</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Tot din Pro +</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>API dedicat</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Account manager</li>
+                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>SLA garantat</li>
+                    </ul>
+                    <a href="#contact" class="block w-full py-3 border border-gray-200 text-gray-700 text-sm font-semibold rounded-full text-center hover:bg-gray-50 transition-colors">Cere ofertă</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Partner Logos -->
+    <section id="partners" class="py-16 bg-white">
+        <div class="max-w-6xl mx-auto px-4 lg:px-8">
+            <div class="text-center mb-10"><p class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Ei ne-au ales</p><h2 class="text-2xl font-bold text-gray-900">Parteneri de încredere</h2></div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div class="logo-card bg-gray-50 rounded-2xl border border-gray-100 p-6 flex items-center justify-center aspect-[3/2]"><span class="text-lg font-bold text-gray-300">AmBilet</span></div>
+                <div class="logo-card bg-gray-50 rounded-2xl border border-gray-100 p-6 flex items-center justify-center aspect-[3/2]"><span class="text-lg font-bold text-gray-300">Festival X</span></div>
+                <div class="logo-card bg-gray-50 rounded-2xl border border-gray-100 p-6 flex items-center justify-center aspect-[3/2]"><span class="text-lg font-bold text-gray-300">Club Y</span></div>
+                <div class="logo-card bg-gray-50 rounded-2xl border border-gray-100 p-6 flex items-center justify-center aspect-[3/2]"><span class="text-lg font-bold text-gray-300">Arena Z</span></div>
+                <div class="logo-card bg-gray-50 rounded-2xl border border-gray-100 p-6 flex items-center justify-center aspect-[3/2]"><span class="text-lg font-bold text-gray-300">Brezing</span></div>
+                <div class="logo-card bg-gray-50 rounded-2xl border border-gray-100 p-6 flex items-center justify-center aspect-[3/2]"><span class="text-lg font-bold text-gray-300">Sala W</span></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonial -->
+    <section class="py-16 bg-gray-50">
+        <div class="max-w-3xl mx-auto px-4 lg:px-8 text-center">
+            <svg class="w-10 h-10 text-gray-300 mx-auto mb-6" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151C7.546 6.068 5.983 8.789 5.983 11H10v10H0z"/></svg>
+            <blockquote class="text-xl lg:text-2xl font-medium text-gray-900 leading-relaxed mb-6">„De când am trecut pe TICS, nu numai că am redus costurile cu ticketing-ul de la 7% la 1%, dar am și acces instantaneu la bani. E o diferență enormă pentru cashflow."</blockquote>
+            <div class="flex items-center justify-center gap-3"><div class="w-12 h-12 bg-gray-300 rounded-full"></div><div class="text-left"><p class="font-semibold text-gray-900">Mihai Dragomir</p><p class="text-sm text-gray-500">Director, Festival XYZ</p></div></div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="py-16 bg-white">
+        <div class="max-w-2xl mx-auto px-4 lg:px-8">
+            <div class="text-center mb-10"><h2 class="text-2xl font-bold text-gray-900">Întrebări frecvente</h2></div>
+            <div class="space-y-3">
+                <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden"><button onclick="toggleFaq(this)" class="w-full flex items-center justify-between p-5 text-left"><span class="font-medium text-gray-900 text-sm pr-4">Cum funcționează comisionul de 1%?</span><svg class="faq-icon w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"/></svg></button><div class="faq-content"><p class="px-5 pb-5 text-sm text-gray-600 leading-relaxed">Comisionul de 1% se aplică pe fiecare bilet vândut și include procesarea plăților, infrastructura de ticketing și suportul tehnic. Nu există costuri ascunse sau taxe suplimentare.</p></div></div>
+                <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden"><button onclick="toggleFaq(this)" class="w-full flex items-center justify-between p-5 text-left"><span class="font-medium text-gray-900 text-sm pr-4">Cum funcționează cashflow-ul direct?</span><svg class="faq-icon w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"/></svg></button><div class="faq-content"><p class="px-5 pb-5 text-sm text-gray-600 leading-relaxed">Plățile sunt procesate direct în contul tău bancar prin sistemul RoPay. Nu intermediem banii — aceștia ajung la tine în maxim 24 de ore lucrătoare de la vânzare.</p></div></div>
+                <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden"><button onclick="toggleFaq(this)" class="w-full flex items-center justify-between p-5 text-left"><span class="font-medium text-gray-900 text-sm pr-4">Pot folosi TICS pe domeniul meu?</span><svg class="faq-icon w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"/></svg></button><div class="faq-content"><p class="px-5 pb-5 text-sm text-gray-600 leading-relaxed">Da, planurile Pro și Enterprise includ white-label complet. Pagina de vânzare, emailurile și biletele vor avea branding-ul tău, pe domeniul tău.</p></div></div>
+                <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden"><button onclick="toggleFaq(this)" class="w-full flex items-center justify-between p-5 text-left"><span class="font-medium text-gray-900 text-sm pr-4">Ce metode de plată sunt acceptate?</span><svg class="faq-icon w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"/></svg></button><div class="faq-content"><p class="px-5 pb-5 text-sm text-gray-600 leading-relaxed">Acceptăm carduri Visa/Mastercard, transfer bancar, Apple Pay, Google Pay și carduri de beneficii (Edenred, Pluxee, Up Romania). Toate într-un checkout fluid.</p></div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact CTA -->
+    <section id="contact" class="py-16 bg-gray-900 text-white">
+        <div class="max-w-3xl mx-auto px-4 lg:px-8">
+            <div class="text-center mb-10"><h2 class="text-2xl lg:text-3xl font-bold">Hai să discutăm</h2><p class="text-gray-400 mt-2">Completează formularul și te contactăm în maxim 24 de ore.</p></div>
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div><label class="text-xs text-gray-400 mb-1 block">Nume complet *</label><input type="text" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 outline-none focus:border-indigo-500 text-sm" placeholder="Ion Popescu"></div>
+                <div><label class="text-xs text-gray-400 mb-1 block">Email *</label><input type="email" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 outline-none focus:border-indigo-500 text-sm" placeholder="ion@companie.ro"></div>
+                <div><label class="text-xs text-gray-400 mb-1 block">Companie</label><input type="text" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 outline-none focus:border-indigo-500 text-sm" placeholder="Numele companiei"></div>
+                <div><label class="text-xs text-gray-400 mb-1 block">Telefon</label><input type="tel" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 outline-none focus:border-indigo-500 text-sm" placeholder="+40 7XX XXX XXX"></div>
+                <div class="sm:col-span-2"><label class="text-xs text-gray-400 mb-1 block">Mesaj</label><textarea rows="3" class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 outline-none focus:border-indigo-500 text-sm resize-none" placeholder="Spune-ne despre evenimentele tale..."></textarea></div>
+            </div>
+            <button class="mt-5 w-full sm:w-auto px-8 py-3.5 bg-indigo-500 text-white text-sm font-semibold rounded-full hover:bg-indigo-400 transition-colors">Trimite mesajul</button>
+        </div>
+    </section>
+
+    <script>
+    function toggleFaq(btn){const c=btn.nextElementSibling;const i=btn.querySelector('.faq-icon');c.classList.toggle('open');i.classList.toggle('open')}
+    </script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<?php
+/**
+ * TICS.ro - About Page
+ * Company info, mission, team, timeline
+ */
+
+require_once __DIR__ . '/includes/config.php';
+
+// Page settings
+$pageTitle = 'Despre TICS — Platforma de ticketing pentru România';
+$pageDescription = 'TICS este platforma de ticketing care pune organizatorul pe primul loc — cu cel mai mic comision din piață, cashflow direct și control total.';
+$bodyClass = 'bg-white';
+
+$breadcrumbs = [
+    ['name' => 'Acasă', 'url' => '/'],
+    ['name' => 'Despre', 'url' => null],
+];
+
+setLoginState($isLoggedIn, $loggedInUser);
+
+include __DIR__ . '/includes/head.php';
+include __DIR__ . '/includes/header.php';
+?>
+
+<!-- Hero -->
+<section class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950"></div>
+    <div class="absolute inset-0">
+        <div class="absolute top-20 left-[15%] w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl float"></div>
+        <div class="absolute bottom-10 right-[10%] w-60 h-60 bg-violet-500/10 rounded-full blur-3xl float" style="animation-delay:3s"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl"></div>
+    </div>
+    <div class="max-w-6xl mx-auto px-4 lg:px-8 py-20 lg:py-32 relative">
+        <div class="max-w-3xl mx-auto text-center">
+            <div class="anim inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full mb-8">
+                <span class="w-2 h-2 bg-indigo-400 rounded-full"></span>
+                <span class="text-sm text-gray-300">Fondat în Brașov, 2024</span>
+            </div>
+            <h1 class="anim ad1 text-4xl lg:text-6xl font-black text-white leading-[1.1] mb-6">Construim <span class="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">viitorul ticketingului</span> din România</h1>
+            <p class="anim ad2 text-lg lg:text-xl text-gray-400 leading-relaxed max-w-2xl mx-auto">TICS este platforma de ticketing care pune organizatorul pe primul loc — cu cel mai mic comision din piață, cashflow direct și control total.</p>
+        </div>
+    </div>
+    <div class="glow-line max-w-lg mx-auto"></div>
+</section>
+
+<!-- Stats -->
+<section class="max-w-6xl mx-auto px-4 lg:px-8 -mt-1 relative z-10">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        <div class="about-stat-card bg-white rounded-2xl border border-gray-200 p-5 lg:p-6 text-center">
+            <p class="text-3xl lg:text-4xl font-black text-gray-900 mb-1">1%</p>
+            <p class="text-sm text-gray-500">Comision pe bilet</p>
+        </div>
+        <div class="about-stat-card bg-white rounded-2xl border border-gray-200 p-5 lg:p-6 text-center">
+            <p class="text-3xl lg:text-4xl font-black text-gray-900 mb-1">100+</p>
+            <p class="text-sm text-gray-500">Organizatori parteneri</p>
+        </div>
+        <div class="about-stat-card bg-white rounded-2xl border border-gray-200 p-5 lg:p-6 text-center">
+            <p class="text-3xl lg:text-4xl font-black text-gray-900 mb-1">500+</p>
+            <p class="text-sm text-gray-500">Evenimente pe an</p>
+        </div>
+        <div class="about-stat-card bg-white rounded-2xl border border-gray-200 p-5 lg:p-6 text-center">
+            <p class="text-3xl lg:text-4xl font-black text-gray-900 mb-1">24h</p>
+            <p class="text-sm text-gray-500">Acces la bani</p>
+        </div>
+    </div>
+</section>
+
+<!-- Mission -->
+<section id="misiune" class="max-w-6xl mx-auto px-4 lg:px-8 py-20 lg:py-28">
+    <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        <div>
+            <span class="inline-flex items-center gap-2 text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-4"><span class="w-8 h-px bg-indigo-400"></span>Misiunea noastră</span>
+            <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 leading-tight mb-6">Organizatorii merită mai mult de la o platformă de ticketing</h2>
+            <p class="text-gray-600 leading-relaxed mb-4">Am pornit TICS dintr-o frustrare simplă: platformele de ticketing din România percep comisioane exagerate de 5-15%, rețin banii organizatorilor săptămâni sau luni, și oferă puțin control asupra datelor și brandingului.</p>
+            <p class="text-gray-600 leading-relaxed mb-6">Credem că organizatorii ar trebui să păstreze banii câștigați, să aibă acces instant la fonduri, și să-și vândă biletele sub propriul brand — fără compromisuri.</p>
+            <div class="space-y-3">
+                <div class="flex items-center gap-3"><div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></div><span class="text-sm text-gray-700">Comision corect — 1%, nu 10%</span></div>
+                <div class="flex items-center gap-3"><div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></div><span class="text-sm text-gray-700">Bani direcți în contul organizatorului</span></div>
+                <div class="flex items-center gap-3"><div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></div><span class="text-sm text-gray-700">Tehnologie modernă, construită în România</span></div>
+            </div>
+        </div>
+        <div class="relative">
+            <div class="bg-gradient-to-br from-gray-50 to-indigo-50/50 rounded-3xl p-8 lg:p-10 border border-gray-100">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4">
+                    <div class="flex items-center gap-3 mb-4"><div class="w-3 h-3 bg-red-400 rounded-full"></div><div class="w-3 h-3 bg-amber-400 rounded-full"></div><div class="w-3 h-3 bg-green-400 rounded-full"></div></div>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between"><span class="text-sm text-gray-500">Comision competitori</span><span class="text-sm font-bold text-red-500 line-through">5 — 15%</span></div>
+                        <div class="flex items-center justify-between"><span class="text-sm text-gray-500">Comision TICS</span><span class="text-2xl font-black text-emerald-600">1%</span></div>
+                        <div class="h-px bg-gray-100"></div>
+                        <div class="flex items-center justify-between"><span class="text-sm text-gray-500">Economie pe 10.000 bilete × 100 RON</span><span class="text-sm font-bold text-gray-900">+40.000 — 140.000 RON</span></div>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 text-center">* Calcul bazat pe prețuri publice ale competitorilor</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Values -->
+<section class="bg-gray-50 py-20">
+    <div class="max-w-6xl mx-auto px-4 lg:px-8">
+        <div class="text-center mb-12">
+            <span class="inline-flex items-center gap-2 text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-4"><span class="w-8 h-px bg-indigo-400"></span>Valorile noastre<span class="w-8 h-px bg-indigo-400"></span></span>
+            <h2 class="text-3xl font-bold text-gray-900">Principiile care ne ghidează</h2>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="value-card bg-white rounded-2xl border border-gray-200 p-6">
+                <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-2xl mb-4">🎯</div>
+                <h3 class="font-bold text-gray-900 mb-2">Transparență totală</h3>
+                <p class="text-sm text-gray-500 leading-relaxed">Fără costuri ascunse, fără surprize. Prețul pe care îl vezi este prețul pe care îl plătești. Comisionul nostru e public și fix.</p>
+            </div>
+            <div class="value-card bg-white rounded-2xl border border-gray-200 p-6">
+                <div class="w-12 h-12 bg-violet-50 rounded-xl flex items-center justify-center text-2xl mb-4">⚡</div>
+                <h3 class="font-bold text-gray-900 mb-2">Viteză și simplitate</h3>
+                <p class="text-sm text-gray-500 leading-relaxed">De la crearea unui eveniment la prima vânzare — minute, nu zile. Interfață intuitivă, fără birocrație, fără așteptări.</p>
+            </div>
+            <div class="value-card bg-white rounded-2xl border border-gray-200 p-6">
+                <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-2xl mb-4">🤝</div>
+                <h3 class="font-bold text-gray-900 mb-2">Partener, nu furnizor</h3>
+                <p class="text-sm text-gray-500 leading-relaxed">Fiecare organizator primește atenție personalizată. Creștem împreună — succesul tău este succesul nostru.</p>
+            </div>
+            <div class="value-card bg-white rounded-2xl border border-gray-200 p-6">
+                <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-2xl mb-4">🔒</div>
+                <h3 class="font-bold text-gray-900 mb-2">Siguranță și conformitate</h3>
+                <p class="text-sm text-gray-500 leading-relaxed">Plăți securizate SSL, fiscalizare ANAF automată, GDPR compliant. Datele tale și ale clienților tăi sunt protejate.</p>
+            </div>
+            <div class="value-card bg-white rounded-2xl border border-gray-200 p-6">
+                <div class="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center text-2xl mb-4">🇷🇴</div>
+                <h3 class="font-bold text-gray-900 mb-2">Construit în România</h3>
+                <p class="text-sm text-gray-500 leading-relaxed">Dezvoltat de o echipă 100% românească, cu înțelegerea reală a pieței locale, a legislației și a nevoilor organizatorilor.</p>
+            </div>
+            <div class="value-card bg-white rounded-2xl border border-gray-200 p-6">
+                <div class="w-12 h-12 bg-sky-50 rounded-xl flex items-center justify-center text-2xl mb-4">🚀</div>
+                <h3 class="font-bold text-gray-900 mb-2">Inovație continuă</h3>
+                <p class="text-sm text-gray-500 leading-relaxed">Transfer instant RoPay, carduri de beneficii, white-label, API deschis — construim funcționalitățile pe care piața le cere.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Team -->
+<section id="echipa" class="max-w-6xl mx-auto px-4 lg:px-8 py-20">
+    <div class="text-center mb-12">
+        <span class="inline-flex items-center gap-2 text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-4"><span class="w-8 h-px bg-indigo-400"></span>Echipa<span class="w-8 h-px bg-indigo-400"></span></span>
+        <h2 class="text-3xl font-bold text-gray-900 mb-3">Oamenii din spatele TICS</h2>
+        <p class="text-gray-500 max-w-lg mx-auto">O echipă mică dar dedicată, cu experiență în dezvoltare software, management de evenimente și industria culturală din România.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="team-card text-center">
+            <div class="team-avatar w-28 h-28 bg-gradient-to-br from-indigo-200 to-violet-200 rounded-2xl mx-auto mb-4 flex items-center justify-center text-4xl shadow-sm">👨‍💻</div>
+            <h3 class="font-bold text-gray-900">Andrei</h3>
+            <p class="text-sm text-indigo-600 font-medium mb-2">Founder & CTO</p>
+            <p class="text-xs text-gray-500 leading-relaxed">15+ ani experiență full-stack. Arhitectul tehnic al platformei TICS.</p>
+        </div>
+        <div class="team-card text-center">
+            <div class="team-avatar w-28 h-28 bg-gradient-to-br from-emerald-200 to-teal-200 rounded-2xl mx-auto mb-4 flex items-center justify-center text-4xl shadow-sm">👩‍💼</div>
+            <h3 class="font-bold text-gray-900">Maria</h3>
+            <p class="text-sm text-indigo-600 font-medium mb-2">Head of Partnerships</p>
+            <p class="text-xs text-gray-500 leading-relaxed">Conexiuni directe cu 100+ venue-uri și festivaluri din România.</p>
+        </div>
+        <div class="team-card text-center">
+            <div class="team-avatar w-28 h-28 bg-gradient-to-br from-amber-200 to-orange-200 rounded-2xl mx-auto mb-4 flex items-center justify-center text-4xl shadow-sm">👨‍🎨</div>
+            <h3 class="font-bold text-gray-900">Radu</h3>
+            <p class="text-sm text-indigo-600 font-medium mb-2">Product Designer</p>
+            <p class="text-xs text-gray-500 leading-relaxed">Obsesia pentru UX și interfețe intuitive care fac ticketingul simplu.</p>
+        </div>
+        <div class="team-card text-center">
+            <div class="team-avatar w-28 h-28 bg-gradient-to-br from-rose-200 to-pink-200 rounded-2xl mx-auto mb-4 flex items-center justify-center text-4xl shadow-sm">👩‍💻</div>
+            <h3 class="font-bold text-gray-900">Elena</h3>
+            <p class="text-sm text-indigo-600 font-medium mb-2">Customer Success</p>
+            <p class="text-xs text-gray-500 leading-relaxed">Asigură o experiență impecabilă pentru fiecare organizator partener.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Timeline -->
+<section id="parcurs" class="bg-gray-50 py-20">
+    <div class="max-w-3xl mx-auto px-4 lg:px-8">
+        <div class="text-center mb-14">
+            <span class="inline-flex items-center gap-2 text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-4"><span class="w-8 h-px bg-indigo-400"></span>Parcursul nostru<span class="w-8 h-px bg-indigo-400"></span></span>
+            <h2 class="text-3xl font-bold text-gray-900">De la idee la platformă</h2>
+        </div>
+        <div class="relative">
+            <div class="absolute left-6 top-0 bottom-0 w-px bg-gradient-to-b from-indigo-200 via-violet-200 to-gray-200"></div>
+            <div class="space-y-10">
+                <div class="timeline-item relative pl-16">
+                    <div class="timeline-dot absolute left-4 top-1.5 w-5 h-5 bg-indigo-500 rounded-full border-4 border-indigo-100"></div>
+                    <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">2024 · Q3</span>
+                    <h3 class="font-bold text-gray-900 mt-1 mb-1">Ideea prinde contur</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">Dintr-o frustrare personală cu platformele existente de ticketing s-a născut conceptul TICS — comision minim, cashflow direct, tehnologie modernă.</p>
+                </div>
+                <div class="timeline-item relative pl-16">
+                    <div class="timeline-dot absolute left-4 top-1.5 w-5 h-5 bg-violet-500 rounded-full border-4 border-violet-100"></div>
+                    <span class="text-xs font-bold text-violet-600 uppercase tracking-wider">2024 · Q4</span>
+                    <h3 class="font-bold text-gray-900 mt-1 mb-1">Dezvoltare și MVP</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">Arhitectura platformei, integrare procesatoare de plăți, fiscalizare ANAF, și prima versiune a dashboard-ului pentru organizatori.</p>
+                </div>
+                <div class="timeline-item relative pl-16">
+                    <div class="timeline-dot absolute left-4 top-1.5 w-5 h-5 bg-indigo-500 rounded-full border-4 border-indigo-100"></div>
+                    <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">2025</span>
+                    <h3 class="font-bold text-gray-900 mt-1 mb-1">Primii parteneri</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">AmBilet.ro devine primul client white-label. Primele contracte cu festivaluri și venue-uri. Echipa crește, platforma se maturizează.</p>
+                </div>
+                <div class="timeline-item relative pl-16">
+                    <div class="timeline-dot absolute left-4 top-1.5 w-5 h-5 bg-emerald-500 rounded-full border-4 border-emerald-100"></div>
+                    <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider">2026 · Acum</span>
+                    <h3 class="font-bold text-gray-900 mt-1 mb-1">Lansare publică</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">Toate contractele sunt live. Aplicație mobilă, transfer instant RoPay, carduri de beneficii, API public. TICS devine o alternativă reală în piața din România.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="max-w-6xl mx-auto px-4 lg:px-8 py-20">
+    <div class="bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 rounded-3xl p-8 lg:p-14 text-center relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-0 left-0 w-60 h-60 bg-violet-500/10 rounded-full blur-3xl"></div>
+        <div class="relative">
+            <h2 class="text-3xl lg:text-4xl font-bold text-white mb-4">Gata să încerci TICS?</h2>
+            <p class="text-gray-400 max-w-lg mx-auto mb-8">Fie că ești organizator și vrei comisionul cel mai mic, fie că vrei să cumperi bilete simplu și rapid — TICS e aici pentru tine.</p>
+            <div class="flex items-center justify-center gap-3 flex-wrap">
+                <a href="/parteneri" class="px-8 py-3.5 bg-white text-gray-900 text-sm font-bold rounded-full hover:bg-gray-100 transition-colors">Devino partener</a>
+                <a href="/" class="px-8 py-3.5 border border-white/20 text-white text-sm font-bold rounded-full hover:bg-white/10 transition-colors">Explorează evenimente</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php include __DIR__ . '/includes/footer.php'; ?>
+</body>
+</html>

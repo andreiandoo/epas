@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evenimente trecute — TICS.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}html{scroll-behavior:smooth}body{font-family:'Inter',system-ui,sans-serif}
+        ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}.no-scrollbar::-webkit-scrollbar{display:none}
+        .event-card{transition:all .25s ease}.event-card:hover{transform:translateY(-2px);box-shadow:0 12px 30px -8px rgba(0,0,0,.1)}.event-card:hover .event-img{transform:scale(1.05)}.event-img{transition:transform .5s ease}
+        .chip-active{background:#111827 !important;color:white !important;border-color:#111827 !important}
+        .month-marker{position:relative}.month-marker::before{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:#e5e7eb}.month-marker span{position:relative;background:#f9fafb;padding:0 12px}
+        .year-tab{transition:all .2s ease}.year-tab:hover{background:#f3f4f6}.year-tab.active{background:#111827;color:white}
+        .stats-card{transition:all .3s ease}.stats-card:hover{transform:translateY(-2px)}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.animate-fadeInUp{animation:fadeInUp .5s ease forwards}
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-lg border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-4">
+                    <a href="/" class="p-2 hover:bg-gray-100 rounded-full transition-all"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></a>
+                    <a href="/" class="flex items-center gap-2 group"><div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform"><span class="text-white font-bold text-sm">T</span></div><span class="font-bold text-lg hidden sm:block">TICS</span></a>
+                </div>
+                <div class="hidden md:flex flex-1 max-w-lg mx-6">
+                    <div class="w-full flex items-center bg-gray-100 rounded-full px-4 py-2.5 focus-within:ring-2 focus-within:ring-gray-900 focus-within:bg-white transition-all">
+                        <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="text" placeholder="Caută în evenimente trecute..." class="flex-1 bg-transparent outline-none text-gray-900 placeholder:text-gray-400">
+                    </div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <a href="#" class="relative flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg><span class="w-5 h-5 bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center">2</span></a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Page Header -->
+    <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8 py-8">
+            <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                <a href="/" class="hover:text-gray-900 transition-colors">Acasă</a><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <span class="text-gray-900 font-medium">Evenimente trecute</span>
+            </div>
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Evenimente trecute</h1>
+                    <p class="text-gray-600">Arhiva completă a evenimentelor organizate prin TICS. Revizuiește momentele memorabile.</p>
+                </div>
+                <!-- Year Tabs -->
+                <div class="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+                    <button class="year-tab px-4 py-2 rounded-lg text-sm font-medium text-gray-600" onclick="switchYear(this)">2024</button>
+                    <button class="year-tab active px-4 py-2 rounded-lg text-sm font-medium" onclick="switchYear(this)">2025</button>
+                    <button class="year-tab px-4 py-2 rounded-lg text-sm font-medium text-gray-600" onclick="switchYear(this)">2026</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8 py-4">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="stats-card bg-gray-50 rounded-xl p-4 text-center">
+                    <p class="text-2xl font-bold text-gray-900">847</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Evenimente în 2025</p>
+                </div>
+                <div class="stats-card bg-gray-50 rounded-xl p-4 text-center">
+                    <p class="text-2xl font-bold text-gray-900">342K</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Bilete vândute</p>
+                </div>
+                <div class="stats-card bg-gray-50 rounded-xl p-4 text-center">
+                    <p class="text-2xl font-bold text-gray-900">156</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Artiști unici</p>
+                </div>
+                <div class="stats-card bg-gray-50 rounded-xl p-4 text-center">
+                    <p class="text-2xl font-bold text-gray-900">42</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Orașe</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="sticky top-16 z-30 bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8">
+            <div class="flex items-center gap-2 py-3 overflow-x-auto no-scrollbar">
+                <button class="chip-active px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium whitespace-nowrap transition-colors" onclick="toggleChip(this)">Toate</button>
+                <button class="px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors" onclick="toggleChip(this)">🎤 Concerte</button>
+                <button class="px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors" onclick="toggleChip(this)">🎪 Festivaluri</button>
+                <button class="px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors" onclick="toggleChip(this)">😂 Stand-up</button>
+                <button class="px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors" onclick="toggleChip(this)">🎭 Teatru</button>
+                <button class="px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors" onclick="toggleChip(this)">🎧 Cluburi & DJ</button>
+                <div class="w-px h-6 bg-gray-200 mx-1"></div>
+                <select class="bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 text-xs font-medium text-gray-700 cursor-pointer focus:outline-none"><option>Toate orașele</option><option>București</option><option>Cluj-Napoca</option><option>Timișoara</option><option>Iași</option><option>Brașov</option></select>
+                <select class="bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 text-xs font-medium text-gray-700 cursor-pointer focus:outline-none"><option>Toate lunile</option><option>Ianuarie</option><option>Februarie</option><option>Martie</option><option>Aprilie</option><option>Mai</option><option>Iunie</option><option>Iulie</option><option>August</option><option>Septembrie</option><option>Octombrie</option><option>Noiembrie</option><option>Decembrie</option></select>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 py-8">
+
+        <!-- Month: Decembrie 2025 -->
+        <div class="month-marker flex items-center justify-center mb-6"><span class="text-sm font-semibold text-gray-900 uppercase tracking-wider">Decembrie 2025</span></div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+            <a href="event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                <div class="relative aspect-[16/9] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=500&h=280&fit=crop" class="absolute inset-0 w-full h-full object-cover event-img grayscale-[30%]">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                    <div class="absolute top-3 left-3"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Sold Out ✓</span></div>
+                    <div class="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-white/90 rounded-full"><svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg><span class="text-xs font-semibold text-gray-700">4.9</span></div>
+                    <div class="absolute bottom-3 left-3"><p class="text-white text-xs font-medium bg-white/20 backdrop-blur px-2.5 py-1 rounded-full">15 Dec 2025</p></div>
+                </div>
+                <div class="p-4">
+                    <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">Carla's Dreams - Concert de Crăciun</h3>
+                    <p class="text-sm text-gray-500 flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>Sala Palatului, București</p>
+                    <div class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
+                        <span class="flex items-center gap-1 text-xs text-gray-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>4.200 participanți</span>
+                        <span class="flex items-center gap-1 text-xs text-gray-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>1.8K aprecieri</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                <div class="relative aspect-[16/9] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=500&h=280&fit=crop" class="absolute inset-0 w-full h-full object-cover event-img grayscale-[30%]">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                    <div class="absolute top-3 left-3"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Sold Out ✓</span></div>
+                    <div class="absolute bottom-3 left-3"><p class="text-white text-xs font-medium bg-white/20 backdrop-blur px-2.5 py-1 rounded-full">12 Dec 2025</p></div>
+                </div>
+                <div class="p-4">
+                    <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">Subcarpați - Turneu Final</h3>
+                    <p class="text-sm text-gray-500 flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>Fratelli Studios, București</p>
+                    <div class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
+                        <span class="flex items-center gap-1 text-xs text-gray-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>2.500 participanți</span>
+                        <span class="flex items-center gap-1 text-xs text-gray-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>923 aprecieri</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                <div class="relative aspect-[16/9] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=500&h=280&fit=crop" class="absolute inset-0 w-full h-full object-cover event-img grayscale-[30%]">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                    <div class="absolute top-3 left-3"><span class="px-2.5 py-1 bg-gray-600/80 backdrop-blur text-white text-xs font-medium rounded-full">Încheiat</span></div>
+                    <div class="absolute bottom-3 left-3"><p class="text-white text-xs font-medium bg-white/20 backdrop-blur px-2.5 py-1 rounded-full">8 Dec 2025</p></div>
+                </div>
+                <div class="p-4">
+                    <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">Irina Rimes - Concert Intim</h3>
+                    <p class="text-sm text-gray-500 flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>Teatrul Național, Cluj</p>
+                    <div class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
+                        <span class="flex items-center gap-1 text-xs text-gray-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>1.100 participanți</span>
+                        <span class="flex items-center gap-1 text-xs text-gray-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>654 aprecieri</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Month: Noiembrie 2025 -->
+        <div class="month-marker flex items-center justify-center mb-6"><span class="text-sm font-semibold text-gray-900 uppercase tracking-wider">Noiembrie 2025</span></div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+            <a href="event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                <div class="relative aspect-[16/9] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&h=280&fit=crop" class="absolute inset-0 w-full h-full object-cover event-img grayscale-[30%]">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                    <div class="absolute top-3 left-3"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Sold Out ✓</span></div>
+                    <div class="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-white/90 rounded-full"><svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg><span class="text-xs font-semibold text-gray-700">4.8</span></div>
+                    <div class="absolute bottom-3 left-3"><p class="text-white text-xs font-medium bg-white/20 backdrop-blur px-2.5 py-1 rounded-full">22 Nov 2025</p></div>
+                </div>
+                <div class="p-4">
+                    <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">The Motans - Până la soare</h3>
+                    <p class="text-sm text-gray-500 flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>Arenele Romane, București</p>
+                    <div class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
+                        <span class="flex items-center gap-1 text-xs text-gray-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>5.000 participanți</span>
+                        <span class="flex items-center gap-1 text-xs text-gray-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>2.1K aprecieri</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                <div class="relative aspect-[16/9] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=500&h=280&fit=crop" class="absolute inset-0 w-full h-full object-cover event-img grayscale-[30%]">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                    <div class="absolute top-3 left-3"><span class="px-2.5 py-1 bg-gray-600/80 backdrop-blur text-white text-xs font-medium rounded-full">Încheiat</span></div>
+                    <div class="absolute bottom-3 left-3"><p class="text-white text-xs font-medium bg-white/20 backdrop-blur px-2.5 py-1 rounded-full">15 Nov 2025</p></div>
+                </div>
+                <div class="p-4">
+                    <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">Delia - Show Aniversar</h3>
+                    <p class="text-sm text-gray-500 flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>BT Arena, Cluj-Napoca</p>
+                    <div class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
+                        <span class="flex items-center gap-1 text-xs text-gray-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>3.800 participanți</span>
+                        <span class="flex items-center gap-1 text-xs text-gray-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>1.4K aprecieri</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="event.html" class="event-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                <div class="relative aspect-[16/9] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&h=280&fit=crop" class="absolute inset-0 w-full h-full object-cover event-img grayscale-[30%]">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                    <div class="absolute top-3 left-3"><span class="px-2.5 py-1 bg-gray-600/80 backdrop-blur text-white text-xs font-medium rounded-full">Încheiat</span></div>
+                    <div class="absolute bottom-3 left-3"><p class="text-white text-xs font-medium bg-white/20 backdrop-blur px-2.5 py-1 rounded-full">8 Nov 2025</p></div>
+                </div>
+                <div class="p-4">
+                    <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600 transition-colors">Luiza Zan - Jazz Night</h3>
+                    <p class="text-sm text-gray-500 flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>Green Hours, București</p>
+                    <div class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
+                        <span class="flex items-center gap-1 text-xs text-gray-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>220 participanți</span>
+                        <span class="flex items-center gap-1 text-xs text-gray-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>187 aprecieri</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Load more -->
+        <div class="text-center">
+            <button class="inline-flex items-center gap-2 px-8 py-3 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-full hover:border-gray-300 hover:bg-gray-50 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                Încarcă mai multe evenimente
+            </button>
+            <p class="text-xs text-gray-400 mt-3">Se afișează 6 din 847 evenimente</p>
+        </div>
+    </main>
+
+    <script>
+    function switchYear(btn){document.querySelectorAll('.year-tab').forEach(t=>{t.classList.remove('active');t.style.background='';t.style.color=''});btn.classList.add('active')}
+    function toggleChip(btn){btn.parentElement.querySelectorAll('button').forEach(c=>{c.classList.remove('chip-active')});btn.classList.add('chip-active')}
+    </script>
+</body>
+</html>
