@@ -45,7 +45,7 @@ $article = [
     ],
     'date'         => formatDate($apiArticle['published_at'] ?? $apiArticle['created_at'] ?? ''),
     'readTime'     => ($apiArticle['read_time'] ?? 5) . ' min citire',
-    'views'        => '',
+    'views'        => ($apiArticle['view_count'] ?? 0) > 0 ? formatFollowers($apiArticle['view_count']) . ' vizualizări' : '',
     'content'      => $apiArticle['content'] ?? '',
 ];
 

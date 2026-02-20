@@ -103,6 +103,8 @@ class BlogController extends Controller
             return response()->json(['success' => false, 'message' => 'Article not found'], 404);
         }
 
+        $article->incrementViewCount();
+
         return response()->json([
             'data' => $this->formatArticle($article, $lang, true),
         ]);
@@ -162,6 +164,7 @@ class BlogController extends Controller
             'published_at' => $article->published_at?->toISOString(),
             'created_at'   => $article->created_at?->toISOString(),
             'is_featured'  => (bool) $article->is_featured,
+            'view_count'   => (int) ($article->view_count ?? 0),
         ];
 
         if ($withContent) {
