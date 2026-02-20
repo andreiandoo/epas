@@ -129,9 +129,13 @@ class OrdersController extends BaseController
                 $ticketType->increment('quota_sold', $quantity);
             }
 
-            // Calculate commission
-            $commissionAmount = $subtotal * ($commission / 100);
-            $total = $subtotal + $commissionAmount;
+            // Calculate commission — respect commission_mode
+            // 'included': commission deducted from organizer payout, customer pays face value (total = subtotal)
+            // 'on_top' / 'added_on_top': commission added to customer price (total = subtotal + commission)
+            $commissionMode = $event->getEffectiveCommissionMode();
+            $commissionAmount = round($subtotal * ($commission / 100), 2);
+            $isOnTop = in_array($commissionMode, ['on_top', 'added_on_top']);
+            $total = $isOnTop ? $subtotal + $commissionAmount : $subtotal;
 
             // Create order
             $order = Order::create([
