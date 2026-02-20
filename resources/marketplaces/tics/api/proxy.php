@@ -28,7 +28,10 @@ $endpoint = $_GET['endpoint'] ?? 'events';
 // Development mode: use demo data
 $useDemoData = true; // Set to false in production
 
-if ($useDemoData) {
+// Chat endpoints always go to live API (not demo data)
+if (str_starts_with($endpoint, 'chat.')) {
+    proxyChatToAPI($endpoint);
+} elseif ($useDemoData) {
     serveDemoData($endpoint);
 } else {
     proxyToAPI($endpoint);
@@ -363,4 +366,76 @@ function findEventBySlug($slug) {
     }
 
     return null;
+}
+
+/**
+ * Proxy chat requests to the live Laravel API
+ */
+function proxyChatToAPI($action) {
+    $endpointMap = [
+        'chat.send' => ['method' => 'POST', 'path' => '/customer/chat/send'],
+        'chat.conversation' => ['method' => 'GET', 'path' => '/customer/chat/conversation'],
+        'chat.new' => ['method' => 'POST', 'path' => '/customer/chat/new'],
+        'chat.rate' => ['method' => 'POST', 'path' => '/customer/chat/rate/' . urlencode($_GET['message_id'] ?? '')],
+    ];
+
+    if (!isset($endpointMap[$action])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Unknown chat action']);
+        return;
+    }
+
+    $route = $endpointMap[$action];
+    $apiUrl = API_BASE_URL . $route['path'];
+
+    // Forward query params for GET requests
+    if ($route['method'] === 'GET') {
+        $queryParams = $_GET;
+        unset($queryParams['endpoint']);
+        if (!empty($queryParams)) {
+            $apiUrl .= '?' . http_build_query($queryParams);
+        }
+    }
+
+    $headers = [
+        'X-API-Key: ' . API_KEY,
+        'Accept: application/json',
+        'Content-Type: application/json',
+    ];
+
+    // Forward auth token if present
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    if (!$authHeader && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    }
+    if ($authHeader) {
+        $headers[] = 'Authorization: ' . $authHeader;
+    }
+
+    $ch = curl_init($apiUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+
+    if ($route['method'] === 'POST') {
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents('php://input'));
+    }
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    curl_close($ch);
+
+    if ($error) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Chat service unavailable']);
+        return;
+    }
+
+    http_response_code($httpCode);
+    echo $response;
 }

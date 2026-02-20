@@ -11,6 +11,13 @@ use App\Models\Order;
 
 class ChatToolHandler
 {
+    private const ALLOWED_LANGUAGES = ['ro', 'en', 'hu', 'de', 'fr', 'es', 'it'];
+
+    protected function sanitizeLanguage(string $language): string
+    {
+        return in_array($language, self::ALLOWED_LANGUAGES, true) ? $language : 'ro';
+    }
+
     /**
      * Get tool definitions for OpenAI
      */
@@ -179,7 +186,7 @@ class ChatToolHandler
 
     protected function searchKnowledgeBase(MarketplaceClient $client, array $args): array
     {
-        $language = $client->language ?? 'ro';
+        $language = $this->sanitizeLanguage($client->language ?? 'ro');
         $query = $args['query'] ?? '';
 
         $articles = KbArticle::query()

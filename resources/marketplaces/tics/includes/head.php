@@ -275,5 +275,8 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
 
     <!-- Page-specific head content -->
     <?php if (isset($headExtra)) echo $headExtra; ?>
+
+    <!-- AI Chat Widget -->
+    <link rel="stylesheet" href="<?= asset('assets/css/chat-widget.css') ?>">
 </head>
 <body class="<?= isset($bodyClass) ? e($bodyClass) : 'bg-gray-50' ?>">

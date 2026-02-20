@@ -2723,22 +2723,22 @@ switch ($action) {
         $method = 'POST';
         $body = file_get_contents('php://input');
         $endpoint = '/customer/chat/send';
-        $requiresAuth = false; // Works for both guest and authenticated
+        $requiresAuth = true; // Forward auth token if available (works for both guest and authenticated)
         break;
 
     case 'chat.conversation':
         $method = 'GET';
         $params = [];
         if (isset($_GET['session_id'])) $params['session_id'] = $_GET['session_id'];
-        $endpoint = '/customer/chat/conversation';
-        $requiresAuth = false;
+        $endpoint = '/customer/chat/conversation?' . http_build_query($params);
+        $requiresAuth = true;
         break;
 
     case 'chat.new':
         $method = 'POST';
         $body = file_get_contents('php://input');
         $endpoint = '/customer/chat/new';
-        $requiresAuth = false;
+        $requiresAuth = true;
         break;
 
     case 'chat.rate':
@@ -2746,7 +2746,7 @@ switch ($action) {
         $messageId = $_GET['message_id'] ?? '';
         $body = file_get_contents('php://input');
         $endpoint = '/customer/chat/rate/' . urlencode($messageId);
-        $requiresAuth = false;
+        $requiresAuth = true;
         break;
 
     default:

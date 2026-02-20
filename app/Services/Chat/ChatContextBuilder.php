@@ -9,6 +9,20 @@ use App\Models\Order;
 
 class ChatContextBuilder
 {
+    private const ALLOWED_LANGUAGES = ['ro', 'en', 'hu', 'de', 'fr', 'es', 'it'];
+
+    /**
+     * Sanitize language code to prevent SQL injection in JSON path expressions
+     */
+    protected function sanitizeLanguage(string $language): string
+    {
+        if (in_array($language, self::ALLOWED_LANGUAGES, true)) {
+            return $language;
+        }
+
+        return 'ro';
+    }
+
     /**
      * Build the system prompt with marketplace context
      */
@@ -49,7 +63,7 @@ PROMPT;
      */
     public function searchKnowledgeBase(MarketplaceClient $client, string $query): string
     {
-        $language = $client->language ?? 'ro';
+        $language = $this->sanitizeLanguage($client->language ?? 'ro');
 
         $articles = KbArticle::query()
             ->where('marketplace_client_id', $client->id)

@@ -151,6 +151,11 @@ const AmbiletChatWidget = (function () {
             }
         });
 
+        // Keyboard: Escape to close
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && state.isOpen) close();
+        });
+
         // Listen for auth events
         document.addEventListener('ambilet:auth:login', loadConversation);
         document.addEventListener('ambilet:auth:logout', function () {

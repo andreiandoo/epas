@@ -29,5 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- Page-specific scripts -->
 <?php if (isset($scriptsExtra)) echo $scriptsExtra; ?>
 
+<!-- AI Chat Widget -->
+<script src="<?= asset('assets/js/chat-widget.js') ?>"></script>
+
 </body>
 </html>
