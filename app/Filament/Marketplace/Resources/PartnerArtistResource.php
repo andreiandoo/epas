@@ -27,7 +27,7 @@ class PartnerArtistResource extends Resource
 
     protected static ?string $navigationLabel = 'Partner Artists';
 
-    protected static ?\UnitEnum|string|null $navigationGroup = 'Content';
+    protected static \UnitEnum|string|null $navigationGroup = 'Content';
 
     protected static ?int $navigationSort = 3;
 
