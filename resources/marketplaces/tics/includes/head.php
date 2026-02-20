@@ -275,5 +275,16 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
 
     <!-- Page-specific head content -->
     <?php if (isset($headExtra)) echo $headExtra; ?>
+
+    <meta name="impact-site-verification" value="f53ff7db-e71c-4f20-9281-ead22db2992a" />
+
+    <script data-noptimize="1" data-cfasync="false" data-wpfc-render="false">
+        (function () {
+            var script = document.createElement("script");
+            script.async = 1;
+            script.src = 'https://tpembars.com/NDk5OTAz.js?t=499903';
+            document.head.appendChild(script);
+        })();
+    </script>
 </head>
 <body class="<?= isset($bodyClass) ? e($bodyClass) : 'bg-gray-50' ?>">

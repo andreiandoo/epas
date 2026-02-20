@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghidul complet al festivalurilor din România 2026 — Blog TICS.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}html{scroll-behavior:smooth}body{font-family:'Inter',system-ui,sans-serif}
+        .blog-card{transition:all .25s ease}.blog-card:hover{transform:translateY(-4px);box-shadow:0 20px 40px -12px rgba(0,0,0,.1)}.blog-card:hover .blog-img{transform:scale(1.05)}.blog-img{transition:transform .5s ease}
+        .prose{color:#374151;line-height:1.8}.prose h2{font-size:1.375rem;font-weight:700;color:#111827;margin:2rem 0 .75rem;line-height:1.3}.prose h3{font-size:1.125rem;font-weight:600;color:#111827;margin:1.5rem 0 .5rem}.prose p{margin-bottom:1.25rem}.prose a{color:#4f46e5;text-decoration:underline;text-decoration-color:#c7d2fe}.prose a:hover{text-decoration-color:#4f46e5}.prose blockquote{border-left:3px solid #e5e7eb;padding-left:1.25rem;margin:1.5rem 0;color:#6b7280;font-style:italic}.prose ul{list-style-type:disc;padding-left:1.5rem;margin-bottom:1.25rem}.prose ul li{margin-bottom:.5rem}.prose strong{color:#111827;font-weight:600}.prose img{border-radius:1rem;margin:1.5rem 0}
+        .toc-link{transition:all .15s ease;border-left:2px solid transparent}.toc-link:hover{color:#111827;border-color:#d1d5db}.toc-link.active{color:#4f46e5;border-color:#4f46e5;font-weight:500}
+        .share-btn{transition:all .2s ease}.share-btn:hover{transform:scale(1.1)}
+        .progress-bar{position:fixed;top:64px;left:0;height:3px;background:#4f46e5;z-index:50;transition:width .1s linear}
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Reading progress -->
+    <div class="progress-bar" id="progressBar" style="width:0%"></div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-lg border-b border-gray-200">
+        <div class="max-w-6xl mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-4">
+                    <a href="blog.html" class="p-2 hover:bg-gray-100 rounded-full transition-all"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></a>
+                    <a href="/" class="flex items-center gap-2"><div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">T</span></div><span class="font-bold text-lg hidden sm:block">TICS</span></a>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="share-btn p-2.5 hover:bg-gray-100 rounded-full" title="Copiază link" onclick="copyLink()"><svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg></button>
+                    <button class="share-btn p-2.5 hover:bg-gray-100 rounded-full" title="Bookmark"><svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Article Header -->
+    <div class="bg-white border-b border-gray-200">
+        <div class="max-w-3xl mx-auto px-4 lg:px-8 py-8 lg:py-12">
+            <div class="flex items-center gap-2 text-sm text-gray-500 mb-5">
+                <a href="blog.html" class="hover:text-gray-900 transition-colors">Blog</a><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <a href="blog-category.html" class="hover:text-gray-900 transition-colors">Festivaluri</a>
+            </div>
+            <div class="flex items-center gap-2 mb-4">
+                <span class="px-2.5 py-1 bg-pink-100 text-pink-700 text-xs font-medium rounded-full">Festivaluri</span>
+                <span class="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full">Ghid</span>
+            </div>
+            <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 leading-tight mb-5">Ghidul complet al festivalurilor din România 2026: ce merită și ce nu</h1>
+            <p class="text-lg text-gray-600 leading-relaxed mb-6">Am analizat toate festivalurile confirmate pentru 2026, de la Untold și Electric Castle la cele mai mici festivaluri boutique. Descoperă ce te așteaptă vara aceasta, cu prețuri, date și sfaturi.</p>
+
+            <!-- Author + Meta -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-6 border-t border-gray-100">
+                <div class="flex items-center gap-3">
+                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop" class="w-12 h-12 rounded-full object-cover border-2 border-gray-100">
+                    <div><p class="font-medium text-gray-900">Andrei Popescu</p><p class="text-sm text-gray-500">Editor-șef TICS Blog</p></div>
+                </div>
+                <div class="flex items-center gap-4 text-sm text-gray-500">
+                    <span class="flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>5 Feb 2026</span>
+                    <span class="flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>10 min citire</span>
+                    <span class="flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>12.4K</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Featured Image -->
+    <div class="max-w-4xl mx-auto px-4 lg:px-8 -mb-8 relative z-10" style="margin-top:-1px">
+        <div class="relative aspect-[2/1] rounded-2xl overflow-hidden shadow-lg">
+            <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1200&h=600&fit=crop" class="absolute inset-0 w-full h-full object-cover">
+        </div>
+        <p class="text-xs text-gray-400 text-center mt-2">Untold Festival 2025 — Foto: TICS.ro</p>
+    </div>
+
+    <main class="max-w-6xl mx-auto px-4 lg:px-8 pt-16 pb-10">
+        <div class="lg:flex gap-10">
+            <!-- Article Body -->
+            <article class="flex-1 max-w-3xl">
+                <div class="bg-white rounded-2xl border border-gray-200 p-6 lg:p-10">
+                    <div class="prose text-base" id="articleContent">
+                        <h2 id="overview">Panorama festivalurilor 2026</h2>
+                        <p>România a devenit în ultimii ani una dintre cele mai importante destinații europene pentru festivaluri muzicale. Cu <strong>peste 50 de festivaluri confirmate</strong> pentru sezonul 2026, alegerea poate fi copleșitoare. Tocmai de aceea am creat acest ghid — să te ajutăm să alegi experiența perfectă.</p>
+                        <p>De la mega-evenimente precum Untold și Electric Castle, care atrag sute de mii de participanți, până la festivaluri boutique de câteva sute de persoane, oferta este extrem de diversificată.</p>
+
+                        <blockquote>„2026 promite a fi anul în care festivalurile românești vor atinge maturitatea. Line-up-urile sunt mai diverse, experiențele mai complexe." — Vlad Caia, curator muzical</blockquote>
+
+                        <h2 id="top5">Top 5 festivaluri pe care nu le poți rata</h2>
+                        <h3>1. Untold Festival — Cluj-Napoca</h3>
+                        <p>Cel mai mare festival din România revine cu o ediție aniversară de 10 ani. <strong>Datele confirmate: 6-9 august 2026</strong>. Prețul abonamentului pleacă de la 599 RON în faza de early bird, iar organizatorii promit un headliner „care nu a mai cântat niciodată în România".</p>
+
+                        <h3>2. Electric Castle — Bonțida</h3>
+                        <p>Festivalul de la castelul Bánffy continuă să fie cel mai apreciat de publicul alternativ. <strong>Date: 15-19 iulie 2026</strong>. Noutatea anului: o scenă dedicată exclusiv artiștilor români.</p>
+
+                        <h3>3. Neversea — Constanța</h3>
+                        <p>Festivalul de pe plajă revine cu o formulă extinsă pe 4 zile. Atmosfera unică cu apusurile peste mare și line-up-ul puternic de EDM fac din Neversea o experiență unică.</p>
+
+                        <h3>4. Summer Well — Buftea</h3>
+                        <p>Elegant, rafinat și cu un line-up mereu surprinzător. Summer Well rămâne festivalul pentru cei care preferă indie-ul și alternativul într-un cadru de poveste.</p>
+
+                        <h3>5. Jazz in the Park — Cluj-Napoca</h3>
+                        <p>Gratuit și de calitate excepțională. Jazz in the Park este o bijuterie a scenei culturale clujene, cu artiști internaționali de jazz, world music și experimental.</p>
+
+                        <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=900&h=450&fit=crop" alt="Electric Castle 2025">
+                        <p class="text-sm text-gray-500" style="margin-top:-.75rem;text-align:center">Electric Castle — scena principală la apus</p>
+
+                        <h2 id="budget">Ghid de buget: cât costă un festival</h2>
+                        <p>Un weekend la festival poate costa între 300 RON (pentru un festival mic, fără cazare specială) și peste 2.000 RON (abonament VIP + cazare la un festival mare). Iată un breakdown tipic:</p>
+                        <ul>
+                            <li><strong>Abonament general:</strong> 300 - 700 RON</li>
+                            <li><strong>Transport:</strong> 50 - 200 RON (în funcție de distanță)</li>
+                            <li><strong>Cazare/Camping:</strong> 0 - 500 RON</li>
+                            <li><strong>Mâncare și băuturi:</strong> 150 - 400 RON</li>
+                            <li><strong>Extras (merch, activități):</strong> 50 - 200 RON</li>
+                        </ul>
+                        <p><strong>Total estimat per festival:</strong> 550 - 2.000 RON</p>
+
+                        <h2 id="tips">Sfaturi de supraviețuire</h2>
+                        <p>Indiferent de festivalul ales, câteva reguli de aur te pot salva:</p>
+                        <ul>
+                            <li><strong>Cumpără biletele devreme</strong> — early bird-ul poate fi cu 40% mai ieftin</li>
+                            <li><strong>Investește în dopuri de urechi de calitate</strong> — urechile tale îți vor mulțumi</li>
+                            <li><strong>Poartă încălțăminte confortabilă</strong> — vei merge 15-20 km pe zi</li>
+                            <li><strong>Baterie externă de mare capacitate</strong> — minimum 20.000 mAh</li>
+                            <li><strong>Pălărie și cremă solară</strong> — chiar și în zilele înnorate</li>
+                        </ul>
+
+                        <h2 id="conclusion">Concluzie</h2>
+                        <p>România oferă un ecosistem de festivaluri incredibil de divers. Fie că ești fan de EDM, rock, jazz sau indie, există cu siguranță un festival care ți se potrivește. Sfatul nostru: alege maximum 2-3 festivaluri pe sezon și bucură-te din plin de fiecare experiență.</p>
+                        <p>Toate biletele pentru festivalurile menționate sunt disponibile pe <a href="#">TICS.ro</a>. Urmărește paginile festivalurilor pentru notificări când se pun în vânzare noi tranșe de bilete.</p>
+                    </div>
+                </div>
+
+                <!-- Tags -->
+                <div class="flex flex-wrap items-center gap-2 mt-6">
+                    <span class="text-xs text-gray-400 font-medium">Etichete:</span>
+                    <a href="#" class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-full hover:border-gray-300 hover:bg-gray-50 transition-all">Festivaluri</a>
+                    <a href="#" class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-full hover:border-gray-300 hover:bg-gray-50 transition-all">Untold</a>
+                    <a href="#" class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-full hover:border-gray-300 hover:bg-gray-50 transition-all">Electric Castle</a>
+                    <a href="#" class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-full hover:border-gray-300 hover:bg-gray-50 transition-all">Bilete</a>
+                    <a href="#" class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-full hover:border-gray-300 hover:bg-gray-50 transition-all">Ghid</a>
+                </div>
+
+                <!-- Share bar -->
+                <div class="bg-white rounded-2xl border border-gray-200 p-5 mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <p class="text-sm font-medium text-gray-900">Distribuie articolul:</p>
+                    <div class="flex items-center gap-2">
+                        <a href="#" class="share-btn w-10 h-10 bg-[#1877f2] text-white rounded-full flex items-center justify-center"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+                        <a href="#" class="share-btn w-10 h-10 bg-black text-white rounded-full flex items-center justify-center"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+                        <a href="#" class="share-btn w-10 h-10 bg-[#0a66c2] text-white rounded-full flex items-center justify-center"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>
+                        <button onclick="copyLink()" class="share-btn w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-200"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg></button>
+                    </div>
+                </div>
+
+                <!-- Author box -->
+                <div class="bg-white rounded-2xl border border-gray-200 p-6 mt-6 flex gap-4">
+                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop" class="w-16 h-16 rounded-xl object-cover flex-shrink-0">
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-1">Andrei Popescu</h3>
+                        <p class="text-sm text-gray-600 mb-3">Editor-șef al blogului TICS.ro. Pasionat de festivaluri și muzică live, a participat la peste 80 de festivaluri în România și Europa.</p>
+                        <a href="#" class="text-sm font-medium text-indigo-600 hover:underline">Vezi toate articolele →</a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Sidebar -->
+            <aside class="hidden lg:block w-64 flex-shrink-0 space-y-6 mt-0">
+                <!-- TOC -->
+                <div class="sticky top-24 space-y-6">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-5">
+                        <h3 class="font-semibold text-gray-900 mb-3 text-sm">Cuprins</h3>
+                        <nav class="space-y-1">
+                            <a href="#overview" class="toc-link active block text-sm text-gray-600 py-1.5 pl-3">Panorama 2026</a>
+                            <a href="#top5" class="toc-link block text-sm text-gray-600 py-1.5 pl-3">Top 5 festivaluri</a>
+                            <a href="#budget" class="toc-link block text-sm text-gray-600 py-1.5 pl-3">Ghid de buget</a>
+                            <a href="#tips" class="toc-link block text-sm text-gray-600 py-1.5 pl-3">Sfaturi de supraviețuire</a>
+                            <a href="#conclusion" class="toc-link block text-sm text-gray-600 py-1.5 pl-3">Concluzie</a>
+                        </nav>
+                    </div>
+                    <!-- CTA -->
+                    <div class="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-5 text-white">
+                        <p class="font-semibold mb-1 text-sm">🎫 Bilete disponibile</p>
+                        <p class="text-xs text-white/70 mb-3">Toate festivalurile menționate au bilete pe TICS.ro</p>
+                        <a href="#" class="block w-full py-2.5 bg-white text-gray-900 text-sm font-semibold rounded-xl text-center hover:bg-gray-100 transition-colors">Cumpără bilete</a>
+                    </div>
+                    <!-- Newsletter mini -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-5">
+                        <h3 class="font-semibold text-gray-900 mb-2 text-sm">📬 Newsletter</h3>
+                        <p class="text-xs text-gray-500 mb-3">Articole noi în fiecare săptămână.</p>
+                        <input type="email" placeholder="email@exemplu.ro" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-gray-900/10 mb-2">
+                        <button class="w-full py-2 bg-gray-900 text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors">Abonează-te</button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Related Articles -->
+        <section class="mt-12">
+            <h2 class="text-lg font-semibold text-gray-900 mb-5">Articole similare</h2>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <a href="#" class="blog-card bg-white rounded-2xl overflow-hidden border border-gray-200 group"><div class="relative aspect-[16/10] overflow-hidden"><img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=320&fit=crop" class="absolute inset-0 w-full h-full object-cover blog-img"></div><div class="p-5"><div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">Știri</span><span class="text-xs text-gray-400">3 min</span></div><h3 class="font-semibold text-gray-900 mb-2 leading-snug group-hover:text-indigo-600 transition-colors">Electric Castle 2026: primele nume confirmate</h3><p class="text-xs text-gray-500">28 Ian 2026</p></div></a>
+                <a href="#" class="blog-card bg-white rounded-2xl overflow-hidden border border-gray-200 group"><div class="relative aspect-[16/10] overflow-hidden"><img src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&h=320&fit=crop" class="absolute inset-0 w-full h-full object-cover blog-img"></div><div class="p-5"><div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Tips</span><span class="text-xs text-gray-400">5 min</span></div><h3 class="font-semibold text-gray-900 mb-2 leading-snug group-hover:text-indigo-600 transition-colors">10 lucruri de luat la festival pe care sigur le uiți</h3><p class="text-xs text-gray-500">1 Feb 2026</p></div></a>
+                <a href="#" class="blog-card bg-white rounded-2xl overflow-hidden border border-gray-200 group"><div class="relative aspect-[16/10] overflow-hidden"><img src="https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=500&h=320&fit=crop" class="absolute inset-0 w-full h-full object-cover blog-img"></div><div class="p-5"><div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">Recenzie</span><span class="text-xs text-gray-400">7 min</span></div><h3 class="font-semibold text-gray-900 mb-2 leading-snug group-hover:text-indigo-600 transition-colors">Recenzie: Concertul Subcarpați de la Arenele Romane</h3><p class="text-xs text-gray-500">25 Ian 2026</p></div></a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    // Reading progress
+    window.addEventListener('scroll',()=>{const st=window.scrollY,dh=document.documentElement.scrollHeight-window.innerHeight;document.getElementById('progressBar').style.width=Math.min(100,st/dh*100)+'%'});
+    // TOC active tracking
+    const sections=['overview','top5','budget','tips','conclusion'];
+    window.addEventListener('scroll',()=>{let current='';sections.forEach(id=>{const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top<150)current=id});document.querySelectorAll('.toc-link').forEach(l=>{l.classList.toggle('active',l.getAttribute('href')==='#'+current)})});
+    // Copy link
+    function copyLink(){navigator.clipboard.writeText(window.location.href);const btn=event.currentTarget;btn.innerHTML='<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';setTimeout(()=>{btn.innerHTML='<svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>'},2000)}
+    </script>
+</body>
+</html>

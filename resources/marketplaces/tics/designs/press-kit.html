@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Press Kit — TICS.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}
+        .dl-card{transition:all .25s ease}.dl-card:hover{transform:translateY(-3px);box-shadow:0 12px 30px -8px rgba(0,0,0,.1);border-color:#c7d2fe}
+        .color-swatch{transition:all .2s ease;cursor:pointer}.color-swatch:hover{transform:scale(1.05)}
+        .copy-toast{transition:all .3s ease;opacity:0;transform:translateY(4px)}.copy-toast.show{opacity:1;transform:translateY(0)}
+    </style>
+</head>
+<body class="bg-white">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-lg border-b border-gray-200">
+        <div class="max-w-5xl mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="/" class="flex items-center gap-2 group"><div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">T</span></div><span class="font-bold text-lg">TICS</span></a>
+                <a href="#" class="px-5 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Descarcă tot (.zip)</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="bg-gray-50 border-b border-gray-200">
+        <div class="max-w-5xl mx-auto px-4 lg:px-8 py-12 lg:py-16">
+            <div class="max-w-2xl">
+                <p class="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-3">Press Kit</p>
+                <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Resurse media TICS.ro</h1>
+                <p class="text-lg text-gray-600 leading-relaxed">Tot ce ai nevoie pentru a scrie despre TICS: logo-uri, descrieri, date de contact și informații despre companie. Materialele sunt libere de utilizat în contexte editoriale.</p>
+            </div>
+        </div>
+    </section>
+
+    <main class="max-w-5xl mx-auto px-4 lg:px-8 py-10">
+
+        <!-- About -->
+        <section class="mb-14">
+            <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-sm">📝</span>Despre TICS</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-gray-50 rounded-2xl border border-gray-200 p-6">
+                    <h3 class="font-semibold text-gray-900 mb-2 text-sm">Descriere scurtă <span class="text-xs text-gray-400 font-normal">(1 paragraf)</span></h3>
+                    <p class="text-sm text-gray-600 leading-relaxed mb-3">TICS.ro este o platformă B2B de ticketing din România care oferă organizatorilor de evenimente un comision disruptiv de doar 1%, cashflow direct și fiscalizare automată completă. Platforma deserves peste 100 de parteneri și 500 de evenimente anual.</p>
+                    <button onclick="copyText(this,'short')" class="text-xs font-medium text-indigo-600 hover:underline">Copiază textul</button>
+                </div>
+                <div class="bg-gray-50 rounded-2xl border border-gray-200 p-6">
+                    <h3 class="font-semibold text-gray-900 mb-2 text-sm">Descriere lungă <span class="text-xs text-gray-400 font-normal">(2 paragrafe)</span></h3>
+                    <p class="text-sm text-gray-600 leading-relaxed mb-2">TICS.ro este o platformă inovatoare de ticketing B2B care transformă industria evenimentelor din România. Cu un model de comision de doar 1% — comparativ cu 5-10% la competiție — TICS oferă organizatorilor controlul complet asupra vânzărilor.</p>
+                    <p class="text-sm text-gray-600 leading-relaxed mb-3">Platforma include cashflow direct (banii ajung imediat la organizator), fiscalizare automată ANAF, white-label complet, dashboard analitic în timp real și acceptare de carduri de beneficii. TICS deservește organizatori de toate dimensiunile, de la cluburi locale la festivaluri naționale.</p>
+                    <button onclick="copyText(this,'long')" class="text-xs font-medium text-indigo-600 hover:underline">Copiază textul</button>
+                </div>
+            </div>
+            <!-- Key facts -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center"><p class="text-xs text-gray-500 mb-1">Anul înființării</p><p class="text-lg font-bold text-gray-900">2024</p></div>
+                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center"><p class="text-xs text-gray-500 mb-1">Sediu</p><p class="text-lg font-bold text-gray-900">Brașov, RO</p></div>
+                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center"><p class="text-xs text-gray-500 mb-1">Fondator & CEO</p><p class="text-lg font-bold text-gray-900">Andrei</p></div>
+                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center"><p class="text-xs text-gray-500 mb-1">Piață</p><p class="text-lg font-bold text-gray-900">România</p></div>
+            </div>
+        </section>
+
+        <!-- Logos -->
+        <section class="mb-14">
+            <h2 class="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2"><span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-sm">🎨</span>Logo-uri</h2>
+            <p class="text-sm text-gray-500 mb-6">Descarcă logo-ul TICS în diferite formate și variante. Nu modifica, distorsiona sau schimba culorile logo-ului.</p>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Logo dark -->
+                <div class="dl-card bg-white rounded-2xl border border-gray-200 overflow-hidden group">
+                    <div class="bg-gray-50 p-10 flex items-center justify-center border-b border-gray-100"><div class="flex items-center gap-2.5"><div class="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center"><span class="text-white font-bold text-xl">T</span></div><span class="font-bold text-2xl text-gray-900">TICS</span></div></div>
+                    <div class="p-4 flex items-center justify-between"><div><p class="font-medium text-gray-900 text-sm">Logo principal</p><p class="text-xs text-gray-400">SVG, PNG, PDF</p></div><a href="#" class="p-2 hover:bg-gray-100 rounded-lg transition-colors"><svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a></div>
+                </div>
+                <!-- Logo white -->
+                <div class="dl-card bg-white rounded-2xl border border-gray-200 overflow-hidden group">
+                    <div class="bg-gray-900 p-10 flex items-center justify-center border-b border-gray-800"><div class="flex items-center gap-2.5"><div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center"><span class="text-gray-900 font-bold text-xl">T</span></div><span class="font-bold text-2xl text-white">TICS</span></div></div>
+                    <div class="p-4 flex items-center justify-between"><div><p class="font-medium text-gray-900 text-sm">Logo alb (dark bg)</p><p class="text-xs text-gray-400">SVG, PNG, PDF</p></div><a href="#" class="p-2 hover:bg-gray-100 rounded-lg transition-colors"><svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a></div>
+                </div>
+                <!-- Icon only -->
+                <div class="dl-card bg-white rounded-2xl border border-gray-200 overflow-hidden group">
+                    <div class="bg-gray-50 p-10 flex items-center justify-center border-b border-gray-100"><div class="w-16 h-16 bg-gray-900 rounded-2xl flex items-center justify-center"><span class="text-white font-bold text-3xl">T</span></div></div>
+                    <div class="p-4 flex items-center justify-between"><div><p class="font-medium text-gray-900 text-sm">Icon / Favicon</p><p class="text-xs text-gray-400">SVG, PNG, ICO</p></div><a href="#" class="p-2 hover:bg-gray-100 rounded-lg transition-colors"><svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a></div>
+                </div>
+            </div>
+            <div class="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <p class="text-sm text-amber-800">Menține o zonă clară de minim 20px în jurul logo-ului. Nu aplica efecte, umbre sau rotații. Dimensiunea minimă: 24px pentru icon, 80px lățime pentru logo complet.</p>
+            </div>
+        </section>
+
+        <!-- Colors -->
+        <section class="mb-14">
+            <h2 class="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2"><span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-sm">🎨</span>Paletă de culori</h2>
+            <p class="text-sm text-gray-500 mb-6">Culorile brand-ului TICS. Click pe o culoare pentru a copia codul hex.</p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                <div class="color-swatch" onclick="copyColor(this,'#111827')"><div class="aspect-square rounded-xl bg-gray-900 mb-2 shadow-sm"></div><p class="text-xs font-semibold text-gray-900">Primary</p><p class="text-xs text-gray-500">#111827</p></div>
+                <div class="color-swatch" onclick="copyColor(this,'#6366F1')"><div class="aspect-square rounded-xl bg-indigo-500 mb-2 shadow-sm"></div><p class="text-xs font-semibold text-gray-900">Accent</p><p class="text-xs text-gray-500">#6366F1</p></div>
+                <div class="color-swatch" onclick="copyColor(this,'#8B5CF6')"><div class="aspect-square rounded-xl bg-violet-500 mb-2 shadow-sm"></div><p class="text-xs font-semibold text-gray-900">Secondary</p><p class="text-xs text-gray-500">#8B5CF6</p></div>
+                <div class="color-swatch" onclick="copyColor(this,'#F9FAFB')"><div class="aspect-square rounded-xl bg-gray-50 mb-2 shadow-sm border border-gray-200"></div><p class="text-xs font-semibold text-gray-900">Background</p><p class="text-xs text-gray-500">#F9FAFB</p></div>
+                <div class="color-swatch" onclick="copyColor(this,'#10B981')"><div class="aspect-square rounded-xl bg-emerald-500 mb-2 shadow-sm"></div><p class="text-xs font-semibold text-gray-900">Success</p><p class="text-xs text-gray-500">#10B981</p></div>
+                <div class="color-swatch" onclick="copyColor(this,'#EF4444')"><div class="aspect-square rounded-xl bg-red-500 mb-2 shadow-sm"></div><p class="text-xs font-semibold text-gray-900">Danger</p><p class="text-xs text-gray-500">#EF4444</p></div>
+            </div>
+        </section>
+
+        <!-- Typography -->
+        <section class="mb-14">
+            <h2 class="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2"><span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-sm">🔤</span>Tipografie</h2>
+            <p class="text-sm text-gray-500 mb-6">Fontul principal folosit pe TICS.ro.</p>
+            <div class="bg-gray-50 rounded-2xl border border-gray-200 p-6 lg:p-8">
+                <div class="flex items-center gap-3 mb-6"><span class="text-5xl font-bold text-gray-900">Aa</span><div><p class="font-semibold text-gray-900">Inter</p><p class="text-sm text-gray-500">Google Fonts — Gratuit</p></div></div>
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <p class="font-normal text-gray-600 text-sm"><span class="inline-block w-20 text-gray-400">Regular</span> The quick brown fox</p>
+                        <p class="font-medium text-gray-700 text-sm"><span class="inline-block w-20 text-gray-400">Medium</span> The quick brown fox</p>
+                        <p class="font-semibold text-gray-800 text-sm"><span class="inline-block w-20 text-gray-400">Semibold</span> The quick brown fox</p>
+                        <p class="font-bold text-gray-900 text-sm"><span class="inline-block w-20 text-gray-400">Bold</span> The quick brown fox</p>
+                        <p class="font-extrabold text-gray-900 text-sm"><span class="inline-block w-20 text-gray-400">Extrabold</span> The quick brown fox</p>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-4"><p class="text-xs text-gray-400 mb-2 font-mono">font-family:</p><code class="text-sm text-gray-900">'Inter', system-ui, -apple-system, sans-serif</code></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Screenshots -->
+        <section class="mb-14">
+            <h2 class="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2"><span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-sm">📸</span>Capturi de ecran</h2>
+            <p class="text-sm text-gray-500 mb-6">Imagini de produs aprobate pentru publicații.</p>
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div class="dl-card bg-white rounded-2xl border border-gray-200 overflow-hidden"><div class="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-400 text-sm">Dashboard Preview</div><div class="p-4 flex items-center justify-between"><div><p class="font-medium text-gray-900 text-sm">Dashboard organizator</p><p class="text-xs text-gray-400">2560×1440, PNG</p></div><a href="#" class="p-2 hover:bg-gray-100 rounded-lg transition-colors"><svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a></div></div>
+                <div class="dl-card bg-white rounded-2xl border border-gray-200 overflow-hidden"><div class="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-400 text-sm">Checkout Preview</div><div class="p-4 flex items-center justify-between"><div><p class="font-medium text-gray-900 text-sm">Pagina de checkout</p><p class="text-xs text-gray-400">2560×1440, PNG</p></div><a href="#" class="p-2 hover:bg-gray-100 rounded-lg transition-colors"><svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a></div></div>
+                <div class="dl-card bg-white rounded-2xl border border-gray-200 overflow-hidden"><div class="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-400 text-sm">Mobile Preview</div><div class="p-4 flex items-center justify-between"><div><p class="font-medium text-gray-900 text-sm">Aplicația mobilă</p><p class="text-xs text-gray-400">1290×2796, PNG</p></div><a href="#" class="p-2 hover:bg-gray-100 rounded-lg transition-colors"><svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a></div></div>
+                <div class="dl-card bg-white rounded-2xl border border-gray-200 overflow-hidden"><div class="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-400 text-sm">Event Page Preview</div><div class="p-4 flex items-center justify-between"><div><p class="font-medium text-gray-900 text-sm">Pagina de eveniment</p><p class="text-xs text-gray-400">2560×1440, PNG</p></div><a href="#" class="p-2 hover:bg-gray-100 rounded-lg transition-colors"><svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a></div></div>
+            </div>
+        </section>
+
+        <!-- Contact Press -->
+        <section class="bg-gray-50 rounded-2xl border border-gray-200 p-8 mb-14">
+            <div class="flex flex-col md:flex-row items-start gap-6">
+                <div class="flex-1">
+                    <h2 class="text-xl font-bold text-gray-900 mb-2">Contact presă</h2>
+                    <p class="text-sm text-gray-600 mb-4">Pentru interviuri, informații suplimentare sau solicitări media, contactează-ne la:</p>
+                    <div class="space-y-2">
+                        <a href="mailto:press@tics.ro" class="flex items-center gap-2 text-sm text-indigo-600 font-medium hover:underline"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>press@tics.ro</a>
+                        <p class="flex items-center gap-2 text-sm text-gray-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Răspundem în maxim 24h</p>
+                    </div>
+                </div>
+                <a href="#" class="flex-shrink-0 px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Descarcă Press Kit (.zip)</a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast -->
+    <div id="copyToast" class="copy-toast fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-full shadow-lg z-50">Copiat! ✓</div>
+
+    <script>
+    function copyColor(el,hex){navigator.clipboard.writeText(hex);showToast('Culoare copiată: '+hex)}
+    function copyText(btn,type){const p=btn.parentElement;const texts=p.querySelectorAll('p:not(:last-child)');let t='';texts.forEach(el=>{if(!el.querySelector('span'))t+=el.textContent+'\n'});navigator.clipboard.writeText(t.trim());showToast('Text copiat!')}
+    function showToast(msg){const t=document.getElementById('copyToast');t.textContent=msg+' ✓';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
+    </script>
+</body>
+</html>

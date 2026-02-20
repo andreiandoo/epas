@@ -3,30 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dezabonare Newsletter — TICS.ro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Dezabonare newsletter — TICS.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.anim{animation:fadeInUp .5s ease forwards;opacity:0}.ad1{animation-delay:.08s}.ad2{animation-delay:.16s}.ad3{animation-delay:.24s}
+        .option-card{transition:all .25s cubic-bezier(.4,0,.2,1);cursor:pointer;position:relative}.option-card:hover{border-color:#a5b4fc;background:#fafafe}.option-card.selected{border-color:#6366f1;background:#eef2ff;box-shadow:0 0 0 3px rgba(99,102,241,.08)}
+        .option-card.selected .check-circle{background:#6366f1;border-color:#6366f1}
+        .option-card.selected .check-circle svg{opacity:1}
+        .check-circle{width:20px;height:20px;border:2px solid #d1d5db;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .2s ease;flex-shrink:0}.check-circle svg{opacity:0;transition:opacity .2s ease}
+        .unsub-btn{transition:all .2s ease}.unsub-btn:hover{background:#dc2626}
+        .keep-btn{transition:all .2s ease}.keep-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(17,24,39,.15)}
+        .freq-btn{transition:all .2s ease}.freq-btn:hover{border-color:#a5b4fc}.freq-btn.active{background:#111827;color:white;border-color:#111827}
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center" style="font-family:'Inter',sans-serif">
-    <div class="max-w-md mx-auto px-4 py-12 text-center">
-        <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-6"><span class="text-3xl">📧</span></div>
-        <h1 class="text-2xl font-bold text-gray-900 mb-2">Te-ai dezabonat cu succes</h1>
-        <p class="text-gray-500 mb-8">Nu vei mai primi emailuri de la newsletter-ul TICS la adresa <strong>maria@email.com</strong></p>
-        <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
-            <p class="text-sm text-gray-600 mb-4">Ai făcut asta din greșeală?</p>
-            <button class="w-full py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700">Reabonează-mă</button>
-        </div>
-        <div class="bg-gray-100 rounded-xl p-4 text-left">
-            <p class="text-sm font-medium text-gray-700 mb-2">Prefer să primesc mai puține emailuri</p>
-            <p class="text-xs text-gray-500 mb-3">În loc să te dezabonezi complet, poți reduce frecvența:</p>
-            <div class="space-y-2">
-                <label class="flex items-center gap-2 text-sm"><input type="radio" name="freq" class="text-indigo-600"><span>Doar emailuri importante (comenzi, bilete)</span></label>
-                <label class="flex items-center gap-2 text-sm"><input type="radio" name="freq" class="text-indigo-600"><span>O dată pe săptămână</span></label>
-                <label class="flex items-center gap-2 text-sm"><input type="radio" name="freq" class="text-indigo-600"><span>O dată pe lună</span></label>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 flex-shrink-0">
+        <div class="max-w-lg mx-auto px-4"><div class="flex items-center justify-center h-16"><a href="/" class="flex items-center gap-2"><div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">T</span></div><span class="font-bold text-lg">TICS</span></a></div></div>
+    </header>
+
+    <main class="flex-1 flex items-center justify-center px-4 py-10">
+        <div class="w-full max-w-lg">
+            <!-- Card -->
+            <div class="anim bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <!-- Top section -->
+                <div class="p-6 lg:p-8 text-center border-b border-gray-100">
+                    <div class="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-5">📬</div>
+                    <h1 class="text-xl font-bold text-gray-900 mb-2">Vrei să te dezabonezi?</h1>
+                    <p class="text-sm text-gray-500">Email: <strong class="text-gray-700">andrei@email.com</strong></p>
+                    <p class="text-sm text-gray-500 mt-1">Înainte de a pleca, poate preferi să ajustezi frecvența?</p>
+                </div>
+
+                <!-- Frequency options -->
+                <div class="p-6 lg:p-8 border-b border-gray-100">
+                    <p class="text-sm font-semibold text-gray-900 mb-3">Ajustează frecvența emailurilor</p>
+                    <div class="grid grid-cols-3 gap-2 mb-5">
+                        <button class="freq-btn px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600" onclick="selectFreq(this)">Săptămânal</button>
+                        <button class="freq-btn active px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600" onclick="selectFreq(this)">Lunar</button>
+                        <button class="freq-btn px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600" onclick="selectFreq(this)">Doar oferte</button>
+                    </div>
+                    <button class="keep-btn w-full py-3 bg-gray-900 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Salvează preferința și rămân abonat
+                    </button>
+                </div>
+
+                <!-- Unsubscribe reasons -->
+                <div class="p-6 lg:p-8">
+                    <p class="text-sm font-semibold text-gray-900 mb-1">Totuși vreau să mă dezabonez</p>
+                    <p class="text-xs text-gray-400 mb-4">Spune-ne de ce, ca să ne îmbunătățim (opțional):</p>
+
+                    <div class="space-y-2 mb-5" id="reasons">
+                        <label class="option-card flex items-center gap-3 p-3 border border-gray-200 rounded-xl" onclick="selectReason(this)">
+                            <div class="check-circle"><svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+                            <span class="text-sm text-gray-700">Primesc prea multe emailuri</span>
+                        </label>
+                        <label class="option-card flex items-center gap-3 p-3 border border-gray-200 rounded-xl" onclick="selectReason(this)">
+                            <div class="check-circle"><svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+                            <span class="text-sm text-gray-700">Conținutul nu este relevant pentru mine</span>
+                        </label>
+                        <label class="option-card flex items-center gap-3 p-3 border border-gray-200 rounded-xl" onclick="selectReason(this)">
+                            <div class="check-circle"><svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+                            <span class="text-sm text-gray-700">Nu am creat eu acest abonament</span>
+                        </label>
+                        <label class="option-card flex items-center gap-3 p-3 border border-gray-200 rounded-xl" onclick="selectReason(this)">
+                            <div class="check-circle"><svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+                            <span class="text-sm text-gray-700">Alt motiv</span>
+                        </label>
+                    </div>
+
+                    <a href="/unsubscribed.html" class="unsub-btn block w-full py-3 bg-red-500 text-white text-sm font-semibold rounded-xl text-center">
+                        Dezabonează-mă complet
+                    </a>
+                    <p class="text-[11px] text-gray-400 text-center mt-3">Vei primi în continuare emailuri tranzacționale (bilete, facturi, confirmări).</p>
+                </div>
             </div>
-            <button class="mt-4 w-full py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300">Actualizează preferințele</button>
+
+            <p class="text-center text-xs text-gray-400 mt-6">
+                <a href="/" class="hover:text-gray-600 transition-colors">TICS.ro</a> · <a href="/privacy.html" class="hover:text-gray-600 transition-colors">Politica de confidențialitate</a>
+            </p>
         </div>
-        <a href="tics-homepage.html" class="inline-block mt-8 text-indigo-600 text-sm hover:underline">← Înapoi la TICS.ro</a>
-    </div>
+    </main>
+
+    <script>
+    function selectReason(el){document.querySelectorAll('.option-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected')}
+    function selectFreq(el){document.querySelectorAll('.freq-btn').forEach(b=>{b.classList.remove('active')});el.classList.add('active')}
+    </script>
 </body>
 </html>

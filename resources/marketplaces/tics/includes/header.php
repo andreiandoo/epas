@@ -43,6 +43,388 @@ if ($isLoggedIn && !isset($loggedInUser)) {
                 <span class="font-bold text-lg hidden sm:block">TICS</span>
             </a>
 
+            <style>
+                .gradient-primary { background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); }
+                .gradient-text { 
+                    background: linear-gradient(135deg, #7c3aed, #ec4899); 
+                    -webkit-background-clip: text; 
+                    -webkit-text-fill-color: transparent; 
+                }
+                
+                /* Dropdown positioning */
+                .dropdown {
+                    position: relative;
+                }
+                
+                .dropdown-menu {
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    min-width: 280px;
+                    background: white;
+                    border-radius: 12px;
+                    box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+                    opacity: 0;
+                    visibility: hidden;
+                    transform: translateY(10px);
+                    transition: all 0.2s ease;
+                    z-index: 1000;
+                }
+                
+                /* Wide dropdown for cities and venues */
+                .dropdown-menu.wide {
+                    min-width: 700px;
+                    left: 50%;
+                    transform: translateX(-50%) translateY(10px);
+                }
+                
+                .dropdown-menu.venues {
+                    min-width: 900px;
+                }
+                
+                .dropdown:hover .dropdown-menu {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: translateY(0);
+                }
+                
+                .dropdown:hover .dropdown-menu.wide {
+                    transform: translateX(-50%) translateY(0);
+                }
+                
+                /* Nav link style */
+                .nav-link {
+                    position: relative;
+                    padding: 0 16px;
+                    height: 64px;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-weight: 500;
+                    color: #374151;
+                    transition: color 0.2s;
+                }
+                
+                .nav-link:hover {
+                    color: #7c3aed;
+                }
+                
+                .nav-link::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0;
+                    left: 16px;
+                    right: 16px;
+                    height: 3px;
+                    background: linear-gradient(135deg, #7c3aed, #ec4899);
+                    border-radius: 3px 3px 0 0;
+                    transform: scaleX(0);
+                    transition: transform 0.2s;
+                }
+                
+                .dropdown:hover .nav-link::after {
+                    transform: scaleX(1);
+                }
+                
+                /* Dropdown link hover */
+                .dropdown-link {
+                    display: block;
+                    padding: 8px 16px;
+                    color: #4b5563;
+                    font-size: 14px;
+                    border-radius: 6px;
+                    transition: all 0.15s;
+                }
+                
+                .dropdown-link:hover {
+                    background: #f3e8ff;
+                    color: #7c3aed;
+                }
+                
+                /* City list scrollable */
+                .city-list {
+                    max-height: 400px;
+                    overflow-y: auto;
+                }
+                
+                .city-list::-webkit-scrollbar {
+                    width: 6px;
+                }
+                
+                .city-list::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                    border-radius: 3px;
+                }
+                
+                .city-list::-webkit-scrollbar-thumb {
+                    background: #c4b5fd;
+                    border-radius: 3px;
+                }
+                
+                /* Venue card compact */
+                .venue-card {
+                    display: flex;
+                    flex-direction: column;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    background: #f9fafb;
+                    transition: all 0.2s;
+                }
+                
+                .venue-card:hover {
+                    background: #f3e8ff;
+                    transform: translateY(-2px);
+                }
+                
+                .venue-card img {
+                    width: 100%;
+                    height: 90px;
+                    object-fit: cover;
+                }
+                
+                .venue-card .venue-info {
+                    padding: 10px;
+                }
+                
+                .venue-card .venue-name {
+                    font-weight: 600;
+                    font-size: 13px;
+                    color: #111827;
+                    line-height: 1.3;
+                }
+                
+                .venue-card .venue-city {
+                    font-size: 12px;
+                    color: #6b7280;
+                    margin-top: 2px;
+                }
+            </style>
+
+            <!-- Desktop Navigation -->
+            <nav class="hidden lg:flex items-center h-full">
+                
+                <!-- Evenimente Dropdown -->
+                <div class="dropdown h-full flex items-center">
+                    <button class="nav-link">
+                        Evenimente
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="dropdown-menu p-3">
+                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-2">Categorii</div>
+                        <a href="#" class="dropdown-link font-medium">🎵 Concerte</a>
+                        <a href="#" class="dropdown-link font-medium">🎪 Festivaluri</a>
+                        <a href="#" class="dropdown-link font-medium">😂 Stand-up Comedy</a>
+                        <a href="#" class="dropdown-link font-medium">🎭 Teatru</a>
+                        <a href="#" class="dropdown-link font-medium">⚽ Sport</a>
+                        <a href="#" class="dropdown-link font-medium">🎨 Expo & Muzee</a>
+                        <a href="#" class="dropdown-link font-medium">👶 Pentru Copii</a>
+                        <a href="#" class="dropdown-link font-medium">📚 Conferințe</a>
+                        <div class="border-t border-gray-100 mt-2 pt-2">
+                            <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-2">Genuri muzicale</div>
+                            <a href="#" class="dropdown-link">Rock & Alternative</a>
+                            <a href="#" class="dropdown-link">Pop</a>
+                            <a href="#" class="dropdown-link">Electronic / DJ</a>
+                            <a href="#" class="dropdown-link">Hip-Hop & Rap</a>
+                            <a href="#" class="dropdown-link">Jazz & Blues</a>
+                            <a href="#" class="dropdown-link">Metal</a>
+                            <a href="#" class="dropdown-link">Clasică & Operă</a>
+                            <a href="#" class="dropdown-link">Folk & Populară</a>
+                        </div>
+                        <div class="border-t border-gray-100 mt-2 pt-2">
+                            <a href="/evenimente" class="dropdown-link font-semibold text-purple-600">Vezi toate evenimentele →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orașe Dropdown -->
+                <div class="dropdown h-full flex items-center">
+                    <button class="nav-link">
+                        Orașe
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="dropdown-menu wide p-4">
+                        <div class="flex items-center justify-between mb-3 px-2">
+                            <span class="text-sm font-semibold text-gray-900">1.245 evenimente din 147 orașe</span>
+                            <a href="/orase" class="text-sm font-semibold text-purple-600 hover:text-purple-700">Vezi toate →</a>
+                        </div>
+                        
+                        <div class="city-list grid grid-cols-4 gap-x-4">
+                            <!-- Popular cities first -->
+                            <a href="/orase/bucuresti" class="dropdown-link font-semibold text-purple-600">București</a>
+                            <a href="#" class="dropdown-link font-semibold text-purple-600">Cluj-Napoca</a>
+                            <a href="#" class="dropdown-link font-semibold text-purple-600">Timișoara</a>
+                            <a href="#" class="dropdown-link font-semibold text-purple-600">Iași</a>
+                            <a href="#" class="dropdown-link font-semibold text-purple-600">Brașov</a>
+                            <a href="#" class="dropdown-link font-semibold text-purple-600">Constanța</a>
+                            <a href="#" class="dropdown-link font-semibold text-purple-600">Sibiu</a>
+                            <a href="#" class="dropdown-link font-semibold text-purple-600">Craiova</a>
+                            
+                            <!-- Divider -->
+                            <div class="col-span-4 border-t border-gray-100 my-2"></div>
+                            
+                            <!-- All cities A-Z -->
+                            <a href="#" class="dropdown-link">Alba Iulia</a>
+                            <a href="#" class="dropdown-link">Arad</a>
+                            <a href="#" class="dropdown-link">Bacău</a>
+                            <a href="#" class="dropdown-link">Baia Mare</a>
+                            <a href="#" class="dropdown-link">Bistrița</a>
+                            <a href="#" class="dropdown-link">Botoșani</a>
+                            <a href="#" class="dropdown-link">Brăila</a>
+                            <a href="#" class="dropdown-link">Buzău</a>
+                            <a href="#" class="dropdown-link">Călărași</a>
+                            <a href="#" class="dropdown-link">Deva</a>
+                            <a href="#" class="dropdown-link">Focșani</a>
+                            <a href="#" class="dropdown-link">Galați</a>
+                            <a href="#" class="dropdown-link">Giurgiu</a>
+                            <a href="#" class="dropdown-link">Hunedoara</a>
+                            <a href="#" class="dropdown-link">Mediaș</a>
+                            <a href="#" class="dropdown-link">Miercurea Ciuc</a>
+                            <a href="#" class="dropdown-link">Oradea</a>
+                            <a href="#" class="dropdown-link">Petroșani</a>
+                            <a href="#" class="dropdown-link">Piatra Neamț</a>
+                            <a href="#" class="dropdown-link">Pitești</a>
+                            <a href="#" class="dropdown-link">Ploiești</a>
+                            <a href="#" class="dropdown-link">Râmnicu Vâlcea</a>
+                            <a href="#" class="dropdown-link">Reșița</a>
+                            <a href="#" class="dropdown-link">Roman</a>
+                            <a href="#" class="dropdown-link">Satu Mare</a>
+                            <a href="#" class="dropdown-link">Sighișoara</a>
+                            <a href="#" class="dropdown-link">Slatina</a>
+                            <a href="#" class="dropdown-link">Slobozia</a>
+                            <a href="#" class="dropdown-link">Suceava</a>
+                            <a href="#" class="dropdown-link">Târgoviște</a>
+                            <a href="#" class="dropdown-link">Târgu Jiu</a>
+                            <a href="#" class="dropdown-link">Târgu Mureș</a>
+                            <a href="#" class="dropdown-link">Tulcea</a>
+                            <a href="#" class="dropdown-link">Vaslui</a>
+                            <a href="#" class="dropdown-link">Zalău</a>
+                            <a href="#" class="dropdown-link">Bârlad</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Locații Dropdown -->
+                <div class="dropdown h-full flex items-center">
+                    <button class="nav-link">
+                        Locații
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="dropdown-menu wide venues p-4">
+                        <div class="flex items-center justify-between mb-4 px-1">
+                            <span class="text-sm font-semibold text-gray-900">Locații populare</span>
+                            <a href="/locatii" class="text-sm font-semibold text-purple-600 hover:text-purple-700">Vezi toate locațiile →</a>
+                        </div>
+                        
+                        <div class="grid grid-cols-6 gap-3">
+                            <a href="#" class="venue-card">
+                                <img src="https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=200&h=120&fit=crop" alt="">
+                                <div class="venue-info">
+                                    <div class="venue-name">Arena Națională</div>
+                                    <div class="venue-city">București</div>
+                                </div>
+                            </a>
+                            
+                            <a href="#" class="venue-card">
+                                <img src="https://images.unsplash.com/photo-1507901747481-84a4f64fda6d?w=200&h=120&fit=crop" alt="">
+                                <div class="venue-info">
+                                    <div class="venue-name">Sala Palatului</div>
+                                    <div class="venue-city">București</div>
+                                </div>
+                            </a>
+                            
+                            <a href="#" class="venue-card">
+                                <img src="https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=200&h=120&fit=crop" alt="">
+                                <div class="venue-info">
+                                    <div class="venue-name">Arenele Romane</div>
+                                    <div class="venue-city">București</div>
+                                </div>
+                            </a>
+                            
+                            <a href="#" class="venue-card">
+                                <img src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=200&h=120&fit=crop" alt="">
+                                <div class="venue-info">
+                                    <div class="venue-name">BT Arena</div>
+                                    <div class="venue-city">Cluj-Napoca</div>
+                                </div>
+                            </a>
+                            
+                            <a href="#" class="venue-card">
+                                <img src="https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=200&h=120&fit=crop" alt="">
+                                <div class="venue-info">
+                                    <div class="venue-name">Romexpo</div>
+                                    <div class="venue-city">București</div>
+                                </div>
+                            </a>
+                            
+                            <a href="#" class="venue-card">
+                                <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=120&fit=crop" alt="">
+                                <div class="venue-info">
+                                    <div class="venue-name">Hard Rock Cafe</div>
+                                    <div class="venue-city">București</div>
+                                </div>
+                            </a>
+                            
+                            <a href="#" class="venue-card">
+                                <img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200&h=120&fit=crop" alt="">
+                                <div class="venue-info">
+                                    <div class="venue-name">Quantic</div>
+                                    <div class="venue-city">București</div>
+                                </div>
+                            </a>
+                            
+                            <a href="#" class="venue-card">
+                                <img src="https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=200&h=120&fit=crop" alt="">
+                                <div class="venue-info">
+                                    <div class="venue-name">Expirat</div>
+                                    <div class="venue-city">București</div>
+                                </div>
+                            </a>
+                            
+                            <a href="#" class="venue-card">
+                                <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200&h=120&fit=crop" alt="">
+                                <div class="venue-info">
+                                    <div class="venue-name">Form Space</div>
+                                    <div class="venue-city">Cluj-Napoca</div>
+                                </div>
+                            </a>
+                            
+                            <a href="#" class="venue-card">
+                                <img src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&h=120&fit=crop" alt="">
+                                <div class="venue-info">
+                                    <div class="venue-name">Filarmonica</div>
+                                    <div class="venue-city">Sibiu</div>
+                                </div>
+                            </a>
+                            
+                            <a href="#" class="venue-card">
+                                <img src="https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=200&h=120&fit=crop" alt="">
+                                <div class="venue-info">
+                                    <div class="venue-name">Club 99</div>
+                                    <div class="venue-city">București</div>
+                                </div>
+                            </a>
+                            
+                            <a href="#" class="venue-card">
+                                <img src="https://images.unsplash.com/photo-1504680177321-2e6a879aac86?w=200&h=120&fit=crop" alt="">
+                                <div class="venue-info">
+                                    <div class="venue-name">TNB</div>
+                                    <div class="venue-city">București</div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
             <!-- Search -->
             <div class="hidden md:flex flex-1 max-w-xl mx-6 relative">
                 <div class="w-full flex items-center bg-gray-100 rounded-full px-4 py-2.5 focus-within:ring-2 focus-within:ring-gray-900 focus-within:bg-white transition-all">

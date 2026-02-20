@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chat cu TICS — Suport Live</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}html,body{height:100%;overflow:hidden}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes slideIn{from{opacity:0;transform:translateX(-12px) translateY(4px)}to{opacity:1;transform:translateX(0) translateY(0)}}
+        @keyframes slideInRight{from{opacity:0;transform:translateX(12px) translateY(4px)}to{opacity:1;transform:translateX(0) translateY(0)}}
+        .msg-bot{animation:slideIn .35s ease forwards}.msg-user{animation:slideInRight .3s ease forwards}
+        @keyframes dot-pulse{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+        .typing-dot{width:6px;height:6px;background:#9ca3af;border-radius:50%;animation:dot-pulse 1.4s infinite ease-in-out}.typing-dot:nth-child(2){animation-delay:.16s}.typing-dot:nth-child(3){animation-delay:.32s}
+        .quick-btn{transition:all .2s ease}.quick-btn:hover{background:#eef2ff;border-color:#a5b4fc;color:#4f46e5;transform:translateY(-1px)}
+        .quick-btn:active{transform:translateY(0)}
+        .chat-bubble{max-width:85%;word-break:break-word}
+        .chat-bubble a{color:#6366f1;text-decoration:underline}
+        .send-btn{transition:all .2s ease}.send-btn:hover:not(:disabled){background:#111827;transform:scale(1.05)}.send-btn:disabled{opacity:.3;cursor:not-allowed}
+        .chat-area::-webkit-scrollbar{width:4px}.chat-area::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:4px}.chat-area::-webkit-scrollbar-thumb:hover{background:#d1d5db}
+        .input-wrap{transition:all .2s ease}.input-wrap:focus-within{border-color:#a5b4fc;box-shadow:0 0 0 4px rgba(99,102,241,.06)}
+        @keyframes satisfactionIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}.satisfaction-in{animation:satisfactionIn .3s ease forwards}
+        .rating-btn{transition:all .2s ease}.rating-btn:hover{transform:scale(1.15)}.rating-btn.selected{transform:scale(1.2)}
+    </style>
+</head>
+<body class="bg-gray-100 h-full flex flex-col">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 flex-shrink-0 z-10">
+        <div class="max-w-3xl mx-auto px-4">
+            <div class="flex items-center justify-between h-14">
+                <div class="flex items-center gap-3">
+                    <a href="/" class="flex items-center gap-2"><div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">T</span></div></a>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="font-semibold text-gray-900 text-sm">Asistent TICS</h1>
+                            <span class="flex items-center gap-1 text-[11px] text-green-600 font-medium"><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>Online</span>
+                        </div>
+                        <p class="text-[11px] text-gray-400 -mt-0.5">Răspuns instant · 24/7</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button onclick="endChat()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Încheie conversația"><svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Chat Area -->
+    <div class="flex-1 overflow-y-auto chat-area" id="chatArea">
+        <div class="max-w-3xl mx-auto px-4 py-5 space-y-4" id="messages">
+
+            <!-- Welcome message -->
+            <div class="flex gap-2.5 msg-bot">
+                <div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0"><span class="text-white font-bold text-xs">T</span></div>
+                <div class="space-y-2">
+                    <div class="chat-bubble bg-white rounded-2xl rounded-tl-md border border-gray-200 px-4 py-3 shadow-sm">
+                        <p class="text-sm text-gray-800 leading-relaxed">Bun venit! 👋 Sunt asistentul virtual TICS. Te pot ajuta cu:</p>
+                        <ul class="mt-2 space-y-1 text-sm text-gray-600">
+                            <li class="flex items-center gap-2">🎫 Informații despre bilete și comenzi</li>
+                            <li class="flex items-center gap-2">💳 Probleme cu plăți sau rambursări</li>
+                            <li class="flex items-center gap-2">🏢 Întrebări despre platforma pentru organizatori</li>
+                            <li class="flex items-center gap-2">🔍 Căutare evenimente</li>
+                        </ul>
+                    </div>
+                    <p class="text-[11px] text-gray-400 px-1">TICS Bot · Acum</p>
+                </div>
+            </div>
+
+            <!-- Quick replies -->
+            <div class="pl-10 flex flex-wrap gap-2 msg-bot" style="animation-delay:.2s" id="quickReplies">
+                <button class="quick-btn px-4 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-700 shadow-sm" onclick="sendQuick('Unde este biletul meu?')">🎫 Unde e biletul meu?</button>
+                <button class="quick-btn px-4 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-700 shadow-sm" onclick="sendQuick('Vreau să returnez un bilet')">🔄 Retur bilet</button>
+                <button class="quick-btn px-4 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-700 shadow-sm" onclick="sendQuick('Ce metode de plată acceptați?')">💳 Metode de plată</button>
+                <button class="quick-btn px-4 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-700 shadow-sm" onclick="sendQuick('Vreau să vorbesc cu un operator')">👤 Operator uman</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="bg-white border-t border-gray-200 flex-shrink-0" id="inputArea">
+        <div class="max-w-3xl mx-auto px-4 py-3">
+            <div class="input-wrap flex items-end gap-2 bg-gray-50 rounded-2xl border border-gray-200 px-3 py-2">
+                <button class="p-1.5 hover:bg-gray-200 rounded-lg transition-colors flex-shrink-0 mb-0.5" title="Atașează fișier">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                </button>
+                <textarea id="chatInput" rows="1" placeholder="Scrie un mesaj..." class="flex-1 bg-transparent text-sm outline-none resize-none placeholder:text-gray-400 max-h-32 leading-relaxed py-1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}" oninput="autoResize(this);toggleSendBtn()"></textarea>
+                <button id="sendBtn" disabled onclick="sendMessage()" class="send-btn p-2 bg-gray-900 text-white rounded-xl flex-shrink-0 mb-0.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                </button>
+            </div>
+            <p class="text-[10px] text-gray-400 text-center mt-2">Asistentul TICS poate face greșeli. Verifică informațiile importante. <a href="/help-center.html" class="text-indigo-500 hover:underline">Centru de ajutor</a></p>
+        </div>
+    </div>
+
+    <script>
+    const chatArea=document.getElementById('chatArea');
+    const messages=document.getElementById('messages');
+    const chatInput=document.getElementById('chatInput');
+    const sendBtn=document.getElementById('sendBtn');
+
+    function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,128)+'px'}
+    function toggleSendBtn(){sendBtn.disabled=!chatInput.value.trim()}
+    function scrollBottom(){setTimeout(()=>chatArea.scrollTo({top:chatArea.scrollHeight,behavior:'smooth'}),50)}
+
+    // Bot responses
+    const botReplies={
+        'Unde este biletul meu?':{
+            text:'Biletul tău ar trebui să fie pe email-ul folosit la achiziție. Poți verifica și în secțiunea <a href="#">Biletele mele</a> din contul tău.\n\nDacă nu l-ai primit, verifică folderul Spam/Junk. Ai nevoie de ajutor suplimentar?',
+            quick:['Da, nu l-am găsit','Nu, am rezolvat, mulțumesc!','Vreau să vorbesc cu un operator']
+        },
+        'Vreau să returnez un bilet':{
+            text:'Politica de retur depinde de organizatorul evenimentului. Multe evenimente permit returnarea cu 48h înainte.\n\nPentru a iniția o returnare:\n1. Mergi la <a href="#">Biletele mele</a>\n2. Selectează biletul\n3. Apasă „Solicită retur"\n\nVrei să te ajut cu un bilet specific?',
+            quick:['Da, am un bilet specific','Care e politica exactă?','Vreau să transfer, nu să returnez']
+        },
+        'Ce metode de plată acceptați?':{
+            text:'Acceptăm mai multe metode de plată:\n\n💳 <strong>Visa & Mastercard</strong> (debit + credit)\n📱 <strong>Apple Pay & Google Pay</strong>\n🏦 <strong>Transfer bancar instant</strong> (RoPay)\n🎁 <strong>Carduri de beneficii</strong> — Edenred, Pluxee, Up Romania\n🎫 <strong>Gift Card TICS</strong>\n\nAi o întrebare specifică despre o metodă?',
+            quick:['Cum plătesc cu Edenred?','Transfer bancar — cum funcționează?','Mulțumesc!']
+        },
+        'Vreau să vorbesc cu un operator':{
+            text:'Înțeleg, te conectez cu un coleg din echipa de suport. ⏳\n\nTimp estimat de așteptare: <strong>sub 2 minute</strong>.\n\nÎntre timp, poți descrie problema și operatorul va vedea conversația noastră.',
+            quick:[]
+        }
+    };
+
+    function addUserMsg(text){
+        const el=document.createElement('div');
+        el.className='flex justify-end msg-user';
+        el.innerHTML=`<div class="space-y-1"><div class="chat-bubble bg-gray-900 text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm"><p class="text-sm leading-relaxed">${escHtml(text)}</p></div><p class="text-[11px] text-gray-400 text-right px-1">Tu · Acum</p></div>`;
+        messages.appendChild(el);
+        scrollBottom();
+    }
+
+    function addBotMsg(html,quick=[]){
+        // Typing indicator
+        const typing=document.createElement('div');
+        typing.className='flex gap-2.5 msg-bot';
+        typing.id='typingIndicator';
+        typing.innerHTML=`<div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0"><span class="text-white font-bold text-xs">T</span></div><div class="chat-bubble bg-white rounded-2xl rounded-tl-md border border-gray-200 px-4 py-3.5 shadow-sm"><div class="flex gap-1.5"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
+        messages.appendChild(typing);
+        scrollBottom();
+
+        setTimeout(()=>{
+            typing.remove();
+            const el=document.createElement('div');
+            el.className='flex gap-2.5 msg-bot';
+            el.innerHTML=`<div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0"><span class="text-white font-bold text-xs">T</span></div><div class="space-y-2"><div class="chat-bubble bg-white rounded-2xl rounded-tl-md border border-gray-200 px-4 py-3 shadow-sm"><div class="text-sm text-gray-800 leading-relaxed whitespace-pre-line">${html}</div></div><p class="text-[11px] text-gray-400 px-1">TICS Bot · Acum</p></div>`;
+            messages.appendChild(el);
+
+            if(quick.length){
+                const qr=document.createElement('div');
+                qr.className='pl-10 flex flex-wrap gap-2 msg-bot';
+                quick.forEach(q=>{
+                    const btn=document.createElement('button');
+                    btn.className='quick-btn px-4 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-700 shadow-sm';
+                    btn.textContent=q;
+                    btn.onclick=()=>sendQuick(q);
+                    qr.appendChild(btn);
+                });
+                messages.appendChild(qr);
+            }
+            scrollBottom();
+        },1200+Math.random()*800);
+    }
+
+    function sendQuick(text){
+        // Remove quick replies
+        document.querySelectorAll('#messages > .pl-10').forEach(el=>el.remove());
+        addUserMsg(text);
+        const reply=botReplies[text];
+        if(reply){
+            addBotMsg(reply.text,reply.quick);
+        }else{
+            addBotMsg('Mulțumesc pentru mesaj! Verific și revin imediat cu un răspuns. 🔍\n\nDacă ai nevoie de ajutor urgent, te pot conecta cu un operator uman.',['Vreau să vorbesc cu un operator','Am și altă întrebare']);
+        }
+    }
+
+    function sendMessage(){
+        const text=chatInput.value.trim();
+        if(!text)return;
+        chatInput.value='';chatInput.style.height='auto';toggleSendBtn();
+        document.querySelectorAll('#messages > .pl-10').forEach(el=>el.remove());
+        addUserMsg(text);
+        const key=Object.keys(botReplies).find(k=>text.toLowerCase().includes(k.toLowerCase().slice(0,10)));
+        if(key){addBotMsg(botReplies[key].text,botReplies[key].quick)}
+        else{addBotMsg('Mulțumesc pentru mesaj! Analizez întrebarea ta... 🔍\n\nPentru a te ajuta cât mai bine, poți să-mi dai mai multe detalii? De exemplu, un număr de comandă sau adresa de email folosită la achiziție.',['Vreau să vorbesc cu un operator'])}
+    }
+
+    function endChat(){
+        const inputArea=document.getElementById('inputArea');
+        inputArea.innerHTML=`<div class="max-w-3xl mx-auto px-4 py-5 satisfaction-in"><div class="text-center"><p class="text-sm font-medium text-gray-900 mb-3">Cum ți s-a părut conversația?</p><div class="flex items-center justify-center gap-3 mb-4"><button class="rating-btn text-2xl" onclick="rate(this,'😞')">😞</button><button class="rating-btn text-2xl" onclick="rate(this,'😐')">😐</button><button class="rating-btn text-2xl" onclick="rate(this,'🙂')">🙂</button><button class="rating-btn text-2xl" onclick="rate(this,'😊')">😊</button><button class="rating-btn text-2xl" onclick="rate(this,'🤩')">🤩</button></div><p class="text-xs text-gray-400" id="rateMsg">Selectează o evaluare</p></div></div>`;
+    }
+
+    function rate(btn,emoji){
+        document.querySelectorAll('.rating-btn').forEach(b=>b.classList.remove('selected'));
+        btn.classList.add('selected');
+        document.getElementById('rateMsg').innerHTML=`Mulțumesc pentru feedback! <a href="/" class="text-indigo-600 hover:underline">Înapoi la TICS.ro</a>`;
+    }
+
+    function escHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+    </script>
+</body>
+</html>
