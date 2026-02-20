@@ -448,6 +448,10 @@ class MarketplaceEventsController extends BaseController
                 'google_maps_url' => $venue->google_maps_url,
                 'image' => $venue->image_url ? Storage::disk('public')->url($venue->image_url) : null,
                 'capacity' => $venue->capacity,
+                'google_reviews' => $venue->google_rating ? [
+                    'rating' => (float) $venue->google_rating,
+                    'total_reviews' => $venue->google_reviews_count,
+                ] : null,
             ];
         }
 

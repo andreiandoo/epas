@@ -331,7 +331,30 @@ class VenueResource extends Resource
                                     ->placeholder('https://maps.google.com/...')
                                     ->prefixIcon('heroicon-o-map')
                                     ->columnSpanFull(),
+                                Forms\Components\TextInput::make('google_place_id')
+                                    ->label('Google Place ID')
+                                    ->placeholder('Auto-detected or paste manually')
+                                    ->helperText('Used to fetch Google Reviews. Auto-detected from Maps link or venue name.')
+                                    ->prefixIcon('heroicon-o-star')
+                                    ->columnSpanFull(),
                             ])->columns(2),
+                        // GOOGLE REVIEWS (read-only)
+                        SC\Section::make('Google Reviews')
+                            ->icon('heroicon-o-star')
+                            ->columnSpan(2)
+                            ->collapsed()
+                            ->schema([
+                                Forms\Components\Placeholder::make('google_rating_display')
+                                    ->label('Rating')
+                                    ->content(fn ($record) => $record?->google_rating
+                                        ? $record->google_rating . ' / 5 (' . ($record->google_reviews_count ?? 0) . ' reviews)'
+                                        : 'Not yet fetched'),
+                                Forms\Components\Placeholder::make('google_reviews_updated_display')
+                                    ->label('Last Updated')
+                                    ->content(fn ($record) => $record?->google_reviews_updated_at
+                                        ? $record->google_reviews_updated_at->diffForHumans()
+                                        : 'Never'),
+                            ]),
                         // CAPACITY
                         SC\Section::make('Capacity')
                             ->icon('heroicon-o-users')

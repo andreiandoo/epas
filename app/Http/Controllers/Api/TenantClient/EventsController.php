@@ -366,6 +366,10 @@ class EventsController extends Controller
                     'email2' => $event->venue->email2,
                     'website_url' => $event->venue->website_url,
                     'image_url' => $event->venue->image_url ? Storage::disk('public')->url($event->venue->image_url) : null,
+                    'google_reviews' => $event->venue->google_rating ? [
+                        'rating' => (float) $event->venue->google_rating,
+                        'total_reviews' => $event->venue->google_reviews_count,
+                    ] : null,
                 ] : null,
 
                 'poster_url' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,

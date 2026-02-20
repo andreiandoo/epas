@@ -284,6 +284,12 @@ class VenuesController extends BaseController
                 'name' => $cat->getTranslation('name', $language),
                 'slug' => $cat->slug,
             ]),
+            'google_reviews' => $venue->google_rating ? [
+                'rating' => (float) $venue->google_rating,
+                'total_reviews' => $venue->google_reviews_count,
+                'reviews' => $venue->google_reviews ?? [],
+                'updated_at' => $venue->google_reviews_updated_at?->toIso8601String(),
+            ] : null,
             'upcoming_events' => $allUpcomingEvents,
             'events_count' => $this->countVenueEvents($venue),
         ];
@@ -304,6 +310,10 @@ class VenuesController extends BaseController
             'address' => $venue->address,
             'capacity' => $venue->capacity,
             'image' => $this->formatImageUrl($venue->image_url),
+            'google_reviews' => $venue->google_rating ? [
+                'rating' => (float) $venue->google_rating,
+                'total_reviews' => $venue->google_reviews_count,
+            ] : null,
             'events_count' => $this->countVenueEvents($venue),
             'is_featured' => $venue->is_featured ?? false,
             'is_partner' => $venue->is_partner ?? false,

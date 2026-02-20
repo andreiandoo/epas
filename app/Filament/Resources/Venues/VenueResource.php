@@ -186,6 +186,12 @@ class VenueResource extends Resource
                     ->placeholder('https://maps.google.com/...')
                     ->prefixIcon('heroicon-o-map')
                     ->columnSpanFull(),
+                Forms\Components\TextInput::make('google_place_id')
+                    ->label('Google Place ID')
+                    ->placeholder('Auto-detected or paste manually')
+                    ->helperText('Used to fetch Google Reviews. Auto-detected from Maps link or venue name.')
+                    ->prefixIcon('heroicon-o-star')
+                    ->columnSpanFull(),
                 SC\Actions::make([
                     Actions\Action::make('geocode')
                         ->label('Auto-detect coordinates')

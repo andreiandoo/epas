@@ -500,6 +500,23 @@ Schedule::command('artists:update-social-stats')
 
 /*
 |--------------------------------------------------------------------------
+| Venue Google Reviews Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Update Google Reviews for venues (weekly on Wednesday at 4 AM)
+Schedule::command('venues:update-google-reviews')
+    ->weeklyOn(3, '04:00')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Venue Google Reviews updated successfully');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to update venue Google Reviews');
+    });
+
+/*
+|--------------------------------------------------------------------------
 | Activity Log Cleanup
 |--------------------------------------------------------------------------
 */

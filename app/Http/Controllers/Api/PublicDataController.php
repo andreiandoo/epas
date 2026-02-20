@@ -145,6 +145,12 @@ class PublicDataController extends Controller
                     'video_url' => $venue->video_url,
                     'gallery' => $venue->gallery,
                 ],
+                'google_reviews' => $venue->google_rating ? [
+                    'rating' => (float) $venue->google_rating,
+                    'total_reviews' => $venue->google_reviews_count,
+                    'reviews' => $venue->google_reviews ?? [],
+                    'updated_at' => $venue->google_reviews_updated_at?->toIso8601String(),
+                ] : null,
                 'established_at' => $venue->established_at?->toDateString(),
                 'meta' => $venue->meta,
                 'created_at' => $venue->created_at?->toIso8601String(),
@@ -236,6 +242,12 @@ class PublicDataController extends Controller
                 'video_url' => $venue->video_url,
                 'gallery' => $venue->gallery,
             ],
+            'google_reviews' => $venue->google_rating ? [
+                'rating' => (float) $venue->google_rating,
+                'total_reviews' => $venue->google_reviews_count,
+                'reviews' => $venue->google_reviews ?? [],
+                'updated_at' => $venue->google_reviews_updated_at?->toIso8601String(),
+            ] : null,
             'established_at' => $venue->established_at?->toDateString(),
             'meta' => $venue->meta,
             'upcoming_events' => $venue->events->map(fn ($event) => [
