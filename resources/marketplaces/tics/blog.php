@@ -6,108 +6,67 @@
 
 require_once __DIR__ . '/includes/config.php';
 
-// Demo blog categories
-$blogCategories = [
-    ['name' => 'Toate', 'slug' => '', 'icon' => ''],
-    ['name' => 'Festivaluri', 'slug' => 'festivaluri', 'icon' => '🎪'],
-    ['name' => 'Interviuri', 'slug' => 'interviuri', 'icon' => '🎤'],
-    ['name' => 'Ghiduri', 'slug' => 'ghiduri', 'icon' => '📋'],
-    ['name' => 'Știri', 'slug' => 'stiri', 'icon' => '📰'],
-    ['name' => 'Recenzii', 'slug' => 'recenzii', 'icon' => '🎵'],
-    ['name' => 'Tips & Tricks', 'slug' => 'tips', 'icon' => '💡'],
-];
+$selectedCategory = $_GET['categorie'] ?? '';
+$currentPage = max(1, intval($_GET['pagina'] ?? 1));
 
-// Demo featured post
-$featuredPost = [
-    'slug' => 'ghidul-festivalurilor-romania-2026',
-    'title' => 'Ghidul complet al festivalurilor din România 2026: ce merită și ce nu',
-    'excerpt' => 'Am analizat toate festivalurile confirmate pentru 2026, de la Untold și Electric Castle la cele mai mici festivaluri boutique. Descoperă ce te așteaptă vara aceasta.',
-    'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=500&fit=crop',
-    'category' => ['name' => 'Ghid', 'color' => 'indigo'],
-    'readTime' => '10 min citire',
-    'author' => ['name' => 'Andrei Popescu', 'avatar' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop'],
-    'date' => '5 Feb 2026',
-];
+// Fetch categories from real API
+$categoriesResponse = callApi('blog-categories');
+$apiCategories      = $categoriesResponse['data'] ?? [];
 
-// Demo posts
-$posts = [
-    [
-        'slug' => 'interviu-irina-rimes-noul-album',
-        'title' => 'Interviu exclusiv: Irina Rimes despre noul album și turneul acustic',
-        'excerpt' => 'Am stat de vorbă cu Irina Rimes despre procesul creativ din spatele celui de-al patrulea album de studio.',
-        'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=500&h=320&fit=crop',
-        'category' => ['name' => 'Interviu', 'color' => 'purple'],
-        'readTime' => '8 min',
-        'author' => ['name' => 'Maria Ionescu', 'avatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop'],
-        'date' => '3 Feb 2026',
-    ],
-    [
-        'slug' => '10-lucruri-de-luat-la-festival',
-        'title' => '10 lucruri de luat la festival pe care sigur le uiți',
-        'excerpt' => 'De la baterie externă la dopuri de urechi, iată lista completă a obiectelor esențiale pentru orice festival.',
-        'image' => 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=320&fit=crop',
-        'category' => ['name' => 'Tips', 'color' => 'green'],
-        'readTime' => '5 min',
-        'author' => ['name' => 'Andrei Popescu', 'avatar' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop'],
-        'date' => '1 Feb 2026',
-    ],
-    [
-        'slug' => 'electric-castle-2026-primele-nume',
-        'title' => 'Electric Castle 2026: primele nume confirmate și prețuri bilete',
-        'excerpt' => 'Organizatorii Electric Castle au anunțat primul val de artiști pentru ediția 2026. Descoperă line-up-ul.',
-        'image' => 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&h=320&fit=crop',
-        'category' => ['name' => 'Știri', 'color' => 'blue'],
-        'readTime' => '3 min',
-        'author' => ['name' => 'Radu Marin', 'avatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop'],
-        'date' => '28 Ian 2026',
-    ],
-    [
-        'slug' => 'recenzie-concert-subcarpati-arenele-romane',
-        'title' => 'Recenzie: Concertul Subcarpați de la Arenele Romane a fost magic',
-        'excerpt' => 'Un show de 3 ore care a reunit generații. Iată cum a fost concertul Subcarpați din ianuarie.',
-        'image' => 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=500&h=320&fit=crop',
-        'category' => ['name' => 'Recenzie', 'color' => 'orange'],
-        'readTime' => '7 min',
-        'author' => ['name' => 'Maria Ionescu', 'avatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop'],
-        'date' => '25 Ian 2026',
-    ],
-    [
-        'slug' => 'cum-organizezi-eveniment-de-la-zero',
-        'title' => 'Cum să organizezi un eveniment de la zero: ghid pas cu pas',
-        'excerpt' => 'Tot ce trebuie să știi despre organizarea unui eveniment, de la buget la promovare și logistică.',
-        'image' => 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=500&h=320&fit=crop',
-        'category' => ['name' => 'Ghid', 'color' => 'indigo'],
-        'readTime' => '12 min',
-        'author' => ['name' => 'Andrei Popescu', 'avatar' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop'],
-        'date' => '20 Ian 2026',
-    ],
-    [
-        'slug' => 'jazz-in-the-park-2026-schimbari',
-        'title' => 'Jazz in the Park 2026: ce schimbări aduce noua ediție',
-        'excerpt' => 'Festivalul de jazz din Cluj-Napoca promite o ediție specială cu artiști internaționali de renume.',
-        'image' => 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&h=320&fit=crop',
-        'category' => ['name' => 'Festivaluri', 'color' => 'pink'],
-        'readTime' => '6 min',
-        'author' => ['name' => 'Radu Marin', 'avatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop'],
-        'date' => '15 Ian 2026',
-    ],
-];
+$blogCategories = [['name' => 'Toate', 'slug' => '', 'icon' => '']];
+foreach ($apiCategories as $cat) {
+    $blogCategories[] = [
+        'name' => $cat['name'] ?? '',
+        'slug' => $cat['slug'] ?? '',
+        'icon' => $cat['icon'] ?? '',
+    ];
+}
 
-// Demo popular articles
-$popularPosts = [
-    ['title' => 'Ghidul festivalurilor 2026', 'views' => '12.4K'],
-    ['title' => "Interviu cu Carla's Dreams", 'views' => '8.7K'],
-    ['title' => '10 lucruri de luat la festival', 'views' => '6.2K'],
-    ['title' => 'Electric Castle: primele nume', 'views' => '5.1K'],
-];
+// Helper: map API article to template array
+function mapBlogArticle($a) {
+    $catColor = 'indigo';
+    return [
+        'slug'     => $a['slug'] ?? '',
+        'title'    => $a['title'] ?? '',
+        'excerpt'  => $a['excerpt'] ?? '',
+        'image'    => getStorageUrl($a['image_url'] ?? $a['cover_image'] ?? ''),
+        'category' => [
+            'name'  => $a['category']['name'] ?? '',
+            'color' => $catColor,
+        ],
+        'readTime' => ($a['read_time'] ?? 5) . ' min',
+        'author'   => [
+            'name'   => $a['author']['name'] ?? 'Redacția TICS',
+            'avatar' => getStorageUrl($a['author']['avatar'] ?? ''),
+        ],
+        'date'     => formatDate($a['published_at'] ?? $a['created_at'] ?? ''),
+    ];
+}
 
-// Demo tags
+// Fetch articles from real API (7 = 1 featured + 6 grid)
+$articlesParams = [
+    'status'   => 'published',
+    'per_page' => 7,
+    'page'     => $currentPage,
+    'category' => $selectedCategory ?: null,
+];
+$articlesResponse = callApi('blog-articles', $articlesParams);
+$apiArticles      = $articlesResponse['data'] ?? [];
+$articlesMeta     = $articlesResponse['meta'] ?? [];
+
+// Split: first article is featured, rest are grid
+$featuredPost = !empty($apiArticles) ? mapBlogArticle(array_shift($apiArticles)) : null;
+$posts        = array_map('mapBlogArticle', $apiArticles);
+$hasMoreArticles = ($articlesMeta['current_page'] ?? 1) < ($articlesMeta['last_page'] ?? 1);
+
+// Sidebar: popular posts and tags (static fallback)
+$popularPosts = [];
 $tags = ['Untold', 'Electric Castle', 'Bilete', 'Concerte', 'Organizatori', 'Festivaluri', 'Pop', 'Rock'];
 
 // Page settings
-$pageTitle = 'Blog — Știri, ghiduri și noutăți din lumea evenimentelor';
+$pageTitle       = 'Blog — Știri, ghiduri și noutăți din lumea evenimentelor';
 $pageDescription = 'Citește cele mai noi articole despre evenimente, festivaluri, concerte și ticketing pe blogul TICS.ro.';
-$bodyClass = 'bg-gray-50';
+$bodyClass       = 'bg-gray-50';
 
 $breadcrumbs = [
     ['name' => 'Acasă', 'url' => '/'],
@@ -121,6 +80,7 @@ include __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero / Featured Post -->
+<?php if ($featuredPost): ?>
 <section class="bg-white border-b border-gray-200">
     <div class="max-w-6xl mx-auto px-4 lg:px-8 py-10">
         <a href="/blog/<?= e($featuredPost['slug']) ?>" class="group grid lg:grid-cols-2 gap-8 items-center">
@@ -144,6 +104,7 @@ include __DIR__ . '/includes/header.php';
         </a>
     </div>
 </section>
+<?php endif; ?>
 
 <!-- Categories -->
 <div class="sticky top-16 z-30 bg-white border-b border-gray-200">
@@ -175,7 +136,9 @@ include __DIR__ . '/includes/header.php';
             </div>
 
             <!-- Load more -->
-            <div class="text-center mt-10"><button class="inline-flex items-center gap-2 px-8 py-3 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-full hover:border-gray-300 hover:bg-gray-50 transition-all"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>Mai multe articole</button></div>
+            <?php if ($hasMoreArticles): ?>
+            <div class="text-center mt-10"><button onclick="loadMoreArticles()" id="loadMoreBlogBtn" class="inline-flex items-center gap-2 px-8 py-3 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-full hover:border-gray-300 hover:bg-gray-50 transition-all"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>Mai multe articole</button></div>
+            <?php endif; ?>
         </div>
 
         <!-- Sidebar -->
@@ -211,6 +174,58 @@ include __DIR__ . '/includes/header.php';
     </div>
 </main>
 
+<script>
+var _blogPage = <?= json_encode($currentPage) ?>;
+var _blogCategory = <?= json_encode($selectedCategory) ?>;
+var _blogHasMore = <?= json_encode($hasMoreArticles) ?>;
+var _storageUrl = <?= json_encode(STORAGE_URL) ?>;
+
+function getImgUrl(path) {
+    if (!path) return '/assets/images/placeholder.jpg';
+    if (path.startsWith('http')) return path;
+    return _storageUrl + '/' + path.replace(/^\//, '');
+}
+
+async function loadMoreArticles() {
+    if (!_blogHasMore) return;
+    const btn = document.getElementById('loadMoreBlogBtn');
+    if (btn) btn.disabled = true;
+
+    _blogPage++;
+    const params = new URLSearchParams({ endpoint: 'blog-articles', status: 'published', per_page: 6, page: _blogPage });
+    if (_blogCategory) params.set('category', _blogCategory);
+
+    try {
+        const res = await fetch('/api/proxy.php?' + params.toString());
+        const data = await res.json();
+        const articles = data.data || [];
+        _blogHasMore = _blogPage < (data.meta?.last_page || 1);
+
+        const grid = document.querySelector('.grid.sm\\:grid-cols-2');
+        articles.forEach(a => {
+            const card = document.createElement('a');
+            card.href = '/blog/' + (a.slug || '');
+            card.className = 'blog-card bg-white rounded-2xl overflow-hidden border border-gray-200 group';
+            const img = getImgUrl(a.image_url || a.cover_image || '');
+            const catName = a.category?.name || '';
+            const readTime = (a.read_time || 5) + ' min';
+            const authorName = a.author?.name || 'Redacția TICS';
+            const authorAvatar = getImgUrl(a.author?.avatar || '');
+            const date = a.published_at ? new Date(a.published_at).toLocaleDateString('ro-RO', {day:'2-digit',month:'short',year:'numeric'}) : '';
+            card.innerHTML = `<div class="relative aspect-[16/10] overflow-hidden"><img src="${img}" class="absolute inset-0 w-full h-full object-cover blog-img" alt="${(a.title||'').replace(/"/g,'&quot;')}"></div><div class="p-5"><div class="flex items-center gap-2 mb-2"><span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full">${catName}</span><span class="text-xs text-gray-400">${readTime}</span></div><h3 class="font-semibold text-gray-900 mb-2 leading-snug group-hover:text-indigo-600 transition-colors">${a.title||''}</h3><p class="text-sm text-gray-500 line-clamp-2 mb-3">${a.excerpt||''}</p><div class="flex items-center gap-2"><img src="${authorAvatar}" class="w-7 h-7 rounded-full object-cover" alt="${authorName}"><div><p class="text-xs font-medium text-gray-700">${authorName}</p><p class="text-xs text-gray-400">${date}</p></div></div></div>`;
+            grid.appendChild(card);
+        });
+
+        if (!_blogHasMore) {
+            document.getElementById('loadMoreBlogBtn')?.parentElement?.remove();
+        } else if (btn) {
+            btn.disabled = false;
+        }
+    } catch(e) {
+        if (btn) btn.disabled = false;
+    }
+}
+</script>
 <script>function toggleCat(b){b.parentElement.querySelectorAll('button').forEach(c=>c.classList.remove('chip-active'));b.classList.add('chip-active')}</script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

@@ -9,219 +9,170 @@ require_once __DIR__ . '/includes/config.php';
 // Get artist slug from query
 $artistSlug = $_GET['slug'] ?? null;
 
-// Demo artist data (in production this would come from API)
+// Fetch from real API
+$apiData = $artistSlug ? callApi('artists/' . urlencode($artistSlug)) : null;
+
+// Handle both {data: {...}} and direct object response
+$apiArtist = null;
+if ($apiData) {
+    $apiArtist = $apiData['data'] ?? $apiData;
+    // If it has typical artist fields, use it; otherwise null
+    if (!isset($apiArtist['name'])) {
+        $apiArtist = null;
+    }
+}
+
+// Fallback: empty artist for graceful 404
+if (!$apiArtist) {
+    $pageTitle       = 'Artist negăsit';
+    $pageDescription = 'Artistul căutat nu a fost găsit pe TICS.ro';
+    $bodyClass       = 'bg-white';
+    $transparentHeader = false;
+    $breadcrumbs = [
+        ['name' => 'Acasă', 'url' => '/'],
+        ['name' => 'Artiști', 'url' => '/artisti'],
+        ['name' => 'Negăsit', 'url' => null],
+    ];
+    setLoginState($isLoggedIn, $loggedInUser);
+    include __DIR__ . '/includes/head.php';
+    include __DIR__ . '/includes/header.php';
+    ?>
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 py-16 text-center">
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">Artistul nu a fost găsit</h1>
+        <p class="text-gray-500 mb-8">Artistul pe care îl cauți nu există sau a fost eliminat.</p>
+        <a href="/artisti" class="px-6 py-3 bg-gray-900 text-white font-medium rounded-full hover:bg-gray-800 transition-colors">Înapoi la artiști</a>
+    </main>
+    <?php
+    include __DIR__ . '/includes/footer.php';
+    ?>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
+// Map API fields to template variables
+$genreNames   = array_map(fn($g) => $g['name'], $apiArtist['genres'] ?? []);
+$stats        = $apiArtist['stats'] ?? [];
+$social       = $apiArtist['social'] ?? [];
+$externalIds  = $apiArtist['external_ids'] ?? [];
+
+$totalSocial = ($stats['instagram_followers'] ?? 0)
+             + ($stats['facebook_followers'] ?? 0)
+             + ($stats['tiktok_followers'] ?? 0);
+
+// First upcoming event for sidebar
+$firstEvent    = $apiArtist['upcoming_events'][0] ?? null;
+$nextEventDate = $firstEvent ? formatDate($firstEvent['starts_at'] ?? '') : '';
+$nextEventCity = $firstEvent ? ($firstEvent['venue']['city'] ?? '') : '';
+$minPrice      = $firstEvent ? ($firstEvent['price_from'] ?? null) : null;
+
 $artist = [
-    'id' => 1,
-    'name' => "Carla's Dreams",
-    'slug' => 'carlas-dreams',
-    'image' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop',
-    'coverImage' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=400&fit=crop',
-    'portraitImage' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=500&fit=crop',
-    'genres' => ['Pop', 'Românesc', 'R&B'],
-    'country' => 'Moldova',
-    'countryFlag' => '🇲🇩',
-    'city' => 'Chișinău',
-    'activeSince' => 2012,
-    'isVerified' => true,
-    'bio' => "Carla's Dreams este un proiect muzical românesc, cunoscut pentru stilul unic care îmbină pop-ul cu elemente de R&B și muzică electronică. Membrii trupei își păstrează identitatea secretă, apărând mereu cu fețele acoperite.\n\nDe la debutul lor în 2012, au cucerit publicul cu hituri precum \"Sub Pielea Mea\", \"Imperfect\", \"Antiexemplu\" și \"Beretta\".\n\nMuzica lor a depășit granițele României, fiind ascultată în toată Europa de Est și acumulând sute de milioane de vizualizări pe platformele de streaming.",
-    'stats' => [
-        'spotify_monthly' => '2.8M',
-        'spotify_monthly_full' => '2,847,320',
-        'spotify_popularity' => 78,
-        'youtube_subscribers' => '1.2M',
-        'youtube_subscribers_full' => '1,234,000',
-        'youtube_views' => '487M',
-        'total_social' => '3.1M',
-        'instagram' => '1.2M',
-        'facebook' => '890K',
-        'tiktok' => '567K',
+    'id'             => $apiArtist['id'],
+    'name'           => $apiArtist['name'],
+    'slug'           => $apiArtist['slug'],
+    'image'          => getStorageUrl($apiArtist['logo'] ?? $apiArtist['image'] ?? ''),
+    'coverImage'     => getStorageUrl($apiArtist['image'] ?? ''),
+    'portraitImage'  => getStorageUrl($apiArtist['portrait'] ?? $apiArtist['image'] ?? ''),
+    'genres'         => $genreNames,
+    'country'        => $apiArtist['country'] ?? '',
+    'countryFlag'    => '',
+    'city'           => $apiArtist['city'] ?? '',
+    'activeSince'    => null,
+    'isVerified'     => $apiArtist['is_verified'] ?? false,
+    'bio'            => $apiArtist['biography'] ?? '',
+    'stats'          => [
+        'spotify_monthly'         => formatFollowers($stats['spotify_listeners'] ?? 0),
+        'spotify_monthly_full'    => number_format($stats['spotify_listeners'] ?? 0),
+        'spotify_popularity'      => $stats['spotify_popularity'] ?? 0,
+        'youtube_subscribers'     => formatFollowers($stats['youtube_subscribers'] ?? 0),
+        'youtube_subscribers_full'=> number_format($stats['youtube_subscribers'] ?? 0),
+        'youtube_views'           => formatFollowers($stats['youtube_total_views'] ?? 0),
+        'total_social'            => formatFollowers($totalSocial),
+        'instagram'               => formatFollowers($stats['instagram_followers'] ?? 0),
+        'facebook'                => formatFollowers($stats['facebook_followers'] ?? 0),
+        'tiktok'                  => formatFollowers($stats['tiktok_followers'] ?? 0),
     ],
-    'social' => [
-        'instagram' => 'https://instagram.com/carlasdreams',
-        'youtube' => 'https://youtube.com/@carlasdreams',
-        'spotify' => 'https://open.spotify.com/artist/2w9zwq3AktTeYYMuhMjju8',
-        'facebook' => 'https://facebook.com/carlasdreams',
-        'tiktok' => 'https://tiktok.com/@carlasdreams',
+    'social'         => [
+        'instagram' => $social['instagram'] ?? '',
+        'youtube'   => $social['youtube'] ?? '',
+        'spotify'   => $social['spotify'] ?? '',
+        'facebook'  => $social['facebook'] ?? '',
+        'tiktok'    => $social['tiktok'] ?? '',
     ],
-    'spotifyId' => '2w9zwq3AktTeYYMuhMjju8',
-    'nextEvent' => [
-        'date' => '14 Mar 2026',
-        'city' => 'București',
-    ],
-    'minPrice' => 119,
-    'discography' => [
-        ['title' => 'Nocturn', 'year' => 2024, 'type' => 'Album'],
-        ['title' => 'Antiexemplu', 'year' => 2021, 'type' => 'Album'],
-        ['title' => 'Ngoc', 'year' => 2018, 'type' => 'Album'],
-        ['title' => 'Sub Pielea Mea', 'year' => 2016, 'type' => 'Single'],
-    ],
-    'awards' => [
-        'Romanian Music Awards - Cel mai bun artist (2018, 2019, 2021)',
-        'Peste 200 de concerte live',
-        '500M+ streamuri pe toate platformele',
-    ],
+    'spotifyId'      => $externalIds['spotify_id'] ?? null,
+    'nextEvent'      => ['date' => $nextEventDate, 'city' => $nextEventCity],
+    'minPrice'       => $minPrice,
+    'discography'    => [],
+    'awards'         => [],
 ];
 
-// Demo upcoming events
-$upcomingEvents = [
-    [
-        'id' => 1,
-        'title' => "Carla's Dreams - Turneul Nocturn 2026",
-        'slug' => 'carlas-dreams-turneul-nocturn-bucuresti',
-        'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=250&fit=crop',
-        'venue' => 'Sala Palatului',
-        'city' => 'București',
-        'date' => '14 Mar 2026',
-        'time' => '20:00',
-        'category' => 'Concert',
-        'minPrice' => 149,
-        'soldPercent' => 78,
-        'badge' => 'trending',
-    ],
-    [
-        'id' => 2,
-        'title' => "Carla's Dreams - Turneul Nocturn 2026",
-        'slug' => 'carlas-dreams-turneul-nocturn-cluj',
-        'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=250&fit=crop',
-        'venue' => 'Casa de Cultură',
-        'city' => 'Cluj-Napoca',
-        'date' => '21 Mar 2026',
-        'time' => null,
-        'category' => 'Concert',
-        'minPrice' => 119,
-        'originalPrice' => 149,
-        'soldPercent' => null,
-        'badge' => 'early',
-    ],
-    [
-        'id' => 3,
-        'title' => 'UNTOLD Festival 2026',
-        'slug' => 'untold-festival-2026',
-        'image' => 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=250&fit=crop',
-        'venue' => 'Cluj Arena',
-        'city' => 'Cluj-Napoca',
-        'date' => '1-4 Aug 2026',
-        'time' => null,
-        'category' => 'Festival',
-        'minPrice' => 449,
-        'soldPercent' => null,
-        'badge' => null,
-        'isHeadliner' => true,
-    ],
-];
+// Map upcoming events
+$upcomingEvents = [];
+foreach ($apiArtist['upcoming_events'] ?? [] as $ev) {
+    $upcomingEvents[] = [
+        'id'         => $ev['id'],
+        'title'      => $ev['name'] ?? '',
+        'slug'       => $ev['slug'] ?? '',
+        'image'      => getStorageUrl($ev['cover_image'] ?? $ev['image'] ?? ''),
+        'venue'      => $ev['venue']['name'] ?? '',
+        'city'       => $ev['venue']['city'] ?? '',
+        'date'       => formatDate($ev['starts_at'] ?? ''),
+        'time'       => null,
+        'category'   => $ev['category']['name'] ?? 'Concert',
+        'minPrice'   => $ev['price_from'] ?? 0,
+        'soldPercent'=> $ev['sold_percentage'] ?? null,
+        'badge'      => ($ev['sold_percentage'] ?? 0) > 60 ? 'trending' : null,
+        'isHeadliner'=> false,
+    ];
+}
 
-// Demo videos
-$videos = [
-    [
-        'title' => "Carla's Dreams - Sub Pielea Mea | #eroina",
-        'youtubeId' => 'dQw4w9WgXcQ',
-        'views' => '238M',
-        'isMain' => true,
-    ],
-    [
-        'title' => "Carla's Dreams - Imperfect",
-        'youtubeId' => 'dQw4w9WgXcQ',
-        'views' => '124M',
-        'isMain' => false,
-    ],
-    [
-        'title' => "Carla's Dreams - Antiexemplu",
-        'youtubeId' => 'dQw4w9WgXcQ',
-        'views' => '89M',
-        'isMain' => false,
-    ],
-    [
-        'title' => "Carla's Dreams - Beretta",
-        'youtubeId' => 'dQw4w9WgXcQ',
-        'views' => '67M',
-        'isMain' => false,
-    ],
-    [
-        'title' => "Carla's Dreams - Nocturn (Live)",
-        'youtubeId' => 'dQw4w9WgXcQ',
-        'views' => '12M',
-        'isMain' => false,
-    ],
-];
+// Map videos
+$videos = [];
+foreach ($apiArtist['youtube_videos'] ?? [] as $i => $vid) {
+    $videos[] = [
+        'title'     => $vid['title'] ?? '',
+        'youtubeId' => $vid['youtube_id'] ?? '',
+        'views'     => formatFollowers($vid['views'] ?? 0),
+        'isMain'    => ($i === 0),
+    ];
+}
 
-// Demo past events
-$pastEvents = [
-    [
-        'title' => 'Concert de Crăciun',
-        'venue' => 'Sala Palatului',
-        'city' => 'București',
-        'date' => ['month' => 'Dec', 'day' => 15, 'year' => 2025],
-        'status' => 'Sold Out',
-    ],
-    [
-        'title' => 'Arenele Romane',
-        'venue' => null,
-        'city' => 'București',
-        'date' => ['month' => 'Oct', 'day' => 22, 'year' => 2025],
-        'status' => 'Sold Out',
-    ],
-    [
-        'title' => 'UNTOLD 2025 (Headliner)',
-        'venue' => 'Cluj Arena',
-        'city' => 'Cluj-Napoca',
-        'date' => ['month' => 'Aug', 'day' => 3, 'year' => 2025],
-        'status' => 'Încheiat',
-    ],
-];
+// Past events — not returned by API directly
+$pastEvents = [];
 
-// Demo similar artists
-$similarArtists = [
-    [
-        'name' => 'The Motans',
-        'slug' => 'the-motans',
-        'image' => 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=80&h=80&fit=crop',
-        'genres' => 'Pop',
-        'followers' => '245K urmăritori',
-        'eventsCount' => 2,
-        'isVerified' => true,
-    ],
-    [
-        'name' => 'Irina Rimes',
-        'slug' => 'irina-rimes',
-        'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=80&h=80&fit=crop',
-        'genres' => 'Pop',
-        'followers' => '278K urmăritori',
-        'eventsCount' => 4,
-        'isVerified' => true,
-    ],
-    [
-        'name' => 'INNA',
-        'slug' => 'inna',
-        'image' => 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=80&h=80&fit=crop',
-        'genres' => 'Pop / Dance',
-        'followers' => '512K urmăritori',
-        'eventsCount' => 3,
-        'isVerified' => false,
-    ],
-];
+// Similar artists
+$similarArtists = [];
+foreach ($apiArtist['similar_artists'] ?? [] as $sim) {
+    $simGenres = implode(' / ', array_map(fn($g) => $g['name'], $sim['genres'] ?? []));
+    $simFollowers = ($sim['stats']['instagram_followers'] ?? 0) + ($sim['stats']['facebook_followers'] ?? 0);
+    $similarArtists[] = [
+        'name'        => $sim['name'] ?? '',
+        'slug'        => $sim['slug'] ?? '',
+        'image'       => getStorageUrl($sim['logo'] ?? $sim['image'] ?? ''),
+        'genres'      => $simGenres,
+        'followers'   => formatFollowers($simFollowers) . ' urmăritori',
+        'eventsCount' => $sim['stats']['upcoming_events'] ?? 0,
+        'isVerified'  => $sim['is_verified'] ?? false,
+    ];
+}
 
 // Page settings
-$pageTitle = $artist['name'];
+$pageTitle       = $artist['name'];
 $pageDescription = "Descoperă evenimentele și concertele artistului {$artist['name']}. Cumpără bilete online pe TICS.ro";
-$pageImage = $artist['coverImage'];
-$pageType = 'artist';
-$bodyClass = 'bg-white';
+$pageImage       = $artist['coverImage'];
+$pageType        = 'artist';
+$bodyClass       = 'bg-white';
 $transparentHeader = false;
 
-// Breadcrumbs
 $breadcrumbs = [
     ['name' => 'Acasă', 'url' => '/'],
     ['name' => 'Artiști', 'url' => '/artisti'],
     ['name' => $artist['name'], 'url' => null],
 ];
 
-// Set login state
 setLoginState($isLoggedIn, $loggedInUser);
-
-// Include head
 include __DIR__ . '/includes/head.php';
-
-// Include header
 include __DIR__ . '/includes/header.php';
 ?>
 
