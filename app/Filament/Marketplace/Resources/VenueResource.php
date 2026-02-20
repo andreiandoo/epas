@@ -278,7 +278,8 @@ class VenueResource extends Resource
                                     ->imagePreviewHeight('200')
                                     ->disk('public')
                                     ->directory('venues')
-                                    ->visibility('public'),
+                                    ->visibility('public')
+                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                                 Forms\Components\FileUpload::make('gallery')
                                     ->label('Gallery')
                                     ->image()
@@ -290,6 +291,7 @@ class VenueResource extends Resource
                                     ->reorderable()
                                     ->panelLayout('grid')
                                     ->imagePreviewHeight('80')
+                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender())
                                     ->columnSpanFull(),
                             ]),
                     ]),
@@ -551,6 +553,7 @@ class VenueResource extends Resource
                         ->directory('venues/videos')
                         ->visibility('public')
                         ->maxSize(102400) // 100MB
+                        ->afterStateUpdated(fn ($livewire) => $livewire->skipRender())
                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'upload')
                         ->columnSpanFull(),
 

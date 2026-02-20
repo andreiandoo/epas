@@ -114,6 +114,7 @@ class VenueResource extends Resource
                     ->visibility('public')
                     ->openable()
                     ->downloadable()
+                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender())
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Trage & plasează o imagine sau alege un fișier.'),
 
                 Forms\Components\FileUpload::make('gallery')
@@ -125,6 +126,7 @@ class VenueResource extends Resource
                     ->reorderable()
                     ->openable()
                     ->downloadable()
+                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender())
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Poți uploada mai multe imagini care vor forma galeria venue-ului.')
                     ->columnSpanFull(),
 
@@ -153,6 +155,7 @@ class VenueResource extends Resource
                     ->directory('venues/videos')
                     ->visibility('public')
                     ->maxSize(102400) // 100MB
+                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender())
                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'upload')
                     ->columnSpanFull(),
             ]),
