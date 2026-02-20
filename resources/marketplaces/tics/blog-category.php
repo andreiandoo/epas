@@ -6,52 +6,78 @@
 
 require_once __DIR__ . '/includes/config.php';
 
-$categorySlug = $_GET['slug'] ?? 'festivaluri';
+$categorySlug = $_GET['slug'] ?? '';
+$currentPage  = max(1, intval($_GET['pagina'] ?? 1));
 
-// Demo category data
-$category = [
-    'name' => 'Festivaluri',
-    'slug' => 'festivaluri',
-    'icon' => '🎪',
-    'iconBg' => 'pink',
-    'description' => 'Ghiduri, știri și recenzii despre festivalurile din România și Europa',
-    'articleCount' => 34,
-    'totalViews' => '48.2K',
-];
+// Fetch categories list to get current category info
+$categoriesResponse = callApi('blog-categories');
+$category = null;
+foreach ($categoriesResponse['data'] ?? [] as $cat) {
+    if (($cat['slug'] ?? '') === $categorySlug) {
+        $category = [
+            'name'         => $cat['name'] ?? '',
+            'slug'         => $cat['slug'] ?? '',
+            'icon'         => $cat['icon'] ?: '📝',
+            'iconBg'       => 'indigo',
+            'description'  => '',
+            'articleCount' => 0,
+            'totalViews'   => '',
+        ];
+        break;
+    }
+}
+if (!$category) {
+    $category = [
+        'name'         => ucfirst(str_replace('-', ' ', $categorySlug)),
+        'slug'         => $categorySlug,
+        'icon'         => '📝',
+        'iconBg'       => 'indigo',
+        'description'  => '',
+        'articleCount' => 0,
+        'totalViews'   => '',
+    ];
+}
 
-// Demo sort options
+// Fetch articles for this category
+$articlesResponse = callApi('blog-articles', [
+    'category' => $categorySlug,
+    'status'   => 'published',
+    'per_page' => 7,
+    'page'     => $currentPage,
+]);
+$apiArticles  = $articlesResponse['data'] ?? [];
+$articlesMeta = $articlesResponse['meta'] ?? [];
+$category['articleCount'] = $articlesMeta['total'] ?? count($apiArticles);
+
+// Helper: map API article to template array
+function mapCatBlogArticle($a) {
+    return [
+        'slug'       => $a['slug'] ?? '',
+        'title'      => $a['title'] ?? '',
+        'excerpt'    => $a['excerpt'] ?? '',
+        'image'      => getStorageUrl($a['image_url'] ?? ''),
+        'categories' => [['name' => $a['category']['name'] ?? '', 'color' => 'indigo']],
+        'category'   => ['name' => $a['category']['name'] ?? '', 'color' => 'indigo'],
+        'readTime'   => ($a['read_time'] ?? 5) . ' min',
+        'author'     => [
+            'name'   => $a['author']['name'] ?? 'Redacția TICS',
+            'avatar' => getStorageUrl($a['author']['avatar'] ?? ''),
+        ],
+        'date'       => formatDate($a['published_at'] ?? $a['created_at'] ?? ''),
+        'views'      => '',
+    ];
+}
+
+$featuredPost = !empty($apiArticles) ? mapCatBlogArticle(array_shift($apiArticles)) : null;
+$posts        = array_map('mapCatBlogArticle', $apiArticles);
+
+// Sort options (UI only)
 $sortOptions = ['Cele mai noi', 'Cele mai citite', 'Ghiduri', 'Recenzii', 'Știri'];
 
-// Demo featured post
-$featuredPost = [
-    'slug' => 'ghidul-festivalurilor-romania-2026',
-    'title' => 'Ghidul complet al festivalurilor din România 2026: ce merită și ce nu',
-    'excerpt' => 'Am analizat toate festivalurile confirmate pentru 2026, de la Untold și Electric Castle la cele mai mici festivaluri boutique din țară.',
-    'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=700&h=450&fit=crop',
-    'categories' => [
-        ['name' => 'Festivaluri', 'color' => 'pink'],
-        ['name' => 'Ghid', 'color' => 'indigo'],
-    ],
-    'readTime' => '10 min',
-    'author' => ['name' => 'Andrei Popescu', 'avatar' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop'],
-    'date' => '5 Feb 2026',
-    'views' => '12.4K',
-];
-
-// Demo posts grid
-$posts = [
-    ['slug' => 'electric-castle-2026', 'title' => 'Electric Castle 2026: primele nume confirmate', 'excerpt' => 'Organizatorii au anunțat primul val de artiști pentru ediția din acest an.', 'image' => 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=320&fit=crop', 'category' => ['name' => 'Știri', 'color' => 'blue'], 'readTime' => '3 min', 'author' => ['name' => 'Radu Marin', 'avatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop'], 'date' => '28 Ian'],
-    ['slug' => 'untold-2025-recenzie', 'title' => 'Untold 2025: ce am învățat din cea mai mare ediție', 'excerpt' => 'Cu peste 400.000 de participanți, ediția trecută a ridicat ștacheta.', 'image' => 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&h=320&fit=crop', 'category' => ['name' => 'Recenzie', 'color' => 'orange'], 'readTime' => '8 min', 'author' => ['name' => 'Maria Ionescu', 'avatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop'], 'date' => '20 Ian'],
-    ['slug' => 'jazz-in-the-park-2026', 'title' => 'Jazz in the Park 2026: ce schimbări aduce noua ediție', 'excerpt' => 'Festivalul din Cluj promite o ediție specială cu artiști de renume.', 'image' => 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&h=320&fit=crop', 'category' => ['name' => 'Festivaluri', 'color' => 'pink'], 'readTime' => '6 min', 'author' => ['name' => 'Radu Marin', 'avatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop'], 'date' => '15 Ian'],
-    ['slug' => 'camping-la-festival', 'title' => 'Cum alegi camping-ul perfect la festival', 'excerpt' => 'Ghid complet pentru alegerea zonei de camping potrivite.', 'image' => 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=500&h=320&fit=crop', 'category' => ['name' => 'Tips', 'color' => 'green'], 'readTime' => '5 min', 'author' => ['name' => 'Andrei Popescu', 'avatar' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop'], 'date' => '10 Ian'],
-    ['slug' => 'neversea-date-2026', 'title' => 'Neversea anunță datele pentru ediția 2026', 'excerpt' => 'Festivalul de pe plajă confirmă revenirea în iulie.', 'image' => 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=500&h=320&fit=crop', 'category' => ['name' => 'Știri', 'color' => 'blue'], 'readTime' => '4 min', 'author' => ['name' => 'Maria Ionescu', 'avatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop'], 'date' => '5 Ian'],
-    ['slug' => 'comparatie-abonamente-festival', 'title' => 'Comparație: toate abonamentele de festival din 2026', 'excerpt' => 'Am pus cap la cap prețurile și beneficiile fiecărui pachet.', 'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=500&h=320&fit=crop', 'category' => ['name' => 'Ghid', 'color' => 'indigo'], 'readTime' => '15 min', 'author' => ['name' => 'Andrei Popescu', 'avatar' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop'], 'date' => '2 Ian'],
-];
-
 // Page settings
-$pageTitle = $category['name'] . ' — Blog TICS.ro';
-$pageDescription = $category['description'];
-$bodyClass = 'bg-gray-50';
+$pageTitle       = $category['name'] . ' — Blog TICS.ro';
+$pageDescription = $category['description'] ?: 'Articole din categoria ' . $category['name'] . ' pe blogul TICS.ro';
+$bodyClass       = 'bg-gray-50';
 
 $breadcrumbs = [
     ['name' => 'Acasă', 'url' => '/'],
@@ -101,6 +127,7 @@ include __DIR__ . '/includes/header.php';
 
 <main class="max-w-6xl mx-auto px-4 lg:px-8 py-8">
     <!-- Featured in category -->
+    <?php if ($featuredPost): ?>
     <a href="/blog/<?= e($featuredPost['slug']) ?>" class="group block bg-white rounded-2xl overflow-hidden border border-gray-200 mb-8 hover:shadow-lg transition-all">
         <div class="grid md:grid-cols-2">
             <div class="relative aspect-video md:aspect-auto overflow-hidden"><img src="<?= e($featuredPost['image']) ?>" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="<?= e($featuredPost['title']) ?>"><div class="absolute top-4 left-4"><span class="px-3 py-1.5 bg-pink-600 text-white text-xs font-semibold rounded-full">📌 Fixat</span></div></div>
@@ -113,10 +140,11 @@ include __DIR__ . '/includes/header.php';
                 </div>
                 <h2 class="text-xl lg:text-2xl font-bold text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors leading-tight"><?= e($featuredPost['title']) ?></h2>
                 <p class="text-gray-600 mb-4 leading-relaxed line-clamp-3"><?= e($featuredPost['excerpt']) ?></p>
-                <div class="flex items-center gap-3"><img src="<?= e($featuredPost['author']['avatar']) ?>" class="w-9 h-9 rounded-full object-cover" alt="<?= e($featuredPost['author']['name']) ?>"><div><p class="text-sm font-medium text-gray-900"><?= e($featuredPost['author']['name']) ?></p><p class="text-xs text-gray-500"><?= e($featuredPost['date']) ?> &bull; <?= e($featuredPost['views']) ?> vizualizări</p></div></div>
+                <div class="flex items-center gap-3"><img src="<?= e($featuredPost['author']['avatar']) ?>" class="w-9 h-9 rounded-full object-cover" alt="<?= e($featuredPost['author']['name']) ?>"><div><p class="text-sm font-medium text-gray-900"><?= e($featuredPost['author']['name']) ?></p><p class="text-xs text-gray-500"><?= e($featuredPost['date']) ?></p></div></div>
             </div>
         </div>
     </a>
+    <?php endif; ?>
 
     <!-- Grid -->
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">

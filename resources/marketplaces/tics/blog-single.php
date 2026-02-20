@@ -6,75 +6,95 @@
 
 require_once __DIR__ . '/includes/config.php';
 
-$articleSlug = $_GET['slug'] ?? 'ghidul-festivalurilor-romania-2026';
+$articleSlug = $_GET['slug'] ?? '';
 
-// Demo article data
+if (!$articleSlug) {
+    http_response_code(404);
+    include __DIR__ . '/404.php';
+    exit;
+}
+
+// Fetch article from real API
+$articleResponse = callApi('blog-articles/' . urlencode($articleSlug));
+$apiArticle      = $articleResponse['data'] ?? null;
+
+if (!$apiArticle) {
+    http_response_code(404);
+    include __DIR__ . '/404.php';
+    exit;
+}
+
+// Map API response to template structure
+$catName = $apiArticle['category']['name'] ?? '';
+$catSlug = $apiArticle['category']['slug'] ?? '';
+
 $article = [
-    'slug' => 'ghidul-festivalurilor-romania-2026',
-    'title' => 'Ghidul complet al festivalurilor din România 2026: ce merită și ce nu',
-    'excerpt' => 'Am analizat toate festivalurile confirmate pentru 2026, de la Untold și Electric Castle la cele mai mici festivaluri boutique. Descoperă ce te așteaptă vara aceasta, cu prețuri, date și sfaturi.',
-    'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1200&h=600&fit=crop',
-    'imageCaption' => 'Untold Festival 2025 — Foto: TICS.ro',
-    'categories' => [
-        ['name' => 'Festivaluri', 'slug' => 'festivaluri', 'color' => 'pink'],
-        ['name' => 'Ghid', 'slug' => 'ghiduri', 'color' => 'indigo'],
+    'slug'         => $apiArticle['slug'] ?? '',
+    'title'        => $apiArticle['title'] ?? '',
+    'excerpt'      => $apiArticle['excerpt'] ?? '',
+    'image'        => getStorageUrl($apiArticle['image_url'] ?? ''),
+    'imageCaption' => '',
+    'categories'   => $catName
+        ? [['name' => $catName, 'slug' => $catSlug, 'color' => 'indigo']]
+        : [['name' => 'Blog', 'slug' => 'blog', 'color' => 'indigo']],
+    'author'       => [
+        'name'   => $apiArticle['author']['name'] ?? 'Redacția TICS',
+        'role'   => 'Redacția TICS',
+        'bio'    => '',
+        'avatar' => getStorageUrl($apiArticle['author']['avatar'] ?? ''),
     ],
-    'author' => [
-        'name' => 'Andrei Popescu',
-        'role' => 'Editor-șef TICS Blog',
-        'bio' => 'Editor-șef al blogului TICS.ro. Pasionat de festivaluri și muzică live, a participat la peste 80 de festivaluri în România și Europa.',
-        'avatar' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-    ],
-    'date' => '5 Feb 2026',
-    'readTime' => '10 min citire',
-    'views' => '12.4K',
+    'date'         => formatDate($apiArticle['published_at'] ?? $apiArticle['created_at'] ?? ''),
+    'readTime'     => ($apiArticle['read_time'] ?? 5) . ' min citire',
+    'views'        => '',
+    'content'      => $apiArticle['content'] ?? '',
 ];
 
-// Demo tags
-$articleTags = ['Festivaluri', 'Untold', 'Electric Castle', 'Bilete', 'Ghid'];
+$articleTags = [];
 
-// Demo TOC sections
-$tocSections = [
-    ['id' => 'overview', 'title' => 'Panorama 2026'],
-    ['id' => 'top5', 'title' => 'Top 5 festivaluri'],
-    ['id' => 'budget', 'title' => 'Ghid de buget'],
-    ['id' => 'tips', 'title' => 'Sfaturi de supraviețuire'],
-    ['id' => 'conclusion', 'title' => 'Concluzie'],
-];
+// Extract TOC from h2 headings in content
+$tocSections = [];
+if (!empty($article['content'])) {
+    preg_match_all('/<h2[^>]*\sid=["\']([^"\']+)["\'][^>]*>(.*?)<\/h2>/is', $article['content'], $m);
+    if (!empty($m[1])) {
+        foreach ($m[1] as $i => $id) {
+            $tocSections[] = ['id' => $id, 'title' => strip_tags($m[2][$i])];
+        }
+    } else {
+        // Fallback: use slugified h2 text
+        preg_match_all('/<h2[^>]*>(.*?)<\/h2>/is', $article['content'], $m2);
+        foreach (($m2[1] ?? []) as $title) {
+            $clean = strip_tags($title);
+            $tocSections[] = [
+                'id'    => preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($clean)),
+                'title' => $clean,
+            ];
+        }
+    }
+}
 
-// Demo related articles
-$relatedArticles = [
-    [
-        'slug' => 'electric-castle-2026-primele-nume',
-        'title' => 'Electric Castle 2026: primele nume confirmate',
-        'image' => 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&h=320&fit=crop',
-        'category' => ['name' => 'Știri', 'color' => 'blue'],
-        'readTime' => '3 min',
-        'date' => '28 Ian 2026',
-    ],
-    [
-        'slug' => '10-lucruri-de-luat-la-festival',
-        'title' => '10 lucruri de luat la festival pe care sigur le uiți',
-        'image' => 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&h=320&fit=crop',
-        'category' => ['name' => 'Tips', 'color' => 'green'],
-        'readTime' => '5 min',
-        'date' => '1 Feb 2026',
-    ],
-    [
-        'slug' => 'recenzie-concert-subcarpati',
-        'title' => 'Recenzie: Concertul Subcarpați de la Arenele Romane',
-        'image' => 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=500&h=320&fit=crop',
-        'category' => ['name' => 'Recenzie', 'color' => 'orange'],
-        'readTime' => '7 min',
-        'date' => '25 Ian 2026',
-    ],
-];
+// Fetch related articles from same category
+$relatedArticles = [];
+if ($catSlug) {
+    $relatedResponse = callApi('blog-articles', ['category' => $catSlug, 'per_page' => 4, 'status' => 'published']);
+    foreach ($relatedResponse['data'] ?? [] as $rel) {
+        if (($rel['slug'] ?? '') === $articleSlug) continue;
+        $relatedArticles[] = [
+            'slug'     => $rel['slug'] ?? '',
+            'title'    => $rel['title'] ?? '',
+            'image'    => getStorageUrl($rel['image_url'] ?? ''),
+            'category' => ['name' => $rel['category']['name'] ?? '', 'color' => 'indigo'],
+            'readTime' => ($rel['read_time'] ?? 5) . ' min',
+            'date'     => formatDate($rel['published_at'] ?? $rel['created_at'] ?? ''),
+        ];
+        if (count($relatedArticles) === 3) break;
+    }
+}
 
 // Page settings
-$pageTitle = $article['title'] . ' — Blog TICS.ro';
+$pageTitle       = $article['title'] . ' — Blog TICS.ro';
 $pageDescription = $article['excerpt'];
-$pageImage = $article['image'];
-$bodyClass = 'bg-gray-50';
+$pageImage       = $article['image'];
+$bodyClass       = 'bg-gray-50';
 
 $breadcrumbs = [
     ['name' => 'Acasă', 'url' => '/'],
@@ -135,55 +155,7 @@ include __DIR__ . '/includes/header.php';
         <article class="flex-1 max-w-3xl">
             <div class="bg-white rounded-2xl border border-gray-200 p-6 lg:p-10">
                 <div class="prose text-base" id="articleContent">
-                    <h2 id="overview">Panorama festivalurilor 2026</h2>
-                    <p>România a devenit în ultimii ani una dintre cele mai importante destinații europene pentru festivaluri muzicale. Cu <strong>peste 50 de festivaluri confirmate</strong> pentru sezonul 2026, alegerea poate fi copleșitoare. Tocmai de aceea am creat acest ghid — să te ajutăm să alegi experiența perfectă.</p>
-                    <p>De la mega-evenimente precum Untold și Electric Castle, care atrag sute de mii de participanți, până la festivaluri boutique de câteva sute de persoane, oferta este extrem de diversificată.</p>
-
-                    <blockquote>„2026 promite a fi anul în care festivalurile românești vor atinge maturitatea. Line-up-urile sunt mai diverse, experiențele mai complexe." — Vlad Caia, curator muzical</blockquote>
-
-                    <h2 id="top5">Top 5 festivaluri pe care nu le poți rata</h2>
-                    <h3>1. Untold Festival — Cluj-Napoca</h3>
-                    <p>Cel mai mare festival din România revine cu o ediție aniversară de 10 ani. <strong>Datele confirmate: 6-9 august 2026</strong>. Prețul abonamentului pleacă de la 599 RON în faza de early bird, iar organizatorii promit un headliner „care nu a mai cântat niciodată în România".</p>
-
-                    <h3>2. Electric Castle — Bonțida</h3>
-                    <p>Festivalul de la castelul Bánffy continuă să fie cel mai apreciat de publicul alternativ. <strong>Date: 15-19 iulie 2026</strong>. Noutatea anului: o scenă dedicată exclusiv artiștilor români.</p>
-
-                    <h3>3. Neversea — Constanța</h3>
-                    <p>Festivalul de pe plajă revine cu o formulă extinsă pe 4 zile. Atmosfera unică cu apusurile peste mare și line-up-ul puternic de EDM fac din Neversea o experiență unică.</p>
-
-                    <h3>4. Summer Well — Buftea</h3>
-                    <p>Elegant, rafinat și cu un line-up mereu surprinzător. Summer Well rămâne festivalul pentru cei care preferă indie-ul și alternativul într-un cadru de poveste.</p>
-
-                    <h3>5. Jazz in the Park — Cluj-Napoca</h3>
-                    <p>Gratuit și de calitate excepțională. Jazz in the Park este o bijuterie a scenei culturale clujene, cu artiști internaționali de jazz, world music și experimental.</p>
-
-                    <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=900&h=450&fit=crop" alt="Electric Castle 2025">
-                    <p class="text-sm text-gray-500" style="margin-top:-.75rem;text-align:center">Electric Castle — scena principală la apus</p>
-
-                    <h2 id="budget">Ghid de buget: cât costă un festival</h2>
-                    <p>Un weekend la festival poate costa între 300 RON (pentru un festival mic, fără cazare specială) și peste 2.000 RON (abonament VIP + cazare la un festival mare). Iată un breakdown tipic:</p>
-                    <ul>
-                        <li><strong>Abonament general:</strong> 300 - 700 RON</li>
-                        <li><strong>Transport:</strong> 50 - 200 RON (în funcție de distanță)</li>
-                        <li><strong>Cazare/Camping:</strong> 0 - 500 RON</li>
-                        <li><strong>Mâncare și băuturi:</strong> 150 - 400 RON</li>
-                        <li><strong>Extras (merch, activități):</strong> 50 - 200 RON</li>
-                    </ul>
-                    <p><strong>Total estimat per festival:</strong> 550 - 2.000 RON</p>
-
-                    <h2 id="tips">Sfaturi de supraviețuire</h2>
-                    <p>Indiferent de festivalul ales, câteva reguli de aur te pot salva:</p>
-                    <ul>
-                        <li><strong>Cumpără biletele devreme</strong> — early bird-ul poate fi cu 40% mai ieftin</li>
-                        <li><strong>Investește în dopuri de urechi de calitate</strong> — urechile tale îți vor mulțumi</li>
-                        <li><strong>Poartă încălțăminte confortabilă</strong> — vei merge 15-20 km pe zi</li>
-                        <li><strong>Baterie externă de mare capacitate</strong> — minimum 20.000 mAh</li>
-                        <li><strong>Pălărie și cremă solară</strong> — chiar și în zilele înnorate</li>
-                    </ul>
-
-                    <h2 id="conclusion">Concluzie</h2>
-                    <p>România oferă un ecosistem de festivaluri incredibil de divers. Fie că ești fan de EDM, rock, jazz sau indie, există cu siguranță un festival care ți se potrivește. Sfatul nostru: alege maximum 2-3 festivaluri pe sezon și bucură-te din plin de fiecare experiență.</p>
-                    <p>Toate biletele pentru festivalurile menționate sunt disponibile pe <a href="/">TICS.ro</a>. Urmărește paginile festivalurilor pentru notificări când se pun în vânzare noi tranșe de bilete.</p>
+                    <?= $article['content'] ?>
                 </div>
             </div>
 
