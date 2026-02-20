@@ -1333,6 +1333,7 @@ use App\Http\Controllers\Api\MarketplaceClient\NewsletterTrackingController;
 use App\Http\Controllers\Api\MarketplaceClient\PromoCodeController as MarketplacePromoCodeController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\FavoritesController as CustomerFavoritesController;
 use App\Http\Controllers\Api\MarketplaceClient\SearchController as MarketplaceSearchController;
+use App\Http\Controllers\Api\MarketplaceClient\BlogController as MarketplaceBlogController;
 
 Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Handle OPTIONS preflight requests
@@ -1367,6 +1368,14 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
     // Global Search
     Route::get('/search', [MarketplaceSearchController::class, 'search'])
         ->name('api.marketplace-client.search');
+
+    // Blog
+    Route::get('/blog-articles', [MarketplaceBlogController::class, 'articles'])
+        ->name('api.marketplace-client.blog-articles');
+    Route::get('/blog-articles/{slug}', [MarketplaceBlogController::class, 'article'])
+        ->name('api.marketplace-client.blog-articles.show');
+    Route::get('/blog-categories', [MarketplaceBlogController::class, 'categories'])
+        ->name('api.marketplace-client.blog-categories');
 
     // Events
     Route::get('/events', [MarketplaceEventsController::class, 'index'])
