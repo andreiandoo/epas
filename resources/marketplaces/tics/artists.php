@@ -10,7 +10,7 @@ require_once __DIR__ . '/includes/config.php';
 $selectedGenre = $_GET['gen'] ?? 'all';
 $selectedLetter = $_GET['litera'] ?? 'all';
 $sortBy = $_GET['sort'] ?? 'popularity';
-$page = max(1, intval($_GET['pagina'] ?? 1));
+$page = 1; // Always start at page 1, load-more handles subsequent pages
 
 // Genre categories
 $genres = [
@@ -29,187 +29,51 @@ $genres = [
 // Alphabet for filtering
 $alphabet = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'Ș', 'T', 'Ț', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 
-// Demo trending artists
-$trendingArtists = [
-    [
-        'id' => 1,
-        'name' => "Carla's Dreams",
-        'slug' => 'carlas-dreams',
-        'image' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=80&h=80&fit=crop',
-        'genres' => ['Pop'],
-        'followers' => '312K',
-        'eventsCount' => 5,
-        'isVerified' => true,
-        'trendRank' => 1,
-        'badge' => 'trending',
-    ],
-    [
-        'id' => 2,
-        'name' => 'Subcarpați',
-        'slug' => 'subcarpati',
-        'image' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=80&h=80&fit=crop',
-        'genres' => ['Hip-Hop', 'Folk'],
-        'followers' => '189K',
-        'eventsCount' => 3,
-        'isVerified' => true,
-        'trendRank' => 2,
-        'badge' => 'trending',
-    ],
-    [
-        'id' => 3,
-        'name' => 'The Motans',
-        'slug' => 'the-motans',
-        'image' => 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=80&h=80&fit=crop',
-        'genres' => ['Pop'],
-        'followers' => '245K',
-        'eventsCount' => 2,
-        'isVerified' => false,
-        'trendRank' => null,
-        'badge' => 'new',
-    ],
-    [
-        'id' => 4,
-        'name' => 'Irina Rimes',
-        'slug' => 'irina-rimes',
-        'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=500&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=80&h=80&fit=crop',
-        'genres' => ['Pop'],
-        'followers' => '278K',
-        'eventsCount' => 4,
-        'isVerified' => true,
-        'trendRank' => 4,
-        'badge' => 'trending',
-        'isFollowing' => true,
-    ],
+// Fetch artists from real API
+$apiParams = [
+    'page'     => 1,
+    'per_page' => 24,
+    'sort'     => $sortBy,
+    'genre'    => $selectedGenre !== 'all' ? $selectedGenre : null,
+    'letter'   => $selectedLetter !== 'all' ? $selectedLetter : null,
 ];
+$apiResponse  = callApi('artists', $apiParams);
+$allArtists   = $apiResponse['data'] ?? [];
+$totalArtists = $apiResponse['meta']['total'] ?? count($allArtists);
+$lastPage     = $apiResponse['meta']['last_page'] ?? 1;
+$hasMore      = $lastPage > 1;
 
-// Demo all artists
-$allArtists = [
-    [
-        'id' => 1,
-        'name' => "Carla's Dreams",
-        'slug' => 'carlas-dreams',
-        'image' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=80&h=80&fit=crop',
-        'genres' => ['Pop', 'Românesc'],
-        'followers' => '312K',
-        'eventsCount' => 5,
-        'isVerified' => true,
-    ],
-    [
-        'id' => 2,
-        'name' => 'Subcarpați',
-        'slug' => 'subcarpati',
-        'image' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=80&h=80&fit=crop',
-        'genres' => ['Hip-Hop', 'Folk'],
-        'followers' => '189K',
-        'eventsCount' => 3,
-        'isVerified' => true,
-    ],
-    [
-        'id' => 3,
-        'name' => 'The Motans',
-        'slug' => 'the-motans',
-        'image' => 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=80&h=80&fit=crop',
-        'genres' => ['Pop'],
-        'followers' => '245K',
-        'eventsCount' => 2,
-        'isVerified' => false,
-    ],
-    [
-        'id' => 4,
-        'name' => 'Irina Rimes',
-        'slug' => 'irina-rimes',
-        'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=80&h=80&fit=crop',
-        'genres' => ['Pop'],
-        'followers' => '278K',
-        'eventsCount' => 4,
-        'isVerified' => true,
-        'isFollowing' => true,
-    ],
-    [
-        'id' => 5,
-        'name' => 'INNA',
-        'slug' => 'inna',
-        'image' => 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=80&h=80&fit=crop',
-        'genres' => ['Pop', 'Dance'],
-        'followers' => '512K',
-        'eventsCount' => 3,
-        'isVerified' => true,
-    ],
-    [
-        'id' => 6,
-        'name' => 'Smiley',
-        'slug' => 'smiley',
-        'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=80&h=80&fit=crop',
-        'genres' => ['Pop'],
-        'followers' => '198K',
-        'eventsCount' => 3,
-        'isVerified' => true,
-    ],
-    [
-        'id' => 7,
-        'name' => 'Vita de Vie',
-        'slug' => 'vita-de-vie',
-        'image' => 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=80&h=80&fit=crop',
-        'genres' => ['Rock', 'Alternativ'],
-        'followers' => '98K',
-        'eventsCount' => 2,
-        'isVerified' => false,
-    ],
-    [
-        'id' => 8,
-        'name' => 'Luiza Zan',
-        'slug' => 'luiza-zan',
-        'image' => 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=80&h=80&fit=crop',
-        'genres' => ['Jazz'],
-        'followers' => '42K',
-        'eventsCount' => 3,
-        'isVerified' => false,
-    ],
-    [
-        'id' => 9,
-        'name' => 'Delia',
-        'slug' => 'delia',
-        'image' => 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=80&h=80&fit=crop',
-        'genres' => ['Pop'],
-        'followers' => '356K',
-        'eventsCount' => 6,
-        'isVerified' => true,
-    ],
-    [
-        'id' => 10,
-        'name' => 'Grasu XXL',
-        'slug' => 'grasu-xxl',
-        'image' => 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=400&h=300&fit=crop',
-        'avatar' => 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=80&h=80&fit=crop',
-        'genres' => ['Hip-Hop'],
-        'followers' => '134K',
-        'eventsCount' => 1,
-        'isVerified' => false,
-    ],
-];
+// Trending artists: first 4 from the API result
+$trendingArtists = array_slice($allArtists, 0, 4);
 
-// Pagination
-$totalArtists = 280;
-$perPage = 10;
-$totalPages = ceil($totalArtists / $perPage);
+// Helper: map API artist to template-compatible array
+function mapArtistForDisplay($a) {
+    $genreNames = array_map(fn($g) => $g['name'], $a['genres'] ?? []);
+    $totalFollowers = ($a['stats']['instagram_followers'] ?? 0)
+                    + ($a['stats']['facebook_followers'] ?? 0);
+    return [
+        'id'          => $a['id'],
+        'name'        => $a['name'],
+        'slug'        => $a['slug'],
+        'image'       => getStorageUrl($a['image'] ?? ''),
+        'avatar'      => getStorageUrl($a['logo'] ?? $a['image'] ?? ''),
+        'genres'      => $genreNames,
+        'followers'   => formatFollowers($totalFollowers),
+        'eventsCount' => $a['stats']['upcoming_events'] ?? 0,
+        'isVerified'  => $a['is_verified'] ?? false,
+        'trendRank'   => null,
+        'badge'       => null,
+        'isFollowing' => false,
+    ];
+}
+
+$trendingArtistsMapped = array_map('mapArtistForDisplay', $trendingArtists);
+$allArtistsMapped      = array_map('mapArtistForDisplay', $allArtists);
 
 // Page settings
-$pageTitle = 'Artiști';
+$pageTitle       = 'Artiști';
 $pageDescription = 'Descoperă artiștii preferați și cumpără bilete la concertele lor pe TICS.ro';
-$bodyClass = 'bg-gray-50';
+$bodyClass       = 'bg-gray-50';
 $transparentHeader = false;
 
 // Set login state
@@ -273,7 +137,7 @@ include __DIR__ . '/includes/header.php';
             </h1>
             <p class="text-sm text-gray-500 mt-0.5"><?= number_format($totalArtists) ?> artiști găsiți</p>
         </div>
-        <select class="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-900/10">
+        <select id="sortSelect" class="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-900/10" onchange="changeSortAndReload(this.value)">
             <option value="popularity" <?= $sortBy === 'popularity' ? 'selected' : '' ?>>Popularitate</option>
             <option value="a-z" <?= $sortBy === 'a-z' ? 'selected' : '' ?>>A → Z</option>
             <option value="z-a" <?= $sortBy === 'z-a' ? 'selected' : '' ?>>Z → A</option>
@@ -284,6 +148,7 @@ include __DIR__ . '/includes/header.php';
     </div>
 
     <!-- Featured Artists - Horizontal Scroll -->
+    <?php if (!empty($trendingArtistsMapped)): ?>
     <div class="mb-8">
         <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
@@ -293,7 +158,7 @@ include __DIR__ . '/includes/header.php';
             <a href="/artisti?sort=trending" class="text-sm font-medium text-indigo-600 hover:underline">Vezi toți →</a>
         </div>
         <div class="flex gap-4 pb-2 overflow-x-auto no-scrollbar">
-            <?php foreach ($trendingArtists as $artist): ?>
+            <?php foreach ($trendingArtistsMapped as $artist): ?>
             <a href="/artist/<?= e($artist['slug']) ?>" class="flex-shrink-0 w-64 overflow-hidden bg-white border border-gray-200 artist-card rounded-2xl group">
                 <div class="relative h-40 overflow-hidden">
                     <img src="<?= e($artist['image']) ?>" class="absolute inset-0 object-cover w-full h-full artist-img" alt="<?= e($artist['name']) ?>">
@@ -330,11 +195,12 @@ include __DIR__ . '/includes/header.php';
             <?php endforeach; ?>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- All Artists Grid -->
     <h2 class="mb-4 text-lg font-semibold text-gray-900">Toți artiștii</h2>
     <div class="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" id="artistsGrid">
-        <?php foreach ($allArtists as $artist): ?>
+        <?php foreach ($allArtistsMapped as $artist): ?>
         <a href="/artist/<?= e($artist['slug']) ?>" class="overflow-hidden bg-white border border-gray-200 artist-card rounded-2xl group" data-name="<?= e($artist['name']) ?>">
             <div class="relative aspect-[4/3] overflow-hidden">
                 <img src="<?= e($artist['image']) ?>" alt="<?= e($artist['name']) ?>" class="absolute inset-0 object-cover w-full h-full artist-img">
@@ -381,90 +247,182 @@ include __DIR__ . '/includes/header.php';
         <?php endforeach; ?>
     </div>
 
-    <!-- Pagination -->
-    <div class="flex items-center justify-center gap-2 mt-10">
-        <?php if ($page <= 1): ?>
-        <button class="flex items-center justify-center w-10 h-10 text-gray-400 border border-gray-200 rounded-full cursor-not-allowed">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    <!-- Load More Button -->
+    <?php if ($hasMore): ?>
+    <div class="flex items-center justify-center mt-10" id="loadMoreContainer">
+        <button id="loadMoreBtn" onclick="loadMoreArtists()" class="inline-flex items-center gap-2 px-8 py-3 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-full hover:border-gray-300 hover:bg-gray-50 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            Mai mulți artiști
         </button>
-        <?php else: ?>
-        <a href="?pagina=<?= $page - 1 ?>" class="flex items-center justify-center w-10 h-10 text-gray-600 transition-colors border border-gray-200 rounded-full hover:border-gray-300">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        </a>
-        <?php endif; ?>
-
-        <?php
-        $showPages = [];
-        if ($totalPages <= 5) {
-            $showPages = range(1, $totalPages);
-        } else {
-            if ($page <= 3) {
-                $showPages = [1, 2, 3, '...', $totalPages];
-            } elseif ($page >= $totalPages - 2) {
-                $showPages = [1, '...', $totalPages - 2, $totalPages - 1, $totalPages];
-            } else {
-                $showPages = [1, '...', $page - 1, $page, $page + 1, '...', $totalPages];
-            }
-        }
-        foreach ($showPages as $p):
-            if ($p === '...'):
-        ?>
-        <span class="text-gray-400">...</span>
-        <?php else: ?>
-        <a href="?pagina=<?= $p ?>" class="w-10 h-10 rounded-full <?= $p === $page ? 'bg-gray-900 text-white' : 'border border-gray-200 text-gray-600 hover:border-gray-300' ?> text-sm font-medium flex items-center justify-center transition-colors"><?= $p ?></a>
-        <?php endif; endforeach; ?>
-
-        <?php if ($page >= $totalPages): ?>
-        <button class="flex items-center justify-center w-10 h-10 text-gray-400 border border-gray-200 rounded-full cursor-not-allowed">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        </button>
-        <?php else: ?>
-        <a href="?pagina=<?= $page + 1 ?>" class="flex items-center justify-center w-10 h-10 text-gray-600 transition-colors border border-gray-200 rounded-full hover:border-gray-300">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        </a>
-        <?php endif; ?>
     </div>
+    <?php endif; ?>
 </main>
 
 <script>
-// Letter filter
+// Letter filter — navigate via URL
 function filterByLetter(btn, letter) {
     document.querySelectorAll('.letter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-
-    const cards = document.querySelectorAll('#artistsGrid > .artist-card');
-    let count = 0;
-
-    cards.forEach(card => {
-        if (letter === 'all') {
-            card.style.display = '';
-            count++;
-            return;
-        }
-
-        const name = card.dataset.name || '';
-        const firstChar = name.charAt(0).toUpperCase();
-
-        if (letter === '#') {
-            const show = /^[^A-ZĂÂÎȘȚa-zăâîșț]/.test(name);
-            card.style.display = show ? '' : 'none';
-            if (show) count++;
-        } else {
-            const match = firstChar === letter;
-            card.style.display = match ? '' : 'none';
-            if (match) count++;
-        }
-    });
+    const url = new URL(window.location.href);
+    if (letter === 'all') {
+        url.searchParams.delete('litera');
+    } else {
+        url.searchParams.set('litera', letter);
+    }
+    window.location.href = url.toString();
 }
 
-// Genre filter chips
+// Sort select — navigate via URL
+function changeSortAndReload(sort) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('sort', sort);
+    window.location.href = url.toString();
+}
+
+// Genre filter chips — navigate via URL
 document.querySelectorAll('.genre-chip').forEach(chip => {
     chip.addEventListener('click', function() {
-        document.querySelectorAll('.genre-chip').forEach(c => c.classList.remove('chip-active'));
-        this.classList.add('chip-active');
-        // In production, this would filter or navigate
+        const genre = this.dataset.genre;
+        const url = new URL(window.location.href);
+        if (genre === 'all') {
+            url.searchParams.delete('gen');
+        } else {
+            url.searchParams.set('gen', genre);
+        }
+        window.location.href = url.toString();
     });
 });
+
+// Load-more state
+let _currentPage = 1;
+let _isLoading = false;
+let _hasMore = <?= json_encode($hasMore) ?>;
+const _sortBy = <?= json_encode($sortBy) ?>;
+const _genre = <?= json_encode($selectedGenre !== 'all' ? $selectedGenre : '') ?>;
+const _letter = <?= json_encode($selectedLetter !== 'all' ? $selectedLetter : '') ?>;
+const _storageUrl = <?= json_encode(STORAGE_URL) ?>;
+
+function getStorageUrlJs(path) {
+    if (!path) return '/assets/images/placeholder.jpg';
+    if (path.startsWith('http')) return path;
+    return _storageUrl + '/' + path.replace(/^\//, '');
+}
+
+function formatFollowersJs(num) {
+    if (!num || num === 0) return '0';
+    if (num >= 1000000) return (Math.round(num / 100000) / 10) + 'M';
+    if (num >= 1000) return (Math.round(num / 100) / 10) + 'K';
+    return num.toString();
+}
+
+function createArtistCard(a) {
+    const genreNames = (a.genres || []).map(g => g.name);
+    const totalFollowers = (a.stats?.instagram_followers || 0) + (a.stats?.facebook_followers || 0);
+    const followers = formatFollowersJs(totalFollowers);
+    const image = getStorageUrlJs(a.image || '');
+    const avatar = getStorageUrlJs(a.logo || a.image || '');
+    const eventsCount = a.stats?.upcoming_events || 0;
+    const isVerified = a.is_verified || false;
+
+    const genrePills = genreNames.slice(0, 2).map(g =>
+        `<span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">${g}</span>`
+    ).join('');
+
+    const verifiedBadge = isVerified
+        ? `<svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>`
+        : '';
+
+    const div = document.createElement('div');
+    div.innerHTML = `
+        <a href="/artist/${a.slug}" class="overflow-hidden bg-white border border-gray-200 artist-card rounded-2xl group" data-name="${(a.name || '').replace(/"/g, '&quot;')}">
+            <div class="relative aspect-[4/3] overflow-hidden">
+                <img src="${image}" alt="${(a.name || '').replace(/"/g, '&quot;')}" class="absolute inset-0 object-cover w-full h-full artist-img">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                <button class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full top-3 right-3 bg-white/90 hover:bg-white" onclick="event.preventDefault(); toggleFavorite(this);">
+                    <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                </button>
+                <div class="absolute flex items-center gap-2 bottom-3 left-3">${genrePills}</div>
+            </div>
+            <div class="p-4">
+                <div class="flex items-start justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <img src="${avatar}" class="object-cover w-10 h-10 border-2 border-gray-100 rounded-full" alt="">
+                        <div>
+                            <div class="flex items-center gap-1">
+                                <h3 class="font-semibold text-gray-900 transition-colors group-hover:text-indigo-600">${a.name || ''}</h3>
+                                ${verifiedBadge}
+                            </div>
+                            <p class="text-xs text-gray-500">${followers} urmăritori</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between pt-3 mt-3 border-t border-gray-100">
+                    <div class="flex items-center gap-3 text-xs text-gray-500">
+                        <span class="flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            ${eventsCount} ev.
+                        </span>
+                    </div>
+                    <button class="follow-btn px-3 py-1.5 bg-gray-900 text-white hover:bg-gray-800 text-xs font-medium rounded-full" onclick="event.preventDefault(); event.stopPropagation(); this.textContent = this.textContent.includes('Urmărești') ? 'Urmărește' : 'Urmărești ✓';">Urmărește</button>
+                </div>
+            </div>
+        </a>`.trim();
+    return div.firstChild;
+}
+
+async function loadMoreArtists() {
+    if (_isLoading || !_hasMore) return;
+    _isLoading = true;
+
+    const btn = document.getElementById('loadMoreBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Se încarcă...';
+    }
+
+    _currentPage++;
+    const params = new URLSearchParams({ endpoint: 'artists', page: _currentPage, per_page: 24, sort: _sortBy });
+    if (_genre) params.set('genre', _genre);
+    if (_letter) params.set('letter', _letter);
+
+    try {
+        const res = await fetch('/api/proxy.php?' + params.toString());
+        const data = await res.json();
+        const artists = data.data || [];
+        const lastPage = data.meta?.last_page || 1;
+        _hasMore = _currentPage < lastPage;
+
+        const grid = document.getElementById('artistsGrid');
+        artists.forEach(a => grid.appendChild(createArtistCard(a)));
+
+        if (!_hasMore && btn) {
+            document.getElementById('loadMoreContainer')?.remove();
+        } else if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg> Mai mulți artiști';
+        }
+    } catch (e) {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg> Mai mulți artiști';
+        }
+    }
+
+    _isLoading = false;
+}
+
+// Letter filter — local filtering (works on already loaded cards)
+function filterByLetter(btn, letter) {
+    document.querySelectorAll('.letter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const url = new URL(window.location.href);
+    if (letter === 'all') {
+        url.searchParams.delete('litera');
+    } else {
+        url.searchParams.set('litera', letter);
+    }
+    window.location.href = url.toString();
+}
 
 // Follow button toggle
 document.querySelectorAll('.follow-btn').forEach(btn => {

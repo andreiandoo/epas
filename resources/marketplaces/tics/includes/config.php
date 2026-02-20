@@ -304,3 +304,54 @@ function setLoginState(&$isLoggedIn, &$loggedInUser) {
         $loggedInUser = null;
     }
 }
+
+/**
+ * Call Tixello Core API server-side via cURL
+ * @param string $endpoint - API endpoint (e.g. 'artists', 'artists/slug')
+ * @param array $params - Query parameters
+ * @return array|null - Decoded JSON response or null on failure
+ */
+function callApi($endpoint, $params = []) {
+    $url = API_BASE_URL . '/' . ltrim($endpoint, '/');
+    // Remove null/empty params
+    $params = array_filter($params, fn($v) => $v !== null && $v !== '');
+    if (!empty($params)) {
+        $url .= '?' . http_build_query($params);
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . API_KEY,
+            'Accept: application/json',
+        ],
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+    ]);
+
+    $response = curl_exec($ch);
+    $error = curl_error($ch);
+    curl_close($ch);
+
+    if ($error || !$response) {
+        return null;
+    }
+
+    return json_decode($response, true);
+}
+
+/**
+ * Format large numbers for display (e.g. 1234567 -> "1.2M", 12345 -> "12.3K")
+ */
+function formatFollowers($num) {
+    if (!is_numeric($num) || $num === 0) return '0';
+    if ($num >= 1000000) {
+        return round($num / 1000000, 1) . 'M';
+    }
+    if ($num >= 1000) {
+        return round($num / 1000, 1) . 'K';
+    }
+    return number_format($num);
+}

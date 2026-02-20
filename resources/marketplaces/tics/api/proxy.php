@@ -28,10 +28,44 @@ $endpoint = $_GET['endpoint'] ?? 'events';
 // Development mode: use demo data
 $useDemoData = true; // Set to false in production
 
-if ($useDemoData) {
+// These endpoints always proxy to real API regardless of $useDemoData
+$liveEndpoints = ['artists', 'artist', 'blog-articles', 'blog-categories'];
+
+if ($useDemoData && !in_array($endpoint, $liveEndpoints)) {
     serveDemoData($endpoint);
 } else {
-    proxyToAPI($endpoint);
+    // Special handling for artist endpoint (slug in URL)
+    if ($endpoint === 'artist') {
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Slug required']);
+            exit;
+        }
+        $queryParams = $_GET;
+        unset($queryParams['endpoint'], $queryParams['slug']);
+        $apiUrl = API_BASE_URL . '/artists/' . urlencode($slug);
+        if (!empty($queryParams)) {
+            $apiUrl .= '?' . http_build_query($queryParams);
+        }
+        $ch = curl_init($apiUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . API_KEY,
+                'Accept: application/json',
+            ],
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        http_response_code($httpCode);
+        echo $response;
+    } else {
+        proxyToAPI($endpoint);
+    }
 }
 
 /**
