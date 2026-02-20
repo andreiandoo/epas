@@ -81,3 +81,4 @@
 </footer>
 
 <?php include __DIR__ . '/accessibility.php'; ?>
+<?php include __DIR__ . '/cookie-consent.php'; ?>

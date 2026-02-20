@@ -1830,3 +1830,60 @@ input[type="range"]::-moz-range-thumb {
     background: #111827;
     color: white;
 }
+
+/* ===========================================
+   COOKIE CONSENT
+   =========================================== */
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(100%); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.cookie-banner {
+    animation: slideUp 0.4s ease forwards;
+}
+.cookie-modal-backdrop {
+    animation: fadeIn 0.3s ease forwards;
+}
+.cookie-modal {
+    animation: slideDown 0.3s ease forwards;
+}
+
+/* Toggle switch */
+.toggle-track {
+    transition: background 0.2s ease;
+}
+.toggle-thumb {
+    transition: transform 0.2s ease;
+}
+.toggle-input:checked + .toggle-track {
+    background: #111827;
+}
+.toggle-input:checked + .toggle-track .toggle-thumb {
+    transform: translateX(16px);
+}
+
+/* Accordion */
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+.accordion-content.open {
+    max-height: 500px;
+}
+.accordion-icon {
+    transition: transform 0.2s ease;
+}
+.accordion-icon.open {
+    transform: rotate(180deg);
+}
