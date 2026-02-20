@@ -284,6 +284,7 @@ class VenueResource extends Resource
                                     ->image()
                                     ->multiple()
                                     ->maxFiles(3)
+                                    ->disk('public')
                                     ->directory('venues/gallery')
                                     ->visibility('public')
                                     ->reorderable()
