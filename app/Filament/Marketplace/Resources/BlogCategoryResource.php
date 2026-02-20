@@ -30,6 +30,8 @@ class BlogCategoryResource extends Resource
 
     protected static ?string $navigationParentItem = 'Blog';
 
+    protected static \UnitEnum|string|null $navigationGroup = 'Content';
+
     protected static ?int $navigationSort = 2;
 
     protected static ?string $modelLabel = 'Category';
