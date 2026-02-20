@@ -61,6 +61,9 @@ class BlogCategoryResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
+                Forms\Components\Hidden::make('tenant_id')
+                    ->default($marketplace?->tenant_id),
+
                 SC\Section::make('Category Details')
                     ->schema([
                         Forms\Components\TextInput::make("name.{$marketplaceLanguage}")
