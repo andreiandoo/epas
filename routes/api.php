@@ -2031,6 +2031,16 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         ->name('api.marketplace-client.customer.gift-cards.check-balance');
     Route::post('/gift-cards/redeem', [CustomerGiftCardController::class, 'redeem'])
         ->name('api.marketplace-client.customer.gift-cards.redeem');
+
+    // AI Chat (public - works for both authenticated and guest users)
+    Route::post('/chat/send', [App\Http\Controllers\Api\MarketplaceClient\Customer\ChatController::class, 'sendMessage'])
+        ->name('api.marketplace-client.customer.chat.send');
+    Route::get('/chat/conversation', [App\Http\Controllers\Api\MarketplaceClient\Customer\ChatController::class, 'getConversation'])
+        ->name('api.marketplace-client.customer.chat.conversation');
+    Route::post('/chat/new', [App\Http\Controllers\Api\MarketplaceClient\Customer\ChatController::class, 'newConversation'])
+        ->name('api.marketplace-client.customer.chat.new');
+    Route::post('/chat/rate/{messageId}', [App\Http\Controllers\Api\MarketplaceClient\Customer\ChatController::class, 'rateMessage'])
+        ->name('api.marketplace-client.customer.chat.rate');
 });
 
 /*

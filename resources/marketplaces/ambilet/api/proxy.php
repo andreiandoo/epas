@@ -2717,6 +2717,38 @@ switch ($action) {
         ]);
         exit;
 
+    // ==================== AI CHAT ====================
+
+    case 'chat.send':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/chat/send';
+        $requiresAuth = false; // Works for both guest and authenticated
+        break;
+
+    case 'chat.conversation':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['session_id'])) $params['session_id'] = $_GET['session_id'];
+        $endpoint = '/customer/chat/conversation';
+        $requiresAuth = false;
+        break;
+
+    case 'chat.new':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/chat/new';
+        $requiresAuth = false;
+        break;
+
+    case 'chat.rate':
+        $method = 'POST';
+        $messageId = $_GET['message_id'] ?? '';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/chat/rate/' . urlencode($messageId);
+        $requiresAuth = false;
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);

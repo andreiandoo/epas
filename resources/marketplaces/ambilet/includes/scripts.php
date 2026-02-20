@@ -59,5 +59,8 @@
 
     <!-- Tracking Scripts (body) -->
     <?php if (!empty($trackingBodyScripts)) echo $trackingBodyScripts . "\n"; ?>
+
+    <!-- AI Chat Widget -->
+    <script src="<?= asset('assets/js/chat-widget.js') ?>"></script>
 </body>
 </html>
