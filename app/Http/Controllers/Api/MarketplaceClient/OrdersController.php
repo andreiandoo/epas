@@ -129,12 +129,14 @@ class OrdersController extends BaseController
                 $ticketType->increment('quota_sold', $quantity);
             }
 
-            // Calculate commission — respect commission_mode
-            // 'included': commission deducted from organizer payout, customer pays face value (total = subtotal)
-            // 'on_top' / 'added_on_top': commission added to customer price (total = subtotal + commission)
+            // Calculate commission
+            // POS/mobile app orders (source=pos_app) always use total = subtotal, regardless of commission_mode.
+            // The ticket price IS the price the customer pays at the door — commission is never added on top.
+            // For online orders: respect commission_mode (on_top adds to price; included deducts from organizer payout).
+            $posSource = $request->input('source', 'marketplace');
             $commissionMode = $event->getEffectiveCommissionMode();
             $commissionAmount = round($subtotal * ($commission / 100), 2);
-            $isOnTop = in_array($commissionMode, ['on_top', 'added_on_top']);
+            $isOnTop = in_array($commissionMode, ['on_top', 'added_on_top']) && $posSource !== 'pos_app';
             $total = $isOnTop ? $subtotal + $commissionAmount : $subtotal;
 
             // Create order
@@ -159,6 +161,7 @@ class OrdersController extends BaseController
                 'meta' => [
                     'marketplace_client' => $client->name,
                     'ip_address' => $request->ip(),
+                    'sold_by' => $request->input('sold_by'),
                 ],
             ]);
 
@@ -682,5 +685,47 @@ class OrdersController extends BaseController
                 ->from($fromEmail, $fromName)
                 ->subject("Biletele tale - {$eventName}");
         });
+    }
+
+    /**
+     * Get sales breakdown for an event (online vs POS, by user)
+     */
+    public function salesBreakdown(Request $request, int $eventId): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $orders = Order::with('items')
+            ->where('event_id', $eventId)
+            ->where('marketplace_client_id', $client->id)
+            ->whereIn('status', ['confirmed', 'completed'])
+            ->get();
+
+        $online = $orders->where('source', '!=', 'pos_app');
+        $pos = $orders->where('source', 'pos_app');
+
+        // Group POS by sold_by from meta
+        $posByUser = $pos->groupBy(function ($o) {
+            $meta = is_array($o->meta) ? $o->meta : (is_string($o->meta) ? json_decode($o->meta, true) : []);
+            return $meta['sold_by'] ?? 'POS';
+        });
+
+        return $this->success([
+            'online' => [
+                'orders' => $online->count(),
+                'tickets' => $online->sum(fn($o) => $o->items->sum('quantity')),
+                'revenue' => round($online->sum('total'), 2),
+            ],
+            'pos' => [
+                'orders' => $pos->count(),
+                'tickets' => $pos->sum(fn($o) => $o->items->sum('quantity')),
+                'revenue' => round($pos->sum('total'), 2),
+                'by_user' => $posByUser->map(fn($userOrders, $userName) => [
+                    'user' => $userName,
+                    'orders' => $userOrders->count(),
+                    'tickets' => $userOrders->sum(fn($o) => $o->items->sum('quantity')),
+                    'revenue' => round($userOrders->sum('total'), 2),
+                ])->values(),
+            ],
+        ]);
     }
 }

@@ -357,8 +357,14 @@ class OrderResource extends Resource
         $customerRef = $record->order_number; // Customer-facing reference like MKT-xxx
         $date = $record->created_at->format('d M Y, H:i');
         $currency = $record->currency ?? 'RON';
-        $total = number_format($record->total ?? ($record->total_cents / 100), 2);
         $ticketCount = $record->tickets->count();
+
+        // POS/mobile app orders: display total = subtotal (face value), not DB total which may include commission
+        $isPosOrder = $record->source === 'pos_app';
+        $displayTotal = $isPosOrder
+            ? number_format($record->subtotal ?? $record->tickets->sum('price'), 2)
+            : number_format($record->total ?? ($record->total_cents / 100), 2);
+        $total = $displayTotal;
 
         // Payment method display - show processor name properly, with fallbacks
         $paymentProcessor = $record->payment_processor ?? $record->meta['payment_processor'] ?? null;
@@ -450,6 +456,14 @@ class OrderResource extends Resource
                         <div style='font-size: 11px; color: #64748B; text-transform: uppercase;'>Ultima actualizare</div>
                     </div>
                 </div>
+                " . ($isPosOrder ? "
+                <div style='display: flex; align-items: center; gap: 10px; margin-top: 16px; padding: 10px 14px; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 10px; font-size: 13px; color: #A5B4FC;'>
+                    <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='width:16px;height:16px;flex-shrink:0;'>
+                        <path stroke-linecap='round' stroke-linejoin='round' d='M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3' />
+                    </svg>
+                    <span>Înregistrată prin <strong>aplicația mobilă Tixello</strong> &nbsp;·&nbsp; Plată în <strong>numerar</strong></span>
+                </div>
+                " : "") . "
             </div>
         ");
     }
@@ -744,6 +758,9 @@ class OrderResource extends Resource
         $discount = $record->discount_amount ?? $record->promo_discount ?? 0;
         $total = $record->total ?? ($record->total_cents / 100);
 
+        // POS/mobile app orders: commission is never added on top of customer price
+        $isPosOrder = $record->source === 'pos_app';
+
         // Get commission info from event
         $event = $record->event;
         $commissionRate = $event?->commission_rate
@@ -770,12 +787,22 @@ class OrderResource extends Resource
         // Commission (if any)
         if ($commission > 0) {
             $modeLabel = $isOnTop ? '(peste preț)' : '(inclus)';
-            $html .= "
-                <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
-                    <span style='font-size: 13px; color: #94A3B8;'>Comision " . number_format($commissionRate, 1) . "% {$modeLabel}</span>
-                    <span style='font-size: 13px; font-weight: 600; color: #E2E8F0;'>" . number_format($commission, 2) . " {$currency}</span>
-                </div>
-            ";
+            if ($isPosOrder) {
+                // Commission not applied to POS orders — show as dash
+                $html .= "
+                    <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                        <span style='font-size: 13px; color: #94A3B8;'>Comision " . number_format($commissionRate, 1) . "% {$modeLabel}</span>
+                        <span style='font-size: 13px; color: #475569;'>—</span>
+                    </div>
+                ";
+            } else {
+                $html .= "
+                    <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                        <span style='font-size: 13px; color: #94A3B8;'>Comision " . number_format($commissionRate, 1) . "% {$modeLabel}</span>
+                        <span style='font-size: 13px; font-weight: 600; color: #E2E8F0;'>" . number_format($commission, 2) . " {$currency}</span>
+                    </div>
+                ";
+            }
         }
 
         // Discount (if any)
@@ -802,9 +829,12 @@ class OrderResource extends Resource
         }
 
         // Calculate final total
-        $finalTotal = $isOnTop
-            ? ($ticketsValue + $commission - $discount + $insuranceAmount)
-            : $total;
+        // POS orders: customer pays the ticket face value only (no commission added on top)
+        $finalTotal = $isPosOrder
+            ? ($ticketsValue - $discount + $insuranceAmount)
+            : ($isOnTop
+                ? ($ticketsValue + $commission - $discount + $insuranceAmount)
+                : $total);
 
         // Total
         $html .= "
