@@ -29,7 +29,7 @@ class ListVenues extends ListRecords
                         ->label('CSV File')
                         ->acceptedFileTypes(['text/csv', 'application/csv', 'text/plain'])
                         ->required()
-                        ->helperText('CSV columns: name (required), slug, address, city, state, country, website_url, phone, phone2, email, email2, facebook_url, instagram_url, tiktok_url, image_url, video_type (youtube/vimeo), video_url, capacity, capacity_total, capacity_standing, capacity_seated, lat, lng, google_maps_url, established_at (YYYY-MM-DD), description')
+                        ->helperText('CSV columns: name (required), slug, address, city, state, country, website_url, phone, phone2, email, email2, facebook_url, instagram_url, tiktok_url, image_url, video_type (youtube/vimeo), video_url, capacity, capacity_total, capacity_standing, capacity_seated, lat, lng, google_maps_url, established_at (YYYY-MM-DD), description, venue_categories (slugs separate prin |), venue_types (slugs separate prin |), galerie_imagini (URL-uri separate prin |), taxa_monument (1/0), timezone, open_hours, general_rules, child_rules, payment_methods (separate prin |)')
                         ->disk('local')
                         ->directory('imports')
                         ->storeFileNamesIn('original_filename')

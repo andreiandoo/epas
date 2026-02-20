@@ -38,6 +38,7 @@ class MarketplaceOrganizer extends Authenticatable
         'company_city',
         'company_county',
         'company_zip',
+        'past_contract',
         'representative_first_name',
         'representative_last_name',
 
@@ -68,6 +69,7 @@ class MarketplaceOrganizer extends Authenticatable
         'email_verification_token',
         'email_verification_expires_at',
         'commission_rate',
+        'fixed_commission_default',
         'default_commission_mode',
         'settings',
         'gamification_enabled',
@@ -104,6 +106,7 @@ class MarketplaceOrganizer extends Authenticatable
         'tax_settings' => 'array',
         'payout_details' => 'encrypted:array',
         'commission_rate' => 'decimal:2',
+        'fixed_commission_default' => 'decimal:2',
         'total_revenue' => 'decimal:2',
         'available_balance' => 'decimal:2',
         'pending_balance' => 'decimal:2',

@@ -144,6 +144,12 @@ class MarketplaceOrganizerResource extends Resource
                             ->label('Postal Code')
                             ->maxLength(20),
 
+                        Forms\Components\Textarea::make('past_contract')
+                            ->label('Past Contract')
+                            ->rows(3)
+                            ->columnSpanFull()
+                            ->helperText('Notes or reference to past contract details'),
+
                         Forms\Components\TextInput::make('representative_first_name')
                             ->label('Representative First Name')
                             ->maxLength(100)
@@ -250,6 +256,13 @@ class MarketplaceOrganizerResource extends Resource
                             ->step(0.01)
                             ->suffix('%')
                             ->helperText('Leave empty to use marketplace default'),
+
+                        Forms\Components\TextInput::make('fixed_commission_default')
+                            ->label('Fixed Commission Default')
+                            ->numeric()
+                            ->step(0.01)
+                            ->prefix('RON')
+                            ->helperText('Fixed commission amount (absolute value, not %). Leave empty if not applicable.'),
                     ])
                     ->columns(2),
             ]);
