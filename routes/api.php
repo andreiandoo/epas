@@ -1420,6 +1420,8 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.orders.send-tickets');
     Route::post('/orders/{order}/pos-complete', [MarketplaceOrdersController::class, 'posComplete'])
         ->name('api.marketplace-client.orders.pos-complete');
+    Route::get('/events/{event}/sales-breakdown', [MarketplaceOrdersController::class, 'salesBreakdown'])
+        ->name('api.marketplace-client.events.sales-breakdown');
 
     // Payment
     Route::post('/orders/{order}/pay', [MarketplacePaymentController::class, 'initiate'])
