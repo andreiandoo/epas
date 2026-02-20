@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 
 class ImportMarketplaceOrganizersCommand extends Command
 {
-    protected $signature = 'import:marketplace-organizers {file}';
+    protected $signature = 'import:marketplace-organizers {file} {--marketplace= : marketplace_client_id to use for all rows (overrides CSV column)}';
     protected $description = 'Import marketplace organizers from CSV file (upsert by email)';
 
     public function handle()
@@ -44,9 +44,11 @@ class ImportMarketplaceOrganizersCommand extends Command
 
             $email = strtolower(trim($data['email']));
 
-            // Resolve marketplace_client_id: by numeric ID or by client name
+            // Resolve marketplace_client_id: --marketplace option overrides CSV columns
             $marketplaceClientId = null;
-            if (!empty($data['marketplace_client_id']) && is_numeric($data['marketplace_client_id'])) {
+            if ($this->option('marketplace') && is_numeric($this->option('marketplace'))) {
+                $marketplaceClientId = (int) $this->option('marketplace');
+            } elseif (!empty($data['marketplace_client_id']) && is_numeric($data['marketplace_client_id'])) {
                 $marketplaceClientId = (int) $data['marketplace_client_id'];
             } elseif (!empty($data['marketplace_client_name'])) {
                 $client = MarketplaceClient::where('name', $data['marketplace_client_name'])->first();
