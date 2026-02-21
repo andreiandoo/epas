@@ -137,6 +137,12 @@ class LocationsController extends BaseController
             ->where('is_visible', true)
             ->with(['region:id,name', 'county:id,name,code']);
 
+        // Filter by country (via county relationship)
+        if ($request->filled('country')) {
+            $country = strtoupper(trim($request->country));
+            $query->whereHas('county', fn ($q) => $q->where('country', $country));
+        }
+
         // Filter by letter - use slug which is always ASCII
         if ($request->has('letter') && $request->letter) {
             $letter = strtoupper($request->letter);
@@ -307,9 +313,15 @@ class LocationsController extends BaseController
         $lang = $client->language ?? $client->locale ?? 'ro';
 
         // Get regions with cities
-        $regions = MarketplaceRegion::where('marketplace_client_id', $client->id)
-            ->where('is_visible', true)
-            ->with(['cities' => function ($q) {
+        $regionQuery = MarketplaceRegion::where('marketplace_client_id', $client->id)
+            ->where('is_visible', true);
+
+        // Filter by country
+        if ($request->filled('country')) {
+            $regionQuery->where('country', strtoupper(trim($request->country)));
+        }
+
+        $regions = $regionQuery->with(['cities' => function ($q) {
                 $q->where('is_visible', true)->orderBy('sort_order');
             }])
             ->orderBy('sort_order')

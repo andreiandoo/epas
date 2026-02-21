@@ -43,166 +43,40 @@ if ($isLoggedIn && !isset($loggedInUser)) {
                 <span class="font-bold text-lg hidden sm:block">TICS</span>
             </a>
 
-            <style>
-                .gradient-primary { background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); }
-                .gradient-text { 
-                    background: linear-gradient(135deg, #7c3aed, #ec4899); 
-                    -webkit-background-clip: text; 
-                    -webkit-text-fill-color: transparent; 
-                }
-                
-                /* Dropdown positioning */
-                .dropdown {
-                    position: relative;
-                }
-                
-                .dropdown-menu {
-                    position: absolute;
-                    top: 100%;
-                    left: 0;
-                    min-width: 280px;
-                    background: white;
-                    border-radius: 12px;
-                    box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-                    opacity: 0;
-                    visibility: hidden;
-                    transform: translateY(10px);
-                    transition: all 0.2s ease;
-                    z-index: 1000;
-                }
-                
-                /* Wide dropdown for cities and venues */
-                .dropdown-menu.wide {
-                    min-width: 700px;
-                    left: 50%;
-                    transform: translateX(-50%) translateY(10px);
-                }
-                
-                .dropdown-menu.venues {
-                    min-width: 900px;
-                }
-                
-                .dropdown:hover .dropdown-menu {
-                    opacity: 1;
-                    visibility: visible;
-                    transform: translateY(0);
-                }
-                
-                .dropdown:hover .dropdown-menu.wide {
-                    transform: translateX(-50%) translateY(0);
-                }
-                
-                /* Nav link style */
-                .nav-link {
-                    position: relative;
-                    padding: 0 16px;
-                    height: 64px;
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                    font-weight: 500;
-                    color: #374151;
-                    transition: color 0.2s;
-                }
-                
-                .nav-link:hover {
-                    color: #7c3aed;
-                }
-                
-                .nav-link::after {
-                    content: '';
-                    position: absolute;
-                    bottom: 0;
-                    left: 16px;
-                    right: 16px;
-                    height: 3px;
-                    background: linear-gradient(135deg, #7c3aed, #ec4899);
-                    border-radius: 3px 3px 0 0;
-                    transform: scaleX(0);
-                    transition: transform 0.2s;
-                }
-                
-                .dropdown:hover .nav-link::after {
-                    transform: scaleX(1);
-                }
-                
-                /* Dropdown link hover */
-                .dropdown-link {
-                    display: block;
-                    padding: 8px 16px;
-                    color: #4b5563;
-                    font-size: 14px;
-                    border-radius: 6px;
-                    transition: all 0.15s;
-                }
-                
-                .dropdown-link:hover {
-                    background: #f3e8ff;
-                    color: #7c3aed;
-                }
-                
-                /* City list scrollable */
-                .city-list {
-                    max-height: 400px;
-                    overflow-y: auto;
-                }
-                
-                .city-list::-webkit-scrollbar {
-                    width: 6px;
-                }
-                
-                .city-list::-webkit-scrollbar-track {
-                    background: #f1f1f1;
-                    border-radius: 3px;
-                }
-                
-                .city-list::-webkit-scrollbar-thumb {
-                    background: #c4b5fd;
-                    border-radius: 3px;
-                }
-                
-                /* Venue card compact */
-                .venue-card {
-                    display: flex;
-                    flex-direction: column;
-                    border-radius: 10px;
-                    overflow: hidden;
-                    background: #f9fafb;
-                    transition: all 0.2s;
-                }
-                
-                .venue-card:hover {
-                    background: #f3e8ff;
-                    transform: translateY(-2px);
-                }
-                
-                .venue-card img {
-                    width: 100%;
-                    height: 90px;
-                    object-fit: cover;
-                }
-                
-                .venue-card .venue-info {
-                    padding: 10px;
-                }
-                
-                .venue-card .venue-name {
-                    font-weight: 600;
-                    font-size: 13px;
-                    color: #111827;
-                    line-height: 1.3;
-                }
-                
-                .venue-card .venue-city {
-                    font-size: 12px;
-                    color: #6b7280;
-                    margin-top: 2px;
-                }
-            </style>
+            <script>
+            window.TICS_API_BASE = '<?= defined('API_BASE_URL') ? htmlspecialchars(API_BASE_URL) : 'https://core.tixello.com/api/marketplace-client' ?>';
+            window.TICS_API_KEY  = '<?= defined('API_KEY') ? htmlspecialchars(API_KEY) : '' ?>';
+            </script>
 
             <!-- Desktop Navigation -->
             <nav class="hidden lg:flex items-center h-full">
-                
+
+                <!-- Country Selector -->
+                <div class="dropdown h-full flex items-center">
+                    <button class="nav-link" type="button">
+                        <span id="countryFlag" class="text-xl leading-none">🇷🇴</span>
+                        <span id="countryName" class="hidden xl:inline">România</span>
+                        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div class="dropdown-menu py-2" style="min-width:200px">
+                        <p class="px-4 pb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Selectează țara</p>
+                        <button class="dropdown-link country-option flex items-center gap-2.5 active" type="button" data-code="RO" data-flag="🇷🇴" data-name="România" onclick="ticsSelectCountry(this)">
+                            <span class="text-lg">🇷🇴</span> România
+                        </button>
+                        <button class="dropdown-link country-option flex items-center gap-2.5" type="button" data-code="MD" data-flag="🇲🇩" data-name="Moldova" onclick="ticsSelectCountry(this)">
+                            <span class="text-lg">🇲🇩</span> Moldova
+                        </button>
+                        <button class="dropdown-link country-option flex items-center gap-2.5" type="button" data-code="HU" data-flag="🇭🇺" data-name="Ungaria" onclick="ticsSelectCountry(this)">
+                            <span class="text-lg">🇭🇺</span> Ungaria
+                        </button>
+                        <button class="dropdown-link country-option flex items-center gap-2.5" type="button" data-code="BG" data-flag="🇧🇬" data-name="Bulgaria" onclick="ticsSelectCountry(this)">
+                            <span class="text-lg">🇧🇬</span> Bulgaria
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Evenimente Dropdown -->
                 <div class="dropdown h-full flex items-center">
                     <button class="nav-link">
@@ -239,72 +113,25 @@ if ($isLoggedIn && !isset($loggedInUser)) {
                     </div>
                 </div>
 
-                <!-- Orașe Dropdown -->
+                <!-- Orașe Dropdown – dynamic, populated by JS based on selected country -->
                 <div class="dropdown h-full flex items-center">
-                    <button class="nav-link">
+                    <button class="nav-link" type="button">
                         Orașe
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
-                    
+
                     <div class="dropdown-menu wide p-4">
                         <div class="flex items-center justify-between mb-3 px-2">
-                            <span class="text-sm font-semibold text-gray-900">1.245 evenimente din 147 orașe</span>
+                            <span id="citiesDropdownTitle" class="text-sm font-semibold text-gray-900">Orașe din România</span>
                             <a href="/orase" class="text-sm font-semibold text-purple-600 hover:text-purple-700">Vezi toate →</a>
                         </div>
-                        
-                        <div class="city-list grid grid-cols-4 gap-x-4">
-                            <!-- Popular cities first -->
-                            <a href="/orase/bucuresti" class="dropdown-link font-semibold text-purple-600">București</a>
-                            <a href="#" class="dropdown-link font-semibold text-purple-600">Cluj-Napoca</a>
-                            <a href="#" class="dropdown-link font-semibold text-purple-600">Timișoara</a>
-                            <a href="#" class="dropdown-link font-semibold text-purple-600">Iași</a>
-                            <a href="#" class="dropdown-link font-semibold text-purple-600">Brașov</a>
-                            <a href="#" class="dropdown-link font-semibold text-purple-600">Constanța</a>
-                            <a href="#" class="dropdown-link font-semibold text-purple-600">Sibiu</a>
-                            <a href="#" class="dropdown-link font-semibold text-purple-600">Craiova</a>
-                            
-                            <!-- Divider -->
-                            <div class="col-span-4 border-t border-gray-100 my-2"></div>
-                            
-                            <!-- All cities A-Z -->
-                            <a href="#" class="dropdown-link">Alba Iulia</a>
-                            <a href="#" class="dropdown-link">Arad</a>
-                            <a href="#" class="dropdown-link">Bacău</a>
-                            <a href="#" class="dropdown-link">Baia Mare</a>
-                            <a href="#" class="dropdown-link">Bistrița</a>
-                            <a href="#" class="dropdown-link">Botoșani</a>
-                            <a href="#" class="dropdown-link">Brăila</a>
-                            <a href="#" class="dropdown-link">Buzău</a>
-                            <a href="#" class="dropdown-link">Călărași</a>
-                            <a href="#" class="dropdown-link">Deva</a>
-                            <a href="#" class="dropdown-link">Focșani</a>
-                            <a href="#" class="dropdown-link">Galați</a>
-                            <a href="#" class="dropdown-link">Giurgiu</a>
-                            <a href="#" class="dropdown-link">Hunedoara</a>
-                            <a href="#" class="dropdown-link">Mediaș</a>
-                            <a href="#" class="dropdown-link">Miercurea Ciuc</a>
-                            <a href="#" class="dropdown-link">Oradea</a>
-                            <a href="#" class="dropdown-link">Petroșani</a>
-                            <a href="#" class="dropdown-link">Piatra Neamț</a>
-                            <a href="#" class="dropdown-link">Pitești</a>
-                            <a href="#" class="dropdown-link">Ploiești</a>
-                            <a href="#" class="dropdown-link">Râmnicu Vâlcea</a>
-                            <a href="#" class="dropdown-link">Reșița</a>
-                            <a href="#" class="dropdown-link">Roman</a>
-                            <a href="#" class="dropdown-link">Satu Mare</a>
-                            <a href="#" class="dropdown-link">Sighișoara</a>
-                            <a href="#" class="dropdown-link">Slatina</a>
-                            <a href="#" class="dropdown-link">Slobozia</a>
-                            <a href="#" class="dropdown-link">Suceava</a>
-                            <a href="#" class="dropdown-link">Târgoviște</a>
-                            <a href="#" class="dropdown-link">Târgu Jiu</a>
-                            <a href="#" class="dropdown-link">Târgu Mureș</a>
-                            <a href="#" class="dropdown-link">Tulcea</a>
-                            <a href="#" class="dropdown-link">Vaslui</a>
-                            <a href="#" class="dropdown-link">Zalău</a>
-                            <a href="#" class="dropdown-link">Bârlad</a>
+
+                        <div id="citiesDropdownContent" class="city-list grid grid-cols-4 gap-x-4">
+                            <div class="col-span-4 flex items-center justify-center py-6">
+                                <div class="w-5 h-5 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -689,3 +516,140 @@ if ($isLoggedIn && !isset($loggedInUser)) {
         </div>
     </div>
 </header>
+
+<script>
+(function () {
+    'use strict';
+
+    var COUNTRIES = {
+        RO: { flag: '🇷🇴', name: 'România'  },
+        MD: { flag: '🇲🇩', name: 'Moldova'  },
+        HU: { flag: '🇭🇺', name: 'Ungaria'  },
+        BG: { flag: '🇧🇬', name: 'Bulgaria' },
+    };
+
+    var citiesCache  = {};
+    var currentCode  = localStorage.getItem('tics_country') || 'RO';
+
+    /* ------------------------------------------------------------------ */
+    /* Public – called from onclick attributes                              */
+    /* ------------------------------------------------------------------ */
+    window.ticsSelectCountry = function (btn) {
+        var code = btn.dataset.code;
+        if (!COUNTRIES[code] || code === currentCode) return;
+        currentCode = code;
+        localStorage.setItem('tics_country', code);
+        updateSelectorUI(code);
+        loadCities(code);
+    };
+
+    /* ------------------------------------------------------------------ */
+    /* UI helpers                                                           */
+    /* ------------------------------------------------------------------ */
+    function updateSelectorUI(code) {
+        var c      = COUNTRIES[code] || COUNTRIES.RO;
+        var flagEl = document.getElementById('countryFlag');
+        var nameEl = document.getElementById('countryName');
+        if (flagEl) flagEl.textContent = c.flag;
+        if (nameEl) nameEl.textContent = c.name;
+        document.querySelectorAll('.country-option').forEach(function (el) {
+            el.classList.toggle('active', el.dataset.code === code);
+        });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Cities API                                                           */
+    /* ------------------------------------------------------------------ */
+    function loadCities(code) {
+        if (citiesCache[code]) { renderCities(code, citiesCache[code]); return; }
+
+        var container = document.getElementById('citiesDropdownContent');
+        if (!container) return;
+
+        container.innerHTML =
+            '<div class="col-span-4 flex items-center justify-center py-6">' +
+            '<div class="w-5 h-5 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>' +
+            '</div>';
+
+        var base = (window.TICS_API_BASE || 'https://core.tixello.com/api/marketplace-client').replace(/\/$/, '');
+        var key  = window.TICS_API_KEY || '';
+
+        fetch(base + '/locations/cities?country=' + encodeURIComponent(code) + '&per_page=50&sort=events', {
+            headers: { 'X-Marketplace-Key': key, 'Accept': 'application/json' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data && data.success && Array.isArray(data.data)) {
+                citiesCache[code] = data.data;
+                renderCities(code, data.data);
+            } else {
+                showCitiesError();
+            }
+        })
+        .catch(showCitiesError);
+    }
+
+    function renderCities(code, cities) {
+        var container = document.getElementById('citiesDropdownContent');
+        var titleEl   = document.getElementById('citiesDropdownTitle');
+        if (!container) return;
+
+        var c = COUNTRIES[code] || COUNTRIES.RO;
+        if (titleEl) titleEl.textContent = 'Orașe din ' + c.name;
+
+        if (!cities.length) {
+            container.innerHTML =
+                '<div class="col-span-4 text-center py-6 text-sm text-gray-400">Nu există orașe disponibile</div>';
+            return;
+        }
+
+        var featured = cities.filter(function (x) { return x.events_count > 0; }).slice(0, 8);
+        var rest     = cities.filter(function (x) { return x.events_count === 0; });
+
+        var html = '';
+
+        featured.forEach(function (city) {
+            html += '<a href="/orase/' + city.slug + '" class="dropdown-link font-semibold text-purple-600">'
+                  + esc(city.name) + '</a>';
+        });
+
+        if (featured.length && rest.length) {
+            html += '<div class="col-span-4 border-t border-gray-100 my-2"></div>';
+        }
+
+        rest.forEach(function (city) {
+            html += '<a href="/orase/' + city.slug + '" class="dropdown-link">' + esc(city.name) + '</a>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    function showCitiesError() {
+        var container = document.getElementById('citiesDropdownContent');
+        if (container) {
+            container.innerHTML =
+                '<div class="col-span-4 text-center py-4 text-sm text-red-400">Nu s-au putut încărca orașele.</div>';
+        }
+    }
+
+    function esc(str) {
+        return String(str)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Init                                                                 */
+    /* ------------------------------------------------------------------ */
+    function init() {
+        updateSelectorUI(currentCode);
+        loadCities(currentCode);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+}());
+</script>
