@@ -178,6 +178,7 @@ class LocationsController extends BaseController
                     'code' => $city->county->code ?? '',
                 ] : null,
                 'events_count' => $eventCounts[$city->id] ?? 0,
+                'is_featured' => (bool) $city->is_featured,
             ];
         });
 

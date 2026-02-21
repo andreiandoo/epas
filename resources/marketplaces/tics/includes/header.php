@@ -124,7 +124,7 @@ if ($isLoggedIn && !isset($loggedInUser)) {
                     <div class="dropdown-menu wide p-4">
                         <div class="flex items-center justify-between mb-3 px-2">
                             <span id="citiesDropdownTitle" class="text-sm font-semibold text-gray-900">Orașe din România</span>
-                            <a href="/orase" class="text-sm font-semibold text-purple-600 hover:text-purple-700">Vezi toate →</a>
+                            <a href="/locatii" class="text-sm font-semibold text-purple-600 hover:text-purple-700">Vezi toate →</a>
                         </div>
 
                         <div id="citiesDropdownContent" class="city-list grid grid-cols-4 gap-x-4">
@@ -588,6 +588,11 @@ if ($isLoggedIn && !isset($loggedInUser)) {
         .catch(showCitiesError);
     }
 
+    /* /evenimente-{city} — strips the 2-letter country prefix (ro-, md-, hu-, bg-) */
+    function cityUrl(slug) {
+        return '/evenimente-' + slug.replace(/^[a-z]{2}-/, '');
+    }
+
     function renderCities(code, cities) {
         var container = document.getElementById('citiesDropdownContent');
         var titleEl   = document.getElementById('citiesDropdownTitle');
@@ -602,22 +607,32 @@ if ($isLoggedIn && !isset($loggedInUser)) {
             return;
         }
 
-        var featured = cities.filter(function (x) { return x.events_count > 0; }).slice(0, 8);
-        var rest     = cities.filter(function (x) { return x.events_count === 0; });
+        /* 3-tier sort: featured (bold purple) → with events → rest */
+        var featured   = cities.filter(function (x) { return x.is_featured; }).slice(0, 8);
+        var withEvents = cities.filter(function (x) { return !x.is_featured && x.events_count > 0; });
+        var rest       = cities.filter(function (x) { return !x.is_featured && x.events_count === 0; });
 
         var html = '';
 
         featured.forEach(function (city) {
-            html += '<a href="/orase/' + city.slug + '" class="dropdown-link font-semibold text-purple-600">'
+            html += '<a href="' + cityUrl(city.slug) + '" class="dropdown-link font-semibold text-purple-600">'
                   + esc(city.name) + '</a>';
         });
 
-        if (featured.length && rest.length) {
+        if (featured.length && (withEvents.length || rest.length)) {
+            html += '<div class="col-span-4 border-t border-gray-100 my-2"></div>';
+        }
+
+        withEvents.forEach(function (city) {
+            html += '<a href="' + cityUrl(city.slug) + '" class="dropdown-link">' + esc(city.name) + '</a>';
+        });
+
+        if ((featured.length || withEvents.length) && rest.length) {
             html += '<div class="col-span-4 border-t border-gray-100 my-2"></div>';
         }
 
         rest.forEach(function (city) {
-            html += '<a href="/orase/' + city.slug + '" class="dropdown-link">' + esc(city.name) + '</a>';
+            html += '<a href="' + cityUrl(city.slug) + '" class="dropdown-link text-gray-400">' + esc(city.name) + '</a>';
         });
 
         container.innerHTML = html;
