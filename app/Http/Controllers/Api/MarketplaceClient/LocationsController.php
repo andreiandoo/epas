@@ -155,11 +155,11 @@ class LocationsController extends BaseController
             $query->where('slug', 'like', "%{$search}%");
         }
 
-        // Default sort by sort_order, then slug
-        $query->orderBy('sort_order')->orderBy('slug');
+        // Featured cities always appear first, then by sort_order, then slug
+        $query->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('slug');
 
         // Pagination
-        $perPage = min((int) $request->get('per_page', 8), 50);
+        $perPage = min((int) $request->get('per_page', 8), 100);
         $cities = $query->paginate($perPage);
 
         // Build event counts with diacritics-aware matching
@@ -182,10 +182,15 @@ class LocationsController extends BaseController
             ];
         });
 
-        // Sort by events if requested (do it in PHP to avoid complex SQL)
+        // Sort by events if requested — featured cities always come first
         $sortBy = $request->get('sort', 'events');
         if ($sortBy === 'events') {
-            $transformedData = $transformedData->sortByDesc('events_count')->values();
+            $transformedData = $transformedData->sort(function ($a, $b) {
+                if ($a['is_featured'] !== $b['is_featured']) {
+                    return $b['is_featured'] <=> $a['is_featured']; // featured first
+                }
+                return $b['events_count'] <=> $a['events_count'];   // then by event count desc
+            })->values();
         }
 
         // Return in paginated format (data at root, meta separate)
@@ -385,7 +390,11 @@ class LocationsController extends BaseController
         if (is_numeric($identifier)) {
             $query->where('id', $identifier);
         } else {
-            $query->where('slug', $identifier);
+            // Match exact slug (e.g. 'ro-bucuresti') OR base slug without country prefix (e.g. 'bucuresti')
+            $query->where(function ($q) use ($identifier) {
+                $q->where('slug', $identifier)
+                  ->orWhere('slug', 'like', '%-' . $identifier);
+            });
         }
 
         $city = $query->with(['region:id,name,slug', 'county:id,name,code'])->first();
