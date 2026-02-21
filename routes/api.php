@@ -742,7 +742,7 @@ Route::prefix('promo-codes')->middleware(['throttle:api'])->group(function () {
     Route::post('/{tenantId}/validate', [App\Http\Controllers\Api\PromoCodeController::class, 'validate'])
         ->name('api.promo-codes.validate')
         ->withoutMiddleware(['throttle:api'])
-        ->middleware('throttle:60,1'); // 60 requests per minute
+        ->middleware('throttle:15,1');
 });
 
 /*
@@ -1068,9 +1068,11 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
         Route::post('/checkout/calculate', [ShopCheckoutController::class, 'calculateTotals'])
             ->name('api.tenant-client.shop.checkout.calculate');
         Route::post('/checkout/create-order', [ShopCheckoutController::class, 'createOrder'])
-            ->name('api.tenant-client.shop.checkout.create-order');
+            ->name('api.tenant-client.shop.checkout.create-order')
+            ->middleware('throttle:10,1');
         Route::post('/checkout/orders/{orderNumber}/confirm-payment', [ShopCheckoutController::class, 'confirmPayment'])
-            ->name('api.tenant-client.shop.checkout.confirm-payment');
+            ->name('api.tenant-client.shop.checkout.confirm-payment')
+            ->middleware('throttle:10,1');
 
         // Wishlist
         Route::get('/wishlist', [ShopWishlistController::class, 'index'])
@@ -1409,7 +1411,8 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
     Route::get('/orders', [MarketplaceOrdersController::class, 'index'])
         ->name('api.marketplace-client.orders');
     Route::post('/orders', [MarketplaceOrdersController::class, 'create'])
-        ->name('api.marketplace-client.orders.create');
+        ->name('api.marketplace-client.orders.create')
+        ->middleware('throttle:10,1');
     Route::get('/orders/{order}', [MarketplaceOrdersController::class, 'show'])
         ->name('api.marketplace-client.orders.show');
     Route::post('/orders/{order}/cancel', [MarketplaceOrdersController::class, 'cancel'])
@@ -1425,7 +1428,8 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
 
     // Payment
     Route::post('/orders/{order}/pay', [MarketplacePaymentController::class, 'initiate'])
-        ->name('api.marketplace-client.orders.pay');
+        ->name('api.marketplace-client.orders.pay')
+        ->middleware('throttle:10,1');
     Route::get('/orders/{order}/payment-status', [MarketplacePaymentController::class, 'status'])
         ->name('api.marketplace-client.orders.payment-status');
 
@@ -1457,7 +1461,8 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
 
     // Promo Codes (public endpoints for checkout)
     Route::post('/promo-codes/validate', [MarketplacePromoCodeController::class, 'validate'])
-        ->name('api.marketplace-client.promo-codes.validate');
+        ->name('api.marketplace-client.promo-codes.validate')
+        ->middleware('throttle:15,1');
     Route::get('/events/{event}/promo-codes', [MarketplacePromoCodeController::class, 'publicCodes'])
         ->name('api.marketplace-client.events.promo-codes');
 });
@@ -2018,7 +2023,8 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
     Route::get('/checkout/summary', [App\Http\Controllers\Api\MarketplaceClient\Customer\CheckoutController::class, 'summary'])
         ->name('api.marketplace-client.customer.checkout.summary');
     Route::post('/checkout', [App\Http\Controllers\Api\MarketplaceClient\Customer\CheckoutController::class, 'checkout'])
-        ->name('api.marketplace-client.customer.checkout');
+        ->name('api.marketplace-client.customer.checkout')
+        ->middleware('throttle:10,1');
 
     // Gift Cards (public - for purchasing and checking balance)
     Route::get('/gift-cards/options', [CustomerGiftCardController::class, 'options'])

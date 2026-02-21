@@ -185,6 +185,14 @@ Schedule::call(function () {
     }
 })->everyFiveMinutes();
 
+// Database Replication: Check replica health (every 5 minutes)
+Schedule::command('db:replication-health')
+    ->everyFiveMinutes()
+    ->runInBackground()
+    ->onFailure(function () {
+        \Log::critical('PostgreSQL replication health check failed');
+    });
+
 // Services Status: Log service status for uptime tracking (every 5 minutes)
 Schedule::command('services:check-status')
     ->everyFiveMinutes()

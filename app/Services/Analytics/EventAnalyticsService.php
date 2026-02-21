@@ -682,7 +682,18 @@ class EventAnalyticsService
             ->limit($limit)
             ->get();
 
-        return $orders->map(function ($order) use ($isMarketplace) {
+        // Pre-fetch returning customers in a single query instead of N+1
+        $customerIds = $orders->pluck('marketplace_customer_id')->filter()->unique()->values();
+        $returningCustomerIds = $customerIds->isNotEmpty()
+            ? Order::whereIn('marketplace_customer_id', $customerIds)
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->groupBy('marketplace_customer_id')
+                ->havingRaw('COUNT(*) > 1')
+                ->pluck('marketplace_customer_id')
+                ->flip()
+            : collect();
+
+        return $orders->map(function ($order) use ($isMarketplace, $returningCustomerIds) {
             $customer = $order->marketplaceCustomer;
             $name = $customer?->name ?? $order->customer_name ?? 'Anonymous';
             $nameParts = explode(' ', $name);
@@ -717,11 +728,8 @@ class EventAnalyticsService
                 default => '💳',
             };
 
-            // Check if returning customer
-            $isReturning = $customer ? Order::where('marketplace_customer_id', $customer->id)
-                ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                ->where('id', '!=', $order->id)
-                ->exists() : false;
+            // Check if returning customer (pre-fetched, no N+1)
+            $isReturning = $customer && $returningCustomerIds->has($customer->id);
 
             return [
                 'id' => $order->id,
@@ -1066,56 +1074,50 @@ class EventAnalyticsService
      */
     protected function computeHourlyChartFromRaw(MarketplaceEvent $event, string $date, int $upToHour): array
     {
-        $chart = [];
         $startOfDay = Carbon::parse($date)->startOfDay();
+        $endOfRange = $startOfDay->copy()->addHours($upToHour + 1);
 
+        // Single query for tracking data grouped by hour
+        $trackingByHour = (clone $this->getTrackingQuery($event))
+            ->whereBetween('created_at', [$startOfDay, $endOfRange])
+            ->selectRaw("
+                EXTRACT(HOUR FROM created_at)::int as hour,
+                COUNT(CASE WHEN event_type = ? OR event_type IS NULL OR event_type = '' THEN 1 END) as page_views,
+                COUNT(DISTINCT CASE WHEN event_type = ? OR event_type IS NULL OR event_type = '' THEN visitor_id END) as unique_visitors,
+                COUNT(CASE WHEN event_type = ? THEN 1 END) as purchases
+            ", [CoreCustomerEvent::TYPE_PAGE_VIEW, CoreCustomerEvent::TYPE_PAGE_VIEW, CoreCustomerEvent::TYPE_PURCHASE])
+            ->groupByRaw('EXTRACT(HOUR FROM created_at)::int')
+            ->get()
+            ->keyBy('hour');
+
+        // Single query for revenue by hour
+        $revenueByHour = $this->getOrdersQuery($event)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->whereBetween('paid_at', [$startOfDay, $endOfRange])
+            ->selectRaw("EXTRACT(HOUR FROM paid_at)::int as hour, SUM(total) as revenue")
+            ->groupByRaw('EXTRACT(HOUR FROM paid_at)::int')
+            ->get()
+            ->keyBy('hour');
+
+        // Single query for tickets by hour
+        $ticketsByHour = Ticket::where('marketplace_event_id', $event->id)
+            ->whereIn('status', ['valid', 'checked_in'])
+            ->whereBetween('created_at', [$startOfDay, $endOfRange])
+            ->selectRaw("EXTRACT(HOUR FROM created_at)::int as hour, COUNT(*) as tickets_sold")
+            ->groupByRaw('EXTRACT(HOUR FROM created_at)::int')
+            ->get()
+            ->keyBy('hour');
+
+        $chart = [];
         for ($hour = 0; $hour <= $upToHour; $hour++) {
-            $hourStart = $startOfDay->copy()->addHours($hour);
-            $hourEnd = $hourStart->copy()->addHour();
-
-            // Use helper for backwards compatibility
-            // Include page_view events OR any records without event_type (for legacy data)
-            $pageViews = (clone $this->getTrackingQuery($event))
-                ->where(function ($q) {
-                    $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
-                      ->orWhereNull('event_type')
-                      ->orWhere('event_type', '');
-                })
-                ->whereBetween('created_at', [$hourStart, $hourEnd])
-                ->count();
-
-            $uniqueVisitors = (clone $this->getTrackingQuery($event))
-                ->where(function ($q) {
-                    $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
-                      ->orWhereNull('event_type')
-                      ->orWhere('event_type', '');
-                })
-                ->whereBetween('created_at', [$hourStart, $hourEnd])
-                ->distinct('visitor_id')
-                ->count('visitor_id');
-
-            $purchases = (clone $this->getTrackingQuery($event))
-                ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
-                ->whereBetween('created_at', [$hourStart, $hourEnd])
-                ->count();
-
-            $revenue = $this->getOrdersQuery($event)
-                ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                ->whereBetween('paid_at', [$hourStart, $hourEnd])
-                ->sum('total');
-
-            $ticketsSold = Ticket::where('marketplace_event_id', $event->id)
-                ->whereIn('status', ['valid', 'checked_in'])
-                ->whereBetween('created_at', [$hourStart, $hourEnd])
-                ->count();
-
+            $tracking = $trackingByHour->get($hour);
             $chart[] = [
                 'hour' => sprintf('%02d:00', $hour),
-                'page_views' => $pageViews,
-                'unique_visitors' => $uniqueVisitors,
-                'purchases' => $purchases,
-                'revenue' => $revenue,
-                'tickets_sold' => $ticketsSold,
+                'page_views' => $tracking?->page_views ?? 0,
+                'unique_visitors' => $tracking?->unique_visitors ?? 0,
+                'purchases' => $tracking?->purchases ?? 0,
+                'revenue' => $revenueByHour->get($hour)?->revenue ?? 0,
+                'tickets_sold' => $ticketsByHour->get($hour)?->tickets_sold ?? 0,
             ];
         }
 

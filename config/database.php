@@ -86,8 +86,33 @@ return [
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '5432'),
+
+            // Write operations → Primary
+            'write' => [
+                'host' => env('DB_HOST', '127.0.0.1'),
+                'port' => env('DB_PORT', '5432'),
+            ],
+
+            // Read operations → Replicas (Laravel auto load-balances)
+            'read' => env('DB_READ_HOST_1') ? [
+                [
+                    'host' => env('DB_READ_HOST_1'),
+                    'port' => env('DB_READ_PORT_1', '5432'),
+                ],
+                [
+                    'host' => env('DB_READ_HOST_2', env('DB_READ_HOST_1')),
+                    'port' => env('DB_READ_PORT_2', '5432'),
+                ],
+            ] : [
+                [
+                    'host' => env('DB_HOST', '127.0.0.1'),
+                    'port' => env('DB_PORT', '5432'),
+                ],
+            ],
+
+            // After a write, reads go to primary for the rest of the request
+            'sticky' => true,
+
             'database' => env('DB_DATABASE', 'laravel'),
             'username' => env('DB_USERNAME', 'root'),
             'password' => env('DB_PASSWORD', ''),

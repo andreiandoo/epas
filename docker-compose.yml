@@ -22,9 +22,14 @@ services:
     networks:
       - sail
     depends_on:
-      - pgsql
-      - redis
+      pgsql:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
+  # ==========================================================================
+  # PostgreSQL Primary (Read/Write)
+  # ==========================================================================
   pgsql:
     image: postgres:16
     ports:
@@ -35,6 +40,69 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - sail-pgsql:/var/lib/postgresql/data
+      - ./docker/postgres/primary/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./docker/postgres/primary/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./docker/postgres/primary/init-replication.sql:/docker-entrypoint-initdb.d/init-replication.sql
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf -c hba_file=/etc/postgresql/pg_hba.conf
+    networks:
+      - sail
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sail"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================================================
+  # PostgreSQL Replica 1 (Read-Only)
+  # ==========================================================================
+  pgsql-replica-1:
+    image: postgres:16
+    ports:
+      - "5433:5432"
+    environment:
+      PGUSER: replicator
+      PGPASSWORD: replicator_password
+    volumes:
+      - sail-pgsql-replica-1:/var/lib/postgresql/data
+      - ./docker/postgres/replica/setup-replica.sh:/docker-entrypoint-initdb.d/setup-replica.sh
+    depends_on:
+      pgsql:
+        condition: service_healthy
+    networks:
+      - sail
+
+  # ==========================================================================
+  # PostgreSQL Replica 2 (Read-Only)
+  # ==========================================================================
+  pgsql-replica-2:
+    image: postgres:16
+    ports:
+      - "5434:5432"
+    environment:
+      PGUSER: replicator
+      PGPASSWORD: replicator_password
+    volumes:
+      - sail-pgsql-replica-2:/var/lib/postgresql/data
+      - ./docker/postgres/replica/setup-replica.sh:/docker-entrypoint-initdb.d/setup-replica.sh
+    depends_on:
+      pgsql:
+        condition: service_healthy
+    networks:
+      - sail
+
+  # ==========================================================================
+  # Automated Backup (every 6 hours)
+  # ==========================================================================
+  pgbackup:
+    image: postgres:16
+    volumes:
+      - ./backups:/backups
+      - ./docker/postgres/scripts/backup.sh:/backup.sh
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["while true; do /backup.sh; sleep 21600; done"]
+    depends_on:
+      pgsql:
+        condition: service_healthy
     networks:
       - sail
 
@@ -61,6 +129,10 @@ networks:
 
 volumes:
   sail-pgsql:
+    driver: local
+  sail-pgsql-replica-1:
+    driver: local
+  sail-pgsql-replica-2:
     driver: local
   sail-redis:
     driver: local

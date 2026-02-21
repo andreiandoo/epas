@@ -87,8 +87,8 @@ class PromoCodeUsageAnalyzer
                 MAX(used_at) as last_use
             FROM promo_code_usage
             WHERE promo_code_id = ?
-            GROUP BY customer_id, DATE_FORMAT(used_at, '%Y-%m-%d %H:%i')
-            HAVING uses > 3
+            GROUP BY customer_id, TO_CHAR(used_at, 'YYYY-MM-DD HH24:MI')
+            HAVING COUNT(*) > 3
         ", [$promoCodeId]);
 
         if (count($rapidUsage) > 0) {
@@ -129,7 +129,7 @@ class PromoCodeUsageAnalyzer
             ->whereNotNull('pc.usage_limit_per_customer')
             ->select('pcu.customer_id', DB::raw('COUNT(*) as uses'), 'pc.usage_limit_per_customer')
             ->groupBy('pcu.customer_id', 'pc.usage_limit_per_customer')
-            ->havingRaw('uses > pc.usage_limit_per_customer')
+            ->havingRaw('COUNT(*) > pc.usage_limit_per_customer')
             ->get();
 
         if ($customerOveruse->count() > 0) {
@@ -158,14 +158,14 @@ class PromoCodeUsageAnalyzer
     public function getUsageTimeline(string $promoCodeId, string $groupBy = 'day'): array
     {
         $dateFormat = match($groupBy) {
-            'week' => '%Y-%u',
-            'month' => '%Y-%m',
-            default => '%Y-%m-%d',
+            'week' => 'IYYY-IW',
+            'month' => 'YYYY-MM',
+            default => 'YYYY-MM-DD',
         };
 
         $timeline = DB::select("
             SELECT
-                DATE_FORMAT(used_at, ?) as period,
+                TO_CHAR(used_at, ?) as period,
                 COUNT(*) as uses,
                 SUM(discount_amount) as total_discount,
                 SUM(original_amount) as total_revenue,
