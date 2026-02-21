@@ -32,7 +32,6 @@ class ImportMarketplaceOrganizersCommand extends Command
         }
 
         $created = 0;
-        $updated = 0;
         $skipped = 0;
 
         while (($row = fgetcsv($handle)) !== false) {
@@ -61,29 +60,23 @@ class ImportMarketplaceOrganizersCommand extends Command
                 continue;
             }
 
-            // Upsert by email — one organizer per email across all marketplaces
-            $existing = MarketplaceOrganizer::where('email', $email)->first();
-            $isNew = !$existing;
-
-            $fields = $this->buildFields($data, $marketplaceClientId, $isNew);
-
-            if ($existing) {
-                // Update existing — preserve password
-                $updateFields = $fields;
-                unset($updateFields['password'], $updateFields['slug']);
-                MarketplaceOrganizer::where('id', $existing->id)->update($updateFields);
-                $this->line("Updated: {$email}");
-                $updated++;
-            } else {
-                MarketplaceOrganizer::create($fields);
-                $this->line("Created: {$email}");
-                $created++;
+            // Skip if email already exists
+            if (MarketplaceOrganizer::where('email', $email)->exists()) {
+                $this->line("Skipped (already exists): {$email}");
+                $skipped++;
+                continue;
             }
+
+            $fields = $this->buildFields($data, $marketplaceClientId);
+
+            MarketplaceOrganizer::create($fields);
+            $this->line("Created: {$email}");
+            $created++;
         }
 
         fclose($handle);
 
-        $this->info("Import complete! Created: {$created} | Updated: {$updated} | Skipped: {$skipped}");
+        $this->info("Import complete! Created: {$created} | Skipped: {$skipped}");
 
         return 0;
     }
@@ -93,15 +86,26 @@ class ImportMarketplaceOrganizersCommand extends Command
         return ($value !== null && $value !== '') ? $value : null;
     }
 
-    private function buildFields(array $data, int $marketplaceClientId, bool $isNew): array
+    private function uniqueSlug(string $base, int $marketplaceClientId): string
+    {
+        $slug = $base;
+        $i = 2;
+        while (MarketplaceOrganizer::where('marketplace_client_id', $marketplaceClientId)->where('slug', $slug)->exists()) {
+            $slug = $base . '-' . $i++;
+        }
+        return $slug;
+    }
+
+    private function buildFields(array $data, int $marketplaceClientId): array
     {
         $name = $this->n($data['name'] ?? null);
+        $slug = $name ? $this->uniqueSlug(Str::slug($name), $marketplaceClientId) : null;
 
         $fields = [
             'marketplace_client_id' => $marketplaceClientId,
             'email'                 => strtolower(trim($data['email'])),
             'name'                  => $name,
-            'slug'                  => $isNew && $name ? Str::slug($name) : null,
+            'slug'                  => $slug,
             'contact_name'          => $this->n($data['contact_name'] ?? null),
             'phone'                 => $this->n($data['phone'] ?? null),
             'description'           => $this->n($data['description'] ?? null),
@@ -153,9 +157,7 @@ class ImportMarketplaceOrganizersCommand extends Command
         ];
 
         // Plain password for new records — model's 'hashed' cast will hash it on set
-        if ($isNew) {
-            $fields['password'] = Str::random(24);
-        }
+        $fields['password'] = Str::random(24);
 
         // Remove null values so existing column values are not overwritten with null on update
         return array_filter($fields, fn($v) => $v !== null);
