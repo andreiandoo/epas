@@ -104,7 +104,10 @@ class ListOrganizers extends ListRecords
                         return;
                     }
 
-                    $marketplace = OrganizerResource::getMarketplaceClient();
+                    $user = auth()->user();
+                    $marketplace = ($user && method_exists($user, 'marketplaceClient'))
+                        ? $user->marketplaceClient
+                        : null;
 
                     Artisan::call('import:marketplace-organizers', [
                         'file'            => $filePath,
