@@ -410,6 +410,14 @@ class OrganizerResource extends Resource
                                 ->suffix('%')
                                 ->helperText('Leave empty to use marketplace default'),
 
+                            Forms\Components\TextInput::make('fixed_commission_default')
+                                ->label('Fixed Commission (RON)')
+                                ->numeric()
+                                ->minValue(0)
+                                ->step(0.5)
+                                ->suffix('RON')
+                                ->helperText('Fixed amount per ticket. Leave empty to use only percentage rate.'),
+
                             Forms\Components\Select::make('default_commission_mode')
                                 ->label('Default Commission Mode')
                                 ->options([
