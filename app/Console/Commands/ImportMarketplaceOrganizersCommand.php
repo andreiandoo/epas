@@ -33,6 +33,7 @@ class ImportMarketplaceOrganizersCommand extends Command
         }
 
         $created = 0;
+        $updated = 0;
         $skipped = 0;
 
         while (($row = fgetcsv($handle)) !== false) {
@@ -61,37 +62,52 @@ class ImportMarketplaceOrganizersCommand extends Command
                 continue;
             }
 
-            // Skip if email already exists
-            if (MarketplaceOrganizer::where('email', $email)->exists()) {
-                $this->line("Skipped (already exists): {$email}");
-                $skipped++;
-                continue;
+            $existing = MarketplaceOrganizer::where('email', $email)->first();
+            $fields   = $this->buildFields($data, $marketplaceClientId, isNew: !$existing);
+
+            if ($existing) {
+                // Update — preserve password and slug
+                $updateFields = $fields;
+                unset($updateFields['password'], $updateFields['slug']);
+                $existing->update($updateFields);
+                $organizer = $existing;
+                $this->line("Updated: {$email}");
+                $updated++;
+            } else {
+                $organizer = MarketplaceOrganizer::create($fields);
+                $this->line("Created: {$email}");
+                $created++;
             }
 
-            $fields = $this->buildFields($data, $marketplaceClientId);
-
-            $organizer = MarketplaceOrganizer::create($fields);
-
-            // Create bank account record if bank data provided
+            // Sync primary bank account if bank data provided
             $bankName = $this->n($data['bank_name'] ?? null);
-            $iban = $this->n($data['iban'] ?? null);
+            $iban     = $this->n($data['iban'] ?? null);
             if ($bankName || $iban) {
-                MarketplaceOrganizerBankAccount::create([
-                    'marketplace_organizer_id' => $organizer->id,
-                    'bank_name'                => $bankName,
-                    'iban'                     => $iban,
-                    'account_holder'           => $organizer->company_name ?? $organizer->name,
-                    'is_primary'               => true,
-                ]);
-            }
+                $primary = MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizer->id)
+                    ->where('is_primary', true)
+                    ->first();
 
-            $this->line("Created: {$email}");
-            $created++;
+                if ($primary) {
+                    $primary->update([
+                        'bank_name'      => $bankName ?? $primary->bank_name,
+                        'iban'           => $iban ?? $primary->iban,
+                        'account_holder' => $organizer->company_name ?? $organizer->name,
+                    ]);
+                } else {
+                    MarketplaceOrganizerBankAccount::create([
+                        'marketplace_organizer_id' => $organizer->id,
+                        'bank_name'                => $bankName,
+                        'iban'                     => $iban,
+                        'account_holder'           => $organizer->company_name ?? $organizer->name,
+                        'is_primary'               => true,
+                    ]);
+                }
+            }
         }
 
         fclose($handle);
 
-        $this->info("Import complete! Created: {$created} | Skipped: {$skipped}");
+        $this->info("Import complete! Created: {$created} | Updated: {$updated} | Skipped: {$skipped}");
 
         return 0;
     }
@@ -111,10 +127,10 @@ class ImportMarketplaceOrganizersCommand extends Command
         return $slug;
     }
 
-    private function buildFields(array $data, int $marketplaceClientId): array
+    private function buildFields(array $data, int $marketplaceClientId, bool $isNew = true): array
     {
         $name = $this->n($data['name'] ?? null);
-        $slug = $name ? $this->uniqueSlug(Str::slug($name), $marketplaceClientId) : null;
+        $slug = ($isNew && $name) ? $this->uniqueSlug(Str::slug($name), $marketplaceClientId) : null;
 
         $fields = [
             'marketplace_client_id' => $marketplaceClientId,
@@ -171,8 +187,10 @@ class ImportMarketplaceOrganizersCommand extends Command
             'status'                => $this->n($data['status'] ?? null) ?? 'active',
         ];
 
-        // Plain password for new records — model's 'hashed' cast will hash it on set
-        $fields['password'] = Str::random(24);
+        // Plain password only for new records — model's 'hashed' cast will hash it on set
+        if ($isNew) {
+            $fields['password'] = Str::random(24);
+        }
 
         // Remove null values so existing column values are not overwritten with null on update
         return array_filter($fields, fn($v) => $v !== null);
