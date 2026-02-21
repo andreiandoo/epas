@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\MarketplaceClient;
 use App\Models\MarketplaceOrganizer;
+use App\Models\MarketplaceOrganizerBankAccount;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
@@ -69,7 +70,21 @@ class ImportMarketplaceOrganizersCommand extends Command
 
             $fields = $this->buildFields($data, $marketplaceClientId);
 
-            MarketplaceOrganizer::create($fields);
+            $organizer = MarketplaceOrganizer::create($fields);
+
+            // Create bank account record if bank data provided
+            $bankName = $this->n($data['bank_name'] ?? null);
+            $iban = $this->n($data['iban'] ?? null);
+            if ($bankName || $iban) {
+                MarketplaceOrganizerBankAccount::create([
+                    'marketplace_organizer_id' => $organizer->id,
+                    'bank_name'                => $bankName,
+                    'iban'                     => $iban,
+                    'account_holder'           => $organizer->company_name ?? $organizer->name,
+                    'is_primary'               => true,
+                ]);
+            }
+
             $this->line("Created: {$email}");
             $created++;
         }
