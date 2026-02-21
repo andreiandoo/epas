@@ -239,6 +239,7 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -266,6 +267,9 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
             }
         }
     </script>
+
+    <!-- Flag Icons (SVG-based, works on all platforms including Windows) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>">

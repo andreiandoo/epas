@@ -54,25 +54,24 @@ if ($isLoggedIn && !isset($loggedInUser)) {
                 <!-- Country Selector -->
                 <div class="dropdown h-full flex items-center">
                     <button class="nav-link" type="button">
-                        <span id="countryFlag" class="text-xl leading-none">🇷🇴</span>
-                        <span id="countryName" class="hidden xl:inline">România</span>
+                        <span id="countryFlag" class="fi fi-ro" style="border-radius:3px;font-size:1.3rem;"></span>
                         <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
                     <div class="dropdown-menu py-2" style="min-width:200px">
                         <p class="px-4 pb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Selectează țara</p>
-                        <button class="dropdown-link country-option flex items-center gap-2.5 active" type="button" data-code="RO" data-flag="🇷🇴" data-name="România" onclick="ticsSelectCountry(this)">
-                            <span class="text-lg">🇷🇴</span> România
+                        <button class="dropdown-link country-option flex items-center gap-2.5 active" type="button" data-code="RO" data-name="România" onclick="ticsSelectCountry(this)">
+                            <span class="fi fi-ro" style="border-radius:2px;"></span> România
                         </button>
-                        <button class="dropdown-link country-option flex items-center gap-2.5" type="button" data-code="MD" data-flag="🇲🇩" data-name="Moldova" onclick="ticsSelectCountry(this)">
-                            <span class="text-lg">🇲🇩</span> Moldova
+                        <button class="dropdown-link country-option flex items-center gap-2.5" type="button" data-code="MD" data-name="Moldova" onclick="ticsSelectCountry(this)">
+                            <span class="fi fi-md" style="border-radius:2px;"></span> Moldova
                         </button>
-                        <button class="dropdown-link country-option flex items-center gap-2.5" type="button" data-code="HU" data-flag="🇭🇺" data-name="Ungaria" onclick="ticsSelectCountry(this)">
-                            <span class="text-lg">🇭🇺</span> Ungaria
+                        <button class="dropdown-link country-option flex items-center gap-2.5" type="button" data-code="HU" data-name="Ungaria" onclick="ticsSelectCountry(this)">
+                            <span class="fi fi-hu" style="border-radius:2px;"></span> Ungaria
                         </button>
-                        <button class="dropdown-link country-option flex items-center gap-2.5" type="button" data-code="BG" data-flag="🇧🇬" data-name="Bulgaria" onclick="ticsSelectCountry(this)">
-                            <span class="text-lg">🇧🇬</span> Bulgaria
+                        <button class="dropdown-link country-option flex items-center gap-2.5" type="button" data-code="BG" data-name="Bulgaria" onclick="ticsSelectCountry(this)">
+                            <span class="fi fi-bg" style="border-radius:2px;"></span> Bulgaria
                         </button>
                     </div>
                 </div>
@@ -522,10 +521,10 @@ if ($isLoggedIn && !isset($loggedInUser)) {
     'use strict';
 
     var COUNTRIES = {
-        RO: { flag: '🇷🇴', name: 'România'  },
-        MD: { flag: '🇲🇩', name: 'Moldova'  },
-        HU: { flag: '🇭🇺', name: 'Ungaria'  },
-        BG: { flag: '🇧🇬', name: 'Bulgaria' },
+        RO: { name: 'România'  },
+        MD: { name: 'Moldova'  },
+        HU: { name: 'Ungaria'  },
+        BG: { name: 'Bulgaria' },
     };
 
     var citiesCache  = {};
@@ -547,11 +546,13 @@ if ($isLoggedIn && !isset($loggedInUser)) {
     /* UI helpers                                                           */
     /* ------------------------------------------------------------------ */
     function updateSelectorUI(code) {
-        var c      = COUNTRIES[code] || COUNTRIES.RO;
         var flagEl = document.getElementById('countryFlag');
-        var nameEl = document.getElementById('countryName');
-        if (flagEl) flagEl.textContent = c.flag;
-        if (nameEl) nameEl.textContent = c.name;
+        if (flagEl) {
+            // Swap fi-XX class to reflect the selected country
+            flagEl.className = 'fi fi-' + code.toLowerCase();
+            flagEl.style.borderRadius = '3px';
+            flagEl.style.fontSize = '1.3rem';
+        }
         document.querySelectorAll('.country-option').forEach(function (el) {
             el.classList.toggle('active', el.dataset.code === code);
         });
@@ -571,11 +572,9 @@ if ($isLoggedIn && !isset($loggedInUser)) {
             '<div class="w-5 h-5 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>' +
             '</div>';
 
-        var base = (window.TICS_API_BASE || 'https://core.tixello.com/api/marketplace-client').replace(/\/$/, '');
-        var key  = window.TICS_API_KEY || '';
-
-        fetch(base + '/locations/cities?country=' + encodeURIComponent(code) + '&per_page=50&sort=events', {
-            headers: { 'X-Marketplace-Key': key, 'Accept': 'application/json' }
+        // Use local PHP proxy to avoid CORS (server-to-server call)
+        fetch('/api/cities.php?country=' + encodeURIComponent(code) + '&per_page=50&sort=events', {
+            headers: { 'Accept': 'application/json' }
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
