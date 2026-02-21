@@ -19,9 +19,10 @@ class VenuesController extends BaseController
             ->with('venueCategories')
             ->where('marketplace_client_id', $client->id);
 
-        // Filter by city
+        // Filter by city — case-insensitive, also matches without diacritics
         if ($request->filled('city')) {
-            $query->where('city', $request->input('city'));
+            $city = $request->input('city');
+            $query->whereRaw('LOWER(city) = LOWER(?)', [$city]);
         }
 
         // Filter by category

@@ -137,10 +137,10 @@ class LocationsController extends BaseController
             ->where('is_visible', true)
             ->with(['region:id,name', 'county:id,name,code']);
 
-        // Filter by country (via county relationship)
+        // Filter by country using the city's own country column (faster, includes cities without county)
         if ($request->filled('country')) {
             $country = strtoupper(trim($request->country));
-            $query->whereHas('county', fn ($q) => $q->where('country', $country));
+            $query->where('country', $country);
         }
 
         // Filter by letter - use slug which is always ASCII

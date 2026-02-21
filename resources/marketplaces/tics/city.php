@@ -52,6 +52,10 @@ if (!empty($city['county']['name']))  $locationLabel .= ($locationLabel ? ', ' :
 // Hero image: prefer cover_image, fallback to image
 $heroImage = $city['cover_image'] ?? $city['image'] ?? '';
 
+// ── Fetch venues in this city from API ───────────────────────────────────────
+$venuesResponse = callApi('venues', ['city' => $cityName, 'sort' => 'events', 'per_page' => 6]);
+$cityVenues = ($venuesResponse['success'] ?? false) ? ($venuesResponse['data'] ?? []) : [];
+
 // ── Page configuration ────────────────────────────────────────────────────────
 $pageTitle       = 'Evenimente în ' . $cityName;
 $pageDescription = !empty($city['description'])
@@ -142,6 +146,55 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 </div>
+
+<!-- Venues Section -->
+<?php if (!empty($cityVenues)): ?>
+<section class="max-w-[1600px] mx-auto px-4 lg:px-8 py-8">
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <h2 class="text-xl font-semibold text-gray-900">Locații populare în <?= e($cityName) ?></h2>
+            <p class="text-sm text-gray-500">Sălile și arenele cu cele mai multe evenimente</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <?php foreach ($cityVenues as $venue): ?>
+        <?php
+            $vImage   = $venue['image'] ?? '';
+            $vName    = $venue['name'] ?? '';
+            $vSlug    = $venue['slug'] ?? '';
+            $vEvents  = (int) ($venue['events_count'] ?? 0);
+            $vCap     = (int) ($venue['capacity'] ?? 0);
+        ?>
+        <a href="<?= e(venueUrl($vSlug)) ?>" class="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:border-gray-300 hover:shadow-md transition-all">
+            <div class="aspect-[4/3] bg-gray-100 overflow-hidden">
+                <?php if ($vImage): ?>
+                <img src="<?= e($vImage) ?>" alt="<?= e($vName) ?>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <?php else: ?>
+                <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                </div>
+                <?php endif; ?>
+            </div>
+            <div class="p-3">
+                <h3 class="font-semibold text-gray-900 text-sm leading-tight mb-1 truncate"><?= e($vName) ?></h3>
+                <?php if ($vCap > 0): ?>
+                <p class="text-xs text-gray-400 mb-1"><?= number_format($vCap) ?> locuri</p>
+                <?php endif; ?>
+                <?php if ($vEvents > 0): ?>
+                <span class="inline-flex items-center gap-1 text-xs font-semibold text-purple-600">
+                    <span class="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
+                    <?= $vEvents ?> <?= $vEvents === 1 ? 'eveniment' : 'evenimente' ?>
+                </span>
+                <?php else: ?>
+                <span class="text-xs text-gray-400">Niciun eveniment acum</span>
+                <?php endif; ?>
+            </div>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
 
 <!-- Main Content -->
 <main class="max-w-[1600px] mx-auto px-4 lg:px-8 py-6">
