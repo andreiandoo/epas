@@ -119,9 +119,16 @@ class MarketplaceOrganizer extends Authenticatable
         parent::boot();
 
         static::creating(function ($organizer) {
-            if (empty($organizer->slug)) {
-                $organizer->slug = Str::slug($organizer->name);
+            if (!$organizer->name) {
+                return;
             }
+            $base = !empty($organizer->slug) ? $organizer->slug : Str::slug($organizer->name);
+            $slug = $base;
+            $i = 2;
+            while (static::where('marketplace_client_id', $organizer->marketplace_client_id)->where('slug', $slug)->exists()) {
+                $slug = $base . '-' . $i++;
+            }
+            $organizer->slug = $slug;
         });
     }
 
