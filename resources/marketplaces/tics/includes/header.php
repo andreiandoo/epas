@@ -573,7 +573,7 @@ if ($isLoggedIn && !isset($loggedInUser)) {
             '</div>';
 
         // Use local PHP proxy to avoid CORS (server-to-server call)
-        fetch('/api/cities.php?country=' + encodeURIComponent(code) + '&per_page=50&sort=events', {
+        fetch('/api/cities.php?country=' + encodeURIComponent(code) + '&per_page=200&sort=events', {
             headers: { 'Accept': 'application/json' }
         })
         .then(function (r) { return r.json(); })

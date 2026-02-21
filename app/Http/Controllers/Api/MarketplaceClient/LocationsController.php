@@ -159,7 +159,7 @@ class LocationsController extends BaseController
         $query->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('slug');
 
         // Pagination
-        $perPage = min((int) $request->get('per_page', 8), 100);
+        $perPage = min((int) $request->get('per_page', 8), 200);
         $cities = $query->paginate($perPage);
 
         // Build event counts with diacritics-aware matching

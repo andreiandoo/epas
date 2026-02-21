@@ -163,7 +163,7 @@ require_once 'includes/header.php';
                 '</div>';
         }
 
-        fetch('/api/cities.php?country=' + encodeURIComponent(code) + '&per_page=100&sort=events', {
+        fetch('/api/cities.php?country=' + encodeURIComponent(code) + '&per_page=200&sort=events', {
             headers: { 'Accept': 'application/json' }
         })
         .then(function (r) { return r.json(); })

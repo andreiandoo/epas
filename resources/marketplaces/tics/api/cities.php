@@ -7,7 +7,7 @@
  *
  * Query params:
  *   country  – ISO 2-letter code (RO, MD, HU, BG)
- *   per_page – max results (default 50, max 100)
+ *   per_page – max results (default 50, max 200)
  *   sort     – "events" (default) or "name"
  */
 
@@ -19,7 +19,7 @@ header('Cache-Control: public, max-age=300'); // 5-minute browser cache
 // Validate inputs
 $country = strtoupper(preg_replace('/[^A-Za-z]/', '', $_GET['country'] ?? ''));
 $sort    = in_array($_GET['sort'] ?? '', ['events', 'name']) ? $_GET['sort'] : 'events';
-$perPage = min(max((int) ($_GET['per_page'] ?? 50), 1), 100);
+$perPage = min(max((int) ($_GET['per_page'] ?? 50), 1), 200);
 
 $params = ['per_page' => $perPage, 'sort' => $sort];
 if ($country !== '') {
