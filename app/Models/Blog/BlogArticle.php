@@ -69,6 +69,7 @@ class BlogArticle extends Model
         'comment_count',
         'language',
         'translations',
+        'event_id',
         'created_by',
         'updated_by',
     ];
@@ -276,6 +277,11 @@ class BlogArticle extends Model
     public function marketplaceClient()
     {
         return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Event::class);
     }
 
 }

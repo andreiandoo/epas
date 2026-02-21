@@ -67,6 +67,7 @@ class BlogController extends Controller
                             ->orderBy('created_at', 'desc')
                             ->skip(($page - 1) * $perPage)
                             ->take($perPage)
+                            ->with(['event'])
                             ->get();
 
         $data = $articles->map(fn ($a) => $this->formatArticle($a, $lang))->values();
@@ -96,7 +97,7 @@ class BlogController extends Controller
         $article = BlogArticle::where('marketplace_client_id', $client->id)
             ->where('slug', $slug)
             ->where('status', 'published')
-            ->with(['category'])
+            ->with(['category', 'event'])
             ->first();
 
         if (!$article) {
@@ -147,6 +148,13 @@ class BlogController extends Controller
             $catSlug = $article->category->slug;
         }
 
+        $eventSlug  = null;
+        $eventTitle = null;
+        if ($article->event) {
+            $eventSlug  = $article->event->slug;
+            $eventTitle = $this->translate($article->event->title, $lang);
+        }
+
         $data = [
             'slug'        => $article->slug,
             'title'       => $this->translate($article->title, $lang),
@@ -165,6 +173,10 @@ class BlogController extends Controller
             'created_at'   => $article->created_at?->toISOString(),
             'is_featured'  => (bool) $article->is_featured,
             'view_count'   => (int) ($article->view_count ?? 0),
+            'event'        => $eventSlug ? [
+                'slug'  => $eventSlug,
+                'title' => $eventTitle ?? '',
+            ] : null,
         ];
 
         if ($withContent) {

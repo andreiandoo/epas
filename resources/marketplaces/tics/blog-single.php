@@ -47,6 +47,7 @@ $article = [
     'readTime'     => ($apiArticle['read_time'] ?? 5) . ' min citire',
     'views'        => ($apiArticle['view_count'] ?? 0) > 0 ? formatFollowers($apiArticle['view_count']) . ' vizualizări' : '',
     'content'      => $apiArticle['content'] ?? '',
+    'event'        => $apiArticle['event'] ?? null,
 ];
 
 $articleTags = [];
@@ -159,6 +160,17 @@ include __DIR__ . '/includes/header.php';
                 </div>
             </div>
 
+            <!-- Event Promo Card -->
+            <?php if (!empty($article['event'])): ?>
+            <a href="<?= e(eventUrl($article['event']['slug'])) ?>" class="block bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-6 mt-6 text-white hover:from-indigo-700 hover:to-violet-700 transition-all group">
+                <p class="text-xs font-semibold uppercase tracking-wider text-white/70 mb-2">🎫 Eveniment promovat</p>
+                <div class="flex items-center justify-between gap-4">
+                    <h3 class="font-bold text-lg leading-tight group-hover:underline"><?= e($article['event']['title']) ?></h3>
+                    <span class="flex-shrink-0 px-5 py-2.5 bg-white text-gray-900 font-bold text-sm rounded-xl group-hover:bg-gray-100 transition-colors whitespace-nowrap">Cumpără bilete &rarr;</span>
+                </div>
+            </a>
+            <?php endif; ?>
+
             <!-- Tags -->
             <div class="flex flex-wrap items-center gap-2 mt-6">
                 <span class="text-xs text-gray-400 font-medium">Etichete:</span>
@@ -202,11 +214,19 @@ include __DIR__ . '/includes/header.php';
                     </nav>
                 </div>
                 <!-- CTA -->
+                <?php if (!empty($article['event'])): ?>
+                <a href="<?= e(eventUrl($article['event']['slug'])) ?>" class="block bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-5 text-white hover:from-indigo-700 hover:to-violet-700 transition-all">
+                    <p class="font-semibold mb-1 text-sm">🎫 Eveniment promovat</p>
+                    <p class="text-xs text-white/70 mb-3 line-clamp-2"><?= e($article['event']['title']) ?></p>
+                    <span class="block w-full py-2.5 bg-white text-gray-900 text-sm font-semibold rounded-xl text-center hover:bg-gray-100 transition-colors">Cumpără bilete</span>
+                </a>
+                <?php else: ?>
                 <div class="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-5 text-white">
                     <p class="font-semibold mb-1 text-sm">🎫 Bilete disponibile</p>
                     <p class="text-xs text-white/70 mb-3">Toate festivalurile menționate au bilete pe TICS.ro</p>
                     <a href="/evenimente" class="block w-full py-2.5 bg-white text-gray-900 text-sm font-semibold rounded-xl text-center hover:bg-gray-100 transition-colors">Cumpără bilete</a>
                 </div>
+                <?php endif; ?>
                 <!-- Newsletter mini -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-5">
                     <h3 class="font-semibold text-gray-900 mb-2 text-sm">📬 Newsletter</h3>

@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\BlogArticleResource\Pages;
 use App\Models\Blog\BlogArticle;
 use App\Models\Blog\BlogCategory;
+use App\Models\Event;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -296,6 +297,25 @@ class BlogArticleResource extends Resource
                                         Forms\Components\Toggle::make('is_featured')
                                             ->label('Featured Article')
                                             ->helperText('Show on homepage/featured section'),
+
+                                        Forms\Components\Select::make('event_id')
+                                            ->label('Linked Event')
+                                            ->placeholder('Select an event to promote...')
+                                            ->options(function () use ($marketplace, $marketplaceLanguage) {
+                                                return Event::where('marketplace_client_id', $marketplace?->id)
+                                                    ->orderBy('created_at', 'desc')
+                                                    ->limit(300)
+                                                    ->get()
+                                                    ->mapWithKeys(function ($event) use ($marketplaceLanguage) {
+                                                        $title = is_array($event->title)
+                                                            ? ($event->title[$marketplaceLanguage] ?? $event->title['en'] ?? reset($event->title) ?? 'Unnamed')
+                                                            : ($event->title ?? 'Unnamed');
+                                                        return [$event->id => $title];
+                                                    });
+                                            })
+                                            ->searchable()
+                                            ->nullable()
+                                            ->helperText('Promotes this event in the article (shows a CTA button)'),
                                     ]),
 
                                 // Featured Image Section
