@@ -90,7 +90,7 @@ class ImportMarketplaceOrganizersCommand extends Command
     {
         $slug = $base;
         $i = 2;
-        while (MarketplaceOrganizer::where('marketplace_client_id', $marketplaceClientId)->where('slug', $slug)->exists()) {
+        while (MarketplaceOrganizer::withTrashed()->where('marketplace_client_id', $marketplaceClientId)->where('slug', $slug)->exists()) {
             $slug = $base . '-' . $i++;
         }
         return $slug;

@@ -125,7 +125,7 @@ class MarketplaceOrganizer extends Authenticatable
             $base = !empty($organizer->slug) ? $organizer->slug : Str::slug($organizer->name);
             $slug = $base;
             $i = 2;
-            while (static::where('marketplace_client_id', $organizer->marketplace_client_id)->where('slug', $slug)->exists()) {
+            while (static::withTrashed()->where('marketplace_client_id', $organizer->marketplace_client_id)->where('slug', $slug)->exists()) {
                 $slug = $base . '-' . $i++;
             }
             $organizer->slug = $slug;
