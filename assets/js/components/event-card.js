@@ -74,9 +74,16 @@ const AmbiletEventCard = {
             '</div>';
         }
 
+        // Responsive image: poster (vertical) on mobile, hero (horizontal) on desktop
+        const posterSrc = getStorageUrl(event.posterImage || event.image);
+        const heroSrc = getStorageUrl(event.heroImage || event.image);
+
         return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
             '<div class="relative h-48 overflow-hidden">' +
-                '<img src="' + getStorageUrl(event.image) + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-2xl rounded-tr-2xl" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                '<picture>' +
+                    '<source media="(min-width: 768px)" srcset="' + heroSrc + '">' +
+                    '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-2xl rounded-tr-2xl" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                '</picture>' +
                 (promotedBadge ? promotedBadge : '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>') +
                 statusBadge +
             '</div>' +
@@ -355,8 +362,14 @@ const AmbiletEventCard = {
             venueCity = apiEvent.city;
         }
 
-        // Extract price - always show base ticket price (without commission on top)
-        let minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
+        // Extract price - skip free (price=0) ticket types, show min paid price
+        let minPrice = 0;
+        if (apiEvent.ticket_types && Array.isArray(apiEvent.ticket_types)) {
+            const paidTickets = apiEvent.ticket_types.filter(t => (t.price || 0) > 0);
+            minPrice = paidTickets.length > 0 ? Math.min(...paidTickets.map(t => t.price || 0)) : 0;
+        } else {
+            minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
+        }
 
         // Extract category
         let categoryName = '';
@@ -396,6 +409,8 @@ const AmbiletEventCard = {
             slug: apiEvent.slug || '',
             title: apiEvent.name || apiEvent.title || 'Eveniment',
             image: apiEvent.poster_url || apiEvent.image_url || apiEvent.featured_image || apiEvent.image || null,
+            posterImage: apiEvent.poster_url || apiEvent.image_url || apiEvent.image || null,
+            heroImage: apiEvent.hero_image_url || apiEvent.cover_image_url || apiEvent.image_url || apiEvent.image || null,
             date: date,
             day: date ? date.getDate() : '',
             month: date ? this.MONTHS[date.getMonth()] : '',

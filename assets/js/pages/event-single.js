@@ -439,8 +439,9 @@ const EventPage = {
             return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
         }
 
-        var mainImage = eventData.hero_image_url || eventData.cover_image_url || eventData.image_url || null;
-        var coverImage = eventData.hero_image_url || eventData.cover_image_url || eventData.image_url || null;
+        // poster_url / image_url = vertical poster (mobile), cover_image_url / hero_image_url = horizontal hero (desktop)
+        var posterImage = eventData.poster_url || eventData.image_url || null;
+        var heroImage = eventData.hero_image_url || eventData.cover_image_url || eventData.image_url || null;
 
         return {
             id: eventData.id,
@@ -449,8 +450,10 @@ const EventPage = {
             description: eventData.description,
             content: eventData.description,
             short_description: eventData.short_description,
-            image: coverImage || mainImage,
-            images: [coverImage, mainImage].filter(Boolean).filter(function(v, i, a) { return a.indexOf(v) === i; }),
+            image: heroImage || posterImage,
+            posterImage: posterImage,
+            heroImage: heroImage,
+            images: [heroImage, posterImage].filter(Boolean).filter(function(v, i, a) { return a.indexOf(v) === i; }),
             category: eventData.category,
             category_slug: eventData.category_slug || (eventData.category ? eventData.category.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : null),
             tags: eventData.tags,
@@ -734,8 +737,9 @@ const EventPage = {
             this.applyEndedLayout();
         }
 
-        // Main image
-        const mainImg = e.image || e.images?.[0] || '/assets/images/default-event.png';
+        // Main image - responsive: poster (vertical) on mobile, hero (horizontal) on desktop
+        const isMobile = window.innerWidth < 768;
+        const mainImg = (isMobile ? (e.posterImage || e.heroImage) : (e.heroImage || e.posterImage)) || e.images?.[0] || '/assets/images/default-event.png';
         document.getElementById(this.elements.mainImage).src = mainImg;
         document.getElementById(this.elements.mainImage).alt = e.title;
 

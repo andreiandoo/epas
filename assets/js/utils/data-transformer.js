@@ -28,6 +28,16 @@ const AmbiletDataTransformer = {
             image = '/storage/' + image;
         }
 
+        // Extract separate poster (vertical, for mobile) and hero (horizontal, for desktop)
+        let posterImage = apiEvent.poster_url || apiEvent.image_url || apiEvent.image || null;
+        if (posterImage && !posterImage.startsWith('http') && !posterImage.startsWith('/')) {
+            posterImage = '/storage/' + posterImage;
+        }
+        let heroImage = apiEvent.hero_image_url || apiEvent.cover_image_url || apiEvent.image_url || apiEvent.image || null;
+        if (heroImage && !heroImage.startsWith('http') && !heroImage.startsWith('/')) {
+            heroImage = '/storage/' + heroImage;
+        }
+
         // Extract venue - handle both string and object formats
         let venueName = '';
         let venueCity = '';
@@ -50,8 +60,14 @@ const AmbiletDataTransformer = {
             venueCity = apiEvent.city;
         }
 
-        // Extract price - always show base ticket price (without commission on top)
-        let minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
+        // Extract price - skip free (price=0) ticket types, show min paid price
+        let minPrice = 0;
+        if (apiEvent.ticket_types && Array.isArray(apiEvent.ticket_types)) {
+            const paidTickets = apiEvent.ticket_types.filter(t => (t.price || 0) > 0);
+            minPrice = paidTickets.length > 0 ? Math.min(...paidTickets.map(t => t.price || 0)) : 0;
+        } else {
+            minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
+        }
 
         // Extract date range for multi-day events (festivals)
         const durationMode = apiEvent.duration_mode || 'single_day';
@@ -87,6 +103,8 @@ const AmbiletDataTransformer = {
             title: title,
             description: apiEvent.description || apiEvent.short_description || '',
             image: image,
+            posterImage: posterImage,
+            heroImage: heroImage,
 
             // Date information
             date: eventDate,
