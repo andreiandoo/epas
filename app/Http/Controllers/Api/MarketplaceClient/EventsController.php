@@ -293,7 +293,7 @@ class EventsController extends BaseController
             'marketplaceEventCategory',
             'ticketTypes' => function ($q) {
                 $q->where('status', 'active')
-                    ->orderBy('id');
+                    ->orderBy('sort_order');
             },
             'artists',
             'eventTypes', // Load event types for tax calculation
@@ -681,6 +681,7 @@ class EventsController extends BaseController
 
         $ticketTypes = TicketType::where('event_id', $event->id)
             ->where('status', 'active')
+            ->orderBy('sort_order')
             ->get()
             ->map(function ($tt) {
                 $available = max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
