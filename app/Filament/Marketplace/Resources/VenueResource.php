@@ -669,7 +669,15 @@ class VenueResource extends Resource
                     ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF'),
                 Tables\Columns\TextColumn::make("name.{$lang}")
                     ->label('Nume')
-                    ->searchable()
+                    ->searchable(query: function (\Illuminate\Database\Eloquent\Builder $query, string $search) use ($lang): void {
+                        $query->whereRaw(
+                            "LOWER(JSON_UNQUOTE(JSON_EXTRACT(`name`, '$.{$lang}'))) LIKE ?",
+                            ['%' . mb_strtolower($search) . '%']
+                        )->orWhereRaw(
+                            "LOWER(`city`) LIKE ?",
+                            ['%' . mb_strtolower($search) . '%']
+                        );
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('city')
                     ->label('Oraș')

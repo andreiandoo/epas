@@ -528,7 +528,8 @@ class EventResource extends Resource
                                         return Venue::query()
                                             ->where(fn($q) => $q
                                                 ->whereNull('marketplace_client_id')
-                                                ->orWhere('marketplace_client_id', $marketplace?->id))
+                                                ->orWhere('marketplace_client_id', $marketplace?->id)
+                                                ->orWhereHas('marketplaceClients', fn($q2) => $q2->where('marketplace_client_id', $marketplace?->id)))
                                             ->orderBy('name')
                                             ->get()
                                             ->mapWithKeys(fn ($venue) => [
@@ -1741,12 +1742,7 @@ class EventResource extends Resource
                                     ->label($t('Eveniment din turneu', 'Part of a Tour'))
                                     ->helperText($t('Bifează dacă acest eveniment face parte dintr-un turneu', 'Check if this event is part of a tour'))
                                     ->dehydrated(false)
-                                    ->live()
-                                    ->afterStateHydrated(function ($state, SSet $set, ?Event $record) {
-                                        if ($record && $record->tour_id !== null) {
-                                            $set('is_in_tour', true);
-                                        }
-                                    }),
+                                    ->live(),
 
                                 Forms\Components\Select::make('tour_event_ids')
                                     ->label($t('Alte evenimente din turneu', 'Other events in the tour'))
@@ -1770,15 +1766,6 @@ class EventResource extends Resource
                                                 if ($date) $label .= ' (' . $date . ')';
                                                 return [$e->id => $label];
                                             });
-                                    })
-                                    ->afterStateHydrated(function ($state, SSet $set, ?Event $record) {
-                                        if ($record && $record->tour_id !== null) {
-                                            $tourEventIds = Event::where('tour_id', $record->tour_id)
-                                                ->where('id', '!=', $record->id)
-                                                ->pluck('id')
-                                                ->toArray();
-                                            $set('tour_event_ids', $tourEventIds);
-                                        }
                                     })
                                     ->visible(fn (SGet $get) => (bool) $get('is_in_tour')),
                             ]),

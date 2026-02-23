@@ -732,6 +732,15 @@ class EditEvent extends EditRecord
             }
         }
 
+        // Tour state — populate virtual fields for the Turneu tab
+        $data['is_in_tour'] = $this->record->tour_id !== null;
+        $data['tour_event_ids'] = $this->record->tour_id !== null
+            ? Event::where('tour_id', $this->record->tour_id)
+                ->where('id', '!=', $this->record->id)
+                ->pluck('id')
+                ->toArray()
+            : [];
+
         return $data;
     }
 

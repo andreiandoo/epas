@@ -251,6 +251,15 @@ class EventsController extends BaseController
                 return max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
             });
 
+            // Include minimal ticket type price data for client-side filtering
+            $ticketTypePrices = $event->ticketTypes
+                ->where('status', 'active')
+                ->map(fn ($tt) => [
+                    'price' => ($tt->sale_price_cents ?? $tt->price_cents ?? 0) / 100,
+                ])
+                ->values()
+                ->toArray();
+
             return [
                 'id' => $event->id,
                 'name' => $title,
@@ -266,6 +275,7 @@ class EventsController extends BaseController
                 'city' => $event->venue?->city,
                 'price_from' => $minPrice,
                 'has_availability' => $totalAvailable > 0,
+                'ticket_types' => $ticketTypePrices,
             ];
         });
 
@@ -573,6 +583,15 @@ class EventsController extends BaseController
                         ?? (is_array($event->venue->name) ? ($event->venue->name[$language] ?? $event->venue->name['ro'] ?? $event->venue->name['en'] ?? null) : $event->venue->name);
                 }
 
+                // Include minimal ticket type price data for client-side filtering
+                $ticketTypePrices = $event->ticketTypes
+                    ->where('status', 'active')
+                    ->map(fn ($tt) => [
+                        'price' => ($tt->sale_price_cents ?? $tt->price_cents ?? 0) / 100,
+                    ])
+                    ->values()
+                    ->toArray();
+
                 return [
                     'id' => $event->id,
                     'name' => $title,
@@ -587,6 +606,7 @@ class EventsController extends BaseController
                     'city' => $event->venue?->city,
                     'price_from' => $minPrice,
                     'has_availability' => $totalAvailable > 0,
+                    'ticket_types' => $ticketTypePrices,
                 ];
             }),
         ]);
