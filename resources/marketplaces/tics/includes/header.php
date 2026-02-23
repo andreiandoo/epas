@@ -29,6 +29,39 @@ if ($isLoggedIn && !isset($loggedInUser)) {
         'points' => 1250
     ];
 }
+
+// ── Fetch event categories for mega menu (file-cached, 5 min TTL) ────────────
+$_navCatCache = sys_get_temp_dir() . '/tics_nav_categories.json';
+$_navCatTtl   = 300;
+$navCategories = [];
+if (file_exists($_navCatCache) && (time() - filemtime($_navCatCache)) < $_navCatTtl) {
+    $navCategories = json_decode(file_get_contents($_navCatCache), true) ?: [];
+} else {
+    $_catResult = callApi('event-categories');
+    if (!empty($_catResult['success']) && is_array($_catResult['data'] ?? null)) {
+        $navCategories = $_catResult['data'];
+        @file_put_contents($_navCatCache, json_encode($navCategories));
+    }
+}
+
+// Find the "Concerte/Muzică" category for the "Genuri Muzicale" default panel
+$_musicCat = null;
+foreach ($navCategories as $_cat) {
+    if (!empty($_cat['children']) &&
+        (str_contains(strtolower($_cat['slug'] ?? ''), 'concert') ||
+         str_contains(strtolower($_cat['slug'] ?? ''), 'muzic'))) {
+        $_musicCat = $_cat;
+        break;
+    }
+}
+// Fallback: first category with children
+if (!$_musicCat) {
+    foreach ($navCategories as $_cat) {
+        if (!empty($_cat['children'])) { $_musicCat = $_cat; break; }
+    }
+}
+$_defaultGenres = $_musicCat['children'] ?? [];
+$_musicCatSlug  = $_musicCat['slug'] ?? '';
 ?>
 
 <!-- Header -->
@@ -76,41 +109,126 @@ if ($isLoggedIn && !isset($loggedInUser)) {
                     </div>
                 </div>
 
-                <!-- Evenimente Dropdown -->
-                <div class="dropdown h-full flex items-center">
+                <!-- Evenimente Mega Menu -->
+                <div class="dropdown h-full flex items-center" id="navEventsDropdown">
                     <button class="nav-link">
                         Evenimente
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
-                    
-                    <div class="dropdown-menu p-3">
-                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-2">Categorii</div>
-                        <a href="#" class="dropdown-link font-medium">🎵 Concerte</a>
-                        <a href="#" class="dropdown-link font-medium">🎪 Festivaluri</a>
-                        <a href="#" class="dropdown-link font-medium">😂 Stand-up Comedy</a>
-                        <a href="#" class="dropdown-link font-medium">🎭 Teatru</a>
-                        <a href="#" class="dropdown-link font-medium">⚽ Sport</a>
-                        <a href="#" class="dropdown-link font-medium">🎨 Expo & Muzee</a>
-                        <a href="#" class="dropdown-link font-medium">👶 Pentru Copii</a>
-                        <a href="#" class="dropdown-link font-medium">📚 Conferințe</a>
-                        <div class="border-t border-gray-100 mt-2 pt-2">
-                            <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-2">Genuri muzicale</div>
-                            <a href="#" class="dropdown-link">Rock & Alternative</a>
-                            <a href="#" class="dropdown-link">Pop</a>
-                            <a href="#" class="dropdown-link">Electronic / DJ</a>
-                            <a href="#" class="dropdown-link">Hip-Hop & Rap</a>
-                            <a href="#" class="dropdown-link">Jazz & Blues</a>
-                            <a href="#" class="dropdown-link">Metal</a>
-                            <a href="#" class="dropdown-link">Clasică & Operă</a>
-                            <a href="#" class="dropdown-link">Folk & Populară</a>
-                        </div>
-                        <div class="border-t border-gray-100 mt-2 pt-2">
-                            <a href="/evenimente" class="dropdown-link font-semibold text-purple-600">Vezi toate evenimentele →</a>
+
+                    <div class="dropdown-menu wide p-0" style="min-width:580px">
+                        <div class="flex">
+                            <!-- Column 1: Categories -->
+                            <div style="width:230px;flex-shrink:0" class="border-r border-gray-100 py-3">
+                                <p class="px-4 pb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Categorii</p>
+                                <?php if (!empty($navCategories)): ?>
+                                <?php foreach ($navCategories as $_nIdx => $_nCat): ?>
+                                <?php $_nName = is_array($_nCat['name'] ?? null) ? ($_nCat['name']['ro'] ?? reset($_nCat['name'])) : ($_nCat['name'] ?? ''); ?>
+                                <a href="/bilete-la-<?= e($_nCat['slug'] ?? '') ?>"
+                                   class="dropdown-link font-medium flex items-center justify-between group/cat"
+                                   data-nav-cat-idx="<?= $_nIdx ?>"
+                                   onmouseenter="ticsNavHoverCat(<?= $_nIdx ?>)">
+                                    <span><?= e($_nCat['icon_emoji'] ?? '') ?> <?= e($_nName) ?></span>
+                                    <?php if (!empty($_nCat['children'])): ?>
+                                    <svg class="w-3 h-3 text-gray-300 group-hover/cat:text-purple-400 flex-shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                    <?php endif; ?>
+                                </a>
+                                <?php endforeach; ?>
+                                <?php else: ?>
+                                <!-- Fallback hardcoded if API unavailable -->
+                                <a href="/bilete-la-concerte"    class="dropdown-link font-medium">🎵 Concerte</a>
+                                <a href="/bilete-la-festivaluri" class="dropdown-link font-medium">🎪 Festivaluri</a>
+                                <a href="/bilete-la-stand-up"    class="dropdown-link font-medium">😂 Stand-up</a>
+                                <a href="/bilete-la-teatru"      class="dropdown-link font-medium">🎭 Teatru</a>
+                                <a href="/bilete-la-sport"       class="dropdown-link font-medium">⚽ Sport</a>
+                                <a href="/bilete-la-arta-muzee"  class="dropdown-link font-medium">🎨 Artă & Muzee</a>
+                                <?php endif; ?>
+                                <div class="border-t border-gray-100 mx-3 my-2"></div>
+                                <a href="/evenimente" class="dropdown-link font-semibold text-purple-600">Toate evenimentele →</a>
+                            </div>
+
+                            <!-- Column 2: Subcategories / Genres panel -->
+                            <div class="flex-1 py-3" id="navCatPanel">
+                                <?php if (!empty($_defaultGenres)): ?>
+                                <p class="px-4 pb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Genuri Muzicale</p>
+                                <?php foreach ($_defaultGenres as $_g): ?>
+                                <?php $_gName = is_array($_g['name'] ?? null) ? ($_g['name']['ro'] ?? reset($_g['name'])) : ($_g['name'] ?? ''); ?>
+                                <a href="/gen/bilete-<?= e($_g['slug'] ?? '') ?>" class="dropdown-link">
+                                    <?= e($_g['icon_emoji'] ?? '') ?> <?= e($_gName) ?>
+                                </a>
+                                <?php endforeach; ?>
+                                <?php else: ?>
+                                <!-- Fallback genres -->
+                                <p class="px-4 pb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Genuri Muzicale</p>
+                                <a href="/gen/bilete-rock"        class="dropdown-link">🎸 Rock & Alternative</a>
+                                <a href="/gen/bilete-pop"         class="dropdown-link">🎤 Pop</a>
+                                <a href="/gen/bilete-electronic"  class="dropdown-link">🎧 Electronic / DJ</a>
+                                <a href="/gen/bilete-hip-hop"     class="dropdown-link">🎵 Hip-Hop & Rap</a>
+                                <a href="/gen/bilete-jazz-blues"  class="dropdown-link">🎷 Jazz & Blues</a>
+                                <a href="/gen/bilete-clasica"     class="dropdown-link">🎻 Clasică & Operă</a>
+                                <a href="/gen/bilete-folk"        class="dropdown-link">🪗 Folk & Populară</a>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <script>
+                /* Embedded categories for JS hover (mega menu right panel) */
+                window._TICS_NAV_CATS = <?= json_encode(array_map(function($_c) {
+                    $_name = is_array($_c['name'] ?? null) ? ($_c['name']['ro'] ?? reset($_c['name'])) : ($_c['name'] ?? '');
+                    return [
+                        'slug'       => $_c['slug'] ?? '',
+                        'name'       => $_name,
+                        'icon_emoji' => $_c['icon_emoji'] ?? '',
+                        'children'   => array_map(function($_ch) {
+                            $_cname = is_array($_ch['name'] ?? null) ? ($_ch['name']['ro'] ?? reset($_ch['name'])) : ($_ch['name'] ?? '');
+                            return ['slug' => $_ch['slug'] ?? '', 'name' => $_cname, 'icon_emoji' => $_ch['icon_emoji'] ?? ''];
+                        }, $_c['children'] ?? []),
+                    ];
+                }, $navCategories)) ?>;
+                window._TICS_MUSIC_SLUG = <?= json_encode($_musicCatSlug) ?>;
+
+                function ticsNavHoverCat(idx) {
+                    var cats = window._TICS_NAV_CATS || [];
+                    var cat = cats[idx];
+                    var panel = document.getElementById('navCatPanel');
+                    if (!panel || !cat) return;
+
+                    var isMusic = cat.slug === window._TICS_MUSIC_SLUG;
+                    var linkBase = isMusic ? '/gen/bilete-' : '/bilete-la-';
+
+                    if (!cat.children || !cat.children.length) {
+                        // No children — reset to default music panel
+                        ticsNavResetPanel();
+                        return;
+                    }
+
+                    var label = isMusic ? 'Genuri Muzicale' : (cat.icon_emoji + ' ' + cat.name);
+                    var html = '<p class="px-4 pb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">'
+                        + _ticsEsc(label) + '</p>';
+                    cat.children.forEach(function(ch) {
+                        html += '<a href="' + linkBase + _ticsEsc(ch.slug) + '" class="dropdown-link">'
+                            + _ticsEsc(ch.icon_emoji) + ' ' + _ticsEsc(ch.name) + '</a>';
+                    });
+                    panel.innerHTML = html;
+                }
+
+                function ticsNavResetPanel() {
+                    var musicIdx = (window._TICS_NAV_CATS || []).findIndex(function(c) {
+                        return c.slug === window._TICS_MUSIC_SLUG;
+                    });
+                    if (musicIdx >= 0) ticsNavHoverCat(musicIdx);
+                }
+
+                function _ticsEsc(s) {
+                    return String(s || '')
+                        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                }
+                </script>
 
                 <!-- Orașe Dropdown – dynamic, populated by JS based on selected country -->
                 <div class="dropdown h-full flex items-center">

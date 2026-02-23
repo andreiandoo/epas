@@ -16,13 +16,55 @@ if ($pathInfo && preg_match('/^\/([a-z0-9-]+)$/', $pathInfo, $matches)) {
     $categorySlug = $matches[1];
 }
 
-// Get category data
-$categoryData = getCategory($categorySlug);
-
-// Redirect to events if no valid category
-if (!$categoryData) {
+if (!$categorySlug) {
     header('Location: /evenimente');
     exit;
+}
+
+// Fetch category from API (includes children/subcategories)
+$_catApiResponse = callApi('event-categories/' . $categorySlug);
+$_apiCatData     = (!empty($_catApiResponse['success']) && !empty($_catApiResponse['data']))
+                    ? $_catApiResponse['data'] : null;
+
+// Build categoryData from API or fallback to hardcoded config
+if ($_apiCatData) {
+    $_apiName = is_array($_apiCatData['name'] ?? null)
+        ? ($_apiCatData['name']['ro'] ?? reset($_apiCatData['name']))
+        : ($_apiCatData['name'] ?? ucfirst($categorySlug));
+
+    $categoryData = [
+        'name' => $_apiName,
+        'icon' => $_apiCatData['icon_emoji'] ?? '📅',
+        'slug' => $_apiCatData['slug'] ?? $categorySlug,
+    ];
+
+    // Children → subcategories
+    $subcategories = array_map(function($_ch) {
+        $_chName = is_array($_ch['name'] ?? null)
+            ? ($_ch['name']['ro'] ?? reset($_ch['name']))
+            : ($_ch['name'] ?? '');
+        return [
+            'name' => $_chName,
+            'slug' => $_ch['slug'] ?? '',
+            'icon' => $_ch['icon_emoji'] ?? '📅',
+        ];
+    }, $_apiCatData['children'] ?? []);
+} else {
+    // Fallback to hardcoded config
+    $categoryData = getCategory($categorySlug);
+    if (!$categoryData) {
+        header('Location: /evenimente');
+        exit;
+    }
+    // Hardcoded fallback subcategories
+    $_FALLBACK_SUBS = [
+        'concerte'   => [['name'=>'Rock','slug'=>'rock','icon'=>'🎸'],['name'=>'Pop','slug'=>'pop','icon'=>'🎤'],['name'=>'Electronic','slug'=>'electronic','icon'=>'🎧'],['name'=>'Jazz & Blues','slug'=>'jazz-blues','icon'=>'🎷'],['name'=>'Clasic','slug'=>'clasic','icon'=>'🎻']],
+        'festivaluri'=> [['name'=>'Muzică','slug'=>'muzica','icon'=>'🎵'],['name'=>'Film','slug'=>'film','icon'=>'🎬'],['name'=>'Artă','slug'=>'arta','icon'=>'🎨']],
+        'stand-up'   => [['name'=>'Stand-up','slug'=>'standup','icon'=>'🎤'],['name'=>'Improvizație','slug'=>'improv','icon'=>'🎭']],
+        'teatru'     => [['name'=>'Dramă','slug'=>'drama','icon'=>'🎭'],['name'=>'Comedie','slug'=>'comedie','icon'=>'😂'],['name'=>'Musical','slug'=>'musical','icon'=>'🎵']],
+        'sport'      => [['name'=>'Fotbal','slug'=>'fotbal','icon'=>'⚽'],['name'=>'Baschet','slug'=>'baschet','icon'=>'🏀'],['name'=>'Tenis','slug'=>'tenis','icon'=>'🎾']],
+    ];
+    $subcategories = $_FALLBACK_SUBS[$categorySlug] ?? [];
 }
 
 // Get URL parameters
@@ -32,46 +74,6 @@ $filterDate = isset($_GET['data']) ? htmlspecialchars($_GET['data'], ENT_QUOTES,
 $filterPrice = isset($_GET['pret']) ? htmlspecialchars($_GET['pret'], ENT_QUOTES, 'UTF-8') : '';
 $filterSort = isset($_GET['sortare']) ? htmlspecialchars($_GET['sortare'], ENT_QUOTES, 'UTF-8') : 'recommended';
 $filterCategory = $categorySlug;
-
-// Subcategories for each category
-$SUBCATEGORIES = [
-    'concerte' => [
-        ['name' => 'Rock', 'slug' => 'rock', 'icon' => '🎸'],
-        ['name' => 'Pop', 'slug' => 'pop', 'icon' => '🎤'],
-        ['name' => 'Electronic', 'slug' => 'electronic', 'icon' => '🎧'],
-        ['name' => 'Jazz & Blues', 'slug' => 'jazz-blues', 'icon' => '🎷'],
-        ['name' => 'Clasic', 'slug' => 'clasic', 'icon' => '🎻'],
-        ['name' => 'Alternativ', 'slug' => 'alternativ', 'icon' => '🎹'],
-        ['name' => 'Românesc', 'slug' => 'romanesc', 'icon' => '🇷🇴'],
-    ],
-    'festivaluri' => [
-        ['name' => 'Muzică', 'slug' => 'muzica', 'icon' => '🎵'],
-        ['name' => 'Film', 'slug' => 'film', 'icon' => '🎬'],
-        ['name' => 'Artă', 'slug' => 'arta', 'icon' => '🎨'],
-        ['name' => 'Gastronomie', 'slug' => 'gastronomie', 'icon' => '🍽️'],
-    ],
-    'stand-up' => [
-        ['name' => 'Stand-up', 'slug' => 'standup', 'icon' => '🎤'],
-        ['name' => 'Improvizație', 'slug' => 'improv', 'icon' => '🎭'],
-        ['name' => 'Open Mic', 'slug' => 'openmic', 'icon' => '🎙️'],
-    ],
-    'teatru' => [
-        ['name' => 'Dramă', 'slug' => 'drama', 'icon' => '🎭'],
-        ['name' => 'Comedie', 'slug' => 'comedie', 'icon' => '😂'],
-        ['name' => 'Musical', 'slug' => 'musical', 'icon' => '🎵'],
-        ['name' => 'Operă', 'slug' => 'opera', 'icon' => '🎼'],
-        ['name' => 'Balet', 'slug' => 'balet', 'icon' => '🩰'],
-    ],
-    'sport' => [
-        ['name' => 'Fotbal', 'slug' => 'fotbal', 'icon' => '⚽'],
-        ['name' => 'Baschet', 'slug' => 'baschet', 'icon' => '🏀'],
-        ['name' => 'Tenis', 'slug' => 'tenis', 'icon' => '🎾'],
-        ['name' => 'Handbal', 'slug' => 'handbal', 'icon' => '🤾'],
-        ['name' => 'MMA', 'slug' => 'mma', 'icon' => '🥊'],
-    ],
-];
-
-$subcategories = $SUBCATEGORIES[$categorySlug] ?? [];
 
 // Category gradient colors
 $CATEGORY_GRADIENTS = [
@@ -130,16 +132,16 @@ require_once __DIR__ . '/includes/header.php';
                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 <a href="/evenimente" class="text-gray-500 hover:text-gray-900">Evenimente</a>
                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                <span class="text-gray-900 font-medium"><?= e($categoryData['name']) ?></span>
+                <a href="/bilete-la-<?= e($categorySlug) ?>" class="text-gray-900 font-medium hover:text-purple-700"><?= e($categoryData['name']) ?></a>
             </div>
             <!-- Subcategories -->
             <?php if (!empty($subcategories)): ?>
             <div class="flex items-center gap-2 pb-3 overflow-x-auto no-scrollbar">
-                <a href="/evenimente/<?= e($categorySlug) ?>" class="category-chip <?= empty($filterSubcategory) ? 'chip-active' : '' ?> px-4 py-2 rounded-full border border-gray-200 text-sm font-medium whitespace-nowrap transition-colors" data-subcategory="">
-                    Toate
+                <a href="/bilete-la-<?= e($categorySlug) ?>" class="category-chip <?= empty($filterSubcategory) ? 'chip-active' : '' ?> px-4 py-2 rounded-full border border-gray-200 text-sm font-medium whitespace-nowrap transition-colors" data-subcategory="">
+                    <?= e($categoryData['icon'] ?? '📅') ?> Toate
                 </a>
                 <?php foreach ($subcategories as $sub): ?>
-                <a href="/evenimente/<?= e($categorySlug) ?>?subcategorie=<?= e($sub['slug']) ?>" class="category-chip <?= $filterSubcategory === $sub['slug'] ? 'chip-active' : '' ?> px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors" data-subcategory="<?= e($sub['slug']) ?>">
+                <a href="/bilete-la-<?= e($categorySlug) ?>?subcategorie=<?= e($sub['slug']) ?>" class="category-chip <?= $filterSubcategory === $sub['slug'] ? 'chip-active' : '' ?> px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors" data-subcategory="<?= e($sub['slug']) ?>">
                     <?= $sub['icon'] ?> <?= e($sub['name']) ?>
                 </a>
                 <?php endforeach; ?>

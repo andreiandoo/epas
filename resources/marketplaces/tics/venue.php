@@ -280,7 +280,7 @@ require_once __DIR__ . '/includes/header.php';
             <?php if ($venueDesc): ?>
             <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
                 <h2 class="text-xl font-bold text-gray-900 mb-4">Despre locație</h2>
-                <div class="text-gray-600 leading-relaxed"><?= nl2br(e($venueDesc)) ?></div>
+                <div class="text-gray-600 leading-relaxed prose prose-sm max-w-none"><?= $venueDesc ?></div>
             </div>
             <?php endif; ?>
 
