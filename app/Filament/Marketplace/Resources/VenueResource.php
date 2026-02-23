@@ -35,7 +35,8 @@ class VenueResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $marketplace = static::getMarketplaceClient();
-        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplace?->id);
+        return parent::getEloquentQuery()
+            ->whereHas('marketplaceClients', fn (Builder $q) => $q->where('marketplace_client_id', $marketplace?->id));
     }
 
     public static function form(Schema $schema): Schema
@@ -91,14 +92,10 @@ class VenueResource extends Resource
                                             $name = $venue->getTranslation('name', 'ro') ?? $venue->getTranslation('name', 'en') ?? 'Locație';
                                             $city = $venue->city ? " - {$venue->city}" : '';
                                             $capacity = $venue->capacity_total ? " ({$venue->capacity_total} locuri)" : '';
-                                            // Show different status based on ownership
-                                            if ($venue->marketplace_client_id === $marketplace?->id) {
-                                                $status = ' [Deja în lista ta]';
-                                            } elseif ($venue->marketplace_client_id) {
-                                                $status = ' [Aparține altui marketplace]';
-                                            } else {
-                                                $status = '';
-                                            }
+                                            // Show status based on pivot relationship
+                                            $status = $venue->isInMarketplace($marketplace?->id ?? 0)
+                                                ? ' [Deja în lista ta]'
+                                                : '';
                                             return [$venue->id => $name . $city . $capacity . $status];
                                         })
                                         ->toArray();
@@ -129,11 +126,9 @@ class VenueResource extends Resource
                                     $address = $venue->address ?? '-';
                                     $capacity = $venue->capacity_total ?? '-';
 
-                                    // Determine status based on ownership
-                                    if ($venue->marketplace_client_id === $marketplace?->id) {
+                                    // Determine status based on pivot relationship
+                                    if ($venue->isInMarketplace($marketplace?->id ?? 0)) {
                                         $statusBadge = '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full dark:text-blue-400 dark:bg-blue-900/30">Deja în lista ta</span>';
-                                    } elseif ($venue->marketplace_client_id) {
-                                        $statusBadge = '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 rounded-full dark:text-yellow-400 dark:bg-yellow-900/30">Aparține altui marketplace</span>';
                                     } else {
                                         $statusBadge = '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full dark:text-green-400 dark:bg-green-900/30">Disponibilă pentru parteneriat</span>';
                                     }
@@ -173,7 +168,8 @@ class VenueResource extends Resource
                                         $venueId = $get('search_existing_venue');
                                         if (!$venueId) return false;
                                         $venue = Venue::find($venueId);
-                                        return $venue && is_null($venue->marketplace_client_id);
+                                        // Show button if venue is NOT yet in this marketplace's partner list
+                                        return $venue && !$venue->isInMarketplace($marketplace?->id ?? 0);
                                     })
                                     ->requiresConfirmation()
                                     ->modalHeading('Adaugă locație ca partener')
@@ -191,20 +187,11 @@ class VenueResource extends Resource
                                             return;
                                         }
 
-                                        if ($venue->marketplace_client_id) {
-                                            Notification::make()
-                                                ->title('Eroare')
-                                                ->body('Această locație aparține deja unui alt marketplace.')
-                                                ->danger()
-                                                ->send();
-                                            return;
-                                        }
-
                                         $venueName = $venue->getTranslation('name', 'ro') ?? $venue->getTranslation('name', 'en') ?? 'Locație';
 
-                                        $venue->update([
-                                            'marketplace_client_id' => $marketplace?->id,
-                                            'is_partner' => true,
+                                        // Attach to this marketplace via pivot (syncWithoutDetaching preserves other marketplaces)
+                                        $venue->marketplaceClients()->syncWithoutDetaching([
+                                            $marketplace?->id => ['is_partner' => true],
                                         ]);
 
                                         Notification::make()

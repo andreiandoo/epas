@@ -17,4 +17,16 @@ class CreateVenue extends CreateRecord
         $data['marketplace_client_id'] = static::getMarketplaceClient()?->id;
         return $data;
     }
+
+    protected function afterCreate(): void
+    {
+        // Also register the new venue in the pivot table so it's discoverable
+        // even when querying via the many-to-many relationship
+        $marketplace = static::getMarketplaceClient();
+        if ($marketplace) {
+            $this->record->marketplaceClients()->syncWithoutDetaching([
+                $marketplace->id => ['is_partner' => true],
+            ]);
+        }
+    }
 }

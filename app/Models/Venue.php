@@ -309,6 +309,26 @@ class Venue extends Model
         return $this->belongsTo(MarketplaceClient::class);
     }
 
+    /**
+     * Marketplace clients that have this venue in their partner list (many-to-many)
+     */
+    public function marketplaceClients(): BelongsToMany
+    {
+        return $this->belongsToMany(MarketplaceClient::class, 'marketplace_venue_partners')
+            ->withPivot('is_partner', 'partner_notes')
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if this venue is linked to a specific marketplace client
+     */
+    public function isInMarketplace(int $marketplaceClientId): bool
+    {
+        return $this->marketplaceClients()
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->exists();
+    }
+
     public function venueType(): BelongsTo
     {
         return $this->belongsTo(VenueType::class);

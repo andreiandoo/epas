@@ -17,7 +17,7 @@ class VenuesController extends BaseController
 
         $query = Venue::query()
             ->with('venueCategories')
-            ->where('marketplace_client_id', $client->id);
+            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_client_id', $client->id));
 
         // Filter by city — case-insensitive, also matches without diacritics
         if ($request->filled('city')) {
@@ -48,9 +48,9 @@ class VenuesController extends BaseController
             $query->where('is_featured', true);
         }
 
-        // Partner only
+        // Partner only — check pivot table
         if ($request->boolean('partner')) {
-            $query->where('is_partner', true);
+            $query->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_client_id', $client->id)->where('is_partner', true));
         }
 
         // Sorting
@@ -76,8 +76,8 @@ class VenuesController extends BaseController
 
         $language = $client->language ?? 'ro';
 
-        $venues = collect($paginator->items())->map(function ($venue) use ($language) {
-            return $this->formatVenue($venue, $language);
+        $venues = collect($paginator->items())->map(function ($venue) use ($language, $client) {
+            return $this->formatVenue($venue, $language, $client->id);
         });
 
         return response()->json([
@@ -103,7 +103,7 @@ class VenuesController extends BaseController
 
         // First try to get explicitly featured venues
         $venues = Venue::query()
-            ->where('marketplace_client_id', $client->id)
+            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_client_id', $client->id))
             ->where('is_featured', true)
             ->limit($limit)
             ->get();
@@ -111,10 +111,10 @@ class VenuesController extends BaseController
         // If no featured venues, get venues with most upcoming events
         if ($venues->isEmpty()) {
             $venues = Venue::query()
-                ->where('marketplace_client_id', $client->id)
+                ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_client_id', $client->id))
                 ->get()
-                ->map(function ($venue) {
-                    $venue->upcoming_events_count = $this->countVenueEvents($venue);
+                ->map(function ($venue) use ($client) {
+                    $venue->upcoming_events_count = $this->countVenueEvents($venue, $client->id);
                     return $venue;
                 })
                 ->filter(fn ($v) => $v->upcoming_events_count > 0)
@@ -126,7 +126,7 @@ class VenuesController extends BaseController
         $language = $client->language ?? 'ro';
 
         return $this->success([
-            'venues' => $venues->map(fn ($v) => $this->formatVenue($v, $language)),
+            'venues' => $venues->map(fn ($v) => $this->formatVenue($v, $language, $client->id)),
         ]);
     }
 
@@ -138,7 +138,7 @@ class VenuesController extends BaseController
         $client = $this->requireClient($request);
 
         $venue = Venue::query()
-            ->where('marketplace_client_id', $client->id)
+            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_client_id', $client->id))
             ->where('slug', $slug)
             ->first();
 
@@ -152,7 +152,7 @@ class VenuesController extends BaseController
         // Get upcoming marketplace events at this venue
         // Match by venue_id OR by venue_name/city for events without venue_id
         $upcomingEvents = \App\Models\MarketplaceEvent::query()
-            ->where('marketplace_client_id', $venue->marketplace_client_id)
+            ->where('marketplace_client_id', $client->id)
             ->where('status', 'published')
             ->where('starts_at', '>=', now())
             ->where(function ($query) use ($venue, $venueName) {
@@ -203,7 +203,7 @@ class VenuesController extends BaseController
 
         // Also get upcoming events from Event table (events created via organizer panel)
         $upcomingCoreEvents = \App\Models\Event::query()
-            ->where('marketplace_client_id', $venue->marketplace_client_id)
+            ->where('marketplace_client_id', $client->id)
             ->where('status', 'published')
             ->where('venue_id', $venue->id)
             ->where(function ($q) {
@@ -310,7 +310,7 @@ class VenuesController extends BaseController
                 'slug' => $cat->slug,
             ]),
             'upcoming_events' => $allUpcomingEvents,
-            'events_count' => $this->countVenueEvents($venue),
+            'events_count' => $this->countVenueEvents($venue, $client->id),
         ];
 
         return $this->success($data);
@@ -319,7 +319,7 @@ class VenuesController extends BaseController
     /**
      * Format venue for list display
      */
-    protected function formatVenue(Venue $venue, string $language): array
+    protected function formatVenue(Venue $venue, string $language, ?int $marketplaceClientId = null): array
     {
         return [
             'id' => $venue->id,
@@ -329,9 +329,9 @@ class VenuesController extends BaseController
             'address' => $venue->address,
             'capacity' => $venue->capacity,
             'image' => $this->formatImageUrl($venue->image_url),
-            'events_count' => $this->countVenueEvents($venue),
+            'events_count' => $this->countVenueEvents($venue, $marketplaceClientId),
             'is_featured' => $venue->is_featured ?? false,
-            'is_partner' => $venue->is_partner ?? false,
+            'is_partner' => true, // All venues returned by this API are in the marketplace's partner list
             'categories' => $venue->venueCategories->map(fn ($cat) => [
                 'id' => $cat->id,
                 'name' => $cat->getTranslation('name', $language),
@@ -341,17 +341,15 @@ class VenuesController extends BaseController
     }
 
     /**
-     * Count upcoming published events for a venue
-     * Counts events from both Event and MarketplaceEvent tables
-     * Events are matched by venue_id OR by matching venue_name/city (for events without venue_id)
+     * Count upcoming published events for a venue within a specific marketplace
      */
-    protected function countVenueEvents(Venue $venue): int
+    protected function countVenueEvents(Venue $venue, ?int $marketplaceClientId = null): int
     {
         $venueName = $venue->getTranslation('name', 'ro') ?: $venue->name;
         $count = 0;
 
-        // Count from MarketplaceEvent table (legacy)
-        $count += \App\Models\MarketplaceEvent::where('marketplace_client_id', $venue->marketplace_client_id)
+        // Count from MarketplaceEvent table
+        $count += \App\Models\MarketplaceEvent::where('marketplace_client_id', $marketplaceClientId)
             ->where('status', 'published')
             ->where('starts_at', '>=', now())
             ->where(function ($query) use ($venue, $venueName) {
@@ -364,12 +362,11 @@ class VenuesController extends BaseController
             })
             ->count();
 
-        // Count from Event table (marketplace events stored here)
-        $count += \App\Models\Event::where('marketplace_client_id', $venue->marketplace_client_id)
+        // Count from Event table
+        $count += \App\Models\Event::where('marketplace_client_id', $marketplaceClientId)
             ->where('status', 'published')
             ->where('venue_id', $venue->id)
             ->where(function ($q) {
-                // Check upcoming using event_date or starts_at
                 $q->where(function ($inner) {
                     $inner->whereNotNull('event_date')->where('event_date', '>=', now()->toDateString());
                 })->orWhere(function ($inner) {
