@@ -35,11 +35,13 @@ $_navCatCache = sys_get_temp_dir() . '/tics_nav_categories.json';
 $_navCatTtl   = 300;
 $navCategories = [];
 if (file_exists($_navCatCache) && (time() - filemtime($_navCatCache)) < $_navCatTtl) {
-    $navCategories = json_decode(file_get_contents($_navCatCache), true) ?: [];
+    $_cached = json_decode(file_get_contents($_navCatCache), true) ?: [];
+    // Validate cache format: must be indexed array of category objects, not wrapped in 'categories' key
+    $navCategories = (isset($_cached[0]) || (is_array($_cached) && array_key_first($_cached) !== 'categories')) ? $_cached : [];
 } else {
     $_catResult = callApi('event-categories');
-    if (!empty($_catResult['success']) && is_array($_catResult['data'] ?? null)) {
-        $navCategories = $_catResult['data'];
+    if (!empty($_catResult['success']) && is_array($_catResult['data']['categories'] ?? null)) {
+        $navCategories = $_catResult['data']['categories'];
         @file_put_contents($_navCatCache, json_encode($navCategories));
     }
 }

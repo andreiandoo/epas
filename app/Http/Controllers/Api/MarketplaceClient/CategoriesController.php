@@ -118,6 +118,7 @@ class CategoriesController extends BaseController
                             'id' => $child->id,
                             'name' => $child->getTranslation('name', $language),
                             'slug' => $child->slug,
+                            'icon_emoji' => $child->icon_emoji,
                             'event_count' => $this->countUpcomingEventsForCategory($child),
                         ];
                     }),

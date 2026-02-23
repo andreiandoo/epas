@@ -22,9 +22,10 @@ if (!$categorySlug) {
 }
 
 // Fetch category from API (includes children/subcategories)
+// API show() wraps result in data.category (not data directly)
 $_catApiResponse = callApi('event-categories/' . $categorySlug);
-$_apiCatData     = (!empty($_catApiResponse['success']) && !empty($_catApiResponse['data']))
-                    ? $_catApiResponse['data'] : null;
+$_apiCatData     = (!empty($_catApiResponse['success']) && !empty($_catApiResponse['data']['category']))
+                    ? $_catApiResponse['data']['category'] : null;
 
 // Build categoryData from API or fallback to hardcoded config
 if ($_apiCatData) {
