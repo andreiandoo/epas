@@ -213,18 +213,21 @@ class EventsController extends BaseController
                 ? ($event->event_date ? $event->event_date->format('Y-m-d') . ' ' . ($event->start_time ?? '00:00') : null)
                 : $event->starts_at;
 
-            // Get image (convert to absolute URL using APP_URL for consistent domain)
-            $imageRelative = $isMarketplaceEvent
+            // Get images (convert to absolute URL using APP_URL for consistent domain)
+            $formatUrl = function(?string $r) {
+                if (!$r) return null;
+                if (str_starts_with($r, 'http://') || str_starts_with($r, 'https://')) return $r;
+                return rtrim(config('app.url'), '/') . '/storage/' . ltrim($r, '/');
+            };
+            $imageUrl  = $formatUrl($isMarketplaceEvent
                 ? ($event->poster_url ?? $event->hero_image_url ?? $event->image_url)
-                : $event->image_url;
-            $imageUrl = null;
-            if ($imageRelative) {
-                if (str_starts_with($imageRelative, 'http://') || str_starts_with($imageRelative, 'https://')) {
-                    $imageUrl = $imageRelative;
-                } else {
-                    $imageUrl = rtrim(config('app.url'), '/') . '/storage/' . ltrim($imageRelative, '/');
-                }
-            }
+                : $event->image_url);
+            $posterUrl = $formatUrl($isMarketplaceEvent
+                ? ($event->poster_url ?? $event->image_url)
+                : $event->image_url);
+            $heroUrl   = $formatUrl($isMarketplaceEvent
+                ? ($event->hero_image_url ?? $event->image_url)
+                : $event->image_url);
 
             // Get category
             $category = $isMarketplaceEvent
@@ -238,10 +241,10 @@ class EventsController extends BaseController
                     ?? (is_array($event->venue->name) ? ($event->venue->name[$language] ?? $event->venue->name['ro'] ?? $event->venue->name['en'] ?? null) : $event->venue->name);
             }
 
-            // Calculate min price from ticket types
-            $minPrice = $event->ticketTypes->map(function ($tt) {
-                return ($tt->sale_price_cents ?? $tt->price_cents) / 100;
-            })->min();
+            // Calculate min price from ticket types (skip free/0-price tickets)
+            $minPrice = $event->ticketTypes->filter(fn ($tt) => ($tt->sale_price_cents ?? $tt->price_cents) > 0)
+                ->map(fn ($tt) => ($tt->sale_price_cents ?? $tt->price_cents) / 100)
+                ->min();
 
             // Calculate total available tickets
             $totalAvailable = $event->ticketTypes->sum(function ($tt) {
@@ -256,6 +259,8 @@ class EventsController extends BaseController
                 'start_time' => $event->start_time,
                 'starts_at' => $startsAt,
                 'image_url' => $imageUrl,
+                'poster_url' => $posterUrl,
+                'hero_image_url' => $heroUrl,
                 'category' => $category,
                 'venue' => $venueName,
                 'city' => $event->venue?->city,
@@ -519,16 +524,21 @@ class EventsController extends BaseController
                     ? ($event->event_date ? $event->event_date->format('Y-m-d') . ' ' . ($event->start_time ?? '00:00') : null)
                     : $event->starts_at;
 
-                // Get image (convert to absolute URL using APP_URL)
-                $imageRelative = $isMarketplaceEvent
+                // Get images separately for responsive cards
+                $imageUrl  = $this->formatImageUrl($isMarketplaceEvent
                     ? ($event->poster_url ?? $event->hero_image_url ?? $event->image_url)
-                    : $event->image_url;
-                $imageUrl = $this->formatImageUrl($imageRelative);
+                    : $event->image_url);
+                $posterUrl = $this->formatImageUrl($isMarketplaceEvent
+                    ? ($event->poster_url ?? $event->image_url)
+                    : $event->image_url);
+                $heroUrl   = $this->formatImageUrl($isMarketplaceEvent
+                    ? ($event->hero_image_url ?? $event->image_url)
+                    : $event->image_url);
 
-                // Calculate min price from active ticket types
-                $minPrice = $event->ticketTypes->map(function ($tt) {
-                    return ($tt->sale_price_cents ?? $tt->price_cents) / 100;
-                })->min();
+                // Calculate min price from active ticket types (skip free/0-price tickets)
+                $minPrice = $event->ticketTypes->filter(fn ($tt) => ($tt->sale_price_cents ?? $tt->price_cents) > 0)
+                    ->map(fn ($tt) => ($tt->sale_price_cents ?? $tt->price_cents) / 100)
+                    ->min();
 
                 // Calculate total available tickets
                 $totalAvailable = $event->ticketTypes->sum(function ($tt) {
@@ -550,6 +560,8 @@ class EventsController extends BaseController
                     'start_time' => $event->start_time,
                     'starts_at' => $startsAt,
                     'image_url' => $imageUrl,
+                    'poster_url' => $posterUrl,
+                    'hero_image_url' => $heroUrl,
                     'venue' => $venueName,
                     'city' => $event->venue?->city,
                     'price_from' => $minPrice,

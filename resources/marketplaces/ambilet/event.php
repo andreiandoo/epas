@@ -162,11 +162,11 @@ require_once __DIR__ . '/includes/head.php';
                                 <div class="flex flex-col">
                                     <div class="flex items-center gap-2">
                                         <p id="event-weekday" class="font-semibold text-secondary"></p>
-                                        <p id="event-date-full" class="text-sm text-muted"></p>
+                                        <p id="event-date-full" class="font-semibold text-secondary"></p>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <p id="event-time" class="font-semibold text-secondary"></p>
-                                        <p id="event-doors" class="text-sm text-muted"></p>
+                                        <p id="event-doors" class="font-semibold text-secondary"></p>
                                     </div>
                                 </div>
                             </div>

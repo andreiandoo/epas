@@ -1940,13 +1940,14 @@ input[type="range"]::-moz-range-thumb {
 /* Nav link button with gradient underline indicator */
 .nav-link {
     position: relative;
-    padding: 0 16px;
-    height: 64px;
+    padding: 0 10px;
+    height: 40px;
+    font-size: 0.875rem;
     display: flex;
     align-items: center;
     gap: 6px;
     font-weight: 500;
-    color: #374151;
+    color: #4b5563;
     transition: color .2s;
     white-space: nowrap;
     background: none;

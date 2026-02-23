@@ -42,6 +42,20 @@ class EditEvent extends EditRecord
             ?? $this->record->getTranslation('title', 'en')
             ?? '';
 
+        // Append city and date in parentheses
+        $parts = [];
+        $city = $this->record->city ?? $this->record->venue?->city ?? null;
+        if ($city) {
+            $parts[] = $city;
+        }
+        $eventDate = $this->record->event_date ?? null;
+        if ($eventDate) {
+            $parts[] = \Carbon\Carbon::parse($eventDate)->translatedFormat('d M Y');
+        }
+        if (!empty($parts)) {
+            $title .= ' (' . implode(', ', $parts) . ')';
+        }
+
         return $title ?: 'Edit Event';
     }
 

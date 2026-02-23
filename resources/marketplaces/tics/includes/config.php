@@ -12,7 +12,7 @@ if (!defined('TICS_ROOT')) {
 
 // API Configuration - Tixello Core API
 define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
-define('API_KEY', 'mpc_TICS_API_KEY_HERE'); // Replace with actual API key
+define('API_KEY', 'mpc_vnZ1jJekvmxnsZpOitiCPhR95PcpYE9PCTMVFG41HpwRM1yq96w0rCpCjNin'); // Replace with actual API key
 define('STORAGE_URL', 'https://core.tixello.com/storage'); // Core storage URL for images
 
 // Site Configuration

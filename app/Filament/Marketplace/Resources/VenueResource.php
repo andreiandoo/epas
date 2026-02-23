@@ -100,6 +100,16 @@ class VenueResource extends Resource
                                         })
                                         ->toArray();
                                 })
+                                ->getOptionLabelUsing(function ($value) use ($marketplace) {
+                                    $venue = Venue::find($value);
+                                    if (!$venue) return $value;
+                                    $name = $venue->getTranslation('name', 'ro') ?? $venue->getTranslation('name', 'en') ?? 'Locație';
+                                    $city = $venue->city ? " - {$venue->city}" : '';
+                                    $status = $venue->isInMarketplace($marketplace?->id ?? 0)
+                                        ? ' [Deja în lista ta]'
+                                        : '';
+                                    return $name . $city . $status;
+                                })
                                 ->live()
                                 ->afterStateUpdated(function ($state, SSet $set) {
                                     // Store the selected venue ID for the action to use

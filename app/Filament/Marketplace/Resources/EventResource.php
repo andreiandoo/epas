@@ -1045,6 +1045,7 @@ class EventResource extends Resource
                                     ->relationship()
                                     ->label($t('Tipuri de bilete', 'Ticket types'))
                                     ->collapsible()
+                                    ->collapsed()
                                     ->reorderable()
                                     ->reorderableWithDragAndDrop()
                                     ->orderColumn('sort_order')

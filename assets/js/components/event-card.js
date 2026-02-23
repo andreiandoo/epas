@@ -34,10 +34,20 @@ const AmbiletEventCard = {
             showPrice = true,
             showVenue = true,
             urlPrefix = '/bilete/',
-            linkClass = ''
+            linkClass = '',
+            showPromotedBadge = false // Show "Promovat" badge for paid promotions
         } = options;
 
         const eventUrl = urlPrefix + event.slug;
+
+        // Promoted badge (shown on top-left for paid promotions)
+        let promotedBadge = '';
+        if (showPromotedBadge) {
+            promotedBadge = '<span class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 px-2 py-1 text-xs font-bold text-white uppercase rounded-lg" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);">' +
+                '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>' +
+                'Promovat' +
+            '</span>';
+        }
 
         // Status badges (cancelled, postponed, sold out take priority)
         let statusBadge = '';
@@ -49,15 +59,6 @@ const AmbiletEventCard = {
             statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 bg-gray-600">SOLD OUT</span>';
         } else if (showCategory && event.categoryName) {
             statusBadge = '<span class="absolute px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg top-3 right-3 bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>';
-        }
-
-        // Featured/promoted badge (shown top left, below date)
-        let featuredBadge = '';
-        if (event.isFeatured) {
-            featuredBadge = '<span class="absolute bottom-3 left-3 px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg bg-gradient-to-r from-primary to-primary-dark flex items-center gap-1">' +
-                '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' +
-                'Promovat' +
-            '</span>';
         }
 
         // Date badge - show range for festivals, single date otherwise
@@ -73,12 +74,18 @@ const AmbiletEventCard = {
             '</div>';
         }
 
+        // Responsive image: poster (vertical) on mobile, hero (horizontal) on desktop
+        const posterSrc = getStorageUrl(event.posterImage || event.image);
+        const heroSrc = getStorageUrl(event.heroImage || event.image);
+
         return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
             '<div class="relative h-48 overflow-hidden">' +
-                '<img src="' + (event.image || this.PLACEHOLDER) + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-2xl rounded-tr-2xl" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
-                '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>' +
+                '<picture>' +
+                    '<source media="(min-width: 768px)" srcset="' + heroSrc + '">' +
+                    '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-2xl rounded-tr-2xl" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                '</picture>' +
+                (promotedBadge ? promotedBadge : '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>') +
                 statusBadge +
-                featuredBadge +
             '</div>' +
             '<div class="px-3 py-2">' +
                 '<h3 class="mb-2 font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2 truncate">' + this.escapeHtml(event.title) + '</h3>' +
@@ -207,7 +214,7 @@ const AmbiletEventCard = {
         return '<article class="event-card group relative bg-white rounded-3xl overflow-hidden cursor-pointer shadow-lg" onclick="window.location.href=\'' + eventUrl + '\'">' +
             '<div class="flex flex-col lg:flex-row">' +
                 '<div class="relative lg:w-2/3 aspect-video lg:aspect-auto overflow-hidden">' +
-                    '<img src="' + (event.image || this.PLACEHOLDER) + '" alt="' + this.escapeHtml(event.title) + '" class="event-image w-full h-full object-cover" loading="lazy">' +
+                    '<img src="' + getStorageUrl(event.image) + '" alt="' + this.escapeHtml(event.title) + '" class="event-image w-full h-full object-cover" loading="lazy">' +
                     '<div class="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black/60 to-transparent"></div>' +
                     '<div class="absolute top-4 left-4">' +
                         '<span class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-full">' +
@@ -255,7 +262,7 @@ const AmbiletEventCard = {
 
         return '<a href="' + eventUrl + '" class="flex gap-4 p-3 rounded-xl hover:bg-surface transition-colors group">' +
             '<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">' +
-                '<img src="' + (event.image || this.PLACEHOLDER) + '" alt="' + this.escapeHtml(event.title) + '" class="w-full h-full object-cover" loading="lazy">' +
+                '<img src="' + getStorageUrl(event.image) + '" alt="' + this.escapeHtml(event.title) + '" class="w-full h-full object-cover" loading="lazy">' +
             '</div>' +
             '<div class="flex-1 min-w-0">' +
                 '<h4 class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">' + this.escapeHtml(event.title) + '</h4>' +
@@ -355,8 +362,14 @@ const AmbiletEventCard = {
             venueCity = apiEvent.city;
         }
 
-        // Extract price - always show base ticket price (without commission on top)
-        let minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
+        // Extract price - skip free (price=0) ticket types, show min paid price
+        let minPrice = 0;
+        if (apiEvent.ticket_types && Array.isArray(apiEvent.ticket_types)) {
+            const paidTickets = apiEvent.ticket_types.filter(t => (t.price || 0) > 0);
+            minPrice = paidTickets.length > 0 ? Math.min(...paidTickets.map(t => t.price || 0)) : 0;
+        } else {
+            minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
+        }
 
         // Extract category
         let categoryName = '';
@@ -395,7 +408,9 @@ const AmbiletEventCard = {
             id: apiEvent.id,
             slug: apiEvent.slug || '',
             title: apiEvent.name || apiEvent.title || 'Eveniment',
-            image: apiEvent.image_url || apiEvent.featured_image || apiEvent.image || null,
+            image: apiEvent.poster_url || apiEvent.image_url || apiEvent.featured_image || apiEvent.image || null,
+            posterImage: apiEvent.poster_url || apiEvent.image_url || apiEvent.image || null,
+            heroImage: apiEvent.hero_image_url || apiEvent.cover_image_url || apiEvent.image_url || apiEvent.image || null,
             date: date,
             day: date ? date.getDate() : '',
             month: date ? this.MONTHS[date.getMonth()] : '',
@@ -410,7 +425,6 @@ const AmbiletEventCard = {
             isCancelled: apiEvent.is_cancelled || false,
             isPostponed: apiEvent.is_postponed || false,
             postponedDate: apiEvent.postponed_date || null,
-            isFeatured: apiEvent.is_featured || apiEvent.featured || false,
             isDateRange: isDateRange,
             dateRangeFormatted: dateRangeFormatted,
             _raw: apiEvent
