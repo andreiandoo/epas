@@ -770,7 +770,11 @@ class EditEvent extends EditRecord
             }
         }
 
-        // Tour management
+        // Tour management — only act if the tour field is present in form data
+        // (prevents accidental clearing when the field value is missing/undefined)
+        if (!array_key_exists('is_in_tour', $this->data)) {
+            return;
+        }
         $isInTour = (bool) ($this->data['is_in_tour'] ?? false);
         $tourEventIds = array_map('intval', array_filter($this->data['tour_event_ids'] ?? []));
 
