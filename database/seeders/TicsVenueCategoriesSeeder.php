@@ -10,16 +10,14 @@ class TicsVenueCategoriesSeeder extends Seeder
 {
     public function run(): void
     {
-        $marketplace = MarketplaceClient::where('name', 'like', '%tics%')
-            ->orWhere('slug', 'like', '%tics%')
-            ->first();
+        $marketplace = MarketplaceClient::find(2);
 
         if (! $marketplace) {
-            $this->command->error('Marketplace client "Tics" not found. Aborting.');
+            $this->command->error('Marketplace client cu id=2 nu a fost găsit. Aborting.');
             return;
         }
 
-        $mcId = $marketplace->id;
+        $mcId = 2;
 
         $this->command->info("Seeding venue categories for marketplace: {$marketplace->name} (id={$mcId})");
 
