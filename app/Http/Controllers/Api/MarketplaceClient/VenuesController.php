@@ -249,6 +249,23 @@ class VenuesController extends BaseController
             ->values()
             ->take(10);
 
+        // Resolve facilities keys → labels (with emoji icon prefix)
+        $facilitiesResolved = collect($venue->facilities ?? [])->map(function ($key) {
+            foreach (Venue::FACILITIES as $cat) {
+                if (isset($cat['items'][$key])) {
+                    $label = $cat['items'][$key];
+                    // Label format: "🅿️ Parcare" — split icon from name
+                    $parts = preg_split('/\s+/', $label, 2);
+                    return [
+                        'key'   => $key,
+                        'icon'  => $parts[0] ?? '',
+                        'label' => $parts[1] ?? $label,
+                    ];
+                }
+            }
+            return null;
+        })->filter()->values()->toArray();
+
         // Build response
         $data = [
             'id' => $venue->id,
@@ -256,17 +273,24 @@ class VenuesController extends BaseController
             'slug' => $venue->slug,
             'description' => $venue->getTranslation('description', $language),
             'city' => $venue->city,
+            'state' => $venue->state,
             'address' => $venue->address,
             'postal_code' => $venue->postal_code,
             'country' => $venue->country,
-            'latitude' => $venue->latitude,
-            'longitude' => $venue->longitude,
+            'latitude' => $venue->lat,
+            'longitude' => $venue->lng,
+            'google_maps_url' => $venue->google_maps_url,
             'capacity' => $venue->capacity_total ?? $venue->capacity,
             'image' => $this->formatImageUrl($venue->image_url),
             'cover_image' => $this->formatImageUrl($venue->cover_image_url),
-            'gallery' => $venue->gallery ?? [],
+            'gallery' => collect($venue->gallery ?? [])->map(fn ($img) => $this->formatImageUrl($img))->filter()->values()->toArray(),
             'schedule' => $venue->schedule,
-            'amenities' => $venue->amenities ?? [],
+            'facilities' => $facilitiesResolved,
+            'video_type' => $venue->video_type,
+            'video_url' => $venue->video_url,
+            'established_at' => $venue->established_at?->format('Y'),
+            'is_partner' => $venue->is_partner ?? false,
+            'is_featured' => $venue->is_featured ?? false,
             'phone' => $venue->phone,
             'email' => $venue->email,
             'website' => $venue->website_url,

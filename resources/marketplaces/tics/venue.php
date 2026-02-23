@@ -26,24 +26,44 @@ if (empty($venueResponse['success']) || empty($venueResponse['data'])) {
 
 $venue = $venueResponse['data'];
 
-$venueName      = $venue['name']        ?? '';
-$venueCity      = $venue['city']        ?? '';
-$venueDesc      = $venue['description'] ?? '';
-$venueAddress   = $venue['address']     ?? '';
-$venueCapacity  = (int) ($venue['capacity'] ?? 0);
-$venueImage     = $venue['image']       ?? '';
-$venueCover     = $venue['cover_image'] ?? $venueImage;
-$venueEvCount   = (int) ($venue['events_count'] ?? 0);
-$venueAmenities = $venue['amenities']   ?? [];
-$venueUpcoming  = $venue['upcoming_events'] ?? [];
-$venueCategories = $venue['categories'] ?? [];
-$venueContact   = $venue['contact']     ?? [];
-$venueSocial    = $venue['social']      ?? [];
-$venueLat       = $venue['latitude']    ?? null;
-$venueLng       = $venue['longitude']   ?? null;
+$venueName       = $venue['name']         ?? '';
+$venueCity       = $venue['city']         ?? '';
+$venueState      = $venue['state']        ?? '';
+$venueCountry    = $venue['country']      ?? '';
+$venueDesc       = $venue['description']  ?? '';
+$venueAddress    = $venue['address']      ?? '';
+$venueCapacity   = (int) ($venue['capacity'] ?? 0);
+$venueImage      = $venue['image']        ?? '';
+$venueCover      = $venue['cover_image']  ?? $venueImage;
+$venueEvCount    = (int) ($venue['events_count'] ?? 0);
+$venueFacilities = $venue['facilities']   ?? [];
+$venueGallery    = $venue['gallery']      ?? [];
+$venueUpcoming   = $venue['upcoming_events'] ?? [];
+$venueCategories = $venue['categories']   ?? [];
+$venueContact    = $venue['contact']      ?? [];
+$venueSocial     = $venue['social']       ?? [];
+$venueLat        = $venue['latitude']     ?? null;
+$venueLng        = $venue['longitude']    ?? null;
+$venueGmapsUrl   = $venue['google_maps_url'] ?? '';
+$venueVideoType  = $venue['video_type']   ?? '';
+$venueVideoUrl   = $venue['video_url']    ?? '';
+$venueEstYear    = $venue['established_at'] ?? '';
+$venueIsPartner  = !empty($venue['is_partner']);
+$venueSchedule   = $venue['schedule']     ?? '';
 
 // City base slug for linking back to city page
 $cityBaseSlug = $venueCity ? slugify($venueCity) : '';
+
+// Google Maps link: use venue's own URL if set, otherwise build from address
+$gmapsLink = $venueGmapsUrl ?: ('https://www.google.com/maps/search/?api=1&query=' . urlencode(implode(', ', array_filter([$venueAddress, $venueCity, $venueCountry]))));
+
+// YouTube embed URL
+$youtubeEmbedUrl = null;
+if ($venueVideoType === 'youtube' && $venueVideoUrl) {
+    if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/', $venueVideoUrl, $m)) {
+        $youtubeEmbedUrl = 'https://www.youtube.com/embed/' . $m[1] . '?rel=0&modestbranding=1';
+    }
+}
 
 // ── Page configuration ────────────────────────────────────────────────────────
 $pageTitle       = $venueName ? $venueName . ' – Bilete și Evenimente' : 'Locație';
@@ -61,7 +81,11 @@ $breadcrumbs = array_filter([
     ['name' => $venueName],
 ]);
 
-$headExtra = '<style>.hero-gradient{background:linear-gradient(135deg,#1e3a5f 0%,#2d5a87 50%,#3d7ab5 100%)}.stat-card{backdrop-filter:blur(10px);background:rgba(255,255,255,.1)}</style>';
+$partnerCss = $venueIsPartner
+    ? '.hero-gradient{background:linear-gradient(135deg,#1e1b4b 0%,#312e81 40%,#4c1d95 80%,#6d28d9 100%)} .partner-glow{box-shadow:0 0 0 3px #7c3aed,0 0 20px rgba(124,58,237,0.4)}'
+    : '.hero-gradient{background:linear-gradient(135deg,#1e3a5f 0%,#2d5a87 50%,#3d7ab5 100%)}';
+
+$headExtra = '<style>' . $partnerCss . ' .stat-card{backdrop-filter:blur(10px);background:rgba(255,255,255,.1)}</style>';
 
 require_once __DIR__ . '/includes/head.php';
 setLoginState($isLoggedIn, $loggedInUser);
@@ -69,13 +93,23 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero -->
-<section class="hero-gradient text-white relative overflow-hidden">
+<section class="hero-gradient text-white relative overflow-hidden <?= $venueIsPartner ? 'partner-glow' : '' ?>">
     <?php if ($venueCover): ?>
     <div class="absolute inset-0">
         <img src="<?= e($venueCover) ?>" alt="<?= e($venueName) ?>" class="w-full h-full object-cover opacity-25">
     </div>
     <?php endif; ?>
     <div class="absolute inset-0 bg-gradient-to-r from-gray-900/85 via-gray-900/60 to-transparent"></div>
+
+    <?php if ($venueIsPartner): ?>
+    <!-- Premium ribbon -->
+    <div class="absolute top-0 right-0 z-10">
+        <div class="bg-gradient-to-br from-amber-400 to-amber-600 text-amber-950 text-xs font-bold px-5 py-1.5 rounded-bl-2xl flex items-center gap-1.5 shadow-lg">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            LOCAȚIE PROMOVATĂ
+        </div>
+    </div>
+    <?php endif; ?>
 
     <div class="max-w-6xl mx-auto px-4 lg:px-8 py-12 lg:py-16 relative">
         <!-- Breadcrumb -->
@@ -90,21 +124,25 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <div class="max-w-2xl">
-            <!-- Categories -->
-            <?php if (!empty($venueCategories)): ?>
+            <!-- Categories + Partner badge -->
             <div class="flex items-center gap-2 mb-3 flex-wrap">
+                <?php if ($venueIsPartner): ?>
+                <span class="px-3 py-1 bg-amber-400/20 border border-amber-400/50 text-amber-300 rounded-full text-xs font-semibold flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    Partner Oficial
+                </span>
+                <?php endif; ?>
                 <?php foreach ($venueCategories as $cat): ?>
                 <span class="px-3 py-1 bg-white/15 border border-white/25 rounded-full text-xs font-medium"><?= e($cat['name']) ?></span>
                 <?php endforeach; ?>
             </div>
-            <?php endif; ?>
 
             <h1 class="text-3xl lg:text-4xl font-bold mb-2"><?= e($venueName) ?></h1>
 
             <?php if ($venueCity || $venueAddress): ?>
             <p class="text-white/80 flex items-center gap-2 mb-4">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                <?= e(implode(', ', array_filter([$venueAddress, $venueCity]))) ?>
+                <?= e(implode(', ', array_filter([$venueAddress, $venueCity, $venueState]))) ?>
             </p>
             <?php endif; ?>
 
@@ -130,116 +168,273 @@ require_once __DIR__ . '/includes/header.php';
 <div class="max-w-6xl mx-auto px-4 lg:px-8 py-10">
     <div class="flex flex-col lg:flex-row gap-10">
 
-        <!-- Left: Events -->
+        <!-- Left: Events + Info -->
         <div class="flex-1 min-w-0">
 
-            <!-- Upcoming Events -->
-            <?php if (!empty($venueUpcoming)): ?>
-            <section class="mb-10">
-                <h2 class="text-xl font-semibold text-gray-900 mb-5">
-                    Evenimente la <?= e($venueName) ?>
-                    <span class="ml-2 text-sm font-normal text-gray-400">(<?= count($venueUpcoming) ?> viitoare)</span>
-                </h2>
-
-                <div class="space-y-3">
-                    <?php foreach ($venueUpcoming as $ev): ?>
-                    <?php
-                        $evSlug     = $ev['slug']     ?? '';
-                        $evName     = $ev['name']     ?? '';
-                        $evImage    = $ev['image']    ?? '';
-                        $evDate     = $ev['starts_at'] ?? '';
-                        $evPrice    = $ev['price_from'] ?? null;
-                        $evCurrency = $ev['currency']   ?? 'RON';
-                        $evSoldOut  = $ev['is_sold_out'] ?? false;
-                        $evCat      = $ev['category']['name'] ?? '';
-
-                        // Format date
-                        $dateStr = '';
-                        if ($evDate) {
-                            try {
-                                $dt = new DateTime($evDate);
-                                $months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                                $dateStr = $dt->format('d') . ' ' . $months[(int)$dt->format('n') - 1] . ' ' . $dt->format('Y, H:i');
-                            } catch (Exception $e) {}
-                        }
-                    ?>
-                    <a href="<?= e('/bilete/' . $evSlug) ?>" class="flex items-center gap-4 bg-white border border-gray-200 rounded-2xl p-4 hover:border-gray-300 hover:shadow-sm transition-all group">
-                        <!-- Image -->
-                        <div class="w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">
-                            <?php if ($evImage): ?>
-                            <img src="<?= e($evImage) ?>" alt="<?= e($evName) ?>" class="w-full h-full object-cover">
-                            <?php else: ?>
-                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100">
-                                <svg class="w-8 h-8 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            </div>
-                            <?php endif; ?>
-                        </div>
-
-                        <!-- Info -->
-                        <div class="flex-1 min-w-0">
-                            <?php if ($evCat): ?>
-                            <p class="text-xs text-purple-600 font-medium mb-0.5"><?= e($evCat) ?></p>
-                            <?php endif; ?>
-                            <h3 class="font-semibold text-gray-900 truncate group-hover:text-purple-700 transition-colors"><?= e($evName) ?></h3>
-                            <?php if ($dateStr): ?>
-                            <p class="text-sm text-gray-500 mt-0.5"><?= e($dateStr) ?></p>
-                            <?php endif; ?>
-                        </div>
-
-                        <!-- Price -->
-                        <div class="flex-shrink-0 text-right">
-                            <?php if ($evSoldOut): ?>
-                            <span class="inline-block px-3 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full">Sold out</span>
-                            <?php elseif ($evPrice !== null): ?>
-                            <p class="text-xs text-gray-400 mb-0.5">de la</p>
-                            <p class="font-bold text-gray-900"><?= formatPrice($evPrice, $evCurrency) ?></p>
-                            <?php else: ?>
-                            <span class="inline-block px-3 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-full">Gratuit</span>
-                            <?php endif; ?>
-                            <svg class="w-4 h-4 text-gray-400 mt-1 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </div>
-                    </a>
-                    <?php endforeach; ?>
+            <!-- ── Stats ───────────────────────────────────────────────────── -->
+            <?php
+            $stats = [];
+            if ($venueCapacity > 0) {
+                $stats[] = ['value' => number_format($venueCapacity), 'label' => 'Capacitate', 'color' => 'text-indigo-600'];
+            }
+            $stats[] = ['value' => $venueEvCount, 'label' => 'Evenimente', 'color' => 'text-gray-900'];
+            if ($venueEstYear) {
+                $stats[] = ['value' => $venueEstYear, 'label' => 'Deschis în', 'color' => 'text-gray-900'];
+            }
+            if (!empty($venueFacilities)) {
+                $stats[] = ['value' => count($venueFacilities), 'label' => 'Facilități', 'color' => 'text-emerald-600'];
+            }
+            ?>
+            <?php if (!empty($stats)): ?>
+            <div class="grid grid-cols-<?= count($stats) ?> gap-4 mb-8">
+                <?php foreach ($stats as $stat): ?>
+                <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                    <p class="text-2xl font-bold <?= $stat['color'] ?>"><?= $stat['value'] ?></p>
+                    <p class="text-sm text-gray-500"><?= $stat['label'] ?></p>
                 </div>
-            </section>
-            <?php else: ?>
-            <section class="mb-10">
-                <h2 class="text-xl font-semibold text-gray-900 mb-5">Evenimente la <?= e($venueName) ?></h2>
-                <div class="text-center py-16 bg-white rounded-2xl border border-gray-200">
-                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    <p class="text-gray-500">Nu există evenimente programate momentan.</p>
-                    <?php if ($venueCity && $cityBaseSlug): ?>
-                    <a href="/evenimente-<?= e($cityBaseSlug) ?>" class="inline-block mt-4 px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors">
-                        Toate evenimentele din <?= e($venueCity) ?>
-                    </a>
-                    <?php endif; ?>
-                </div>
-            </section>
-            <?php endif; ?>
-
-        </div>
-
-        <!-- Right: Info sidebar -->
-        <aside class="lg:w-80 flex-shrink-0 space-y-5">
-
-            <!-- Description -->
-            <?php if ($venueDesc): ?>
-            <div class="bg-white border border-gray-200 rounded-2xl p-5">
-                <h3 class="font-semibold text-gray-900 mb-3">Despre locație</h3>
-                <p class="text-sm text-gray-600 leading-relaxed"><?= e($venueDesc) ?></p>
+                <?php endforeach; ?>
             </div>
             <?php endif; ?>
 
-            <!-- Contact & Address -->
+            <!-- ── Upcoming Events ─────────────────────────────────────────── -->
+            <?php if (!empty($venueUpcoming)): ?>
+                <section class="mb-10">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-5">
+                        Evenimente la <?= e($venueName) ?>
+                        <span class="ml-2 text-sm font-normal text-gray-400">(<?= count($venueUpcoming) ?> viitoare)</span>
+                    </h2>
+
+                    <div class="space-y-3">
+                        <?php foreach ($venueUpcoming as $ev): ?>
+                        <?php
+                            $evSlug     = $ev['slug']     ?? '';
+                            $evName     = $ev['name']     ?? '';
+                            $evImage    = $ev['image']    ?? '';
+                            $evDate     = $ev['starts_at'] ?? '';
+                            $evPrice    = $ev['price_from'] ?? null;
+                            $evCurrency = $ev['currency']   ?? 'RON';
+                            $evSoldOut  = $ev['is_sold_out'] ?? false;
+                            $evCat      = $ev['category']['name'] ?? '';
+
+                            $dateStr = '';
+                            if ($evDate) {
+                                try {
+                                    $dt = new DateTime($evDate);
+                                    $months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                    $dateStr = $dt->format('d') . ' ' . $months[(int)$dt->format('n') - 1] . ' ' . $dt->format('Y, H:i');
+                                } catch (Exception $e) {}
+                            }
+                        ?>
+                        <a href="<?= e('/bilete/' . $evSlug) ?>" class="flex items-center gap-4 bg-white border border-gray-200 rounded-2xl p-4 hover:border-gray-300 hover:shadow-sm transition-all group">
+                            <div class="w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">
+                                <?php if ($evImage): ?>
+                                <img src="<?= e($evImage) ?>" alt="<?= e($evName) ?>" class="w-full h-full object-cover">
+                                <?php else: ?>
+                                <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100">
+                                    <svg class="w-8 h-8 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <?php if ($evCat): ?>
+                                <p class="text-xs text-purple-600 font-medium mb-0.5"><?= e($evCat) ?></p>
+                                <?php endif; ?>
+                                <h3 class="font-semibold text-gray-900 truncate group-hover:text-purple-700 transition-colors"><?= e($evName) ?></h3>
+                                <?php if ($dateStr): ?>
+                                <p class="text-sm text-gray-500 mt-0.5"><?= e($dateStr) ?></p>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="flex-shrink-0 text-right">
+                                <?php if ($evSoldOut): ?>
+                                <span class="inline-block px-3 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full">Sold out</span>
+                                <?php elseif ($evPrice !== null): ?>
+                                <p class="text-xs text-gray-400 mb-0.5">de la</p>
+                                <p class="font-bold text-gray-900"><?= formatPrice($evPrice, $evCurrency) ?></p>
+                                <?php else: ?>
+                                <span class="inline-block px-3 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-full">Gratuit</span>
+                                <?php endif; ?>
+                                <svg class="w-4 h-4 text-gray-400 mt-1 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </div>
+                        </a>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+            <?php else: ?>
+                <section class="mb-10">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-5">Evenimente la <?= e($venueName) ?></h2>
+                    <div class="text-center py-16 bg-white rounded-2xl border border-gray-200">
+                        <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <p class="text-gray-500">Nu există evenimente programate momentan.</p>
+                        <?php if ($venueCity && $cityBaseSlug): ?>
+                        <a href="/evenimente-<?= e($cityBaseSlug) ?>" class="inline-block mt-4 px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors">
+                            Toate evenimentele din <?= e($venueCity) ?>
+                        </a>
+                        <?php endif; ?>
+                    </div>
+                </section>
+            <?php endif; ?>
+
+            <!-- ── About ───────────────────────────────────────────────────── -->
+            <?php if ($venueDesc): ?>
+            <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Despre locație</h2>
+                <div class="text-gray-600 leading-relaxed"><?= nl2br(e($venueDesc)) ?></div>
+            </div>
+            <?php endif; ?>
+
+            <!-- ── Gallery ─────────────────────────────────────────────────── -->
+            <?php if (!empty($venueGallery)): ?>
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">📸 Galerie</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <?php foreach ($venueGallery as $galleryImg): ?>
+                    <?php if ($galleryImg): ?>
+                    <a href="<?= e($galleryImg) ?>" target="_blank" rel="noopener" class="block rounded-xl overflow-hidden group aspect-[4/3] bg-gray-100">
+                        <img src="<?= e($galleryImg) ?>" alt="<?= e($venueName) ?>" loading="lazy"
+                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    </a>
+                    <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- ── YouTube Video ───────────────────────────────────────────── -->
+            <?php if ($youtubeEmbedUrl): ?>
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">🎬 Video</h2>
+                <div class="rounded-2xl overflow-hidden shadow-md aspect-video bg-black">
+                    <iframe
+                        src="<?= e($youtubeEmbedUrl) ?>"
+                        title="<?= e($venueName) ?> – Video"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen
+                        class="w-full h-full">
+                    </iframe>
+                </div>
+            </div>
+            <?php endif; ?>
+
+        </div><!-- /left -->
+
+        <!-- ── Right: Info Sidebar ───────────────────────────────────────── -->
+        <aside class="lg:w-80 flex-shrink-0 space-y-5">
+
+            <!-- Partner highlight card -->
+            <?php if ($venueIsPartner): ?>
+            <div class="bg-gradient-to-br from-violet-600 to-purple-700 text-white rounded-2xl p-5 shadow-lg">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-amber-300" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-bold text-sm">Locație Promovată</p>
+                        <p class="text-white/70 text-xs">Partner oficial TICS.ro</p>
+                    </div>
+                </div>
+                <p class="text-white/80 text-xs leading-relaxed">Această locație beneficiază de vizibilitate prioritară și este verificată de echipa TICS.ro.</p>
+            </div>
+            <?php endif; ?>
+
+            <!-- 1. Location & Maps -->
+            <div class="bg-white rounded-2xl border border-gray-200 p-5">
+                <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Locație
+                </h3>
+
+                <!-- Google Maps preview -->
+                <a href="<?= e($gmapsLink) ?>" target="_blank" rel="noopener"
+                   class="block rounded-xl overflow-hidden mb-4 group">
+                    <?php if ($venueLat && $venueLng): ?>
+                    <img
+                        src="https://maps.googleapis.com/maps/api/staticmap?center=<?= $venueLat ?>,<?= $venueLng ?>&zoom=15&size=320x160&maptype=roadmap&markers=color:red%7C<?= $venueLat ?>,<?= $venueLng ?>&key=AIzaSyD-PLACEHOLDER"
+                        alt="Hartă <?= e($venueName) ?>"
+                        class="w-full h-36 object-cover group-hover:opacity-90 transition"
+                        onerror="this.parentElement.innerHTML='<div class=\'h-36 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center\'><div class=\'text-center\'><svg class=\'w-8 h-8 text-gray-400 mx-auto mb-1\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z\'/><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M15 11a3 3 0 11-6 0 3 3 0 016 0z\'/></svg><p class=\'text-xs text-gray-500\'>Deschide în Google Maps</p></div></div>'">
+                    <?php else: ?>
+                    <div class="h-36 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center group-hover:from-gray-200 group-hover:to-gray-300 transition">
+                        <div class="text-center">
+                            <svg class="w-8 h-8 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <p class="text-xs text-gray-500">Deschide în Google Maps</p>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </a>
+
+                <!-- Address details -->
+                <div class="space-y-2 text-sm">
+                    <?php if ($venueAddress): ?>
+                    <div class="flex items-start gap-2">
+                        <svg class="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                        <span class="text-gray-700"><?= e($venueAddress) ?></span>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($venueCity): ?>
+                    <div class="flex items-start gap-2">
+                        <svg class="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                        <span class="text-gray-700"><?= e(implode(', ', array_filter([$venueCity, $venueState]))) ?></span>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($venueCountry): ?>
+                    <div class="flex items-start gap-2">
+                        <svg class="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span class="text-gray-700"><?= e($venueCountry) ?></span>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <a href="<?= e($gmapsLink) ?>" target="_blank" rel="noopener"
+                   class="mt-4 flex items-center justify-center gap-2 w-full py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    Deschide în Google Maps
+                </a>
+            </div>
+
+            <!-- 2. Schedule / Program -->
+            <?php if ($venueSchedule): ?>
+            <div class="bg-white rounded-2xl border border-gray-200 p-5">
+                <h3 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Program
+                </h3>
+                <?php
+                $scheduleData = is_string($venueSchedule) ? json_decode($venueSchedule, true) : $venueSchedule;
+                $dayNames = ['monday' => 'Luni', 'tuesday' => 'Marți', 'wednesday' => 'Miercuri', 'thursday' => 'Joi', 'friday' => 'Vineri', 'saturday' => 'Sâmbătă', 'sunday' => 'Duminică'];
+                ?>
+                <?php if (is_array($scheduleData) && !empty($scheduleData)): ?>
+                <div class="space-y-1.5 text-sm">
+                    <?php foreach ($dayNames as $key => $dayLabel): ?>
+                    <?php if (isset($scheduleData[$key])): ?>
+                    <?php $hours = $scheduleData[$key]; ?>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600 font-medium w-24"><?= $dayLabel ?></span>
+                        <span class="text-gray-700">
+                            <?php if (empty($hours) || ($hours === 'closed') || (is_array($hours) && !empty($hours['closed']))): ?>
+                                <span class="text-red-500 text-xs">Închis</span>
+                            <?php elseif (is_array($hours) && isset($hours['open'])): ?>
+                                <?= e($hours['open']) ?> – <?= e($hours['close'] ?? '') ?>
+                            <?php elseif (is_string($hours)): ?>
+                                <?= e($hours) ?>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                    <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+                <?php else: ?>
+                <p class="text-sm text-gray-600 whitespace-pre-line"><?= e($venueSchedule) ?></p>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+
+            <!-- 3. Contact & Social -->
             <div class="bg-white border border-gray-200 rounded-2xl p-5">
                 <h3 class="font-semibold text-gray-900 mb-4">Informații</h3>
                 <div class="space-y-3 text-sm">
-                    <?php if ($venueAddress): ?>
-                    <div class="flex items-start gap-3">
-                        <svg class="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        <span class="text-gray-700"><?= e($venueAddress) ?><?= $venueCity ? ', ' . e($venueCity) : '' ?></span>
-                    </div>
-                    <?php endif; ?>
                     <?php if (!empty($venueContact['phone'])): ?>
                     <div class="flex items-center gap-3">
                         <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
@@ -289,39 +484,22 @@ require_once __DIR__ . '/includes/header.php';
                 <?php endif; ?>
             </div>
 
-            <!-- Amenities -->
-            <?php if (!empty($venueAmenities)): ?>
+            <!-- 4. Facilities -->
+            <?php if (!empty($venueFacilities)): ?>
             <div class="bg-white border border-gray-200 rounded-2xl p-5">
                 <h3 class="font-semibold text-gray-900 mb-3">Facilități</h3>
                 <div class="flex flex-wrap gap-2">
-                    <?php foreach ($venueAmenities as $amenity): ?>
-                    <span class="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full text-xs font-medium text-gray-700">
-                        ✓ <?= e($amenity) ?>
+                    <?php foreach ($venueFacilities as $facility): ?>
+                    <span class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full text-xs font-medium text-gray-700">
+                        <span><?= e($facility['icon'] ?? '✓') ?></span>
+                        <span><?= e($facility['label'] ?? $facility['key'] ?? '') ?></span>
                     </span>
                     <?php endforeach; ?>
                 </div>
             </div>
             <?php endif; ?>
 
-            <!-- Map placeholder -->
-            <?php if ($venueLat && $venueLng): ?>
-            <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-                <a href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($venueAddress . ', ' . $venueCity) ?>" target="_blank" rel="noopener" class="block">
-                    <div class="h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors">
-                        <div class="text-center">
-                            <svg class="w-10 h-10 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            <p class="text-sm text-gray-500">Deschide în Google Maps</p>
-                        </div>
-                    </div>
-                </a>
-                <div class="p-4">
-                    <p class="text-sm text-gray-700 font-medium"><?= e($venueAddress) ?></p>
-                    <?php if ($venueCity): ?><p class="text-xs text-gray-500"><?= e($venueCity) ?></p><?php endif; ?>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <!-- Back to city -->
+            <!-- 5. Back to city -->
             <?php if ($venueCity && $cityBaseSlug): ?>
             <a href="/evenimente-<?= e($cityBaseSlug) ?>" class="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
