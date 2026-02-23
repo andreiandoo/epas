@@ -14,7 +14,7 @@ class ImportAmbiletOrdersCommand extends Command
         {--dry-run}
         {--fresh : Ignore existing maps and re-process all rows}';
 
-    protected $description = 'Import AmBilet orders (+ customers) from CSV into Tixello';
+    protected $description = 'Import AmBilet orders + customers from CSV into Tixello';
 
     public function handle(): int
     {
@@ -28,7 +28,6 @@ class ImportAmbiletOrdersCommand extends Command
             return 1;
         }
 
-        // Use directory of first file to store maps
         $dir              = dirname($files[0]);
         $ordersMapFile    = $dir . '/orders_map.json';
         $customersMapFile = $dir . '/customers_map.json';
@@ -63,7 +62,7 @@ class ImportAmbiletOrdersCommand extends Command
                 continue;
             }
 
-            $this->info("Processing: " . basename($file));
+            $this->info('Processing: ' . basename($file));
 
             $handle = fopen($file, 'r');
             $header = fgetcsv($handle);
@@ -79,9 +78,14 @@ class ImportAmbiletOrdersCommand extends Command
 
                 $email = strtolower(trim($data['customer_email'] ?? ''));
                 if (!$email) {
+                    $this->warn("Skipping order {$wpOrderId}: no customer email.");
                     $failed++;
                     continue;
                 }
+
+                // first_name and last_name are NOT NULL in marketplace_customers — use '-' as fallback
+                $firstName = $this->n($data['billing_first_name']) ?? '-';
+                $lastName  = $this->n($data['billing_last_name'])  ?? '-';
 
                 // Upsert MarketplaceCustomer by email
                 $customerId = $customersMap[$email] ?? null;
@@ -89,37 +93,44 @@ class ImportAmbiletOrdersCommand extends Command
                     $customer = MarketplaceCustomer::firstOrCreate(
                         ['marketplace_client_id' => $clientId, 'email' => $email],
                         [
-                            'first_name'        => $this->n($data['billing_first_name']),
-                            'last_name'         => $this->n($data['billing_last_name']),
+                            'first_name'        => $firstName,
+                            'last_name'         => $lastName,
                             'phone'             => $this->n($data['billing_phone']),
                             'status'            => 'active',
                             'email_verified_at' => now(),
+                            // No password — historical customers use "forgot password" to activate
                         ]
                     );
-                    $customerId              = $customer->id;
-                    $customersMap[$email]    = $customerId;
+                    $customerId           = $customer->id;
+                    $customersMap[$email] = $customerId;
                 } elseif (!$customerId && $dryRun) {
                     $customerId           = 0;
                     $customersMap[$email] = 0;
                 }
 
-                $paidAt = $this->parseDate($data['paid_at'])
-                    ?? $this->parseDate($data['created_at']);
+                $paidAt    = $this->parseDate($data['paid_at']) ?? $this->parseDate($data['created_at']);
+                $createdAt = $this->parseDate($data['created_at']) ?? now()->toDateTimeString();
 
-                $customerName = trim(
-                    ($this->n($data['billing_first_name']) ?? '') . ' ' .
-                    ($this->n($data['billing_last_name']) ?? '')
-                );
+                $customerName = trim($firstName . ' ' . $lastName);
+                if ($customerName === '- -') {
+                    $customerName = null;
+                }
 
+                // Note: marketplace_organizer_id and marketplace_event_id are populated
+                // in a post-import step at the end of import:ambilet-tickets,
+                // once we know which tickets (→ events → organizers) belong to each order.
                 $orderData = [
                     'marketplace_client_id'   => $clientId,
                     'marketplace_customer_id' => $customerId,
                     'order_number'            => 'AMB-' . $wpOrderId,
                     'customer_email'          => $email,
-                    'customer_name'           => $customerName ?: null,
+                    'customer_name'           => $customerName,
                     'customer_phone'          => $this->n($data['billing_phone']),
                     'total'                   => is_numeric($data['order_total']) ? (float) $data['order_total'] : 0,
                     'subtotal'                => is_numeric($data['order_total']) ? (float) $data['order_total'] : 0,
+                    'discount_amount'         => 0,
+                    'commission_rate'         => 0,
+                    'commission_amount'       => 0,
                     'currency'                => 'RON',
                     'status'                  => 'completed',
                     'payment_status'          => 'paid',
@@ -130,12 +141,12 @@ class ImportAmbiletOrdersCommand extends Command
                         'wp_order_id'   => $wpOrderId,
                         'imported_from' => 'ambilet',
                     ]),
-                    'created_at'              => $this->parseDate($data['created_at']),
-                    'updated_at'              => $this->parseDate($data['created_at']),
+                    'created_at'              => $createdAt,
+                    'updated_at'              => $createdAt,
                 ];
 
                 if ($dryRun) {
-                    $this->line("[DRY RUN] Would create order AMB-{$wpOrderId} for {$email}");
+                    $this->line("[DRY RUN] Order AMB-{$wpOrderId} for {$email} ({$createdAt})");
                     $ordersMap[$wpOrderId] = 0;
                     $created++;
                     continue;
@@ -165,9 +176,8 @@ class ImportAmbiletOrdersCommand extends Command
         file_put_contents($customersMapFile, json_encode($customersMap, JSON_PRETTY_PRINT));
 
         $this->info("Done! Created: {$created} | Skipped: {$skipped} | Failed: {$failed}");
-        $this->info("Maps saved to: {$dir}");
 
-        // Update customer stats
+        // Update customer cached stats: total_orders, total_spent
         if (!$dryRun && $created > 0) {
             $this->info('Updating customer stats (total_orders, total_spent)...');
             DB::statement("

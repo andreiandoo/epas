@@ -2,9 +2,10 @@
 
 namespace App\Console\Commands;
 
-use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceOrganizer;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ImportAmbiletEventsCommand extends Command
 {
@@ -21,18 +22,18 @@ class ImportAmbiletEventsCommand extends Command
 
     public function handle(): int
     {
-        $file      = $this->argument('file');
-        $clientId  = (int) $this->option('marketplace');
-        $dryRun    = $this->option('dry-run');
-        $fresh     = $this->option('fresh');
+        $file     = $this->argument('file');
+        $clientId = (int) $this->option('marketplace');
+        $dryRun   = $this->option('dry-run');
+        $fresh    = $this->option('fresh');
 
         if (!file_exists($file)) {
             $this->error("File not found: {$file}");
             return 1;
         }
 
-        $dir            = dirname($file);
-        $this->mapFile  = $dir . '/events_map.json';
+        $dir           = dirname($file);
+        $this->mapFile = $dir . '/events_map.json';
 
         if (!$fresh && file_exists($this->mapFile)) {
             $this->map = json_decode(file_get_contents($this->mapFile), true) ?? [];
@@ -57,7 +58,6 @@ class ImportAmbiletEventsCommand extends Command
             $data      = array_combine($header, $row);
             $wpEventId = $data['wp_event_id'];
 
-            // Already imported
             if (isset($this->map[$wpEventId])) {
                 $skipped++;
                 continue;
@@ -67,7 +67,7 @@ class ImportAmbiletEventsCommand extends Command
             $organizerId    = $organizers[$organizerEmail] ?? null;
 
             if (!$organizerId) {
-                $this->warn("No organizer for email '{$organizerEmail}' (event: {$data['name']}) — skipping.");
+                $this->warn("No organizer for '{$organizerEmail}' (event: {$data['name']}) — skipping.");
                 $failed++;
                 continue;
             }
@@ -86,12 +86,15 @@ class ImportAmbiletEventsCommand extends Command
                 }
             }
 
-            $createdAt = $this->parseDate($data['created_at']);
+            $createdAt = $this->parseDate($data['created_at']) ?? now()->toDateTimeString();
+            $status    = $data['post_status'] === 'publish' ? 'published' : 'draft';
+            $slug      = $this->generateUniqueSlug($this->n($data['name']) ?? '', $clientId);
 
             $eventData = [
                 'marketplace_client_id'    => $clientId,
                 'marketplace_organizer_id' => $organizerId,
                 'name'                     => $data['name'],
+                'slug'                     => $slug,
                 'description'              => $this->n($data['description']),
                 'ticket_terms'             => $this->n($data['ticket_terms']),
                 'starts_at'                => $this->parseDate($data['starts_at']),
@@ -100,22 +103,29 @@ class ImportAmbiletEventsCommand extends Command
                 'venue_city'               => $venueCity,
                 'venue_address'            => $location,
                 'image'                    => $this->n($data['image_url']),
-                'status'                   => $data['post_status'] === 'publish' ? 'published' : 'draft',
-                'is_public'                => true,
+                'status'                   => $status,
+                'is_public'                => 1,
+                'is_featured'              => 0,
+                'tickets_sold'             => 0,
+                'revenue'                  => 0,
+                'views'                    => 0,
                 'submitted_at'             => $createdAt,
                 'approved_at'              => $createdAt,
+                'created_at'               => $createdAt,
+                'updated_at'               => $createdAt,
             ];
 
             if ($dryRun) {
-                $this->line("[DRY RUN] Would create event: {$data['name']}");
+                $this->line("[DRY RUN] Would create event: {$data['name']} ({$createdAt})");
                 $this->map[$wpEventId] = 0;
                 $created++;
                 continue;
             }
 
             try {
-                $event                    = MarketplaceEvent::create($eventData);
-                $this->map[$wpEventId]   = $event->id;
+                // Use DB::table() to bypass Eloquent timestamp override and preserve original dates
+                $eventId                 = DB::table('marketplace_events')->insertGetId($eventData);
+                $this->map[$wpEventId]   = $eventId;
                 $created++;
 
                 if ($created % 100 === 0) {
@@ -135,6 +145,27 @@ class ImportAmbiletEventsCommand extends Command
         $this->info("Map saved to: {$this->mapFile}");
 
         return 0;
+    }
+
+    /**
+     * Generate a unique slug within the marketplace client's event namespace.
+     * Uses DB::table() to avoid triggering Eloquent observers.
+     */
+    private function generateUniqueSlug(string $name, int $clientId): string
+    {
+        $base = Str::slug($name) ?: 'event';
+        $slug = $base;
+        $i    = 1;
+
+        while (DB::table('marketplace_events')
+            ->where('marketplace_client_id', $clientId)
+            ->where('slug', $slug)
+            ->exists()
+        ) {
+            $slug = $base . '-' . $i++;
+        }
+
+        return $slug;
     }
 
     private function saveMap(): void

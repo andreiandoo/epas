@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\MarketplaceTicketType;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class ImportAmbiletTicketTypesCommand extends Command
 {
@@ -61,8 +61,8 @@ class ImportAmbiletTicketTypesCommand extends Command
                 continue;
             }
 
-            $wpEventId       = $data['wp_event_id'];
-            $tixelloEventId  = $eventsMap[$wpEventId] ?? null;
+            $wpEventId      = $data['wp_event_id'];
+            $tixelloEventId = $eventsMap[$wpEventId] ?? null;
 
             if (!$tixelloEventId) {
                 $this->warn("No Tixello event for wp_event_id={$wpEventId} (ticket type: {$data['name']}) — skipping.");
@@ -75,19 +75,25 @@ class ImportAmbiletTicketTypesCommand extends Command
                 ? (int) $data['stock_qty']
                 : null;
 
+            $now = now()->toDateTimeString();
+
+            // Use DB::table() to preserve timestamps — MarketplaceTicketType::create()
+            // would override created_at since it's not in $fillable
             $ttData = [
-                'marketplace_event_id'       => $tixelloEventId,
-                'name'                       => $data['name'],
-                'price'                      => $price,
-                'currency'                   => 'RON',
-                'quantity'                   => $qty,
-                'quantity_sold'              => 0,
-                'quantity_reserved'          => 0,
-                'status'                     => 'sold_out',
-                'is_visible'                 => false,
-                'is_refundable'              => false,
-                'sort_order'                 => 0,
-                'autostart_when_previous_sold_out' => false,
+                'marketplace_event_id'             => $tixelloEventId,
+                'name'                             => $data['name'],
+                'price'                            => $price,
+                'currency'                         => 'RON',
+                'quantity'                         => $qty,
+                'quantity_sold'                    => 0,
+                'quantity_reserved'                => 0,
+                'status'                           => 'sold_out',
+                'is_visible'                       => 0,
+                'is_refundable'                    => 0,
+                'sort_order'                       => 0,
+                'autostart_when_previous_sold_out' => 0,
+                'created_at'                       => $now,
+                'updated_at'                       => $now,
             ];
 
             if ($dryRun) {
@@ -98,8 +104,8 @@ class ImportAmbiletTicketTypesCommand extends Command
             }
 
             try {
-                $tt                     = MarketplaceTicketType::create($ttData);
-                $map[$wpProductId]      = $tt->id;
+                $id                = DB::table('marketplace_ticket_types')->insertGetId($ttData);
+                $map[$wpProductId] = $id;
                 $created++;
 
                 if ($created % 500 === 0) {

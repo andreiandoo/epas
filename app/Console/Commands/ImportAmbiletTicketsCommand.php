@@ -28,33 +28,32 @@ class ImportAmbiletTicketsCommand extends Command
             return 1;
         }
 
-        $dir          = dirname($file);
+        $dir            = dirname($file);
         $ticketsMapFile = $dir . '/tickets_map.json';
 
-        // --- Load prerequisite maps ---
-        $eventsMap    = $this->loadJsonMap($dir . '/events_map.json', 'events');
-        $ttMap        = $this->loadJsonMap($dir . '/ticket_types_map.json', 'ticket types');
-        $ordersMap    = $this->loadJsonMap($dir . '/orders_map.json', 'orders');
+        // Load prerequisite maps
+        $eventsMap = $this->loadJsonMap($dir . '/events_map.json', 'events');
+        $ttMap     = $this->loadJsonMap($dir . '/ticket_types_map.json', 'ticket types');
+        $ordersMap = $this->loadJsonMap($dir . '/orders_map.json', 'orders');
 
-        // --- Load order_item_map.csv: order_item_id => wp_order_id ---
+        // Load order_item_map.csv: order_item_id => wp_order_id
         $orderItemMapFile = $dir . '/order_item_map.csv';
         if (!file_exists($orderItemMapFile)) {
             $this->error("order_item_map.csv not found in: {$dir}");
             return 1;
         }
 
-        $this->info('Loading order item map (order_item_id → wp_order_id)...');
+        $this->info('Loading order item map...');
         $itemToOrderId = [];
         $fh = fopen($orderItemMapFile, 'r');
         fgetcsv($fh); // skip header
         while (($r = fgetcsv($fh)) !== false) {
-            // order_item_id, wp_order_id
-            $itemToOrderId[$r[0]] = $r[1];
+            $itemToOrderId[$r[0]] = $r[1]; // order_item_id => wp_order_id
         }
         fclose($fh);
         $this->info('Loaded ' . count($itemToOrderId) . ' order item mappings.');
 
-        // --- Load tickets idempotency map ---
+        // Idempotency map for tickets
         $ticketsMap = [];
         if (!$fresh && file_exists($ticketsMapFile)) {
             $ticketsMap = json_decode(file_get_contents($ticketsMapFile), true) ?? [];
@@ -64,7 +63,6 @@ class ImportAmbiletTicketsCommand extends Command
             $this->info('Deleted existing tickets map (--fresh).');
         }
 
-        // --- Process ticket_instances.csv ---
         $handle  = fopen($file, 'r');
         $header  = fgetcsv($handle);
         $created = $skipped = $failed = $noOrder = 0;
@@ -78,13 +76,13 @@ class ImportAmbiletTicketsCommand extends Command
                 continue;
             }
 
-            // Resolve Tixello event and ticket type
+            // Resolve Tixello event and marketplace ticket type
             $tixelloEventId = $eventsMap[$data['wp_event_id']] ?? null;
             $tixelloTtId    = $ttMap[$data['wp_product_id']] ?? null;
 
-            // Resolve order via wc_order_item_id
+            // Resolve order via wc_order_item_id → order_item_map → orders_map
             $tixelloOrderId = null;
-            $wcItemId = $this->n($data['wc_order_item_id']);
+            $wcItemId       = $this->n($data['wc_order_item_id']);
             if ($wcItemId) {
                 $wpOrderId      = $itemToOrderId[$wcItemId] ?? null;
                 $tixelloOrderId = $wpOrderId ? ($ordersMap[$wpOrderId] ?? null) : null;
@@ -95,8 +93,8 @@ class ImportAmbiletTicketsCommand extends Command
                 $noOrder++;
             }
 
-            // Parse check-in from PHP serialized data
-            // fgetcsv already unescapes "" → " inside quoted fields
+            // Parse check-in from PHP serialized data.
+            // fgetcsv() already unescapes doubled quotes ("" → ") inside CSV fields.
             $checkedInAt = null;
             $checkinRaw  = $this->n($data['checkin_data']);
             if ($checkinRaw) {
@@ -109,7 +107,12 @@ class ImportAmbiletTicketsCommand extends Command
                 }
             }
 
+            $createdAt = $this->parseDate($data['created_at']) ?? now()->toDateTimeString();
+
+            // ticket_type_id is now nullable (migration 2026_02_23_100000).
+            // Marketplace tickets use marketplace_ticket_type_id instead.
             $ticketData = [
+                'ticket_type_id'             => null,         // nullable after migration
                 'marketplace_client_id'      => $clientId,
                 'marketplace_event_id'       => $tixelloEventId,
                 'marketplace_ticket_type_id' => $tixelloTtId,
@@ -123,8 +126,8 @@ class ImportAmbiletTicketsCommand extends Command
                     'wp_ticket_id'  => $wpTicketId,
                     'imported_from' => 'ambilet',
                 ]),
-                'created_at'                 => $this->parseDate($data['created_at']),
-                'updated_at'                 => $this->parseDate($data['created_at']),
+                'created_at'                 => $createdAt,
+                'updated_at'                 => $createdAt,
             ];
 
             if ($dryRun) {
@@ -144,7 +147,7 @@ class ImportAmbiletTicketsCommand extends Command
                     $this->line("Progress: {$created} created | {$skipped} skipped | {$failed} failed | {$noOrder} no-order");
                 }
             } catch (\Exception $e) {
-                $this->error("Failed ticket {$wpTicketId}: " . $e->getMessage());
+                $this->error("Failed ticket {$wpTicketId} ({$data['ticket_code']}): " . $e->getMessage());
                 $failed++;
             }
         }
@@ -155,21 +158,101 @@ class ImportAmbiletTicketsCommand extends Command
         $this->info("Done! Created: {$created} | Skipped: {$skipped} | Failed: {$failed} | No order link: {$noOrder}");
         $this->info("Map saved to: {$ticketsMapFile}");
 
-        // Update quantity_sold on MarketplaceTicketType for all imported ticket types
-        if (!$dryRun && $created > 0) {
-            $this->info('Updating quantity_sold on ticket types...');
-            DB::statement("
-                UPDATE marketplace_ticket_types mtt
-                SET quantity_sold = (
-                    SELECT COUNT(*) FROM tickets t
-                    WHERE t.marketplace_ticket_type_id = mtt.id AND t.status = 'valid'
-                )
-                WHERE mtt.marketplace_event_id IN (
-                    SELECT id FROM marketplace_events WHERE marketplace_client_id = {$clientId}
-                )
-            ");
-            $this->info('quantity_sold updated.');
+        if ($dryRun) {
+            return 0;
         }
+
+        // =====================================================================
+        // POST-IMPORT ANALYTICS UPDATES
+        // Run after all tickets are inserted. Does NOT touch available_balance.
+        // =====================================================================
+
+        $this->info('');
+        $this->info('Running post-import analytics updates...');
+
+        // 1. Set marketplace_ticket_types.quantity_sold from actual ticket count
+        $this->info('  [1/4] Updating ticket type quantity_sold...');
+        DB::statement("
+            UPDATE marketplace_ticket_types mtt
+            SET quantity_sold = (
+                SELECT COUNT(*) FROM tickets t
+                WHERE t.marketplace_ticket_type_id = mtt.id AND t.status = 'valid'
+            )
+            WHERE mtt.marketplace_event_id IN (
+                SELECT id FROM marketplace_events WHERE marketplace_client_id = {$clientId}
+            )
+        ");
+
+        // 2. Set orders.marketplace_event_id and orders.marketplace_organizer_id
+        //    using the first ticket in each order.
+        //    This enables per-organizer and per-event order filtering.
+        //    NOTE: Does NOT touch available_balance (already paid out in old platform).
+        $this->info('  [2/4] Linking orders to events and organizers...');
+        DB::statement("
+            UPDATE orders o
+            INNER JOIN (
+                SELECT
+                    t.order_id,
+                    t.marketplace_event_id,
+                    me.marketplace_organizer_id
+                FROM tickets t
+                INNER JOIN marketplace_events me ON t.marketplace_event_id = me.id
+                WHERE t.marketplace_client_id = {$clientId}
+                  AND t.order_id IS NOT NULL
+                GROUP BY t.order_id
+            ) sub ON o.id = sub.order_id
+            SET
+                o.marketplace_event_id      = sub.marketplace_event_id,
+                o.marketplace_organizer_id  = sub.marketplace_organizer_id
+            WHERE o.marketplace_client_id = {$clientId}
+              AND o.marketplace_organizer_id IS NULL
+        ");
+
+        // 3. Update marketplace_events cached stats: tickets_sold, revenue
+        $this->info('  [3/4] Updating event tickets_sold and revenue...');
+        DB::statement("
+            UPDATE marketplace_events me
+            SET
+                tickets_sold = (
+                    SELECT COUNT(*) FROM tickets t
+                    WHERE t.marketplace_event_id = me.id AND t.status = 'valid'
+                ),
+                revenue = (
+                    SELECT COALESCE(SUM(o.total), 0) FROM orders o
+                    WHERE o.marketplace_event_id = me.id AND o.status = 'completed'
+                )
+            WHERE me.marketplace_client_id = {$clientId}
+        ");
+
+        // 4. Update marketplace_organizers cached stats: total_events, total_tickets_sold, total_revenue
+        //    NOTE: available_balance, pending_balance, total_paid_out are NOT touched —
+        //    historical funds were already paid out through the old platform.
+        $this->info('  [4/4] Updating organizer stats (total_events, total_tickets_sold, total_revenue)...');
+        DB::statement("
+            UPDATE marketplace_organizers mo
+            SET
+                total_events = (
+                    SELECT COUNT(*) FROM marketplace_events me
+                    WHERE me.marketplace_organizer_id = mo.id
+                      AND me.marketplace_client_id = {$clientId}
+                ),
+                total_tickets_sold = (
+                    SELECT COUNT(*) FROM tickets t
+                    INNER JOIN marketplace_events me ON t.marketplace_event_id = me.id
+                    WHERE me.marketplace_organizer_id = mo.id
+                      AND t.marketplace_client_id = {$clientId}
+                      AND t.status = 'valid'
+                ),
+                total_revenue = (
+                    SELECT COALESCE(SUM(o.total), 0) FROM orders o
+                    WHERE o.marketplace_organizer_id = mo.id
+                      AND o.marketplace_client_id = {$clientId}
+                      AND o.status = 'completed'
+                )
+            WHERE mo.marketplace_client_id = {$clientId}
+        ");
+
+        $this->info('Post-import analytics complete.');
 
         return 0;
     }
