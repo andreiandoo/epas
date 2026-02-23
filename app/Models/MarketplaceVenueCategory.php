@@ -6,6 +6,7 @@ use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class MarketplaceVenueCategory extends Model
@@ -21,6 +22,7 @@ class MarketplaceVenueCategory extends Model
 
     protected $fillable = [
         'marketplace_client_id',
+        'parent_id',
         'name',
         'slug',
         'description',
@@ -45,6 +47,16 @@ class MarketplaceVenueCategory extends Model
     public function marketplaceClient(): BelongsTo
     {
         return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id')->orderBy('sort_order');
     }
 
     public function venues(): BelongsToMany
