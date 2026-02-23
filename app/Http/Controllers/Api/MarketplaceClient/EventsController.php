@@ -455,6 +455,27 @@ class EventsController extends BaseController
                     'image_url' => $artist->main_image_full_url ?? $artist->image_url,
                 ];
             }),
+            'tour_events' => $event->tour_id
+                ? \App\Models\Event::where('tour_id', $event->tour_id)
+                    ->where('id', '!=', $event->id)
+                    ->where('status', 'published')
+                    ->with('venue:id,name,city')
+                    ->orderByRaw("COALESCE(event_date, DATE(starts_at)) ASC")
+                    ->get()
+                    ->map(function ($te) use ($language) {
+                        $teTitle = $te->getTranslation('title', $language) ?? $te->getTranslation('title', 'ro') ?? $te->name ?? '';
+                        return [
+                            'id' => $te->id,
+                            'slug' => $te->slug,
+                            'name' => $teTitle,
+                            'event_date' => $te->event_date?->format('Y-m-d'),
+                            'start_time' => $te->start_time,
+                            'city' => $te->venue?->city ?? null,
+                            'venue_name' => $te->venue ? (is_array($te->venue->name) ? ($te->venue->name[$language] ?? $te->venue->name['ro'] ?? $te->venue->name['en'] ?? null) : $te->venue->name) : null,
+                            'image_url' => $this->formatImageUrl($te->poster_url ?? $te->hero_image_url ?? $te->image_url),
+                        ];
+                    })
+                : [],
             'commission_rate' => $commission,
             'commission_mode' => $commissionMode,
             // Get applicable taxes based on event's event types

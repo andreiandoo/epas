@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Resources\EventResource\Pages;
 use App\Filament\Marketplace\Resources\ArtistResource;
 use App\Filament\Marketplace\Resources\VenueResource;
 use App\Models\Event;
+use App\Models\Tour;
 use App\Models\EventGenre;
 use App\Models\EventTag;
 use App\Models\EventType;
@@ -1728,6 +1729,61 @@ class EventResource extends Resource
                             })
                             ->columnSpanFull(),
                                     ]), // End Tab 6: Harta Locuri
+
+                                // ========== TAB 7: TURNEU ==========
+                                SC\Tabs\Tab::make($t('Turneu', 'Tour'))
+                                    ->key('turneu')
+                                    ->icon('heroicon-o-map-pin')
+                                    ->schema([
+                        SC\Section::make($t('Setări Turneu', 'Tour Settings'))
+                            ->schema([
+                                Forms\Components\Toggle::make('is_in_tour')
+                                    ->label($t('Eveniment din turneu', 'Part of a Tour'))
+                                    ->helperText($t('Bifează dacă acest eveniment face parte dintr-un turneu', 'Check if this event is part of a tour'))
+                                    ->dehydrated(false)
+                                    ->live()
+                                    ->afterStateHydrated(function ($state, SSet $set, ?Event $record) {
+                                        if ($record && $record->tour_id !== null) {
+                                            $set('is_in_tour', true);
+                                        }
+                                    }),
+
+                                Forms\Components\Select::make('tour_event_ids')
+                                    ->label($t('Alte evenimente din turneu', 'Other events in the tour'))
+                                    ->helperText($t('Selectează celelalte evenimente din același turneu. Numele, orașul și data sunt afișate.', 'Select the other events in the same tour. Name, city and date are shown.'))
+                                    ->multiple()
+                                    ->searchable()
+                                    ->dehydrated(false)
+                                    ->options(function (?Event $record) use ($marketplace) {
+                                        if (!$marketplace) return [];
+                                        $query = Event::where('marketplace_client_id', $marketplace->id)
+                                            ->where('status', 'published');
+                                        if ($record?->id) {
+                                            $query->where('id', '!=', $record->id);
+                                        }
+                                        return $query->with('venue')->orderByRaw("COALESCE(event_date, DATE(starts_at)) ASC")->get()
+                                            ->mapWithKeys(function ($e) {
+                                                $city = $e->venue?->city ?? null;
+                                                $date = $e->event_date ? \Carbon\Carbon::parse($e->event_date)->format('d.m.Y') : null;
+                                                $label = ($e->getTranslation('title', 'ro') ?? $e->getTranslation('title', 'en') ?? $e->name ?? 'Eveniment');
+                                                if ($city) $label .= ' · ' . $city;
+                                                if ($date) $label .= ' (' . $date . ')';
+                                                return [$e->id => $label];
+                                            });
+                                    })
+                                    ->afterStateHydrated(function ($state, SSet $set, ?Event $record) {
+                                        if ($record && $record->tour_id !== null) {
+                                            $tourEventIds = Event::where('tour_id', $record->tour_id)
+                                                ->where('id', '!=', $record->id)
+                                                ->pluck('id')
+                                                ->toArray();
+                                            $set('tour_event_ids', $tourEventIds);
+                                        }
+                                    })
+                                    ->visible(fn (SGet $get) => (bool) $get('is_in_tour')),
+                            ]),
+                                    ]), // End Tab 7: Turneu
+
                             ]), // End Tabs component
                     ]),
                 // ========== COLOANA DREAPTĂ - SIDEBAR (1/4) ==========

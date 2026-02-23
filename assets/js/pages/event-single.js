@@ -535,7 +535,9 @@ const EventPage = {
             // Custom related events
             has_custom_related: eventData.has_custom_related || false,
             custom_related_event_ids: eventData.custom_related_event_ids || [],
-            custom_related_events: apiData.custom_related_events || []
+            custom_related_events: apiData.custom_related_events || [],
+            // Tour events
+            tour_events: apiData.tour_events || []
         };
     },
 
@@ -803,6 +805,11 @@ const EventPage = {
         if (!this.eventEnded) {
             this.ticketTypes = e.ticket_types || this.getDefaultTicketTypes();
             this.renderTicketTypes();
+        }
+
+        // Tour events
+        if (e.tour_events && e.tour_events.length > 0) {
+            this.renderTourEvents(e.tour_events);
         }
 
         // Related events (skip for ended events - banner already shows them)
@@ -1793,6 +1800,57 @@ const EventPage = {
                 '</div>' +
             '</div>' +
         '</a>';
+    },
+
+    /**
+     * Render tour events section
+     */
+    renderTourEvents(tourEvents) {
+        var section = document.getElementById('tour-events-section');
+        var container = document.getElementById('tour-events-list');
+        if (!section || !container || !tourEvents || tourEvents.length === 0) return;
+
+        var MONTHS_SHORT = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        var html = '';
+        for (var i = 0; i < tourEvents.length; i++) {
+            var te = tourEvents[i];
+            var date = te.event_date ? new Date(te.event_date) : null;
+            var dayNum = date ? date.getDate() : '';
+            var monthStr = date ? MONTHS_SHORT[date.getMonth()] : '';
+            var yearNum = date ? date.getFullYear() : '';
+            var timeStr = te.start_time ? te.start_time.substring(0, 5) : '';
+            var city = te.city || '';
+            var venueName = te.venue_name || '';
+            var location = city ? (venueName ? venueName + ', ' + city : city) : venueName;
+            var imgSrc = te.image_url || '/assets/images/default-event.png';
+            var eventUrl = '/bilete/' + (te.slug || te.id);
+
+            html += '<a href="' + eventUrl + '" class="flex items-center gap-4 p-3 transition-colors rounded-xl hover:bg-gray-50 group">';
+            html += '<div class="flex-shrink-0 flex flex-col items-center justify-center w-14 h-14 rounded-xl text-white text-center" style="background: linear-gradient(135deg, #A51C30 0%, #8B1728 100%);">';
+            html += '<span class="text-xl font-bold leading-none">' + dayNum + '</span>';
+            html += '<span class="text-xs font-semibold uppercase">' + monthStr + '</span>';
+            html += '</div>';
+            html += '<div class="flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden hidden sm:block">';
+            html += '<img src="' + imgSrc + '" alt="' + te.name + '" class="w-full h-full object-cover">';
+            html += '</div>';
+            html += '<div class="flex-1 min-w-0">';
+            html += '<p class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">' + (te.name || 'Eveniment') + '</p>';
+            if (location) {
+                html += '<p class="text-sm text-muted truncate">';
+                html += '<svg class="inline w-3.5 h-3.5 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
+                html += location + '</p>';
+            }
+            if (timeStr) {
+                html += '<p class="text-xs text-muted mt-0.5">' + dayNum + ' ' + monthStr + ' ' + yearNum + (timeStr ? ' · ' + timeStr : '') + '</p>';
+            }
+            html += '</div>';
+            html += '<svg class="flex-shrink-0 w-5 h-5 text-gray-300 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
+            html += '</a>';
+        }
+
+        container.innerHTML = html;
+        section.style.display = 'block';
     },
 
     /**

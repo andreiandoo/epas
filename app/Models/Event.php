@@ -40,6 +40,9 @@ class Event extends Model
         'is_template',
         'occurrence_number',
 
+        // Tour
+        'tour_id',
+
         // flags
         'is_sold_out', 'is_cancelled', 'cancel_reason',
         'is_postponed', 'postponed_date', 'postponed_start_time', 'postponed_door_time', 'postponed_end_time', 'postponed_reason',
@@ -142,6 +145,12 @@ class Event extends Model
                 $event->saveQuietly(); // Save without triggering events again
             }
         });
+    }
+
+    /* Tour Relation */
+    public function tour(): BelongsTo
+    {
+        return $this->belongsTo(Tour::class);
     }
 
     /* Parent/Child Event Relations */
