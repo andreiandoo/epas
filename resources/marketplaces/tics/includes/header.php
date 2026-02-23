@@ -31,16 +31,23 @@ if ($isLoggedIn && !isset($loggedInUser)) {
 }
 
 // ── Fetch event categories for mega menu (file-cached, 5 min TTL) ────────────
-$_navCatCache = sys_get_temp_dir() . '/tics_nav_categories.json';
-$_navCatTtl   = 300;
+$_navCatCache  = sys_get_temp_dir() . '/tics_nav_categories.json';
+$_navCatTtl    = 300;
 $navCategories = [];
+
+// Try cache first — valid only when first element is a category object array
 if (file_exists($_navCatCache) && (time() - filemtime($_navCatCache)) < $_navCatTtl) {
     $_cached = json_decode(file_get_contents($_navCatCache), true) ?: [];
-    // Validate cache format: must be indexed array of category objects, not wrapped in 'categories' key
-    $navCategories = (isset($_cached[0]) || (is_array($_cached) && array_key_first($_cached) !== 'categories')) ? $_cached : [];
-} else {
+    if (isset($_cached[0]) && is_array($_cached[0])) {
+        $navCategories = $_cached;
+    }
+    // If cache format is invalid, fall through to API call below
+}
+
+// Fetch from API when cache miss or stale/invalid format
+if (empty($navCategories)) {
     $_catResult = callApi('event-categories');
-    if (!empty($_catResult['success']) && is_array($_catResult['data']['categories'] ?? null)) {
+    if (!empty($_catResult['success']) && !empty($_catResult['data']['categories'])) {
         $navCategories = $_catResult['data']['categories'];
         @file_put_contents($_navCatCache, json_encode($navCategories));
     }
@@ -219,6 +226,14 @@ $_musicCatSlug  = $_musicCat['slug'] ?? '';
                 }
 
                 function ticsNavResetPanel() {
+                    var panel = document.getElementById('navCatPanel');
+                    if (!panel) return;
+                    // Restore server-rendered default (genres) panel
+                    if (window._ticsNavPanelDefault) {
+                        panel.innerHTML = window._ticsNavPanelDefault;
+                        return;
+                    }
+                    // Fallback: render music category children
                     var musicIdx = (window._TICS_NAV_CATS || []).findIndex(function(c) {
                         return c.slug === window._TICS_MUSIC_SLUG;
                     });
@@ -230,6 +245,19 @@ $_musicCatSlug  = $_musicCat['slug'] ?? '';
                         .replace(/&/g,'&amp;').replace(/</g,'&lt;')
                         .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
                 }
+
+                // Store original panel HTML and reset on each dropdown open
+                document.addEventListener('DOMContentLoaded', function() {
+                    var panel = document.getElementById('navCatPanel');
+                    if (panel) window._ticsNavPanelDefault = panel.innerHTML;
+
+                    var dd = document.getElementById('navEventsDropdown');
+                    if (dd) {
+                        dd.addEventListener('mouseenter', function() {
+                            ticsNavResetPanel();
+                        });
+                    }
+                });
                 </script>
 
                 <!-- Orașe Dropdown – dynamic, populated by JS based on selected country -->

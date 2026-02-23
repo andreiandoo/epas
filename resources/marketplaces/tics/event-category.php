@@ -51,21 +51,25 @@ if ($_apiCatData) {
         ];
     }, $_apiCatData['children'] ?? []);
 } else {
-    // Fallback to hardcoded config
+    // API failed — use hardcoded config
     $categoryData = getCategory($categorySlug);
     if (!$categoryData) {
         header('Location: /evenimente');
         exit;
     }
-    // Hardcoded fallback subcategories
-    $_FALLBACK_SUBS = [
-        'concerte'   => [['name'=>'Rock','slug'=>'rock','icon'=>'🎸'],['name'=>'Pop','slug'=>'pop','icon'=>'🎤'],['name'=>'Electronic','slug'=>'electronic','icon'=>'🎧'],['name'=>'Jazz & Blues','slug'=>'jazz-blues','icon'=>'🎷'],['name'=>'Clasic','slug'=>'clasic','icon'=>'🎻']],
-        'festivaluri'=> [['name'=>'Muzică','slug'=>'muzica','icon'=>'🎵'],['name'=>'Film','slug'=>'film','icon'=>'🎬'],['name'=>'Artă','slug'=>'arta','icon'=>'🎨']],
-        'stand-up'   => [['name'=>'Stand-up','slug'=>'standup','icon'=>'🎤'],['name'=>'Improvizație','slug'=>'improv','icon'=>'🎭']],
-        'teatru'     => [['name'=>'Dramă','slug'=>'drama','icon'=>'🎭'],['name'=>'Comedie','slug'=>'comedie','icon'=>'😂'],['name'=>'Musical','slug'=>'musical','icon'=>'🎵']],
-        'sport'      => [['name'=>'Fotbal','slug'=>'fotbal','icon'=>'⚽'],['name'=>'Baschet','slug'=>'baschet','icon'=>'🏀'],['name'=>'Tenis','slug'=>'tenis','icon'=>'🎾']],
-    ];
-    $subcategories = $_FALLBACK_SUBS[$categorySlug] ?? [];
+    $subcategories = [];
+}
+
+// Hardcoded fallback subcategories used when API returns no children
+$_FALLBACK_SUBS = [
+    'concerte'   => [['name'=>'Rock','slug'=>'rock','icon'=>'🎸'],['name'=>'Pop','slug'=>'pop','icon'=>'🎤'],['name'=>'Electronic','slug'=>'electronic','icon'=>'🎧'],['name'=>'Hip-Hop & Rap','slug'=>'hip-hop','icon'=>'🎵'],['name'=>'Jazz & Blues','slug'=>'jazz-blues','icon'=>'🎷'],['name'=>'Clasică & Operă','slug'=>'clasica','icon'=>'🎻'],['name'=>'Folk & Populară','slug'=>'folk','icon'=>'🪗']],
+    'festivaluri'=> [['name'=>'Muzică','slug'=>'festivaluri-muzica','icon'=>'🎶'],['name'=>'Film','slug'=>'festivaluri-film','icon'=>'🎬'],['name'=>'Artă','slug'=>'festivaluri-arta','icon'=>'🎨'],['name'=>'Street Food','slug'=>'festivaluri-gastronomie','icon'=>'🍔']],
+    'stand-up'   => [['name'=>'Stand-up Solo','slug'=>'stand-up-comedy','icon'=>'🎤'],['name'=>'Improvizație','slug'=>'improvizatie','icon'=>'🎭'],['name'=>'Gale Comedy','slug'=>'comedy-gala','icon'=>'🎊']],
+    'teatru'     => [['name'=>'Dramă','slug'=>'drama','icon'=>'🎭'],['name'=>'Comedie','slug'=>'comedie-teatru','icon'=>'😄'],['name'=>'Musical','slug'=>'musical','icon'=>'🎶'],['name'=>'Balet & Dans','slug'=>'balet-dans','icon'=>'🩰']],
+    'sport'      => [['name'=>'Fotbal','slug'=>'fotbal','icon'=>'⚽'],['name'=>'Tenis','slug'=>'tenis','icon'=>'🎾'],['name'=>'Baschet','slug'=>'baschet','icon'=>'🏀'],['name'=>'Box & Arte Marțiale','slug'=>'box-arte-martiale','icon'=>'🥊']],
+];
+if (empty($subcategories) && isset($_FALLBACK_SUBS[$categorySlug])) {
+    $subcategories = $_FALLBACK_SUBS[$categorySlug];
 }
 
 // Get URL parameters
