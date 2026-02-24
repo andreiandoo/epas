@@ -1261,11 +1261,25 @@ function calculateOrderSummary() {
     const event = events.find(e => e.id == document.getElementById('service-event').value);
 
     switch (currentServiceType) {
-        case 'featuring':
+        case 'featuring': {
             const locations = document.querySelectorAll('input[name="featuring_locations[]"]:checked');
-            const startDate = new Date(document.getElementById('featuring-start').value);
-            const endDate = new Date(document.getElementById('featuring-end').value);
-            const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+            const startVal = document.getElementById('featuring-start').value;
+            const endVal = document.getElementById('featuring-end').value;
+
+            // Hours-based calculation:
+            // If start date is today, use current time; otherwise use midnight of start date
+            const todayStr = new Date().toISOString().slice(0, 10);
+            let startMs;
+            if (startVal === todayStr) {
+                startMs = Date.now();
+            } else {
+                startMs = new Date(startVal + 'T00:00:00').getTime();
+            }
+            // End = 23:59:59 of the selected end date
+            const endMs = new Date(endVal + 'T23:59:59').getTime();
+            const hours = (endMs - startMs) / (1000 * 60 * 60);
+            const daysMultiplier = Math.max(hours / 24, 0);
+            const daysDisplay = daysMultiplier.toFixed(2);
 
             const prices = servicePricing.featuring;
             const labels = {
@@ -1276,11 +1290,12 @@ function calculateOrderSummary() {
             };
 
             locations.forEach(loc => {
-                const price = (prices[loc.value] ?? 40) * days;
-                items.push({ name: (labels[loc.value] || loc.value) + ' (' + days + ' zile)', price });
+                const price = (prices[loc.value] ?? 40) * daysMultiplier;
+                items.push({ name: (labels[loc.value] || loc.value) + ' (' + daysDisplay + ' zile)', price });
                 total += price;
             });
             break;
+        }
 
         case 'email':
             const emailAudienceType = document.querySelector('input[name="email_audience"]:checked').value;

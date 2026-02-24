@@ -323,6 +323,16 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/documents\/\d+\/view$/)) return 'organizer.documents.view';
         if (endpoint === '/organizer/documents' || endpoint.includes('/organizer/documents?')) return 'organizer.documents';
 
+        // Organizer services (Extra Services / Promovare)
+        if (endpoint === '/organizer/services/pricing') return 'organizer.services.pricing';
+        if (endpoint === '/organizer/services/stats') return 'organizer.services.stats';
+        if (endpoint === '/organizer/services/types') return 'organizer.services.types';
+        if (endpoint === '/organizer/services/email-audiences' || endpoint.includes('/organizer/services/email-audiences?')) return 'organizer.services.email-audiences';
+        if (endpoint.match(/\/organizer\/services\/orders\/[^\/\?]+\/pay$/)) return 'organizer.services.orders.pay';
+        if (endpoint.match(/\/organizer\/services\/orders\/[^\/\?]+\/cancel$/)) return 'organizer.services.orders.cancel';
+        if (endpoint.match(/\/organizer\/services\/orders\/[^\/\?]+$/)) return 'organizer.services.orders.show';
+        if (endpoint === '/organizer/services/orders' || endpoint.includes('/organizer/services/orders?')) return 'organizer.services.orders';
+
         return null; // unknown endpoint - will cause error
     },
 
@@ -538,6 +548,12 @@ const AmbiletAPI = {
         const organizerDocumentViewMatch = endpoint.match(/\/organizer\/documents\/(\d+)\/view$/);
         if (organizerDocumentViewMatch) {
             return `document_id=${encodeURIComponent(organizerDocumentViewMatch[1])}`;
+        }
+
+        // Organizer services - extract UUID from /organizer/services/orders/{uuid}[/action]
+        const serviceOrderUuidMatch = endpoint.match(/\/organizer\/services\/orders\/([^\/\?]+)/);
+        if (serviceOrderUuidMatch) {
+            return `uuid=${encodeURIComponent(serviceOrderUuidMatch[1])}`;
         }
 
         // Cart item management - extract item key (but NOT /cart/items/with-seats)
