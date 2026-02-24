@@ -76,30 +76,30 @@ const AmbiletEventCard = {
         const posterSrc = getStorageUrl(event.posterImage || event.image);
         const heroSrc = getStorageUrl(event.heroImage || event.image);
 
-        return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
+        return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-lg border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
             '<div class="relative h-40 overflow-hidden">' +
                 '<picture>' +
                     '<source media="(min-width: 768px)" srcset="' + heroSrc + '">' +
-                    '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-2xl rounded-tr-2xl" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                    '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-lg rounded-tr-lg" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '</picture>' +
                 (promotedBadge ? promotedBadge : '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>') +
                 statusBadge +
             '</div>' +
-            '<div class="px-3 py-2">' +
-                '<h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2 truncate">' + this.escapeHtml(event.title) + '</h3>' +
+            '<div class="py-2">' +
+                '<h3 class="px-3 font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2 truncate">' + this.escapeHtml(event.title) + '</h3>' +
                 (showVenue && event.location ?
-                    '<p class="text-sm text-muted flex items-center gap-1.5 mb-1">' +
+                    '<p class="px-3 text-sm text-muted flex items-center gap-1 mb-2">' +
                         '<svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
-                        '<span class="truncate">' + this.escapeHtml(event.location) + '</span>' +
+                        '<span class="truncate text-xs">' + this.escapeHtml(event.location) + '</span>' +
                     '</p>' : '') +
                 (showPrice ?
-                    '<div class="flex items-center justify-between pt-1 border-t border-border">' +
+                    '<div class="px-3 flex items-center justify-between pt-1 border-t border-border">' +
                         '<span class="font-bold ' + (event.isCancelled || event.isPostponed || event.isSoldOut ? 'text-gray-400 line-through' : 'text-primary') + '">' + event.priceFormatted + '</span>' +
                         '<span class="text-xs ' + (event.isCancelled ? 'text-red-600 font-semibold' : event.isPostponed ? 'text-orange-600 font-semibold' : event.isSoldOut ? 'text-gray-600 font-semibold' : 'text-muted') + '">' +
                             (event.isCancelled ? 'Anulat' : event.isPostponed ? 'Amânat' : event.isSoldOut ? 'Sold Out' : '') +
                         '</span>' +
                         (showCategory && event.categoryName ?
-                            '<span class="cat-pill font-semibold text-white uppercase rounded-md bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
+                            '<span class="cat-pill font-semibold text-white uppercase rounded-lg bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
                             '') +
                     '</div>' : '') +
             '</div>' +
@@ -429,7 +429,7 @@ const AmbiletEventCard = {
             time: apiEvent.start_time || (date ? String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0') : '20:00'),
             venueName: venueName,
             venueCity: venueCity,
-            location: venueCity ? (venueName + ', ' + venueCity) : venueName,
+            location: venueCity ? (venueName) : venueName, // + ', ' + venueCity if both exist
             minPrice: minPrice,
             priceFormatted: minPrice > 0 ? 'de la ' + minPrice + ' lei' : 'Gratuit',
             categoryName: categoryName,
