@@ -774,6 +774,21 @@ class EditEvent extends EditRecord
             }
         }
 
+        // Ticket type sort order — explicitly save based on Repeater array order
+        // This is a defensive fix because ->orderColumn('sort_order') may not always persist correctly
+        $ticketTypesData = $this->data['ticketTypes'] ?? [];
+        if (!empty($ticketTypesData)) {
+            $sortIndex = 0;
+            foreach ($ticketTypesData as $ttData) {
+                if (!empty($ttData['id'])) {
+                    \App\Models\TicketType::where('id', (int) $ttData['id'])
+                        ->where('event_id', $this->record->id)
+                        ->update(['sort_order' => $sortIndex]);
+                    $sortIndex++;
+                }
+            }
+        }
+
         // Tour management — only act if the tour field is present in form data
         // (prevents accidental clearing when the field value is missing/undefined)
         if (!array_key_exists('is_in_tour', $this->data)) {
