@@ -257,6 +257,26 @@ require_once __DIR__ . '/includes/head.php';
                 <div class="mb-8 mobile:mb-0 mobile:border-b mobile:border-border" id="venue">
                     <div id="venue-content" class="mobile:p-4"></div>
                 </div>
+
+                <!-- Tour Events Section -->
+                <section id="tour-events-section" style="display:none;" class="mb-8 mobile:mb-0 mobile:border-b mobile:border-border">
+                    <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                        <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                            <span class="flex items-center justify-center w-9 h-9 rounded-xl" style="background: linear-gradient(135deg, #A51C30 0%, #8B1728 100%);">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                                </svg>
+                            </span>
+                            <div>
+                                <h2 class="text-lg font-bold text-secondary">Alte date din turneu</h2>
+                                <p class="text-sm text-muted"><span id="tour-name-display"></span><span id="tour-name-fallback">Evenimentul face parte dintr-un turneu. Alege și alte date.</span></p>
+                            </div>
+                        </div>
+                        <div id="tour-events-list" class="divide-y divide-gray-50 px-2 py-2">
+                            <!-- Loaded dynamically by JS -->
+                        </div>
+                    </div>
+                </section>
             </div>
 
             <!-- Right Column - Ticket Selection (Hidden on mobile, shown in drawer) -->
@@ -355,28 +375,6 @@ require_once __DIR__ . '/includes/head.php';
             </div>
         </div>
     </section>
-
-    <!-- Tour Events Section -->
-    <div class="px-4 py-0 mx-auto max-w-7xl mobile:p-0">
-        <section id="tour-events-section" style="display:none;" class="mt-12 mb-4">
-            <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-                <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-                    <span class="flex items-center justify-center w-9 h-9 rounded-xl" style="background: linear-gradient(135deg, #A51C30 0%, #8B1728 100%);">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                        </svg>
-                    </span>
-                    <div>
-                        <h2 class="text-lg font-bold text-secondary">Alte date din turneu</h2>
-                        <p class="text-sm text-muted"><span id="tour-name-display"></span><span id="tour-name-fallback">Evenimentul face parte dintr-un turneu. Alege și alte date.</span></p>
-                    </div>
-                </div>
-                <div id="tour-events-list" class="divide-y divide-gray-50 px-2 py-2">
-                    <!-- Loaded dynamically by JS -->
-                </div>
-            </div>
-        </section>
-    </div>
 
     <div class="px-4 py-8 mx-auto max-w-7xl mobile:p-0">
         <!-- Related Events -->
