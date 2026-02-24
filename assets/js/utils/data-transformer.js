@@ -62,11 +62,14 @@ const AmbiletDataTransformer = {
 
         // Extract price - skip free (price=0) ticket types, show min paid price
         let minPrice = 0;
+        let hasMultipleTicketTypes = false;
         if (apiEvent.ticket_types && Array.isArray(apiEvent.ticket_types)) {
             const paidTickets = apiEvent.ticket_types.filter(t => (t.price || 0) > 0);
             minPrice = paidTickets.length > 0 ? Math.min(...paidTickets.map(t => t.price || 0)) : 0;
+            hasMultipleTicketTypes = apiEvent.ticket_types.length > 1;
         } else {
             minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
+            hasMultipleTicketTypes = true; // price_from implies multiple possible prices
         }
 
         // Extract date range for multi-day events (festivals)
@@ -130,7 +133,7 @@ const AmbiletDataTransformer = {
 
             // Price information
             minPrice: minPrice,
-            priceFormatted: minPrice > 0 ? AmbiletUtils.formatCurrency(minPrice) : 'Gratuit',
+            priceFormatted: minPrice > 0 ? (hasMultipleTicketTypes ? 'de la ' : '') + AmbiletUtils.formatCurrency(minPrice) : 'Gratuit',
 
             // Category
             categoryName: categoryName,
