@@ -259,42 +259,54 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <div class="relative">
                                 <label class="cursor-pointer block">
                                     <input type="checkbox" name="featuring_locations[]" value="home_hero" class="peer sr-only">
-                                    <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
+                                    <div class="p-4 pr-9 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
                                         <p class="font-medium text-secondary">Prima pagina - Hero</p>
                                         <p class="text-sm text-muted">Vizibilitate maxima, banner principal</p>
                                         <p class="text-sm font-semibold text-primary mt-2" data-price-key="home_hero">— RON / zi</p>
                                     </div>
                                 </label>
+                                <button type="button" onclick="showPlacementPreview('home_hero')" class="absolute top-2 right-2 p-1.5 bg-white hover:bg-primary/5 border border-border rounded-lg text-muted hover:text-primary z-10 shadow-sm transition-colors" title="Previzualizeaza plasamentul">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                </button>
                             </div>
                             <div class="relative">
                                 <label class="cursor-pointer block">
                                     <input type="checkbox" name="featuring_locations[]" value="home_recommendations" class="peer sr-only">
-                                    <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
+                                    <div class="p-4 pr-9 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
                                         <p class="font-medium text-secondary">Prima pagina - Recomandari</p>
                                         <p class="text-sm text-muted">Sectiunea de recomandari</p>
                                         <p class="text-sm font-semibold text-primary mt-2" data-price-key="home_recommendations">— RON / zi</p>
                                     </div>
                                 </label>
+                                <button type="button" onclick="showPlacementPreview('home_recommendations')" class="absolute top-2 right-2 p-1.5 bg-white hover:bg-primary/5 border border-border rounded-lg text-muted hover:text-primary z-10 shadow-sm transition-colors" title="Previzualizeaza plasamentul">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                </button>
                             </div>
                             <div class="relative">
                                 <label class="cursor-pointer block">
                                     <input type="checkbox" name="featuring_locations[]" value="category" class="peer sr-only">
-                                    <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
+                                    <div class="p-4 pr-9 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
                                         <p class="font-medium text-secondary">Pagina categorie eveniment</p>
                                         <p class="text-sm text-muted">Audienta targetata pe categorie</p>
                                         <p class="text-sm font-semibold text-primary mt-2" data-price-key="category">— RON / zi</p>
                                     </div>
                                 </label>
+                                <button type="button" onclick="showPlacementPreview('category')" class="absolute top-2 right-2 p-1.5 bg-white hover:bg-primary/5 border border-border rounded-lg text-muted hover:text-primary z-10 shadow-sm transition-colors" title="Previzualizeaza plasamentul">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                </button>
                             </div>
                             <div class="relative">
                                 <label class="cursor-pointer block">
                                     <input type="checkbox" name="featuring_locations[]" value="city" class="peer sr-only">
-                                    <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
+                                    <div class="p-4 pr-9 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
                                         <p class="font-medium text-secondary">Pagina oras eveniment</p>
                                         <p class="text-sm text-muted">Audienta locala din orasul tau</p>
                                         <p class="text-sm font-semibold text-primary mt-2" data-price-key="city">— RON / zi</p>
                                     </div>
                                 </label>
+                                <button type="button" onclick="showPlacementPreview('city')" class="absolute top-2 right-2 p-1.5 bg-white hover:bg-primary/5 border border-border rounded-lg text-muted hover:text-primary z-10 shadow-sm transition-colors" title="Previzualizeaza plasamentul">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                </button>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-4 mt-4">
@@ -1848,251 +1860,309 @@ function closeEmailPreview() {
 
 // Placement Preview Functions
 const placementPreviews = {
-    home: {
-        title: 'Pagina Principala - Sectiunea Featured',
-        description: 'Evenimentul tau va aparea in sectiunea "Evenimente Recomandate" pe pagina principala, vizibila pentru toti vizitatorii site-ului.',
-        content: `
-            <div class="bg-gray-100 p-4">
-                <!-- Mock Homepage -->
-                <div class="bg-white rounded-lg shadow-sm">
-                    <!-- Header -->
-                    <div class="h-12 bg-gradient-to-r from-primary to-primary-dark flex items-center px-4">
-                        <div class="w-24 h-6 bg-white/30 rounded"></div>
-                        <div class="ml-auto flex gap-2">
-                            <div class="w-16 h-6 bg-white/30 rounded"></div>
-                            <div class="w-16 h-6 bg-white/30 rounded"></div>
+    home_hero: {
+        title: 'Prima pagina — Hero Banner',
+        description: 'Evenimentul tau apare ca banner principal pe prima pagina, vizibil imediat la accesarea site-ului. Pozitia cu cea mai mare vizibilitate.',
+        buildContent: (eventName, eventImage, eventDate, eventVenue) => `
+            <div class="bg-gray-100 text-sm select-none">
+                <!-- Site Nav -->
+                <div class="bg-white border-b border-gray-200 flex items-center gap-2 px-4 py-2.5 text-xs">
+                    <span class="font-black text-primary text-base tracking-tight">ambilet</span>
+                    <div class="flex items-center gap-1 ml-2 text-gray-500">
+                        <span class="px-2 py-1 rounded cursor-pointer">Concerte</span>
+                        <span class="px-2 py-1 rounded cursor-pointer">Festivaluri</span>
+                        <span class="px-2 py-1 rounded cursor-pointer">Teatru</span>
+                        <span class="px-2 py-1 rounded cursor-pointer">Sport</span>
+                    </div>
+                    <div class="ml-auto flex items-center gap-2">
+                        <div class="bg-gray-100 rounded-lg px-3 py-1.5 text-gray-400 flex items-center gap-1.5 w-28">
+                            <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <span>Cauta...</span>
+                        </div>
+                        <button class="bg-primary text-white px-3 py-1.5 rounded-lg font-medium cursor-default">Cont</button>
+                    </div>
+                </div>
+                <!-- HERO BANNER — your event appears here -->
+                <div class="relative ring-4 ring-primary ring-inset">
+                    <img src="${eventImage}" alt="${eventName}" class="w-full h-56 object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent"></div>
+                    <div class="absolute top-3 right-3 z-30 bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide shadow-lg flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        Evenimentul tau
+                    </div>
+                    <div class="absolute inset-0 flex flex-col justify-end p-5">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="text-[10px] text-yellow-400 font-bold uppercase tracking-widest">★ Promovat</span>
+                            <span class="text-[10px] text-white/50">•</span>
+                            <span class="text-[10px] text-white/70 uppercase tracking-wide">Concert</span>
+                        </div>
+                        <h2 class="text-white text-xl font-black mb-1 max-w-sm drop-shadow-lg leading-tight">${eventName}</h2>
+                        <p class="text-gray-300 text-xs mb-3 flex items-center gap-2">
+                            <span>${eventDate}</span><span>•</span><span>${eventVenue}</span>
+                        </p>
+                        <div class="flex items-center gap-3">
+                            <button class="bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg shadow-lg cursor-default">Cumpara Bilete</button>
+                            <span class="text-white/80 text-xs font-semibold">de la 80 RON</span>
                         </div>
                     </div>
-
-                    <!-- Hero Section -->
-                    <div class="h-32 bg-gradient-to-b from-primary/10 to-transparent p-4">
-                        <div class="w-48 h-6 bg-gray-200 rounded mb-2"></div>
-                        <div class="w-32 h-4 bg-gray-200 rounded"></div>
+                    <div class="absolute bottom-3 right-4 flex items-center gap-1.5">
+                        <div class="w-5 h-1.5 bg-white rounded-full"></div>
+                        <div class="w-1.5 h-1.5 bg-white/40 rounded-full"></div>
+                        <div class="w-1.5 h-1.5 bg-white/40 rounded-full"></div>
+                        <div class="w-1.5 h-1.5 bg-white/40 rounded-full"></div>
                     </div>
-
-                    <!-- Featured Section - THIS IS WHERE AD APPEARS -->
-                    <div class="p-4 border-2 border-dashed border-primary bg-primary/5 rounded-lg mx-4 -mt-4 relative">
-                        <div class="absolute -top-3 left-4 bg-primary text-white text-xs px-2 py-1 rounded font-medium">📍 EVENIMENTUL TAU AICI</div>
-                        <p class="text-sm font-semibold text-secondary mb-3">Evenimente Recomandate</p>
-                        <div class="grid grid-cols-4 gap-3">
-                            <div class="bg-primary/20 rounded-lg p-2 ring-2 ring-primary">
-                                <div class="w-full h-16 bg-primary/30 rounded mb-2"></div>
-                                <div class="w-full h-3 bg-primary/40 rounded mb-1"></div>
-                                <div class="w-2/3 h-2 bg-primary/30 rounded"></div>
-                            </div>
-                            <div class="bg-gray-100 rounded-lg p-2 opacity-50">
-                                <div class="w-full h-16 bg-gray-200 rounded mb-2"></div>
-                                <div class="w-full h-3 bg-gray-200 rounded mb-1"></div>
-                                <div class="w-2/3 h-2 bg-gray-200 rounded"></div>
-                            </div>
-                            <div class="bg-gray-100 rounded-lg p-2 opacity-50">
-                                <div class="w-full h-16 bg-gray-200 rounded mb-2"></div>
-                                <div class="w-full h-3 bg-gray-200 rounded mb-1"></div>
-                                <div class="w-2/3 h-2 bg-gray-200 rounded"></div>
-                            </div>
-                            <div class="bg-gray-100 rounded-lg p-2 opacity-50">
-                                <div class="w-full h-16 bg-gray-200 rounded mb-2"></div>
-                                <div class="w-full h-3 bg-gray-200 rounded mb-1"></div>
-                                <div class="w-2/3 h-2 bg-gray-200 rounded"></div>
-                            </div>
+                </div>
+                <!-- Category tabs -->
+                <div class="bg-white border-b border-gray-200 flex gap-2 px-4 py-2 overflow-x-auto">
+                    <span class="px-3 py-1 bg-primary text-white text-xs rounded-full font-medium whitespace-nowrap cursor-pointer">Toate</span>
+                    <span class="px-3 py-1 bg-gray-100 text-gray-500 text-xs rounded-full whitespace-nowrap cursor-pointer">Concerte</span>
+                    <span class="px-3 py-1 bg-gray-100 text-gray-500 text-xs rounded-full whitespace-nowrap cursor-pointer">Festivaluri</span>
+                    <span class="px-3 py-1 bg-gray-100 text-gray-500 text-xs rounded-full whitespace-nowrap cursor-pointer">Teatru</span>
+                    <span class="px-3 py-1 bg-gray-100 text-gray-500 text-xs rounded-full whitespace-nowrap cursor-pointer">Sport</span>
+                    <span class="px-3 py-1 bg-gray-100 text-gray-500 text-xs rounded-full whitespace-nowrap cursor-pointer">Comedy</span>
+                </div>
+                <!-- Rest of page (dimmed) -->
+                <div class="p-4 opacity-40">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Urmatoarele evenimente</p>
+                    <div class="grid grid-cols-4 gap-3">
+                        <div class="bg-white rounded-xl overflow-hidden shadow-sm"><img src="https://picsum.photos/seed/ambilet-ev1/300/180" class="w-full h-14 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3"></div></div></div>
+                        <div class="bg-white rounded-xl overflow-hidden shadow-sm"><img src="https://picsum.photos/seed/ambilet-ev2/300/180" class="w-full h-14 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3"></div></div></div>
+                        <div class="bg-white rounded-xl overflow-hidden shadow-sm"><img src="https://picsum.photos/seed/ambilet-ev3/300/180" class="w-full h-14 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3"></div></div></div>
+                        <div class="bg-white rounded-xl overflow-hidden shadow-sm"><img src="https://picsum.photos/seed/ambilet-ev4/300/180" class="w-full h-14 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3"></div></div></div>
+                    </div>
+                </div>
+            </div>
+        `
+    },
+    home_recommendations: {
+        title: 'Prima pagina — Sectiunea Recomandari',
+        description: 'Evenimentul tau apare primul in sectiunea "Recomandate pentru tine" de pe prima pagina, vizibila pentru toti vizitatorii site-ului.',
+        buildContent: (eventName, eventImage, eventDate, eventVenue) => `
+            <div class="bg-gray-100 text-sm select-none">
+                <!-- Site Nav -->
+                <div class="bg-white border-b border-gray-200 flex items-center gap-2 px-4 py-2.5 text-xs">
+                    <span class="font-black text-primary text-base tracking-tight">ambilet</span>
+                    <div class="flex items-center gap-1 ml-2 text-gray-500">
+                        <span class="px-2 py-1 rounded cursor-pointer">Concerte</span>
+                        <span class="px-2 py-1 rounded cursor-pointer">Festivaluri</span>
+                        <span class="px-2 py-1 rounded cursor-pointer">Teatru</span>
+                    </div>
+                    <div class="ml-auto">
+                        <div class="bg-gray-100 rounded-lg px-3 py-1.5 text-gray-400 flex items-center gap-1.5 w-28">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <span>Cauta...</span>
                         </div>
                     </div>
-
-                    <!-- Other Events -->
-                    <div class="p-4 mt-4">
-                        <div class="w-32 h-4 bg-gray-200 rounded mb-3"></div>
-                        <div class="grid grid-cols-4 gap-3 opacity-50">
-                            <div class="bg-gray-100 rounded-lg p-2">
-                                <div class="w-full h-12 bg-gray-200 rounded mb-2"></div>
-                                <div class="w-full h-2 bg-gray-200 rounded"></div>
-                            </div>
-                            <div class="bg-gray-100 rounded-lg p-2">
-                                <div class="w-full h-12 bg-gray-200 rounded mb-2"></div>
-                                <div class="w-full h-2 bg-gray-200 rounded"></div>
-                            </div>
-                            <div class="bg-gray-100 rounded-lg p-2">
-                                <div class="w-full h-12 bg-gray-200 rounded mb-2"></div>
-                                <div class="w-full h-2 bg-gray-200 rounded"></div>
-                            </div>
-                            <div class="bg-gray-100 rounded-lg p-2">
-                                <div class="w-full h-12 bg-gray-200 rounded mb-2"></div>
-                                <div class="w-full h-2 bg-gray-200 rounded"></div>
+                </div>
+                <!-- Hero (dimmed — not this placement) -->
+                <div class="relative opacity-30 pointer-events-none">
+                    <img src="https://picsum.photos/seed/ambilet-hero2/900/300" class="w-full h-28 object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex flex-col justify-end p-4">
+                        <div class="h-3 bg-white/40 rounded w-40 mb-1"></div>
+                        <div class="h-2 bg-white/30 rounded w-24"></div>
+                    </div>
+                </div>
+                <!-- RECOMMENDATIONS SECTION — your event appears here -->
+                <div class="bg-white px-4 pt-5 pb-4 ring-4 ring-primary ring-inset">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-primary text-base">⭐</span>
+                            <span class="font-bold text-gray-900">Recomandate pentru tine</span>
+                            <span class="bg-yellow-100 text-yellow-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide">Evenimentul tau</span>
+                        </div>
+                        <span class="text-xs text-primary cursor-pointer font-medium">Vezi toate →</span>
+                    </div>
+                    <div class="flex gap-3 overflow-x-auto pb-1">
+                        <!-- YOUR EVENT — highlighted, first position -->
+                        <div class="flex-shrink-0 w-40 bg-white rounded-xl shadow-lg ring-2 ring-primary overflow-hidden relative cursor-pointer">
+                            <div class="absolute top-1.5 right-1.5 z-10 bg-primary text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow">★ PROMOVAT</div>
+                            <img src="${eventImage}" alt="${eventName}" class="w-full h-24 object-cover">
+                            <div class="p-2.5">
+                                <p class="text-xs font-bold text-gray-900 truncate leading-tight mb-1">${eventName}</p>
+                                <p class="text-[10px] text-gray-500 mb-0.5">${eventDate}</p>
+                                <p class="text-[10px] text-gray-400 truncate mb-1.5">${eventVenue}</p>
+                                <div class="flex items-center justify-between">
+                                    <p class="text-xs font-bold text-primary">80 RON</p>
+                                    <button class="text-[10px] bg-primary text-white px-2 py-0.5 rounded-lg cursor-default font-semibold">Bilete</button>
+                                </div>
                             </div>
                         </div>
+                        <!-- Other events (dimmed) -->
+                        <div class="flex-shrink-0 w-36 bg-white rounded-xl shadow-sm overflow-hidden opacity-45 cursor-pointer"><img src="https://picsum.photos/seed/ambilet-ev1/300/180" class="w-full h-20 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3 mb-1"></div><div class="h-2 bg-gray-100 rounded w-1/2"></div></div></div>
+                        <div class="flex-shrink-0 w-36 bg-white rounded-xl shadow-sm overflow-hidden opacity-45 cursor-pointer"><img src="https://picsum.photos/seed/ambilet-ev2/300/180" class="w-full h-20 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3 mb-1"></div><div class="h-2 bg-gray-100 rounded w-1/2"></div></div></div>
+                        <div class="flex-shrink-0 w-36 bg-white rounded-xl shadow-sm overflow-hidden opacity-45 cursor-pointer"><img src="https://picsum.photos/seed/ambilet-ev3/300/180" class="w-full h-20 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3 mb-1"></div><div class="h-2 bg-gray-100 rounded w-1/2"></div></div></div>
+                        <div class="flex-shrink-0 w-36 bg-white rounded-xl shadow-sm overflow-hidden opacity-45 cursor-pointer"><img src="https://picsum.photos/seed/ambilet-ev4/300/180" class="w-full h-20 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3 mb-1"></div><div class="h-2 bg-gray-100 rounded w-1/2"></div></div></div>
+                    </div>
+                </div>
+                <!-- Rest of page (dimmed) -->
+                <div class="p-4 bg-white mt-2 opacity-35">
+                    <div class="h-3 bg-gray-200 rounded w-40 mb-3"></div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="bg-gray-50 rounded-xl overflow-hidden"><img src="https://picsum.photos/seed/ambilet-ev5/300/180" class="w-full h-16 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3"></div></div></div>
+                        <div class="bg-gray-50 rounded-xl overflow-hidden"><img src="https://picsum.photos/seed/ambilet-ev6/300/180" class="w-full h-16 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3"></div></div></div>
+                        <div class="bg-gray-50 rounded-xl overflow-hidden"><img src="https://picsum.photos/seed/ambilet-ev7/300/180" class="w-full h-16 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3"></div></div></div>
                     </div>
                 </div>
             </div>
         `
     },
     category: {
-        title: 'Pagina Categorie - Top Events',
-        description: 'Evenimentul tau va aparea in partea de sus a paginii de categorie (ex: Concerte, Festivaluri), vizibil pentru utilizatorii care cauta acest tip de evenimente.',
-        content: `
-            <div class="bg-gray-100 p-4">
-                <!-- Mock Category Page -->
-                <div class="bg-white rounded-lg shadow-sm">
-                    <!-- Header -->
-                    <div class="h-12 bg-gradient-to-r from-primary to-primary-dark flex items-center px-4">
-                        <div class="w-24 h-6 bg-white/30 rounded"></div>
+        title: 'Pagina Categorie Eveniment',
+        description: 'Evenimentul tau apare ca eveniment recomandat la inceputul paginii de categorie (ex: Concerte, Festivaluri). Ajunge la publicul targetat pe tipul de eveniment.',
+        buildContent: (eventName, eventImage, eventDate, eventVenue) => `
+            <div class="bg-gray-100 text-sm select-none">
+                <!-- Site Nav -->
+                <div class="bg-white border-b border-gray-200 flex items-center gap-2 px-4 py-2.5 text-xs">
+                    <span class="font-black text-primary text-base tracking-tight">ambilet</span>
+                    <div class="flex items-center gap-1 ml-2 text-gray-400">
+                        <span class="cursor-pointer hover:text-primary">Acasa</span>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        <span class="font-semibold text-gray-700">Concerte</span>
                     </div>
-
-                    <!-- Category Header -->
-                    <div class="p-4 border-b border-gray-200">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 bg-primary/20 rounded-lg"></div>
-                            <div class="w-24 h-6 bg-gray-200 rounded"></div>
-                        </div>
-                        <div class="w-48 h-3 bg-gray-100 rounded mt-2"></div>
-                    </div>
-
-                    <!-- Featured in Category - THIS IS WHERE AD APPEARS -->
-                    <div class="p-4 border-2 border-dashed border-primary bg-primary/5 rounded-lg mx-4 mt-4 relative">
-                        <div class="absolute -top-3 left-4 bg-primary text-white text-xs px-2 py-1 rounded font-medium">📍 EVENIMENTUL TAU AICI</div>
-                        <div class="grid grid-cols-3 gap-4">
-                            <div class="col-span-2 bg-primary/20 rounded-lg p-3 ring-2 ring-primary">
-                                <div class="w-full h-32 bg-primary/30 rounded mb-2"></div>
-                                <div class="w-3/4 h-4 bg-primary/40 rounded mb-1"></div>
-                                <div class="w-1/2 h-3 bg-primary/30 rounded"></div>
-                            </div>
-                            <div class="space-y-2 opacity-50">
-                                <div class="bg-gray-100 rounded-lg p-2">
-                                    <div class="w-full h-12 bg-gray-200 rounded mb-1"></div>
-                                    <div class="w-full h-2 bg-gray-200 rounded"></div>
-                                </div>
-                                <div class="bg-gray-100 rounded-lg p-2">
-                                    <div class="w-full h-12 bg-gray-200 rounded mb-1"></div>
-                                    <div class="w-full h-2 bg-gray-200 rounded"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Other Events -->
-                    <div class="p-4 mt-4 opacity-50">
-                        <div class="grid grid-cols-4 gap-3">
-                            <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-16 bg-gray-200 rounded mb-2"></div><div class="w-full h-2 bg-gray-200 rounded"></div></div>
-                            <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-16 bg-gray-200 rounded mb-2"></div><div class="w-full h-2 bg-gray-200 rounded"></div></div>
-                            <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-16 bg-gray-200 rounded mb-2"></div><div class="w-full h-2 bg-gray-200 rounded"></div></div>
-                            <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-16 bg-gray-200 rounded mb-2"></div><div class="w-full h-2 bg-gray-200 rounded"></div></div>
+                    <div class="ml-auto">
+                        <div class="bg-gray-100 rounded-lg px-3 py-1.5 text-gray-400 flex items-center gap-1.5 w-28">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <span>Cauta...</span>
                         </div>
                     </div>
                 </div>
-            </div>
-        `
-    },
-    genre: {
-        title: 'Pagina Gen Muzical - Highlight',
-        description: 'Evenimentul tau va aparea pe pagina de gen muzical (ex: Rock, Pop, Electronic), ajungand la fanii acelui stil muzical.',
-        content: `
-            <div class="bg-gray-100 p-4">
-                <!-- Mock Genre Page -->
-                <div class="bg-white rounded-lg shadow-sm">
-                    <!-- Header -->
-                    <div class="h-12 bg-gradient-to-r from-purple-600 to-pink-500 flex items-center px-4">
-                        <div class="w-24 h-6 bg-white/30 rounded"></div>
+                <!-- Category header -->
+                <div class="bg-white border-b border-gray-100 px-5 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                        </div>
+                        <div>
+                            <h1 class="text-base font-black text-gray-900">Concerte</h1>
+                            <p class="text-xs text-gray-500">247 de evenimente disponibile</p>
+                        </div>
                     </div>
-
-                    <!-- Genre Header -->
-                    <div class="p-4 bg-gradient-to-b from-purple-50 to-white">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
-                            </div>
-                            <div>
-                                <div class="w-20 h-5 bg-gray-300 rounded"></div>
-                                <div class="w-32 h-3 bg-gray-200 rounded mt-1"></div>
+                    <div class="flex gap-2 mt-3 overflow-x-auto">
+                        <span class="px-3 py-1 bg-orange-500 text-white text-[11px] rounded-full font-medium whitespace-nowrap cursor-pointer">Toate concertele</span>
+                        <span class="px-3 py-1 bg-gray-100 text-gray-500 text-[11px] rounded-full whitespace-nowrap cursor-pointer">Rock</span>
+                        <span class="px-3 py-1 bg-gray-100 text-gray-500 text-[11px] rounded-full whitespace-nowrap cursor-pointer">Pop</span>
+                        <span class="px-3 py-1 bg-gray-100 text-gray-500 text-[11px] rounded-full whitespace-nowrap cursor-pointer">Electronic</span>
+                        <span class="px-3 py-1 bg-gray-100 text-gray-500 text-[11px] rounded-full whitespace-nowrap cursor-pointer">Jazz</span>
+                    </div>
+                </div>
+                <!-- FEATURED EVENT — your event appears here -->
+                <div class="p-4 ring-4 ring-primary ring-inset bg-white">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-[10px] font-black text-primary uppercase tracking-wider">★ Eveniment Promovat</span>
+                        <span class="bg-yellow-100 text-yellow-800 text-[10px] font-black px-1.5 py-0.5 rounded-full">Evenimentul tau</span>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-lg ring-2 ring-primary overflow-hidden relative cursor-pointer">
+                        <div class="absolute top-2.5 right-2.5 z-10 bg-primary text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-md">★ PROMOVAT</div>
+                        <div class="flex">
+                            <img src="${eventImage}" alt="${eventName}" class="w-32 h-28 object-cover flex-shrink-0">
+                            <div class="flex-1 p-3">
+                                <p class="font-black text-gray-900 text-sm mb-0.5 leading-tight">${eventName}</p>
+                                <div class="flex items-center gap-1 text-[11px] text-gray-500 mb-0.5">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    ${eventDate}
+                                </div>
+                                <div class="flex items-center gap-1 text-[11px] text-gray-500 mb-2">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    ${eventVenue}
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-[10px] text-gray-400">de la</p>
+                                        <p class="font-black text-primary text-sm">80 RON</p>
+                                    </div>
+                                    <button class="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-xl cursor-default shadow-sm">Cumpara Bilete</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Genre Highlight - THIS IS WHERE AD APPEARS -->
-                    <div class="p-4 border-2 border-dashed border-purple-500 bg-purple-50 rounded-lg mx-4 relative">
-                        <div class="absolute -top-3 left-4 bg-purple-500 text-white text-xs px-2 py-1 rounded font-medium">📍 EVENIMENTUL TAU AICI</div>
-                        <div class="flex gap-4">
-                            <div class="flex-1 bg-purple-200 rounded-lg p-3 ring-2 ring-purple-500">
-                                <div class="w-full h-24 bg-purple-300 rounded mb-2"></div>
-                                <div class="w-3/4 h-4 bg-purple-400 rounded mb-1"></div>
-                                <div class="w-1/2 h-3 bg-purple-300 rounded"></div>
-                            </div>
-                            <div class="w-1/3 space-y-2 opacity-50">
-                                <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-8 bg-gray-200 rounded mb-1"></div><div class="w-2/3 h-2 bg-gray-200 rounded"></div></div>
-                                <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-8 bg-gray-200 rounded mb-1"></div><div class="w-2/3 h-2 bg-gray-200 rounded"></div></div>
-                                <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-8 bg-gray-200 rounded mb-1"></div><div class="w-2/3 h-2 bg-gray-200 rounded"></div></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- More from this genre -->
-                    <div class="p-4 mt-4 opacity-50">
-                        <div class="w-32 h-3 bg-gray-200 rounded mb-3"></div>
-                        <div class="grid grid-cols-4 gap-2">
-                            <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-12 bg-gray-200 rounded"></div></div>
-                            <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-12 bg-gray-200 rounded"></div></div>
-                            <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-12 bg-gray-200 rounded"></div></div>
-                            <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-12 bg-gray-200 rounded"></div></div>
-                        </div>
+                </div>
+                <!-- Other events (dimmed) -->
+                <div class="p-4 opacity-35">
+                    <p class="text-xs font-semibold text-gray-500 mb-3">Toate concertele</p>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer"><img src="https://picsum.photos/seed/ambilet-ev1/300/180" class="w-full h-20 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3 mb-1"></div><div class="h-3 bg-primary/20 rounded w-1/2"></div></div></div>
+                        <div class="bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer"><img src="https://picsum.photos/seed/ambilet-ev2/300/180" class="w-full h-20 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3 mb-1"></div><div class="h-3 bg-primary/20 rounded w-1/2"></div></div></div>
+                        <div class="bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer"><img src="https://picsum.photos/seed/ambilet-ev3/300/180" class="w-full h-20 object-cover"><div class="p-2"><div class="h-2.5 bg-gray-200 rounded mb-1"></div><div class="h-2 bg-gray-100 rounded w-2/3 mb-1"></div><div class="h-3 bg-primary/20 rounded w-1/2"></div></div></div>
                     </div>
                 </div>
             </div>
         `
     },
     city: {
-        title: 'Pagina Oras - Evenimente Locale',
-        description: 'Evenimentul tau va aparea pe pagina orasului (ex: Bucuresti, Cluj), ajungand la utilizatorii care cauta evenimente in zona lor.',
-        content: `
-            <div class="bg-gray-100 p-4">
-                <!-- Mock City Page -->
-                <div class="bg-white rounded-lg shadow-sm">
-                    <!-- Header -->
-                    <div class="h-12 bg-gradient-to-r from-blue-600 to-cyan-500 flex items-center px-4">
-                        <div class="w-24 h-6 bg-white/30 rounded"></div>
+        title: 'Pagina Oras Eveniment',
+        description: 'Evenimentul tau apare in sectiunea "Populare in [oras]" pe pagina dedicata orasului evenimentului. Ajunge la utilizatorii care cauta evenimente in zona lor.',
+        buildContent: (eventName, eventImage, eventDate, eventVenue) => `
+            <div class="bg-gray-100 text-sm select-none">
+                <!-- Site Nav -->
+                <div class="bg-white border-b border-gray-200 flex items-center gap-2 px-4 py-2.5 text-xs">
+                    <span class="font-black text-primary text-base tracking-tight">ambilet</span>
+                    <div class="flex items-center gap-1 ml-2 text-gray-400">
+                        <span class="cursor-pointer hover:text-primary">Acasa</span>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        <span class="font-semibold text-gray-700">București</span>
                     </div>
-
-                    <!-- City Header -->
-                    <div class="p-4 bg-gradient-to-b from-blue-50 to-white">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            </div>
-                            <div>
-                                <div class="w-24 h-5 bg-gray-300 rounded"></div>
-                                <div class="w-40 h-3 bg-gray-200 rounded mt-1"></div>
-                            </div>
+                    <div class="ml-auto">
+                        <div class="bg-gray-100 rounded-lg px-3 py-1.5 text-gray-400 flex items-center gap-1.5 w-28">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <span>Cauta...</span>
                         </div>
                     </div>
-
-                    <!-- City Featured - THIS IS WHERE AD APPEARS -->
-                    <div class="p-4 border-2 border-dashed border-blue-500 bg-blue-50 rounded-lg mx-4 relative">
-                        <div class="absolute -top-3 left-4 bg-blue-500 text-white text-xs px-2 py-1 rounded font-medium">📍 EVENIMENTUL TAU AICI</div>
-                        <p class="text-xs font-semibold text-blue-700 mb-2">🔥 Populare in acest oras</p>
-                        <div class="grid grid-cols-3 gap-3">
-                            <div class="bg-blue-200 rounded-lg p-2 ring-2 ring-blue-500">
-                                <div class="w-full h-20 bg-blue-300 rounded mb-2"></div>
-                                <div class="w-full h-3 bg-blue-400 rounded mb-1"></div>
-                                <div class="w-2/3 h-2 bg-blue-300 rounded"></div>
+                </div>
+                <!-- City hero -->
+                <div class="bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-4 text-white">
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <svg class="w-4 h-4 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <span class="font-black text-lg">București</span>
+                    </div>
+                    <p class="text-blue-100 text-xs mb-3">Descopera cele mai bune evenimente din oras</p>
+                    <div class="flex gap-2">
+                        <span class="px-2.5 py-1 bg-white/25 text-white text-[11px] rounded-full font-medium cursor-pointer">Toate</span>
+                        <span class="px-2.5 py-1 bg-white/10 text-white/80 text-[11px] rounded-full cursor-pointer">Concerte</span>
+                        <span class="px-2.5 py-1 bg-white/10 text-white/80 text-[11px] rounded-full cursor-pointer">Weekend</span>
+                        <span class="px-2.5 py-1 bg-white/10 text-white/80 text-[11px] rounded-full cursor-pointer">Gratuit</span>
+                    </div>
+                </div>
+                <!-- FEATURED IN CITY — your event appears here -->
+                <div class="bg-white px-4 pt-4 pb-4 ring-4 ring-blue-500 ring-inset">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">🔥</span>
+                            <span class="font-bold text-gray-900">Populare in București</span>
+                            <span class="bg-yellow-100 text-yellow-800 text-[10px] font-black px-1.5 py-0.5 rounded-full">Evenimentul tau</span>
+                        </div>
+                        <span class="text-xs text-blue-600 font-medium cursor-pointer">Toate →</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <!-- YOUR EVENT — highlighted, first position -->
+                        <div class="col-span-2 bg-white rounded-2xl shadow-lg ring-2 ring-blue-500 overflow-hidden relative cursor-pointer">
+                            <div class="absolute top-2 left-2 z-10 bg-yellow-400 text-yellow-900 text-[9px] font-black px-1.5 py-0.5 rounded-full shadow">Evenimentul tau</div>
+                            <div class="absolute top-2 right-2 z-10 bg-blue-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow">★ PROMOVAT</div>
+                            <img src="${eventImage}" alt="${eventName}" class="w-full h-28 object-cover">
+                            <div class="p-3">
+                                <p class="font-black text-gray-900 text-sm leading-tight mb-1">${eventName}</p>
+                                <p class="text-[11px] text-gray-500 mb-0.5">${eventDate}</p>
+                                <p class="text-[11px] text-gray-400 truncate mb-2">${eventVenue}</p>
+                                <div class="flex items-center justify-between">
+                                    <p class="font-black text-blue-600 text-sm">de la 80 RON</p>
+                                    <button class="bg-blue-500 text-white text-[11px] font-bold px-3 py-1 rounded-lg cursor-default shadow-sm">Bilete</button>
+                                </div>
                             </div>
-                            <div class="bg-gray-100 rounded-lg p-2 opacity-50">
-                                <div class="w-full h-20 bg-gray-200 rounded mb-2"></div>
-                                <div class="w-full h-3 bg-gray-200 rounded mb-1"></div>
-                                <div class="w-2/3 h-2 bg-gray-200 rounded"></div>
-                            </div>
-                            <div class="bg-gray-100 rounded-lg p-2 opacity-50">
-                                <div class="w-full h-20 bg-gray-200 rounded mb-2"></div>
-                                <div class="w-full h-3 bg-gray-200 rounded mb-1"></div>
-                                <div class="w-2/3 h-2 bg-gray-200 rounded"></div>
-                            </div>
+                        </div>
+                        <!-- Other city events (dimmed) -->
+                        <div class="space-y-2 opacity-40">
+                            <div class="bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer"><img src="https://picsum.photos/seed/ambilet-ev1/300/180" class="w-full h-16 object-cover"><div class="p-2"><div class="h-2 bg-gray-200 rounded mb-1"></div><div class="h-1.5 bg-gray-100 rounded w-2/3"></div></div></div>
+                            <div class="bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer"><img src="https://picsum.photos/seed/ambilet-ev2/300/180" class="w-full h-16 object-cover"><div class="p-2"><div class="h-2 bg-gray-200 rounded mb-1"></div><div class="h-1.5 bg-gray-100 rounded w-2/3"></div></div></div>
                         </div>
                     </div>
-
-                    <!-- All events in city -->
-                    <div class="p-4 mt-4 opacity-50">
-                        <div class="w-40 h-3 bg-gray-200 rounded mb-3"></div>
-                        <div class="grid grid-cols-4 gap-2">
-                            <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-12 bg-gray-200 rounded mb-1"></div><div class="w-2/3 h-2 bg-gray-200 rounded"></div></div>
-                            <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-12 bg-gray-200 rounded mb-1"></div><div class="w-2/3 h-2 bg-gray-200 rounded"></div></div>
-                            <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-12 bg-gray-200 rounded mb-1"></div><div class="w-2/3 h-2 bg-gray-200 rounded"></div></div>
-                            <div class="bg-gray-100 rounded-lg p-2"><div class="w-full h-12 bg-gray-200 rounded mb-1"></div><div class="w-2/3 h-2 bg-gray-200 rounded"></div></div>
-                        </div>
+                </div>
+                <!-- More events in city (dimmed) -->
+                <div class="p-4 bg-white mt-2 opacity-35">
+                    <div class="h-3 bg-gray-200 rounded w-48 mb-3"></div>
+                    <div class="grid grid-cols-4 gap-2">
+                        <div class="bg-gray-50 rounded-xl overflow-hidden"><img src="https://picsum.photos/seed/ambilet-ev3/200/150" class="w-full h-12 object-cover"><div class="p-1.5"><div class="h-2 bg-gray-200 rounded mb-1"></div></div></div>
+                        <div class="bg-gray-50 rounded-xl overflow-hidden"><img src="https://picsum.photos/seed/ambilet-ev4/200/150" class="w-full h-12 object-cover"><div class="p-1.5"><div class="h-2 bg-gray-200 rounded mb-1"></div></div></div>
+                        <div class="bg-gray-50 rounded-xl overflow-hidden"><img src="https://picsum.photos/seed/ambilet-ev5/200/150" class="w-full h-12 object-cover"><div class="p-1.5"><div class="h-2 bg-gray-200 rounded mb-1"></div></div></div>
+                        <div class="bg-gray-50 rounded-xl overflow-hidden"><img src="https://picsum.photos/seed/ambilet-ev6/200/150" class="w-full h-12 object-cover"><div class="p-1.5"><div class="h-2 bg-gray-200 rounded mb-1"></div></div></div>
                     </div>
                 </div>
             </div>
@@ -2104,9 +2174,20 @@ function showPlacementPreview(placement) {
     const preview = placementPreviews[placement];
     if (!preview) return;
 
+    // Use selected event data for a realistic preview
+    const eventId = document.getElementById('service-event')?.value;
+    const event = events.find(e => e.id == eventId);
+    const eventName = event ? (event.name || event.title || 'Evenimentul Tau') : 'Evenimentul Tau';
+    const rawImage = event?.image ? getStorageUrl(event.image) : null;
+    const eventImage = rawImage || 'https://picsum.photos/seed/ambilet-hero/900/450';
+    const eventDate = event ? (AmbiletUtils.formatDate(event.starts_at || event.date) || 'Data evenimentului') : 'Data evenimentului';
+    const eventVenue = event
+        ? (event.venue_name || (typeof event.venue === 'object' ? event.venue?.name : event.venue) || event.venue_city || 'Locatia evenimentului')
+        : 'Locatia evenimentului';
+
     document.getElementById('placement-preview-title').textContent = preview.title;
     document.getElementById('placement-preview-description').textContent = preview.description;
-    document.getElementById('placement-preview-content').innerHTML = preview.content;
+    document.getElementById('placement-preview-content').innerHTML = preview.buildContent(eventName, eventImage, eventDate, eventVenue);
 
     document.getElementById('placement-preview-modal').classList.remove('hidden');
     document.getElementById('placement-preview-modal').classList.add('flex');
