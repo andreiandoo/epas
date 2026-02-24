@@ -793,7 +793,7 @@ let currentServiceType = '';
 let events = [];
 let activeServices = [];
 let servicePricing = {
-    featuring: { home: 99, category: 69, genre: 59, city: 49 },
+    featuring: { home_hero: 120, home_recommendations: 80, category: 60, city: 40 },
     email: { own_per_email: 0.40, marketplace_per_email: 0.50, minimum: 100 },
     tracking: { per_platform_monthly: 49, discounts: { 1: 0, 3: 0.10, 6: 0.15, 12: 0.25 } },
     campaign: { basic: 499, standard: 899, premium: 1499 }
@@ -826,12 +826,12 @@ function checkUrlParams() {
     // Check for success messages
     if (params.get('featuring_activated') === '1') {
         showSuccessBanner('Promovare Activata!', 'Evenimentul tau este acum afisat in sectiunile selectate.');
-    } else if (params.get('payment_success') === '1') {
-        showSuccessBanner('Plata Confirmata!', 'Serviciul a fost activat cu succes.');
+    } else if (params.get('payment_success') === '1' || params.get('payment') === 'success') {
+        showSuccessBanner('Plata Confirmata!', 'Serviciul a fost activat cu succes. Evenimentul tau va aparea in sectiunile selectate.');
     }
 
     // Check for cancelled payment
-    if (params.get('cancelled') === '1') {
+    if (params.get('cancelled') === '1' || params.get('payment') === 'cancel') {
         document.getElementById('cancelled-banner').classList.remove('hidden');
     }
 
@@ -894,19 +894,24 @@ function updatePricingUI() {
     }
 
     // Update featuring prices in the UI
-    const priceMap = {
-        home: servicePricing.featuring.home,
-        category: servicePricing.featuring.category,
-        genre: servicePricing.featuring.genre,
-        city: servicePricing.featuring.city
-    };
-
+    const fp = servicePricing.featuring || {};
     document.querySelectorAll('#featuring-options input[name="featuring_locations[]"]').forEach(input => {
-        const priceEl = input.closest('label').querySelector('.text-primary');
-        if (priceEl && priceMap[input.value]) {
-            priceEl.textContent = priceMap[input.value] + ' RON / zi';
+        const priceEl = input.closest('label').querySelector('[data-price-key]');
+        if (priceEl) {
+            const key = priceEl.getAttribute('data-price-key');
+            const price = fp[key] ?? fp[input.value];
+            priceEl.textContent = price != null ? price + ' RON / zi' : '— RON / zi';
         }
     });
+
+    // Update "de la" price on featuring card
+    const cardFeaturingPrice = document.getElementById('card-featuring-price');
+    if (cardFeaturingPrice) {
+        const lowestFeaturing = Math.min(...Object.values(fp).filter(v => typeof v === 'number' && v > 0));
+        if (isFinite(lowestFeaturing)) {
+            cardFeaturingPrice.textContent = lowestFeaturing + ' RON';
+        }
+    }
 
     // Update tracking prices
     document.querySelectorAll('#tracking-options input[name="tracking_platforms[]"]').forEach(input => {
@@ -1251,11 +1256,16 @@ function calculateOrderSummary() {
             const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
             const prices = servicePricing.featuring;
-            const labels = { home: 'Pagina Principala', category: 'Pagina Categorie', genre: 'Pagina Gen', city: 'Pagina Oras' };
+            const labels = {
+                home_hero: 'Prima pagina - Hero',
+                home_recommendations: 'Prima pagina - Recomandari',
+                category: 'Pagina categorie eveniment',
+                city: 'Pagina oras eveniment'
+            };
 
             locations.forEach(loc => {
-                const price = (prices[loc.value] || 49) * days;
-                items.push({ name: labels[loc.value] + ' (' + days + ' zile)', price });
+                const price = (prices[loc.value] ?? 40) * days;
+                items.push({ name: (labels[loc.value] || loc.value) + ' (' + days + ' zile)', price });
                 total += price;
             });
             break;
