@@ -1325,8 +1325,8 @@ const EventPage = {
 
             // Card classes
             var cardClasses = isSoldOut
-                ? 'relative z-10 p-2 pl-4 border ticket-card border-gray-200 rounded-2xl bg-gray-100 cursor-default'
-                : 'bg-white relative z-10 p-2 pl-4 border cursor-pointer ticket-card border-border rounded-2xl hover:z-20';
+                ? 'relative z-10 p-2 pl-4 border ticket-card border-gray-200 rounded-lg bg-gray-100 cursor-default'
+                : 'bg-white relative z-10 p-2 pl-4 border cursor-pointer ticket-card border-border rounded-lg hover:z-20';
             var titleClasses = isSoldOut ? 'text-gray-400' : 'text-secondary';
             var priceClasses = isSoldOut ? 'text-gray-400 line-through' : 'text-primary';
             var descClasses = isSoldOut ? 'text-gray-400' : 'text-muted';
@@ -1382,7 +1382,7 @@ const EventPage = {
                         '<span class="block text-xl font-bold ' + priceClasses + '">' + displayPrice.toFixed(2) + ' lei</span>' +
                     '</div>' +
                 '</div>' +
-                '<div class="flex items-center justify-between">' +
+                '<div class="flex items-end justify-between">' +
                     availabilityHtml +
                     controlsHtml +
                 '</div>' +
@@ -1871,7 +1871,7 @@ const EventPage = {
             var timeStr = te.start_time ? te.start_time.substring(0, 5) : '';
             var city = te.city || '';
             var venueName = te.venue_name || '';
-            var location = city ? (venueName ? venueName + ', ' + city : city) : venueName;
+            var location = city ? (venueName ? venueName : city) : venueName;
             var imgSrc = te.image_url || '/assets/images/default-event.png';
             var eventUrl = '/bilete/' + (te.slug || te.id);
 
@@ -1889,8 +1889,9 @@ const EventPage = {
             html += '<div class="flex-1 min-w-0">';
             if (location) {
                 html += '<p class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">';
-                html += '<svg class="inline w-3.5 h-3.5 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
-                html += location + '</p>';
+                html += city ? esc(city) : '';
+                html += '<svg class="text-primary inline w-3.5 h-3.5 ml-1 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
+                html += '<span class="text-primary">' + location + '</span></p>';
             }
             html += '<p class="text-sm text-muted">' + (te.name || 'Eveniment') + '</p>';
             html += '</div>';
