@@ -317,7 +317,7 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
 
                         <!-- Ticket Terms Section -->
-                        <div id="ticket-terms-section" class="mb-4" style="display:none;">
+                        <div id="ticket-terms-section" class="mb-4">
                             <div id="ticket-terms-content" class="hidden p-4 text-xs prose prose-slate max-w-none border-t border-border">
                                 <!-- Loaded dynamically by JS -->
                             </div>
