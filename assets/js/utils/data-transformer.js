@@ -69,7 +69,8 @@ const AmbiletDataTransformer = {
             hasMultipleTicketTypes = apiEvent.ticket_types.length > 1;
         } else {
             minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
-            hasMultipleTicketTypes = true; // price_from implies multiple possible prices
+            const ttCount = apiEvent.ticket_types_count;
+            hasMultipleTicketTypes = ttCount != null ? ttCount > 1 : false;
         }
 
         // Extract date range for multi-day events (festivals)
