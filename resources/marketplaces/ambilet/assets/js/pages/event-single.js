@@ -769,8 +769,8 @@ const EventPage = {
         this.renderDate(e);
 
         // Time
-        document.getElementById(this.elements.eventTime).textContent = 'Acces: ' + (e.start_time || '20:00');
-        document.getElementById(this.elements.eventDoors).textContent = 'Doors: ' + (e.doors_time || '19:00');
+        document.getElementById(this.elements.eventTime).innerHTML = '<span class="text-muted">Acces:</span> ' + (e.start_time || '20:00');
+        document.getElementById(this.elements.eventDoors).innerHTML = '<span class="text-muted">Doors:</span> ' + (e.doors_time || '19:00');
 
         // Venue (with city)
         var venueName = e.venue?.name || e.location || 'Locație TBA';
@@ -1100,7 +1100,7 @@ const EventPage = {
             var socialLinksHtml = '';
             var socialLinks = artist.social_links || {};
             if (Object.keys(socialLinks).length > 0) {
-                socialLinksHtml = '<div class="flex items-center gap-3 mb-4">';
+                socialLinksHtml = '<div class="flex items-center gap-3">';
                 for (var platform in socialLinks) {
                     if (socialLinks.hasOwnProperty(platform) && socialIcons[platform]) {
                         socialLinksHtml += '<a href="' + socialLinks[platform] + '" target="_blank" rel="noopener noreferrer" class="p-2 text-muted transition-colors rounded-full bg-surface ' + (socialColors[platform] || 'hover:text-primary') + '" title="' + platform.charAt(0).toUpperCase() + platform.slice(1) + '">' + socialIcons[platform] + '</a>';
@@ -1110,9 +1110,9 @@ const EventPage = {
             }
 
             // Headliners get larger display
-            var imageColClass = isHeadliner ? 'md:w-2/5' : 'md:w-1/3';
-            var contentColClass = isHeadliner ? 'md:w-3/5' : 'md:w-2/3';
-            var nameClass = isHeadliner ? 'text-3xl' : 'text-2xl';
+            var imageColClass = isHeadliner ? 'md:w-2/5' : 'md:w-1/4';
+            var contentColClass = isHeadliner ? 'md:w-3/5' : 'md:w-3/4';
+            var nameClass = isHeadliner ? 'text-2xl' : 'text-xl';
             var containerClass = isHeadliner ? 'p-4 -m-4 rounded-2xl bg-gradient-to-r from-amber-50 to-transparent border border-amber-100' : '';
 
             allHtml += '<div class="flex flex-col gap-6 md:flex-row ' + containerClass + (i > 0 ? ' pt-6 mt-6' + (isHeadliner ? '' : ' border-t border-border') : '') + '">' +
@@ -1123,17 +1123,19 @@ const EventPage = {
                     '</a>' +
                 '</div>' +
                 '<div class="' + contentColClass + '">' +
-                    '<div class="flex flex-wrap items-center gap-3 mb-4 mobile:justify-between">' +
+                    '<div class="flex flex-wrap items-center gap-3 mb-2 mobile:justify-between">' +
                         '<a href="' + artistLink + '" class="' + nameClass + ' font-bold text-secondary hover:text-primary">' + artist.name + '</a>' +
                         statusBadgeHtml +
                         (artist.verified ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary">Verified</span>' : '') +
                     '</div>' +
-                    (artistDescription ? '<p class="mb-4 leading-relaxed text-muted">' + artistDescription + '</p>' : '<p class="mb-4 leading-relaxed text-muted">Detalii despre artist vor fi disponibile în curând.</p>') +
-                    socialLinksHtml +
-                    '<a href="' + artistLink + '" class="inline-flex mobile:flex items-center gap-2 font-semibold text-primary border border-primary rounded-md py-2 px-6 mobile:justify-center hover:bg-primary hover:text-white transition-all ease-in-out duration-200">' +
-                        'Vezi profilul artistului' +
-                        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>' +
-                    '</a>' +
+                    (artistDescription ? '<p class="mb-2 leading-relaxed text-muted">' + artistDescription + '</p>' : '<p class="mb-4 leading-relaxed text-muted">Detalii despre artist vor fi disponibile în curând.</p>') +
+                    '<div class="flex items-center mobile:flex-col gap-4">' +
+                        '<a href="' + artistLink + '" class="inline-flex mobile:flex items-center gap-2 font-semibold text-primary border border-primary rounded-md py-2 px-6 mobile:justify-center hover:bg-primary hover:text-white transition-all ease-in-out duration-200">' +
+                            'Vezi profilul artistului' +
+                            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>' +
+                        '</a>' +
+                        socialLinksHtml +
+                    '</div>' +
                 '</div>' +
             '</div>';
         }
@@ -1159,16 +1161,16 @@ const EventPage = {
         }
 
         var html = '<div class="flex flex-col gap-6 md:flex-row">' +
-            '<div class="md:w-1/3">' +
-                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl" loading="lazy">' +
+            '<div class="md:w-1/5">' +
+                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-36 mb-4 rounded-2xl" loading="lazy">' +
             '</div>' +
-            '<div class="md:w-2/3">' +
+            '<div class="md:w-4/5">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
-                '<p class="mb-4 text-muted">' + venueAddress + '</p>' +
-                '<div class="mb-4 leading-relaxed text-muted">' + (venue.description || '') + '</div>';
+                '<p class="mb-2 text-muted">' + venueAddress + '</p>' +
+                '<div class="leading-relaxed text-muted text-sm">' + (venue.description || '') + '</div>';
 
         if (venue.amenities && venue.amenities.length) {
-            html += '<div class="mb-6 space-y-3">';
+            html += '<div class="mt-4 mb-6 space-y-3">';
             venue.amenities.forEach(function(a) {
                 html += '<div class="flex items-center gap-3">' +
                     '<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-success/10">' +
@@ -1181,7 +1183,7 @@ const EventPage = {
         }
 
         if (googleMapsUrl) {
-            html += '<a href="' + googleMapsUrl + '" target="_blank" class="inline-flex items-center gap-2 font-semibold text-secondary border border-secondary text-sm rounded-md py-2 px-6 hover:bg-secondary hover:text-white transition-all ease-in-out duration-200">' +
+            html += '<a href="' + googleMapsUrl + '" target="_blank" class="inline-flex items-center gap-2 font-semibold text-secondary border border-secondary text-sm rounded-md mt-2 py-2 px-6 hover:bg-secondary hover:text-white transition-all ease-in-out duration-200">' +
                 '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
                 'Deschide in Google Maps' +
             '</a>';
@@ -1323,8 +1325,8 @@ const EventPage = {
 
             // Card classes
             var cardClasses = isSoldOut
-                ? 'relative z-10 p-4 border-2 ticket-card border-gray-200 rounded-2xl bg-gray-100 cursor-default'
-                : 'relative z-10 p-4 border-2 cursor-pointer ticket-card border-border rounded-2xl hover:z-20';
+                ? 'relative z-10 p-2 pl-4 border ticket-card border-gray-200 rounded-lg bg-gray-100 cursor-default'
+                : 'bg-white relative z-10 p-2 pl-4 border cursor-pointer ticket-card border-border rounded-lg hover:z-20';
             var titleClasses = isSoldOut ? 'text-gray-400' : 'text-secondary';
             var priceClasses = isSoldOut ? 'text-gray-400 line-through' : 'text-primary';
             var descClasses = isSoldOut ? 'text-gray-400' : 'text-muted';
@@ -1346,9 +1348,9 @@ const EventPage = {
             } else {
                 // Quantity controls (always show for available tickets)
                 controlsHtml = '<div class="flex items-center gap-2">' +
-                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">-</button>' +
+                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary border border-slate-200 hover:text-white">-</button>' +
                     '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center">' + currentQty + '</span>' +
-                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">+</button>';
+                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary border border-slate-200 hover:text-white">+</button>';
 
                 // Add "Alege locul/locurile" button for seating tickets when quantity > 0
                 if (hasSeating && currentQty > 0) {
@@ -1367,7 +1369,7 @@ const EventPage = {
             }
 
             return '<div class="' + cardClasses + '" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
-                '<div class="flex items-start justify-between">' +
+                '<div class="flex items-center justify-between">' +
                     '<div class="relative tooltip-trigger">' +
                         '<h3 class="flex items-center font-bold gap-x-2 ' + titleClasses + ' cursor-help border-muted">' + tt.name +
                             (hasDiscount && !isSoldOut ? '<span class="discount-badge text-white text-[10px] font-bold py-1 px-2 rounded-full">-' + discountPercent + '%</span>' : '') +
@@ -1375,12 +1377,12 @@ const EventPage = {
                         '<p class="text-sm ' + descClasses + '">' + (tt.description || '') + '</p>' +
                         (isSoldOut ? '' : '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' + tooltipHtml + '</div>') +
                     '</div>' +
-                    '<div class="text-right">' +
-                        (hasDiscount && !isSoldOut ? '<span class="text-sm line-through text-muted">' + crossedOutPrice.toFixed(0) + ' lei</span>' : '') +
+                    '<div class="text-right relative">' +
+                        (hasDiscount && !isSoldOut ? '<span class="bg-primary p-1 px-3 rounded-md absolute -right-4 -top-6 line-through font-bold text-xs text-white">' + crossedOutPrice.toFixed(0) + ' lei</span>' : '') +
                         '<span class="block text-xl font-bold ' + priceClasses + '">' + displayPrice.toFixed(2) + ' lei</span>' +
                     '</div>' +
                 '</div>' +
-                '<div class="flex items-center justify-between">' +
+                '<div class="flex items-end justify-between">' +
                     availabilityHtml +
                     controlsHtml +
                 '</div>' +
@@ -1857,7 +1859,7 @@ const EventPage = {
             if (nameFallback) nameFallback.style.display = 'none';
         }
 
-        var MONTHS_SHORT = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var MONTHS_SHORT = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec'];
 
         var html = '';
         for (var i = 0; i < tourEvents.length; i++) {
@@ -1869,7 +1871,7 @@ const EventPage = {
             var timeStr = te.start_time ? te.start_time.substring(0, 5) : '';
             var city = te.city || '';
             var venueName = te.venue_name || '';
-            var location = city ? (venueName ? venueName + ', ' + city : city) : venueName;
+            var location = city ? (venueName ? venueName : city) : venueName;
             var imgSrc = te.image_url || '/assets/images/default-event.png';
             var eventUrl = '/bilete/' + (te.slug || te.id);
 
@@ -1885,15 +1887,13 @@ const EventPage = {
             html += '</div>';
             // Info
             html += '<div class="flex-1 min-w-0">';
-            html += '<p class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">' + (te.name || 'Eveniment') + '</p>';
             if (location) {
-                html += '<p class="text-sm text-muted truncate">';
-                html += '<svg class="inline w-3.5 h-3.5 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
-                html += location + '</p>';
+                html += '<p class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">';
+                html += city ? city : '';
+                html += '<svg class="text-primary inline w-3.5 h-3.5 ml-1 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
+                html += '<span class="text-primary">' + location + '</span></p>';
             }
-            if (timeStr) {
-                html += '<p class="text-xs text-muted mt-0.5">' + dayNum + ' ' + monthStr + ' ' + yearNum + (timeStr ? ' · ' + timeStr : '') + '</p>';
-            }
+            html += '<p class="text-sm text-muted">' + (te.name || 'Eveniment') + '</p>';
             html += '</div>';
             // Arrow
             html += '<svg class="flex-shrink-0 w-5 h-5 text-gray-300 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
