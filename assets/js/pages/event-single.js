@@ -1325,8 +1325,8 @@ const EventPage = {
 
             // Card classes
             var cardClasses = isSoldOut
-                ? 'bg-white relative z-10 p-4 border ticket-card border-gray-200 rounded-2xl bg-gray-100 cursor-default'
-                : 'relative z-10 p-2 pl-4 border cursor-pointer ticket-card border-border rounded-2xl hover:z-20';
+                ? 'relative z-10 p-2 pl-4 border ticket-card border-gray-200 rounded-2xl bg-gray-100 cursor-default'
+                : 'bg-white relative z-10 p-2 pl-4 border cursor-pointer ticket-card border-border rounded-2xl hover:z-20';
             var titleClasses = isSoldOut ? 'text-gray-400' : 'text-secondary';
             var priceClasses = isSoldOut ? 'text-gray-400 line-through' : 'text-primary';
             var descClasses = isSoldOut ? 'text-gray-400' : 'text-muted';
@@ -1871,8 +1871,7 @@ const EventPage = {
             var timeStr = te.start_time ? te.start_time.substring(0, 5) : '';
             var city = te.city || '';
             var venueName = te.venue_name || '';
-            var location = city ? (venueName ? venueName : city) : venueName;
-            var city = te.city || '';
+            var location = city ? (venueName ? venueName + ', ' + city : city) : venueName;
             var imgSrc = te.image_url || '/assets/images/default-event.png';
             var eventUrl = '/bilete/' + (te.slug || te.id);
 
