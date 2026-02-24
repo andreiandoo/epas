@@ -262,14 +262,14 @@ require_once __DIR__ . '/includes/head.php';
             <!-- Right Column - Ticket Selection (Hidden on mobile, shown in drawer) -->
             <div class="lg:w-1/3 sticky-cart-wrapper">
                 <div class="sticky-cart">
-                    <div class="bg-white border rounded-3xl border-border">
-                        <div class="p-6 border-b border-border">
+                    <div class="rounded-3xl ">
+                        <div class="hidden p-6 border-b border-border">
                             <h2 class="mb-2 text-xl font-bold text-secondary">Selectează bilete</h2>
                             <p class="text-sm text-muted">Alege tipul de bilet și cantitatea</p>
                         </div>
 
                         <!-- Ticket Types -->
-                        <div class="p-4 space-y-2" id="ticket-types"></div>
+                        <div class="pb-4 space-y-2" id="ticket-types"></div>
 
                         <!-- Cart Summary -->
                         <div id="cartSummary" class="hidden border-t border-border">

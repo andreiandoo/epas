@@ -1369,7 +1369,7 @@ const EventPage = {
             }
 
             return '<div class="' + cardClasses + '" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
-                '<div class="flex items-start justify-between">' +
+                '<div class="flex items-center justify-between">' +
                     '<div class="relative tooltip-trigger">' +
                         '<h3 class="flex items-center font-bold gap-x-2 ' + titleClasses + ' cursor-help border-muted">' + tt.name +
                             (hasDiscount && !isSoldOut ? '<span class="discount-badge text-white text-[10px] font-bold py-1 px-2 rounded-full">-' + discountPercent + '%</span>' : '') +
@@ -1377,8 +1377,8 @@ const EventPage = {
                         '<p class="text-sm ' + descClasses + '">' + (tt.description || '') + '</p>' +
                         (isSoldOut ? '' : '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' + tooltipHtml + '</div>') +
                     '</div>' +
-                    '<div class="text-right">' +
-                        (hasDiscount && !isSoldOut ? '<span class="text-sm line-through text-muted">' + crossedOutPrice.toFixed(0) + ' lei</span>' : '') +
+                    '<div class="text-right relative">' +
+                        (hasDiscount && !isSoldOut ? '<span class="bg-primary p-1 px-3 rounded-md absolute -right-6 -top-6 line-through font-bold text-xs text-white">' + crossedOutPrice.toFixed(0) + ' lei</span>' : '') +
                         '<span class="block text-xl font-bold ' + priceClasses + '">' + displayPrice.toFixed(2) + ' lei</span>' +
                     '</div>' +
                 '</div>' +
