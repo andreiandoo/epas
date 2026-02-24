@@ -223,27 +223,27 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
 
                         <div id="event-description" class="prose prose-slate max-w-none"></div>
-                    </div>
-                </div>
 
-                <!-- Ticket Terms Section -->
-                <div id="ticket-terms-section" class="mb-8 mobile:mb-0 mobile:border-b mobile:border-border" style="display:none;">
-                    <div class="overflow-hidden bg-white border rounded-3xl border-border mobile:rounded-none">
-                        <button type="button" onclick="EventPage.toggleTicketTerms()" class="flex items-center justify-between w-full px-6 py-4 text-left transition-colors hover:bg-gray-50">
-                            <div class="flex items-center gap-3">
-                                <span class="flex items-center justify-center w-9 h-9 rounded-xl bg-gray-100">
-                                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        <!-- Ticket Terms Section -->
+                        <div id="ticket-terms-section" class="mb-4 mobile:mb-0 mobile:border-b mobile:border-border" style="display:none;">
+                            <div class="overflow-hidden">
+                                <button type="button" onclick="EventPage.toggleTicketTerms()" class="flex items-center justify-between w-full px-8 py-4 text-left transition-colors hover:text-primary">
+                                    <div class="flex items-center gap-3">
+                                        <span class="flex items-center justify-center w-9 h-9">
+                                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                        </span>
+                                        <span class="font-bold text-secondary">Termeni și condiții bilete</span>
+                                    </div>
+                                    <svg id="ticket-terms-chevron" class="w-5 h-5 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                     </svg>
-                                </span>
-                                <span class="font-bold text-secondary">Termeni și condiții bilete</span>
+                                </button>
+                                <div id="ticket-terms-content" class="hidden px-8 pt-4 text-sm prose prose-slate max-w-none border-t border-border">
+                                    <!-- Loaded dynamically by JS -->
+                                </div>
                             </div>
-                            <svg id="ticket-terms-chevron" class="w-5 h-5 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </button>
-                        <div id="ticket-terms-content" class="hidden px-6 pt-4 pb-6 prose prose-slate max-w-none border-t border-border">
-                            <!-- Loaded dynamically by JS -->
                         </div>
                     </div>
                 </div>
