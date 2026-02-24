@@ -370,7 +370,7 @@ class ServiceOrder extends Model
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(MarketplaceEvent::class, 'marketplace_event_id');
+        return $this->belongsTo(Event::class, 'marketplace_event_id');
     }
 
     public function assignedUser(): BelongsTo

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\Event;
 use App\Models\MarketplaceCustomer;
-use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceOrganizer;
 use App\Models\Order;
 use App\Models\ServiceOrder;
@@ -144,7 +144,7 @@ class ServiceOrderController extends BaseController
 
         $validator = Validator::make($request->all(), [
             'service_type' => 'required|in:featuring,email,tracking,campaign',
-            'event_id' => 'required|exists:marketplace_events,id',
+            'event_id' => 'required|exists:events,id',
             'payment_method' => 'nullable|in:card,transfer',
             'config' => 'required|array',
         ]);
@@ -154,7 +154,7 @@ class ServiceOrderController extends BaseController
         }
 
         // Verify event belongs to organizer
-        $event = MarketplaceEvent::where('id', $request->event_id)
+        $event = Event::where('id', $request->event_id)
             ->where('marketplace_organizer_id', $organizer->id)
             ->first();
 
