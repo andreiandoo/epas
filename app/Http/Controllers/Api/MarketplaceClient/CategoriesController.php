@@ -128,25 +128,40 @@ class CategoriesController extends BaseController
 
     /**
      * Count upcoming published events for a category (including child categories)
+     * Counts from both MarketplaceEvent and Event tables
      */
     protected function countUpcomingEventsForCategory(MarketplaceEventCategory $category): int
     {
-        // Count events directly in this category
+        $categoryIds = collect([$category->id]);
+
+        // Include child category IDs
+        $childIds = $category->children()->pluck('id');
+        if ($childIds->isNotEmpty()) {
+            $categoryIds = $categoryIds->merge($childIds);
+        }
+
+        // Count from MarketplaceEvent table
         $count = \App\Models\MarketplaceEvent::query()
-            ->where('marketplace_event_category_id', $category->id)
+            ->whereIn('marketplace_event_category_id', $categoryIds)
             ->where('status', 'published')
             ->where('starts_at', '>=', now())
             ->count();
 
-        // Include events from child categories
-        $childIds = $category->children()->pluck('id');
-        if ($childIds->isNotEmpty()) {
-            $count += \App\Models\MarketplaceEvent::query()
-                ->whereIn('marketplace_event_category_id', $childIds)
-                ->where('status', 'published')
-                ->where('starts_at', '>=', now())
-                ->count();
-        }
+        // Also count from Event table (core events assigned to this marketplace category)
+        $count += \App\Models\Event::query()
+            ->whereIn('marketplace_event_category_id', $categoryIds)
+            ->where('is_published', true)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where(function ($q) {
+                $q->where(function ($inner) {
+                    $inner->whereNotNull('event_date')->where('event_date', '>=', now()->toDateString());
+                })->orWhere(function ($inner) {
+                    $inner->whereNotNull('range_start_date')->where('range_start_date', '>=', now()->toDateString());
+                });
+            })
+            ->count();
 
         return $count;
     }

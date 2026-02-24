@@ -31,27 +31,8 @@ $navCities = $navCities ?? getFeaturedCities();
 // Event categories - loaded from API with caching (30 min TTL)
 $navCategories = $navCategories ?? getEventCategories();
 
-// Featured/trending events
-$navFeaturedEvents = $navFeaturedEvents ?? [
-    [
-        'name' => 'Coldplay - Music of the Spheres',
-        'slug' => 'coldplay',
-        'category' => 'Concert',
-        'date' => '15 Iun 2025',
-        'venue' => 'Arena Națională',
-        'price' => 299,
-        'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200&h=200&fit=crop'
-    ],
-    [
-        'name' => 'UNTOLD Festival 2025',
-        'slug' => 'untold',
-        'category' => 'Festival',
-        'date' => '7-10 Aug 2025',
-        'venue' => 'Cluj-Napoca',
-        'price' => 449,
-        'image' => 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=200&h=200&fit=crop'
-    ]
-];
+// Featured/trending events - loaded from API with caching (15 min TTL)
+$navFeaturedEvents = $navFeaturedEvents ?? getTrendingEvents();
 
 // Venues/Locations - loaded from API with caching (30 min TTL)
 // Shows featured venues (is_featured = true) from admin
@@ -73,7 +54,7 @@ $navQuickLinks = $navQuickLinks ?? [
 // Only apply nav counts to items that don't already have count from API
 // $navCategories - already has 'count' from getEventCategories() API
 // $navCities - already has 'count' from getFeaturedCities() API
-$navVenues = applyNavCounts($navVenues, 'venues');
+// $navVenues - already has 'count' (events_count) from getFeaturedVenues() API
 $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 ?>
 
@@ -338,22 +319,43 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                 </div>
 
                                 <div class="flex flex-col">
+                                <?php if (!empty($navFeaturedEvents)): ?>
                                 <?php foreach ($navFeaturedEvents as $event): ?>
                                     <a href="/bilete/<?= $event['slug'] ?>" class="flex gap-3.5 p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all mb-2 justify-between">
-                                        <div class="w-[72px] h-[72px] rounded-lg overflow-hidden flex-shrink-0 flex-none">
+                                        <div class="w-[72px] h-[72px] rounded-lg overflow-hidden flex-shrink-0 flex-none bg-gray-100">
+                                            <?php if (!empty($event['image'])): ?>
                                             <img src="<?= $event['image'] ?>" alt="<?= htmlspecialchars($event['name']) ?>" class="object-cover w-full h-full">
+                                            <?php else: ?>
+                                            <div class="flex items-center justify-center w-full h-full text-gray-300">
+                                                <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                            </div>
+                                            <?php endif; ?>
                                         </div>
                                         <div class="flex flex-col justify-center flex-1 ml-0">
+                                            <?php if (!empty($event['category'])): ?>
                                             <div class="text-[11px] font-semibold text-primary uppercase tracking-wide mb-1"><?= htmlspecialchars($event['category']) ?></div>
+                                            <?php endif; ?>
                                             <div class="text-sm font-bold text-gray-900 mb-1.5 leading-tight"><?= htmlspecialchars($event['name']) ?></div>
                                             <div class="flex gap-3 text-xs text-gray-500">
-                                                <span><?= htmlspecialchars($event['date']) ?></span>
-                                                <span><?= htmlspecialchars($event['venue']) ?></span>
+                                                <?php if (!empty($event['date'])): ?><span><?= htmlspecialchars($event['date']) ?></span><?php endif; ?>
+                                                <?php if (!empty($event['venue'])): ?><span><?= htmlspecialchars($event['venue']) ?></span><?php endif; ?>
                                             </div>
                                         </div>
-                                        <div class="mr-0 text-sm font-bold text-emerald-500">de la <?= $event['price'] ?> lei</div>
+                                        <?php if (!empty($event['price']) && $event['price'] > 0): ?>
+                                        <div class="mr-0 text-sm font-bold text-emerald-500">de la <?= number_format($event['price'], 0) ?> lei</div>
+                                        <?php else: ?>
+                                        <div class="mr-0 text-sm font-bold text-emerald-500">Gratuit</div>
+                                        <?php endif; ?>
                                     </a>
                                 <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="flex items-center justify-center py-6 text-sm text-gray-400">
+                                        <a href="/evenimente" class="flex items-center gap-2 text-primary hover:underline">
+                                            Vezi toate evenimentele
+                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
                                 </div>
 
                                 <div class="flex gap-2 pt-4 mt-4 border-t border-gray-200">
@@ -393,11 +395,18 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                     </svg>
                                 </a>
                             </div>
+                            <?php if (!empty($navVenues)): ?>
                             <div class="grid grid-cols-3 gap-4">
                                 <?php foreach ($navVenues as $venue): ?>
                                 <a href="/locatie/<?= $venue['slug'] ?>" class="flex gap-3.5 p-4 bg-gray-50 rounded-xl border border-transparent hover:bg-white hover:border-gray-200 hover:shadow-md transition-all">
-                                    <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-lg">
+                                    <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-lg bg-gray-100">
+                                        <?php if (!empty($venue['image'])): ?>
                                         <img src="<?= $venue['image'] ?>" alt="<?= htmlspecialchars($venue['name']) ?>" class="object-cover w-full h-full">
+                                        <?php else: ?>
+                                        <div class="flex items-center justify-center w-full h-full text-gray-300">
+                                            <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                        </div>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="flex flex-col justify-center flex-1">
                                         <div class="mb-1 text-sm font-bold text-gray-900"><?= htmlspecialchars($venue['name']) ?></div>
@@ -407,6 +416,14 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                 </a>
                                 <?php endforeach; ?>
                             </div>
+                            <?php else: ?>
+                            <div class="flex items-center justify-center py-8 text-sm text-gray-400">
+                                <a href="/locatii" class="flex items-center gap-2 text-primary hover:underline">
+                                    Explorează toate locațiile
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </a>
+                            </div>
+                            <?php endif; ?>
                             <div class="flex gap-2.5 mt-5 pt-5 border-t border-gray-200">
                                 <?php foreach ($navVenueTypes as $type): ?>
                                 <a href="/locatii/<?= $type['slug'] ?>" class="flex-1 flex items-center gap-2.5 px-4 py-3 bg-gray-50 rounded-lg text-gray-600 hover:bg-primary hover:text-white transition-all group/type">

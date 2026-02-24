@@ -545,6 +545,171 @@ function fetchEventCategoriesFromAPI(): array {
     return $categories;
 }
 
+// ==================== TRENDING EVENTS CACHE ====================
+
+define('TRENDING_EVENTS_CACHE_FILE', __DIR__ . '/cache/trending-events.json');
+define('TRENDING_EVENTS_CACHE_TTL', 15 * 60); // 15 minutes
+
+/**
+ * Get trending/featured events for navigation with caching
+ *
+ * @return array Trending events array
+ */
+function getTrendingEvents(): array {
+    // Check if cache exists and is valid
+    if (isTrendingEventsCacheValid()) {
+        return loadTrendingEventsCache();
+    }
+
+    // Fetch fresh data from API
+    $freshData = fetchTrendingEventsFromAPI();
+
+    // Save to cache
+    saveTrendingEventsCache($freshData);
+
+    return $freshData;
+}
+
+/**
+ * Check if trending events cache is still valid
+ */
+function isTrendingEventsCacheValid(): bool {
+    if (!file_exists(TRENDING_EVENTS_CACHE_FILE)) {
+        return false;
+    }
+
+    $cacheTime = filemtime(TRENDING_EVENTS_CACHE_FILE);
+    return (time() - $cacheTime) < TRENDING_EVENTS_CACHE_TTL;
+}
+
+/**
+ * Load trending events from cache file
+ */
+function loadTrendingEventsCache(): array {
+    $content = file_get_contents(TRENDING_EVENTS_CACHE_FILE);
+
+    if (isContentCorrupted($content)) {
+        @unlink(TRENDING_EVENTS_CACHE_FILE);
+        return [];
+    }
+
+    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+    $data = json_decode($content, true);
+
+    return $data ?: [];
+}
+
+/**
+ * Save trending events to cache file
+ */
+function saveTrendingEventsCache(array $data): void {
+    $cacheDir = dirname(TRENDING_EVENTS_CACHE_FILE);
+
+    if (!is_dir($cacheDir)) {
+        mkdir($cacheDir, 0755, true);
+    }
+
+    file_put_contents(TRENDING_EVENTS_CACHE_FILE, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+/**
+ * Fetch trending events from API
+ * Tries featured events first, falls back to upcoming events
+ */
+function fetchTrendingEventsFromAPI(): array {
+    require_once __DIR__ . '/../includes/config.php';
+
+    // First try featured events
+    $apiUrl = API_BASE_URL . '/events/featured?type=any&limit=4';
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => [
+                'X-API-Key: ' . API_KEY,
+                'Accept: application/json',
+            ],
+            'timeout' => 5,
+            'ignore_errors' => true
+        ],
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false
+        ]
+    ]);
+
+    $response = @file_get_contents($apiUrl, false, $context);
+    $events = [];
+
+    if ($response !== false) {
+        $data = json_decode($response, true);
+        if ($data && isset($data['success']) && $data['success'] && !empty($data['data']['events'])) {
+            $events = $data['data']['events'];
+        }
+    }
+
+    // If no featured events, try upcoming events sorted by date
+    if (empty($events)) {
+        $apiUrl = API_BASE_URL . '/events?per_page=4&sort=date_asc';
+
+        $response = @file_get_contents($apiUrl, false, $context);
+
+        if ($response !== false) {
+            $data = json_decode($response, true);
+            // Paginated endpoint returns data as array directly (not data.events)
+            if ($data && isset($data['success']) && $data['success'] && !empty($data['data'])) {
+                $events = is_array($data['data']) ? $data['data'] : [];
+            }
+        }
+    }
+
+    if (empty($events)) {
+        error_log('[nav-cache] Failed to fetch trending events from API');
+        return [];
+    }
+
+    // Transform API response to nav format
+    $formatted = [];
+    foreach ($events as $event) {
+        // Format date in Romanian
+        $dateStr = '';
+        if (!empty($event['starts_at'])) {
+            $timestamp = strtotime($event['starts_at']);
+            if ($timestamp) {
+                $months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                $day = date('j', $timestamp);
+                $month = $months[(int)date('n', $timestamp) - 1];
+                $year = date('Y', $timestamp);
+                $dateStr = $day . ' ' . $month . ' ' . $year;
+            }
+        }
+
+        // For date ranges
+        if (!empty($event['duration_mode']) && $event['duration_mode'] === 'date_range'
+            && !empty($event['range_start_date']) && !empty($event['range_end_date'])) {
+            $startTs = strtotime($event['range_start_date']);
+            $endTs = strtotime($event['range_end_date']);
+            if ($startTs && $endTs) {
+                $months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                $dateStr = date('j', $startTs) . '-' . date('j', $endTs) . ' '
+                    . $months[(int)date('n', $endTs) - 1] . ' ' . date('Y', $endTs);
+            }
+        }
+
+        $formatted[] = [
+            'name' => $event['name'] ?? '',
+            'slug' => $event['slug'] ?? '',
+            'category' => $event['category']['name'] ?? '',
+            'date' => $dateStr,
+            'venue' => $event['venue_name'] ?? '',
+            'price' => $event['price_from'] ?? 0,
+            'image' => $event['image'] ?? $event['poster_url'] ?? '',
+        ];
+    }
+
+    return $formatted;
+}
+
 // ==================== FEATURED VENUES CACHE ====================
 
 define('FEATURED_VENUES_CACHE_FILE', __DIR__ . '/cache/featured-venues.json');
@@ -591,7 +756,7 @@ function loadFeaturedVenuesCache(): array {
     // Detect corrupted files
     if (isContentCorrupted($content)) {
         @unlink(FEATURED_VENUES_CACHE_FILE);
-        return getDefaultFeaturedVenues();
+        return [];
     }
 
     // Strip UTF-8 BOM if present
@@ -599,14 +764,8 @@ function loadFeaturedVenuesCache(): array {
 
     $data = json_decode($content, true);
 
-    // Only fall back to defaults if JSON parsing failed (null), not for empty arrays
-    if ($data === null) {
-        return getDefaultFeaturedVenues();
-    }
-
-    // If empty array, return defaults (no venues in database)
-    if (empty($data)) {
-        return getDefaultFeaturedVenues();
+    if (!is_array($data)) {
+        return [];
     }
 
     // Filter out items with invalid slugs
@@ -633,7 +792,8 @@ function fetchFeaturedVenuesFromAPI(): array {
     require_once __DIR__ . '/../includes/config.php';
 
     // Call API directly (not through proxy) for server-side requests
-    $apiUrl = API_BASE_URL . '/venues/featured';
+    // Request more than 8 so we can randomly pick 8 if more are promoted
+    $apiUrl = API_BASE_URL . '/venues/featured?limit=20';
 
     $context = stream_context_create([
         'http' => [
@@ -655,14 +815,14 @@ function fetchFeaturedVenuesFromAPI(): array {
 
     if ($response === false) {
         error_log('[nav-cache] Failed to fetch featured venues from API: ' . $apiUrl);
-        return getDefaultFeaturedVenues();
+        return [];
     }
 
     $data = json_decode($response, true);
 
     if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['venues'])) {
         error_log('[nav-cache] Invalid API response for featured venues: ' . substr($response, 0, 500));
-        return getDefaultFeaturedVenues();
+        return [];
     }
 
     // Transform API response to nav format
@@ -675,6 +835,12 @@ function fetchFeaturedVenuesFromAPI(): array {
             'count' => $venue['events_count'] ?? 0,
             'image' => $venue['image'] ?? 'https://images.unsplash.com/photo-1522158637959-30385a09e0da?w=200&h=200&fit=crop'
         ];
+    }
+
+    // If more than 8 promoted venues, pick 8 randomly
+    if (count($venues) > 8) {
+        shuffle($venues);
+        $venues = array_slice($venues, 0, 8);
     }
 
     return $venues;
