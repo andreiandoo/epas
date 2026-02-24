@@ -346,7 +346,7 @@ require_once __DIR__ . '/includes/head.php';
                     </span>
                     <div>
                         <h2 class="text-lg font-bold text-secondary">Alte date din turneu</h2>
-                        <p class="text-sm text-muted">Evenimentul face parte dintr-un turneu. Alege și alte date.</p>
+                        <p class="text-sm text-muted"><span id="tour-name-display"></span><span id="tour-name-fallback">Evenimentul face parte dintr-un turneu. Alege și alte date.</span></p>
                     </div>
                 </div>
                 <div id="tour-events-list" class="divide-y divide-gray-50 px-2 py-2">

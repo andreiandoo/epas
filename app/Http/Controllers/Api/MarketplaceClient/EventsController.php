@@ -465,6 +465,9 @@ class EventsController extends BaseController
                     'image_url' => $artist->main_image_full_url ?? $artist->image_url,
                 ];
             }),
+            'tour_name' => $event->tour_id
+                ? \App\Models\Tour::find($event->tour_id)?->name
+                : null,
             'tour_events' => $event->tour_id
                 ? \App\Models\Event::where('tour_id', $event->tour_id)
                     ->where('id', '!=', $event->id)

@@ -1744,30 +1744,57 @@ class EventResource extends Resource
                                     ->dehydrated(false)
                                     ->live(),
 
-                                Forms\Components\Select::make('tour_event_ids')
-                                    ->label($t('Alte evenimente din turneu', 'Other events in the tour'))
-                                    ->helperText($t('Selectează celelalte evenimente din același turneu. Numele, orașul și data sunt afișate.', 'Select the other events in the same tour. Name, city and date are shown.'))
-                                    ->multiple()
+                                Forms\Components\Radio::make('tour_mode')
+                                    ->label($t('Tip turneu', 'Tour type'))
+                                    ->options([
+                                        'new'      => $t('Turneu nou', 'New tour'),
+                                        'existing' => $t('Turneu existent', 'Existing tour'),
+                                    ])
+                                    ->default('new')
+                                    ->dehydrated(false)
+                                    ->live()
+                                    ->visible(fn (SGet $get) => (bool) $get('is_in_tour')),
+
+                                Forms\Components\TextInput::make('tour_name')
+                                    ->label($t('Nume turneu', 'Tour name'))
+                                    ->helperText($t('Introduceți un nume pentru turneu (ex: "Dirtylicious Decade Tour")', 'Enter a name for the tour'))
+                                    ->dehydrated(false)
+                                    ->maxLength(255)
+                                    ->visible(fn (SGet $get) => (bool) $get('is_in_tour') && $get('tour_mode') === 'new'),
+
+                                Forms\Components\Select::make('existing_tour_id')
+                                    ->label($t('Selectează turneul', 'Select tour'))
+                                    ->helperText($t('Alege un turneu existent. Lista este filtrată după formațiile acestui eveniment.', 'Choose an existing tour. List is filtered by this event\'s artists.'))
                                     ->searchable()
                                     ->dehydrated(false)
                                     ->options(function (?Event $record) use ($marketplace) {
                                         if (!$marketplace) return [];
-                                        $query = Event::where('marketplace_client_id', $marketplace->id)
-                                            ->where('status', 'published');
-                                        if ($record?->id) {
-                                            $query->where('id', '!=', $record->id);
+
+                                        $query = Tour::where('marketplace_client_id', $marketplace->id);
+
+                                        // Filter by tours that share artists with this event
+                                        $artistIds = $record?->artists?->pluck('id')->toArray() ?? [];
+                                        if (!empty($artistIds)) {
+                                            $tourIds = Event::whereHas('artists', fn ($q) => $q->whereIn('artists.id', $artistIds))
+                                                ->whereNotNull('tour_id')
+                                                ->pluck('tour_id')
+                                                ->unique()
+                                                ->toArray();
+
+                                            if (!empty($tourIds)) {
+                                                // Include current event's tour even if artist filter misses it
+                                                if ($record?->tour_id) {
+                                                    $tourIds[] = $record->tour_id;
+                                                }
+                                                $query->whereIn('id', array_unique($tourIds));
+                                            }
                                         }
-                                        return $query->with('venue')->orderByRaw("COALESCE(event_date, DATE(starts_at)) ASC")->get()
-                                            ->mapWithKeys(function ($e) {
-                                                $city = $e->venue?->city ?? null;
-                                                $date = $e->event_date ? \Carbon\Carbon::parse($e->event_date)->format('d.m.Y') : null;
-                                                $label = ($e->getTranslation('title', 'ro') ?? $e->getTranslation('title', 'en') ?? $e->name ?? 'Eveniment');
-                                                if ($city) $label .= ' · ' . $city;
-                                                if ($date) $label .= ' (' . $date . ')';
-                                                return [$e->id => $label];
-                                            });
+
+                                        return $query->orderBy('name')->get()->mapWithKeys(fn ($tour) => [
+                                            $tour->id => $tour->name ?: ('Turneu #' . $tour->id),
+                                        ]);
                                     })
-                                    ->visible(fn (SGet $get) => (bool) $get('is_in_tour')),
+                                    ->visible(fn (SGet $get) => (bool) $get('is_in_tour') && $get('tour_mode') === 'existing'),
                             ]),
                                     ]), // End Tab 7: Turneu
 

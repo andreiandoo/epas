@@ -734,12 +734,16 @@ class EditEvent extends EditRecord
 
         // Tour state — populate virtual fields for the Turneu tab
         $data['is_in_tour'] = $this->record->tour_id !== null;
-        $data['tour_event_ids'] = $this->record->tour_id !== null
-            ? Event::where('tour_id', $this->record->tour_id)
-                ->where('id', '!=', $this->record->id)
-                ->pluck('id')
-                ->toArray()
-            : [];
+        if ($this->record->tour_id !== null) {
+            $tour = Tour::find($this->record->tour_id);
+            $data['tour_mode'] = 'existing';
+            $data['existing_tour_id'] = $this->record->tour_id;
+            $data['tour_name'] = $tour?->name ?? '';
+        } else {
+            $data['tour_mode'] = 'new';
+            $data['existing_tour_id'] = null;
+            $data['tour_name'] = '';
+        }
 
         return $data;
     }
@@ -775,51 +779,53 @@ class EditEvent extends EditRecord
         if (!array_key_exists('is_in_tour', $this->data)) {
             return;
         }
+
         $isInTour = (bool) ($this->data['is_in_tour'] ?? false);
-        $tourEventIds = array_map('intval', array_filter($this->data['tour_event_ids'] ?? []));
 
         if ($isInTour) {
-            // Get or create a tour for this event
-            if ($this->record->tour_id) {
-                $tourId = $this->record->tour_id;
+            $tourMode = $this->data['tour_mode'] ?? 'new';
+
+            if ($tourMode === 'new') {
+                $tourName = trim($this->data['tour_name'] ?? '');
+
+                if ($this->record->tour_id) {
+                    // Update the name of the existing tour
+                    Tour::where('id', $this->record->tour_id)->update(['name' => $tourName]);
+                } else {
+                    // Create a brand-new tour and assign only this event
+                    $tour = Tour::create([
+                        'marketplace_client_id' => $this->record->marketplace_client_id,
+                        'name' => $tourName,
+                    ]);
+                    $this->record->update(['tour_id' => $tour->id]);
+                }
             } else {
-                $tour = Tour::create([
-                    'marketplace_client_id' => $this->record->marketplace_client_id,
-                ]);
-                $tourId = $tour->id;
-                $this->record->update(['tour_id' => $tourId]);
-            }
+                // Existing tour selected
+                $existingTourId = (int) ($this->data['existing_tour_id'] ?? 0);
 
-            // All events that should be in this tour: current + selected
-            $desiredIds = array_unique(array_merge([$this->record->id], $tourEventIds));
+                if ($existingTourId && $existingTourId !== (int) $this->record->tour_id) {
+                    // Remove this event from old tour and clean up if orphaned
+                    $oldTourId = $this->record->tour_id;
+                    $this->record->update(['tour_id' => $existingTourId]);
 
-            // Events currently in this tour
-            $currentIds = Event::where('tour_id', $tourId)->pluck('id')->toArray();
-
-            // Add new events to tour (only marketplace events from same client)
-            $toAdd = array_diff($desiredIds, $currentIds);
-            if (!empty($toAdd)) {
-                Event::whereIn('id', $toAdd)
-                    ->where('marketplace_client_id', $this->record->marketplace_client_id)
-                    ->update(['tour_id' => $tourId]);
-            }
-
-            // Remove events that were deselected (never remove current event)
-            $toRemove = array_diff($currentIds, $desiredIds);
-            if (!empty($toRemove)) {
-                Event::whereIn('id', $toRemove)->update(['tour_id' => null]);
+                    if ($oldTourId) {
+                        $remaining = Event::where('tour_id', $oldTourId)->count();
+                        if ($remaining === 0) {
+                            Tour::where('id', $oldTourId)->delete();
+                        }
+                    }
+                }
             }
         } else {
             // Remove current event from its tour
             if ($this->record->tour_id) {
-                $tourId = $this->record->tour_id;
+                $oldTourId = $this->record->tour_id;
                 $this->record->update(['tour_id' => null]);
 
-                // Clean up tour if it has 0 or 1 remaining events
-                $remaining = Event::where('tour_id', $tourId)->count();
-                if ($remaining <= 1) {
-                    Event::where('tour_id', $tourId)->update(['tour_id' => null]);
-                    Tour::where('id', $tourId)->delete();
+                // Clean up tour if it has no remaining events
+                $remaining = Event::where('tour_id', $oldTourId)->count();
+                if ($remaining === 0) {
+                    Tour::where('id', $oldTourId)->delete();
                 }
             }
         }
