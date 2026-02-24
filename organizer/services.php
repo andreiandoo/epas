@@ -229,7 +229,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
 
-            <form id="service-form" class="p-6">
+            <form id="service-form" class="p-6" novalidate>
                 <input type="hidden" id="service-type">
 
                 <!-- Step 1: Select Event -->
@@ -1553,42 +1553,50 @@ document.getElementById('service-form').addEventListener('submit', async functio
         payment_method: paymentMethod
     };
 
-    // Add service-specific data
+    // Add service-specific data nested under "config" (required by server)
     switch (currentServiceType) {
         case 'featuring':
-            data.locations = Array.from(document.querySelectorAll('input[name="featuring_locations[]"]:checked')).map(c => c.value);
-            data.start_date = document.getElementById('featuring-start').value;
-            data.end_date = document.getElementById('featuring-end').value;
+            data.config = {
+                locations: Array.from(document.querySelectorAll('input[name="featuring_locations[]"]:checked')).map(c => c.value),
+                start_date: document.getElementById('featuring-start').value,
+                end_date: document.getElementById('featuring-end').value,
+            };
             break;
-        case 'email':
-            data.audience_type = document.querySelector('input[name="email_audience"]:checked').value;
-            data.template = document.querySelector('input[name="email_template"]:checked')?.value || 'classic';
-            // Combine date and time into ISO format
+        case 'email': {
+            const emailAudienceType = document.querySelector('input[name="email_audience"]:checked').value;
             const emailDate = document.getElementById('email-send-date').value;
             const emailTime = document.getElementById('email-send-time').value || '10:00';
-            data.send_date = emailDate + 'T' + emailTime;
-            data.recipient_count = emailAudiences[data.audience_type]?.filtered_count || 0;
-            // Get multiselect values
             const getSelectedVals = (selectId) => {
                 const select = document.getElementById(selectId);
                 return Array.from(select.selectedOptions).map(opt => opt.value).filter(v => v);
             };
-            data.filters = {
-                age_min: document.getElementById('email-filter-age-min').value || null,
-                age_max: document.getElementById('email-filter-age-max').value || null,
-                cities: getSelectedVals('email-filter-city'),
-                categories: getSelectedVals('email-filter-category'),
-                genres: getSelectedVals('email-filter-genre')
+            data.config = {
+                audience_type: emailAudienceType,
+                template: document.querySelector('input[name="email_template"]:checked')?.value || 'classic',
+                send_date: emailDate + 'T' + emailTime,
+                recipient_count: emailAudiences[emailAudienceType]?.filtered_count || 0,
+                filters: {
+                    age_min: document.getElementById('email-filter-age-min').value || null,
+                    age_max: document.getElementById('email-filter-age-max').value || null,
+                    cities: getSelectedVals('email-filter-city'),
+                    categories: getSelectedVals('email-filter-category'),
+                    genres: getSelectedVals('email-filter-genre')
+                }
             };
             break;
+        }
         case 'tracking':
-            data.platforms = Array.from(document.querySelectorAll('input[name="tracking_platforms[]"]:checked')).map(c => c.value);
-            data.duration = document.getElementById('tracking-duration').value;
+            data.config = {
+                platforms: Array.from(document.querySelectorAll('input[name="tracking_platforms[]"]:checked')).map(c => c.value),
+                duration_months: parseInt(document.getElementById('tracking-duration').value) || 1,
+            };
             break;
         case 'campaign':
-            data.campaign_type = document.querySelector('input[name="campaign_type"]:checked').value;
-            data.budget = document.getElementById('campaign-budget').value;
-            data.notes = document.getElementById('campaign-notes').value;
+            data.config = {
+                campaign_type: document.querySelector('input[name="campaign_type"]:checked').value,
+                budget: document.getElementById('campaign-budget').value,
+                notes: document.getElementById('campaign-notes').value,
+            };
             break;
     }
 
