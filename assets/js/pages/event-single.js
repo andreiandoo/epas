@@ -769,8 +769,8 @@ const EventPage = {
         this.renderDate(e);
 
         // Time
-        document.getElementById(this.elements.eventTime).textContent = 'Acces: ' + (e.start_time || '20:00');
-        document.getElementById(this.elements.eventDoors).textContent = 'Doors: ' + (e.doors_time || '19:00');
+        document.getElementById(this.elements.eventTime).innerHTML = '<span class="text-muted">Acces:</span> ' + (e.start_time || '20:00');
+        document.getElementById(this.elements.eventDoors).innerHTML = '<span class="text-muted">Doors:</span> ' + (e.doors_time || '19:00');
 
         // Venue (with city)
         var venueName = e.venue?.name || e.location || 'Locație TBA';
@@ -1110,9 +1110,9 @@ const EventPage = {
             }
 
             // Headliners get larger display
-            var imageColClass = isHeadliner ? 'md:w-2/5' : 'md:w-1/3';
-            var contentColClass = isHeadliner ? 'md:w-3/5' : 'md:w-2/3';
-            var nameClass = isHeadliner ? 'text-3xl' : 'text-2xl';
+            var imageColClass = isHeadliner ? 'md:w-2/5' : 'md:w-1/4';
+            var contentColClass = isHeadliner ? 'md:w-3/5' : 'md:w-3/4';
+            var nameClass = isHeadliner ? 'text-2xl' : 'text-xl';
             var containerClass = isHeadliner ? 'p-4 -m-4 rounded-2xl bg-gradient-to-r from-amber-50 to-transparent border border-amber-100' : '';
 
             allHtml += '<div class="flex flex-col gap-6 md:flex-row ' + containerClass + (i > 0 ? ' pt-6 mt-6' + (isHeadliner ? '' : ' border-t border-border') : '') + '">' +
@@ -1123,17 +1123,19 @@ const EventPage = {
                     '</a>' +
                 '</div>' +
                 '<div class="' + contentColClass + '">' +
-                    '<div class="flex flex-wrap items-center gap-3 mb-4 mobile:justify-between">' +
+                    '<div class="flex flex-wrap items-center gap-3 mb-2 mobile:justify-between">' +
                         '<a href="' + artistLink + '" class="' + nameClass + ' font-bold text-secondary hover:text-primary">' + artist.name + '</a>' +
                         statusBadgeHtml +
                         (artist.verified ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary">Verified</span>' : '') +
                     '</div>' +
-                    (artistDescription ? '<p class="mb-4 leading-relaxed text-muted">' + artistDescription + '</p>' : '<p class="mb-4 leading-relaxed text-muted">Detalii despre artist vor fi disponibile în curând.</p>') +
-                    socialLinksHtml +
-                    '<a href="' + artistLink + '" class="inline-flex mobile:flex items-center gap-2 font-semibold text-primary border border-primary rounded-md py-2 px-6 mobile:justify-center hover:bg-primary hover:text-white transition-all ease-in-out duration-200">' +
-                        'Vezi profilul artistului' +
-                        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>' +
-                    '</a>' +
+                    (artistDescription ? '<p class="mb-2 leading-relaxed text-muted">' + artistDescription + '</p>' : '<p class="mb-4 leading-relaxed text-muted">Detalii despre artist vor fi disponibile în curând.</p>') +
+                    '<div class="flex items-center mobile:flex-col gap-4">' +
+                        '<a href="' + artistLink + '" class="inline-flex mobile:flex items-center gap-2 font-semibold text-primary border border-primary rounded-md py-2 px-6 mobile:justify-center hover:bg-primary hover:text-white transition-all ease-in-out duration-200">' +
+                            'Vezi profilul artistului' +
+                            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>' +
+                        '</a>' +
+                        socialLinksHtml +
+                    '</div>' +
                 '</div>' +
             '</div>';
         }
@@ -1159,16 +1161,16 @@ const EventPage = {
         }
 
         var html = '<div class="flex flex-col gap-6 md:flex-row">' +
-            '<div class="md:w-1/3">' +
-                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl" loading="lazy">' +
+            '<div class="md:w-1/5">' +
+                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-36 mb-4 rounded-2xl" loading="lazy">' +
             '</div>' +
-            '<div class="md:w-2/3">' +
+            '<div class="md:w-4/5">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
-                '<p class="mb-4 text-muted">' + venueAddress + '</p>' +
-                '<div class="mb-4 leading-relaxed text-muted">' + (venue.description || '') + '</div>';
+                '<p class="mb-2 text-muted">' + venueAddress + '</p>' +
+                '<div class="leading-relaxed text-muted text-sm">' + (venue.description || '') + '</div>';
 
         if (venue.amenities && venue.amenities.length) {
-            html += '<div class="mb-6 space-y-3">';
+            html += '<div class="mt-4 mb-6 space-y-3">';
             venue.amenities.forEach(function(a) {
                 html += '<div class="flex items-center gap-3">' +
                     '<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-success/10">' +
@@ -1181,7 +1183,7 @@ const EventPage = {
         }
 
         if (googleMapsUrl) {
-            html += '<a href="' + googleMapsUrl + '" target="_blank" class="inline-flex items-center gap-2 font-semibold text-secondary border border-secondary text-sm rounded-md py-2 px-6 hover:bg-secondary hover:text-white transition-all ease-in-out duration-200">' +
+            html += '<a href="' + googleMapsUrl + '" target="_blank" class="inline-flex items-center gap-2 font-semibold text-secondary border border-secondary text-sm rounded-md mt-2 py-2 px-6 hover:bg-secondary hover:text-white transition-all ease-in-out duration-200">' +
                 '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
                 'Deschide in Google Maps' +
             '</a>';

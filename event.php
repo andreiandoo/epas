@@ -164,7 +164,7 @@ require_once __DIR__ . '/includes/head.php';
                                         <p id="event-weekday" class="font-semibold text-secondary"></p>
                                         <p id="event-date-full" class="font-semibold text-secondary"></p>
                                     </div>
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex items-center gap-2 text-sm tracking-tight">
                                         <p id="event-time" class="font-semibold text-secondary"></p>
                                         <p id="event-doors" class="font-semibold text-secondary"></p>
                                     </div>
@@ -249,7 +249,7 @@ require_once __DIR__ . '/includes/head.php';
                 </div>
 
                 <!-- Artist Section -->
-                <div class="mb-8 mobile:mb-0" id="artist-section" style="display:none;">
+                <div class="mb-8 mobile:mb-0 px-8" id="artist-section" style="display:none;">
                     <div id="artist-content" class="mobile:p-4"></div>
                 </div>
 
