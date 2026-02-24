@@ -1149,6 +1149,7 @@ class MarketplaceEventsController extends BaseController
             'is_postponed' => (bool) ($event->is_postponed ?? false),
             'postponed_date' => $event->is_postponed && $event->postponed_date ? $event->postponed_date->format('Y-m-d') : null,
             'price_from' => $minPrice,
+            'ticket_types_count' => $event->relationLoaded('ticketTypes') ? $event->ticketTypes->count() : null,
             'commission_mode' => $commissionMode,
             'commission_rate' => $commissionRate,
             'organizer' => $organizer ? [

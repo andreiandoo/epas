@@ -381,7 +381,8 @@ const AmbiletEventCard = {
                       : apiEvent.min_price != null ? apiEvent.min_price
                       : apiEvent.price != null ? apiEvent.price : 0;
             minPrice = raw;
-            hasMultipleTicketTypes = true; // price_from implies multiple possible prices
+            const ttCount = apiEvent.ticket_types_count;
+            hasMultipleTicketTypes = ttCount != null ? ttCount > 1 : false;
         }
 
         // Extract category
