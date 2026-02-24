@@ -1057,6 +1057,7 @@ class EventResource extends Resource
                                         : '○ ' . ($state['name'] ?? $t('Bilet', 'Ticket')))
                                     ->columns(12)
                                     ->schema([
+                                        Forms\Components\Hidden::make('id'),
                                         Forms\Components\TextInput::make('name')
                                             ->label($t('Nume', 'Name'))
                                             ->placeholder($t('ex: Early Bird, Standard, VIP', 'e.g. Early Bird, Standard, VIP'))
