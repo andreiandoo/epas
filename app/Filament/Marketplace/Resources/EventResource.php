@@ -1505,9 +1505,8 @@ class EventResource extends Resource
                                     ->key('seo')
                                     ->icon('heroicon-o-globe-alt')
                                     ->schema([
-                        // SEO Section
+                        // SEO Section (not collapsible - always visible when on SEO tab)
                         SC\Section::make('SEO')
-                ->collapsed()
                 ->schema([
                     Forms\Components\Select::make('seo_presets')
                         ->label($t('Adaugă chei SEO din șablon', 'Add SEO keys from template'))

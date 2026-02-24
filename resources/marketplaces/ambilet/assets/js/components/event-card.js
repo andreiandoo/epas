@@ -52,13 +52,11 @@ const AmbiletEventCard = {
         // Status badges (cancelled, postponed, sold out take priority)
         let statusBadge = '';
         if (event.isCancelled) {
-            statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 bg-red-600">ANULAT</span>';
+            statusBadge = '<span class="absolute px-2 py-1 text-sm font-bold text-white uppercase rounded-lg top-3 right-3 bg-red-600">ANULAT</span>';
         } else if (event.isPostponed) {
-            statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 bg-orange-500">AMÂNAT</span>';
+            statusBadge = '<span class="absolute px-2 py-1 text-sm font-bold text-white uppercase rounded-lg top-3 right-3 bg-orange-500">AMÂNAT</span>';
         } else if (event.isSoldOut) {
-            statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 bg-gray-600">SOLD OUT</span>';
-        } else if (showCategory && event.categoryName) {
-            statusBadge = '<span class="absolute px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg top-3 right-3 bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>';
+            statusBadge = '<span class="absolute px-2 py-1 text-sm font-bold text-white uppercase rounded-lg top-3 right-3 bg-gray-600">SOLD OUT</span>';
         }
 
         // Date badge - show range for festivals, single date otherwise
@@ -100,6 +98,9 @@ const AmbiletEventCard = {
                         '<span class="text-xs ' + (event.isCancelled ? 'text-red-600 font-semibold' : event.isPostponed ? 'text-orange-600 font-semibold' : event.isSoldOut ? 'text-gray-600 font-semibold' : 'text-muted') + '">' +
                             (event.isCancelled ? 'Anulat' : event.isPostponed ? 'Amânat' : event.isSoldOut ? 'Sold Out' : '') +
                         '</span>' +
+                        (showCategory && event.categoryName ?
+                            '<span class="cat-pill font-semibold text-white uppercase rounded-md bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
+                            '') +
                     '</div>' : '') +
             '</div>' +
         '</a>';
@@ -159,7 +160,7 @@ const AmbiletEventCard = {
         }
 
         return '<a href="' + eventUrl + '" class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all mobile:flex-col">' +
-            '<div class="mobile:flex">' +
+            '<div class="flex">' +
             dateHtml +
             '<div class="flex flex-col justify-center flex-1 px-5 py-4 mobile:py-2 mobile:px-4 mobile:border-b mobile:border-border">' +
                 (event.categoryName ? '<div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">' + this.escapeHtml(event.categoryName) + '</div>' : '') +
@@ -362,13 +363,24 @@ const AmbiletEventCard = {
             venueCity = apiEvent.city;
         }
 
-        // Extract price - skip free (price=0) ticket types, show min paid price
+        // Extract price - skip free (price=0) tickets when paid tickets also exist
+        // Show "Gratuit" only when ALL tickets are free (no paid options)
         let minPrice = 0;
-        if (apiEvent.ticket_types && Array.isArray(apiEvent.ticket_types)) {
+        if (apiEvent.ticket_types && Array.isArray(apiEvent.ticket_types) && apiEvent.ticket_types.length > 0) {
             const paidTickets = apiEvent.ticket_types.filter(t => (t.price || 0) > 0);
-            minPrice = paidTickets.length > 0 ? Math.min(...paidTickets.map(t => t.price || 0)) : 0;
+            if (paidTickets.length > 0) {
+                // Has paid tickets - show minimum paid price (ignore free ones)
+                minPrice = Math.min(...paidTickets.map(t => t.price || 0));
+            } else {
+                // All tickets are free
+                minPrice = 0;
+            }
         } else {
-            minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
+            // No ticket_types array - use API-provided price_from
+            const raw = apiEvent.price_from != null ? apiEvent.price_from
+                      : apiEvent.min_price != null ? apiEvent.min_price
+                      : apiEvent.price != null ? apiEvent.price : 0;
+            minPrice = raw;
         }
 
         // Extract category

@@ -139,7 +139,7 @@ require_once __DIR__ . '/includes/head.php';
                 <!-- Event Header -->
                 <div class="mb-8 bg-white border rounded-3xl border-border mobile:border-0 mobile:border-b mobile:rounded-none">
                     <!-- Main Image -->
-                    <div class="relative overflow-hidden rounded-t-3xl h-72 md:h-96 mobile:rounded-none">
+                    <div class="relative overflow-hidden rounded-t-3xl h-72 md:h-108 mobile:rounded-none">
                         <img id="mainImage" src="" alt="" class="object-cover w-full h-full">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                         <div class="absolute flex gap-2 top-4 left-4" id="event-badges"></div>
@@ -164,7 +164,7 @@ require_once __DIR__ . '/includes/head.php';
                                         <p id="event-weekday" class="font-semibold text-secondary"></p>
                                         <p id="event-date-full" class="font-semibold text-secondary"></p>
                                     </div>
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex items-center gap-2 text-sm tracking-tight">
                                         <p id="event-time" class="font-semibold text-secondary"></p>
                                         <p id="event-doors" class="font-semibold text-secondary"></p>
                                     </div>
@@ -226,30 +226,28 @@ require_once __DIR__ . '/includes/head.php';
                     </div>
                 </div>
 
-                <!-- Ticket Terms Section -->
-                <div id="ticket-terms-section" class="mb-8 mobile:mb-0 mobile:border-b mobile:border-border" style="display:none;">
-                    <div class="overflow-hidden bg-white border rounded-3xl border-border mobile:rounded-none">
-                        <button type="button" onclick="EventPage.toggleTicketTerms()" class="flex items-center justify-between w-full px-6 py-4 text-left transition-colors hover:bg-gray-50">
-                            <div class="flex items-center gap-3">
-                                <span class="flex items-center justify-center w-9 h-9 rounded-xl bg-gray-100">
-                                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                    </svg>
-                                </span>
-                                <span class="font-bold text-secondary">Termeni și condiții bilete</span>
+                <!-- Tour Events Section -->
+                <section id="tour-events-section" style="display:none;" class="mb-8 mobile:mb-0 mobile:border-b mobile:border-border">
+                    <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                        <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                            <span class="flex items-center justify-center w-9 h-9 rounded-xl" style="background: linear-gradient(135deg, #A51C30 0%, #8B1728 100%);">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                                </svg>
+                            </span>
+                            <div>
+                                <h2 class="text-lg font-bold text-secondary">Alte date din turneu</h2>
+                                <p class="text-sm text-muted"><span id="tour-name-display"></span><span id="tour-name-fallback">Evenimentul face parte dintr-un turneu. Alege și alte date.</span></p>
                             </div>
-                            <svg id="ticket-terms-chevron" class="w-5 h-5 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </button>
-                        <div id="ticket-terms-content" class="hidden px-6 pt-4 pb-6 prose prose-slate max-w-none border-t border-border">
+                        </div>
+                        <div id="tour-events-list" class="divide-y divide-gray-50 px-2 py-2">
                             <!-- Loaded dynamically by JS -->
                         </div>
                     </div>
-                </div>
+                </section>
 
                 <!-- Artist Section -->
-                <div class="mb-8 mobile:mb-0" id="artist-section" style="display:none;">
+                <div class="mb-8 mobile:mb-0 px-8" id="artist-section" style="display:none;">
                     <div id="artist-content" class="mobile:p-4"></div>
                 </div>
 
@@ -262,14 +260,14 @@ require_once __DIR__ . '/includes/head.php';
             <!-- Right Column - Ticket Selection (Hidden on mobile, shown in drawer) -->
             <div class="lg:w-1/3 sticky-cart-wrapper">
                 <div class="sticky-cart">
-                    <div class="bg-white border rounded-3xl border-border">
-                        <div class="p-6 border-b border-border">
+                    <div class="rounded-3xl ">
+                        <div class="hidden p-6 border-b border-border">
                             <h2 class="mb-2 text-xl font-bold text-secondary">Selectează bilete</h2>
                             <p class="text-sm text-muted">Alege tipul de bilet și cantitatea</p>
                         </div>
 
                         <!-- Ticket Types -->
-                        <div class="p-4 space-y-2" id="ticket-types"></div>
+                        <div class="space-y-3" id="ticket-types"></div>
 
                         <!-- Cart Summary -->
                         <div id="cartSummary" class="hidden border-t border-border">
@@ -302,25 +300,32 @@ require_once __DIR__ . '/includes/head.php';
                                     <span id="checkoutBtnText">Cumpără bilete</span>
                                 </button>
                             </div>
+
+                            <!-- Trust Badges -->
+                            <div class="p-4 mt-4 bg-white border rounded-2xl border-border">
+                                <div class="flex items-center justify-center gap-6">
+                                    <div class="flex items-center gap-2 text-xs text-muted">
+                                        <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                        Plată securizată
+                                    </div>
+                                    <div class="flex items-center gap-2 text-xs text-muted">
+                                        <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        Livrare instant
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
+                        <!-- Ticket Terms Section -->
+                        <div id="ticket-terms-section" class="mb-4">
+                            <div id="ticket-terms-content" class="p-4 text-xs prose prose-slate max-w-none">
+                                <!-- Loaded dynamically by JS -->
+                            </div>
+                        </div>
+                        
                         <!-- Empty State -->
                         <div id="emptyCart" class="p-4 text-center border-t border-border">
                             <p class="text-sm text-muted">Selectează cel puțin un bilet pentru a continua</p>
-                        </div>
-                    </div>
-
-                    <!-- Trust Badges -->
-                    <div class="p-4 mt-4 bg-white border rounded-2xl border-border">
-                        <div class="flex items-center justify-center gap-6">
-                            <div class="flex items-center gap-2 text-xs text-muted">
-                                <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                                Plată securizată
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-muted">
-                                <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                Livrare instant
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -355,28 +360,6 @@ require_once __DIR__ . '/includes/head.php';
             </div>
         </div>
     </section>
-
-    <!-- Tour Events Section -->
-    <div class="px-4 py-0 mx-auto max-w-7xl mobile:p-0">
-        <section id="tour-events-section" style="display:none;" class="mt-12 mb-4">
-            <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-                <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-                    <span class="flex items-center justify-center w-9 h-9 rounded-xl" style="background: linear-gradient(135deg, #A51C30 0%, #8B1728 100%);">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                        </svg>
-                    </span>
-                    <div>
-                        <h2 class="text-lg font-bold text-secondary">Alte date din turneu</h2>
-                        <p class="text-sm text-muted"><span id="tour-name-display"></span><span id="tour-name-fallback">Evenimentul face parte dintr-un turneu. Alege și alte date.</span></p>
-                    </div>
-                </div>
-                <div id="tour-events-list" class="divide-y divide-gray-50 px-2 py-2">
-                    <!-- Loaded dynamically by JS -->
-                </div>
-            </div>
-        </section>
-    </div>
 
     <div class="px-4 py-8 mx-auto max-w-7xl mobile:p-0">
         <!-- Related Events -->
@@ -555,13 +538,19 @@ require_once __DIR__ . '/includes/head.php';
                 const mobileBtn = document.getElementById('mobileTicketBtn');
                 const minPriceEl = document.getElementById('mobileMinPrice');
                 if (mobileBtn) {
-                    // Find minimum price
-                    const prices = EventPage.ticketTypes
+                    // Find minimum price (skip 0-price if paid tickets exist)
+                    const allPrices = EventPage.ticketTypes
                         .filter(t => !t.is_sold_out && t.available > 0)
                         .map(t => t.price);
+                    const paidPrices = allPrices.filter(p => p > 0);
+                    const prices = paidPrices.length > 0 ? paidPrices : allPrices;
                     if (prices.length && minPriceEl) {
                         const minPrice = Math.min(...prices);
-                        minPriceEl.textContent = 'de la ' + minPrice.toFixed(0) + ' lei';
+                        if (minPrice > 0) {
+                            minPriceEl.textContent = 'de la ' + minPrice.toFixed(0) + ' lei';
+                        } else {
+                            minPriceEl.textContent = 'Gratuit';
+                        }
                     }
                 }
             }

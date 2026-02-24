@@ -748,8 +748,170 @@ class EditEvent extends EditRecord
         return $data;
     }
 
+    /**
+     * Auto-fill all SEO keys with the latest event data.
+     * Runs on every save to keep SEO data up-to-date.
+     * Overwrites all auto-generated keys with fresh values.
+     */
+    protected function autoFillSeoKeys(): void
+    {
+        $event = $this->record->fresh(['venue']);
+        $marketplace = EventResource::getMarketplaceClient();
+        $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
+
+        // Gather event data
+        $title = $event->getTranslation('title', $lang) ?? '';
+        $slug = $event->slug ?? '';
+        $description = $event->getTranslation('short_description', $lang)
+            ?? $event->getTranslation('description', $lang)
+            ?? '';
+        $shortDesc = strip_tags($description);
+        if (strlen($shortDesc) > 160) {
+            $shortDesc = substr($shortDesc, 0, 157) . '...';
+        }
+
+        $posterUrl = $event->poster_url ?? '';
+        $heroUrl = $event->hero_image_url ?? '';
+        $imageUrl = $posterUrl ?: $heroUrl;
+        $eventDate = $event->event_date?->format('Y-m-d') ?? '';
+        $startTime = $event->start_time ?? '';
+        $endTime = $event->end_time ?? '';
+
+        $venueName = '';
+        $venueAddress = '';
+        if ($event->venue) {
+            $venueName = $event->venue->getTranslation('name', $lang) ?? $event->venue->name ?? '';
+            $venueAddress = $event->venue->address ?? '';
+        }
+
+        // Get marketplace's website URL
+        $baseUrl = $marketplace?->website ?? '';
+        if ($baseUrl && !str_starts_with($baseUrl, 'http://') && !str_starts_with($baseUrl, 'https://')) {
+            $baseUrl = 'https://' . $baseUrl;
+        }
+        $eventUrl = $baseUrl && $slug ? "{$baseUrl}/bilete/{$slug}" : '';
+
+        // Build absolute image URL
+        $absoluteImageUrl = '';
+        if ($imageUrl) {
+            if (str_starts_with($imageUrl, 'http://') || str_starts_with($imageUrl, 'https://')) {
+                $absoluteImageUrl = $imageUrl;
+            } else {
+                $absoluteImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($imageUrl);
+            }
+        }
+
+        $now = now()->toIso8601String();
+        $siteName = $marketplace?->public_name ?? $marketplace?->name ?? '';
+
+        // Min price from active ticket types
+        $minPrice = '';
+        $ticketTypes = $event->ticketTypes()->where('status', 'active')->get();
+        if ($ticketTypes->isNotEmpty()) {
+            $paidTickets = $ticketTypes->filter(fn ($t) => ($t->price_cents ?? 0) > 0);
+            if ($paidTickets->isNotEmpty()) {
+                $minPriceCents = $paidTickets->min(fn ($t) => $t->sale_price_cents > 0 ? $t->sale_price_cents : $t->price_cents);
+                $minPrice = number_format($minPriceCents / 100, 2, '.', '');
+            }
+        }
+
+        // Build all SEO keys (overwrite auto-generated values)
+        $seo = [
+            // Core
+            'meta_title'       => $title,
+            'meta_description' => $shortDesc,
+            'canonical_url'    => $eventUrl,
+            'robots'           => 'index,follow',
+            'viewport'         => 'width=device-width, initial-scale=1',
+            'referrer'         => 'no-referrer-when-downgrade',
+
+            // International
+            'og:locale'        => $lang === 'ro' ? 'ro_RO' : 'en_US',
+
+            // Open Graph
+            'og:title'         => $title,
+            'og:description'   => $shortDesc,
+            'og:type'          => 'event',
+            'og:url'           => $eventUrl,
+            'og:image'         => $absoluteImageUrl,
+            'og:image:alt'     => $title,
+            'og:image:width'   => '1200',
+            'og:image:height'  => '630',
+            'og:site_name'     => $siteName,
+
+            // Article
+            'article:author'         => $siteName,
+            'article:section'        => 'Events',
+            'article:published_time' => $event->created_at?->toIso8601String() ?? $now,
+            'article:modified_time'  => $now,
+
+            // Product
+            'product:price:amount'   => $minPrice,
+            'product:price:currency' => $marketplace?->currency ?? 'RON',
+            'product:availability'   => ($event->is_sold_out ?? false) ? 'oos' : 'instock',
+
+            // Twitter
+            'twitter:card'        => 'summary_large_image',
+            'twitter:title'       => $title,
+            'twitter:description' => $shortDesc,
+            'twitter:image'       => $absoluteImageUrl,
+
+            // JSON-LD structured data
+            'structured_data' => json_encode([
+                '@context' => 'https://schema.org',
+                '@type'    => 'Event',
+                'name'     => $title,
+                'description' => $shortDesc,
+                'image'    => $absoluteImageUrl,
+                'startDate' => $eventDate && $startTime ? "{$eventDate}T{$startTime}" : $eventDate,
+                'endDate'   => $eventDate && $endTime ? "{$eventDate}T{$endTime}" : '',
+                'location' => [
+                    '@type'   => 'Place',
+                    'name'    => $venueName,
+                    'address' => $venueAddress,
+                ],
+                'organizer' => [
+                    '@type' => 'Organization',
+                    'name'  => $siteName,
+                    'url'   => $baseUrl,
+                ],
+                'url' => $eventUrl,
+                'offers' => $minPrice ? [
+                    '@type' => 'Offer',
+                    'price' => $minPrice,
+                    'priceCurrency' => $marketplace?->currency ?? 'RON',
+                    'availability' => ($event->is_sold_out ?? false)
+                        ? 'https://schema.org/SoldOut'
+                        : 'https://schema.org/InStock',
+                    'url' => $eventUrl,
+                ] : null,
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+
+            // Robots advanced
+            'max-snippet'       => '-1',
+            'max-image-preview' => 'large',
+            'max-video-preview' => '-1',
+        ];
+
+        // Remove null values from JSON-LD offers
+        $jsonLd = json_decode($seo['structured_data'], true);
+        if (empty($jsonLd['offers'])) {
+            unset($jsonLd['offers']);
+            $seo['structured_data'] = json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
+        // Merge: keep any user-added custom keys, overwrite auto-generated ones
+        $existingSeo = (array) ($event->seo ?? []);
+        $merged = array_merge($existingSeo, $seo);
+
+        $event->update(['seo' => $merged]);
+    }
+
     protected function afterSave(): void
     {
+        // Auto-fill all SEO keys with latest event data on every save
+        $this->autoFillSeoKeys();
+
         // Only sync child events if this is a parent event (not a child)
         if (!$this->record->isChild()) {
             app(EventSchedulingService::class)->syncChildEvents($this->record);

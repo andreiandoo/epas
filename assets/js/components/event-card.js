@@ -52,13 +52,11 @@ const AmbiletEventCard = {
         // Status badges (cancelled, postponed, sold out take priority)
         let statusBadge = '';
         if (event.isCancelled) {
-            statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 bg-red-600">ANULAT</span>';
+            statusBadge = '<span class="absolute px-2 py-1 text-sm font-bold text-white uppercase rounded-lg top-3 right-3 bg-red-600">ANULAT</span>';
         } else if (event.isPostponed) {
-            statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 bg-orange-500">AMÂNAT</span>';
+            statusBadge = '<span class="absolute px-2 py-1 text-sm font-bold text-white uppercase rounded-lg top-3 right-3 bg-orange-500">AMÂNAT</span>';
         } else if (event.isSoldOut) {
-            statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 bg-gray-600">SOLD OUT</span>';
-        } else if (showCategory && event.categoryName) {
-            statusBadge = '<span class="absolute px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg top-3 right-3 bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>';
+            statusBadge = '<span class="absolute px-2 py-1 text-sm font-bold text-white uppercase rounded-lg top-3 right-3 bg-gray-600">SOLD OUT</span>';
         }
 
         // Date badge - show range for festivals, single date otherwise
@@ -79,27 +77,30 @@ const AmbiletEventCard = {
         const heroSrc = getStorageUrl(event.heroImage || event.image);
 
         return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
-            '<div class="relative h-48 overflow-hidden">' +
+            '<div class="relative h-40 overflow-hidden">' +
                 '<picture>' +
                     '<source media="(min-width: 768px)" srcset="' + heroSrc + '">' +
-                    '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-2xl rounded-tr-2xl" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                    '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-2xl rounded-tr-2xl" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '</picture>' +
                 (promotedBadge ? promotedBadge : '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>') +
                 statusBadge +
             '</div>' +
             '<div class="px-3 py-2">' +
-                '<h3 class="mb-2 font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2 truncate">' + this.escapeHtml(event.title) + '</h3>' +
+                '<h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2 truncate">' + this.escapeHtml(event.title) + '</h3>' +
                 (showVenue && event.location ?
-                    '<p class="text-sm text-muted flex items-center gap-1.5 mb-3">' +
+                    '<p class="text-sm text-muted flex items-center gap-1.5 mb-1">' +
                         '<svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
                         '<span class="truncate">' + this.escapeHtml(event.location) + '</span>' +
                     '</p>' : '') +
                 (showPrice ?
-                    '<div class="flex items-center justify-between pt-2 border-t border-border">' +
+                    '<div class="flex items-center justify-between pt-1 border-t border-border">' +
                         '<span class="font-bold ' + (event.isCancelled || event.isPostponed || event.isSoldOut ? 'text-gray-400 line-through' : 'text-primary') + '">' + event.priceFormatted + '</span>' +
                         '<span class="text-xs ' + (event.isCancelled ? 'text-red-600 font-semibold' : event.isPostponed ? 'text-orange-600 font-semibold' : event.isSoldOut ? 'text-gray-600 font-semibold' : 'text-muted') + '">' +
                             (event.isCancelled ? 'Anulat' : event.isPostponed ? 'Amânat' : event.isSoldOut ? 'Sold Out' : '') +
                         '</span>' +
+                        (showCategory && event.categoryName ?
+                            '<span class="cat-pill font-semibold text-white uppercase rounded-md bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
+                            '') +
                     '</div>' : '') +
             '</div>' +
         '</a>';
@@ -159,7 +160,7 @@ const AmbiletEventCard = {
         }
 
         return '<a href="' + eventUrl + '" class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all mobile:flex-col">' +
-            '<div class="mobile:flex">' +
+            '<div class="flex">' +
             dateHtml +
             '<div class="flex flex-col justify-center flex-1 px-5 py-4 mobile:py-2 mobile:px-4 mobile:border-b mobile:border-border">' +
                 (event.categoryName ? '<div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">' + this.escapeHtml(event.categoryName) + '</div>' : '') +
@@ -362,13 +363,24 @@ const AmbiletEventCard = {
             venueCity = apiEvent.city;
         }
 
-        // Extract price - skip free (price=0) ticket types, show min paid price
+        // Extract price - skip free (price=0) tickets when paid tickets also exist
+        // Show "Gratuit" only when ALL tickets are free (no paid options)
         let minPrice = 0;
-        if (apiEvent.ticket_types && Array.isArray(apiEvent.ticket_types)) {
+        if (apiEvent.ticket_types && Array.isArray(apiEvent.ticket_types) && apiEvent.ticket_types.length > 0) {
             const paidTickets = apiEvent.ticket_types.filter(t => (t.price || 0) > 0);
-            minPrice = paidTickets.length > 0 ? Math.min(...paidTickets.map(t => t.price || 0)) : 0;
+            if (paidTickets.length > 0) {
+                // Has paid tickets - show minimum paid price (ignore free ones)
+                minPrice = Math.min(...paidTickets.map(t => t.price || 0));
+            } else {
+                // All tickets are free
+                minPrice = 0;
+            }
         } else {
-            minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
+            // No ticket_types array - use API-provided price_from
+            const raw = apiEvent.price_from != null ? apiEvent.price_from
+                      : apiEvent.min_price != null ? apiEvent.min_price
+                      : apiEvent.price != null ? apiEvent.price : 0;
+            minPrice = raw;
         }
 
         // Extract category

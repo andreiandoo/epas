@@ -137,8 +137,10 @@ const EventPage = {
      */
     async init() {
         // Get slug from URL
-        this.slug = new URLSearchParams(window.location.search).get('slug') ||
+        const urlParams = new URLSearchParams(window.location.search);
+        this.slug = urlParams.get('slug') ||
                    window.location.pathname.split('/bilete/')[1]?.split('?')[0] || '';
+        this.isPreview = urlParams.get('preview') === '1';
 
         if (!this.slug) {
             window.location.href = '/';
@@ -388,7 +390,8 @@ const EventPage = {
      */
     async loadEvent() {
         try {
-            const response = await AmbiletAPI.getEvent(this.slug);
+            const params = this.isPreview ? { preview: true } : {};
+            const response = await AmbiletAPI.getEvent(this.slug, params);
             console.log('[EventPage] API Response:', response);
             console.log('[EventPage] === EVENT DATA ===');
             console.log('[EventPage] Event object:', response.data?.event);

@@ -324,4 +324,4 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <!-- Page-specific head content -->
     <?php if (isset($headExtra)) echo $headExtra; ?>
 </head>
-<body class="<?= isset($bodyClass) ? htmlspecialchars($bodyClass) : 'bg-white' ?>">
+<body class="bg-slate-100 <?= isset($bodyClass) ? htmlspecialchars($bodyClass) : 'bg-white' ?>">

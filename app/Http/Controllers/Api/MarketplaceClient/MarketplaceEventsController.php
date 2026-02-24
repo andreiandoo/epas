@@ -1102,15 +1102,18 @@ class MarketplaceEventsController extends BaseController
 
         // Get minimum price from ticket types (price stored in cents)
         // Use sale_price_cents if set, otherwise price_cents
+        // Skip 0-price tickets when paid tickets also exist
         $minPrice = null;
         if ($event->relationLoaded('ticketTypes') && $event->ticketTypes->isNotEmpty()) {
-            $minPriceCents = $event->ticketTypes->map(function ($ticket) {
-                // Use sale price if set and greater than 0, otherwise regular price
+            $allPrices = $event->ticketTypes->map(function ($ticket) {
                 if ($ticket->sale_price_cents !== null && $ticket->sale_price_cents > 0) {
                     return $ticket->sale_price_cents;
                 }
-                return $ticket->price_cents;
-            })->min();
+                return $ticket->price_cents ?? 0;
+            });
+
+            $paidPrices = $allPrices->filter(fn ($p) => $p > 0);
+            $minPriceCents = $paidPrices->isNotEmpty() ? $paidPrices->min() : $allPrices->min();
 
             if ($minPriceCents !== null) {
                 $minPrice = $minPriceCents / 100;
