@@ -67,14 +67,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             </div>
                             <div class="flex-1">
                                 <h3 class="text-lg font-bold text-secondary mb-1">Promovare Eveniment</h3>
-                                <p class="text-sm text-muted mb-4">Afiseaza evenimentul tau pe pagina principala, in categorii, genuri sau orase pentru vizibilitate maxima.</p>
+                                <p class="text-sm text-muted mb-4">Afiseaza evenimentul tau pe prima pagina, in sectiunea de recomandari, pe pagina categoriei sau a orasului evenimentului.</p>
                                 <div class="flex flex-wrap gap-2 mb-4">
-                                    <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">Pagina Principala</span>
-                                    <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">Categorii</span>
-                                    <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">Genuri</span>
-                                    <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">Orase</span>
+                                    <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">Hero Prima Pagina</span>
+                                    <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">Recomandari</span>
+                                    <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">Categorie</span>
+                                    <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">Oras</span>
                                 </div>
-                                <p class="text-sm font-semibold text-secondary">De la <span class="text-primary">49 RON</span> / zi</p>
+                                <p class="text-sm font-semibold text-secondary">De la <span class="text-primary" id="card-featuring-price">40 RON</span> / zi</p>
                             </div>
                         </div>
                     </div>
@@ -258,55 +258,43 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <div class="grid grid-cols-2 gap-3">
                             <div class="relative">
                                 <label class="cursor-pointer block">
-                                    <input type="checkbox" name="featuring_locations[]" value="home" class="peer sr-only">
+                                    <input type="checkbox" name="featuring_locations[]" value="home_hero" class="peer sr-only">
                                     <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
-                                        <p class="font-medium text-secondary">Pagina Principala</p>
-                                        <p class="text-sm text-muted">Vizibilitate maxima</p>
-                                        <p class="text-sm font-semibold text-primary mt-2">99 RON / zi</p>
+                                        <p class="font-medium text-secondary">Prima pagina - Hero</p>
+                                        <p class="text-sm text-muted">Vizibilitate maxima, banner principal</p>
+                                        <p class="text-sm font-semibold text-primary mt-2" data-price-key="home_hero">— RON / zi</p>
                                     </div>
                                 </label>
-                                <button type="button" onclick="showPlacementPreview('home')" class="absolute top-2 right-2 p-1.5 bg-white hover:bg-surface border border-border rounded-lg transition-colors" title="Vezi previzualizare">
-                                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                </button>
+                            </div>
+                            <div class="relative">
+                                <label class="cursor-pointer block">
+                                    <input type="checkbox" name="featuring_locations[]" value="home_recommendations" class="peer sr-only">
+                                    <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
+                                        <p class="font-medium text-secondary">Prima pagina - Recomandari</p>
+                                        <p class="text-sm text-muted">Sectiunea de recomandari</p>
+                                        <p class="text-sm font-semibold text-primary mt-2" data-price-key="home_recommendations">— RON / zi</p>
+                                    </div>
+                                </label>
                             </div>
                             <div class="relative">
                                 <label class="cursor-pointer block">
                                     <input type="checkbox" name="featuring_locations[]" value="category" class="peer sr-only">
                                     <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
-                                        <p class="font-medium text-secondary">Pagina Categorie</p>
-                                        <p class="text-sm text-muted">Audienta targetata</p>
-                                        <p class="text-sm font-semibold text-primary mt-2">69 RON / zi</p>
+                                        <p class="font-medium text-secondary">Pagina categorie eveniment</p>
+                                        <p class="text-sm text-muted">Audienta targetata pe categorie</p>
+                                        <p class="text-sm font-semibold text-primary mt-2" data-price-key="category">— RON / zi</p>
                                     </div>
                                 </label>
-                                <button type="button" onclick="showPlacementPreview('category')" class="absolute top-2 right-2 p-1.5 bg-white hover:bg-surface border border-border rounded-lg transition-colors" title="Vezi previzualizare">
-                                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                </button>
-                            </div>
-                            <div class="relative">
-                                <label class="cursor-pointer block">
-                                    <input type="checkbox" name="featuring_locations[]" value="genre" class="peer sr-only">
-                                    <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
-                                        <p class="font-medium text-secondary">Pagina Gen</p>
-                                        <p class="text-sm text-muted">Fani interesati</p>
-                                        <p class="text-sm font-semibold text-primary mt-2">59 RON / zi</p>
-                                    </div>
-                                </label>
-                                <button type="button" onclick="showPlacementPreview('genre')" class="absolute top-2 right-2 p-1.5 bg-white hover:bg-surface border border-border rounded-lg transition-colors" title="Vezi previzualizare">
-                                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                </button>
                             </div>
                             <div class="relative">
                                 <label class="cursor-pointer block">
                                     <input type="checkbox" name="featuring_locations[]" value="city" class="peer sr-only">
                                     <div class="p-4 border-2 border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5">
-                                        <p class="font-medium text-secondary">Pagina Oras</p>
-                                        <p class="text-sm text-muted">Audienta locala</p>
-                                        <p class="text-sm font-semibold text-primary mt-2">49 RON / zi</p>
+                                        <p class="font-medium text-secondary">Pagina oras eveniment</p>
+                                        <p class="text-sm text-muted">Audienta locala din orasul tau</p>
+                                        <p class="text-sm font-semibold text-primary mt-2" data-price-key="city">— RON / zi</p>
                                     </div>
                                 </label>
-                                <button type="button" onclick="showPlacementPreview('city')" class="absolute top-2 right-2 p-1.5 bg-white hover:bg-surface border border-border rounded-lg transition-colors" title="Vezi previzualizare">
-                                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                </button>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-4 mt-4">
