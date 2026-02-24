@@ -123,41 +123,46 @@ require_once __DIR__ . '/includes/header.php'; ?>
     </div>
 </section>
 
-<!-- Desktop Filters -->
-<section class="sticky top-[72px] z-20 py-4 bg-white border-b border-border hidden lg:block">
-    <div class="flex flex-wrap items-center gap-3 px-4 mx-auto max-w-7xl">
-        <select id="categoryFilter" class="px-4 py-2.5 pr-10 text-sm font-medium bg-surface border-0 rounded-xl focus:ring-2 focus:ring-primary/20" onchange="CityPage.filter()">
-            <option value="">Toate categoriile</option>
-            <?php
-            // Load event categories from cache/API
-            $eventCategories = getEventCategories();
-            foreach ($eventCategories as $category):
-            ?>
-            <option value="<?= htmlspecialchars($category['slug']) ?>"><?= htmlspecialchars($category['name']) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <select id="dateFilter" class="px-4 py-2.5 pr-10 text-sm font-medium bg-surface border-0 rounded-xl focus:ring-2 focus:ring-primary/20" onchange="CityPage.filter()">
-            <option value="">Oricând</option>
-            <option value="today">Astăzi</option>
-            <option value="weekend">Weekend</option>
-            <option value="week">Săptămâna asta</option>
-            <option value="month">Luna asta</option>
-        </select>
-        <select id="priceFilter" class="px-4 py-2.5 pr-10 text-sm font-medium bg-surface border-0 rounded-xl focus:ring-2 focus:ring-primary/20" onchange="CityPage.filter()">
-            <option value="">Orice preț</option>
-            <option value="free">Gratuit</option>
-            <option value="0-50">Sub 50 lei</option>
-            <option value="50-100">50 - 100 lei</option>
-            <option value="100-200">100 - 200 lei</option>
-            <option value="200+">Peste 200 lei</option>
-        </select>
-        <div class="ml-auto">
-            <select id="sortSelect" class="px-4 py-2.5 pr-10 text-sm font-medium bg-surface border-0 rounded-xl focus:ring-2 focus:ring-primary/20" onchange="CityPage.filter()">
-                <option value="date">Data (aproape)</option>
-                <option value="price_asc">Preț (mic - mare)</option>
-                <option value="price_desc">Preț (mare - mic)</option>
-                <option value="popular">Popularitate</option>
+<!-- Desktop Filters Bar -->
+<section class="sticky top-[72px] z-20 py-4 bg-white border-b border-gray-200 shadow-sm hidden lg:block">
+    <div class="px-4 mx-auto max-w-7xl">
+        <div class="flex flex-wrap items-center gap-3">
+            <select id="categoryFilter" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" onchange="CityPage.filter()">
+                <option value="">Toate categoriile</option>
+                <?php
+                $eventCategories = getEventCategories();
+                foreach ($eventCategories as $category):
+                ?>
+                <option value="<?= htmlspecialchars($category['slug']) ?>"><?= htmlspecialchars($category['name']) ?></option>
+                <?php endforeach; ?>
             </select>
+            <select id="dateFilter" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" onchange="CityPage.filter()">
+                <option value="">Oricând</option>
+                <option value="today">Astăzi</option>
+                <option value="tomorrow">Mâine</option>
+                <option value="weekend">Weekend</option>
+                <option value="week">Săptămâna asta</option>
+                <option value="month">Luna asta</option>
+                <option value="next-month">Luna viitoare</option>
+            </select>
+            <select id="priceFilter" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" onchange="CityPage.filter()">
+                <option value="">Orice preț</option>
+                <option value="free">Gratuit</option>
+                <option value="0-50">Sub 50 lei</option>
+                <option value="50-100">50 - 100 lei</option>
+                <option value="100-200">100 - 200 lei</option>
+                <option value="200-500">200 - 500 lei</option>
+                <option value="500+">Peste 500 lei</option>
+            </select>
+            <div class="flex items-center gap-2 ml-auto">
+                <span class="text-sm text-gray-500">Sortare:</span>
+                <select id="sortSelect" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" onchange="CityPage.filter()">
+                    <option value="date">Data (aproape)</option>
+                    <option value="popular">Popularitate</option>
+                    <option value="price_asc">Preț (mic - mare)</option>
+                    <option value="price_desc">Preț (mare - mic)</option>
+                </select>
+            </div>
         </div>
     </div>
 </section>
@@ -186,9 +191,11 @@ require_once __DIR__ . '/includes/header.php'; ?>
             <select id="dateFilterMobile" class="w-full px-4 py-3 text-sm font-medium border border-gray-200 bg-gray-50 rounded-xl" onchange="document.getElementById('dateFilter').value = this.value;">
                 <option value="">Oricând</option>
                 <option value="today">Astăzi</option>
+                <option value="tomorrow">Mâine</option>
                 <option value="weekend">Weekend</option>
                 <option value="week">Săptămâna asta</option>
                 <option value="month">Luna asta</option>
+                <option value="next-month">Luna viitoare</option>
             </select>
         </div>
         <div>
@@ -199,7 +206,8 @@ require_once __DIR__ . '/includes/header.php'; ?>
                 <option value="0-50">Sub 50 lei</option>
                 <option value="50-100">50 - 100 lei</option>
                 <option value="100-200">100 - 200 lei</option>
-                <option value="200+">Peste 200 lei</option>
+                <option value="200-500">200 - 500 lei</option>
+                <option value="500+">Peste 500 lei</option>
             </select>
         </div>
     </div>

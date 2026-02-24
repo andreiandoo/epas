@@ -1744,3 +1744,9 @@ select.pr-10 {
     font-size: 0.625rem;
     padding:0.15rem 0.25rem
 }
+
+@media (min-width: 768px) {
+    .md\:h-108 {
+        height: 27rem;
+    }
+}

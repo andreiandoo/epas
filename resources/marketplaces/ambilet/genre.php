@@ -95,35 +95,145 @@ require_once __DIR__ . '/includes/header.php'; ?>
     </div>
 </section>
 
-<!-- Events Content -->
-<section class="py-8 md:py-12">
+<!-- Mobile Filters Button -->
+<section class="sticky top-[72px] z-20 py-3 bg-white border-b border-gray-200 shadow-sm lg:hidden">
+    <div class="flex items-center justify-between gap-3 px-4">
+        <button onclick="openGenreFiltersDrawer()" class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+            Filtre
+            <span id="mobileFilterCount" class="hidden px-2 py-0.5 text-xs font-bold text-white rounded-full bg-primary">0</span>
+        </button>
+        <select id="sortEventsMobile" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('sortEvents').value = this.value; GenrePage.loadEvents();">
+            <option value="date_asc">Data</option>
+            <option value="popularity">Popular</option>
+            <option value="price_asc">Preț ↑</option>
+            <option value="price_desc">Preț ↓</option>
+        </select>
+    </div>
+</section>
+
+<!-- Desktop Filters Bar -->
+<section class="sticky top-[72px] z-20 py-4 bg-white border-b border-gray-200 shadow-sm hidden lg:block">
     <div class="px-4 mx-auto max-w-7xl">
-        <!-- Filters Bar -->
-        <div class="flex flex-col justify-between gap-4 p-4 mb-8 bg-white border md:flex-row md:items-center rounded-2xl border-border">
-            <div class="flex flex-wrap items-center gap-3">
-                <select id="filterCity" class="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    <option value="">Toate orasele</option>
-                </select>
-                <select id="filterDate" class="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    <option value="">Oricand</option>
-                    <option value="today">Astazi</option>
-                    <option value="tomorrow">Maine</option>
-                    <option value="this_week">Saptamana aceasta</option>
-                    <option value="this_month">Luna aceasta</option>
-                </select>
-            </div>
-            <div class="flex items-center gap-3">
-                <span id="resultsCount" class="text-sm text-muted">-- rezultate</span>
-                <select id="sortEvents" class="px-4 py-2.5 bg-surface border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20">
+        <div class="flex flex-wrap items-center gap-3">
+            <select id="filterCity" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" onchange="GenrePage.loadEvents()">
+                <option value="">Toate orașele</option>
+            </select>
+            <select id="filterDate" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" onchange="GenrePage.loadEvents()">
+                <option value="">Oricând</option>
+                <option value="today">Astăzi</option>
+                <option value="tomorrow">Mâine</option>
+                <option value="weekend">Weekend</option>
+                <option value="this_week">Săptămâna asta</option>
+                <option value="this_month">Luna asta</option>
+            </select>
+            <select id="filterPrice" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" onchange="GenrePage.loadEvents()">
+                <option value="">Orice preț</option>
+                <option value="free">Gratuit</option>
+                <option value="0-50">Sub 50 lei</option>
+                <option value="50-100">50 - 100 lei</option>
+                <option value="100-200">100 - 200 lei</option>
+                <option value="200-500">200 - 500 lei</option>
+                <option value="500+">Peste 500 lei</option>
+            </select>
+            <div class="flex items-center gap-2 ml-auto">
+                <span class="text-sm text-gray-500">Sortare:</span>
+                <select id="sortEvents" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" onchange="GenrePage.loadEvents()">
                     <option value="date_asc">Data (aproape)</option>
                     <option value="date_desc">Data (departe)</option>
-                    <option value="price_asc">Pret (mic)</option>
-                    <option value="price_desc">Pret (mare)</option>
+                    <option value="price_asc">Preț (mic - mare)</option>
+                    <option value="price_desc">Preț (mare - mic)</option>
                     <option value="popularity">Popularitate</option>
                 </select>
             </div>
         </div>
+    </div>
+</section>
 
+<!-- Mobile Filters Drawer -->
+<div id="genreFiltersBackdrop" class="fixed inset-0 z-[105] transition-opacity duration-300 bg-black/50 backdrop-blur-sm lg:hidden" style="opacity: 0; visibility: hidden;" onclick="closeGenreFiltersDrawer()"></div>
+<div id="genreFiltersDrawer" class="fixed bottom-0 left-0 right-0 z-[110] overflow-hidden transition-transform duration-300 bg-white lg:hidden rounded-t-3xl max-h-[85vh]" style="transform: translateY(100%);">
+    <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-200">
+        <h2 class="text-lg font-bold text-gray-900">Filtre</h2>
+        <button onclick="closeGenreFiltersDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-gray-100 hover:bg-gray-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
+    <div class="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
+        <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700">Oraș</label>
+            <select id="filterCityMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('filterCity').value = this.value;">
+                <option value="">Toate orașele</option>
+            </select>
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700">Dată</label>
+            <select id="filterDateMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('filterDate').value = this.value;">
+                <option value="">Oricând</option>
+                <option value="today">Astăzi</option>
+                <option value="tomorrow">Mâine</option>
+                <option value="weekend">Weekend</option>
+                <option value="this_week">Săptămâna asta</option>
+                <option value="this_month">Luna asta</option>
+            </select>
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700">Preț</label>
+            <select id="filterPriceMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('filterPrice').value = this.value;">
+                <option value="">Orice preț</option>
+                <option value="free">Gratuit</option>
+                <option value="0-50">Sub 50 lei</option>
+                <option value="50-100">50 - 100 lei</option>
+                <option value="100-200">100 - 200 lei</option>
+                <option value="200-500">200 - 500 lei</option>
+                <option value="500+">Peste 500 lei</option>
+            </select>
+        </div>
+    </div>
+    <div class="flex gap-3 p-4 border-t border-gray-200 bg-gray-50">
+        <button onclick="clearGenreFilters(); closeGenreFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-200 rounded-xl hover:bg-gray-50">
+            Șterge filtre
+        </button>
+        <button onclick="GenrePage.loadEvents(); closeGenreFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-bold text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark">
+            Aplică filtre
+        </button>
+    </div>
+</div>
+
+<script>
+function openGenreFiltersDrawer() {
+    document.getElementById('genreFiltersBackdrop').style.opacity = '1';
+    document.getElementById('genreFiltersBackdrop').style.visibility = 'visible';
+    document.getElementById('genreFiltersDrawer').style.transform = 'translateY(0)';
+    document.body.style.overflow = 'hidden';
+    var fc = document.getElementById('filterCity'), fcm = document.getElementById('filterCityMobile');
+    var fd = document.getElementById('filterDate'), fdm = document.getElementById('filterDateMobile');
+    var fp = document.getElementById('filterPrice'), fpm = document.getElementById('filterPriceMobile');
+    if (fc && fcm) fcm.value = fc.value;
+    if (fd && fdm) fdm.value = fd.value;
+    if (fp && fpm) fpm.value = fp.value;
+}
+function closeGenreFiltersDrawer() {
+    document.getElementById('genreFiltersBackdrop').style.opacity = '0';
+    document.getElementById('genreFiltersBackdrop').style.visibility = 'hidden';
+    document.getElementById('genreFiltersDrawer').style.transform = 'translateY(100%)';
+    document.body.style.overflow = '';
+}
+function clearGenreFilters() {
+    ['filterCity', 'filterDate', 'filterPrice', 'filterCityMobile', 'filterDateMobile', 'filterPriceMobile'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    document.getElementById('sortEvents').value = 'date_asc';
+    var sm = document.getElementById('sortEventsMobile');
+    if (sm) sm.value = 'date_asc';
+    GenrePage.loadEvents();
+}
+</script>
+
+<!-- Events Content -->
+<section class="py-8 md:py-12">
+    <div class="px-4 mx-auto max-w-7xl">
         <!-- Events Grid (grouped by month) -->
         <div id="eventsGrid" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <!-- Events will be loaded dynamically -->

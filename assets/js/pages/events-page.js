@@ -216,12 +216,12 @@ const EventsPage = {
             : 'flex flex-col gap-4';
 
         return '<div class="month-group">' +
-            '<div class="flex items-center gap-4 mb-6">' +
-                '<h2 class="text-2xl font-bold text-gray-900">' + group.label + '</h2>' +
-                '<span class="px-3 py-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-full">' +
+            '<div class="flex items-center mb-6">' +
+                '<h2 class="text-2xl font-bold text-slate-700">' + group.label + '</h2>' +
+                '<span class="ml-6 px-3 py-1 text-sm font-medium text-slate-600 bg-gray-100 border border-slate-200 rounded-full">' +
                     group.events.length + ' ' + (group.events.length === 1 ? 'eveniment' : 'evenimente') +
                 '</span>' +
-                '<div class="flex-1 h-px bg-gray-200"></div>' +
+                '<div class="flex-1 h-px bg-slate-200"></div>' +
             '</div>' +
             '<div class="' + gridClass + '">' + eventsHtml + '</div>' +
         '</div>';

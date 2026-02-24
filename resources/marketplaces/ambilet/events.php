@@ -313,27 +313,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<!-- Results Info -->
-<section class="py-4 bg-gray-50">
-    <div class="flex items-center justify-between px-4 mx-auto max-w-7xl">
-        <p class="text-sm text-gray-600">
-            <span id="resultsCount" class="font-semibold text-gray-900">0</span> evenimente găsite
-        </p>
-        <div class="flex items-center gap-2">
-            <button onclick="EventsPage.setView('grid')" id="viewGrid" class="p-2 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-primary">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
-                </svg>
-            </button>
-            <button onclick="EventsPage.setView('list')" id="viewList" class="p-2 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-primary">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                </svg>
-            </button>
-        </div>
-    </div>
-</section>
-
 <!-- Events Grid -->
 <section class="py-8 bg-gray-50">
     <div class="px-4 mx-auto max-w-7xl">
