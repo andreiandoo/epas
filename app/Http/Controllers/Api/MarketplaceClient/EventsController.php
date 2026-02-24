@@ -415,6 +415,9 @@ class EventsController extends BaseController
                 'views_count' => $event->views_count ?? 0,
                 'interested_count' => $event->interested_count ?? 0,
                 'target_price' => $event->target_price ?? $client->target_price ?? null,
+                'ticket_terms' => $isMarketplaceEvent
+                    ? ($event->getTranslation('ticket_terms', $language) ?? $event->getTranslation('ticket_terms', 'ro') ?? $event->getTranslation('ticket_terms', 'en') ?? null)
+                    : null,
             ],
             'venue' => $event->venue ? [
                 'id' => $event->venue->id,

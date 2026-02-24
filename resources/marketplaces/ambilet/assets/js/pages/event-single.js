@@ -544,7 +544,9 @@ const EventPage = {
             custom_related_events: apiData.custom_related_events || [],
             // Tour events
             tour_name: apiData.tour_name || null,
-            tour_events: apiData.tour_events || []
+            tour_events: apiData.tour_events || [],
+            // Ticket terms (HTML from WYSIWYG editor)
+            ticket_terms: (apiData.event && apiData.event.ticket_terms) ? apiData.event.ticket_terms : null
         };
     },
 
@@ -812,6 +814,11 @@ const EventPage = {
         if (!this.eventEnded) {
             this.ticketTypes = e.ticket_types || this.getDefaultTicketTypes();
             this.renderTicketTypes();
+        }
+
+        // Ticket terms
+        if (e.ticket_terms) {
+            this.renderTicketTerms(e.ticket_terms);
         }
 
         // Tour events
@@ -1807,6 +1814,31 @@ const EventPage = {
                 '</div>' +
             '</div>' +
         '</a>';
+    },
+
+    /**
+     * Render ticket terms section (HTML from WYSIWYG editor)
+     */
+    renderTicketTerms(termsHtml) {
+        var section = document.getElementById('ticket-terms-section');
+        var content = document.getElementById('ticket-terms-content');
+        if (!section || !content || !termsHtml) return;
+
+        content.innerHTML = termsHtml;
+        section.style.display = 'block';
+    },
+
+    /**
+     * Toggle ticket terms accordion open/closed
+     */
+    toggleTicketTerms() {
+        var content = document.getElementById('ticket-terms-content');
+        var chevron = document.getElementById('ticket-terms-chevron');
+        if (!content) return;
+
+        var isHidden = content.classList.contains('hidden');
+        content.classList.toggle('hidden', !isHidden);
+        if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
     },
 
     /**
