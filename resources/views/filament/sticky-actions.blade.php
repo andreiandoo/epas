@@ -6,74 +6,66 @@
     position: sticky;
     bottom: 0;
     z-index: 10000;
-    background-color: rgb(156 163 175); /* gray-400 */
-    border-top: 1px solid rgba(0,0,0,0.1);
-    padding: 0.5rem 1rem;
-    border-radius: 0;
-}
-.dark .fi-form-actions {
-    background-color: rgb(75 85 99); /* gray-600 */
+    background: var(--fi-color-bg, #fff);
+    border-top: 1px solid var(--fi-color-divider, #e5e7eb);
+    padding: 0.75rem 1rem;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Filament 4 Schema forms (.fi-sc-actions) — fixed pill, bottom-right
+   #ep-float-save — floating fixed save button (bottom-right)
 ───────────────────────────────────────────────────────────────────────────── */
-.fi-sc-actions {
-    position: fixed !important;
-    bottom: 1rem !important;
-    right: 3rem !important;
-    height: auto !important;
-    z-index: 10000 !important;
-    width: 21rem !important;
-    border-radius: 0.75rem !important;
-    /* no border, no box-shadow, no margin-left */
-    background-color: rgb(156 163 175) !important; /* fi-bg-color-400 */
-    padding: 0.5rem !important;
+#ep-float-save {
+    position: fixed;
+    bottom: 1rem;
+    right: 3rem;
+    z-index: 10001;
+    width: 21rem;
+    display: none; /* shown by JS when form actions are present */
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1.25rem;
+    background: #009966;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #ffffff;
+    box-shadow: 0 8px 24px rgba(0, 153, 102, 0.35);
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    user-select: none;
+    border: none;
+    outline: none;
 }
-.dark .fi-sc-actions {
-    background-color: rgb(75 85 99) !important; /* fi-bg-color-600 */
+#ep-float-save:hover {
+    background: #007a52;
+    box-shadow: 0 12px 30px rgba(0, 153, 102, 0.45);
+    transform: translateY(-1px);
 }
-
-/* Inner action wrappers — flex row, Save on right */
-.fi-sc-actions > *,
-.fi-sc-actions .fi-ac,
-.fi-sc-actions .fi-ac-actions-ctn,
-.fi-sc-actions .fi-ac-actions {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 0.5rem !important;
-    width: 100% !important;
-    justify-content: flex-end !important;
-}
-
-/* Put primary (Save) button on the far right using order */
-.fi-sc-actions .fi-btn-color-primary,
-.fi-sc-actions [data-color="primary"].fi-btn {
-    order: 10 !important;
-    /* White background, gray-600 text */
-    background-color: #ffffff !important;
-    color: rgb(75 85 99) !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-.fi-sc-actions .fi-btn-color-primary:hover,
-.fi-sc-actions [data-color="primary"].fi-btn:hover {
-    background-color: rgb(249 250 251) !important;
+#ep-float-save:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(0, 153, 102, 0.3);
 }
 
-/* Cancel / gray button — transparent, no border */
-.fi-sc-actions .fi-btn-color-gray,
-.fi-sc-actions [data-color="gray"].fi-btn {
-    order: 1 !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    color: #ffffff !important;
+/* ── Pending state — animates while Livewire saves ── */
+#ep-float-save.ep-pending {
+    background: #007a52;
+    cursor: wait;
+    pointer-events: none;
+    transform: none !important;
 }
-.fi-sc-actions .fi-btn-color-gray:hover,
-.fi-sc-actions [data-color="gray"].fi-btn:hover {
-    background-color: rgba(255,255,255,0.12) !important;
+#ep-float-save.ep-pending .ep-save-icon {
+    animation: ep-spin 0.8s linear infinite;
+}
+@keyframes ep-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Success state — brief flash after save ── */
+#ep-float-save.ep-success {
+    background: #00cc88;
+    pointer-events: none;
+    transform: none !important;
 }
 </style>
 
@@ -81,89 +73,114 @@
 (function () {
     'use strict';
 
-    /* ── Floating quick-save button (visible when .fi-sc-actions is off-screen) ── */
+    /* ── Create floating save button ── */
     var floatBtn = document.getElementById('ep-float-save');
     if (!floatBtn) {
-        floatBtn = document.createElement('div');
+        floatBtn = document.createElement('button');
         floatBtn.id = 'ep-float-save';
-        floatBtn.setAttribute('role', 'button');
-        floatBtn.setAttribute('tabindex', '0');
-        floatBtn.setAttribute('title', 'Salvează');
-        floatBtn.style.cssText = [
-            'display:none',
-            'position:fixed',
-            'bottom:1rem',
-            'right:3rem',
-            'z-index:10001',
-            'align-items:center',
-            'gap:0.5rem',
-            'padding:0.5rem 1.25rem',
-            'background:rgb(156 163 175)',
-            'border-radius:0.75rem',
-            'cursor:pointer',
-            'font-size:0.875rem',
-            'font-weight:600',
-            'color:#fff',
-            'box-shadow:0 8px 24px rgba(0,0,0,0.25)',
-            'transition:transform 0.1s,box-shadow 0.15s',
-        ].join(';');
-        floatBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" style="width:1rem;height:1rem;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2M12 4v12m0 0-4-4m4 4 4-4"/></svg><span>Salvează</span>';
+        floatBtn.type = 'button';
+        floatBtn.title = 'Salvează modificările';
         document.body.appendChild(floatBtn);
     }
 
-    var observer = null;
+    var ICON_SAVE = '<svg class="ep-save-icon" xmlns="http://www.w3.org/2000/svg" style="width:1.25rem;height:1.25rem;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-8H7v8M7 3v5h8"/></svg>';
+    var ICON_SPINNER = '<svg class="ep-save-icon" xmlns="http://www.w3.org/2000/svg" style="width:1.25rem;height:1.25rem;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v3m0 12v3M4.22 4.22l2.12 2.12m11.32 11.32 2.12 2.12M3 12h3m12 0h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>';
+    var ICON_CHECK = '<svg class="ep-save-icon" xmlns="http://www.w3.org/2000/svg" style="width:1.25rem;height:1.25rem;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
 
-    function findPrimaryActions() {
-        var all = document.querySelectorAll('.fi-sc-actions');
-        return all.length ? all[all.length - 1] : null;
+    function setNormal() {
+        floatBtn.classList.remove('ep-pending', 'ep-success');
+        floatBtn.innerHTML = ICON_SAVE + '<span>Salvează</span>';
     }
 
-    function findSaveButton(actionsEl) {
-        if (!actionsEl) return null;
-        return actionsEl.querySelector(
+    function setPending() {
+        floatBtn.classList.add('ep-pending');
+        floatBtn.classList.remove('ep-success');
+        floatBtn.innerHTML = ICON_SPINNER + '<span>Se salvează…</span>';
+    }
+
+    function setSuccess() {
+        floatBtn.classList.remove('ep-pending');
+        floatBtn.classList.add('ep-success');
+        floatBtn.innerHTML = ICON_CHECK + '<span>Salvat!</span>';
+        setTimeout(setNormal, 1800);
+    }
+
+    function findSaveButton() {
+        var actions = document.querySelectorAll('.fi-sc-actions');
+        if (!actions.length) return null;
+        var last = actions[actions.length - 1];
+        return last.querySelector(
             '.fi-btn-color-primary, [data-color="primary"].fi-btn, ' +
             'button[type="submit"], button[wire\\:click*="save"], button[wire\\:click*="create"]'
         );
     }
 
-    function triggerSave() {
-        var actions = findPrimaryActions();
-        var saveBtn = findSaveButton(actions);
-        if (saveBtn) { saveBtn.click(); }
-        else if (actions) { actions.scrollIntoView({ behavior: 'smooth', block: 'end' }); }
+    function onSaveClick() {
+        var saveBtn = findSaveButton();
+        if (saveBtn) {
+            saveBtn.click();
+        }
     }
 
-    function setupObserver() {
-        if (observer) { observer.disconnect(); observer = null; }
-        var actions = findPrimaryActions();
-        if (!actions || !floatBtn) return;
+    /* ── Show/hide based on whether the page has form actions ── */
+    function syncVisibility() {
+        var actions = document.querySelectorAll('.fi-sc-actions');
+        var hasForm = false;
+        actions.forEach(function (a) {
+            if (a.querySelector('button')) hasForm = true;
+        });
+        floatBtn.style.display = hasForm ? 'flex' : 'none';
+    }
 
-        /* .fi-sc-actions is now position:fixed so it's always "in viewport" visually.
-           We observe it by checking if it's in the DOM and if there's a form on the page. */
-        var hasActions = !!actions.querySelector('.fi-btn');
+    /* ── Livewire pending state ── */
+    function setupLivewire() {
+        if (typeof Livewire === 'undefined') return;
+        Livewire.hook('commit', function (params) {
+            var commit   = params.commit;
+            var succeed  = params.succeed;
+            var fail     = params.fail;
 
-        /* Show float button only on pages that DON'T already have visible .fi-sc-actions
-           (i.e. pages where it somehow fails to render) — for safety keep observer logic */
-        observer = new IntersectionObserver(function (entries) {
-            floatBtn.style.display = entries[0].isIntersecting ? 'none' : 'flex';
-        }, { threshold: 0.1 });
-        observer.observe(actions);
+            var calls = (commit && commit.calls) ? commit.calls : [];
+            var isSave = calls.some(function (c) {
+                return c.method === 'save' ||
+                       c.method === 'create' ||
+                       c.method === 'saveAndGoBack' ||
+                       c.method === 'saveAndCreateAnother';
+            });
+
+            if (!isSave) return;
+
+            setPending();
+
+            succeed(function () {
+                setSuccess();
+            });
+
+            fail(function () {
+                setNormal();
+            });
+        });
     }
 
     function init() {
-        floatBtn.addEventListener('click', triggerSave);
-        floatBtn.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') triggerSave();
-        });
-        setTimeout(setupObserver, 400);
+        setNormal();
+        floatBtn.addEventListener('click', onSaveClick);
+        syncVisibility();
     }
 
+    /* ── Boot ── */
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
-    document.addEventListener('livewire:navigated', function () { setTimeout(setupObserver, 400); });
-    document.addEventListener('livewire:update', function () { setTimeout(setupObserver, 150); });
+
+    document.addEventListener('livewire:init', setupLivewire);
+    document.addEventListener('livewire:navigated', function () {
+        setTimeout(syncVisibility, 400);
+    });
+    document.addEventListener('livewire:update', function () {
+        setTimeout(syncVisibility, 150);
+    });
 })();
 </script>
