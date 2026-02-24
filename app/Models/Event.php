@@ -148,6 +148,20 @@ class Event extends Model
         });
     }
 
+    /**
+     * Get a plain string name (first available locale from translatable title).
+     * Used by relationships in admin panel and API.
+     */
+    public function getNameAttribute(): string
+    {
+        $title = $this->title;
+        if (is_array($title)) {
+            return $title['ro'] ?? $title['en'] ?? reset($title) ?? '';
+        }
+
+        return (string) ($title ?? '');
+    }
+
     /* Tour Relation */
     public function tour(): BelongsTo
     {

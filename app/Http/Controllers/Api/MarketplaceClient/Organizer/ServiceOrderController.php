@@ -170,11 +170,10 @@ class ServiceOrderController extends BaseController
             return $this->error('Service type not available', 400);
         }
 
-        // Calculate price
+        // Calculate price (no TVA for extra services)
         $subtotal = $this->calculatePrice($request->service_type, $request->config, $serviceType->pricing);
-        $taxRate = 0.19; // 19% TVA
-        $tax = round($subtotal * $taxRate, 2);
-        $total = $subtotal + $tax;
+        $tax = 0;
+        $total = $subtotal;
 
         try {
             $order = ServiceOrder::create([
@@ -365,7 +364,8 @@ class ServiceOrderController extends BaseController
             'type' => $order->service_type,
             'type_label' => $order->service_type_label,
             'event_id' => $order->marketplace_event_id,
-            'event_name' => $order->event?->name,
+            'event_name' => $this->getEventTitle($order->event),
+            'details' => $this->getOrderDetails($order),
             'total' => (float) $order->total,
             'currency' => $order->currency,
             'status' => $order->status,
@@ -375,6 +375,44 @@ class ServiceOrderController extends BaseController
             'service_end_date' => $order->service_end_date?->format('Y-m-d'),
             'created_at' => $order->created_at->toIso8601String(),
         ];
+    }
+
+    protected function getEventTitle(?Event $event): string
+    {
+        if (! $event) {
+            return '';
+        }
+        $title = $event->title;
+        if (is_array($title)) {
+            return $title['ro'] ?? $title['en'] ?? reset($title) ?? '';
+        }
+
+        return (string) ($title ?? '');
+    }
+
+    protected function getOrderDetails(ServiceOrder $order): string
+    {
+        $config = $order->config ?? [];
+
+        $locationLabels = [
+            'home_hero'           => 'Prima pagina - Hero',
+            'home_recommendations'=> 'Prima pagina - Recomandari',
+            'category'            => 'Pagina categorie',
+            'city'                => 'Pagina oras',
+        ];
+
+        return match ($order->service_type) {
+            'featuring' => implode(', ', array_map(
+                fn ($loc) => $locationLabels[$loc] ?? $loc,
+                $config['locations'] ?? []
+            )) ?: '-',
+            'email' => (($config['audience_type'] ?? '') === 'own' ? 'Clientii tai' : 'Baza marketplace')
+                       . ' - ' . number_format((int) ($config['recipient_count'] ?? 0)) . ' destinatari',
+            'tracking' => implode(', ', $config['platforms'] ?? [])
+                          . ' (' . ($config['duration_months'] ?? 1) . ' luni)',
+            'campaign' => ($config['campaign_type'] ?? 'custom') . ' - ' . number_format((float) ($config['budget'] ?? 0)) . ' RON',
+            default => '-',
+        };
     }
 
     /**
@@ -396,7 +434,7 @@ class ServiceOrderController extends BaseController
             'sent_count' => $order->sent_count,
             'event' => $order->event ? [
                 'id' => $order->event->id,
-                'name' => $order->event->name,
+                'name' => $this->getEventTitle($order->event),
                 'slug' => $order->event->slug,
                 'starts_at' => $order->event->starts_at?->toIso8601String(),
                 'venue' => $order->event->venue_display_name,

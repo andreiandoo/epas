@@ -80,6 +80,32 @@ class ServiceOrderResource extends Resource
                         Forms\Components\Placeholder::make('type_display')
                             ->label('Service Type')
                             ->content(fn (?ServiceOrder $record): string => $record?->service_type_label ?? '-'),
+
+                        Forms\Components\Placeholder::make('locations_display')
+                            ->label('Plasamente / Detalii')
+                            ->columnSpanFull()
+                            ->content(function (?ServiceOrder $record): string {
+                                if (! $record) return '-';
+                                $config = $record->config ?? [];
+                                $locationLabels = [
+                                    'home_hero'            => 'Prima pagina - Hero',
+                                    'home_recommendations' => 'Prima pagina - Recomandari',
+                                    'category'             => 'Pagina categorie',
+                                    'city'                 => 'Pagina oras',
+                                ];
+                                return match ($record->service_type) {
+                                    'featuring' => implode(', ', array_map(
+                                        fn ($loc) => $locationLabels[$loc] ?? $loc,
+                                        $config['locations'] ?? []
+                                    )) ?: '-',
+                                    'email' => (($config['audience_type'] ?? '') === 'own' ? 'Clientii tai' : 'Baza marketplace')
+                                               . ' - ' . number_format((int) ($config['recipient_count'] ?? 0)) . ' destinatari',
+                                    'tracking' => implode(', ', $config['platforms'] ?? [])
+                                                  . ' (' . ($config['duration_months'] ?? 1) . ' luni)',
+                                    'campaign' => ($config['campaign_type'] ?? 'custom') . ' - ' . number_format((float) ($config['budget'] ?? 0)) . ' RON',
+                                    default => '-',
+                                };
+                            }),
                     ])
                     ->columns(4),
 
