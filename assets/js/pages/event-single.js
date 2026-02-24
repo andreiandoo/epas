@@ -543,7 +543,10 @@ const EventPage = {
             custom_related_event_ids: eventData.custom_related_event_ids || [],
             custom_related_events: apiData.custom_related_events || [],
             // Tour events
-            tour_events: apiData.tour_events || []
+            tour_name: apiData.tour_name || null,
+            tour_events: apiData.tour_events || [],
+            // Ticket terms (HTML from WYSIWYG editor)
+            ticket_terms: (apiData.event && apiData.event.ticket_terms) ? apiData.event.ticket_terms : null
         };
     },
 
@@ -813,9 +816,14 @@ const EventPage = {
             this.renderTicketTypes();
         }
 
+        // Ticket terms
+        if (e.ticket_terms) {
+            this.renderTicketTerms(e.ticket_terms);
+        }
+
         // Tour events
         if (e.tour_events && e.tour_events.length > 0) {
-            this.renderTourEvents(e.tour_events);
+            this.renderTourEvents(e.tour_events, e.tour_name);
         }
 
         // Related events (skip for ended events - banner already shows them)
@@ -1809,12 +1817,45 @@ const EventPage = {
     },
 
     /**
+     * Render ticket terms section (HTML from WYSIWYG editor)
+     */
+    renderTicketTerms(termsHtml) {
+        var section = document.getElementById('ticket-terms-section');
+        var content = document.getElementById('ticket-terms-content');
+        if (!section || !content || !termsHtml) return;
+
+        content.innerHTML = termsHtml;
+        section.style.display = 'block';
+    },
+
+    /**
+     * Toggle ticket terms accordion open/closed
+     */
+    toggleTicketTerms() {
+        var content = document.getElementById('ticket-terms-content');
+        var chevron = document.getElementById('ticket-terms-chevron');
+        if (!content) return;
+
+        var isHidden = content.classList.contains('hidden');
+        content.classList.toggle('hidden', !isHidden);
+        if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+    },
+
+    /**
      * Render tour events section
      */
-    renderTourEvents(tourEvents) {
+    renderTourEvents(tourEvents, tourName) {
         var section = document.getElementById('tour-events-section');
         var container = document.getElementById('tour-events-list');
         if (!section || !container || !tourEvents || tourEvents.length === 0) return;
+
+        // Update subtitle with tour name if available
+        var nameDisplay = document.getElementById('tour-name-display');
+        var nameFallback = document.getElementById('tour-name-fallback');
+        if (tourName && nameDisplay) {
+            nameDisplay.textContent = tourName;
+            if (nameFallback) nameFallback.style.display = 'none';
+        }
 
         var MONTHS_SHORT = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
