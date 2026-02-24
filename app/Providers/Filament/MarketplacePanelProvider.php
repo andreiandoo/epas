@@ -122,6 +122,9 @@ class MarketplacePanelProvider extends PanelProvider
             // Sidebar footer with support card
             ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.marketplace-support-card')->render())
 
+            // Sticky / floating save button for long forms
+            ->renderHook('panels::body.end', fn (): string => view('filament.sticky-actions')->render())
+
             // Set dark mode as default if not already set
             ->renderHook('panels::head.end', fn () => '<script>if(!localStorage.getItem("theme")){localStorage.setItem("theme","dark");document.documentElement.classList.add("dark");}</script>')
 
