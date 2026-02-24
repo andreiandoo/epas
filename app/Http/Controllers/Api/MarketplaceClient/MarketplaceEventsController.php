@@ -505,6 +505,10 @@ class MarketplaceEventsController extends BaseController
                 // Custom related events flags
                 'has_custom_related' => (bool) $event->has_custom_related,
                 'custom_related_event_ids' => $event->custom_related_event_ids ?? [],
+                'ticket_terms' => $event->getTranslation('ticket_terms', $language)
+                    ?? $event->getTranslation('ticket_terms', 'ro')
+                    ?? $event->getTranslation('ticket_terms', 'en')
+                    ?? null,
             ],
             'venue' => $venueData,
             'organizer' => $organizer ? [
@@ -517,7 +521,7 @@ class MarketplaceEventsController extends BaseController
                 'social_links' => $organizer->social_links,
                 'verified' => $organizer->verified_at !== null,
             ] : null,
-            'ticket_types' => $event->ticketTypes->filter(fn ($tt) => $tt->status === 'active')->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate) {
+            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active')->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate) {
                 // Debug: log ticket type color and seating row data
                 \Log::info('[MarketplaceEventsController] TicketType #' . $tt->id . ' "' . $tt->name . '"'
                     . ' | color=' . var_export($tt->color, true)
@@ -647,6 +651,28 @@ class MarketplaceEventsController extends BaseController
             'seating_layout' => $this->getSeatingLayout($venue, $event),
             // Custom related events (array at root level for frontend)
             'custom_related_events' => $this->getCustomRelatedEvents($event, $language, $client),
+            // Tour
+            'tour_name' => $event->tour_id ? \App\Models\Tour::find($event->tour_id)?->name : null,
+            'tour_events' => $event->tour_id
+                ? Event::where('tour_id', $event->tour_id)
+                    ->where('id', '!=', $event->id)
+                    ->where('status', 'published')
+                    ->with('venue:id,name,city')
+                    ->orderByRaw("COALESCE(event_date, DATE(starts_at)) ASC")
+                    ->get()
+                    ->map(function ($te) use ($language) {
+                        return [
+                            'id' => $te->id,
+                            'slug' => $te->slug,
+                            'name' => $te->getTranslation('title', $language) ?? $te->getTranslation('title', 'ro') ?? $te->name ?? '',
+                            'event_date' => $te->event_date?->format('Y-m-d'),
+                            'start_time' => $te->start_time,
+                            'city' => $te->venue?->city ?? null,
+                            'venue_name' => $te->venue ? (is_array($te->venue->name) ? ($te->venue->name[$language] ?? $te->venue->name['ro'] ?? $te->venue->name['en'] ?? null) : $te->venue->name) : null,
+                            'image_url' => $te->poster_url ? \Illuminate\Support\Facades\Storage::disk('public')->url($te->poster_url) : ($te->hero_image_url ? \Illuminate\Support\Facades\Storage::disk('public')->url($te->hero_image_url) : null),
+                        ];
+                    })
+                : [],
         ]);
     }
 
