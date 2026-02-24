@@ -134,7 +134,7 @@ const AmbiletDataTransformer = {
 
             // Price information
             minPrice: minPrice,
-            priceFormatted: minPrice > 0 ? (hasMultipleTicketTypes ? 'de la ' : '') + AmbiletUtils.formatCurrency(minPrice) : 'Gratuit',
+            priceFormatted: minPrice > 0 ? (hasMultipleTicketTypes ? 'de la ' : 'Bilete: ') + AmbiletUtils.formatCurrency(minPrice) : 'Gratuit',
 
             // Category
             categoryName: categoryName,
