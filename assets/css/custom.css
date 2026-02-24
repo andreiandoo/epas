@@ -1740,3 +1740,7 @@ select.pr-10 {
     border-radius: 50%;
 }
 
+.cat-pill {
+    font-size: 0.625rem;
+    padding:0.15rem 0.25rem
+}

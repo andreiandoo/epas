@@ -139,7 +139,7 @@ require_once __DIR__ . '/includes/head.php';
                 <!-- Event Header -->
                 <div class="mb-8 bg-white border rounded-3xl border-border mobile:border-0 mobile:border-b mobile:rounded-none">
                     <!-- Main Image -->
-                    <div class="relative overflow-hidden rounded-t-3xl h-72 md:h-96 mobile:rounded-none">
+                    <div class="relative overflow-hidden rounded-t-3xl h-72 md:h-108 mobile:rounded-none">
                         <img id="mainImage" src="" alt="" class="object-cover w-full h-full">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                         <div class="absolute flex gap-2 top-4 left-4" id="event-badges"></div>
@@ -267,7 +267,7 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
 
                         <!-- Ticket Types -->
-                        <div class="pb-4 space-y-3" id="ticket-types"></div>
+                        <div class="space-y-3" id="ticket-types"></div>
 
                         <!-- Cart Summary -->
                         <div id="cartSummary" class="hidden border-t border-border">
@@ -538,13 +538,19 @@ require_once __DIR__ . '/includes/head.php';
                 const mobileBtn = document.getElementById('mobileTicketBtn');
                 const minPriceEl = document.getElementById('mobileMinPrice');
                 if (mobileBtn) {
-                    // Find minimum price
-                    const prices = EventPage.ticketTypes
+                    // Find minimum price (skip 0-price if paid tickets exist)
+                    const allPrices = EventPage.ticketTypes
                         .filter(t => !t.is_sold_out && t.available > 0)
                         .map(t => t.price);
+                    const paidPrices = allPrices.filter(p => p > 0);
+                    const prices = paidPrices.length > 0 ? paidPrices : allPrices;
                     if (prices.length && minPriceEl) {
                         const minPrice = Math.min(...prices);
-                        minPriceEl.textContent = 'de la ' + minPrice.toFixed(0) + ' lei';
+                        if (minPrice > 0) {
+                            minPriceEl.textContent = 'de la ' + minPrice.toFixed(0) + ' lei';
+                        } else {
+                            minPriceEl.textContent = 'Gratuit';
+                        }
                     }
                 }
             }

@@ -641,8 +641,8 @@ const AmbiletAPI = {
     /**
      * Get single event details
      */
-    async getEvent(identifier) {
-        return this.get(`/marketplace-events/${identifier}`);
+    async getEvent(identifier, params = {}) {
+        return this.get(`/marketplace-events/${identifier}`, params);
     },
 
     /**
