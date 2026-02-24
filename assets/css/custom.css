@@ -1745,6 +1745,8 @@ select.pr-10 {
     padding:0.15rem 0.25rem
 }
 
-.md\:h-108 {
-    height: 27rem;
+@media (min-width: 768px) {
+    .md\:h-108 {
+        height: 27rem;
+    }
 }

@@ -367,21 +367,21 @@ const AmbiletEventCard = {
         // Extract price - skip free (price=0) tickets when paid tickets also exist
         // Show "Gratuit" only when ALL tickets are free (no paid options)
         let minPrice = 0;
+        let hasMultipleTicketTypes = false;
         if (apiEvent.ticket_types && Array.isArray(apiEvent.ticket_types) && apiEvent.ticket_types.length > 0) {
             const paidTickets = apiEvent.ticket_types.filter(t => (t.price || 0) > 0);
             if (paidTickets.length > 0) {
-                // Has paid tickets - show minimum paid price (ignore free ones)
                 minPrice = Math.min(...paidTickets.map(t => t.price || 0));
             } else {
-                // All tickets are free
                 minPrice = 0;
             }
+            hasMultipleTicketTypes = apiEvent.ticket_types.length > 1;
         } else {
-            // No ticket_types array - use API-provided price_from
             const raw = apiEvent.price_from != null ? apiEvent.price_from
                       : apiEvent.min_price != null ? apiEvent.min_price
                       : apiEvent.price != null ? apiEvent.price : 0;
             minPrice = raw;
+            hasMultipleTicketTypes = true; // price_from implies multiple possible prices
         }
 
         // Extract category
@@ -432,7 +432,7 @@ const AmbiletEventCard = {
             venueCity: venueCity,
             location: venueCity ? (venueName) : venueName, // + ', ' + venueCity if both exist
             minPrice: minPrice,
-            priceFormatted: minPrice > 0 ? 'de la ' + minPrice + ' lei' : 'Gratuit',
+            priceFormatted: minPrice > 0 ? (hasMultipleTicketTypes ? 'de la ' : '') + minPrice + ' lei' : 'Gratuit',
             categoryName: categoryName,
             isSoldOut: apiEvent.is_sold_out || false,
             isCancelled: apiEvent.is_cancelled || false,
