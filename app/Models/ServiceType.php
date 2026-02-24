@@ -32,10 +32,10 @@ class ServiceType extends Model
     {
         return [
             'featuring' => [
-                'home' => 99,
-                'category' => 69,
-                'genre' => 59,
-                'city' => 49,
+                'home_hero'            => 120,
+                'home_recommendations' => 80,
+                'category'             => 60,
+                'city'                 => 40,
             ],
             'email' => [
                 'own_per_email' => 0.40,

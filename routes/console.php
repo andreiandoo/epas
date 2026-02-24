@@ -674,3 +674,15 @@ Schedule::command('marketplace:cleanup-expired-orders')
     ->onFailure(function () {
         \Log::error('Failed to clean up expired marketplace orders');
     });
+
+// Deactivate expired event featuring service orders (daily at midnight)
+Schedule::command('marketplace:deactivate-expired-featuring')
+    ->daily()
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Expired featuring orders deactivated');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to deactivate expired featuring orders');
+    });

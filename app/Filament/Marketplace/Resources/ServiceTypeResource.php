@@ -80,29 +80,29 @@ class ServiceTypeResource extends Resource
                     ->icon('heroicon-o-star')
                     ->description('Prices per day for featuring an event on different pages')
                     ->schema([
-                        Forms\Components\TextInput::make('pricing.home')
-                            ->label('Home Page (RON/day)')
+                        Forms\Components\TextInput::make('pricing.home_hero')
+                            ->label('Prima pagina - Hero (RON/zi)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(99),
+                            ->default(120),
+
+                        Forms\Components\TextInput::make('pricing.home_recommendations')
+                            ->label('Prima pagina - Recomandari (RON/zi)')
+                            ->numeric()
+                            ->step(0.01)
+                            ->default(80),
 
                         Forms\Components\TextInput::make('pricing.category')
-                            ->label('Category Page (RON/day)')
+                            ->label('Pagina categorie eveniment (RON/zi)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(69),
-
-                        Forms\Components\TextInput::make('pricing.genre')
-                            ->label('Genre Page (RON/day)')
-                            ->numeric()
-                            ->step(0.01)
-                            ->default(59),
+                            ->default(60),
 
                         Forms\Components\TextInput::make('pricing.city')
-                            ->label('City Page (RON/day)')
+                            ->label('Pagina oras eveniment (RON/zi)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(49),
+                            ->default(40),
                     ])
                     ->columns(4)
                     ->visible(fn ($record) => $record?->code === 'featuring'),
@@ -243,8 +243,10 @@ class ServiceTypeResource extends Resource
                         $pricing = $record->pricing;
                         return match ($record->code) {
                             'featuring' => sprintf(
-                                'Home: %d RON/day, City: %d RON/day',
-                                $pricing['home'] ?? 0,
+                                'Hero: %d RON/zi, Rec: %d RON/zi, Cat: %d RON/zi, Oras: %d RON/zi',
+                                $pricing['home_hero'] ?? ($pricing['home'] ?? 0),
+                                $pricing['home_recommendations'] ?? ($pricing['genre'] ?? 0),
+                                $pricing['category'] ?? 0,
                                 $pricing['city'] ?? 0
                             ),
                             'email' => sprintf(

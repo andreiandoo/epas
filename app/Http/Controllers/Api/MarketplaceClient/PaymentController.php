@@ -210,8 +210,13 @@ class PaymentController extends BaseController
                 'order_id_from_callback' => $result['order_id'] ?? $result['payment_id'] ?? 'unknown',
             ]);
 
-            // Find order using the order ID from the decrypted callback data
+            // Check if this callback is for a service order (SVC- prefix)
             $callbackOrderId = $result['order_id'] ?? $result['payment_id'] ?? null;
+            if ($callbackOrderId && str_starts_with((string) $callbackOrderId, 'SVC-')) {
+                return $this->handleServiceOrderCallback($result, $client, $callbackOrderId);
+            }
+
+            // Find order using the order ID from the decrypted callback data
             $orderId = $request->input('order_id') ?? $request->input('orderId');
             $orderNumber = $request->input('order_number') ?? $request->input('orderNumber');
 
@@ -672,6 +677,50 @@ class PaymentController extends BaseController
             $log->markFailed($e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * Handle payment callback for service orders (SVC- prefix)
+     */
+    protected function handleServiceOrderCallback(array $result, \App\Models\MarketplaceClient $client, string $reference): \Illuminate\Http\Response
+    {
+        $serviceOrder = \App\Models\ServiceOrder::where('order_number', $reference)
+            ->where('marketplace_client_id', $client->id)
+            ->first();
+
+        if (! $serviceOrder) {
+            Log::channel('marketplace')->error('ServiceOrder not found for callback', [
+                'reference' => $reference,
+                'client_id' => $client->id,
+            ]);
+            return $this->netopiaResponse(0); // ACK to avoid retries
+        }
+
+        if ($result['status'] === 'success') {
+            // Idempotency: don't process twice
+            if ($serviceOrder->payment_status === \App\Models\ServiceOrder::PAYMENT_PAID) {
+                return $this->netopiaResponse(0);
+            }
+
+            $serviceOrder->markAsPaid($result['transaction_id'] ?? $result['payment_id'] ?? null);
+            $serviceOrder->activate(); // marks event as featured
+
+            Log::channel('marketplace')->info('ServiceOrder payment confirmed and activated', [
+                'order_number' => $reference,
+                'client_id'    => $client->id,
+            ]);
+        } else {
+            $serviceOrder->update([
+                'payment_status' => \App\Models\ServiceOrder::PAYMENT_FAILED,
+            ]);
+
+            Log::channel('marketplace')->warning('ServiceOrder payment failed', [
+                'order_number' => $reference,
+                'status'       => $result['status'],
+            ]);
+        }
+
+        return $this->netopiaResponse(0);
     }
 
     /**

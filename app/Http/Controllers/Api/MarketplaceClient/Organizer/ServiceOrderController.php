@@ -227,6 +227,84 @@ class ServiceOrderController extends BaseController
     }
 
     /**
+     * Initiate Netopia payment for a pending service order
+     */
+    public function pay(Request $request, string $uuid): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $client = \App\Models\MarketplaceClient::find($organizer->marketplace_client_id);
+
+        $order = ServiceOrder::where('uuid', $uuid)
+            ->where('marketplace_client_id', $client->id)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('status', ServiceOrder::STATUS_PENDING_PAYMENT)
+            ->first();
+
+        if (! $order) {
+            return $this->error('Order not found or not payable', 404);
+        }
+
+        $defaultPaymentMethod = $client->getDefaultPaymentMethod();
+        if (! $defaultPaymentMethod) {
+            return $this->error('No payment method configured for this marketplace', 400);
+        }
+
+        $processorType = match ($defaultPaymentMethod->slug) {
+            'netopia', 'netopia-payments', 'payment-netopia' => 'netopia',
+            'stripe', 'stripe-payments', 'payment-stripe'    => 'stripe',
+            'euplatesc', 'payment-euplatesc'                 => 'euplatesc',
+            'payu', 'payment-payu'                           => 'payu',
+            default => $defaultPaymentMethod->slug,
+        };
+
+        $paymentConfig = $client->getPaymentMethodSettings($defaultPaymentMethod->slug);
+        if (! $paymentConfig) {
+            return $this->error('Payment configuration not found', 400);
+        }
+
+        // order_number already starts with SVC- prefix (from generateOrderNumber)
+        $reference = $order->order_number;
+
+        try {
+            $processor = \App\Services\PaymentProcessors\PaymentProcessorFactory::makeFromArray($processorType, $paymentConfig);
+
+            $baseUrl = rtrim($client->domain ?? 'https://bilete.online', '/');
+            $paymentData = $processor->createPayment([
+                'order_id'       => $reference,
+                'order_number'   => $reference,
+                'amount'         => $order->total,
+                'currency'       => $order->currency ?? 'RON',
+                'customer_email' => $organizer->email ?? '',
+                'customer_name'  => $organizer->name ?? '',
+                'description'    => 'Promovare eveniment - ' . $reference,
+                'success_url'    => $baseUrl . '/organizator/servicii?payment=success',
+                'return_url'     => $baseUrl . '/organizator/servicii?payment=success',
+                'cancel_url'     => $baseUrl . '/organizator/servicii?payment=cancel',
+                'callback_url'   => route('api.marketplace-client.payment.callback', ['client' => $client->slug]),
+                'metadata'       => ['source' => 'service_order'],
+            ]);
+
+            $order->update(['payment_reference' => $reference]);
+
+            $response = [
+                'payment_url'       => $paymentData['redirect_url'] ?? $paymentData['payment_url'] ?? null,
+                'payment_reference' => $reference,
+                'processor'         => $processorType,
+            ];
+
+            if (($paymentData['method'] ?? 'GET') === 'POST' && ! empty($paymentData['form_data'])) {
+                $response['method']    = 'POST';
+                $response['form_data'] = $paymentData['form_data'];
+            }
+
+            return $this->success($response, 'Payment initiated');
+
+        } catch (\Exception $e) {
+            return $this->error('Failed to initiate payment: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * Calculate price based on service type and config
      */
     protected function calculatePrice(string $type, array $config, array $pricing): float
@@ -240,7 +318,13 @@ class ServiceOrderController extends BaseController
                 $days = max(1, $startDate->diff($endDate)->days + 1);
 
                 foreach ($locations as $location) {
-                    $dailyRate = $pricing[$location] ?? 0;
+                    // Map old keys (home/genre) to new keys for backward compatibility
+                    $key = match ($location) {
+                        'home'  => 'home_hero',
+                        'genre' => 'home_recommendations',
+                        default => $location,
+                    };
+                    $dailyRate = $pricing[$key] ?? $pricing[$location] ?? 0;
                     $total += $dailyRate * $days;
                 }
                 return $total;

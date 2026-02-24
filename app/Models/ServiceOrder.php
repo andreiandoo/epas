@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\OrganizerNotificationService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Event;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -197,6 +198,19 @@ class ServiceOrder extends Model
             'status' => self::STATUS_ACTIVE,
         ]);
 
+        // Mark event as featured for the purchased locations
+        if ($this->service_type === self::TYPE_FEATURING && $this->marketplace_event_id) {
+            $locations = $this->config['locations'] ?? [];
+            $updates = [];
+            if (in_array('home_hero', $locations))            $updates['is_homepage_featured'] = true;
+            if (in_array('home_recommendations', $locations)) $updates['is_general_featured']  = true;
+            if (in_array('category', $locations))             $updates['is_category_featured'] = true;
+            if (in_array('city', $locations))                 $updates['is_city_featured']     = true;
+            if (! empty($updates)) {
+                Event::where('id', $this->marketplace_event_id)->update($updates);
+            }
+        }
+
         // Notify organizer that service has started
         try {
             OrganizerNotificationService::notifyServiceOrderStatus($this, 'started');
@@ -218,6 +232,40 @@ class ServiceOrder extends Model
         $this->update([
             'status' => self::STATUS_COMPLETED,
         ]);
+
+        // Unmark event featuring for locations that no longer have an active order
+        if ($this->service_type === self::TYPE_FEATURING && $this->marketplace_event_id) {
+            $locations = $this->config['locations'] ?? [];
+
+            // Find other ACTIVE featuring orders for same event to avoid disabling flags still in use
+            $otherActiveLocations = [];
+            self::where('marketplace_event_id', $this->marketplace_event_id)
+                ->where('id', '!=', $this->id)
+                ->where('service_type', self::TYPE_FEATURING)
+                ->where('status', self::STATUS_ACTIVE)
+                ->get()
+                ->each(function ($order) use (&$otherActiveLocations) {
+                    $otherActiveLocations = array_merge($otherActiveLocations, $order->config['locations'] ?? []);
+                });
+
+            $updates = [];
+            if (in_array('home_hero', $locations) && ! in_array('home_hero', $otherActiveLocations)) {
+                $updates['is_homepage_featured'] = false;
+            }
+            if (in_array('home_recommendations', $locations) && ! in_array('home_recommendations', $otherActiveLocations)) {
+                $updates['is_general_featured'] = false;
+            }
+            if (in_array('category', $locations) && ! in_array('category', $otherActiveLocations)) {
+                $updates['is_category_featured'] = false;
+            }
+            if (in_array('city', $locations) && ! in_array('city', $otherActiveLocations)) {
+                $updates['is_city_featured'] = false;
+            }
+
+            if (! empty($updates)) {
+                Event::where('id', $this->marketplace_event_id)->update($updates);
+            }
+        }
 
         // Notify organizer that service is completed
         try {

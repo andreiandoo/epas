@@ -287,7 +287,7 @@ class MarketplaceEventsController extends BaseController
 
         $this->applyUpcomingFilter($query);
 
-        // Featured type filter: homepage, general, category, or any
+        // Featured type filter: homepage, general, category, city, or any
         $featuredType = $request->get('type', 'any');
         if ($featuredType === 'homepage') {
             $query->where('is_homepage_featured', true);
@@ -295,11 +295,19 @@ class MarketplaceEventsController extends BaseController
             $query->where('is_general_featured', true);
         } elseif ($featuredType === 'category') {
             $query->where('is_category_featured', true);
+        } elseif ($featuredType === 'city') {
+            $query->where('is_city_featured', true);
+            // Optionally filter by a specific city slug/name
+            if ($request->has('city')) {
+                $city = $request->get('city');
+                $query->whereHas('venue', fn ($q) => $q->where('city', 'like', "%{$city}%"));
+            }
         } else {
             $query->where(function ($q) {
                 $q->where('is_homepage_featured', true)
                     ->orWhere('is_general_featured', true)
-                    ->orWhere('is_category_featured', true);
+                    ->orWhere('is_category_featured', true)
+                    ->orWhere('is_city_featured', true);
             });
         }
 
@@ -489,6 +497,10 @@ class MarketplaceEventsController extends BaseController
                 'venue_city' => $venue?->city,
                 'capacity' => $venue?->capacity,
                 'is_featured' => $event->is_homepage_featured || $event->is_general_featured,
+                'is_homepage_featured'  => (bool) $event->is_homepage_featured,
+                'is_general_featured'   => (bool) $event->is_general_featured,
+                'is_category_featured'  => (bool) $event->is_category_featured,
+                'is_city_featured'      => (bool) ($event->is_city_featured ?? false),
                 'target_price' => $targetPrice,
                 'views_count' => (int) ($event->views_count ?? 0),
                 'interested_count' => (int) ($event->interested_count ?? 0),
