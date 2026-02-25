@@ -184,18 +184,18 @@ const AmbiletEventCard = {
         const locationHtml = (event.venueCity || event.venueName) ?
             '<p class="text-xs text-muted flex items-center gap-1 mobile:text-base">' +
                 '<svg class="flex-shrink-0 w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
-                '<span class="truncate">' + (event.venueCity ? (event.venueName ? '<strong>' + this.escapeHtml(event.venueCity) + '</strong>, ' + this.escapeHtml(event.venueName) : this.escapeHtml(event.venueCity)) : this.escapeHtml(event.venueName)) + '</span>' +
+                '<span class="">' + (event.venueCity ? (event.venueName ? '<strong>' + this.escapeHtml(event.venueCity) + '</strong>, ' + this.escapeHtml(event.venueName) : this.escapeHtml(event.venueCity)) : this.escapeHtml(event.venueName)) + '</span>' +
             '</p>' : '';
 
-        return '<a href="' + eventUrl + '" class="overflow-hidden relative transition-all bg-gray-900 border group rounded-md border-gray-800 hover:-translate-y-1 hover:shadow-xl hover:border-primary">' +
+        return '<a href="' + eventUrl + '" class="overflow-hidden relative transition-all bg-gray-900 border group rounded-md border-gray-800 hover:-translate-y-1 hover:shadow-xl hover:border-transparent hover:scale-105 duration-300 ease-in-out">' +
             '<div class="relative aspect-[2/3] overflow-hidden mobile:aspect-auto">' +
-                '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:hidden object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
-                '<img src="' + heroSrc + '" alt="' + this.escapeHtml(event.title) + '" class="hidden mobile:block object-cover w-full h-52 transition-transform duration-300" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
-                '<div class="opacity-0 bg-gradient-to-b from-transparent via-gray-900/50 to-gray-900/90 w-full h-full absolute transition-opacity duration-250 ease-in-out group-hover:opacity-100 "></div>' +
+                '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:hidden object-cover w-full h-full transition-transform duration-300" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                '<img src="' + heroSrc + '" alt="' + this.escapeHtml(event.title) + '" class="hidden mobile:block object-cover w-full h-52 transition-transform duration-300 relative" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                '<div class="opacity-0 z-10 bg-gradient-to-b from-transparent via-gray-900/70 to-gray-900 w-full h-full bottom-0 absolute transition-opacity duration-250 ease-in-out group-hover:opacity-100 "></div>' +
                 '<div class="absolute z-20 bottom-0 flex items-center gap-x-2 p-2">' +
                     '<div class="flex z-10">' + dateBadgeHtml + '</div>' +
-                    '<div class="opacity-0 flex flex-col truncate transition-opacity duration-250  ease-in-out group-hover:opacity-100">' +
-                        '<h3 class="text-sm font-bold leading-snug transition-colors text-white group-hover:text-primary line-clamp-2 truncate mobile:text-xl">' + this.escapeHtml(event.title) + '</h3>' +
+                    '<div class="opacity-0 flex flex-col transition-opacity duration-250 pb-2 ease-in-out group-hover:opacity-100">' +
+                        '<h3 class="text-sm font-bold leading-snug transition-colors text-white group-hover:text-primary line-clamp-2 mobile:text-xl">' + this.escapeHtml(event.title) + '</h3>' +
                         locationHtml +
                     '</div>' +
                 '</div>' +
