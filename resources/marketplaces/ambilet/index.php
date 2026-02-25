@@ -16,42 +16,23 @@ require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<!-- Hero Slider Section - 3D Coverflow Style -->
-<section class="relative py-8 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 mt-18 pt-32 mobile:pt-12" id="heroSlider">
+<!-- Hero Carousel - 3D Poster Stack -->
+<section class="relative py-8 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 mt-18 pt-28 mobile:pt-10" id="heroSlider">
     <div class="px-4 mx-auto max-w-7xl">
-        <!-- Main 3D Carousel -->
-        <div class="relative" id="heroSection">
-            <!-- Slider Navigation Arrows -->
-            <button id="heroPrev" class="absolute z-30 flex items-center justify-center w-10 h-10 text-white transition-all -translate-y-1/2 rounded-full shadow-lg md:w-12 md:h-12 left-2 md:left-4 top-1/2 bg-black/50 hover:bg-primary">
-                <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-            </button>
-            <button id="heroNext" class="absolute z-30 flex items-center justify-center w-10 h-10 text-white transition-all -translate-y-1/2 rounded-full shadow-lg md:w-12 md:h-12 right-2 md:right-4 top-1/2 bg-black/50 hover:bg-primary">
-                <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </button>
-
-            <!-- 3D Slides Container -->
-            <div class="coverflow-container" id="coverflowContainer">
-                <div id="heroSlides" class="coverflow-track">
-                    <!-- Loading Skeleton -->
-                    <div class="coverflow-slide coverflow-left">
-                        <div class="coverflow-slide-inner skeleton"></div>
-                    </div>
-                    <div class="coverflow-slide coverflow-center">
-                        <div class="coverflow-slide-inner skeleton"></div>
-                    </div>
-                    <div class="coverflow-slide coverflow-right">
-                        <div class="coverflow-slide-inner skeleton"></div>
-                    </div>
-                </div>
+        <div class="hero-carousel-wrapper">
+            <!-- 3D Carousel Container -->
+            <div id="heroCarousel" class="hero-carousel">
+                <!-- Loading Skeleton -->
+                <div class="hero-skeleton-item skeleton" style="transform: translateX(-360px) scale(0.8); opacity: 0.5;"></div>
+                <div class="hero-skeleton-item skeleton" style="transform: translateX(-180px) scale(0.9); opacity: 0.7;"></div>
+                <div class="hero-skeleton-item skeleton" style="z-index: 3;"></div>
+                <div class="hero-skeleton-item skeleton" style="transform: translateX(180px) scale(0.9); opacity: 0.7;"></div>
+                <div class="hero-skeleton-item skeleton" style="transform: translateX(360px) scale(0.8); opacity: 0.5;"></div>
             </div>
-        </div>
-
-        <!-- Thumbnails Navigation -->
-        <div class="mt-6 md:mt-8">
-            <div class="flex justify-center gap-2 px-4 pb-2 overflow-x-auto md:gap-3 thumbnails-scroll" id="heroThumbnails">
-                <!-- Thumbnails will be loaded dynamically -->
-                <?php for ($i = 0; $i < 6; $i++): ?>
-                <div class="flex-shrink-0 w-16 h-16 rounded-lg md:w-20 md:h-20 skeleton"></div>
+            <!-- Dot Indicators -->
+            <div id="heroDots" class="hero-dots">
+                <?php for ($i = 0; $i < 5; $i++): ?>
+                <button class="hero-dot <?= $i === 0 ? 'active' : '' ?>"></button>
                 <?php endfor; ?>
             </div>
         </div>
@@ -166,140 +147,98 @@ require_once __DIR__ . '/includes/header.php';
 <?php
 $scriptsExtra = <<<'SCRIPTS'
 <script>
-// 3D Coverflow Hero Carousel Module
+// 3D Poster Stack Carousel Module
 const HeroSlider = {
     events: [],
     currentIndex: 0,
     autoplayInterval: null,
-    autoplayDelay: 5000, // 5 seconds
+    autoplayDelay: 2000, // 2 seconds
 
     async init() {
         try {
-            // Load homepage featured events
             const response = await AmbiletAPI.get('/events/featured?type=homepage&limit=12');
-            if (response.data && response.data.events && response.data.events.length > 0) {
+            if (response.data && response.data.events && response.data.events.length >= 5) {
                 this.events = response.data.events;
                 this.render();
-                this.renderThumbnails();
-                this.updateSlidePositions();
+                this.renderDots();
+                this.updatePositions();
                 this.bindEvents();
                 this.startAutoplay();
+            } else {
+                const section = document.getElementById('heroSlider');
+                if (section) section.style.display = 'none';
             }
         } catch (error) {
-            console.warn('Failed to load hero slider events:', error);
-            // Hide section if no events
+            console.warn('Failed to load hero events:', error);
             const section = document.getElementById('heroSlider');
             if (section) section.style.display = 'none';
         }
     },
 
     render() {
-        const slidesContainer = document.getElementById('heroSlides');
-        if (!slidesContainer || this.events.length === 0) return;
+        const container = document.getElementById('heroCarousel');
+        if (!container || this.events.length === 0) return;
 
-        // Create coverflow slides - dimensions handled by CSS
-        slidesContainer.innerHTML = this.events.map((event, index) => {
-            const image = getStorageUrl(event.homepage_featured_image || event.featured_image || event.image);
-            const date = new Date(event.starts_at || event.start_date || event.event_date);
-            const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' });
-            const location = event.venue_name || event.venue?.name || event.city || 'Romania';
-            const category = event.category?.name || event.type || 'Eveniment';
-            const priceFrom = event.price_from ? `de la ${event.price_from} Lei` : '';
+        container.innerHTML = this.events.map((event, index) => {
+            const image = getStorageUrl(event.poster_url || event.homepage_featured_image || event.featured_image || event.image);
+            const title = this.escapeHtml(event.title || event.name || 'Eveniment');
+            const city = event.venue_city || event.city || '';
+            const venue = event.venue_name || (event.venue ? event.venue.name : '') || '';
+            const locationText = city ? (venue ? city + ', ' + venue : city) : venue;
+            const priceFrom = event.price_from ? 'de la ' + event.price_from + ' Lei' : '';
+            const isPromoted = event.has_paid_promotion === true;
 
-            return `
-                <div class="coverflow-slide" data-index="${index}">
-                    <a href="/bilete/${event.slug || ''}" class="coverflow-slide-inner">
-                        <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" loading="${index < 3 ? 'eager' : 'lazy'}">
-                        <div class="coverflow-slide-overlay"></div>
-                        ${priceFrom ? `<div class="coverflow-slide-price">${priceFrom}</div>` : ''}
-                        <div class="coverflow-slide-content">
-                            <span class="coverflow-slide-badge">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-                                ${this.escapeHtml(category)}
-                            </span>
-                            <h3 class="coverflow-slide-title">${this.escapeHtml(event.title || event.name || 'Eveniment')}</h3>
-                            <div class="coverflow-slide-meta">
-                                <span class="coverflow-slide-date">
-                                    <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                    ${formattedDate}
-                                </span>
-                                <span class="coverflow-slide-location">
-                                    <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                    ${this.escapeHtml(location)}
-                                </span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            `;
+            return '<div class="hero-item" data-index="' + index + '" style="--r: ' + (index - this.currentIndex) + ';">' +
+                '<a href="/bilete/' + (event.slug || '') + '" class="hero-item-inner">' +
+                    '<img src="' + image + '" alt="' + title + '" loading="' + (index < 5 ? 'eager' : 'lazy') + '">' +
+                    '<div class="hero-item-overlay"></div>' +
+                    (isPromoted ? '<div class="hero-item-promoted"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>Promovat</div>' : '') +
+                    '<div class="hero-item-content">' +
+                        '<h3 class="hero-item-title">' + title + '</h3>' +
+                        '<div class="hero-item-meta">' +
+                            (locationText ? '<span class="hero-item-location"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + this.escapeHtml(locationText) + '</span>' : '') +
+                            (priceFrom ? '<span class="hero-item-price">' + priceFrom + '</span>' : '') +
+                        '</div>' +
+                    '</div>' +
+                '</a>' +
+            '</div>';
         }).join('');
     },
 
-    renderThumbnails() {
-        const thumbnailsContainer = document.getElementById('heroThumbnails');
-        if (!thumbnailsContainer || this.events.length === 0) return;
+    renderDots() {
+        const dotsContainer = document.getElementById('heroDots');
+        if (!dotsContainer) return;
 
-        thumbnailsContainer.innerHTML = this.events.map((event, index) => {
-            const image = getStorageUrl(event.homepage_featured_image || event.featured_image || event.image);
-            return `
-                <div class="thumbnail-item ${index === 0 ? 'active' : ''}" data-index="${index}">
-                    <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" class="object-cover w-16 h-16 md:w-20 md:h-20" loading="lazy">
-                </div>
-            `;
-        }).join('');
+        dotsContainer.innerHTML = this.events.map((_, index) =>
+            '<button class="hero-dot' + (index === 0 ? ' active' : '') + '" data-index="' + index + '"></button>'
+        ).join('');
     },
 
-    updateSlidePositions() {
-        const slides = document.querySelectorAll('.coverflow-slide');
+    updatePositions() {
+        const items = document.querySelectorAll('.hero-item');
         const total = this.events.length;
 
-        slides.forEach((slide, index) => {
-            // Remove all position classes
-            slide.classList.remove('coverflow-far-left', 'coverflow-left', 'coverflow-center', 'coverflow-right', 'coverflow-far-right', 'coverflow-hidden');
-
-            // Calculate relative position
-            let relativePos = index - this.currentIndex;
-
-            // Handle wrapping for circular navigation
-            if (relativePos > total / 2) relativePos -= total;
-            if (relativePos < -total / 2) relativePos += total;
-
-            // Assign position class based on relative position
-            if (relativePos === 0) {
-                slide.classList.add('coverflow-center');
-            } else if (relativePos === -1) {
-                slide.classList.add('coverflow-left');
-            } else if (relativePos === 1) {
-                slide.classList.add('coverflow-right');
-            } else {
-                slide.classList.add('coverflow-hidden');
-            }
+        items.forEach((item, index) => {
+            let r = index - this.currentIndex;
+            // Circular wrapping
+            if (r > total / 2) r -= total;
+            if (r < -total / 2) r += total;
+            item.style.setProperty('--r', r);
         });
 
-        // Update thumbnails
-        const thumbnails = document.querySelectorAll('.thumbnail-item');
-        thumbnails.forEach((thumb, index) => {
-            thumb.classList.toggle('active', index === this.currentIndex);
+        // Update dots
+        const dots = document.querySelectorAll('.hero-dot');
+        dots.forEach((dot, index) => {
+            dot.classList.toggle('active', index === this.currentIndex);
         });
-
-        // Scroll active thumbnail into view WITHOUT scrolling the page
-        const activeThumbnail = thumbnails[this.currentIndex];
-        const thumbnailsContainer = document.getElementById('heroThumbnails');
-        if (activeThumbnail && thumbnailsContainer) {
-            const containerRect = thumbnailsContainer.getBoundingClientRect();
-            const thumbRect = activeThumbnail.getBoundingClientRect();
-
-            // Calculate scroll position to center the thumbnail
-            const scrollLeft = activeThumbnail.offsetLeft - thumbnailsContainer.offsetWidth / 2 + activeThumbnail.offsetWidth / 2;
-            thumbnailsContainer.scrollTo({ left: scrollLeft, behavior: 'smooth' });
-        }
     },
 
     goToSlide(index) {
-        if (index < 0) index = this.events.length - 1;
-        if (index >= this.events.length) index = 0;
+        const total = this.events.length;
+        if (index < 0) index = total - 1;
+        if (index >= total) index = 0;
         this.currentIndex = index;
-        this.updateSlidePositions();
+        this.updatePositions();
     },
 
     next() {
@@ -325,47 +264,30 @@ const HeroSlider = {
     },
 
     bindEvents() {
-        const prevBtn = document.getElementById('heroPrev');
-        const nextBtn = document.getElementById('heroNext');
         const heroSection = document.getElementById('heroSlider');
-        const thumbnailsContainer = document.getElementById('heroThumbnails');
-        const slidesContainer = document.getElementById('heroSlides');
+        const carousel = document.getElementById('heroCarousel');
+        const dotsContainer = document.getElementById('heroDots');
 
-        // Navigation buttons
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => {
-                this.prev();
-                this.startAutoplay();
-            });
-        }
-
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                this.next();
-                this.startAutoplay();
-            });
-        }
-
-        // Thumbnail clicks
-        if (thumbnailsContainer) {
-            thumbnailsContainer.addEventListener('click', (e) => {
-                const thumb = e.target.closest('.thumbnail-item');
-                if (thumb) {
-                    const index = parseInt(thumb.dataset.index, 10);
-                    this.goToSlide(index);
+        // Dot clicks
+        if (dotsContainer) {
+            dotsContainer.addEventListener('click', (e) => {
+                const dot = e.target.closest('.hero-dot');
+                if (dot) {
+                    this.goToSlide(parseInt(dot.dataset.index, 10));
                     this.startAutoplay();
                 }
             });
         }
 
-        // Side slide clicks
-        if (slidesContainer) {
-            slidesContainer.addEventListener('click', (e) => {
-                const slide = e.target.closest('.coverflow-slide');
-                if (slide && !slide.classList.contains('coverflow-center')) {
+        // Click side slides to navigate
+        if (carousel) {
+            carousel.addEventListener('click', (e) => {
+                const item = e.target.closest('.hero-item');
+                if (!item) return;
+                const r = parseFloat(item.style.getPropertyValue('--r'));
+                if (r !== 0) {
                     e.preventDefault();
-                    const index = parseInt(slide.dataset.index, 10);
-                    this.goToSlide(index);
+                    this.goToSlide(parseInt(item.dataset.index, 10));
                     this.startAutoplay();
                 }
             });
@@ -379,15 +301,14 @@ const HeroSlider = {
 
         // Touch/swipe support
         let touchStartX = 0;
-        if (slidesContainer) {
-            slidesContainer.addEventListener('touchstart', (e) => {
+        if (carousel) {
+            carousel.addEventListener('touchstart', (e) => {
                 touchStartX = e.touches[0].clientX;
                 this.stopAutoplay();
             }, { passive: true });
 
-            slidesContainer.addEventListener('touchend', (e) => {
-                const touchEndX = e.changedTouches[0].clientX;
-                const diff = touchStartX - touchEndX;
+            carousel.addEventListener('touchend', (e) => {
+                const diff = touchStartX - e.changedTouches[0].clientX;
                 if (Math.abs(diff) > 50) {
                     if (diff > 0) this.next();
                     else this.prev();
@@ -398,22 +319,8 @@ const HeroSlider = {
 
         // Keyboard navigation
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') {
-                this.prev();
-                this.startAutoplay();
-            } else if (e.key === 'ArrowRight') {
-                this.next();
-                this.startAutoplay();
-            }
-        });
-
-        // Recalculate on resize - no need to recalc sizes, CSS handles it
-        let resizeTimeout;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                this.updateSlidePositions();
-            }, 200);
+            if (e.key === 'ArrowLeft') { this.prev(); this.startAutoplay(); }
+            else if (e.key === 'ArrowRight') { this.next(); this.startAutoplay(); }
         });
     },
 
