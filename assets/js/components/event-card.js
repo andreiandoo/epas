@@ -187,15 +187,15 @@ const AmbiletEventCard = {
                 '<span class="">' + (event.venueCity ? (event.venueName ? '<strong>' + this.escapeHtml(event.venueCity) + '</strong>, ' + this.escapeHtml(event.venueName) : this.escapeHtml(event.venueCity)) : this.escapeHtml(event.venueName)) + '</span>' +
             '</p>' : '';
 
-        return '<a href="' + eventUrl + '" class="overflow-hidden relative transition-all bg-gray-900 border group rounded-md border-gray-800 hover:-translate-y-1 hover:shadow-xl hover:border-transparent hover:scale-105 duration-300 ease-in-out">' +
+        return '<a href="' + eventUrl + '" class="overflow-hidden relative transition-all bg-gray-900 border group rounded-md border-transparent hover:-translate-y-1 hover:shadow-xl hover:scale-105 duration-300 ease-in-out">' +
             '<div class="relative aspect-[2/3] overflow-hidden mobile:aspect-auto">' +
                 '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:hidden object-cover w-full h-full transition-transform duration-300" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '<img src="' + heroSrc + '" alt="' + this.escapeHtml(event.title) + '" class="hidden mobile:block object-cover w-full h-52 transition-transform duration-300 relative" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '<div class="opacity-0 z-10 bg-gradient-to-b from-transparent via-gray-900/70 to-gray-900 w-full h-full bottom-0 absolute transition-opacity duration-250 ease-in-out group-hover:opacity-100 "></div>' +
-                '<div class="absolute z-20 bottom-0 flex items-center gap-x-2 p-2">' +
+                '<div class="absolute z-20 bottom-0 flex items-end gap-x-2 p-2">' +
                     '<div class="flex z-10">' + dateBadgeHtml + '</div>' +
-                    '<div class="opacity-0 flex flex-col transition-opacity duration-250 pb-2 ease-in-out group-hover:opacity-100">' +
-                        '<h3 class="text-sm font-bold leading-snug transition-colors text-white group-hover:text-primary line-clamp-2 mobile:text-xl">' + this.escapeHtml(event.title) + '</h3>' +
+                    '<div class="opacity-0 flex flex-col transition-opacity duration-250 ease-in-out group-hover:opacity-100">' +
+                        '<h3 class="text-sm font-bold leading-snug transition-colors text-white group-hover:text-white line-clamp-2 pb-1 mobile:text-xl">' + this.escapeHtml(event.title) + '</h3>' +
                         locationHtml +
                     '</div>' +
                 '</div>' +

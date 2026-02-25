@@ -63,7 +63,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Categories -->
 <section class="py-8 bg-primary lazy-section" id="categoriesSection" data-lazy-load="categories">
     <div class="px-4 mx-auto max-w-7xl">
-        <h2 class="mb-4 text-lg text-center font-bold md:text-2xl text-secondary">Explorează dupa categorie</h2>
+        <h2 class="mb-4 text-lg text-center font-bold md:text-2xl text-white">Explorează dupa categorie</h2>
 
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 md:gap-4" id="categoriesGrid">
             <!-- Categories will be loaded dynamically -->
@@ -78,38 +78,45 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <!-- Events by City (Combined with Latest Events) -->
-<section class="py-10 bg-white md:py-14 lazy-section" id="cityEventsSection" data-lazy-load="cityEvents">
-    <div class="px-4 mx-auto max-w-7xl">
-        <!-- City Filter Buttons -->
-        <div class="flex flex-wrap gap-2 mb-8" id="cityFilterButtons">
-            <button class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-full city-filter-btn active bg-primary" data-city="">
-                Toate
-            </button>
-            <!-- City buttons will be loaded dynamically -->
-        </div>
-
-        <!-- Events Grid (filtered by city) -->
-        <div class="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="cityEventsGrid">
-            <!-- Events will be loaded dynamically -->
-            <?php for ($i = 0; $i < 10; $i++): ?>
-            <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                <div class="skeleton h-44"></div>
-                <div class="p-4">
-                    <div class="w-1/3 mb-2 skeleton skeleton-text"></div>
-                    <div class="skeleton skeleton-title"></div>
-                    <div class="w-2/3 mt-2 skeleton skeleton-text"></div>
-                </div>
+<section class="lazy-section" id="cityEventsSection" data-lazy-load="cityEvents">
+    <div class="pt-8 pb-4 bg-primary ">
+        <div class="px-4 mx-auto max-w-7xl">
+            <span class="mb-4 text-lg text-center font-bold md:text-2xl text-white">sau dupa oraș</span>
+            <!-- City Filter Buttons -->
+            <div class="flex flex-wrap gap-2 mb-8" id="cityFilterButtons">
+                <button class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-full city-filter-btn active bg-primary" data-city="">
+                    Toate
+                </button>
+                <!-- City buttons will be loaded dynamically -->
             </div>
-            <?php endfor; ?>
         </div>
+    </div>
 
-        <div class="mt-10 text-center">
-            <a href="/evenimente" class="inline-flex items-center gap-2 px-8 py-4 font-bold transition-all border-2 border-primary text-primary rounded-xl hover:bg-primary hover:text-white">
-                Vezi mai multe evenimente
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-            </a>
+    <div class="bg-white py-8 ">
+        <div class="px-4 mx-auto max-w-7xl">
+            <!-- Events Grid (filtered by city) -->
+            <div class="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="cityEventsGrid">
+                <!-- Events will be loaded dynamically -->
+                <?php for ($i = 0; $i < 10; $i++): ?>
+                <div class="overflow-hidden bg-white border rounded-2xl border-border">
+                    <div class="skeleton h-44"></div>
+                    <div class="p-4">
+                        <div class="w-1/3 mb-2 skeleton skeleton-text"></div>
+                        <div class="skeleton skeleton-title"></div>
+                        <div class="w-2/3 mt-2 skeleton skeleton-text"></div>
+                    </div>
+                </div>
+                <?php endfor; ?>
+            </div>
+
+            <div class="mt-10 text-center">
+                <a href="/evenimente" class="inline-flex items-center gap-2 px-8 py-4 font-bold transition-all border-2 border-primary text-primary rounded-xl hover:bg-primary hover:text-white">
+                    Vezi mai multe evenimente
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </a>
+            </div>
         </div>
     </div>
 </section>
@@ -636,9 +643,9 @@ function renderCategories(categories) {
     }
 
     container.innerHTML = categories.slice(0, 6).map(cat => `
-        <a href="/${cat.slug}" class="flex items-center gap-3 py-3 px-6 bg-white border category-pill rounded-lg border-border group">
-            <div class="flex items-center justify-center w-12 h-12 transition-colors md:w-14 md:h-14 bg-primary/10 rounded-xl group-hover:bg-white/20">
-                <span class="text-2xl">${icons[cat.slug] || '🎫'}</span>
+        <a href="/${cat.slug}" class="flex items-center gap-3 py-2 px-3 bg-white border category-pill rounded-lg border-border group">
+            <div class="flex items-center justify-center w-8 h-8 transition-colors bg-primary/10 rounded-lg group-hover:bg-white/20">
+                <span class="text-lg">${icons[cat.slug] || '🎫'}</span>
             </div>
             <span class="text-sm font-semibold transition-colors md:text-base text-secondary group-hover:text-white">${cat.name}</span>
         </a>
