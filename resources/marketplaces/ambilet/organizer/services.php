@@ -351,7 +351,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                             <p class="text-xs text-accent font-semibold mt-1">0.50 RON / email</p>
                                         </div>
                                         <div class="text-right">
-                                            <p class="text-lg font-bold text-accent" id="audience-marketplace-count">~250,000</p>
+                                            <p class="text-lg font-bold text-accent" id="audience-marketplace-count">~0</p>
                                             <p class="text-xs text-muted">utilizatori</p>
                                         </div>
                                     </div>
@@ -396,23 +396,20 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                             <!-- City -->
                             <div>
-                                <label class="label text-xs">Oras <span class="text-muted">(multiselect)</span></label>
-                                <select id="email-filter-city" class="input w-full text-sm" multiple size="4" onchange="updateEmailAudienceCount()">
-                                </select>
+                                <label class="label text-xs">Oras</label>
+                                <div id="email-filter-city" class="searchable-multiselect" data-placeholder="Cauta oras..."></div>
                             </div>
 
                             <!-- Event Type (Category) -->
                             <div>
-                                <label class="label text-xs">Tip Eveniment <span class="text-muted">(multiselect)</span></label>
-                                <select id="email-filter-category" class="input w-full text-sm" multiple size="4" onchange="updateEmailAudienceCount()">
-                                </select>
+                                <label class="label text-xs">Tip Eveniment</label>
+                                <div id="email-filter-category" class="searchable-multiselect" data-placeholder="Cauta categorie..."></div>
                             </div>
 
                             <!-- Music Genre -->
                             <div>
-                                <label class="label text-xs">Gen Muzical <span class="text-muted">(multiselect)</span></label>
-                                <select id="email-filter-genre" class="input w-full text-sm" multiple size="4" onchange="updateEmailAudienceCount()">
-                                </select>
+                                <label class="label text-xs">Gen Muzical</label>
+                                <div id="email-filter-genre" class="searchable-multiselect" data-placeholder="Cauta gen muzical..."></div>
                             </div>
 
                             <!-- Filtered Count -->
@@ -428,9 +425,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             </div>
 
                             <!-- Filter Breakdowns -->
-                            <div id="filter-breakdowns" class="hidden space-y-2">
+                            <div id="filter-breakdowns" class="hidden space-y-2 bg-surface rounded-lg p-3">
+                                <p class="text-xs font-medium text-secondary mb-1">Detalii filtre:</p>
                                 <div id="breakdown-city" class="hidden">
-                                    <p class="text-xs text-muted mb-1">Detalii filtre oras:</p>
                                     <div id="breakdown-city-items" class="space-y-0.5"></div>
                                     <p id="breakdown-without-city" class="text-xs text-blue-600 mt-1"></p>
                                 </div>
@@ -442,6 +439,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 </div>
                                 <div id="breakdown-birthdate" class="hidden">
                                     <p id="breakdown-birthdate-text" class="text-xs text-amber-600"></p>
+                                </div>
+                                <!-- Include partial matches toggle -->
+                                <div id="partial-matches-toggle" class="hidden border-t border-border pt-2 mt-2">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" id="include-partial-matches" class="accent-accent w-4 h-4" onchange="updateEmailAudienceCount()">
+                                        <span class="text-xs text-secondary">Include si utilizatorii care se potrivesc partial (<span id="partial-matches-count">0</span> extra)</span>
+                                    </label>
+                                    <p class="text-[10px] text-muted mt-1 ml-6">Adauga utilizatorii care corespund celorlalte filtre, dar nu au date pentru filtrele care nu se potrivesc</p>
                                 </div>
                             </div>
                         </div>
@@ -830,13 +835,137 @@ let servicePricing = {
 };
 let emailAudiences = {
     own: { count: 0, filtered_count: 0 },
-    marketplace: { count: 250000, filtered_count: 250000 }
+    marketplace: { count: 0, filtered_count: 0 }
 };
 let emailFilterOptions = {
     cities: [],
     categories: [],
     genres: []
 };
+
+// ==================== SEARCHABLE MULTISELECT COMPONENT ====================
+
+const multiselectInstances = {};
+
+function initSearchableMultiselect(containerId, options, onChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = '';
+    const instance = { selected: new Set(), options, onChange };
+    multiselectInstances[containerId] = instance;
+
+    // Selected tags area
+    const tagsArea = document.createElement('div');
+    tagsArea.className = 'flex flex-wrap gap-1 mb-1';
+    tagsArea.id = containerId + '-tags';
+
+    // Search input
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'input w-full text-sm';
+    searchInput.placeholder = container.dataset.placeholder || 'Cauta...';
+
+    // Dropdown list
+    const dropdown = document.createElement('div');
+    dropdown.className = 'hidden absolute z-50 w-full mt-1 bg-white border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto';
+    dropdown.id = containerId + '-dropdown';
+
+    // Wrapper for relative positioning
+    const wrapper = document.createElement('div');
+    wrapper.className = 'relative';
+    wrapper.appendChild(searchInput);
+    wrapper.appendChild(dropdown);
+
+    container.appendChild(tagsArea);
+    container.appendChild(wrapper);
+
+    // Populate dropdown
+    function renderDropdown(filter = '') {
+        dropdown.innerHTML = '';
+        const lowerFilter = filter.toLowerCase();
+        let hasResults = false;
+        options.forEach(opt => {
+            if (lowerFilter && !opt.label.toLowerCase().includes(lowerFilter)) return;
+            hasResults = true;
+            const item = document.createElement('div');
+            item.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-accent/10 flex items-center gap-2 ' +
+                (instance.selected.has(opt.value) ? 'bg-accent/5 text-accent font-medium' : 'text-secondary');
+            const check = instance.selected.has(opt.value) ? '<svg class="w-4 h-4 text-accent flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : '<span class="w-4 h-4 flex-shrink-0"></span>';
+            item.innerHTML = check + '<span>' + opt.label.trim() + '</span>';
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (instance.selected.has(opt.value)) {
+                    instance.selected.delete(opt.value);
+                } else {
+                    instance.selected.add(opt.value);
+                }
+                renderTags();
+                renderDropdown(searchInput.value);
+                if (onChange) onChange();
+            });
+            dropdown.appendChild(item);
+        });
+        if (!hasResults) {
+            const empty = document.createElement('div');
+            empty.className = 'px-3 py-2 text-sm text-muted';
+            empty.textContent = 'Niciun rezultat';
+            dropdown.appendChild(empty);
+        }
+    }
+
+    function renderTags() {
+        tagsArea.innerHTML = '';
+        instance.selected.forEach(val => {
+            const opt = options.find(o => o.value === val);
+            if (!opt) return;
+            const tag = document.createElement('span');
+            tag.className = 'inline-flex items-center gap-1 px-2 py-0.5 bg-accent/10 text-accent text-xs rounded-md';
+            tag.innerHTML = '<span>' + opt.label.trim() + '</span><button type="button" class="hover:text-red-500">&times;</button>';
+            tag.querySelector('button').addEventListener('click', (e) => {
+                e.stopPropagation();
+                instance.selected.delete(val);
+                renderTags();
+                renderDropdown(searchInput.value);
+                if (onChange) onChange();
+            });
+            tagsArea.appendChild(tag);
+        });
+    }
+
+    // Events
+    searchInput.addEventListener('focus', () => {
+        renderDropdown(searchInput.value);
+        dropdown.classList.remove('hidden');
+    });
+    searchInput.addEventListener('input', () => {
+        renderDropdown(searchInput.value);
+        dropdown.classList.remove('hidden');
+    });
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    renderDropdown();
+}
+
+function getMultiselectValues(containerId) {
+    const instance = multiselectInstances[containerId];
+    return instance ? Array.from(instance.selected) : [];
+}
+
+function clearMultiselect(containerId) {
+    const instance = multiselectInstances[containerId];
+    if (instance) {
+        instance.selected.clear();
+        const tagsArea = document.getElementById(containerId + '-tags');
+        if (tagsArea) tagsArea.innerHTML = '';
+    }
+}
+
+// ==================== END SEARCHABLE MULTISELECT ====================
 
 document.addEventListener('DOMContentLoaded', function() {
     loadPricing();
@@ -1414,47 +1543,59 @@ function setupPaymentMethodToggle() {
 
 async function loadEmailFilterOptions() {
     try {
-        // Load cities
-        const citiesRes = await AmbiletAPI.get('/cities');
-        if (citiesRes.success && citiesRes.data.cities) {
-            emailFilterOptions.cities = citiesRes.data.cities;
-            const citySelect = document.getElementById('email-filter-city');
-            citiesRes.data.cities.forEach(city => {
-                const opt = document.createElement('option');
-                opt.value = city.slug || city.id;
-                opt.textContent = city.name;
-                citySelect.appendChild(opt);
-            });
-        }
-
-        // Load categories
-        const catRes = await AmbiletAPI.get('/event-categories');
-        if (catRes.success && catRes.data.categories) {
-            emailFilterOptions.categories = catRes.data.categories;
-            const catSelect = document.getElementById('email-filter-category');
-            catRes.data.categories.forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat.slug || cat.id;
-                opt.textContent = cat.name;
-                catSelect.appendChild(opt);
-            });
-        }
-
-        // Load genres
-        const genreRes = await AmbiletAPI.get('/event-genres');
-        if (genreRes.success && genreRes.data.genres) {
-            emailFilterOptions.genres = genreRes.data.genres;
-            const genreSelect = document.getElementById('email-filter-genre');
-            genreRes.data.genres.forEach(genre => {
-                const opt = document.createElement('option');
-                opt.value = genre.slug || genre.id;
-                opt.textContent = genre.name;
-                genreSelect.appendChild(opt);
-            });
+        // Load cities (request all with per_page=200)
+        const citiesRes = await AmbiletAPI.get('/cities', { per_page: 200 });
+        const cities = citiesRes?.data || citiesRes?.cities || [];
+        if (Array.isArray(cities) && cities.length > 0) {
+            emailFilterOptions.cities = cities;
+            initSearchableMultiselect('email-filter-city', cities.map(c => ({
+                value: c.name,
+                label: c.name
+            })), updateEmailAudienceCount);
         }
     } catch (e) {
-        console.log('Email filter options will load when API is available');
+        console.log('Failed to load cities:', e.message);
     }
+
+    try {
+        // Load categories (use ID as value for DB filtering)
+        const catRes = await AmbiletAPI.get('/event-categories');
+        const categories = catRes?.categories || catRes?.data?.categories || catRes?.data || [];
+        if (Array.isArray(categories) && categories.length > 0) {
+            emailFilterOptions.categories = categories;
+            // Flatten children into parent list
+            const flatCats = [];
+            categories.forEach(cat => {
+                flatCats.push({ value: String(cat.id), label: cat.name });
+                if (cat.children) {
+                    cat.children.forEach(child => {
+                        flatCats.push({ value: String(child.id), label: '  ' + child.name });
+                    });
+                }
+            });
+            initSearchableMultiselect('email-filter-category', flatCats, updateEmailAudienceCount);
+        }
+    } catch (e) {
+        console.log('Failed to load categories:', e.message);
+    }
+
+    try {
+        // Load genres (use ID as value for DB filtering)
+        const genreRes = await AmbiletAPI.get('/event-genres');
+        const genres = genreRes?.genres || genreRes?.data?.genres || genreRes?.data || [];
+        if (Array.isArray(genres) && genres.length > 0) {
+            emailFilterOptions.genres = genres;
+            initSearchableMultiselect('email-filter-genre', genres.map(g => ({
+                value: String(g.id),
+                label: g.name
+            })), updateEmailAudienceCount);
+        }
+    } catch (e) {
+        console.log('Failed to load genres:', e.message);
+    }
+
+    // Load initial audience counts
+    updateEmailAudienceCount();
 }
 
 function setupEmailAudienceToggle() {
@@ -1481,16 +1622,10 @@ async function updateEmailAudienceCount() {
     const audienceType = document.querySelector('input[name="email_audience"]:checked')?.value || 'own';
     const eventId = document.getElementById('service-event').value;
 
-    // Get multiselect values as arrays
-    const getSelectedValues = (selectId) => {
-        const select = document.getElementById(selectId);
-        return Array.from(select.selectedOptions).map(opt => opt.value).filter(v => v);
-    };
-
-    // Collect filters
-    const cities = getSelectedValues('email-filter-city');
-    const categories = getSelectedValues('email-filter-category');
-    const genres = getSelectedValues('email-filter-genre');
+    // Get values from searchable multiselects
+    const cities = getMultiselectValues('email-filter-city');
+    const categories = getMultiselectValues('email-filter-category');
+    const genres = getMultiselectValues('email-filter-genre');
 
     const filters = {
         audience_type: audienceType,
@@ -1508,8 +1643,24 @@ async function updateEmailAudienceCount() {
     try {
         const response = await AmbiletAPI.get('/organizer/services/email-audiences', filters);
         if (response.success && response.data) {
-            const count = response.data.filtered_count || 0;
+            let count = response.data.filtered_count || 0;
             const baseCount = response.data.total_count || 0;
+            const fc = response.data.filter_counts || {};
+
+            // Calculate partial matches extra count
+            let partialExtra = 0;
+            const maxWithout = Math.max(
+                fc.without_city || 0,
+                fc.without_category || 0,
+                fc.without_genre || 0
+            );
+            partialExtra = Math.max(0, maxWithout - count);
+
+            // Check if include partial matches is enabled
+            const includePartial = document.getElementById('include-partial-matches')?.checked;
+            if (includePartial && partialExtra > 0) {
+                count = maxWithout;
+            }
 
             // Update UI counts
             document.getElementById('audience-filtered-count').textContent = AmbiletUtils.formatNumber(count);
@@ -1533,10 +1684,10 @@ async function updateEmailAudienceCount() {
             document.getElementById('email-cost-estimate').textContent = AmbiletUtils.formatCurrency(totalCost);
 
             // Show filter breakdowns
-            displayFilterBreakdowns(response.data.filter_counts || {}, baseCount);
+            displayFilterBreakdowns(fc, baseCount, partialExtra);
         }
     } catch (e) {
-        console.log('Using default audience counts');
+        console.log('Audience count error:', e.message);
         // Use cached values
         const count = emailAudiences[audienceType]?.filtered_count || 0;
         document.getElementById('audience-filtered-count').textContent = AmbiletUtils.formatNumber(count);
@@ -1552,17 +1703,15 @@ async function updateEmailAudienceCount() {
 function resetEmailFilters() {
     document.getElementById('email-filter-age-min').value = '';
     document.getElementById('email-filter-age-max').value = '';
-    // Clear multiselect selections
-    const citySelect = document.getElementById('email-filter-city');
-    const categorySelect = document.getElementById('email-filter-category');
-    const genreSelect = document.getElementById('email-filter-genre');
-    Array.from(citySelect.options).forEach(opt => opt.selected = false);
-    Array.from(categorySelect.options).forEach(opt => opt.selected = false);
-    Array.from(genreSelect.options).forEach(opt => opt.selected = false);
+    clearMultiselect('email-filter-city');
+    clearMultiselect('email-filter-category');
+    clearMultiselect('email-filter-genre');
+    const partialCheckbox = document.getElementById('include-partial-matches');
+    if (partialCheckbox) partialCheckbox.checked = false;
     updateEmailAudienceCount();
 }
 
-function displayFilterBreakdowns(filterCounts, totalCount) {
+function displayFilterBreakdowns(filterCounts, totalCount, partialExtra) {
     const container = document.getElementById('filter-breakdowns');
     const hasData = filterCounts && Object.keys(filterCounts).length > 0;
 
@@ -1577,17 +1726,20 @@ function displayFilterBreakdowns(filterCounts, totalCount) {
     const citySection = document.getElementById('breakdown-city');
     const cityItems = document.getElementById('breakdown-city-items');
     const withoutCityEl = document.getElementById('breakdown-without-city');
-    if (filterCounts.by_city && Object.keys(filterCounts.by_city).length > 0) {
+    if (filterCounts.by_city && typeof filterCounts.by_city === 'object' && Object.keys(filterCounts.by_city).length > 0) {
         citySection.classList.remove('hidden');
         cityItems.innerHTML = '';
-        for (const [city, count] of Object.entries(filterCounts.by_city)) {
+        for (const [cityKey, count] of Object.entries(filterCounts.by_city)) {
+            if (cityKey === undefined || cityKey === 'undefined') continue;
             const div = document.createElement('div');
             div.className = 'flex justify-between text-xs';
-            div.innerHTML = `<span class="text-muted">${city}</span><span class="font-medium text-secondary">${AmbiletUtils.formatNumber(count)}</span>`;
+            const cityName = String(cityKey);
+            const countStr = typeof count === 'number' ? AmbiletUtils.formatNumber(count) : '0';
+            div.innerHTML = '<span class="text-muted">' + cityName + '</span><span class="font-medium text-secondary">' + countStr + '</span>';
             cityItems.appendChild(div);
         }
         if (filterCounts.without_city !== undefined) {
-            withoutCityEl.textContent = `Fara filtru oras: ${AmbiletUtils.formatNumber(filterCounts.without_city)} se potrivesc partial`;
+            withoutCityEl.textContent = 'Fara filtru oras: ' + AmbiletUtils.formatNumber(filterCounts.without_city) + ' se potrivesc partial';
             withoutCityEl.classList.remove('hidden');
         } else {
             withoutCityEl.classList.add('hidden');
@@ -1601,7 +1753,7 @@ function displayFilterBreakdowns(filterCounts, totalCount) {
     const withoutCatEl = document.getElementById('breakdown-without-category');
     if (filterCounts.without_category !== undefined) {
         catSection.classList.remove('hidden');
-        withoutCatEl.textContent = `Fara filtru categorie: ${AmbiletUtils.formatNumber(filterCounts.without_category)} se potrivesc partial`;
+        withoutCatEl.textContent = 'Fara filtru categorie: ' + AmbiletUtils.formatNumber(filterCounts.without_category) + ' se potrivesc partial';
     } else {
         catSection.classList.add('hidden');
     }
@@ -1611,7 +1763,7 @@ function displayFilterBreakdowns(filterCounts, totalCount) {
     const withoutGenreEl = document.getElementById('breakdown-without-genre');
     if (filterCounts.without_genre !== undefined) {
         genreSection.classList.remove('hidden');
-        withoutGenreEl.textContent = `Fara filtru gen muzical: ${AmbiletUtils.formatNumber(filterCounts.without_genre)} se potrivesc partial`;
+        withoutGenreEl.textContent = 'Fara filtru gen muzical: ' + AmbiletUtils.formatNumber(filterCounts.without_genre) + ' se potrivesc partial';
     } else {
         genreSection.classList.add('hidden');
     }
@@ -1622,9 +1774,18 @@ function displayFilterBreakdowns(filterCounts, totalCount) {
     if (filterCounts.with_birth_date !== undefined && totalCount > 0) {
         const pct = Math.round((filterCounts.with_birth_date / totalCount) * 100);
         bdSection.classList.remove('hidden');
-        bdText.textContent = `${AmbiletUtils.formatNumber(filterCounts.with_birth_date)} din ${AmbiletUtils.formatNumber(totalCount)} (${pct}%) au data nasterii setata (relevanta pentru filtru varsta)`;
+        bdText.textContent = AmbiletUtils.formatNumber(filterCounts.with_birth_date) + ' din ' + AmbiletUtils.formatNumber(totalCount) + ' (' + pct + '%) au data nasterii setata (relevanta pentru filtru varsta)';
     } else {
         bdSection.classList.add('hidden');
+    }
+
+    // Partial matches toggle
+    const partialToggle = document.getElementById('partial-matches-toggle');
+    if (partialExtra > 0) {
+        partialToggle.classList.remove('hidden');
+        document.getElementById('partial-matches-count').textContent = AmbiletUtils.formatNumber(partialExtra);
+    } else {
+        partialToggle.classList.add('hidden');
     }
 }
 
@@ -1679,10 +1840,6 @@ document.getElementById('service-form').addEventListener('submit', async functio
             const emailAudienceType = document.querySelector('input[name="email_audience"]:checked').value;
             const emailDate = document.getElementById('email-send-date').value;
             const emailTime = document.getElementById('email-send-time').value || '10:00';
-            const getSelectedVals = (selectId) => {
-                const select = document.getElementById(selectId);
-                return Array.from(select.selectedOptions).map(opt => opt.value).filter(v => v);
-            };
             data.config = {
                 audience_type: emailAudienceType,
                 template: document.querySelector('input[name="email_template"]:checked')?.value || 'classic',
@@ -1691,9 +1848,9 @@ document.getElementById('service-form').addEventListener('submit', async functio
                 filters: {
                     age_min: document.getElementById('email-filter-age-min').value || null,
                     age_max: document.getElementById('email-filter-age-max').value || null,
-                    cities: getSelectedVals('email-filter-city'),
-                    categories: getSelectedVals('email-filter-category'),
-                    genres: getSelectedVals('email-filter-genre')
+                    cities: getMultiselectValues('email-filter-city'),
+                    categories: getMultiselectValues('email-filter-category'),
+                    genres: getMultiselectValues('email-filter-genre')
                 }
             };
             break;

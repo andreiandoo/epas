@@ -79,11 +79,11 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- Events by City (Combined with Latest Events) -->
 <section class="lazy-section" id="cityEventsSection" data-lazy-load="cityEvents">
-    <div class="pt-8 pb-4 bg-primary ">
+    <div class="pb-2 bg-primary ">
         <div class="px-4 mx-auto max-w-7xl">
-            <span class="mb-4 text-lg text-center font-bold md:text-2xl text-white">sau dupa oraș</span>
+            <span class="mb-4 block w-full text-lg text-center font-bold md:text-2xl text-white">sau dupa oraș</span>
             <!-- City Filter Buttons -->
-            <div class="flex flex-wrap gap-2 mb-8" id="cityFilterButtons">
+            <div class="flex flex-wrap justify-center gap-2 mb-8" id="cityFilterButtons">
                 <button class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-full city-filter-btn active bg-primary" data-city="">
                     Toate
                 </button>
