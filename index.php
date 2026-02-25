@@ -43,8 +43,8 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- Promoted & Recommended Events -->
 <section class="py-10 bg-gray-900 md:py-14">
-    <div class="px-4 mx-auto max-w-7xl">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 md:gap-5" id="promotedEventsGrid">
+    <div class="px-4 mx-auto">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-6 lg:grid-cols-8 md:gap-5" id="promotedEventsGrid">
             <!-- Promoted events will be loaded dynamically -->
             <?php for ($i = 0; $i < 12; $i++): ?>
             <div class="overflow-hidden bg-white border rounded-xl border-border">
