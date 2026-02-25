@@ -143,7 +143,7 @@ const AmbiletEventCard = {
             priceHtml = '<span class="text-sm font-bold text-red-500">SOLD OUT</span>';
             buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-gray-400 rounded-lg text-white text-sm font-semibold cursor-not-allowed" disabled>Indisponibil</button>' : '';
         } else {
-            priceHtml = '<div class="text-xs text-muted">de la <strong class="text-lg font-bold text-success">' + event.priceFormatted + '</strong></div>';
+            priceHtml = '<div class="text-xs text-muted">De la <strong class="text-lg font-bold text-success">' + event.priceFormatted + '</strong></div>';
             buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-secondary hover:bg-secondary/90 rounded-lg text-white text-sm font-semibold transition-all">Cumpără bilete</button>' : '';
         }
 
@@ -237,7 +237,7 @@ const AmbiletEventCard = {
                     '</div>' +
                     '<div class="flex items-center justify-between">' +
                         '<div>' +
-                            '<span class="text-sm text-muted">de la</span>' +
+                            '<span class="text-sm text-muted">De la</span>' +
                             '<span class="text-2xl font-bold text-primary ml-1">' + event.priceFormatted + '</span>' +
                         '</div>' +
                         '<button class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition-colors">' +
@@ -433,7 +433,7 @@ const AmbiletEventCard = {
             venueCity: venueCity,
             location: venueCity ? (venueName) : venueName, // + ', ' + venueCity if both exist
             minPrice: minPrice,
-            priceFormatted: minPrice > 0 ? (hasMultipleTicketTypes ? 'de la ' : 'Bilete: ') + minPrice + ' lei' : 'Gratuit',
+            priceFormatted: minPrice > 0 ? (hasMultipleTicketTypes ? 'De la ' : 'Bilete: ') + minPrice + ' lei' : 'Gratuit',
             categoryName: categoryName,
             isSoldOut: apiEvent.is_sold_out || false,
             isCancelled: apiEvent.is_cancelled || false,

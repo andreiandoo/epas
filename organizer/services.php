@@ -1016,9 +1016,9 @@ async function loadEvents() {
 
 async function loadActiveServices() {
     try {
-        const response = await AmbiletAPI.get('/organizer/services');
+        const response = await AmbiletAPI.get('/organizer/services/orders');
         if (response.success) {
-            activeServices = response.data.services || [];
+            activeServices = response.data.data || response.data.services || [];
             renderActiveServices();
         }
     } catch (e) {
@@ -1062,17 +1062,27 @@ function renderActiveServices() {
         campaign: 'purple-600'
     };
 
-    container.innerHTML = activeServices.map(s => `
+    const statusMap = {
+        active: { label: 'Activ', color: 'success' },
+        pending_payment: { label: 'Asteapta plata', color: 'warning' },
+        pending: { label: 'In procesare', color: 'warning' },
+        completed: { label: 'Finalizat', color: 'muted' },
+        cancelled: { label: 'Anulat', color: 'muted' },
+    };
+
+    container.innerHTML = activeServices.map(s => {
+        const statusInfo = statusMap[s.status] || { label: s.status, color: 'muted' };
+        return `
         <tr class="hover:bg-surface/50">
             <td class="px-6 py-4">
-                <span class="px-3 py-1 bg-${typeColors[s.type]}/10 text-${typeColors[s.type]} text-sm font-medium rounded-full">${typeLabels[s.type]}</span>
+                <span class="px-3 py-1 bg-${typeColors[s.type] || 'muted'}/10 text-${typeColors[s.type] || 'muted'} text-sm font-medium rounded-full">${typeLabels[s.type] || s.type}</span>
             </td>
-            <td class="px-6 py-4 font-medium text-secondary">${s.event_title}</td>
-            <td class="px-6 py-4 text-sm text-muted">${s.details}</td>
-            <td class="px-6 py-4 text-sm text-muted">${AmbiletUtils.formatDate(s.start_date)} - ${AmbiletUtils.formatDate(s.end_date)}</td>
+            <td class="px-6 py-4 font-medium text-secondary">${s.event_name || '-'}</td>
+            <td class="px-6 py-4 text-sm text-muted">${s.details || '-'}</td>
+            <td class="px-6 py-4 text-sm text-muted">${AmbiletUtils.formatDate(s.service_start_date)} - ${AmbiletUtils.formatDate(s.service_end_date)}</td>
             <td class="px-6 py-4">
-                <span class="px-3 py-1 bg-${s.status === 'active' ? 'success' : s.status === 'pending' ? 'warning' : 'muted'}/10 text-${s.status === 'active' ? 'success' : s.status === 'pending' ? 'warning' : 'muted'} text-sm rounded-full">
-                    ${s.status === 'active' ? 'Activ' : s.status === 'pending' ? 'In asteptare' : 'Finalizat'}
+                <span class="px-3 py-1 bg-${statusInfo.color}/10 text-${statusInfo.color} text-sm rounded-full">
+                    ${statusInfo.label}
                 </span>
             </td>
             <td class="px-6 py-4 text-right">
@@ -1081,7 +1091,8 @@ function renderActiveServices() {
                 </button>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function openServiceModal(type) {

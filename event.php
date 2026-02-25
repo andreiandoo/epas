@@ -337,7 +337,7 @@ require_once __DIR__ . '/includes/head.php';
             <button onclick="openTicketDrawer()" class="flex items-center justify-center w-full gap-3 py-4 text-lg font-bold bg-white text-primary rounded-xl">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 <span>Cumpără bilete</span>
-                <span id="mobileMinPrice" class="px-2 py-1 text-sm font-semibold rounded-lg bg-white/20">de la -- lei</span>
+                <span id="mobileMinPrice" class="px-2 py-1 text-sm font-semibold rounded-lg bg-white/20">De la -- lei</span>
             </button>
         </div>
     </main>
@@ -547,7 +547,7 @@ require_once __DIR__ . '/includes/head.php';
                     if (prices.length && minPriceEl) {
                         const minPrice = Math.min(...prices);
                         if (minPrice > 0) {
-                            minPriceEl.textContent = 'de la ' + minPrice.toFixed(0) + ' lei';
+                            minPriceEl.textContent = 'De la ' + minPrice.toFixed(0) + ' lei';
                         } else {
                             minPriceEl.textContent = 'Gratuit';
                         }
