@@ -17,7 +17,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Carousel - 3D Poster Stack -->
-<section class="relative py-8 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 mt-18 pt-28 mobile:pt-10" id="heroSlider">
+<section class="relative py-8 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 mt-18 pt-28 mobile:pt-10" id="heroSlider">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="hero-carousel-wrapper">
             <!-- 3D Carousel Container -->
@@ -42,9 +42,9 @@ require_once __DIR__ . '/includes/header.php';
 <?php // require_once __DIR__ . '/includes/featured-carousel.php'; ?>
 
 <!-- Promoted & Recommended Events -->
-<section class="py-10 bg-white md:py-14">
-    <div class="px-4 mx-auto max-w-7xl">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 md:gap-5" id="promotedEventsGrid">
+<section class="py-10 bg-gray-900 md:py-14">
+    <div class="px-4 mx-auto">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-6 lg:grid-cols-8 md:gap-5" id="promotedEventsGrid">
             <!-- Promoted events will be loaded dynamically -->
             <?php for ($i = 0; $i < 12; $i++): ?>
             <div class="overflow-hidden bg-white border rounded-xl border-border">
@@ -223,7 +223,14 @@ const HeroSlider = {
             // Circular wrapping
             if (r > total / 2) r -= total;
             if (r < -total / 2) r += total;
+
+            const abs = Math.abs(r);
             item.style.setProperty('--r', r);
+            item.style.setProperty('--abs', abs);
+            item.style.zIndex = 10 - abs;
+            item.style.opacity = abs > 2 ? 0 : 1;
+            item.style.filter = 'brightness(' + (1 - 0.15 * abs) + ')';
+            item.style.pointerEvents = abs > 2 ? 'none' : 'auto';
         });
 
         // Update dots
