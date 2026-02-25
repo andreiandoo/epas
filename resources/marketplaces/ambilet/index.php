@@ -23,11 +23,11 @@ require_once __DIR__ . '/includes/header.php';
             <!-- 3D Carousel Container -->
             <div id="heroCarousel" class="hero-carousel">
                 <!-- Loading Skeleton -->
-                <div class="hero-skeleton-item skeleton" style="transform: translateX(-360px) scale(0.8); opacity: 0.5;"></div>
-                <div class="hero-skeleton-item skeleton" style="transform: translateX(-180px) scale(0.9); opacity: 0.7;"></div>
+                <div class="hero-skeleton-item skeleton" style="transform: rotateY(20deg) translateX(240px); opacity: 0.4;"></div>
+                <div class="hero-skeleton-item skeleton" style="transform: rotateY(10deg) translateX(120px); opacity: 0.6;"></div>
                 <div class="hero-skeleton-item skeleton" style="z-index: 3;"></div>
-                <div class="hero-skeleton-item skeleton" style="transform: translateX(180px) scale(0.9); opacity: 0.7;"></div>
-                <div class="hero-skeleton-item skeleton" style="transform: translateX(360px) scale(0.8); opacity: 0.5;"></div>
+                <div class="hero-skeleton-item skeleton" style="transform: rotateY(-10deg) translateX(-120px); opacity: 0.6;"></div>
+                <div class="hero-skeleton-item skeleton" style="transform: rotateY(-20deg) translateX(-240px); opacity: 0.4;"></div>
             </div>
             <!-- Dot Indicators -->
             <div id="heroDots" class="hero-dots">
@@ -44,7 +44,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Promoted & Recommended Events -->
 <section class="py-10 bg-white md:py-14">
     <div class="px-4 mx-auto max-w-7xl">
-        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 md:gap-5" id="promotedEventsGrid">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 md:gap-5" id="promotedEventsGrid">
             <!-- Promoted events will be loaded dynamically -->
             <?php for ($i = 0; $i < 12; $i++): ?>
             <div class="overflow-hidden bg-white border rounded-xl border-border">
@@ -89,7 +89,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <!-- Events Grid (filtered by city) -->
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="cityEventsGrid">
+        <div class="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="cityEventsGrid">
             <!-- Events will be loaded dynamically -->
             <?php for ($i = 0; $i < 10; $i++): ?>
             <div class="overflow-hidden bg-white border rounded-2xl border-border">
@@ -157,7 +157,7 @@ const HeroSlider = {
     async init() {
         try {
             const response = await AmbiletAPI.get('/events/featured?type=homepage&limit=12');
-            if (response.data && response.data.events && response.data.events.length >= 5) {
+            if (response.data && response.data.events && response.data.events.length > 0) {
                 this.events = response.data.events;
                 this.render();
                 this.renderDots();
@@ -180,12 +180,12 @@ const HeroSlider = {
         if (!container || this.events.length === 0) return;
 
         container.innerHTML = this.events.map((event, index) => {
-            const image = getStorageUrl(event.poster_url || event.homepage_featured_image || event.featured_image || event.image);
+            const image = getStorageUrl(event.homepage_featured_image || event.featured_image || event.hero_image_url || event.image);
             const title = this.escapeHtml(event.title || event.name || 'Eveniment');
             const city = event.venue_city || event.city || '';
             const venue = event.venue_name || (event.venue ? event.venue.name : '') || '';
             const locationText = city ? (venue ? city + ', ' + venue : city) : venue;
-            const priceFrom = event.price_from ? 'de la ' + event.price_from + ' Lei' : '';
+            const priceFrom = event.price_from ? 'De la ' + event.price_from + ' Lei' : '';
             const isPromoted = event.has_paid_promotion === true;
 
             return '<div class="hero-item" data-index="' + index + '" style="--r: ' + (index - this.currentIndex) + ';">' +
