@@ -194,7 +194,7 @@ const AmbiletEventCard = {
                 statusBadge +
             '</div>' +
             typeBadge +
-            '<div class="flex items-center gap-x-2 p-2 bg-white">' +
+            '<div class="flex items-center gap-x-2 p-2">' +
                 '<div class="flex z-10">' + dateBadgeHtml + '</div>' +
                 '<div class="flex flex-col truncate">' +
                     '<h3 class="text-sm font-bold leading-snug transition-colors text-white group-hover:text-primary line-clamp-2 truncate mobile:text-xl">' + this.escapeHtml(event.title) + '</h3>' +

@@ -223,7 +223,14 @@ const HeroSlider = {
             // Circular wrapping
             if (r > total / 2) r -= total;
             if (r < -total / 2) r += total;
+
+            const abs = Math.abs(r);
             item.style.setProperty('--r', r);
+            item.style.setProperty('--abs', abs);
+            item.style.zIndex = 10 - abs;
+            item.style.opacity = abs > 2 ? 0 : 1;
+            item.style.filter = 'brightness(' + (1 - 0.15 * abs) + ')';
+            item.style.pointerEvents = abs > 2 ? 'none' : 'auto';
         });
 
         // Update dots
