@@ -77,7 +77,7 @@ const AmbiletEventCard = {
         const heroSrc = getStorageUrl(event.heroImage || event.image);
 
         return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-lg border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
-            '<div class="relative h-40 overflow-hidden">' +
+            '<div class="relative h-40 mobile:h-64 overflow-hidden">' +
                 '<picture>' +
                     '<source media="(min-width: 768px)" srcset="' + heroSrc + '">' +
                     '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-lg rounded-tr-lg" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
@@ -100,7 +100,7 @@ const AmbiletEventCard = {
                             (event.isCancelled ? 'Anulat' : event.isPostponed ? 'Amânat' : event.isSoldOut ? 'Sold Out' : '') +
                         '</span>' +
                         (showCategory && event.categoryName ?
-                            '<span class="cat-pill font-semibold text-white uppercase rounded-lg bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
+                            '<span class="mobile:hidden cat-pill font-semibold text-white uppercase rounded-lg bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
                             '') +
                     '</div>' : '') +
             '</div>' +
@@ -150,18 +150,21 @@ const AmbiletEventCard = {
         // Date badge
         let dateBadgeHtml;
         if (event.isDateRange && event.dateRangeFormatted) {
-            dateBadgeHtml = '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
-                '<span class="block text-xs font-semibold leading-tight">' + this.escapeHtml(event.dateRangeFormatted) + '</span>' +
+            dateBadgeHtml = '<div class="px-2 py-1 text-center text-white shadow-lg bg-primary rounded-md">' +
+                '<span class="block text-xs font-semibold leading-tight mobile:text-sm">' + this.escapeHtml(event.dateRangeFormatted) + '</span>' +
             '</div>';
         } else {
-            dateBadgeHtml = '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
-                '<span class="block text-lg font-bold leading-none">' + event.day + '</span>' +
-                '<span class="block text-[10px] uppercase tracking-wide mt-0.5">' + event.month + '</span>' +
+            dateBadgeHtml = '<div class="px-2 py-1 text-center text-white shadow-lg bg-primary rounded-md">' +
+                '<span class="block text-lg font-bold leading-none mobile:text-xl">' + event.day + '</span>' +
+                '<span class="block text-[10px] uppercase tracking-wide mt-0.5 mobile:text-sm">' + event.month + '</span>' +
             '</div>';
         }
 
         // Poster image only (vertical)
         const posterSrc = getStorageUrl(event.posterImage || event.image);
+
+        // Normal image only (horizontal fallback)
+        const heroSrc = getStorageUrl(event.heroImage || event.image);
 
         // Type bar: gold for Promovat, red for Recomandat
         let typeBadge;
@@ -179,21 +182,24 @@ const AmbiletEventCard = {
 
         // Location display
         const locationHtml = (event.venueCity || event.venueName) ?
-            '<p class="px-3 text-xs text-muted flex items-center gap-1">' +
+            '<p class="text-xs text-muted flex items-center gap-1 mobile:text-base">' +
                 '<svg class="flex-shrink-0 w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
-                '<span class="truncate">' + this.escapeHtml(event.venueCity ? (event.venueName ? event.venueCity + ', ' + event.venueName : event.venueCity) : event.venueName) + '</span>' +
+                '<span class="truncate">' + (event.venueCity ? (event.venueName ? '<strong>' + this.escapeHtml(event.venueCity) + '</strong>, ' + this.escapeHtml(event.venueName) : this.escapeHtml(event.venueCity)) : this.escapeHtml(event.venueName)) + '</span>' +
             '</p>' : '';
 
-        return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary">' +
-            '<div class="relative aspect-[2/3] overflow-hidden">' +
-                '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
-                '<div class="absolute top-3 left-3 z-10">' + dateBadgeHtml + '</div>' +
+        return '<a href="' + eventUrl + '" class="overflow-hidden relative transition-all bg-gray-900 border group rounded-md border-gray-800 hover:-translate-y-1 hover:shadow-xl hover:border-primary">' +
+            '<div class="relative aspect-[2/3] overflow-hidden mobile:aspect-auto">' +
+                '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:hidden object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                '<img src="' + heroSrc + '" alt="' + this.escapeHtml(event.title) + '" class="hidden mobile:block object-cover w-full h-52 transition-transform duration-300" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 statusBadge +
             '</div>' +
             typeBadge +
-            '<div class="px-3 py-2">' +
-                '<h3 class="text-sm font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + this.escapeHtml(event.title) + '</h3>' +
-                locationHtml +
+            '<div class="flex items-center gap-x-2 p-2">' +
+                '<div class="flex z-10">' + dateBadgeHtml + '</div>' +
+                '<div class="flex flex-col truncate">' +
+                    '<h3 class="text-sm font-bold leading-snug transition-colors text-white group-hover:text-primary line-clamp-2 truncate mobile:text-xl">' + this.escapeHtml(event.title) + '</h3>' +
+                    locationHtml +
+                '</div>' +
             '</div>' +
         '</a>';
     },
