@@ -191,16 +191,17 @@ const AmbiletEventCard = {
             '<div class="relative aspect-[2/3] overflow-hidden mobile:aspect-auto">' +
                 '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:hidden object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '<img src="' + heroSrc + '" alt="' + this.escapeHtml(event.title) + '" class="hidden mobile:block object-cover w-full h-52 transition-transform duration-300" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                '<div class="opacity-0 bg-gradient-to-b from-transparent via-gray-900/50 to-gray-900/90 w-full h-full absolute transition-opacity duration-250 ease-in-out group-hover:opacity-100 "></div>' +
+                '<div class="absolute z-20 bottom-0 flex items-center gap-x-2 p-2">' +
+                    '<div class="flex z-10">' + dateBadgeHtml + '</div>' +
+                    '<div class="opacity-0 flex flex-col truncate transition-opacity duration-250  ease-in-out group-hover:opacity-100">' +
+                        '<h3 class="text-sm font-bold leading-snug transition-colors text-white group-hover:text-primary line-clamp-2 truncate mobile:text-xl">' + this.escapeHtml(event.title) + '</h3>' +
+                        locationHtml +
+                    '</div>' +
+                '</div>' +
                 statusBadge +
             '</div>' +
             typeBadge +
-            '<div class="flex items-center gap-x-2 p-2">' +
-                '<div class="flex z-10">' + dateBadgeHtml + '</div>' +
-                '<div class="flex flex-col truncate">' +
-                    '<h3 class="text-sm font-bold leading-snug transition-colors text-white group-hover:text-primary line-clamp-2 truncate mobile:text-xl">' + this.escapeHtml(event.title) + '</h3>' +
-                    locationHtml +
-                '</div>' +
-            '</div>' +
         '</a>';
     },
 

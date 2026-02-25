@@ -231,12 +231,12 @@ const FeaturedCarousel = {
         const day = date.getDate();
         const month = months[date.getMonth()];
 
-        const image = event.featured_image || event.image || '/assets/images/default-event.png';
+        const image = getStorageUrl(event.featured_image || event.image);
         const title = event.name || event.title || 'Eveniment';
         const venue = event.venue_name || (event.venue ? event.venue.name : '');
         const city = event.venue_city || (event.venue ? event.venue.city : '');
         const location = city ? (venue ? venue + ', ' + city : city) : venue;
-        const priceFrom = event.price_from ? 'de la ' + event.price_from + ' lei' : '';
+        const priceFrom = event.price_from ? 'De la ' + event.price_from + ' lei' : '';
         const category = event.category?.name || event.category || '';
 
         return '<a href="/bilete/' + (event.slug || '') + '" class="featured-carousel-card group relative overflow-hidden rounded-2xl bg-white shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">' +

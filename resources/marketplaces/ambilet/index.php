@@ -17,7 +17,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Carousel - 3D Poster Stack -->
-<section class="relative py-8 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 mt-18 pt-28 mobile:pt-10" id="heroSlider">
+<section class="relative py-8 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 mt-18 pt-40 mobile:pt-10" id="heroSlider">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="hero-carousel-wrapper">
             <!-- 3D Carousel Container -->
@@ -61,9 +61,9 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <!-- Categories -->
-<section class="py-10 md:py-14 bg-surface lazy-section" id="categoriesSection" data-lazy-load="categories">
+<section class="py-8 bg-primary lazy-section" id="categoriesSection" data-lazy-load="categories">
     <div class="px-4 mx-auto max-w-7xl">
-        <h2 class="mb-8 text-xl font-bold md:text-2xl text-secondary">Explorează dupa categorie</h2>
+        <h2 class="mb-4 text-lg text-center font-bold md:text-2xl text-secondary">Explorează dupa categorie</h2>
 
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 md:gap-4" id="categoriesGrid">
             <!-- Categories will be loaded dynamically -->
@@ -636,9 +636,9 @@ function renderCategories(categories) {
     }
 
     container.innerHTML = categories.slice(0, 6).map(cat => `
-        <a href="/${cat.slug}" class="flex flex-col items-center gap-3 p-5 bg-white border category-pill md:p-6 rounded-2xl border-border group">
+        <a href="/${cat.slug}" class="flex items-center gap-3 py-3 px-6 bg-white border category-pill rounded-lg border-border group">
             <div class="flex items-center justify-center w-12 h-12 transition-colors md:w-14 md:h-14 bg-primary/10 rounded-xl group-hover:bg-white/20">
-                <span class="text-2xl md:text-3xl">${icons[cat.slug] || '🎫'}</span>
+                <span class="text-2xl">${icons[cat.slug] || '🎫'}</span>
             </div>
             <span class="text-sm font-semibold transition-colors md:text-base text-secondary group-hover:text-white">${cat.name}</span>
         </a>

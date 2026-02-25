@@ -1808,7 +1808,7 @@ const EventPage = {
                 '<div class="flex items-center justify-between pt-3 mt-auto border-t border-border/50">' +
                     (priceFrom ?
                         '<div>' +
-                            '<span class="block text-xs text-muted">de la</span>' +
+                            '<span class="block text-xs text-muted">De la</span>' +
                             '<span class="text-xl font-black text-primary">' + priceFrom + ' <span class="text-sm font-semibold">lei</span></span>' +
                         '</div>' :
                         '<span class="text-sm font-medium text-muted">Vezi detalii</span>'
