@@ -187,7 +187,7 @@ const AmbiletEventCard = {
                 '<span class="truncate">' + this.escapeHtml(event.venueCity ? (event.venueName ? '<strong>' + event.venueCity + '</strong>, ' + event.venueName : event.venueCity) : event.venueName) + '</span>' +
             '</p>' : '';
 
-        return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-md border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary">' +
+        return '<a href="' + eventUrl + '" class="overflow-hidden relative transition-all bg-gray-900 border group rounded-md border-gray-800 hover:-translate-y-1 hover:shadow-xl hover:border-primary">' +
             '<div class="relative aspect-[2/3] overflow-hidden mobile:aspect-auto">' +
                 '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:hidden object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '<img src="' + heroSrc + '" alt="' + this.escapeHtml(event.title) + '" class="hidden mobile:block object-cover w-full h-52 transition-transform duration-300" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
@@ -197,7 +197,7 @@ const AmbiletEventCard = {
             '<div class="flex items-center gap-x-2 p-2 bg-white">' +
                 '<div class="flex z-10">' + dateBadgeHtml + '</div>' +
                 '<div class="flex flex-col truncate">' +
-                    '<h3 class="text-sm font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2 truncate mobile:text-xl">' + this.escapeHtml(event.title) + '</h3>' +
+                    '<h3 class="text-sm font-bold leading-snug transition-colors text-white group-hover:text-primary line-clamp-2 truncate mobile:text-xl">' + this.escapeHtml(event.title) + '</h3>' +
                     locationHtml +
                 '</div>' +
             '</div>' +

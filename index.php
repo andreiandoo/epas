@@ -17,17 +17,17 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Carousel - 3D Poster Stack -->
-<section class="relative py-8 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 mt-18 pt-28 mobile:pt-10" id="heroSlider">
+<section class="relative py-8 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 mt-18 pt-28 mobile:pt-10" id="heroSlider">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="hero-carousel-wrapper">
             <!-- 3D Carousel Container -->
             <div id="heroCarousel" class="hero-carousel">
                 <!-- Loading Skeleton -->
-                <div class="hero-skeleton-item skeleton" style="transform: translateX(-360px) scale(0.8); opacity: 0.5;"></div>
-                <div class="hero-skeleton-item skeleton" style="transform: translateX(-180px) scale(0.9); opacity: 0.7;"></div>
+                <div class="hero-skeleton-item skeleton" style="transform: rotateY(20deg) translateX(240px); opacity: 0.4;"></div>
+                <div class="hero-skeleton-item skeleton" style="transform: rotateY(10deg) translateX(120px); opacity: 0.6;"></div>
                 <div class="hero-skeleton-item skeleton" style="z-index: 3;"></div>
-                <div class="hero-skeleton-item skeleton" style="transform: translateX(180px) scale(0.9); opacity: 0.7;"></div>
-                <div class="hero-skeleton-item skeleton" style="transform: translateX(360px) scale(0.8); opacity: 0.5;"></div>
+                <div class="hero-skeleton-item skeleton" style="transform: rotateY(-10deg) translateX(-120px); opacity: 0.6;"></div>
+                <div class="hero-skeleton-item skeleton" style="transform: rotateY(-20deg) translateX(-240px); opacity: 0.4;"></div>
             </div>
             <!-- Dot Indicators -->
             <div id="heroDots" class="hero-dots">
@@ -42,7 +42,7 @@ require_once __DIR__ . '/includes/header.php';
 <?php // require_once __DIR__ . '/includes/featured-carousel.php'; ?>
 
 <!-- Promoted & Recommended Events -->
-<section class="py-10 bg-white md:py-14">
+<section class="py-10 bg-gray-900 md:py-14">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 md:gap-5" id="promotedEventsGrid">
             <!-- Promoted events will be loaded dynamically -->
@@ -157,7 +157,7 @@ const HeroSlider = {
     async init() {
         try {
             const response = await AmbiletAPI.get('/events/featured?type=homepage&limit=12');
-            if (response.data && response.data.events && response.data.events.length >= 5) {
+            if (response.data && response.data.events && response.data.events.length > 0) {
                 this.events = response.data.events;
                 this.render();
                 this.renderDots();
@@ -180,7 +180,7 @@ const HeroSlider = {
         if (!container || this.events.length === 0) return;
 
         container.innerHTML = this.events.map((event, index) => {
-            const image = getStorageUrl(event.poster_url || event.homepage_featured_image || event.featured_image || event.image);
+            const image = getStorageUrl(event.homepage_featured_image || event.featured_image || event.hero_image_url || event.image);
             const title = this.escapeHtml(event.title || event.name || 'Eveniment');
             const city = event.venue_city || event.city || '';
             const venue = event.venue_name || (event.venue ? event.venue.name : '') || '';
