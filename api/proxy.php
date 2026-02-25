@@ -862,6 +862,8 @@ switch ($action) {
         $params = [];
         if (isset($_GET['genre'])) $params['genre'] = $_GET['genre'];
         if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        if (isset($_GET['per_page'])) $params['per_page'] = (int)$_GET['per_page'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
         $endpoint = '/marketplace-events/cities' . ($params ? '?' . http_build_query($params) : '');
         break;
 
