@@ -395,7 +395,7 @@ include 'includes/header.php'; ?>
                         '</p>' +
                     '</div>' +
                     '<div class="flex flex-col items-end gap-2">' +
-                        (event.price_from ? '<div class="text-lg font-bold text-primary">de la ' + event.price_from + ' lei</div>' : '<div class="text-sm text-muted">Gratuit</div>') +
+                        (event.price_from ? '<div class="text-lg font-bold text-primary">De la ' + event.price_from + ' lei</div>' : '<div class="text-sm text-muted">Gratuit</div>') +
                         '<button class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg bg-secondary hover:bg-secondary/90">Bilete</button>' +
                     '</div>' +
                 '</a>';

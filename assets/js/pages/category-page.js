@@ -289,7 +289,7 @@ const CategoryPage = {
         const venue = event.venue_name || (event.venue ? event.venue.name : '');
         const city = event.venue_city || (event.venue ? event.venue.city : '');
         const location = city ? (venue ? venue + ', ' + city : city) : venue;
-        const priceFrom = event.price_from ? 'de la ' + event.price_from + ' lei' : '';
+        const priceFrom = event.price_from ? 'De la ' + event.price_from + ' lei' : '';
         const category = event.category?.name || event.category || '';
 
         return '<a href="/bilete/' + (event.slug || '') + '" class="group relative overflow-hidden rounded-2xl bg-secondary aspect-[16/9] md:aspect-[21/9]">' +
