@@ -119,6 +119,100 @@ const AmbiletEventCard = {
     },
 
     /**
+     * Render promoted/recommended event card (poster-style)
+     * Used on: index.php (Promoted & Recommended section)
+     *
+     * @param {Object} eventData - Raw API event data or normalized event
+     * @param {Object} options - Display options
+     * @returns {string} HTML string
+     */
+    renderPromoted(eventData, options = {}) {
+        const event = eventData._raw ? eventData : this.normalizeEvent(eventData);
+        if (!event) return '';
+
+        const {
+            urlPrefix = '/bilete/',
+            isPromoted = false
+        } = options;
+
+        const eventUrl = urlPrefix + event.slug;
+
+        // Status badges (cancelled, postponed, sold out)
+        let statusBadge = '';
+        if (event.isCancelled) {
+            statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 z-10 bg-red-600">ANULAT</span>';
+        } else if (event.isPostponed) {
+            statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 z-10 bg-orange-500">AMÂNAT</span>';
+        } else if (event.isSoldOut) {
+            statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 z-10 bg-gray-600">SOLD OUT</span>';
+        }
+
+        // Date badge
+        let dateBadgeHtml;
+        if (event.isDateRange && event.dateRangeFormatted) {
+            dateBadgeHtml = '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
+                '<span class="block text-xs font-semibold leading-tight">' + this.escapeHtml(event.dateRangeFormatted) + '</span>' +
+            '</div>';
+        } else {
+            dateBadgeHtml = '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
+                '<span class="block text-lg font-bold leading-none">' + event.day + '</span>' +
+                '<span class="block text-[10px] uppercase tracking-wide mt-0.5">' + event.month + '</span>' +
+            '</div>';
+        }
+
+        // Poster image only (vertical)
+        const posterSrc = getStorageUrl(event.posterImage || event.image);
+
+        // Type bar: gold for Promovat, red for Recomandat
+        let typeBadge;
+        if (isPromoted) {
+            typeBadge = '<div class="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wide" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">' +
+                '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>' +
+                'Promovat' +
+            '</div>';
+        } else {
+            typeBadge = '<div class="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wide bg-red-600">' +
+                '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>' +
+                'Recomandat' +
+            '</div>';
+        }
+
+        // Location display
+        const locationHtml = (event.venueCity || event.venueName) ?
+            '<p class="px-3 text-xs text-muted flex items-center gap-1">' +
+                '<svg class="flex-shrink-0 w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
+                '<span class="truncate">' + this.escapeHtml(event.venueCity ? (event.venueName ? event.venueCity + ', ' + event.venueName : event.venueCity) : event.venueName) + '</span>' +
+            '</p>' : '';
+
+        return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary">' +
+            '<div class="relative aspect-[2/3] overflow-hidden">' +
+                '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                '<div class="absolute top-3 left-3 z-10">' + dateBadgeHtml + '</div>' +
+                statusBadge +
+            '</div>' +
+            typeBadge +
+            '<div class="px-3 py-2">' +
+                '<h3 class="text-sm font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + this.escapeHtml(event.title) + '</h3>' +
+                locationHtml +
+            '</div>' +
+        '</a>';
+    },
+
+    /**
+     * Render multiple promoted cards
+     * @param {Array} events - Array of event data
+     * @param {Object} options - Options passed to renderPromoted()
+     * @returns {string} HTML string
+     */
+    renderManyPromoted(events, options = {}) {
+        if (!Array.isArray(events) || events.length === 0) return '';
+        return events.map(e => this.renderPromoted(e, {
+            ...options,
+            isPromoted: e.has_paid_promotion === true
+        })).join('');
+    },
+
+    /**
      * Render horizontal event card (for venue/artist detail pages)
      * Used on: venue-single.php, artist-single.php
      *

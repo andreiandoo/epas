@@ -63,13 +63,13 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Promoted & Recommended Events -->
 <section class="py-10 bg-white md:py-14">
     <div class="px-4 mx-auto max-w-7xl">
-        <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="promotedEventsGrid">
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 md:gap-5" id="promotedEventsGrid">
             <!-- Promoted events will be loaded dynamically -->
-            <?php for ($i = 0; $i < 10; $i++): ?>
-            <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                <div class="skeleton h-44"></div>
-                <div class="p-4">
-                    <div class="w-1/3 mb-2 skeleton skeleton-text"></div>
+            <?php for ($i = 0; $i < 12; $i++): ?>
+            <div class="overflow-hidden bg-white border rounded-xl border-border">
+                <div class="skeleton aspect-[2/3]"></div>
+                <div class="h-8 skeleton"></div>
+                <div class="p-3">
                     <div class="skeleton skeleton-title"></div>
                     <div class="w-2/3 mt-2 skeleton skeleton-text"></div>
                 </div>
@@ -559,14 +559,14 @@ const PromotedEvents = {
         try {
             // Load promoted (paid) and recommended events
             const [promotedRes, recommendedRes] = await Promise.all([
-                AmbiletAPI.get('/marketplace-events?promoted=1&limit=5').catch(() => ({ data: [] })),
-                AmbiletAPI.get('/marketplace-events?recommended=1&limit=10').catch(() => ({ data: [] }))
+                AmbiletAPI.get('/marketplace-events?promoted=1&limit=12').catch(() => ({ data: [] })),
+                AmbiletAPI.get('/marketplace-events?recommended=1&limit=12').catch(() => ({ data: [] }))
             ]);
 
             const promoted = this.extractEvents(promotedRes);
             const recommended = this.extractEvents(recommendedRes);
 
-            // Combine and dedupe, keeping has_paid_promotion flag from API
+            // Combine: promoted first (priority), then recommended (deduped)
             const combined = [...promoted];
             recommended.forEach(event => {
                 if (!combined.find(e => e.id === event.id)) {
@@ -574,7 +574,11 @@ const PromotedEvents = {
                 }
             });
 
-            this.render(combined.slice(0, 10));
+            // Limit to 12 and shuffle randomly
+            const limited = combined.slice(0, 12);
+            this.shuffle(limited);
+
+            this.render(limited);
         } catch (error) {
             console.warn('Failed to load promoted events:', error);
         }
@@ -586,6 +590,13 @@ const PromotedEvents = {
         return response.data.events || response.data.data || [];
     },
 
+    shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    },
+
     render(events) {
         const container = document.getElementById('promotedEventsGrid');
         if (!container) return;
@@ -595,19 +606,10 @@ const PromotedEvents = {
             return;
         }
 
-        // Use AmbiletEventCard component - only show Promovat badge for events with paid promotion
-        if (typeof AmbiletEventCard !== 'undefined') {
-            container.innerHTML = events.map(event =>
-                AmbiletEventCard.render(event, {
-                    urlPrefix: '/bilete/',
-                    showCategory: true,
-                    showPrice: true,
-                    showVenue: true,
-                    showPromotedBadge: event.has_paid_promotion === true
-                })
-            ).join('');
+        // Use poster-style promoted cards
+        if (typeof AmbiletEventCard !== 'undefined' && typeof AmbiletEventCard.renderManyPromoted === 'function') {
+            container.innerHTML = AmbiletEventCard.renderManyPromoted(events);
         } else {
-            // Fallback - shouldn't happen
             container.innerHTML = '<p class="text-muted col-span-full">Nu sunt evenimente disponibile.</p>';
         }
 
