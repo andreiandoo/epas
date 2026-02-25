@@ -17,7 +17,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Carousel - 3D Poster Stack -->
-<section class="relative py-8 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 mt-18 pt-28 mobile:pt-10" id="heroSlider">
+<section class="relative py-8 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 mt-18 pt-40 mobile:pt-10" id="heroSlider">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="hero-carousel-wrapper">
             <!-- 3D Carousel Container -->
