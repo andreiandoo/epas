@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ro" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="x-apple-disable-message-reformatting">
+    <title>Confirmare transfer fonduri — {{event_name}} — TIXELLO</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased;">
+    
+    <div style="display: none; max-height: 0; overflow: hidden;">Transfer efectuat: {{transfer_amount}} lei pentru {{event_name}}. Vezi obligațiile fiscale și pașii următori.</div>
+    
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden;">
+                    
+                    <!-- Header - Success Green -->
+                    <tr>
+                        <td align="center" bgcolor="#10B981" style="background-color: #10B981; padding: 40px 30px;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td align="center" style="padding-bottom: 16px;">
+                                        <span style="display: inline-block; background-color: rgba(255,255,255,0.2); border-radius: 50%; padding: 16px; font-size: 32px;">💸</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center">
+                                        <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700;">Transfer efectuat cu succes!</h1>
+                                        <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.9); font-size: 15px;">Fondurile pentru evenimentul tău au fost transferate</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Amount Hero Card -->
+                    <tr>
+                        <td style="padding: 0 30px;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: -30px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+                                <tr>
+                                    <td align="center" style="padding: 24px;">
+                                        <p style="margin: 0; color: #64748B; font-size: 14px;">Sumă transferată</p>
+                                        <p style="margin: 8px 0; color: #10B981; font-size: 42px; font-weight: 800;">{{transfer_amount}} lei</p>
+                                        <p style="margin: 0; color: #1E293B; font-size: 14px;">în contul {{bank_name}} ****{{bank_last4}}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 30px;">
+                            
+                            <p style="margin: 0 0 8px 0; color: #64748B; font-size: 16px;">Salut, {{nume_companie}}!</p>
+                            <p style="margin: 0 0 24px 0; color: #64748B; font-size: 16px; line-height: 1.6;">Îți confirmăm că transferul fondurilor pentru evenimentul <strong style="color: #1E293B;">{{event_name}}</strong> ({{event_date}}) a fost procesat cu succes.</p>
+                            
+                            <!-- Transfer Details -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC; border-radius: 12px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <p style="margin: 0 0 12px 0; color: #1E293B; font-weight: 700; font-size: 15px;">📋 Detalii transfer</p>
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #64748B; font-size: 14px;">ID transfer</td>
+                                                <td style="padding: 6px 0; color: #1E293B; font-size: 14px; text-align: right; font-weight: 500;">{{transfer_id}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #64748B; font-size: 14px;">Data transfer</td>
+                                                <td style="padding: 6px 0; color: #1E293B; font-size: 14px; text-align: right;">{{transfer_date}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #64748B; font-size: 14px;">Cont beneficiar</td>
+                                                <td style="padding: 6px 0; color: #1E293B; font-size: 14px; text-align: right;">{{iban_masked}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #64748B; font-size: 14px;">Referință</td>
+                                                <td style="padding: 6px 0; color: #1E293B; font-size: 14px; text-align: right;">{{payment_reference}}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Divider -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr><td style="padding: 24px 0;"><div style="height: 1px; background-color: #E2E8F0;"></div></td></tr>
+                            </table>
+                            
+                            <h2 style="margin: 0 0 16px 0; color: #1E293B; font-size: 18px; font-weight: 700;">💰 Defalcarea sumei</h2>
+                            
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC; border-radius: 12px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="padding: 8px 0; color: #64748B; font-size: 14px;">Vânzări brute bilete</td>
+                                                <td style="padding: 8px 0; color: #1E293B; font-size: 14px; text-align: right; font-weight: 600;">{{gross_sales}} lei</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; color: #64748B; font-size: 14px;">Rambursări acordate</td>
+                                                <td style="padding: 8px 0; color: #EF4444; font-size: 14px; text-align: right;">-{{refunds_amount}} lei</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; color: #64748B; font-size: 14px;">Comision TIXELLO (5%)</td>
+                                                <td style="padding: 8px 0; color: #EF4444; font-size: 14px; text-align: right;">-{{tixello_commission}} lei</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; color: #64748B; font-size: 14px;">Taxe procesare plăți (1.5%)</td>
+                                                <td style="padding: 8px 0; color: #EF4444; font-size: 14px; text-align: right;">-{{processing_fees}} lei</td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="2" style="padding: 12px 0;"><div style="height: 2px; background-color: #E2E8F0;"></div></td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; color: #1E293B; font-size: 16px; font-weight: 700;">TOTAL TRANSFERAT</td>
+                                                <td style="padding: 8px 0; color: #10B981; font-size: 18px; text-align: right; font-weight: 800;">{{transfer_amount}} lei</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Divider -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr><td style="padding: 24px 0;"><div style="height: 1px; background-color: #E2E8F0;"></div></td></tr>
+                            </table>
+                            
+                            <!-- TAX SECTION -->
+                            <h2 style="margin: 0 0 16px 0; color: #1E293B; font-size: 18px; font-weight: 700;">🏛️ Obligații fiscale - Pașii următori</h2>
+                            
+                            <!-- Tax Warning -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 0 12px 12px 0;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td style="vertical-align: top; padding-right: 12px; width: 32px; font-size: 24px;">⚠️</td>
+                                                <td style="vertical-align: top;">
+                                                    <p style="margin: 0 0 4px 0; color: #92400E; font-weight: 700; font-size: 14px;">Important!</p>
+                                                    <p style="margin: 0; color: #A16207; font-size: 14px; line-height: 1.5;">Ca organizator de evenimente, ai obligații fiscale care trebuie îndeplinite. Mai jos găsești detaliile complete pentru fiecare taxă.</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Tax Item 1: TVA -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #ffffff; border: 1px solid #E2E8F0; border-radius: 12px; margin-top: 16px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="vertical-align: top;">
+                                                    <p style="margin: 0; color: #1E293B; font-weight: 700; font-size: 15px;">📊 TVA (Taxa pe Valoare Adăugată)</p>
+                                                </td>
+                                                <td style="text-align: right; vertical-align: top;">
+                                                    <span style="display: inline-block; background-color: #FEE2E2; color: #991B1B; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px;">Termen: {{tva_deadline}}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC; border-radius: 8px; margin-top: 12px;">
+                                            <tr>
+                                                <td style="padding: 12px;">
+                                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                        <tr>
+                                                            <td style="padding: 4px 0; color: #64748B; font-size: 13px;">Baza impozabilă</td>
+                                                            <td style="padding: 4px 0; color: #1E293B; font-size: 13px; text-align: right;">{{tva_base}} lei</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 4px 0; color: #64748B; font-size: 13px;">Cotă TVA</td>
+                                                            <td style="padding: 4px 0; color: #1E293B; font-size: 13px; text-align: right;">{{tva_rate}}%</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 4px 0; color: #A51C30; font-size: 14px; font-weight: 600;">Sumă de plată</td>
+                                                            <td style="padding: 4px 0; color: #A51C30; font-size: 14px; font-weight: 700; text-align: right;">{{tva_amount}} lei</td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        
+                                        <p style="margin: 12px 0 0 0; color: #64748B; font-size: 13px; line-height: 1.5;">
+                                            <strong>Unde se plătește:</strong> ANAF - prin Declarația 300<br>
+                                            <strong>Cod cont:</strong> {{tva_account_code}}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Tax Item 2: Impozit spectacole -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #ffffff; border: 1px solid #E2E8F0; border-radius: 12px; margin-top: 12px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="vertical-align: top;">
+                                                    <p style="margin: 0; color: #1E293B; font-weight: 700; font-size: 15px;">🎭 Impozit pe spectacole</p>
+                                                </td>
+                                                <td style="text-align: right; vertical-align: top;">
+                                                    <span style="display: inline-block; background-color: #FEE2E2; color: #991B1B; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px;">Termen: {{entertainment_tax_deadline}}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC; border-radius: 8px; margin-top: 12px;">
+                                            <tr>
+                                                <td style="padding: 12px;">
+                                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                        <tr>
+                                                            <td style="padding: 4px 0; color: #64748B; font-size: 13px;">Baza de calcul</td>
+                                                            <td style="padding: 4px 0; color: #1E293B; font-size: 13px; text-align: right;">{{entertainment_base}} lei</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 4px 0; color: #64748B; font-size: 13px;">Cotă impozit ({{city_name}})</td>
+                                                            <td style="padding: 4px 0; color: #1E293B; font-size: 13px; text-align: right;">{{entertainment_rate}}%</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 4px 0; color: #A51C30; font-size: 14px; font-weight: 600;">Sumă de plată</td>
+                                                            <td style="padding: 4px 0; color: #A51C30; font-size: 14px; font-weight: 700; text-align: right;">{{entertainment_tax_amount}} lei</td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        
+                                        <p style="margin: 12px 0 0 0; color: #64748B; font-size: 13px; line-height: 1.5;">
+                                            <strong>Unde se plătește:</strong> Primăria {{city_name}} - Direcția Taxe și Impozite Locale<br>
+                                            <strong>Cont IBAN:</strong> {{entertainment_iban}}<br>
+                                            <strong>CIF beneficiar:</strong> {{city_cif}}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Tax Item 3: Timbru muzical -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #ffffff; border: 1px solid #E2E8F0; border-radius: 12px; margin-top: 12px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="vertical-align: top;">
+                                                    <p style="margin: 0; color: #1E293B; font-weight: 700; font-size: 15px;">🎵 Timbru muzical (UCMR-ADA)</p>
+                                                </td>
+                                                <td style="text-align: right; vertical-align: top;">
+                                                    <span style="display: inline-block; background-color: #FEE2E2; color: #991B1B; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px;">Termen: {{music_stamp_deadline}}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC; border-radius: 8px; margin-top: 12px;">
+                                            <tr>
+                                                <td style="padding: 12px;">
+                                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                        <tr>
+                                                            <td style="padding: 4px 0; color: #64748B; font-size: 13px;">Baza de calcul (încasări nete)</td>
+                                                            <td style="padding: 4px 0; color: #1E293B; font-size: 13px; text-align: right;">{{music_stamp_base}} lei</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 4px 0; color: #64748B; font-size: 13px;">Cotă timbru</td>
+                                                            <td style="padding: 4px 0; color: #1E293B; font-size: 13px; text-align: right;">{{music_stamp_rate}}%</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 4px 0; color: #A51C30; font-size: 14px; font-weight: 600;">Sumă de plată</td>
+                                                            <td style="padding: 4px 0; color: #A51C30; font-size: 14px; font-weight: 700; text-align: right;">{{music_stamp_amount}} lei</td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        
+                                        <p style="margin: 12px 0 0 0; color: #64748B; font-size: 13px; line-height: 1.5;">
+                                            <strong>Unde se plătește:</strong> UCMR-ADA<br>
+                                            <strong>Cont IBAN:</strong> {{ucmr_iban}}<br>
+                                            <strong>Explicație plată:</strong> Timbru muzical {{event_name}} - {{event_date}}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Tax Item 4: Crucea Rosie -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #ffffff; border: 1px solid #E2E8F0; border-radius: 12px; margin-top: 12px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td style="vertical-align: top;">
+                                                    <p style="margin: 0; color: #1E293B; font-weight: 700; font-size: 15px;">🏥 Contribuție Crucea Roșie</p>
+                                                </td>
+                                                <td style="text-align: right; vertical-align: top;">
+                                                    <span style="display: inline-block; background-color: #FEE2E2; color: #991B1B; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px;">Termen: {{red_cross_deadline}}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #F8FAFC; border-radius: 8px; margin-top: 12px;">
+                                            <tr>
+                                                <td style="padding: 12px;">
+                                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                        <tr>
+                                                            <td style="padding: 4px 0; color: #64748B; font-size: 13px;">Baza de calcul</td>
+                                                            <td style="padding: 4px 0; color: #1E293B; font-size: 13px; text-align: right;">{{red_cross_base}} lei</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 4px 0; color: #64748B; font-size: 13px;">Cotă contribuție</td>
+                                                            <td style="padding: 4px 0; color: #1E293B; font-size: 13px; text-align: right;">{{red_cross_rate}}%</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 4px 0; color: #A51C30; font-size: 14px; font-weight: 600;">Sumă de plată</td>
+                                                            <td style="padding: 4px 0; color: #A51C30; font-size: 14px; font-weight: 700; text-align: right;">{{red_cross_amount}} lei</td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        
+                                        <p style="margin: 12px 0 0 0; color: #64748B; font-size: 13px; line-height: 1.5;">
+                                            <strong>Unde se plătește:</strong> Crucea Roșie Română - Filiala {{county_name}}<br>
+                                            <strong>Cont IBAN:</strong> {{red_cross_iban}}<br>
+                                            <strong>Explicație plată:</strong> Contribuție spectacol {{event_date}}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Total Taxes -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #FEE2E2; border-radius: 12px; margin-top: 20px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                            <tr>
+                                                <td>
+                                                    <p style="margin: 0; color: #991B1B; font-weight: 700; font-size: 14px;">TOTAL TAXE DE PLĂTIT</p>
+                                                    <p style="margin: 4px 0 0 0; color: #B91C1C; font-size: 12px;">Suma totală a obligațiilor fiscale</p>
+                                                </td>
+                                                <td style="text-align: right;">
+                                                    <p style="margin: 0; color: #991B1B; font-size: 28px; font-weight: 800;">{{total_taxes}} lei</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Divider -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr><td style="padding: 24px 0;"><div style="height: 1px; background-color: #E2E8F0;"></div></td></tr>
+                            </table>
+                            
+                            <h2 style="margin: 0 0 16px 0; color: #1E293B; font-size: 18px; font-weight: 700;">📚 Resurse utile</h2>
+                            
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr><td style="padding: 8px 0;"><a href="{{tax_guide_link}}" style="color: #A51C30; text-decoration: none; font-weight: 500; font-size: 14px;">📖 Ghid complet taxe evenimente</a></td></tr>
+                                <tr><td style="padding: 8px 0;"><a href="{{tax_calculator_link}}" style="color: #A51C30; text-decoration: none; font-weight: 500; font-size: 14px;">🧮 Calculator taxe TIXELLO</a></td></tr>
+                                <tr><td style="padding: 8px 0;"><a href="{{invoice_download_link}}" style="color: #A51C30; text-decoration: none; font-weight: 500; font-size: 14px;">🧾 Descarcă factura comision TIXELLO</a></td></tr>
+                                <tr><td style="padding: 8px 0;"><a href="{{tax_report_download_link}}" style="color: #A51C30; text-decoration: none; font-weight: 500; font-size: 14px;">📥 Descarcă raportul fiscal complet (PDF)</a></td></tr>
+                            </table>
+                            
+                            <!-- CTA Button -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding: 32px 0 16px 0;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td align="center" bgcolor="#A51C30" style="background-color: #A51C30; border-radius: 12px;">
+                                                    <a href="{{finance_dashboard_link}}" target="_blank" style="display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px;">Vezi dashboard financiar</a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Support -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #EFF6FF; border-radius: 12px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td style="vertical-align: top; padding-right: 12px; width: 32px; font-size: 24px;">💬</td>
+                                                <td style="vertical-align: top;">
+                                                    <p style="margin: 0 0 4px 0; color: #1E40AF; font-weight: 700; font-size: 14px;">Ai nevoie de ajutor cu taxele?</p>
+                                                    <p style="margin: 0; color: #3B82F6; font-size: 14px; line-height: 1.5;">Echipa noastră de suport fiscal este disponibilă pentru tine. Contactează-ne la <a href="mailto:taxe@tixello.ro" style="color: #1E40AF; font-weight: 600; text-decoration: none;">taxe@tixello.ro</a></p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td bgcolor="#F8FAFC" style="background-color: #F8FAFC; padding: 30px; border-top: 1px solid #E2E8F0;">
+                            <p style="margin: 0 0 8px 0; color: #94A3B8; font-size: 11px; text-align: center;">Acest email conține informații fiscale importante. Păstrează-l pentru evidențele tale contabile.</p>
+                            <p style="margin: 0 0 8px 0; color: #94A3B8; font-size: 13px; text-align: center;">© 2024 TIXELLO. Toate drepturile rezervate.</p>
+                            <p style="margin: 16px 0 0 0; color: #94A3B8; font-size: 13px; text-align: center;">
+                                <a href="mailto:organizatori@tixello.ro" style="color: #A51C30; text-decoration: none;">organizatori@tixello.ro</a> · 
+                                <a href="{{unsubscribe_link}}" style="color: #94A3B8; text-decoration: underline;">Dezabonare</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+                
+            </td>
+        </tr>
+    </table>
+    
+</body>
+</html>

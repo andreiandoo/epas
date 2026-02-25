@@ -1,0 +1,25 @@
+# API Routing for Ambilet Marketplace
+
+# Enable URL rewriting
+RewriteEngine On
+
+# Set base path
+RewriteBase /api/
+
+# Route API requests to appropriate handlers
+# GET /api/v1/public/search -> api/search.php
+RewriteRule ^v1/public/search/?$ search.php [L,QSA]
+
+# GET /api/v1/public/navigation/counts -> api/navigation-counts.php
+RewriteRule ^v1/public/navigation/counts/?$ navigation-counts.php [L,QSA]
+
+# Set headers for all API responses
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type"
+</IfModule>
+
+# Handle OPTIONS preflight requests
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
