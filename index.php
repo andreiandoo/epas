@@ -89,7 +89,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <!-- Events Grid (filtered by city) -->
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="cityEventsGrid">
+        <div class="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="cityEventsGrid">
             <!-- Events will be loaded dynamically -->
             <?php for ($i = 0; $i < 10; $i++): ?>
             <div class="overflow-hidden bg-white border rounded-2xl border-border">

@@ -77,7 +77,7 @@ const AmbiletEventCard = {
         const heroSrc = getStorageUrl(event.heroImage || event.image);
 
         return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-lg border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
-            '<div class="relative h-40 overflow-hidden">' +
+            '<div class="relative h-40 mobile:h-64 overflow-hidden">' +
                 '<picture>' +
                     '<source media="(min-width: 768px)" srcset="' + heroSrc + '">' +
                     '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-lg rounded-tr-lg" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
@@ -100,7 +100,7 @@ const AmbiletEventCard = {
                             (event.isCancelled ? 'Anulat' : event.isPostponed ? 'Amânat' : event.isSoldOut ? 'Sold Out' : '') +
                         '</span>' +
                         (showCategory && event.categoryName ?
-                            '<span class="cat-pill font-semibold text-white uppercase rounded-lg bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
+                            '<span class="mobile:hidden cat-pill font-semibold text-white uppercase rounded-lg bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
                             '') +
                     '</div>' : '') +
             '</div>' +
