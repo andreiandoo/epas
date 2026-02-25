@@ -451,7 +451,6 @@ class ServiceOrderController extends BaseController
         $organizer = $this->requireOrganizer($request);
 
         $audienceType = $request->get('audience_type', 'own');
-        $eventId = $request->get('event_id');
 
         // Get filter parameters (support both single values and arrays)
         $ageMin = $request->get('age_min');
@@ -465,106 +464,163 @@ class ServiceOrderController extends BaseController
         if (!is_array($categories)) $categories = $categories ? [$categories] : [];
         if (!is_array($genres)) $genres = $genres ? [$genres] : [];
 
+        $filters = compact('ageMin', 'ageMax', 'cities', 'categories', 'genres');
+
+        // Build base query for audience type
+        $baseQuery = $this->buildAudienceBaseQuery($organizer, $audienceType);
+        $totalCount = (clone $baseQuery)->count();
+
+        // Apply ALL filters → filtered_count
+        $filteredQuery = $this->applyAudienceFilters(clone $baseQuery, $filters, $organizer, $audienceType);
+        $filteredCount = $filteredQuery->count();
+
+        // Build per-filter breakdowns (only when filters are active)
+        $filterCounts = $this->buildFilterBreakdowns($baseQuery, $filters, $organizer, $audienceType);
+
+        return $this->success([
+            'total_count' => $totalCount,
+            'filtered_count' => $filteredCount,
+            'filter_counts' => $filterCounts,
+        ]);
+    }
+
+    /**
+     * Build the base audience query (no filters applied)
+     */
+    public function buildAudienceBaseQuery(MarketplaceOrganizer $organizer, string $audienceType)
+    {
         if ($audienceType === 'own') {
-            // Own audience: customers who have ordered from this organizer
-            $baseQuery = MarketplaceCustomer::query()
+            return MarketplaceCustomer::query()
                 ->where('marketplace_client_id', $organizer->marketplace_client_id)
                 ->whereHas('orders', function ($q) use ($organizer) {
                     $q->where('marketplace_organizer_id', $organizer->id)
                       ->where('status', 'completed');
                 });
-
-            $totalCount = (clone $baseQuery)->count();
-
-            // Apply filters
-            $filteredQuery = clone $baseQuery;
-
-            if ($ageMin) {
-                $minDate = now()->subYears((int) $ageMin);
-                $filteredQuery->where('birth_date', '<=', $minDate);
-            }
-
-            if ($ageMax) {
-                $maxDate = now()->subYears((int) $ageMax + 1)->addDay();
-                $filteredQuery->where('birth_date', '>=', $maxDate);
-            }
-
-            if (!empty($cities)) {
-                $filteredQuery->where(function ($q) use ($cities) {
-                    foreach ($cities as $city) {
-                        $q->orWhere('city', 'like', "%{$city}%");
-                    }
-                });
-            }
-
-            // Category and genre filtering through orders -> events
-            if (!empty($categories) || !empty($genres)) {
-                $filteredQuery->whereHas('orders', function ($q) use ($organizer, $categories, $genres) {
-                    $q->where('marketplace_organizer_id', $organizer->id)
-                      ->where('status', 'completed')
-                      ->whereHas('marketplaceEvent', function ($eq) use ($categories, $genres) {
-                          if (!empty($categories)) {
-                              $eq->whereIn('event_type_id', $categories);
-                          }
-                          if (!empty($genres)) {
-                              $eq->whereIn('music_genre_id', $genres);
-                          }
-                      });
-                });
-            }
-
-            $filteredCount = $filteredQuery->count();
-        } else {
-            // Marketplace audience: all customers who accepted marketing
-            $baseQuery = MarketplaceCustomer::query()
-                ->where('marketplace_client_id', $organizer->marketplace_client_id)
-                ->where('accepts_marketing', true);
-
-            $totalCount = (clone $baseQuery)->count();
-
-            // Apply filters
-            $filteredQuery = clone $baseQuery;
-
-            if ($ageMin) {
-                $minDate = now()->subYears((int) $ageMin);
-                $filteredQuery->where('birth_date', '<=', $minDate);
-            }
-
-            if ($ageMax) {
-                $maxDate = now()->subYears((int) $ageMax + 1)->addDay();
-                $filteredQuery->where('birth_date', '>=', $maxDate);
-            }
-
-            if (!empty($cities)) {
-                $filteredQuery->where(function ($q) use ($cities) {
-                    foreach ($cities as $city) {
-                        $q->orWhere('city', 'like', "%{$city}%");
-                    }
-                });
-            }
-
-            // Category and genre filtering through orders -> events
-            if (!empty($categories) || !empty($genres)) {
-                $filteredQuery->whereHas('orders', function ($q) use ($categories, $genres) {
-                    $q->where('status', 'completed')
-                      ->whereHas('marketplaceEvent', function ($eq) use ($categories, $genres) {
-                          if (!empty($categories)) {
-                              $eq->whereIn('event_type_id', $categories);
-                          }
-                          if (!empty($genres)) {
-                              $eq->whereIn('music_genre_id', $genres);
-                          }
-                      });
-                });
-            }
-
-            $filteredCount = $filteredQuery->count();
         }
 
-        return $this->success([
-            'total_count' => $totalCount,
-            'filtered_count' => $filteredCount,
-        ]);
+        // Marketplace audience: all customers who accepted marketing
+        return MarketplaceCustomer::query()
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->where('accepts_marketing', true);
+    }
+
+    /**
+     * Apply audience filters to a query
+     */
+    public function applyAudienceFilters($query, array $filters, MarketplaceOrganizer $organizer, string $audienceType)
+    {
+        $ageMin = $filters['ageMin'] ?? null;
+        $ageMax = $filters['ageMax'] ?? null;
+        $cities = $filters['cities'] ?? [];
+        $categories = $filters['categories'] ?? [];
+        $genres = $filters['genres'] ?? [];
+
+        if ($ageMin) {
+            $minDate = now()->subYears((int) $ageMin);
+            $query->where('birth_date', '<=', $minDate);
+        }
+
+        if ($ageMax) {
+            $maxDate = now()->subYears((int) $ageMax + 1)->addDay();
+            $query->where('birth_date', '>=', $maxDate);
+        }
+
+        if (!empty($cities)) {
+            $query->where(function ($q) use ($cities) {
+                foreach ($cities as $city) {
+                    $q->orWhere('city', 'like', "%{$city}%");
+                }
+            });
+        }
+
+        // Category and genre filtering through orders -> events
+        if (!empty($categories) || !empty($genres)) {
+            $query->whereHas('orders', function ($q) use ($organizer, $audienceType, $categories, $genres) {
+                if ($audienceType === 'own') {
+                    $q->where('marketplace_organizer_id', $organizer->id);
+                }
+                $q->where('status', 'completed')
+                  ->whereHas('marketplaceEvent', function ($eq) use ($categories, $genres) {
+                      if (!empty($categories)) {
+                          $eq->whereIn('marketplace_event_category_id', $categories);
+                      }
+                      if (!empty($genres)) {
+                          $eq->where(function ($gq) use ($genres) {
+                              foreach ($genres as $genre) {
+                                  $gq->orWhereJsonContains('genre_ids', (int) $genre);
+                              }
+                          });
+                      }
+                  });
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Build per-filter count breakdowns
+     */
+    protected function buildFilterBreakdowns($baseQuery, array $filters, MarketplaceOrganizer $organizer, string $audienceType): array
+    {
+        $cities = $filters['cities'] ?? [];
+        $categories = $filters['categories'] ?? [];
+        $genres = $filters['genres'] ?? [];
+
+        $hasAnyFilter = !empty($filters['ageMin']) || !empty($filters['ageMax'])
+            || !empty($cities) || !empty($categories) || !empty($genres);
+
+        if (!$hasAnyFilter) {
+            return [];
+        }
+
+        $result = [];
+
+        // Count: match all filters EXCEPT cities (partial match without city filter)
+        if (!empty($cities)) {
+            $withoutCity = $this->applyAudienceFilters(
+                clone $baseQuery,
+                array_merge($filters, ['cities' => []]),
+                $organizer, $audienceType
+            );
+            $result['without_city'] = $withoutCity->count();
+
+            // Per-city counts (with all other filters applied)
+            $byCityFilters = array_merge($filters, ['cities' => []]);
+            $byCityBase = $this->applyAudienceFilters(clone $baseQuery, $byCityFilters, $organizer, $audienceType);
+            $byCities = [];
+            foreach ($cities as $city) {
+                $cityQuery = (clone $byCityBase)->where('city', 'like', "%{$city}%");
+                $byCities[$city] = $cityQuery->count();
+            }
+            $result['by_city'] = $byCities;
+        }
+
+        // Count: match all filters EXCEPT categories
+        if (!empty($categories)) {
+            $withoutCat = $this->applyAudienceFilters(
+                clone $baseQuery,
+                array_merge($filters, ['categories' => []]),
+                $organizer, $audienceType
+            );
+            $result['without_category'] = $withoutCat->count();
+        }
+
+        // Count: match all filters EXCEPT genres
+        if (!empty($genres)) {
+            $withoutGenre = $this->applyAudienceFilters(
+                clone $baseQuery,
+                array_merge($filters, ['genres' => []]),
+                $organizer, $audienceType
+            );
+            $result['without_genre'] = $withoutGenre->count();
+        }
+
+        // Count: have birth_date set (for age filter relevance)
+        $withBirthDate = (clone $baseQuery)->whereNotNull('birth_date')->count();
+        $result['with_birth_date'] = $withBirthDate;
+
+        return $result;
     }
 
     /**

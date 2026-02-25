@@ -426,6 +426,24 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <p class="text-xs text-muted">destinatari</p>
                                 </div>
                             </div>
+
+                            <!-- Filter Breakdowns -->
+                            <div id="filter-breakdowns" class="hidden space-y-2">
+                                <div id="breakdown-city" class="hidden">
+                                    <p class="text-xs text-muted mb-1">Detalii filtre oras:</p>
+                                    <div id="breakdown-city-items" class="space-y-0.5"></div>
+                                    <p id="breakdown-without-city" class="text-xs text-blue-600 mt-1"></p>
+                                </div>
+                                <div id="breakdown-category" class="hidden">
+                                    <p id="breakdown-without-category" class="text-xs text-blue-600"></p>
+                                </div>
+                                <div id="breakdown-genre" class="hidden">
+                                    <p id="breakdown-without-genre" class="text-xs text-blue-600"></p>
+                                </div>
+                                <div id="breakdown-birthdate" class="hidden">
+                                    <p id="breakdown-birthdate-text" class="text-xs text-amber-600"></p>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Cost Summary -->
@@ -1513,6 +1531,9 @@ async function updateEmailAudienceCount() {
                 : (servicePricing.email.marketplace_per_email || 0.50);
             const totalCost = count * pricePerEmail;
             document.getElementById('email-cost-estimate').textContent = AmbiletUtils.formatCurrency(totalCost);
+
+            // Show filter breakdowns
+            displayFilterBreakdowns(response.data.filter_counts || {}, baseCount);
         }
     } catch (e) {
         console.log('Using default audience counts');
@@ -1539,6 +1560,72 @@ function resetEmailFilters() {
     Array.from(categorySelect.options).forEach(opt => opt.selected = false);
     Array.from(genreSelect.options).forEach(opt => opt.selected = false);
     updateEmailAudienceCount();
+}
+
+function displayFilterBreakdowns(filterCounts, totalCount) {
+    const container = document.getElementById('filter-breakdowns');
+    const hasData = filterCounts && Object.keys(filterCounts).length > 0;
+
+    if (!hasData) {
+        container.classList.add('hidden');
+        return;
+    }
+
+    container.classList.remove('hidden');
+
+    // City breakdowns
+    const citySection = document.getElementById('breakdown-city');
+    const cityItems = document.getElementById('breakdown-city-items');
+    const withoutCityEl = document.getElementById('breakdown-without-city');
+    if (filterCounts.by_city && Object.keys(filterCounts.by_city).length > 0) {
+        citySection.classList.remove('hidden');
+        cityItems.innerHTML = '';
+        for (const [city, count] of Object.entries(filterCounts.by_city)) {
+            const div = document.createElement('div');
+            div.className = 'flex justify-between text-xs';
+            div.innerHTML = `<span class="text-muted">${city}</span><span class="font-medium text-secondary">${AmbiletUtils.formatNumber(count)}</span>`;
+            cityItems.appendChild(div);
+        }
+        if (filterCounts.without_city !== undefined) {
+            withoutCityEl.textContent = `Fara filtru oras: ${AmbiletUtils.formatNumber(filterCounts.without_city)} se potrivesc partial`;
+            withoutCityEl.classList.remove('hidden');
+        } else {
+            withoutCityEl.classList.add('hidden');
+        }
+    } else {
+        citySection.classList.add('hidden');
+    }
+
+    // Category breakdown
+    const catSection = document.getElementById('breakdown-category');
+    const withoutCatEl = document.getElementById('breakdown-without-category');
+    if (filterCounts.without_category !== undefined) {
+        catSection.classList.remove('hidden');
+        withoutCatEl.textContent = `Fara filtru categorie: ${AmbiletUtils.formatNumber(filterCounts.without_category)} se potrivesc partial`;
+    } else {
+        catSection.classList.add('hidden');
+    }
+
+    // Genre breakdown
+    const genreSection = document.getElementById('breakdown-genre');
+    const withoutGenreEl = document.getElementById('breakdown-without-genre');
+    if (filterCounts.without_genre !== undefined) {
+        genreSection.classList.remove('hidden');
+        withoutGenreEl.textContent = `Fara filtru gen muzical: ${AmbiletUtils.formatNumber(filterCounts.without_genre)} se potrivesc partial`;
+    } else {
+        genreSection.classList.add('hidden');
+    }
+
+    // Birth date info
+    const bdSection = document.getElementById('breakdown-birthdate');
+    const bdText = document.getElementById('breakdown-birthdate-text');
+    if (filterCounts.with_birth_date !== undefined && totalCount > 0) {
+        const pct = Math.round((filterCounts.with_birth_date / totalCount) * 100);
+        bdSection.classList.remove('hidden');
+        bdText.textContent = `${AmbiletUtils.formatNumber(filterCounts.with_birth_date)} din ${AmbiletUtils.formatNumber(totalCount)} (${pct}%) au data nasterii setata (relevanta pentru filtru varsta)`;
+    } else {
+        bdSection.classList.add('hidden');
+    }
 }
 
 document.getElementById('service-event').addEventListener('change', function() {

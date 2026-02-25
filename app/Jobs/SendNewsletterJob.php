@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\MarketplaceNewsletter;
 use App\Models\MarketplaceNewsletterRecipient;
 use App\Models\MarketplaceEmailLog;
+use App\Models\ServiceOrder;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -59,6 +60,7 @@ class SendNewsletterJob implements ShouldQueue
         if ($recipients->isEmpty()) {
             // All done
             $newsletter->markCompleted();
+            $this->completeServiceOrder($newsletter);
             return;
         }
 
@@ -89,6 +91,7 @@ class SendNewsletterJob implements ShouldQueue
             static::dispatch($newsletter, $this->batchSize)->delay(now()->addSeconds(5));
         } else {
             $newsletter->markCompleted();
+            $this->completeServiceOrder($newsletter);
         }
     }
 
@@ -174,6 +177,35 @@ class SendNewsletterJob implements ShouldQueue
         $token = hash('sha256', $recipient->id . 'open' . config('app.key'));
         $url = url("/api/marketplace-client/newsletter/track/open?id={$recipient->id}&token={$token}");
         return '<img src="' . $url . '" width="1" height="1" style="display:none;" alt="" />';
+    }
+
+    /**
+     * Complete the linked ServiceOrder after all emails are sent
+     */
+    protected function completeServiceOrder(MarketplaceNewsletter $newsletter): void
+    {
+        try {
+            $serviceOrderId = $newsletter->target_lists['service_order_id'] ?? null;
+            if (!$serviceOrderId) return;
+
+            $serviceOrder = ServiceOrder::find($serviceOrderId);
+            if (!$serviceOrder) return;
+
+            $sentCount = $newsletter->recipients()->where('status', 'sent')->count();
+            $serviceOrder->update([
+                'executed_at' => now(),
+                'sent_count' => $sentCount,
+                'status' => ServiceOrder::STATUS_COMPLETED,
+            ]);
+
+            // Notify organizer about results
+            $serviceOrder->markResultsAvailable();
+        } catch (\Exception $e) {
+            \Log::warning('Failed to complete service order after newsletter', [
+                'newsletter_id' => $newsletter->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function failed(\Throwable $exception): void

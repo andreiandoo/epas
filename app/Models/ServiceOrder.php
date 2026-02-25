@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\ServiceOrderController;
+use App\Jobs\SendNewsletterJob;
 use App\Services\OrganizerNotificationService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Event;
@@ -211,6 +213,18 @@ class ServiceOrder extends Model
             }
         }
 
+        // Create and dispatch email campaign
+        if ($this->service_type === self::TYPE_EMAIL) {
+            try {
+                $this->createEmailCampaign();
+            } catch (\Exception $e) {
+                Log::error('Failed to create email campaign', [
+                    'service_order_id' => $this->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         // Notify organizer that service has started
         try {
             OrganizerNotificationService::notifyServiceOrderStatus($this, 'started');
@@ -314,6 +328,296 @@ class ServiceOrder extends Model
         }
 
         return $this;
+    }
+
+    /**
+     * Create email campaign: newsletter + recipients + dispatch job
+     */
+    protected function createEmailCampaign(): void
+    {
+        $config = $this->config ?? [];
+        $marketplace = $this->marketplaceClient;
+        $event = MarketplaceEvent::find($this->marketplace_event_id);
+        $organizer = $this->marketplaceOrganizer;
+
+        if (!$marketplace || !$event || !$organizer) {
+            Log::warning('Email campaign missing dependencies', [
+                'service_order_id' => $this->id,
+                'has_marketplace' => !!$marketplace,
+                'has_event' => !!$event,
+                'has_organizer' => !!$organizer,
+            ]);
+            return;
+        }
+
+        $template = $config['template'] ?? 'classic';
+        $sendDate = !empty($config['send_date']) ? \Carbon\Carbon::parse($config['send_date']) : null;
+        $filters = $config['filters'] ?? [];
+
+        // Generate email HTML
+        $bodyHtml = $this->generateEmailHtml($template, $event, $marketplace);
+        $subject = $this->generateEmailSubject($template, $event);
+
+        // Create newsletter
+        $newsletter = MarketplaceNewsletter::create([
+            'marketplace_client_id' => $marketplace->id,
+            'name' => "Campanie: {$event->name} ({$this->order_number})",
+            'subject' => $subject,
+            'from_name' => $marketplace->getEmailFromName(),
+            'from_email' => $marketplace->getEmailFromAddress(),
+            'reply_to' => $marketplace->getEmailFromAddress(),
+            'body_html' => $bodyHtml,
+            'status' => 'draft',
+            'target_lists' => ['service_order_id' => $this->id],
+            'total_recipients' => 0,
+        ]);
+
+        // Build recipient list using the same filters from the service order config
+        $audienceType = $config['audience_type'] ?? 'own';
+        $controller = app(ServiceOrderController::class);
+        $baseQuery = $controller->buildAudienceBaseQuery($organizer, $audienceType);
+
+        $normalizedFilters = [
+            'ageMin' => $filters['age_min'] ?? null,
+            'ageMax' => $filters['age_max'] ?? null,
+            'cities' => $filters['cities'] ?? [],
+            'categories' => $filters['categories'] ?? [],
+            'genres' => $filters['genres'] ?? [],
+        ];
+
+        $filteredQuery = $controller->applyAudienceFilters(
+            clone $baseQuery, $normalizedFilters, $organizer, $audienceType
+        );
+
+        // Create recipient records
+        $customers = $filteredQuery->get();
+        $recipientCount = 0;
+
+        foreach ($customers as $customer) {
+            if (empty($customer->email)) continue;
+
+            MarketplaceNewsletterRecipient::create([
+                'newsletter_id' => $newsletter->id,
+                'marketplace_customer_id' => $customer->id,
+                'email' => $customer->email,
+                'status' => 'pending',
+            ]);
+            $recipientCount++;
+        }
+
+        $newsletter->update(['total_recipients' => $recipientCount]);
+
+        // Update service order with scheduled_at
+        if ($sendDate) {
+            $this->update(['scheduled_at' => $sendDate]);
+        }
+
+        // Dispatch or schedule
+        if ($sendDate && $sendDate->isFuture()) {
+            $newsletter->schedule($sendDate->toDateTimeImmutable());
+            SendNewsletterJob::dispatch($newsletter)->delay($sendDate);
+        } else {
+            $newsletter->startSending();
+            SendNewsletterJob::dispatch($newsletter);
+        }
+
+        Log::info('Email campaign created', [
+            'service_order_id' => $this->id,
+            'newsletter_id' => $newsletter->id,
+            'recipient_count' => $recipientCount,
+            'template' => $template,
+            'scheduled' => $sendDate?->toDateTimeString(),
+        ]);
+    }
+
+    /**
+     * Generate email subject based on template type
+     */
+    protected function generateEmailSubject(string $template, MarketplaceEvent $event): string
+    {
+        $name = $event->name;
+
+        return match ($template) {
+            'urgent' => "ULTIMELE BILETE pentru {$name}!",
+            'reminder' => "Reminder: {$name} este in curand!",
+            default => "{$name} - Nu rata!",
+        };
+    }
+
+    /**
+     * Generate responsive email HTML for the campaign
+     */
+    protected function generateEmailHtml(string $template, MarketplaceEvent $event, MarketplaceClient $marketplace): string
+    {
+        $eventName = e($event->name);
+        $eventDate = $event->starts_at ? $event->starts_at->format('d.m.Y, H:i') : 'TBA';
+        $venueName = e($event->venue_name ?? 'TBA');
+        $venueCity = e($event->venue_city ?? '');
+        $venueDisplay = $venueCity ? "{$venueName}, {$venueCity}" : $venueName;
+        $imageUrl = $event->image_url;
+        $eventUrl = "https://{$marketplace->domain}/{$event->slug}";
+        $marketplaceName = e($marketplace->name);
+
+        $accentColor = '#6366f1';
+        $urgentColor = '#ef4444';
+        $reminderColor = '#3b82f6';
+
+        // Template-specific banner
+        $banner = '';
+        $ctaColor = $accentColor;
+        $ctaText = 'Cumpara Bilete Acum';
+        $bodyText = 'Evenimentul pe care il asteptai este aproape! Asigura-te ca ai bilete pentru a nu rata aceasta experienta unica.';
+
+        if ($template === 'urgent') {
+            $ctaColor = $urgentColor;
+            $ctaText = 'Cumpara ACUM - Stoc Limitat!';
+            $bodyText = 'Biletele se vand rapid! Rezerva-ti locul acum pentru a nu ramane pe dinafara.';
+            $banner = <<<HTML
+            <tr>
+                <td style="padding: 0 30px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; margin-bottom: 24px;">
+                        <tr>
+                            <td style="padding: 16px 20px;">
+                                <p style="margin: 0; font-weight: bold; color: #b91c1c; font-size: 16px;">⚡ Ultimele bilete disponibile!</p>
+                                <p style="margin: 4px 0 0; color: #dc2626; font-size: 14px;">Nu rata sansa de a fi acolo</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+HTML;
+        } elseif ($template === 'reminder') {
+            $ctaColor = $reminderColor;
+            $ctaText = 'Vezi Detalii & Cumpara Bilete';
+            $bodyText = 'Pregateste-te pentru o experienta de neuitat! Nu uita sa iti rezervi biletele daca nu ai facut-o deja.';
+            $banner = <<<HTML
+            <tr>
+                <td style="padding: 0 30px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; margin-bottom: 24px;">
+                        <tr>
+                            <td style="padding: 16px 20px;">
+                                <p style="margin: 0; font-weight: bold; color: #1d4ed8; font-size: 16px;">🎉 Evenimentul se apropie!</p>
+                                <p style="margin: 4px 0 0; color: #2563eb; font-size: 14px;">Inca mai poti obtine bilete</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+HTML;
+        }
+
+        // Image section
+        $imageSection = '';
+        if ($imageUrl) {
+            $imageSection = <<<HTML
+            <tr>
+                <td style="padding: 0 30px 20px; text-align: center;">
+                    <img src="{$imageUrl}" alt="{$eventName}" width="520" style="max-width: 100%; height: auto; border-radius: 12px; display: block; margin: 0 auto;" />
+                </td>
+            </tr>
+HTML;
+        }
+
+        // Reminder uses a smaller image layout
+        if ($template === 'reminder' && $imageUrl) {
+            $imageSection = <<<HTML
+            <tr>
+                <td style="padding: 0 30px 20px; text-align: center;">
+                    <img src="{$imageUrl}" alt="{$eventName}" width="200" style="width: 200px; height: 200px; object-fit: cover; border-radius: 12px; display: block; margin: 0 auto;" />
+                </td>
+            </tr>
+HTML;
+        }
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{$eventName}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 30px 10px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color: {$ctaColor}; padding: 20px 30px; text-align: center;">
+                            <p style="margin: 0; color: #ffffff; font-size: 18px; font-weight: bold;">{$marketplaceName}</p>
+                        </td>
+                    </tr>
+
+                    <!-- Spacer -->
+                    <tr><td style="height: 24px;"></td></tr>
+
+                    {$banner}
+
+                    {$imageSection}
+
+                    <!-- Event Title -->
+                    <tr>
+                        <td style="padding: 0 30px 16px; text-align: center;">
+                            <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #1f2937;">{$eventName}</h1>
+                        </td>
+                    </tr>
+
+                    <!-- Event Details -->
+                    <tr>
+                        <td style="padding: 0 30px 20px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 12px;">
+                                <tr>
+                                    <td width="50%" style="padding: 16px; text-align: center; border-right: 1px solid #e5e7eb;">
+                                        <p style="margin: 0; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Data</p>
+                                        <p style="margin: 4px 0 0; font-size: 15px; font-weight: 600; color: #1f2937;">{$eventDate}</p>
+                                    </td>
+                                    <td width="50%" style="padding: 16px; text-align: center;">
+                                        <p style="margin: 0; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Locatie</p>
+                                        <p style="margin: 4px 0 0; font-size: 15px; font-weight: 600; color: #1f2937;">{$venueDisplay}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Body Text -->
+                    <tr>
+                        <td style="padding: 0 30px 24px; text-align: center;">
+                            <p style="margin: 0; font-size: 15px; color: #6b7280; line-height: 1.6;">{$bodyText}</p>
+                        </td>
+                    </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td style="padding: 0 30px 30px; text-align: center;">
+                            <a href="{$eventUrl}" target="_blank" style="display: inline-block; background-color: {$ctaColor}; color: #ffffff; padding: 14px 32px; border-radius: 12px; font-size: 16px; font-weight: bold; text-decoration: none;">{$ctaText}</a>
+                        </td>
+                    </tr>
+
+                    <!-- Divider -->
+                    <tr>
+                        <td style="padding: 0 30px;">
+                            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 0;">
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 30px 24px; text-align: center;">
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                Ai primit acest email pentru ca esti abonat la newsletter-ul {$marketplaceName}.<br>
+                                <a href="{{unsubscribe_url}}" style="color: {$ctaColor}; text-decoration: underline;">Dezabonare</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+HTML;
     }
 
     /**
