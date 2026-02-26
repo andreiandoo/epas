@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Blog';
-$transparentHeader = true;
+$transparentHeader = false;
 
 // Sample blog data
 $categories = ['Toate', 'Industrie', 'Pentru organizatori', 'Ghiduri', 'Interviuri', 'Noutati'];

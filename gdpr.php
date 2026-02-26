@@ -10,7 +10,7 @@ require_once __DIR__ . '/includes/config.php';
 $pageTitle = "Drepturile Tale GDPR — Ambilet";
 $pageDescription = "Ai control deplin asupra datelor tale personale. Află ce drepturi îți garantează GDPR și cum le poți exercita.";
 $bodyClass = 'page-gdpr';
-$transparentHeader = true;
+$transparentHeader = false;
 
 // Include head
 require_once __DIR__ . '/includes/head.php';

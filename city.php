@@ -70,7 +70,7 @@ if (!$cityConfig) {
 $pageTitle = 'Evenimente în ' . $cityConfig['name'];
 $pageDescription = $cityConfig['description'];
 $currentPage = 'cities';
-$transparentHeader = true;
+$transparentHeader = false;
 
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php'; ?>

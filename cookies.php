@@ -10,7 +10,7 @@ require_once __DIR__ . '/includes/config.php';
 $pageTitle = "Politica de Cookies — Ambilet";
 $pageDescription = "Află ce sunt cookie-urile, cum le folosim și cum îți poți gestiona preferințele pentru o experiență personalizată.";
 $bodyClass = 'page-cookies';
-$transparentHeader = true;
+$transparentHeader = false;
 
 // Include head
 require_once __DIR__ . '/includes/head.php';

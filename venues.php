@@ -9,7 +9,7 @@ require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Locații';
 $pageDescription = 'Descoperă cele mai populare locații pentru evenimente din România. De la arene și stadioane la teatre și cluburi.';
 $bodyClass = 'bg-surface min-h-screen';
-$transparentHeader = true;
+$transparentHeader = false;
 
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';

@@ -10,7 +10,7 @@ $pageTitle = $searchQuery ? 'Rezultate pentru "' . htmlspecialchars($searchQuery
 $pageDescription = 'Caută evenimente, artiști și locații pe ' . SITE_NAME;
 
 $currentPage = 'search';
-$transparentHeader = true;
+$transparentHeader = false;
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>

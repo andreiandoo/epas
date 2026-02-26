@@ -92,7 +92,7 @@ function buildOrgUrl($params = []) {
 }
 
 require_once __DIR__ . '/includes/head.php';
-$transparentHeader = true;
+$transparentHeader = false;
 require_once __DIR__ . '/includes/header.php'; ?>
 
     <!-- Hero Section -->

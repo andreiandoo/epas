@@ -195,7 +195,7 @@ require_once __DIR__ . '/includes/header.php';
                             Agenția de Booking
                         </h2>
                     </div>
-                    <div id="bookingAgencyContent" class="flex flex-col items-start gap-4">
+                    <div id="bookingAgencyContent" class="flex flex-col items-start">
                         <!-- Content will be loaded dynamically -->
                     </div>
                 </div>

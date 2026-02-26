@@ -9,7 +9,7 @@ require_once __DIR__ . '/includes/category-config.php';
 $pageTitle = 'Artisti';
 $pageDescription = 'Descopera artistii tai preferati si nu rata urmatoarele lor concerte si evenimente in Romania.';
 $currentPage = 'artists';
-$transparentHeader = true;
+$transparentHeader = false;
 
 // Get filters from URL
 $genreFilter = $_GET['genre'] ?? '';

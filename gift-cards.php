@@ -7,7 +7,7 @@ require_once 'includes/config.php';
 
 $pageTitle = 'Carduri Cadou — ' . SITE_NAME;
 $pageDescription = 'Dăruiește experiențe, nu obiecte. Cardurile cadou Ambilet sunt valabile pentru concerte, festivaluri, teatru și multe altele.';
-$transparentHeader = true;
+$transparentHeader = false;
 // Predefined amounts
 $amounts = [
     ['value' => 50, 'description' => 'Pentru un film sau spectacol'],

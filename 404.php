@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
 $pageTitle = '404 - Pagina negasita';
-$transparentHeader = true;
+$transparentHeader = false;
 $darkPage = true;
 ?>
 <!DOCTYPE html>
