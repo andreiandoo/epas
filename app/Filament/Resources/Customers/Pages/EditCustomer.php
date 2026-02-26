@@ -86,7 +86,7 @@ class EditCustomer extends EditRecord
                 }),
             Action::make('viewProfile')->label('Profil Client')->icon('heroicon-o-user-circle')
                 ->color('info')
-                ->url(fn() => static::getResource()::getUrl('view', ['record' => $this->record])),
+                ->url(fn() => static::getResource()::getUrl('profile', ['record' => $this->record])),
             Action::make('stats')->label('Stats')->icon('heroicon-o-chart-bar')
                 ->url(fn() => static::getResource()::getUrl('stats', ['record' => $this->record])),
             Action::make('seeOrders')->label('See Orders')->icon('heroicon-o-receipt-percent')

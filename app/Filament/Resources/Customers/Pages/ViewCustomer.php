@@ -94,7 +94,7 @@ class ViewCustomer extends ViewRecord
             \Filament\Actions\Action::make('edit')
                 ->label('Editează')
                 ->icon('heroicon-o-pencil-square')
-                ->url(fn () => static::getResource()::getUrl('edit', ['record' => $this->record])),
+                ->url(fn () => CustomerResource::getUrl('edit', ['record' => $this->record])),
             \Filament\Actions\Action::make('seeOrders')
                 ->label('Vezi Comenzi')
                 ->icon('heroicon-o-receipt-percent')

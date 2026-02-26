@@ -262,7 +262,7 @@ class CustomerResource extends Resource
                 Tables\Columns\TextColumn::make('profile_link')
                     ->label('Profil')
                     ->state('Profil')
-                    ->url(fn ($record) => static::getUrl('view', ['record' => $record]))
+                    ->url(fn ($record) => static::getUrl('profile', ['record' => $record]))
                     ->openUrlInNewTab(false),
 
                 Tables\Columns\TextColumn::make('stats_link')
@@ -295,7 +295,7 @@ class CustomerResource extends Resource
             'index'  => Pages\ListCustomers::route('/'),
             'create' => Pages\CreateCustomer::route('/create'),
             'edit'   => Pages\EditCustomer::route('/{record}/edit'),
-            'view'   => Pages\ViewCustomer::route('/{record}/view'),
+            'profile' => Pages\ViewCustomer::route('/{record}/profile'),
             'stats'  => Pages\ViewCustomerStats::route('/{record}/stats'),
         ];
     }
