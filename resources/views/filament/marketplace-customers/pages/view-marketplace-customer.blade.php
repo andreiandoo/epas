@@ -3,7 +3,7 @@
     {{-- TAB NAVIGATION --}}
     <div x-data="{ activeTab: 'overview' }" class="space-y-6">
         {{-- Tab Buttons --}}
-        <div class="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-1">
+        <div class="flex flex-wrap gap-2 pb-1 border-b border-gray-200 dark:border-gray-700">
             @foreach([
                 'overview' => ['Prezentare Generală', 'heroicon-o-user-circle'],
                 'orders' => ['Comenzi & Bilete', 'heroicon-o-receipt-percent'],
@@ -28,13 +28,12 @@
              ═══════════════════════════════════════════════════════════════ --}}
         <div x-show="activeTab === 'overview'" x-cloak>
 
-            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div class="grid grid-cols-2 gap-6 lg:grid-cols-2">
 
                 {{-- LEFT COLUMN: Stat Cards (2-col grid) --}}
                 <div class="space-y-6">
                     <x-filament::section>
-                        <x-slot name="heading">Statistici Rapide</x-slot>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-3 gap-3">
                             @php
                                 $topGenre = !empty($artistGenres) ? $artistGenres[0]['label'] : '-';
                                 $top3Artists = !empty($topArtists) ? collect($topArtists)->take(3)->pluck('name')->implode(', ') : '-';
@@ -63,10 +62,10 @@
                                 ['Failed / Expirate', number_format($orderStatusBreakdown['failed_value'] ?? 0, 2) . ' RON', 'heroicon-o-exclamation-triangle', 'text-red-500 dark:text-red-400'],
                                 ['Rambursări', number_format($orderStatusBreakdown['refund_value'] ?? 0, 2) . ' RON', 'heroicon-o-arrow-uturn-left', 'text-gray-600 dark:text-gray-400'],
                             ] as [$label, $value, $icon, $color])
-                                <div class="rounded-xl bg-white dark:bg-gray-900 p-3 shadow-sm ring-1 ring-gray-950/5 dark:ring-white/10">
+                                <div class="p-3 bg-white shadow-sm rounded-xl dark:bg-gray-900 ring-1 ring-gray-950/5 dark:ring-white/10">
                                     <div class="flex items-center gap-1.5 mb-0.5">
+                                        <span class="text-[10px] font-medium text-gray-400 dark:text-gray-400 uppercase tracking-wide">{{ $label }}</span>
                                         <x-filament::icon :icon="$icon" class="w-4 h-4 {{ $color }}" />
-                                        <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ $label }}</span>
                                     </div>
                                     <div class="text-sm font-bold {{ $color }} truncate" title="{{ $value }}">{{ $value }}</div>
                                 </div>
@@ -94,37 +93,13 @@
                         </x-filament::section>
                     @endif
 
-                    {{-- Beneficiaries / Attendees --}}
-                    @if(!empty($attendees))
-                        <x-filament::section>
-                            <x-slot name="heading">Beneficiari ({{ count($attendees) }})</x-slot>
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
-                                    <thead class="bg-gray-50 dark:bg-gray-800">
-                                        <tr>
-                                            <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Nume</th>
-                                            <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Email</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                                        @foreach($attendees as $att)
-                                            <tr>
-                                                <td class="px-3 py-2 text-gray-800 dark:text-gray-200">{{ $att->attendee_name }}</td>
-                                                <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $att->attendee_email ?? '-' }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </x-filament::section>
-                    @endif
+                    
                 </div>
 
                 {{-- RIGHT COLUMN: Personal Info --}}
                 <div>
                     <x-filament::section>
-                        <x-slot name="heading">Informații Client</x-slot>
-                        <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                        <div class="divide-y divide-gray-100">
                             @foreach([
                                 'Nume' => trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) ?: '-',
                                 'Email' => $record->email ?? '-',
@@ -142,13 +117,39 @@
                                 'Creat la' => $record->created_at?->format('d.m.Y H:i') ?? '-',
                                 'Actualizat la' => $record->updated_at?->format('d.m.Y H:i') ?? '-',
                             ] as $fieldLabel => $fieldValue)
-                                <div class="flex justify-between py-2 px-1">
-                                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $fieldLabel }}</span>
-                                    <span class="text-sm text-gray-900 dark:text-gray-100">{{ $fieldValue }}</span>
+                                @php $isEmpty = in_array($fieldValue, ['-', 'Nu', 'Niciodată']); @endphp
+                                <div class="flex justify-between px-1 py-2">
+                                    <span class="text-sm font-medium {{ $isEmpty ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400' }}">{{ $fieldLabel }}</span>
+                                    <span class="text-sm {{ $isEmpty ? 'text-red-400 dark:text-red-500' : 'text-gray-900 dark:text-gray-100' }}">{{ $fieldValue }}</span>
                                 </div>
                             @endforeach
                         </div>
                     </x-filament::section>
+
+                    {{-- Beneficiaries / Attendees --}}
+                    @if(!empty($attendees))
+                        <x-filament::section>
+                            <x-slot name="heading">Beneficiari ({{ count($attendees) }})</x-slot>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-800">
+                                        <tr>
+                                            <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Nume</th>
+                                            <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Email</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                        @foreach($attendees as $att)
+                                            <tr>
+                                                <td class="px-3 py-2 text-gray-800 dark:text-gray-200">{{ $att->attendee_name }}</td>
+                                                <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $att->attendee_email ?? '-' }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </x-filament::section>
+                    @endif
                 </div>
             </div>
 
@@ -175,24 +176,24 @@
                 <x-slot name="heading">Comenzi ({{ count($ordersList) }})</x-slot>
                 @if(!empty($ordersList))
                     <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                        <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
                             <thead class="bg-gray-50 dark:bg-gray-800">
                                 <tr>
-                                    <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">#</th>
-                                    <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Eveniment</th>
-                                    <th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">Total</th>
-                                    <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Status</th>
-                                    <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Data</th>
+                                    <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">#</th>
+                                    <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Eveniment</th>
+                                    <th class="px-3 py-2 font-medium text-right text-gray-600 dark:text-gray-300">Total</th>
+                                    <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Status</th>
+                                    <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Data</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                                 @foreach($ordersList as $ord)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onclick="window.location='{{ route('filament.admin.resources.orders.edit', ['record' => $ord->id]) }}'">
+                                    <tr class="cursor-pointer hover:bg-white/20 dark:hover:bg-white/20 group" onclick="window.location='{{ route('filament.marketplace.resources.orders.edit', ['record' => $ord->id]) }}'">
                                         <td class="px-3 py-2 font-mono text-xs">
-                                            <a href="{{ route('filament.admin.resources.orders.edit', ['record' => $ord->id]) }}" class="text-primary-600 hover:underline">{{ $ord->order_number ?? '#' . str_pad($ord->id, 6, '0', STR_PAD_LEFT) }}</a>
+                                            <a href="{{ route('filament.marketplace.resources.orders.edit', ['record' => $ord->id]) }}" class="text-primary-600 hover:underline">{{ $ord->order_number ?? '#' . str_pad($ord->id, 6, '0', STR_PAD_LEFT) }}</a>
                                         </td>
-                                        <td class="px-3 py-2 text-gray-800 dark:text-gray-200 max-w-xs truncate">{{ $ord->event_title }}</td>
-                                        <td class="px-3 py-2 text-right font-semibold text-gray-800 dark:text-gray-200">{{ number_format(($ord->total_cents ?? 0) / 100, 2) }} {{ $ord->currency ?? 'RON' }}</td>
+                                        <td class="max-w-xs px-3 py-2 text-gray-800 truncate dark:text-gray-200 group-hover:text-slate-400">{{ $ord->event_title }}</td>
+                                        <td class="px-3 py-2 font-semibold text-right text-gray-800 dark:text-gray-200 group-hover:text-slate-400">{{ number_format(($ord->total_cents ?? 0) / 100, 2) }} {{ $ord->currency ?? 'RON' }}</td>
                                         <td class="px-3 py-2">
                                             <span class="px-2 py-0.5 rounded text-xs font-medium
                                                 {{ match($ord->status) {
@@ -220,26 +221,26 @@
                     <x-slot name="heading">Bilete ({{ count($ticketsList) }})</x-slot>
                     @if(!empty($ticketsList))
                         <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                            <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead class="bg-gray-50 dark:bg-gray-800">
                                     <tr>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Cod</th>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Eveniment</th>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Tip Bilet</th>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Participant</th>
-                                        <th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">Preț</th>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Loc</th>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Status</th>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Check-in</th>
+                                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Cod</th>
+                                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Eveniment</th>
+                                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Tip Bilet</th>
+                                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Participant</th>
+                                        <th class="px-3 py-2 font-medium text-right text-gray-600 dark:text-gray-300">Preț</th>
+                                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Loc</th>
+                                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Status</th>
+                                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Check-in</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                                     @foreach($ticketsList as $tkt)
-                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onclick="window.location='{{ route('filament.admin.resources.tickets.index') }}?tableSearch={{ urlencode($tkt->code ?? '') }}'">
+                                        <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" onclick="window.location='{{ route('filament.marketplace.resources.tickets.view', ['record' => $tkt->id]) }}'">
                                             <td class="px-3 py-2 font-mono text-xs">
-                                                <a href="{{ route('filament.admin.resources.tickets.index') }}?tableSearch={{ urlencode($tkt->code ?? '') }}" class="text-primary-600 hover:underline">{{ $tkt->code ?? '-' }}</a>
+                                                <a href="{{ route('filament.marketplace.resources.tickets.view', ['record' => $tkt->id]) }}" class="text-primary-600 hover:underline">{{ $tkt->code ?? '-' }}</a>
                                             </td>
-                                            <td class="px-3 py-2 text-gray-800 dark:text-gray-200 max-w-xs truncate">{{ $tkt->event_title }}</td>
+                                            <td class="max-w-xs px-3 py-2 text-gray-800 truncate dark:text-gray-200">{{ $tkt->event_title }}</td>
                                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $tkt->ticket_type_name ?? '-' }}</td>
                                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $tkt->attendee_name ?? '-' }}</td>
                                             <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-200">{{ $tkt->price ? number_format($tkt->price, 2) . ' RON' : '-' }}</td>
@@ -271,12 +272,12 @@
                     <x-filament::section>
                         <x-slot name="heading">Cumpărături per Tenant</x-slot>
                         <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                            <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead class="bg-gray-50 dark:bg-gray-800">
                                     <tr>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Tenant</th>
-                                        <th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">Comenzi</th>
-                                        <th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">Valoare (RON)</th>
+                                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Tenant</th>
+                                        <th class="px-3 py-2 font-medium text-right text-gray-600 dark:text-gray-300">Comenzi</th>
+                                        <th class="px-3 py-2 font-medium text-right text-gray-600 dark:text-gray-300">Valoare (RON)</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -303,20 +304,20 @@
                 <x-slot name="heading">Istoric Email-uri ({{ count($emailLogs) }})</x-slot>
                 @if(!empty($emailLogs))
                     <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                        <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
                             <thead class="bg-gray-50 dark:bg-gray-800">
                                 <tr>
-                                    <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Subiect</th>
-                                    <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Template</th>
-                                    <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Status</th>
-                                    <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Trimis la</th>
-                                    <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Creat la</th>
+                                    <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Subiect</th>
+                                    <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Template</th>
+                                    <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Status</th>
+                                    <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Trimis la</th>
+                                    <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Creat la</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                                 @foreach($emailLogs as $log)
                                     <tr>
-                                        <td class="px-3 py-2 text-gray-800 dark:text-gray-200 max-w-xs truncate">{{ $log->subject }}</td>
+                                        <td class="max-w-xs px-3 py-2 text-gray-800 truncate dark:text-gray-200">{{ $log->subject }}</td>
                                         <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $log->template_name ?? '-' }}</td>
                                         <td class="px-3 py-2">
                                             <span class="px-2 py-0.5 rounded text-xs font-medium
@@ -351,7 +352,7 @@
                     @if(!empty($eventTypes))
                         <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($eventTypes as $item)
-                                <li class="flex items-center justify-between py-2 px-1">
+                                <li class="flex items-center justify-between px-1 py-2">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $item['label'] }}</span>
                                     <span class="text-xs text-gray-500">({{ $item['count'] }}) <span class="font-semibold text-primary-600">{{ $item['percentage'] }}%</span></span>
                                 </li>
@@ -367,7 +368,7 @@
                     @if(!empty($eventGenres))
                         <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($eventGenres as $item)
-                                <li class="flex items-center justify-between py-2 px-1">
+                                <li class="flex items-center justify-between px-1 py-2">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $item['label'] }}</span>
                                     <span class="text-xs text-gray-500">({{ $item['count'] }}) <span class="font-semibold text-primary-600">{{ $item['percentage'] }}%</span></span>
                                 </li>
@@ -383,7 +384,7 @@
                     @if(!empty($eventTags))
                         <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($eventTags as $item)
-                                <li class="flex items-center justify-between py-2 px-1">
+                                <li class="flex items-center justify-between px-1 py-2">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $item['label'] }}</span>
                                     <span class="text-xs text-gray-500">({{ $item['count'] }}) <span class="font-semibold text-primary-600">{{ $item['percentage'] }}%</span></span>
                                 </li>
@@ -395,13 +396,13 @@
                 </x-filament::section>
             </div>
 
-            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3 mt-6">
+            <div class="grid grid-cols-1 gap-6 mt-6 lg:grid-cols-3">
                 <x-filament::section>
                     <x-slot name="heading">Tipuri Locație</x-slot>
                     @if(!empty($venueTypes))
                         <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($venueTypes as $item)
-                                <li class="flex items-center justify-between py-2 px-1">
+                                <li class="flex items-center justify-between px-1 py-2">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $item['label'] }}</span>
                                     <span class="text-xs text-gray-500">({{ $item['count'] }}) <span class="font-semibold text-primary-600">{{ $item['percentage'] }}%</span></span>
                                 </li>
@@ -417,7 +418,7 @@
                     @if(!empty($artistGenres))
                         <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($artistGenres as $item)
-                                <li class="flex items-center justify-between py-2 px-1">
+                                <li class="flex items-center justify-between px-1 py-2">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $item['label'] }}</span>
                                     <span class="text-xs text-gray-500">({{ $item['count'] }}) <span class="font-semibold text-primary-600">{{ $item['percentage'] }}%</span></span>
                                 </li>
@@ -433,7 +434,7 @@
                     @if(!empty($topArtists))
                         <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($topArtists as $a)
-                                <li class="flex items-center justify-between py-2 px-1">
+                                <li class="flex items-center justify-between px-1 py-2">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $a->name }}</span>
                                     <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{{ $a->cnt }}</span>
                                 </li>
@@ -445,13 +446,13 @@
                 </x-filament::section>
             </div>
 
-            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3 mt-6">
+            <div class="grid grid-cols-1 gap-6 mt-6 lg:grid-cols-3">
                 <x-filament::section>
                     <x-slot name="heading">Top 3 Zile Preferate</x-slot>
                     @if(!empty($preferredDays))
                         <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($preferredDays as $item)
-                                <li class="flex items-center justify-between py-2 px-1">
+                                <li class="flex items-center justify-between px-1 py-2">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $item['label'] }}</span>
                                     <span class="text-xs text-gray-500">({{ $item['count'] }}) <span class="font-semibold text-primary-600">{{ $item['percentage'] }}%</span></span>
                                 </li>
@@ -467,7 +468,7 @@
                     @if(!empty($preferredCities))
                         <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($preferredCities as $item)
-                                <li class="flex items-center justify-between py-2 px-1">
+                                <li class="flex items-center justify-between px-1 py-2">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $item['label'] }}</span>
                                     <span class="text-xs text-gray-500">({{ $item['count'] }}) <span class="font-semibold text-primary-600">{{ $item['percentage'] }}%</span></span>
                                 </li>
@@ -483,7 +484,7 @@
                     @if(!empty($preferredStartTimes))
                         <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($preferredStartTimes as $item)
-                                <li class="flex items-center justify-between py-2 px-1">
+                                <li class="flex items-center justify-between px-1 py-2">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $item['label'] }}</span>
                                     <span class="text-xs text-gray-500">({{ $item['count'] }}) <span class="font-semibold text-primary-600">{{ $item['percentage'] }}%</span></span>
                                 </li>
@@ -495,13 +496,13 @@
                 </x-filament::section>
             </div>
 
-            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-6">
+            <div class="grid grid-cols-1 gap-6 mt-6 lg:grid-cols-2">
                 <x-filament::section>
                     <x-slot name="heading">Luni Preferate ale Anului</x-slot>
                     @if(!empty($preferredMonths))
                         <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($preferredMonths as $item)
-                                <li class="flex items-center justify-between py-2 px-1">
+                                <li class="flex items-center justify-between px-1 py-2">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $item['label'] }}</span>
                                     <span class="text-xs text-gray-500">({{ $item['count'] }}) <span class="font-semibold text-primary-600">{{ $item['percentage'] }}%</span></span>
                                 </li>
@@ -517,7 +518,7 @@
                     @if(!empty($preferredMonthPeriods))
                         <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($preferredMonthPeriods as $item)
-                                <li class="flex items-center justify-between py-2 px-1">
+                                <li class="flex items-center justify-between px-1 py-2">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $item['label'] }}</span>
                                     <span class="text-xs text-gray-500">({{ $item['count'] }}) <span class="font-semibold text-primary-600">{{ $item['percentage'] }}%</span></span>
                                 </li>
@@ -535,9 +536,9 @@
                         <x-slot name="heading">Evenimente Recente</x-slot>
                         <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($recentEvents as $ev)
-                                <li class="flex items-center justify-between py-2 px-1">
+                                <li class="flex items-center justify-between px-1 py-2">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $ev->title }}</span>
-                                    <a href="{{ route('filament.admin.resources.events.edit', ['record' => $ev->id]) }}" class="text-primary-600 hover:underline text-xs">Deschide</a>
+                                    <a href="{{ route('filament.marketplace.resources.events.edit', ['record' => $ev->id]) }}" class="text-xs text-primary-600 hover:underline">Deschide</a>
                                 </li>
                             @endforeach
                         </ul>

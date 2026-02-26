@@ -62,7 +62,7 @@ class CustomerInsightsService
     {
         $orders = DB::table('orders')
             ->where($this->orderColumn, $this->customerId)
-            ->selectRaw('COUNT(*) as total_orders, COALESCE(SUM(total_cents), 0) as total_value')
+            ->selectRaw("COUNT(*) as total_orders, SUM(" . $this->totalExpr() . ") as total_value")
             ->first();
 
         $tickets = DB::table('tickets as t')
@@ -99,7 +99,7 @@ class CustomerInsightsService
             ->select(
                 'status',
                 DB::raw('COUNT(*) as cnt'),
-                DB::raw('COALESCE(SUM(total_cents), 0) as total_cents')
+                DB::raw("SUM(" . $this->totalExpr() . ") as total_cents")
             )
             ->groupBy('status')
             ->get()
@@ -118,7 +118,7 @@ class CustomerInsightsService
         $refundTotal = DB::table('orders')
             ->where($this->orderColumn, $this->customerId)
             ->where('status', 'refunded')
-            ->sum(DB::raw('COALESCE(refund_amount, total_cents / 100)'));
+            ->sum(DB::raw("COALESCE(refund_amount, " . $this->totalExpr() . " / 100)"));
 
         return [
             'pending_value' => ($rows->get('pending')?->total_cents ?? 0) / 100,
@@ -138,7 +138,7 @@ class CustomerInsightsService
         $monthNames = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
         $rows = DB::table('orders')
-            ->selectRaw("MONTH(created_at) as m, COUNT(*) as cnt, COALESCE(SUM(total_cents), 0) as total")
+            ->selectRaw("MONTH(created_at) as m, COUNT(*) as cnt, SUM(" . $this->totalExpr() . ") as total")
             ->where($this->orderColumn, $this->customerId)
             ->whereYear('created_at', $year)
             ->groupBy('m')
@@ -147,7 +147,7 @@ class CustomerInsightsService
             ->toArray();
 
         $revenueRows = DB::table('orders')
-            ->selectRaw("MONTH(created_at) as m, COALESCE(SUM(total_cents), 0) as total")
+            ->selectRaw("MONTH(created_at) as m, SUM(" . $this->totalExpr() . ") as total")
             ->where($this->orderColumn, $this->customerId)
             ->whereYear('created_at', $year)
             ->groupBy('m')
@@ -450,7 +450,7 @@ class CustomerInsightsService
                 'o.id',
                 'o.order_number',
                 DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro')), 'N/A') as event_title"),
-                'o.total_cents',
+                DB::raw($this->totalExpr('o') . ' as total_cents'),
                 'o.currency',
                 'o.status',
                 'o.created_at'
@@ -583,7 +583,7 @@ class CustomerInsightsService
     public function monthlyOrders(): array
     {
         return DB::table('orders')
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as cnt, SUM(total_cents) as total")
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as cnt, SUM(" . $this->totalExpr() . ") as total")
             ->where($this->orderColumn, $this->customerId)
             ->groupBy('month')
             ->orderBy('month')
@@ -634,11 +634,20 @@ class CustomerInsightsService
         return DB::table('tenants as tn')
             ->join('orders as o', 'o.tenant_id', '=', 'tn.id')
             ->where('o.' . $this->orderColumn, $this->customerId)
-            ->select('tn.id', 'tn.name', DB::raw('COUNT(*) as cnt'), DB::raw('SUM(o.total_cents) as total'))
+            ->select('tn.id', 'tn.name', DB::raw('COUNT(*) as cnt'), DB::raw("SUM(" . $this->totalExpr('o') . ") as total"))
             ->groupBy('tn.id', 'tn.name')
             ->orderByDesc('total')
             ->get()
             ->toArray();
+    }
+
+    // ─── Helper: total expression (handles both total_cents and total columns) ─
+
+    protected function totalExpr(string $prefix = ''): string
+    {
+        $p = $prefix ? "{$prefix}." : '';
+
+        return "COALESCE(NULLIF({$p}total_cents, 0), ROUND({$p}total * 100), 0)";
     }
 
     // ─── Helper: Format with Percentage ───────────────────────────
