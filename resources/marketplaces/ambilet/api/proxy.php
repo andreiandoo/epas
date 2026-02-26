@@ -1981,7 +1981,7 @@ switch ($action) {
     case 'organizer.services.email-audiences':
         $method = 'GET';
         $params = [];
-        foreach (['audience_type', 'event_id', 'age_min', 'age_max'] as $k) {
+        foreach (['audience_type', 'event_id', 'age_min', 'age_max', 'gender'] as $k) {
             if (isset($_GET[$k])) $params[$k] = $_GET[$k];
         }
         foreach (['cities', 'categories', 'genres'] as $k) {

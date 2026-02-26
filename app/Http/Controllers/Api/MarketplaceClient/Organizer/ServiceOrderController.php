@@ -455,6 +455,7 @@ class ServiceOrderController extends BaseController
         // Get filter parameters (support both single values and arrays)
         $ageMin = $request->get('age_min');
         $ageMax = $request->get('age_max');
+        $gender = $request->get('gender');
         $cities = $request->get('cities', []);
         $categories = $request->get('categories', []);
         $genres = $request->get('genres', []);
@@ -464,7 +465,7 @@ class ServiceOrderController extends BaseController
         if (!is_array($categories)) $categories = $categories ? [$categories] : [];
         if (!is_array($genres)) $genres = $genres ? [$genres] : [];
 
-        $filters = compact('ageMin', 'ageMax', 'cities', 'categories', 'genres');
+        $filters = compact('ageMin', 'ageMax', 'gender', 'cities', 'categories', 'genres');
 
         // Build base query for audience type
         $baseQuery = $this->buildAudienceBaseQuery($organizer, $audienceType);
@@ -498,23 +499,31 @@ class ServiceOrderController extends BaseController
                 });
         }
 
-        // Marketplace audience: all customers who accepted marketing
+        // Marketplace audience: ALL active customers in the marketplace
         return MarketplaceCustomer::query()
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
-            ->where('accepts_marketing', true);
+            ->where('status', 'active');
     }
 
     /**
-     * Apply audience filters to a query
+     * Apply audience filters to a query.
+     * Filters use multiple data sources:
+     *   - City: customer.city OR favorite venues' city
+     *   - Category: orders -> marketplace events OR watchlist marketplace events
+     *   - Genre: orders -> marketplace events OR watchlist marketplace events
+     *   - Gender: customer.gender
+     *   - Age: customer.birth_date
      */
     public function applyAudienceFilters($query, array $filters, MarketplaceOrganizer $organizer, string $audienceType)
     {
         $ageMin = $filters['ageMin'] ?? null;
         $ageMax = $filters['ageMax'] ?? null;
+        $gender = $filters['gender'] ?? null;
         $cities = $filters['cities'] ?? [];
         $categories = $filters['categories'] ?? [];
         $genres = $filters['genres'] ?? [];
 
+        // Age filter (birth_date based)
         if ($ageMin) {
             $minDate = now()->subYears((int) $ageMin);
             $query->where('birth_date', '<=', $minDate);
@@ -525,33 +534,70 @@ class ServiceOrderController extends BaseController
             $query->where('birth_date', '>=', $maxDate);
         }
 
+        // Gender filter
+        if ($gender) {
+            $query->where('gender', $gender);
+        }
+
+        // City filter: customer.city OR favorite venue city
         if (!empty($cities)) {
             $query->where(function ($q) use ($cities) {
-                foreach ($cities as $city) {
-                    $q->orWhere('city', 'like', "%{$city}%");
-                }
+                $q->where(function ($cq) use ($cities) {
+                    foreach ($cities as $city) {
+                        $cq->orWhere('city', 'like', "%{$city}%");
+                    }
+                });
+                $q->orWhereHas('favoriteVenues', function ($vq) use ($cities) {
+                    $vq->where(function ($vcq) use ($cities) {
+                        foreach ($cities as $city) {
+                            $vcq->orWhere('city', 'like', "%{$city}%");
+                        }
+                    });
+                });
             });
         }
 
-        // Category and genre filtering through orders -> events
-        if (!empty($categories) || !empty($genres)) {
-            $query->whereHas('orders', function ($q) use ($organizer, $audienceType, $categories, $genres) {
-                if ($audienceType === 'own') {
-                    $q->where('marketplace_organizer_id', $organizer->id);
-                }
-                $q->where('status', 'completed')
-                  ->whereHas('marketplaceEvent', function ($eq) use ($categories, $genres) {
-                      if (!empty($categories)) {
-                          $eq->whereIn('marketplace_event_category_id', $categories);
-                      }
-                      if (!empty($genres)) {
-                          $eq->where(function ($gq) use ($genres) {
-                              foreach ($genres as $genre) {
-                                  $gq->orWhereJsonContains('genre_ids', (int) $genre);
-                              }
-                          });
-                      }
-                  });
+        // Category filter: via orders OR watchlist marketplace events
+        if (!empty($categories)) {
+            $query->where(function ($q) use ($organizer, $audienceType, $categories) {
+                $q->whereHas('orders', function ($oq) use ($organizer, $audienceType, $categories) {
+                    if ($audienceType === 'own') {
+                        $oq->where('marketplace_organizer_id', $organizer->id);
+                    }
+                    $oq->where('status', 'completed')
+                       ->whereHas('marketplaceEvent', function ($eq) use ($categories) {
+                           $eq->whereIn('marketplace_event_category_id', $categories);
+                       });
+                });
+                $q->orWhereHas('watchlistMarketplaceEvents', function ($wq) use ($categories) {
+                    $wq->whereIn('marketplace_event_category_id', $categories);
+                });
+            });
+        }
+
+        // Genre filter: via orders OR watchlist marketplace events
+        if (!empty($genres)) {
+            $query->where(function ($q) use ($organizer, $audienceType, $genres) {
+                $q->whereHas('orders', function ($oq) use ($organizer, $audienceType, $genres) {
+                    if ($audienceType === 'own') {
+                        $oq->where('marketplace_organizer_id', $organizer->id);
+                    }
+                    $oq->where('status', 'completed')
+                       ->whereHas('marketplaceEvent', function ($eq) use ($genres) {
+                           $eq->where(function ($gq) use ($genres) {
+                               foreach ($genres as $genre) {
+                                   $gq->orWhereJsonContains('genre_ids', (int) $genre);
+                               }
+                           });
+                       });
+                });
+                $q->orWhereHas('watchlistMarketplaceEvents', function ($wq) use ($genres) {
+                    $wq->where(function ($gq) use ($genres) {
+                        foreach ($genres as $genre) {
+                            $gq->orWhereJsonContains('genre_ids', (int) $genre);
+                        }
+                    });
+                });
             });
         }
 
@@ -566,9 +612,10 @@ class ServiceOrderController extends BaseController
         $cities = $filters['cities'] ?? [];
         $categories = $filters['categories'] ?? [];
         $genres = $filters['genres'] ?? [];
+        $gender = $filters['gender'] ?? null;
 
         $hasAnyFilter = !empty($filters['ageMin']) || !empty($filters['ageMax'])
-            || !empty($cities) || !empty($categories) || !empty($genres);
+            || !empty($cities) || !empty($categories) || !empty($genres) || !empty($gender);
 
         if (!$hasAnyFilter) {
             return [];
@@ -590,7 +637,12 @@ class ServiceOrderController extends BaseController
             $byCityBase = $this->applyAudienceFilters(clone $baseQuery, $byCityFilters, $organizer, $audienceType);
             $byCities = [];
             foreach ($cities as $city) {
-                $cityQuery = (clone $byCityBase)->where('city', 'like', "%{$city}%");
+                $cityQuery = (clone $byCityBase)->where(function ($q) use ($city) {
+                    $q->where('city', 'like', "%{$city}%")
+                      ->orWhereHas('favoriteVenues', function ($vq) use ($city) {
+                          $vq->where('city', 'like', "%{$city}%");
+                      });
+                });
                 $byCities[$city] = $cityQuery->count();
             }
             $result['by_city'] = $byCities;

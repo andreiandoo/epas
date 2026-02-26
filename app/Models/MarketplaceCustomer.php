@@ -181,6 +181,20 @@ class MarketplaceCustomer extends Authenticatable
     }
 
     /**
+     * Watchlist marketplace events (via marketplace_event_id)
+     */
+    public function watchlistMarketplaceEvents(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketplaceEvent::class,
+            'marketplace_customer_watchlist',
+            'marketplace_customer_id',
+            'marketplace_event_id'
+        )->withPivot(['notify_on_sale', 'notify_on_price_drop'])
+         ->withTimestamps();
+    }
+
+    /**
      * Get total available gift card balance for this customer
      */
     public function getGiftCardBalanceAttribute(): float
