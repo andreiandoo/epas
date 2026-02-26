@@ -528,7 +528,8 @@ const EventPage = {
                     has_seating: tt.has_seating || false,
                     seating_sections: tt.seating_sections || [],
                     seating_rows: tt.seating_rows || [],
-                    commission: tt.commission || null
+                    commission: tt.commission || null,
+                    is_refundable: tt.is_refundable || false
                 };
             }),
             seating_layout: apiData.seating_layout || null,
