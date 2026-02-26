@@ -162,7 +162,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 <!-- Header -->
 <header class="fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 <?= $transparentHeader ? 'header-transparent bg-transparent border-transparent' : 'bg-white border-b border-gray-200' ?>" id="header" data-transparent="<?= $transparentHeader ? 'true' : 'false' ?>">
     <!-- Top Bar (default) -->
-    <div class="mobile:hidden bg-secondary text-white text-sm py-2.5 transition-all duration-200 ease-in-out <?= $transparentHeader ? 'hidden' : '' ?>" id="headerTopBar">
+    <div class="mobile:hidden bg-secondary text-white text-sm py-2.5 transition-all duration-200 ease-in-out <?= $transparentHeader ? 'hidden' : '' ?>" id="headerTopBar" style="display:none">
         <div class="flex items-center justify-between px-4 mx-auto max-w-7xl">
             <p class="items-center hidden gap-2 sm:flex">
                 <svg class="w-4 h-4 text-primary-light" fill="currentColor" viewBox="0 0 24 24">
@@ -199,9 +199,9 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         <div class="flex items-center justify-between h-[72px]">
             <!-- Logo -->
             <a href="/" class="flex items-center gap-2.5 no-underline flex-shrink-0">
-                <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
+                <img src="/assets/images/ambilet_logo.webp" alt="<?= SITE_NAME ?>" class="h-10 w-auto header-logo <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
                 
-                <svg class="w-8 h-8" viewBox="0 0 48 48" fill="none">
+                <svg class="hidden w-8 h-8" viewBox="0 0 48 48" fill="none">
                     <defs>
                         <linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38">
                             <stop stop-color="#A51C30"/>
@@ -399,7 +399,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             <div class="grid grid-cols-3 gap-4">
                                 <?php foreach ($navVenues as $venue): ?>
                                 <a href="/locatie/<?= $venue['slug'] ?>" class="flex gap-3.5 p-4 bg-gray-50 rounded-xl border border-transparent hover:bg-white hover:border-gray-200 hover:shadow-md transition-all">
-                                    <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-lg bg-gray-100">
+                                    <div class="flex-shrink-0 w-16 h-16 overflow-hidden bg-gray-100 rounded-lg">
                                         <?php if (!empty($venue['image'])): ?>
                                         <img src="<?= $venue['image'] ?>" alt="<?= htmlspecialchars($venue['name']) ?>" class="object-cover w-full h-full">
                                         <?php else: ?>

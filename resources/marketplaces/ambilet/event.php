@@ -47,9 +47,6 @@ require_once __DIR__ . '/includes/head.php';
 
         .sticky-cart { position: sticky; top: 88px; }
 
-        .gallery-thumb { transition: all 0.2s ease; }
-        .gallery-thumb:hover, .gallery-thumb.active { border-color: #A51C30; opacity: 1; }
-
         /* Mobile ticket drawer */
         @media (max-width: 1023px) {
             .sticky-cart-wrapper { display: none; }
@@ -139,13 +136,10 @@ require_once __DIR__ . '/includes/head.php';
                 <!-- Event Header -->
                 <div class="mb-8 bg-white border rounded-3xl border-border mobile:border-0 mobile:border-b mobile:rounded-none">
                     <!-- Main Image -->
-                    <div class="relative overflow-hidden rounded-t-3xl h-72 md:h-108 mobile:rounded-none">
+                    <div class="relative overflow-hidden rounded-t-3xl mobile:rounded-none" style="aspect-ratio: 1.904/1;">
                         <img id="mainImage" src="" alt="" class="object-cover w-full h-full">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                         <div class="absolute flex gap-2 top-4 left-4" id="event-badges"></div>
-                        <div class="absolute bottom-4 left-4 right-4">
-                            <div class="flex gap-2" id="gallery-thumbs"></div>
-                        </div>
                     </div>
 
                     <!-- Event Info -->
