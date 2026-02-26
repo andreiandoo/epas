@@ -58,7 +58,24 @@ class ImportArtists extends Page implements HasForms
                         FC\Toggle::make('update_existing')
                             ->label('Update Existing Artists')
                             ->helperText('If enabled, existing artists (matched by slug) will be updated with new data')
-                            ->default(true),
+                            ->default(true)
+                            ->live()
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
+                                if ($state) {
+                                    $set('skip_existing', false);
+                                }
+                            }),
+
+                        FC\Toggle::make('skip_existing')
+                            ->label('Skip Existing Artists')
+                            ->helperText('If enabled, only new artists will be imported — existing artists (matched by slug) are skipped entirely')
+                            ->default(false)
+                            ->live()
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
+                                if ($state) {
+                                    $set('update_existing', false);
+                                }
+                            }),
 
                         FC\Toggle::make('download_images')
                             ->label('Download Images from URLs')
@@ -116,7 +133,13 @@ class ImportArtists extends Page implements HasForms
         }
 
         $updateExisting = $data['update_existing'] ?? false;
+        $skipExisting = $data['skip_existing'] ?? false;
         $downloadImages = $data['download_images'] ?? false;
+
+        // skip_existing takes precedence over update_existing
+        if ($skipExisting) {
+            $updateExisting = false;
+        }
 
         $handle = fopen($filePath, 'r');
 
@@ -248,16 +271,20 @@ class ImportArtists extends Page implements HasForms
             ];
         }
 
-        // Handle YouTube videos
+        // Handle YouTube videos (repeater format: [{url: 'https://...'}, ...])
         $youtubeVideos = [];
         for ($i = 1; $i <= 5; $i++) {
             $videoUrl = $data["youtube_video_{$i}"] ?? $data["youtube_video{$i}"] ?? null;
             if (!empty($videoUrl)) {
-                $videoId = YouTubeService::extractVideoId($videoUrl);
-                if ($videoId) {
-                    $youtubeVideos[] = $videoId;
-                } elseif (strlen($videoUrl) === 11) {
-                    $youtubeVideos[] = $videoUrl;
+                // If it's already a full URL, use it directly
+                if (filter_var($videoUrl, FILTER_VALIDATE_URL)) {
+                    $youtubeVideos[] = ['url' => $videoUrl];
+                } else {
+                    // Assume it's a video ID, construct full URL
+                    $videoId = (strlen($videoUrl) === 11) ? $videoUrl : YouTubeService::extractVideoId($videoUrl);
+                    if ($videoId) {
+                        $youtubeVideos[] = ['url' => 'https://www.youtube.com/watch?v=' . $videoId];
+                    }
                 }
             }
         }

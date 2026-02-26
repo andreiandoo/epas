@@ -98,7 +98,7 @@ require_once __DIR__ . '/includes/head.php';
 <?php require_once __DIR__ . '/includes/header.php'; ?>
 
     <!-- Breadcrumb -->
-    <div class="bg-white border-b border-border mt-28 mobile:hidden">
+    <div class="bg-white border-b border-border mt-18 mobile:hidden">
         <div class="px-4 py-3 mx-auto max-w-7xl">
             <nav class="flex items-center gap-2 text-sm" id="breadcrumb">
                 <a href="/" class="transition-colors text-muted hover:text-primary">Acasă</a>
@@ -222,7 +222,7 @@ require_once __DIR__ . '/includes/head.php';
 
                 <!-- Tour Events Section -->
                 <section id="tour-events-section" style="display:none;" class="mb-8 mobile:mb-0 mobile:border-b mobile:border-border">
-                    <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                    <div class="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-2xl">
                         <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-100 bg-gray-50/50">
                             <span class="flex items-center justify-center w-9 h-9 rounded-xl" style="background: linear-gradient(135deg, #A51C30 0%, #8B1728 100%);">
                                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,14 +234,14 @@ require_once __DIR__ . '/includes/head.php';
                                 <p class="text-sm text-muted"><span id="tour-name-display"></span><span id="tour-name-fallback">Evenimentul face parte dintr-un turneu. Alege și alte date.</span></p>
                             </div>
                         </div>
-                        <div id="tour-events-list" class="divide-y divide-gray-50 px-2 py-2">
+                        <div id="tour-events-list" class="px-2 py-2 divide-y divide-gray-50">
                             <!-- Loaded dynamically by JS -->
                         </div>
                     </div>
                 </section>
 
                 <!-- Artist Section -->
-                <div class="mb-8 mobile:mb-0 px-8" id="artist-section" style="display:none;">
+                <div class="px-8 mb-8 mobile:mb-0" id="artist-section" style="display:none;">
                     <div id="artist-content" class="mobile:p-4"></div>
                 </div>
 
@@ -312,7 +312,7 @@ require_once __DIR__ . '/includes/head.php';
 
                         <!-- Ticket Terms Section -->
                         <div id="ticket-terms-section" class="mb-4">
-                            <div id="ticket-terms-content" class="p-4 text-xs prose prose-slate max-w-none text-blue-800">
+                            <div id="ticket-terms-content" class="p-4 text-xs prose text-blue-800 prose-slate max-w-none">
                                 <!-- Loaded dynamically by JS -->
                             </div>
                         </div>
