@@ -259,6 +259,12 @@ class CustomerResource extends Resource
                     ->url(fn ($record) => route('filament.admin.resources.orders.index') . '?tableSearch=' . urlencode($record->email))
                     ->openUrlInNewTab(),
 
+                Tables\Columns\TextColumn::make('profile_link')
+                    ->label('Profil')
+                    ->state('Profil')
+                    ->url(fn ($record) => static::getUrl('view', ['record' => $record]))
+                    ->openUrlInNewTab(false),
+
                 Tables\Columns\TextColumn::make('stats_link')
                     ->label('Stats')
                     ->state('Open')
@@ -289,6 +295,7 @@ class CustomerResource extends Resource
             'index'  => Pages\ListCustomers::route('/'),
             'create' => Pages\CreateCustomer::route('/create'),
             'edit'   => Pages\EditCustomer::route('/{record}/edit'),
+            'view'   => Pages\ViewCustomer::route('/{record}/view'),
             'stats'  => Pages\ViewCustomerStats::route('/{record}/stats'),
         ];
     }

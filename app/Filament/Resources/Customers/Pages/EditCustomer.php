@@ -84,6 +84,9 @@ class EditCustomer extends EditRecord
 
                     $this->refreshFormData(['points_balance', 'points_earned', 'points_spent']);
                 }),
+            Action::make('viewProfile')->label('Profil Client')->icon('heroicon-o-user-circle')
+                ->color('info')
+                ->url(fn() => static::getResource()::getUrl('view', ['record' => $this->record])),
             Action::make('stats')->label('Stats')->icon('heroicon-o-chart-bar')
                 ->url(fn() => static::getResource()::getUrl('stats', ['record' => $this->record])),
             Action::make('seeOrders')->label('See Orders')->icon('heroicon-o-receipt-percent')
