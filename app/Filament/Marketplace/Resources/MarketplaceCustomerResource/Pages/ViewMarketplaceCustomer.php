@@ -35,6 +35,12 @@ class ViewMarketplaceCustomer extends ViewRecord
     public array $topArtists = [];
     public array $tenantsList = [];
     public array $gamification = [];
+    public string $profileNarrative = '';
+    public array $weightedProfileData = [];
+    public array $favoritesProfile = [];
+    public array $notificationPreferences = [];
+    public ?string $emailVerifiedDisplay = null;
+    public bool $acceptsMarketingDisplay = false;
 
     public function mount($record): void
     {
@@ -42,7 +48,26 @@ class ViewMarketplaceCustomer extends ViewRecord
 
         /** @var MarketplaceCustomer $customer */
         $customer = $this->record;
+
+        // Bug fix: capture raw values before Filament form state hydration
+        $this->emailVerifiedDisplay = $customer->email_verified_at
+            ? 'Da (' . $customer->email_verified_at->format('d.m.Y') . ')' : 'Nu';
+        $this->acceptsMarketingDisplay = (bool) $customer->accepts_marketing;
+
+        // Notification preferences
+        $prefs = $customer->settings['notification_preferences'] ?? [];
+        $this->notificationPreferences = [
+            'Event Reminders' => $prefs['reminders'] ?? false,
+            'Newsletter & Offers' => $prefs['newsletter'] ?? false,
+            'Favorite Updates' => $prefs['favorites'] ?? false,
+            'Browsing History' => $prefs['history'] ?? false,
+            'Marketing Cookies' => $prefs['marketing'] ?? false,
+        ];
+
         $service = CustomerInsightsService::forMarketplaceCustomer($customer);
+
+        // Profile narrative
+        $this->profileNarrative = $service->generateProfileNarrative();
 
         // Lifetime stats
         $this->lifetimeStats = $service->lifetimeStats();
@@ -60,6 +85,10 @@ class ViewMarketplaceCustomer extends ViewRecord
         $this->preferredStartTimes = $service->preferredStartTimes();
         $this->preferredMonths = $service->preferredMonths();
         $this->preferredMonthPeriods = $service->preferredMonthPeriods();
+
+        // Favorites + weighted profile
+        $this->favoritesProfile = $service->favoritesProfile();
+        $this->weightedProfileData = $service->weightedProfile();
 
         // History
         $this->ordersList = $service->ordersList();

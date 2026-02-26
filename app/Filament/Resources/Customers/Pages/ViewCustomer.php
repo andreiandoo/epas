@@ -38,6 +38,7 @@ class ViewCustomer extends ViewRecord
     public array $tenantsList = [];
     public array $trackingData = [];
     public ?MarketplaceCustomer $marketplaceProfile = null;
+    public string $profileNarrative = '';
 
     public function mount($record): void
     {
@@ -49,6 +50,9 @@ class ViewCustomer extends ViewRecord
 
         // Look up linked MarketplaceCustomer by email for extra fields
         $this->marketplaceProfile = MarketplaceCustomer::where('email', $customer->email)->first();
+
+        // Profile narrative
+        $this->profileNarrative = $service->generateProfileNarrative();
 
         // Lifetime stats
         $this->lifetimeStats = $service->lifetimeStats();

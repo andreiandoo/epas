@@ -22,6 +22,7 @@ class CustomerInsightsService
     protected ?Customer $coreCustomer;
     protected ?int $marketplaceCustomerId;
     protected ?int $marketplaceClientId;
+    protected ?MarketplaceCustomer $marketplaceCustomer = null;
 
     private function __construct(
         int $customerId,
@@ -54,7 +55,7 @@ class CustomerInsightsService
 
     public static function forMarketplaceCustomer(MarketplaceCustomer $customer): static
     {
-        return new static(
+        $instance = new static(
             $customer->id,
             $customer->email,
             'marketplace_customer_id',
@@ -63,6 +64,8 @@ class CustomerInsightsService
             $customer->id,
             $customer->marketplace_client_id
         );
+        $instance->marketplaceCustomer = $customer;
+        return $instance;
     }
 
     // ─── Lifetime Stats ───────────────────────────────────────────
@@ -743,6 +746,402 @@ class CustomerInsightsService
         $p = $prefix ? "{$prefix}." : '';
 
         return "COALESCE(NULLIF({$p}total_cents, 0), ROUND({$p}total * 100), 0)";
+    }
+
+    // ─── Favorites Profile (marketplace only) ──────────────────────
+
+    public function favoritesProfile(): array
+    {
+        if (! $this->marketplaceCustomer) {
+            return ['event_types' => [], 'event_genres' => [], 'artist_genres' => [], 'venue_types' => [], 'cities' => []];
+        }
+
+        $mc = $this->marketplaceCustomer;
+
+        // Artist genres from favorite artists
+        $artistGenreCounts = [];
+        foreach ($mc->favoriteArtists()->with('artistGenres')->get() as $artist) {
+            foreach ($artist->artistGenres as $genre) {
+                $label = $this->extractTranslatableName($genre->name);
+                $artistGenreCounts[$label] = ($artistGenreCounts[$label] ?? 0) + 1;
+            }
+        }
+
+        // Venue types + cities from favorite venues
+        $venueTypeCounts = [];
+        $cityCounts = [];
+        foreach ($mc->favoriteVenues()->with('venueTypes')->get() as $venue) {
+            foreach ($venue->venueTypes as $vt) {
+                $label = $this->extractTranslatableName($vt->name);
+                $venueTypeCounts[$label] = ($venueTypeCounts[$label] ?? 0) + 1;
+            }
+            if ($venue->city) {
+                $cityCounts[$venue->city] = ($cityCounts[$venue->city] ?? 0) + 1;
+            }
+        }
+
+        // Event types, genres, cities from watchlist events
+        $eventTypeCounts = [];
+        $eventGenreCounts = [];
+        foreach ($mc->watchlistEvents()->with(['eventTypes', 'eventGenres', 'venue'])->get() as $event) {
+            foreach ($event->eventTypes as $et) {
+                $label = $this->extractTranslatableName($et->name);
+                $eventTypeCounts[$label] = ($eventTypeCounts[$label] ?? 0) + 1;
+            }
+            foreach ($event->eventGenres as $eg) {
+                $label = $this->extractTranslatableName($eg->name);
+                $eventGenreCounts[$label] = ($eventGenreCounts[$label] ?? 0) + 1;
+            }
+            if ($event->venue && $event->venue->city) {
+                $cityCounts[$event->venue->city] = ($cityCounts[$event->venue->city] ?? 0) + 1;
+            }
+        }
+
+        return [
+            'event_types' => $this->sortedCounts($eventTypeCounts),
+            'event_genres' => $this->sortedCounts($eventGenreCounts),
+            'artist_genres' => $this->sortedCounts($artistGenreCounts),
+            'venue_types' => $this->sortedCounts($venueTypeCounts),
+            'cities' => $this->sortedCounts($cityCounts),
+        ];
+    }
+
+    // ─── Weighted Profile (orders × 0.7 + favorites × 0.3) ──────
+
+    public function weightedProfile(float $orderWeight = 0.7, float $favWeight = 0.3): array
+    {
+        $favs = $this->favoritesProfile();
+
+        return [
+            'event_types' => $this->mergeWeighted($this->eventTypes(), $favs['event_types'], $orderWeight, $favWeight),
+            'event_genres' => $this->mergeWeighted($this->eventGenres(), $favs['event_genres'], $orderWeight, $favWeight),
+            'artist_genres' => $this->mergeWeighted($this->artistGenres(), $favs['artist_genres'], $orderWeight, $favWeight),
+            'venue_types' => $this->mergeWeighted($this->venueTypes(), $favs['venue_types'], $orderWeight, $favWeight),
+            'cities' => $this->mergeWeighted($this->preferredCities(), $favs['cities'], $orderWeight, $favWeight),
+        ];
+    }
+
+    // ─── Profile Narrative Generation ───────────────────────────
+
+    public function generateProfileNarrative(): string
+    {
+        $stats = $this->lifetimeStats();
+        $priceRange = $this->priceRange();
+        $breakdown = $this->orderStatusBreakdown();
+        $attendees = $this->attendees();
+
+        // Determine data source: weighted (marketplace) or orders-only
+        $isMarketplace = $this->marketplaceCustomer !== null;
+        if ($isMarketplace) {
+            $wp = $this->weightedProfile();
+            $topEventType = $this->extractTopLabel($wp['event_types'], 'label');
+            $topEventGenres = $this->extractTopLabels($wp['event_genres'], 2, 'label');
+            $topVenueTypes = $this->extractTopLabels($wp['venue_types'], 2, 'label');
+            $topArtistGenres = $this->extractTopLabels($wp['artist_genres'], 3, 'label');
+            $topCity = $this->extractTopLabel($wp['cities'], 'label');
+        } else {
+            $topEventType = $this->extractTopLabel($this->eventTypes(), 'label');
+            $topEventGenres = $this->extractTopLabels($this->eventGenres(), 2, 'label');
+            $topVenueTypes = $this->extractTopLabels($this->venueTypes(), 2, 'label');
+            $topArtistGenres = $this->extractTopLabels($this->artistGenres(), 3, 'label');
+            $topCity = $this->extractTopLabel($this->preferredCities(), 'label');
+        }
+
+        $topArtistNames = collect($this->topArtists(3))->pluck('name')->implode(', ');
+        $topDay = $this->extractTopLabel($this->preferredDays(), 'label');
+        $topMonthPeriod = $this->extractTopLabel($this->preferredMonthPeriods(), 'label');
+        $topStartTime = $this->extractTopLabel($this->preferredStartTimes(), 'label');
+        $topMonths = $this->extractTopLabels($this->preferredMonths(), 2, 'label');
+
+        // Customer demographics
+        $mc = $this->marketplaceCustomer;
+        $coreCustomer = $this->coreCustomer;
+
+        $name = null;
+        $gender = null;
+        $city = null;
+        $age = null;
+
+        if ($mc) {
+            $name = trim(($mc->first_name ?? '') . ' ' . ($mc->last_name ?? ''));
+            $gender = $mc->gender;
+            $city = $mc->city;
+            $age = $mc->birth_date ? $mc->birth_date->age : null;
+        } elseif ($coreCustomer) {
+            $name = trim(($coreCustomer->first_name ?? '') . ' ' . ($coreCustomer->last_name ?? ''));
+            $city = $coreCustomer->city;
+            $age = $coreCustomer->date_of_birth ? $coreCustomer->date_of_birth->age : null;
+            // Try linked marketplace profile for gender
+            $linkedMp = MarketplaceCustomer::where('email', $this->email)->first();
+            if ($linkedMp) {
+                $gender = $linkedMp->gender;
+                if (! $age && $linkedMp->birth_date) {
+                    $age = $linkedMp->birth_date->age;
+                }
+                if (! $city) {
+                    $city = $linkedMp->city;
+                }
+            }
+        }
+
+        $name = $name ?: 'Clientul';
+        $isFemale = $gender === 'female';
+        $genderLabel = match ($gender) {
+            'male' => 'un bărbat',
+            'female' => 'o femeie',
+            default => null,
+        };
+        $interesat = $isFemale ? 'interesată' : 'interesat';
+
+        // Check if we have enough data
+        $hasOrders = ($stats['total_orders'] ?? 0) > 0;
+        $hasFavorites = $isMarketplace && $this->hasFavoritesData();
+        if (! $hasOrders && ! $hasFavorites) {
+            return 'Nu există suficiente date pentru a genera un profil detaliat.';
+        }
+
+        // Build narrative parts
+        $parts = [];
+
+        // Opening: "{Name} este {gender} din {city}, cu vârsta de {age} ani"
+        $opening = $name;
+        if ($genderLabel) {
+            $opening .= " este {$genderLabel}";
+        }
+        if ($city) {
+            $opening .= ($genderLabel ? ' din ' : ' este din ') . $city;
+        }
+        if ($age) {
+            $opening .= ", cu vârsta de {$age} de ani";
+        }
+
+        // Interests
+        if ($topEventType) {
+            $opening .= ", {$interesat} de {$topEventType}";
+            if ($topEventGenres) {
+                $opening .= " în genul {$topEventGenres}";
+            }
+        }
+        $opening .= '.';
+        $parts[] = $opening;
+
+        // Venue types + artist genres
+        $venueArtist = '';
+        if ($topVenueTypes) {
+            $venueArtist .= "Îi place să petreacă timp în {$topVenueTypes}";
+        }
+        if ($topArtistGenres) {
+            $genrePart = "să asculte {$topArtistGenres}";
+            if ($topArtistNames) {
+                $genrePart .= " ({$topArtistNames})";
+            }
+            $venueArtist .= ($venueArtist ? ' și ' : '') . $genrePart;
+        }
+        if ($venueArtist) {
+            $parts[] = $venueArtist . '.';
+        }
+
+        // Ideal event
+        $idealParts = [];
+        if ($topDay) {
+            $idealParts[] = "într-o zi de {$topDay}";
+        }
+        if ($topMonthPeriod) {
+            $idealParts[] = strtolower($topMonthPeriod);
+        }
+        if ($topCity) {
+            $idealParts[] = "în orașul {$topCity}";
+        }
+        if ($topStartTime) {
+            $idealParts[] = "la ora {$topStartTime}";
+        }
+        if (! empty($idealParts)) {
+            $parts[] = 'Evenimentul perfect ar trebui să fie ' . implode(', ', $idealParts) . '.';
+        }
+
+        // Preferred months
+        if ($topMonths) {
+            $parts[] = "Lunile preferate sunt {$topMonths}.";
+        }
+
+        // Price range
+        if (($priceRange['avg'] ?? 0) > 0) {
+            $avg = $priceRange['avg'];
+            $low = round($avg * 0.85, 2);
+            $high = round($avg * 1.15, 2);
+            $parts[] = "Valoarea dispusă de cheltuit pe un bilet este " . number_format($low, 2) . " - " . number_format($high, 2) . " RON";
+            if (($breakdown['avg_per_order'] ?? 0) > 0) {
+                $parts[count($parts) - 1] .= " și a unei comenzi " . number_format($breakdown['avg_per_order'], 2) . " RON.";
+            } else {
+                $parts[count($parts) - 1] .= '.';
+            }
+        }
+
+        // Lifetime value + tenure
+        if ($hasOrders) {
+            $ltv = number_format($stats['lifetime_value'], 2);
+            $days = $stats['lifetime_days'];
+            $parts[] = "Lifetime Value: {$ltv} RON, client de {$days} zile.";
+        }
+
+        // Beneficiaries
+        if (! empty($attendees)) {
+            $attendeeNames = collect($attendees)->pluck('attendee_name')->unique()->take(5)->implode(', ');
+            $parts[] = "Îi place să meargă la evenimente împreună cu {$attendeeNames}.";
+
+            // Generate mini-profiles for beneficiaries who are also customers
+            $miniProfiles = [];
+            foreach (collect($attendees)->unique('attendee_email')->take(5) as $att) {
+                if (! $att->attendee_email) {
+                    continue;
+                }
+                $mini = $this->generateMiniProfile($att->attendee_email, $att->attendee_name);
+                if ($mini) {
+                    $miniProfiles[] = $mini;
+                }
+            }
+            if (! empty($miniProfiles)) {
+                $parts[] = implode(' ', $miniProfiles);
+            }
+        }
+
+        return implode(' ', $parts);
+    }
+
+    // ─── Helper: Has Favorites Data ─────────────────────────────
+
+    protected function hasFavoritesData(): bool
+    {
+        if (! $this->marketplaceCustomer) {
+            return false;
+        }
+        $mc = $this->marketplaceCustomer;
+        return $mc->favoriteArtists()->count() > 0
+            || $mc->favoriteVenues()->count() > 0
+            || $mc->watchlistEvents()->count() > 0;
+    }
+
+    // ─── Helper: Extract Translatable Name ──────────────────────
+
+    protected function extractTranslatableName($name): string
+    {
+        if (is_array($name)) {
+            return $name['ro'] ?? $name['en'] ?? reset($name) ?: '?';
+        }
+        if (is_string($name)) {
+            $decoded = json_decode($name, true);
+            if (is_array($decoded)) {
+                return $decoded['ro'] ?? $decoded['en'] ?? reset($decoded) ?: '?';
+            }
+            return $name;
+        }
+        return (string) $name;
+    }
+
+    // ─── Helper: Sort Counts → [{label, count, percentage}] ────
+
+    protected function sortedCounts(array $counts): array
+    {
+        if (empty($counts)) {
+            return [];
+        }
+        arsort($counts);
+        $total = array_sum($counts);
+        $result = [];
+        foreach ($counts as $label => $count) {
+            $result[] = [
+                'label' => $label,
+                'count' => $count,
+                'percentage' => round(($count / $total) * 100, 1),
+            ];
+        }
+        return $result;
+    }
+
+    // ─── Helper: Merge Weighted ─────────────────────────────────
+
+    protected function mergeWeighted(array $orderItems, array $favItems, float $ow, float $fw): array
+    {
+        // Normalize to percentage maps
+        $orderMap = [];
+        foreach ($orderItems as $item) {
+            $orderMap[$item['label']] = ['pct' => $item['percentage'] ?? 0, 'count' => $item['count'] ?? 0];
+        }
+        $favMap = [];
+        foreach ($favItems as $item) {
+            $favMap[$item['label']] = ['pct' => $item['percentage'] ?? 0, 'count' => $item['count'] ?? 0];
+        }
+
+        // All unique labels
+        $allLabels = array_unique(array_merge(array_keys($orderMap), array_keys($favMap)));
+        $merged = [];
+        foreach ($allLabels as $label) {
+            $oPct = $orderMap[$label]['pct'] ?? 0;
+            $fPct = $favMap[$label]['pct'] ?? 0;
+            $weighted = round(($oPct * $ow) + ($fPct * $fw), 1);
+            $merged[] = [
+                'label' => $label,
+                'order_pct' => $oPct,
+                'fav_pct' => $fPct,
+                'weighted' => $weighted,
+                'order_count' => $orderMap[$label]['count'] ?? 0,
+                'fav_count' => $favMap[$label]['count'] ?? 0,
+            ];
+        }
+
+        // Sort by weighted descending
+        usort($merged, fn ($a, $b) => $b['weighted'] <=> $a['weighted']);
+
+        return $merged;
+    }
+
+    // ─── Helper: Extract Top Label ──────────────────────────────
+
+    protected function extractTopLabel(array $items, string $key = 'label'): ?string
+    {
+        return ! empty($items) ? ($items[0][$key] ?? null) : null;
+    }
+
+    protected function extractTopLabels(array $items, int $count = 2, string $key = 'label'): ?string
+    {
+        $labels = collect($items)->take($count)->pluck($key)->filter()->values();
+        return $labels->isNotEmpty() ? $labels->implode(', ') : null;
+    }
+
+    // ─── Helper: Generate Mini Profile for Beneficiary ──────────
+
+    protected function generateMiniProfile(string $email, string $name): ?string
+    {
+        // Try to find as MarketplaceCustomer
+        $mp = MarketplaceCustomer::where('email', $email)->first();
+        if ($mp) {
+            $parts = [$name . ':'];
+            if ($mp->gender) {
+                $parts[] = match ($mp->gender) { 'male' => 'bărbat', 'female' => 'femeie', default => '' };
+            }
+            if ($mp->birth_date) {
+                $parts[] = $mp->birth_date->age . ' ani';
+            }
+            if ($mp->city) {
+                $parts[] = $mp->city;
+            }
+            return count($parts) > 1 ? '[' . implode(', ', array_filter($parts)) . ']' : null;
+        }
+
+        // Try as Customer (admin-side)
+        $customer = Customer::where('email', $email)->first();
+        if ($customer) {
+            $parts = [$name . ':'];
+            if ($customer->date_of_birth) {
+                $parts[] = $customer->date_of_birth->age . ' ani';
+            }
+            if ($customer->city) {
+                $parts[] = $customer->city;
+            }
+            return count($parts) > 1 ? '[' . implode(', ', array_filter($parts)) . ']' : null;
+        }
+
+        return null;
     }
 
     // ─── Helper: Format with Percentage ───────────────────────────

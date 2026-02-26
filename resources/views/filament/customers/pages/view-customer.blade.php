@@ -29,6 +29,21 @@
              ═══════════════════════════════════════════════════════════════ --}}
         <div x-show="activeTab === 'overview'" x-cloak>
 
+            {{-- Profile Narrative --}}
+            @if(!empty($profileNarrative))
+                <div class="p-4 mb-6 rounded-xl bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/40 dark:via-purple-950/40 dark:to-pink-950/40 ring-1 ring-indigo-200/60 dark:ring-indigo-700/40">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0 p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/50">
+                            <x-filament::icon icon="heroicon-o-user-circle" class="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <div>
+                            <h3 class="mb-1 text-sm font-semibold text-indigo-700 dark:text-indigo-300">Profil Client Generat</h3>
+                            <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{{ $profileNarrative }}</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <div class="grid grid-cols-2 gap-6 lg:grid-cols-2">
 
                 {{-- LEFT COLUMN: Stat Cards (2-col grid) --}}
