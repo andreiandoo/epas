@@ -475,9 +475,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <span class="text-sm text-muted">Cost per email:</span>
                                 <span class="font-semibold text-secondary" id="email-price-per">0.40 RON</span>
                             </div>
-                            <div class="flex justify-between items-center mb-2">
+                            <!-- Simple recipient count (shown when no partial) -->
+                            <div class="flex justify-between items-center mb-2" id="email-recipient-row-simple">
                                 <span class="text-sm text-muted">Nr. destinatari:</span>
                                 <span class="font-semibold text-secondary" id="email-recipient-count">0</span>
+                            </div>
+                            <!-- Detailed breakdown (shown when partial matches included) -->
+                            <div id="email-pricing-breakdown" class="hidden">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-sm text-muted">Perfect match:</span>
+                                    <span class="text-sm text-secondary"><span id="email-perfect-count">0</span> × <span id="email-perfect-price">0.40</span> = <span class="font-semibold" id="email-perfect-cost">0</span> RON</span>
+                                </div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm text-muted">Partial match <span class="text-xs">(½ pret)</span>:</span>
+                                    <span class="text-sm text-secondary"><span id="email-partial-count">0</span> × <span id="email-partial-price">0.20</span> = <span class="font-semibold" id="email-partial-cost">0</span> RON</span>
+                                </div>
                             </div>
                             <div class="border-t border-border pt-2 mt-2 flex justify-between items-center">
                                 <span class="text-sm font-medium text-secondary">Cost total estimat:</span>
@@ -1696,8 +1708,11 @@ async function updateEmailAudienceCount() {
 
             // Check if include partial matches is enabled
             const includePartial = document.getElementById('include-partial-matches')?.checked;
+            const perfectCount = count; // Before adding partial
+            let partialCount = 0;
             if (includePartial && partialExtra > 0) {
-                count = maxWithout;
+                partialCount = partialExtra;
+                count = perfectCount + partialCount;
             }
 
             // Update UI counts
@@ -1708,18 +1723,40 @@ async function updateEmailAudienceCount() {
                 document.getElementById('audience-own-count').textContent = AmbiletUtils.formatNumber(baseCount);
                 emailAudiences.own.count = baseCount;
                 emailAudiences.own.filtered_count = count;
+                emailAudiences.own.perfect_count = perfectCount;
+                emailAudiences.own.partial_count = partialCount;
             } else {
                 document.getElementById('audience-marketplace-count').textContent = '~' + AmbiletUtils.formatNumber(baseCount);
                 emailAudiences.marketplace.count = baseCount;
                 emailAudiences.marketplace.filtered_count = count;
+                emailAudiences.marketplace.perfect_count = perfectCount;
+                emailAudiences.marketplace.partial_count = partialCount;
             }
 
-            // Calculate cost
+            // Calculate cost with separate pricing for partial matches (half price)
             const pricePerEmail = audienceType === 'own'
                 ? (servicePricing.email.own_per_email || 0.40)
                 : (servicePricing.email.marketplace_per_email || 0.50);
-            const totalCost = count * pricePerEmail;
+            const partialPrice = pricePerEmail / 2;
+            const perfectCost = perfectCount * pricePerEmail;
+            const partialCostVal = partialCount * partialPrice;
+            const totalCost = perfectCost + partialCostVal;
             document.getElementById('email-cost-estimate').textContent = AmbiletUtils.formatCurrency(totalCost);
+
+            // Update pricing breakdown UI
+            if (includePartial && partialCount > 0) {
+                document.getElementById('email-recipient-row-simple').classList.add('hidden');
+                document.getElementById('email-pricing-breakdown').classList.remove('hidden');
+                document.getElementById('email-perfect-count').textContent = AmbiletUtils.formatNumber(perfectCount);
+                document.getElementById('email-perfect-price').textContent = pricePerEmail.toFixed(2);
+                document.getElementById('email-perfect-cost').textContent = AmbiletUtils.formatCurrency(perfectCost);
+                document.getElementById('email-partial-count').textContent = AmbiletUtils.formatNumber(partialCount);
+                document.getElementById('email-partial-price').textContent = partialPrice.toFixed(2);
+                document.getElementById('email-partial-cost').textContent = AmbiletUtils.formatCurrency(partialCostVal);
+            } else {
+                document.getElementById('email-recipient-row-simple').classList.remove('hidden');
+                document.getElementById('email-pricing-breakdown').classList.add('hidden');
+            }
 
             // Show filter breakdowns
             displayFilterBreakdowns(fc, baseCount, partialExtra);
@@ -1886,11 +1923,14 @@ document.getElementById('service-form').addEventListener('submit', async functio
             const emailAudienceType = document.querySelector('input[name="email_audience"]:checked').value;
             const emailDate = document.getElementById('email-send-date').value;
             const emailTime = document.getElementById('email-send-time').value || '10:00';
+            const aud = emailAudiences[emailAudienceType] || {};
             data.config = {
                 audience_type: emailAudienceType,
                 template: document.querySelector('input[name="email_template"]:checked')?.value || 'classic',
                 send_date: emailDate + 'T' + emailTime,
-                recipient_count: emailAudiences[emailAudienceType]?.filtered_count || 0,
+                recipient_count: aud.filtered_count || 0,
+                perfect_count: aud.perfect_count || aud.filtered_count || 0,
+                partial_count: aud.partial_count || 0,
                 variant_indices: window._emailPreviewVariants || {},
                 filters: {
                     age_min: document.getElementById('email-filter-age-min').value || null,

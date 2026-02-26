@@ -350,7 +350,10 @@ class ServiceOrder extends Model
         }
 
         $template = $config['template'] ?? 'classic';
-        $sendDate = !empty($config['send_date']) ? \Carbon\Carbon::parse($config['send_date']) : null;
+        // Parse send_date as Europe/Bucharest (client timezone) then convert to UTC for server
+        $sendDate = !empty($config['send_date'])
+            ? \Carbon\Carbon::parse($config['send_date'], 'Europe/Bucharest')->utc()
+            : null;
         $filters = $config['filters'] ?? [];
 
         // Generate email HTML
@@ -407,10 +410,16 @@ class ServiceOrder extends Model
 
         $newsletter->update(['total_recipients' => $recipientCount]);
 
-        // Update service order with scheduled_at
+        // Update service order with scheduled_at and service_start_date
+        $updateData = [];
         if ($sendDate) {
-            $this->update(['scheduled_at' => $sendDate]);
+            $updateData['scheduled_at'] = $sendDate;
+            $updateData['service_start_date'] = $sendDate->toDateString();
+        } else {
+            $updateData['scheduled_at'] = now();
+            $updateData['service_start_date'] = now()->toDateString();
         }
+        $this->update($updateData);
 
         // Dispatch or schedule
         if ($sendDate && $sendDate->isFuture()) {
@@ -906,6 +915,18 @@ HTML;
     public function assignedUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /**
+     * Get the linked newsletter for email campaigns
+     */
+    public function getLinkedNewsletter(): ?MarketplaceNewsletter
+    {
+        if ($this->service_type !== self::TYPE_EMAIL) return null;
+
+        return MarketplaceNewsletter::where('marketplace_client_id', $this->marketplace_client_id)
+            ->whereJsonContains('target_lists->service_order_id', $this->id)
+            ->first();
     }
 
     // Scopes

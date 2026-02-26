@@ -330,11 +330,13 @@ class ServiceOrderController extends BaseController
 
             case ServiceOrder::TYPE_EMAIL:
                 $audienceType = $config['audience_type'] ?? 'own';
-                $recipientCount = $config['recipient_count'] ?? 0;
                 $pricePerEmail = $audienceType === 'own'
                     ? ($pricing['own_per_email'] ?? 0.40)
                     : ($pricing['marketplace_per_email'] ?? 0.50);
-                return $recipientCount * $pricePerEmail;
+                $perfectCount = $config['perfect_count'] ?? ($config['recipient_count'] ?? 0);
+                $partialCount = $config['partial_count'] ?? 0;
+                // Partial matches at half price
+                return ($perfectCount * $pricePerEmail) + ($partialCount * ($pricePerEmail / 2));
 
             case ServiceOrder::TYPE_TRACKING:
                 $platforms = $config['platforms'] ?? [];

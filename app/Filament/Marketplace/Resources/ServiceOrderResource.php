@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Resources\ServiceOrderResource\Pages;
 use App\Models\ServiceOrder;
 use App\Models\ServiceType;
+use Illuminate\Support\HtmlString;
 use Filament\Forms;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
@@ -140,13 +141,25 @@ class ServiceOrderResource extends Resource
 
                         Forms\Components\Placeholder::make('service_start_display')
                             ->label('Service Start')
-                            ->content(fn (?ServiceOrder $record): string =>
-                                $record?->service_start_date?->format('Y-m-d') ?? '-'),
+                            ->content(function (?ServiceOrder $record): string {
+                                if (!$record) return '-';
+                                // For email: show scheduled_at (when emails should start sending)
+                                if ($record->service_type === 'email' && $record->scheduled_at) {
+                                    return $record->scheduled_at->setTimezone('Europe/Bucharest')->format('d.m.Y H:i') . ' (RO)';
+                                }
+                                return $record->service_start_date?->format('Y-m-d') ?? '-';
+                            }),
 
                         Forms\Components\Placeholder::make('service_end_display')
                             ->label('Service End')
-                            ->content(fn (?ServiceOrder $record): string =>
-                                $record?->service_end_date?->format('Y-m-d') ?? '-'),
+                            ->content(function (?ServiceOrder $record): string {
+                                if (!$record) return '-';
+                                // For email: show executed_at (when sending completed)
+                                if ($record->service_type === 'email' && $record->executed_at) {
+                                    return $record->executed_at->setTimezone('Europe/Bucharest')->format('d.m.Y H:i') . ' (RO)';
+                                }
+                                return $record->service_end_date?->format('Y-m-d') ?? '-';
+                            }),
 
                         Forms\Components\Placeholder::make('created_display')
                             ->label('Created At')
@@ -154,6 +167,71 @@ class ServiceOrderResource extends Resource
                                 $record?->created_at?->format('Y-m-d H:i') ?? '-'),
                     ])
                     ->columns(4),
+
+                Section::make('Email Campaign Stats')
+                    ->schema([
+                        Forms\Components\Placeholder::make('email_stats_display')
+                            ->label('')
+                            ->columnSpanFull()
+                            ->content(function (?ServiceOrder $record): HtmlString {
+                                if (!$record) return new HtmlString('-');
+
+                                $newsletter = $record->getLinkedNewsletter();
+                                if (!$newsletter) return new HtmlString('<p class="text-sm text-gray-500">No newsletter linked yet.</p>');
+
+                                $nl = $newsletter;
+                                $statusColor = match ($nl->status) {
+                                    'sent' => 'green', 'sending' => 'blue', 'scheduled' => 'yellow',
+                                    'failed' => 'red', 'cancelled' => 'gray', default => 'gray',
+                                };
+                                $statusLabel = ucfirst($nl->status);
+
+                                $openRate = $nl->sent_count > 0
+                                    ? round(($nl->opened_count / $nl->sent_count) * 100, 1) . '%'
+                                    : '0%';
+                                $clickRate = $nl->opened_count > 0
+                                    ? round(($nl->clicked_count / $nl->opened_count) * 100, 1) . '%'
+                                    : '0%';
+
+                                return new HtmlString("
+                                    <div class='grid grid-cols-2 md:grid-cols-4 gap-4 mb-4'>
+                                        <div class='bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center'>
+                                            <p class='text-2xl font-bold text-gray-900 dark:text-white'>{$nl->total_recipients}</p>
+                                            <p class='text-xs text-gray-500'>Total Recipients</p>
+                                        </div>
+                                        <div class='bg-green-50 dark:bg-green-900/20 rounded-lg p-3 text-center'>
+                                            <p class='text-2xl font-bold text-green-600'>{$nl->sent_count}</p>
+                                            <p class='text-xs text-gray-500'>Sent</p>
+                                        </div>
+                                        <div class='bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-center'>
+                                            <p class='text-2xl font-bold text-blue-600'>{$nl->opened_count}</p>
+                                            <p class='text-xs text-gray-500'>Opened ({$openRate})</p>
+                                        </div>
+                                        <div class='bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 text-center'>
+                                            <p class='text-2xl font-bold text-purple-600'>{$nl->clicked_count}</p>
+                                            <p class='text-xs text-gray-500'>Clicked ({$clickRate})</p>
+                                        </div>
+                                    </div>
+                                    <div class='grid grid-cols-3 gap-4'>
+                                        <div class='bg-red-50 dark:bg-red-900/20 rounded-lg p-3 text-center'>
+                                            <p class='text-lg font-bold text-red-600'>{$nl->failed_count}</p>
+                                            <p class='text-xs text-gray-500'>Failed</p>
+                                        </div>
+                                        <div class='bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3 text-center'>
+                                            <p class='text-lg font-bold text-orange-600'>{$nl->unsubscribed_count}</p>
+                                            <p class='text-xs text-gray-500'>Unsubscribed</p>
+                                        </div>
+                                        <div class='rounded-lg p-3 text-center'>
+                                            <span class='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{$statusColor}-100 text-{$statusColor}-800'>{$statusLabel}</span>
+                                            <p class='text-xs text-gray-500 mt-1'>Newsletter Status</p>
+                                        </div>
+                                    </div>
+                                ");
+                            }),
+                    ])
+                    ->visible(fn (?ServiceOrder $record): bool =>
+                        $record?->service_type === 'email'
+                    ),
 
                 Section::make('Service Configuration')
                     ->schema([

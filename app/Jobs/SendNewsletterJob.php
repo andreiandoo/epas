@@ -33,11 +33,16 @@ class SendNewsletterJob implements ShouldQueue
 
     public function handle(): void
     {
-        $newsletter = $this->newsletter;
+        $newsletter = $this->newsletter->fresh();
         $marketplace = $newsletter->marketplaceClient;
 
-        // Check if newsletter is still in sending state
-        if ($newsletter->status !== 'sending') {
+        // Transition scheduled newsletters to sending state
+        if ($newsletter->status === 'scheduled') {
+            $newsletter->startSending();
+        }
+
+        // Check if newsletter is in a sendable state
+        if (!in_array($newsletter->status, ['sending'])) {
             return;
         }
 
@@ -113,6 +118,9 @@ class SendNewsletterJob implements ShouldQueue
         $subject = $this->replaceVariables($newsletter->subject, $variables);
         $bodyHtml = $this->replaceVariables($newsletter->body_html, $variables);
 
+        // Wrap all links with click tracking (before adding tracking pixel)
+        $bodyHtml = $this->wrapLinksWithTracking($bodyHtml, $recipient);
+
         // Add tracking pixel
         $trackingPixel = $this->generateTrackingPixel($recipient);
         $bodyHtml .= $trackingPixel;
@@ -172,6 +180,44 @@ class SendNewsletterJob implements ShouldQueue
         return url("/api/marketplace-client/newsletter/unsubscribe?id={$recipient->id}&token={$token}");
     }
 
+    /**
+     * Wrap all <a href="..."> links in the HTML with click-tracking redirect URLs.
+     * Excludes unsubscribe links and already-tracked links.
+     */
+    protected function wrapLinksWithTracking(string $html, MarketplaceNewsletterRecipient $recipient): string
+    {
+        $token = hash('sha256', $recipient->id . 'click' . config('app.key'));
+        $trackBase = url('/api/marketplace-client/newsletter/track/click');
+
+        return preg_replace_callback(
+            '/<a\s([^>]*?)href=["\']([^"\']+)["\']/i',
+            function ($matches) use ($recipient, $token, $trackBase) {
+                $attrs = $matches[1];
+                $originalUrl = $matches[2];
+
+                // Skip unsubscribe links, tracking links, and mailto/tel
+                if (
+                    str_contains($originalUrl, '/newsletter/unsubscribe') ||
+                    str_contains($originalUrl, '/newsletter/track/') ||
+                    str_starts_with($originalUrl, 'mailto:') ||
+                    str_starts_with($originalUrl, 'tel:') ||
+                    str_starts_with($originalUrl, '#')
+                ) {
+                    return $matches[0];
+                }
+
+                $trackUrl = $trackBase . '?' . http_build_query([
+                    'id' => $recipient->id,
+                    'token' => $token,
+                    'url' => $originalUrl,
+                ]);
+
+                return '<a ' . $attrs . 'href="' . htmlspecialchars($trackUrl, ENT_QUOTES, 'UTF-8') . '"';
+            },
+            $html
+        );
+    }
+
     protected function generateTrackingPixel(MarketplaceNewsletterRecipient $recipient): string
     {
         $token = hash('sha256', $recipient->id . 'open' . config('app.key'));
@@ -195,6 +241,7 @@ class SendNewsletterJob implements ShouldQueue
             $serviceOrder->update([
                 'executed_at' => now(),
                 'sent_count' => $sentCount,
+                'service_end_date' => now()->toDateString(),
                 'status' => ServiceOrder::STATUS_COMPLETED,
             ]);
 
