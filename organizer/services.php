@@ -366,8 +366,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <button type="button" onclick="resetEmailFilters()" class="text-sm text-primary hover:underline">Reseteaza filtre</button>
                             </div>
 
-                            <!-- Age Range -->
-                            <div class="grid grid-cols-2 gap-4">
+                            <!-- Age Range + Gender -->
+                            <div class="grid grid-cols-3 gap-4">
                                 <div>
                                     <label class="label text-xs">Varsta minima</label>
                                     <select id="email-filter-age-min" class="input w-full text-sm" onchange="updateEmailAudienceCount()">
@@ -390,6 +390,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <option value="40">pana la 40</option>
                                         <option value="50">pana la 50</option>
                                         <option value="65">pana la 65</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="label text-xs">Gen</label>
+                                    <select id="email-filter-gender" class="input w-full text-sm" onchange="updateEmailAudienceCount()">
+                                        <option value="">Orice</option>
+                                        <option value="male">Barbati</option>
+                                        <option value="female">Femei</option>
+                                        <option value="other">Altul</option>
                                     </select>
                                 </div>
                             </div>
@@ -1627,11 +1636,14 @@ async function updateEmailAudienceCount() {
     const categories = getMultiselectValues('email-filter-category');
     const genres = getMultiselectValues('email-filter-genre');
 
+    const gender = document.getElementById('email-filter-gender').value || null;
+
     const filters = {
         audience_type: audienceType,
         event_id: eventId,
         age_min: document.getElementById('email-filter-age-min').value || null,
         age_max: document.getElementById('email-filter-age-max').value || null,
+        gender: gender,
         cities: cities.length > 0 ? cities : null,
         categories: categories.length > 0 ? categories : null,
         genres: genres.length > 0 ? genres : null
@@ -1703,6 +1715,7 @@ async function updateEmailAudienceCount() {
 function resetEmailFilters() {
     document.getElementById('email-filter-age-min').value = '';
     document.getElementById('email-filter-age-max').value = '';
+    document.getElementById('email-filter-gender').value = '';
     clearMultiselect('email-filter-city');
     clearMultiselect('email-filter-category');
     clearMultiselect('email-filter-genre');
@@ -1848,6 +1861,7 @@ document.getElementById('service-form').addEventListener('submit', async functio
                 filters: {
                     age_min: document.getElementById('email-filter-age-min').value || null,
                     age_max: document.getElementById('email-filter-age-max').value || null,
+                    gender: document.getElementById('email-filter-gender').value || null,
                     cities: getMultiselectValues('email-filter-city'),
                     categories: getMultiselectValues('email-filter-category'),
                     genres: getMultiselectValues('email-filter-genre')

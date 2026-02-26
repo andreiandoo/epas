@@ -1,5 +1,0 @@
-# Ignore all cache files but keep directory structure
-api/*.json
-*.json
-!.htaccess
-!.gitignore
