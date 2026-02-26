@@ -405,6 +405,7 @@
                                         <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Tip Bilet</th>
                                         <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Participant</th>
                                         <th class="px-3 py-2 font-medium text-right text-gray-600 dark:text-gray-300">Preț</th>
+                                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Payment</th>
                                         <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Loc</th>
                                         <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Status</th>
                                         <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Check-in</th>
@@ -420,6 +421,13 @@
                                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $tkt->ticket_type_name ?? '-' }}</td>
                                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $tkt->attendee_name ?? '-' }}</td>
                                             <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-200">{{ $tkt->price ? number_format($tkt->price, 2) . ' RON' : '-' }}</td>
+                                            <td class="px-3 py-2 text-gray-600 dark:text-gray-400">
+                                                @if($tkt->payment_processor)
+                                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{{ ucfirst($tkt->payment_processor) }}</span>
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
                                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $tkt->seat_label ?? '-' }}</td>
                                             <td class="px-3 py-2">
                                                 <span class="px-2 py-0.5 rounded text-xs font-medium

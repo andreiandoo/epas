@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Customers\Pages;
 
 use App\Filament\Resources\Customers\CustomerResource;
 use App\Models\Customer;
+use App\Models\MarketplaceCustomer;
 use App\Services\CustomerInsightsService;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -36,6 +37,7 @@ class ViewCustomer extends ViewRecord
     public array $topArtists = [];
     public array $tenantsList = [];
     public array $trackingData = [];
+    public ?MarketplaceCustomer $marketplaceProfile = null;
 
     public function mount($record): void
     {
@@ -44,6 +46,9 @@ class ViewCustomer extends ViewRecord
         /** @var Customer $customer */
         $customer = $this->record;
         $service = CustomerInsightsService::forCustomer($customer);
+
+        // Look up linked MarketplaceCustomer by email for extra fields
+        $this->marketplaceProfile = MarketplaceCustomer::where('email', $customer->email)->first();
 
         // Lifetime stats
         $this->lifetimeStats = $service->lifetimeStats();

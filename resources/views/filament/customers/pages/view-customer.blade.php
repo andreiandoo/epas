@@ -99,14 +99,22 @@
                 <div>
                     <x-filament::section>
                         <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                            @php $mp = $marketplaceProfile; @endphp
                             @foreach([
                                 'Nume' => trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) ?: '-',
                                 'Email' => $record->email ?? '-',
                                 'Telefon' => $record->phone ?? '-',
+                                'Gen' => $mp ? match($mp->gender) { 'male' => 'Masculin', 'female' => 'Feminin', 'other' => 'Altul', default => '-' } : '-',
+                                'Data nașterii' => $record->date_of_birth?->format('d.m.Y') ?? ($mp?->birth_date?->format('d.m.Y') ?? '-'),
+                                'Vârstă' => $record->age ?? '-',
                                 'Oraș' => $record->city ?? '-',
                                 'Țară' => $record->country ?? '-',
-                                'Data nașterii' => $record->date_of_birth?->format('d.m.Y') ?? '-',
-                                'Vârstă' => $record->age ?? '-',
+                                'Adresă' => $mp?->address ?? '-',
+                                'Limbă' => $mp ? match($mp->locale) { 'ro' => 'Română', 'en' => 'English', 'de' => 'Deutsch', 'fr' => 'Français', 'es' => 'Español', default => $mp->locale ?? '-' } : '-',
+                                'Status' => $mp?->status ?? '-',
+                                'Email verificat' => $mp?->email_verified_at ? 'Da (' . $mp->email_verified_at->format('d.m.Y') . ')' : 'Nu',
+                                'Accepts Marketing' => $mp ? ($mp->accepts_marketing ? 'Da' : 'Nu') : '-',
+                                'Ultimul login' => $mp?->last_login_at?->format('d.m.Y H:i') ?? 'Niciodată',
                                 'Cod referral' => $record->referral_code ?? '-',
                                 'Tenant (creat)' => $record->tenant?->name ?? '-',
                                 'Primary Tenant' => $record->primaryTenant?->name ?? '-',
@@ -188,7 +196,6 @@
             </div>
 
             {{-- CoreCustomer Tracking / Attribution --}}
-            @if(!empty($trackingData))
                 <div class="mt-6">
                     <x-filament::section>
                         <x-slot name="heading">
@@ -197,6 +204,7 @@
                                 Tracking & Atribuire (CoreCustomer)
                             </div>
                         </x-slot>
+                    @if(!empty($trackingData))
                         <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
                             {{-- Google --}}
                             <div class="p-3 space-y-2 rounded-lg bg-gray-50 dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700">
@@ -314,9 +322,15 @@
                                 @endforeach
                             </div>
                         </div>
+                    @else
+                        <div class="p-4 text-sm text-center text-gray-500 dark:text-gray-400">
+                            <x-filament::icon icon="heroicon-o-information-circle" class="inline w-5 h-5 mr-1 text-gray-400" />
+                            Nu a fost găsit un CoreCustomer asociat cu email-ul <strong>{{ $record->email }}</strong>.
+                            Datele de tracking vor apărea automat când clientul este identificat prin CoreCustomer.
+                        </div>
+                    @endif
                     </x-filament::section>
                 </div>
-            @endif
 
             {{-- Orders by Month Chart --}}
             @if(!empty($monthlyChart['labels']))
@@ -569,6 +583,7 @@
                                         <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Tip Bilet</th>
                                         <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Participant</th>
                                         <th class="px-3 py-2 font-medium text-right text-gray-600 dark:text-gray-300">Preț</th>
+                                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Payment</th>
                                         <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Loc</th>
                                         <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Status</th>
                                         <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Check-in</th>
@@ -584,6 +599,13 @@
                                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $tkt->ticket_type_name ?? '-' }}</td>
                                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $tkt->attendee_name ?? '-' }}</td>
                                             <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-200">{{ $tkt->price ? number_format($tkt->price, 2) . ' RON' : '-' }}</td>
+                                            <td class="px-3 py-2 text-gray-600 dark:text-gray-400">
+                                                @if($tkt->payment_processor)
+                                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{{ ucfirst($tkt->payment_processor) }}</span>
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
                                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $tkt->seat_label ?? '-' }}</td>
                                             <td class="px-3 py-2">
                                                 <span class="px-2 py-0.5 rounded text-xs font-medium

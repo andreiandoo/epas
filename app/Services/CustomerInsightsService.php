@@ -489,7 +489,8 @@ class CustomerInsightsService
                 't.status',
                 't.seat_label',
                 't.price',
-                't.checked_in_at'
+                't.checked_in_at',
+                'o.payment_processor'
             )
             ->orderByDesc('t.created_at')
             ->limit($limit)
