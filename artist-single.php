@@ -176,7 +176,6 @@ require_once __DIR__ . '/includes/header.php';
             <div class="sticky self-start top-24">
                 <!-- Quick Facts -->
                 <div id="factsCard" class="p-6 mb-10 bg-white border border-gray-200 shadow-sm rounded-2xl">
-                    <h3 class="flex items-center gap-2 mb-5 text-base font-bold text-gray-900">⚡ Quick Facts</h3>
                     <div class="space-y-3">
                         <?php for ($i = 0; $i < 5; $i++): ?>
                         <div class="flex justify-between py-3.5 border-b border-gray-100 last:border-0">
@@ -196,7 +195,7 @@ require_once __DIR__ . '/includes/header.php';
                             Agenția de Booking
                         </h2>
                     </div>
-                    <div id="bookingAgencyContent" class="flex items-center justify-between gap-4 mobile:flex-col mobile:items-start">
+                    <div id="bookingAgencyContent" class="flex flex-col items-start gap-4">
                         <!-- Content will be loaded dynamically -->
                     </div>
                 </div>
