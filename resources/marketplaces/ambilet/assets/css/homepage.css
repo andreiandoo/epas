@@ -15,7 +15,7 @@
     align-items: center;
     justify-content: center;
     position: relative;
-    height: 220px;
+    height: 250px;
     overflow: visible;
     perspective: 600px;
     pointer-events: none;
@@ -23,20 +23,20 @@
 
 @media (min-width: 768px) {
     .hero-carousel {
-        height: 320px;
+        height: 370px;
         perspective: 600px;
     }
 }
 
 @media (min-width: 1024px) {
     .hero-carousel {
-        height: 420px;
+        height: 490px;
     }
 }
 
 @media (min-width: 1280px) {
     .hero-carousel {
-        height: 500px;
+        height: 600px;
     }
 }
 
@@ -87,7 +87,7 @@
     border-radius: 1rem;
     box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.5);
     width: 300px;
-    height: 131px;
+    height: 158px;
     background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
     text-decoration: none;
     color: white;
@@ -96,21 +96,21 @@
 @media (min-width: 768px) {
     .hero-item-inner {
         width: 520px;
-        height: 227px;
+        height: 273px;
     }
 }
 
 @media (min-width: 1024px) {
     .hero-item-inner {
         width: 760px;
-        height: 332px;
+        height: 399px;
     }
 }
 
 @media (min-width: 1280px) {
     .hero-item-inner {
         width: 1029px;
-        height: 450px;
+        height: 540px;
     }
 }
 
@@ -290,27 +290,27 @@
     border-radius: 1rem;
     overflow: hidden;
     width: 300px;
-    height: 131px;
+    height: 158px;
 }
 
 @media (min-width: 768px) {
     .hero-skeleton-item {
         width: 520px;
-        height: 227px;
+        height: 273px;
     }
 }
 
 @media (min-width: 1024px) {
     .hero-skeleton-item {
         width: 760px;
-        height: 332px;
+        height: 399px;
     }
 }
 
 @media (min-width: 1280px) {
     .hero-skeleton-item {
         width: 1029px;
-        height: 450px;
+        height: 540px;
     }
 }
 
