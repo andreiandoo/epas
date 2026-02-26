@@ -9,7 +9,7 @@ require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Bilete Evenimente Romania';
 $pageDescription = 'Cumpara bilete online pentru concerte, festivaluri, teatru, sport si multe altele. Platforma de ticketing pentru evenimente din Romania.';
 $currentPage = 'home';
-$transparentHeader = true;
+$transparentHeader = false;
 $headExtra = '<link rel="stylesheet" href="' . asset('assets/css/homepage.css') . '">';
 
 require_once __DIR__ . '/includes/head.php';
