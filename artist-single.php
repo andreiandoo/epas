@@ -133,7 +133,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
             <div class="">
                 <!-- Upcoming Events Section -->
-                <section class="">
+                <section class="mb-10">
                     <div class="flex items-center justify-between mb-5">
                         <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
                             Concerte viitoare
@@ -172,35 +172,39 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="w-3/4 h-4 bg-gray-200 rounded animate-pulse"></div>
                 </div>
             </div>
-            <!-- Quick Facts -->
-            <div id="factsCard" class="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-                <h3 class="flex items-center gap-2 mb-5 text-base font-bold text-gray-900">⚡ Quick Facts</h3>
-                <div class="space-y-3">
-                    <?php for ($i = 0; $i < 5; $i++): ?>
-                    <div class="flex justify-between py-3.5 border-b border-gray-100 last:border-0">
-                        <div class="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
-                        <div class="w-32 h-4 bg-gray-100 rounded animate-pulse"></div>
+
+            <div class="sticky self-start top-24">
+                <!-- Quick Facts -->
+                <div id="factsCard" class="p-6 mb-10 bg-white border border-gray-200 shadow-sm rounded-2xl">
+                    <h3 class="flex items-center gap-2 mb-5 text-base font-bold text-gray-900">⚡ Quick Facts</h3>
+                    <div class="space-y-3">
+                        <?php for ($i = 0; $i < 5; $i++): ?>
+                        <div class="flex justify-between py-3.5 border-b border-gray-100 last:border-0">
+                            <div class="w-20 h-4 bg-gray-200 rounded animate-pulse"></div>
+                            <div class="w-32 h-4 bg-gray-100 rounded animate-pulse"></div>
+                        </div>
+                        <?php endfor; ?>
                     </div>
-                    <?php endfor; ?>
+                </div>
+                <!-- Booking Agency (hidden by default, shown if data exists) -->
+                <div id="bookingAgencyCard" class="hidden mt-10">
+                    <div class="flex items-center justify-between mb-5">
+                        <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                            Agenția de Booking
+                        </h2>
+                    </div>
+                    <div id="bookingAgencyContent" class="flex items-center justify-between gap-4 mobile:flex-col mobile:items-start">
+                        <!-- Content will be loaded dynamically -->
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Booking Agency (hidden by default, shown if data exists) -->
-    <section id="bookingAgencyCard" class="hidden mt-10">
-        <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
-                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                </svg>
-                Agenția de Booking
-            </h2>
-        </div>
-        <div id="bookingAgencyContent" class="flex items-center justify-between gap-4 mobile:flex-col mobile:items-start">
-            <!-- Content will be loaded dynamically -->
-        </div>
-    </section>
+    
 
     <!-- YouTube Videos Section -->
     <section id="youtubeVideosSection" class="hidden mt-10">
