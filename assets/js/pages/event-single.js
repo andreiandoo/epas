@@ -1126,11 +1126,11 @@ const EventPage = {
             venueAddress = venueAddress ? venueAddress + ', ' + venue.state : venue.state;
         }
 
-        var html = '<div class="flex flex-col gap-6 md:flex-row">' +
-            '<div class="md:w-1/5">' +
-                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-36 mb-4 rounded-2xl" loading="lazy">' +
+        var html = '<div class="flex flex-col md:items-center gap-6 md:flex-row px-8">' +
+            '<div class="md:w-1/4">' +
+                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-32 mb-4 rounded-2xl" loading="lazy">' +
             '</div>' +
-            '<div class="md:w-4/5">' +
+            '<div class="md:w-3/4">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
                 '<p class="mb-2 text-muted">' + venueAddress + '</p>' +
                 '<div class="leading-relaxed text-muted text-sm">' + (venue.description || '') + '</div>';
@@ -1626,7 +1626,8 @@ const EventPage = {
                         min_per_order: tt.min_per_order || 1,
                         max_per_order: tt.max_per_order || 10,
                         // Per-ticket commission (null means use event defaults)
-                        commission: tt.commission || null
+                        commission: tt.commission || null,
+                        is_refundable: tt.is_refundable || false
                     };
                     AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty);
                     addedAny = true;
@@ -3188,7 +3189,8 @@ const EventPage = {
                 name: tt.name,
                 price: basePrice,
                 original_price: baseOriginalPrice,
-                description: tt.description
+                description: tt.description,
+                is_refundable: tt.is_refundable || false
             };
 
             // Extract seat_uids for API call
@@ -3247,7 +3249,8 @@ const EventPage = {
                                 name: ticketTypeData.name,
                                 price: ticketTypeData.price,
                                 originalPrice: ticketTypeData.original_price,
-                                description: ticketTypeData.description
+                                description: ticketTypeData.description,
+                                is_refundable: ticketTypeData.is_refundable || false
                             },
                             quantity: seats.length,
                             seats: seats,
@@ -3298,7 +3301,8 @@ const EventPage = {
                         name: ticketTypeData.name,
                         price: ticketTypeData.price,
                         originalPrice: ticketTypeData.original_price,
-                        description: ticketTypeData.description
+                        description: ticketTypeData.description,
+                        is_refundable: ticketTypeData.is_refundable || false
                     },
                     quantity: seats.length,
                     seats: seats,

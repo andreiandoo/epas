@@ -458,6 +458,7 @@ class EventsController extends BaseController
                     'min_per_order' => $tt->min_per_order ?? 1,
                     'sale_starts_at' => $tt->sales_start_at,
                     'sale_ends_at' => $tt->sales_end_at,
+                    'is_refundable' => (bool) ($tt->is_refundable ?? false),
                 ];
             }),
             'artists' => $event->artists->map(function ($artist) {

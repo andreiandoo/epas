@@ -263,6 +263,7 @@ HTML;
             'show_in_checkout' => $settings['show_in_checkout'] ?? true,
             'pre_checked' => $settings['pre_checked'] ?? false,
             'terms_url' => $settings['terms_url'] ?? null,
+            'apply_to' => $settings['apply_to'] ?? 'all',
         ];
     }
 }

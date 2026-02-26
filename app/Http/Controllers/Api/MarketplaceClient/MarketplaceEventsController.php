@@ -621,6 +621,7 @@ class MarketplaceEventsController extends BaseController
                     'seating_rows' => $seatingRows,
                     // Per-ticket commission (null = use event defaults)
                     'commission' => $ticketCommission,
+                    'is_refundable' => (bool) ($tt->is_refundable ?? false),
                 ];
             })->values(),
             'artists' => $event->artists->map(function ($artist) use ($language) {

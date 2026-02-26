@@ -68,7 +68,11 @@ const AmbiletCart = {
                     name: ticketTypeData.name,
                     price: ticketTypeData.price,
                     originalPrice: ticketTypeData.original_price,
-                    description: ticketTypeData.description
+                    description: ticketTypeData.description,
+                    min_per_order: ticketTypeData.min_per_order || 1,
+                    max_per_order: ticketTypeData.max_per_order || 10,
+                    commission: ticketTypeData.commission || null, // Per-ticket commission settings
+                    is_refundable: ticketTypeData.is_refundable || false
                 },
                 quantity,
                 addedAt: new Date().toISOString()
@@ -235,6 +239,81 @@ const AmbiletCart = {
     },
 
     /**
+     * Calculate commission for a single ticket type
+     * @param {Object} item - Cart item with ticketType and event data
+     * @returns {Object} Commission details: { amount, rate, fixed, mode, type }
+     */
+    calculateItemCommission(item) {
+        const basePrice = item.ticketType.price || 0;
+        const commission = item.ticketType.commission;
+
+        // If ticket has per-ticket commission settings
+        if (commission && commission.type) {
+            let amount = 0;
+            switch (commission.type) {
+                case 'percentage':
+                    amount = basePrice * ((commission.rate || 0) / 100);
+                    break;
+                case 'fixed':
+                    amount = commission.fixed || 0;
+                    break;
+                case 'both':
+                    amount = (basePrice * ((commission.rate || 0) / 100)) + (commission.fixed || 0);
+                    break;
+            }
+            return {
+                amount: amount,
+                rate: commission.rate || 0,
+                fixed: commission.fixed || 0,
+                mode: commission.mode || 'included',
+                type: commission.type
+            };
+        }
+
+        // Fall back to event-level commission
+        const eventRate = item.event?.commission_rate || 5;
+        const eventMode = item.event?.commission_mode || 'included';
+        return {
+            amount: basePrice * (eventRate / 100),
+            rate: eventRate,
+            fixed: 0,
+            mode: eventMode,
+            type: 'percentage'
+        };
+    },
+
+    /**
+     * Calculate total commission for all items in cart
+     * @returns {number} Total commission amount
+     */
+    getTotalCommission() {
+        const cart = this.getCart();
+        return cart.items.reduce((total, item) => {
+            const commission = this.calculateItemCommission(item);
+            return total + (commission.amount * item.quantity);
+        }, 0);
+    },
+
+    /**
+     * Get commission breakdown by item for reporting
+     * @returns {Array} Array of { item, commission, quantity, total }
+     */
+    getCommissionBreakdown() {
+        const cart = this.getCart();
+        return cart.items.map(item => {
+            const commission = this.calculateItemCommission(item);
+            return {
+                ticketName: item.ticketType.name,
+                eventTitle: item.event.title,
+                basePrice: item.ticketType.price,
+                commission: commission,
+                quantity: item.quantity,
+                totalCommission: commission.amount * item.quantity
+            };
+        });
+    },
+
+    /**
      * Calculate points to be earned
      */
     getPointsEarned() {
@@ -354,7 +433,9 @@ const AmbiletCart = {
             promoCode: this.getPromoCode(),
             promoDiscount: this.getPromoDiscount(),
             total: this.getTotal(),
-            pointsEarned: this.getPointsEarned()
+            pointsEarned: this.getPointsEarned(),
+            totalCommission: this.getTotalCommission(),
+            commissionBreakdown: this.getCommissionBreakdown()
         };
     },
 
@@ -366,6 +447,9 @@ const AmbiletCart = {
     startReservationTimer() {
         const expiresAt = new Date(Date.now() + AMBILET_CONFIG.CART_RESERVATION_MINUTES * 60 * 1000);
         localStorage.setItem(this.RESERVATION_KEY, expiresAt.toISOString());
+
+        // Also set cart_end_time for global timer bar compatibility
+        localStorage.setItem('cart_end_time', expiresAt.getTime().toString());
 
         window.dispatchEvent(new CustomEvent('ambilet:cart:reservation', {
             detail: { expiresAt: expiresAt.toISOString() }
