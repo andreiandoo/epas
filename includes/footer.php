@@ -127,6 +127,7 @@ $currentYear = date('Y');
                             <li><a href="/teatru" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Teatru & Spectacole</a></li>
                             <li><a href="/evenimente-copii" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Evenimente copii</a></li>
                             <li><a href="/comedie" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Stand-up Comedy</a></li>
+                            <li><a href="/festivaluri-moto" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Festivaluri Moto</a></li>
                             <li><a href="/calendar" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Calendar evenimente</a></li>
                         </ul>
                     </div>
@@ -138,8 +139,8 @@ $currentYear = date('Y');
                             <li><a href="/orase" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Orașe</a></li>
                             <li><a href="/locatii" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Locații</a></li>
                             <li><a href="/artisti" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Artiști</a></li>
-                            <li><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Organizatori</a></li>
-                            <li>
+                            <li class="hidden"><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Organizatori</a></li>
+                            <li class="hidden">
                                 <a href="/card-cadou" class="inline-flex items-center gap-2 text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">
                                     Carduri cadou
                                     <span class="px-2 py-0.5 bg-primary rounded text-[10px] font-bold text-white uppercase">Nou</span>
@@ -167,11 +168,11 @@ $currentYear = date('Y');
                     <div class="mobile:text-right">
                         <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Organizatori</h4>
                         <ul class="space-y-3">
-                            <li><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Vinde bilete</a></li>
+                            <li class="hidden"><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Vinde bilete</a></li>
                             <li><a href="/organizator/inregistrare" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Înregistrare organizator</a></li>
                             <li><a href="/organizator/login" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Login organizator</a></li>
                             <li><a href="/ghid-organizator" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Ghid organizatori</a></li>
-                            <li><a href="/comisioane" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Comisioane</a></li>
+                            <li class="hidden"><a href="/comisioane" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Comisioane</a></li>
                         </ul>
                     </div>
                 </div>

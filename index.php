@@ -129,7 +129,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="flex-1">
                 <span class="inline-block px-3 py-1.5 bg-accent/20 text-accent font-bold text-xs rounded-full mb-4 uppercase tracking-wide">Pentru Organizatori</span>
                 <h2 class="mb-3 text-2xl font-bold md:text-3xl text-secondary">Vrei sa-ti vinzi biletele prin <?= SITE_NAME ?>?</h2>
-                <p class="mb-6 text-muted">Comisioane transparente, plati rapide si suport dedicat pentru organizatori.</p>
+                <p class="text-muted">Comisioane transparente, plati rapide si suport dedicat pentru organizatori.</p>
             </div>
             <div class="flex-shrink-0 hidden md:block">
                 <div class="flex flex-wrap gap-3">

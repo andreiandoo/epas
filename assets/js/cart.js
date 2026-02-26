@@ -71,7 +71,8 @@ const AmbiletCart = {
                     description: ticketTypeData.description,
                     min_per_order: ticketTypeData.min_per_order || 1,
                     max_per_order: ticketTypeData.max_per_order || 10,
-                    commission: ticketTypeData.commission || null // Per-ticket commission settings
+                    commission: ticketTypeData.commission || null, // Per-ticket commission settings
+                    is_refundable: ticketTypeData.is_refundable || false
                 },
                 quantity,
                 addedAt: new Date().toISOString()

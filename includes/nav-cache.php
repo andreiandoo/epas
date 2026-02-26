@@ -420,16 +420,31 @@ define('EVENT_CATEGORIES_CACHE_TTL', 30 * 60); // 30 minutes
 function getEventCategories(): array {
     // Check if cache exists and is valid
     if (isEventCategoriesCacheValid()) {
-        return loadEventCategoriesCache();
+        $cached = loadEventCategoriesCache();
+        if (!empty($cached)) {
+            return $cached;
+        }
     }
 
     // Fetch fresh data from API
     $freshData = fetchEventCategoriesFromAPI();
 
-    // Save to cache
-    saveEventCategoriesCache($freshData);
+    // Only cache successful API responses (not failures)
+    if ($freshData !== false) {
+        saveEventCategoriesCache($freshData);
+        return $freshData;
+    }
 
-    return $freshData;
+    // API failed - try stale cache before falling back to defaults
+    if (file_exists(EVENT_CATEGORIES_CACHE_FILE)) {
+        $staleData = loadEventCategoriesCache();
+        if (!empty($staleData)) {
+            return $staleData;
+        }
+    }
+
+    // Last resort: return defaults (will NOT be cached)
+    return getDefaultEventCategories();
 }
 
 /**
@@ -461,7 +476,8 @@ function loadEventCategoriesCache(): array {
 
     $data = json_decode($content, true);
 
-    if (!$data) {
+    // Only fall back to defaults if JSON parse failed (null), not for empty array
+    if ($data === null) {
         return getDefaultEventCategories();
     }
 
@@ -485,40 +501,65 @@ function saveEventCategoriesCache(array $data): void {
 /**
  * Fetch event categories from API directly
  */
-function fetchEventCategoriesFromAPI(): array {
+function fetchEventCategoriesFromAPI(): array|false {
     require_once __DIR__ . '/../includes/config.php';
 
     // Call API directly (not through proxy) for server-side requests
     $apiUrl = API_BASE_URL . '/event-categories';
 
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => [
+    // Use curl for more reliable HTTPS connections
+    if (function_exists('curl_init')) {
+        $ch = curl_init($apiUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 5,
+            CURLOPT_HTTPHEADER => [
                 'X-API-Key: ' . API_KEY,
                 'Accept: application/json',
             ],
-            'timeout' => 5,
-            'ignore_errors' => true
-        ],
-        'ssl' => [
-            'verify_peer' => false,
-            'verify_peer_name' => false
-        ]
-    ]);
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
 
-    $response = @file_get_contents($apiUrl, false, $context);
+        if ($response === false || $httpCode >= 400) {
+            error_log('[nav-cache] Curl failed for event categories: ' . ($error ?: "HTTP $httpCode") . ' URL: ' . $apiUrl);
+            return false;
+        }
+    } else {
+        // Fallback to file_get_contents
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'header' => [
+                    'X-API-Key: ' . API_KEY,
+                    'Accept: application/json',
+                ],
+                'timeout' => 5,
+                'ignore_errors' => true
+            ],
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false
+            ]
+        ]);
 
-    if ($response === false) {
-        error_log('[nav-cache] Failed to fetch event categories from API: ' . $apiUrl);
-        return getDefaultEventCategories();
+        $response = @file_get_contents($apiUrl, false, $context);
+
+        if ($response === false) {
+            error_log('[nav-cache] Failed to fetch event categories from API: ' . $apiUrl);
+            return false;
+        }
     }
 
     $data = json_decode($response, true);
 
     if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['categories'])) {
         error_log('[nav-cache] Invalid API response for event categories: ' . substr($response, 0, 500));
-        return getDefaultEventCategories();
+        return false;
     }
 
     // Transform API response to nav format

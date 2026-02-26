@@ -145,6 +145,7 @@ require_once __DIR__ . '/includes/header.php';
                                         <span class="font-bold text-success" id="insurance-price">+5.00 lei</span>
                                     </div>
                                     <p class="text-sm text-muted" id="insurance-description">Poți solicita returnarea biletelor în cazul în care evenimentul este amânat sau anulat.</p>
+                                    <p class="hidden mt-2 text-xs font-medium text-amber-600" id="insurance-partial-note"></p>
                                     <a href="#" id="insurance-terms-link" class="hidden mt-2 text-xs text-primary hover:underline">Vezi termeni și condiții</a>
                                 </div>
                             </label>
@@ -467,6 +468,23 @@ const CheckoutPage = {
                 // Handle ticket insurance
                 if (response.data.ticket_insurance && response.data.ticket_insurance.enabled && response.data.ticket_insurance.show_in_checkout) {
                     this.insurance = response.data.ticket_insurance;
+
+                    // Check refundability of cart items - insurance only applies to refundable tickets
+                    const refundableItems = this.items.filter(item => item.ticketType?.is_refundable);
+                    const nonRefundableItems = this.items.filter(item => !item.ticketType?.is_refundable);
+                    const hasRefundable = refundableItems.length > 0;
+                    const isMixed = hasRefundable && nonRefundableItems.length > 0;
+
+                    // Only show insurance if cart has at least one refundable ticket
+                    if (!hasRefundable) {
+                        this.insurance = null;
+                        return;
+                    }
+
+                    // Store refundability info for calculation
+                    this.insurance._refundableItems = refundableItems;
+                    this.insurance._isMixed = isMixed;
+
                     this.setupInsuranceUI();
                 }
             }
@@ -489,8 +507,13 @@ const CheckoutPage = {
         document.getElementById('insurance-title').textContent = this.insurance.label || 'Protecție returnare bilete';
         document.getElementById('insurance-description').textContent = this.insurance.description || '';
 
-        // Calculate total tickets and display price per ticket
-        const totalTickets = this.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        // Insurance always applies only to refundable tickets
+        const isMixed = this.insurance._isMixed;
+        const refundableItems = this.insurance._refundableItems || [];
+
+        // Calculate applicable tickets count (only refundable)
+        const applicableTickets = refundableItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+
         const insuranceAmount = this.calculateInsuranceAmount();
 
         // Show price per ticket info
@@ -499,6 +522,14 @@ const CheckoutPage = {
             document.getElementById('insurance-price').textContent = AmbiletUtils.formatCurrency(pricePerTicket) + '/bilet';
         } else {
             document.getElementById('insurance-price').textContent = this.insurance.price_percentage + '% din total';
+        }
+
+        // Show partial note for mixed carts (some refundable, some not)
+        const partialNote = document.getElementById('insurance-partial-note');
+        if (partialNote && isMixed) {
+            const refundableNames = refundableItems.map(item => item.ticketType?.name || 'Bilet').join(', ');
+            partialNote.textContent = 'Se aplică doar pentru: ' + refundableNames;
+            partialNote.classList.remove('hidden');
         }
 
         // Show terms link if available
@@ -516,7 +547,7 @@ const CheckoutPage = {
         }
 
         // Update row label in summary to show ticket count
-        document.getElementById('insurance-row-label').textContent = (this.insurance.label || 'Taxa de retur') + ' (' + totalTickets + ' bilete)';
+        document.getElementById('insurance-row-label').textContent = (this.insurance.label || 'Taxa de retur') + ' (' + applicableTickets + ' bilete)';
     },
 
     setupInsuranceCheckbox() {
@@ -554,21 +585,26 @@ const CheckoutPage = {
     calculateInsuranceAmount() {
         if (!this.insurance) return 0;
 
-        // Calculate total number of tickets
-        const totalTickets = this.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        // Insurance always applies only to refundable tickets
+        const applicableItems = this.insurance._refundableItems || [];
+
+        if (applicableItems.length === 0) return 0;
+
+        // Calculate total number of applicable tickets
+        const applicableTickets = applicableItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
         if (this.insurance.price_type === 'percentage') {
-            // Calculate based on subtotal
-            const subtotal = this.items.reduce((sum, item) => {
+            // Calculate based on subtotal of applicable items only
+            const subtotal = applicableItems.reduce((sum, item) => {
                 const price = item.ticketType?.price || item.price || 0;
                 return sum + (price * (item.quantity || 1));
             }, 0);
             return Math.round(subtotal * (this.insurance.price_percentage / 100) * 100) / 100;
         }
 
-        // Fixed price per ticket × number of tickets
+        // Fixed price per ticket × number of applicable tickets
         const pricePerTicket = this.insurance.price || 0;
-        return Math.round(pricePerTicket * totalTickets * 100) / 100;
+        return Math.round(pricePerTicket * applicableTickets * 100) / 100;
     },
 
     setupTimer() {

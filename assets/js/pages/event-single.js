@@ -1626,7 +1626,8 @@ const EventPage = {
                         min_per_order: tt.min_per_order || 1,
                         max_per_order: tt.max_per_order || 10,
                         // Per-ticket commission (null means use event defaults)
-                        commission: tt.commission || null
+                        commission: tt.commission || null,
+                        is_refundable: tt.is_refundable || false
                     };
                     AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty);
                     addedAny = true;
@@ -3188,7 +3189,8 @@ const EventPage = {
                 name: tt.name,
                 price: basePrice,
                 original_price: baseOriginalPrice,
-                description: tt.description
+                description: tt.description,
+                is_refundable: tt.is_refundable || false
             };
 
             // Extract seat_uids for API call
@@ -3247,7 +3249,8 @@ const EventPage = {
                                 name: ticketTypeData.name,
                                 price: ticketTypeData.price,
                                 originalPrice: ticketTypeData.original_price,
-                                description: ticketTypeData.description
+                                description: ticketTypeData.description,
+                                is_refundable: ticketTypeData.is_refundable || false
                             },
                             quantity: seats.length,
                             seats: seats,
@@ -3298,7 +3301,8 @@ const EventPage = {
                         name: ticketTypeData.name,
                         price: ticketTypeData.price,
                         originalPrice: ticketTypeData.original_price,
-                        description: ticketTypeData.description
+                        description: ticketTypeData.description,
+                        is_refundable: ticketTypeData.is_refundable || false
                     },
                     quantity: seats.length,
                     seats: seats,
