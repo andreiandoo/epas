@@ -16,6 +16,7 @@ use Filament\Notifications\Notification;
 use Filament\Schemas\Components as SC;
 use Filament\Schemas\Schema;
 use Filament\Resources\Pages\Page;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -35,6 +36,12 @@ class ImportArtists extends Page implements HasForms
     public ?array $data = [];
 
     public array $importResults = [];
+
+    // Live progress tracking
+    public bool $isImporting = false;
+    public int $importProgress = 0;
+    public int $importTotal = 0;
+    public string $currentArtistName = '';
 
     public function mount(): void
     {
@@ -110,6 +117,14 @@ class ImportArtists extends Page implements HasForms
             ->statePath('data');
     }
 
+    protected function importCacheKey(): string
+    {
+        return 'artist_import_' . auth()->id();
+    }
+
+    /**
+     * Start the import: parse CSV, store rows in cache, begin batch processing.
+     */
     public function import(): void
     {
         $data = $this->form->getState();
@@ -130,15 +145,6 @@ class ImportArtists extends Page implements HasForms
                 ->danger()
                 ->send();
             return;
-        }
-
-        $updateExisting = $data['update_existing'] ?? false;
-        $skipExisting = $data['skip_existing'] ?? false;
-        $downloadImages = $data['download_images'] ?? false;
-
-        // skip_existing takes precedence over update_existing
-        if ($skipExisting) {
-            $updateExisting = false;
         }
 
         $handle = fopen($filePath, 'r');
@@ -167,58 +173,147 @@ class ImportArtists extends Page implements HasForms
             return;
         }
 
-        $imported = 0;
-        $updated = 0;
-        $skipped = 0;
-        $errors = [];
-
+        // Parse all rows upfront
+        $allRows = [];
         while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
             if (count($row) < count($header)) {
                 $row = array_pad($row, count($header), '');
             }
-
             $rowData = array_combine($header, $row);
-
-            if (empty($rowData['name'])) {
-                continue;
-            }
-
-            try {
-                $result = $this->processArtistRow($rowData, $updateExisting, $downloadImages);
-
-                if ($result === 'imported') {
-                    $imported++;
-                } elseif ($result === 'updated') {
-                    $updated++;
-                } else {
-                    $skipped++;
-                }
-            } catch (\Exception $e) {
-                $errors[] = "Error processing {$rowData['name']}: {$e->getMessage()}";
+            if (!empty($rowData['name'])) {
+                $allRows[] = $rowData;
             }
         }
-
         fclose($handle);
 
         // Clean up uploaded file
         Storage::disk('local')->delete($data['csv_file']);
 
-        $this->importResults = [
-            'imported' => $imported,
-            'updated' => $updated,
-            'skipped' => $skipped,
-            'errors' => $errors,
-        ];
-
-        $message = "Imported: {$imported}, Updated: {$updated}, Skipped: {$skipped}";
-        if (!empty($errors)) {
-            $message .= ", Errors: " . count($errors);
+        if (empty($allRows)) {
+            Notification::make()
+                ->title('No valid rows found')
+                ->body('The CSV file contained no rows with a "name" value.')
+                ->warning()
+                ->send();
+            return;
         }
 
+        $updateExisting = $data['update_existing'] ?? false;
+        $skipExisting = $data['skip_existing'] ?? false;
+        if ($skipExisting) {
+            $updateExisting = false;
+        }
+
+        // Store import state in cache
+        Cache::put($this->importCacheKey(), [
+            'rows' => $allRows,
+            'updateExisting' => $updateExisting,
+            'downloadImages' => $data['download_images'] ?? false,
+            'imported' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'errors' => [],
+        ], now()->addHour());
+
+        // Initialize progress UI
+        $this->importTotal = count($allRows);
+        $this->importProgress = 0;
+        $this->importResults = [];
+        $this->currentArtistName = '';
+        $this->isImporting = true;
+    }
+
+    /**
+     * Process the next batch of rows. Called by wire:poll during import.
+     */
+    public function processNextBatch(): void
+    {
+        if (!$this->isImporting) {
+            return;
+        }
+
+        $state = Cache::get($this->importCacheKey());
+
+        if (!$state || empty($state['rows'])) {
+            $this->finishImport($state);
+            return;
+        }
+
+        // Process 5 rows per tick
+        $batchSize = min(5, count($state['rows']));
+        $batch = array_slice($state['rows'], 0, $batchSize);
+        $state['rows'] = array_slice($state['rows'], $batchSize);
+
+        foreach ($batch as $rowData) {
+            $this->currentArtistName = $rowData['name'] ?? '';
+
+            try {
+                $result = $this->processArtistRow($rowData, $state['updateExisting'], $state['downloadImages']);
+
+                if ($result === 'imported') {
+                    $state['imported']++;
+                } elseif ($result === 'updated') {
+                    $state['updated']++;
+                } else {
+                    $state['skipped']++;
+                }
+            } catch (\Exception $e) {
+                $state['errors'][] = "Error processing {$rowData['name']}: {$e->getMessage()}";
+            }
+
+            $this->importProgress++;
+        }
+
+        if (empty($state['rows'])) {
+            $this->finishImport($state);
+        } else {
+            Cache::put($this->importCacheKey(), $state, now()->addHour());
+        }
+    }
+
+    /**
+     * Finish the import and show results.
+     */
+    protected function finishImport(?array $state): void
+    {
+        $this->isImporting = false;
+        $this->currentArtistName = '';
+        Cache::forget($this->importCacheKey());
+
+        if ($state) {
+            $this->importResults = [
+                'imported' => $state['imported'],
+                'updated' => $state['updated'],
+                'skipped' => $state['skipped'],
+                'errors' => $state['errors'],
+            ];
+
+            $message = "Imported: {$state['imported']}, Updated: {$state['updated']}, Skipped: {$state['skipped']}";
+            if (!empty($state['errors'])) {
+                $message .= ", Errors: " . count($state['errors']);
+            }
+
+            Notification::make()
+                ->title('Import Complete')
+                ->body($message)
+                ->success()
+                ->send();
+        }
+    }
+
+    /**
+     * Cancel a running import.
+     */
+    public function cancelImport(): void
+    {
+        Cache::forget($this->importCacheKey());
+        $this->isImporting = false;
+        $this->currentArtistName = '';
+
         Notification::make()
-            ->title('Import Complete')
-            ->body($message)
-            ->success()
+            ->title('Import Cancelled')
+            ->body("Stopped at {$this->importProgress} / {$this->importTotal}. Already processed rows were saved.")
+            ->warning()
             ->send();
     }
 
