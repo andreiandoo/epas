@@ -41,6 +41,11 @@ body {
     border-bottom-left-radius: 0;
 }
 
+.divide-gray-100 {
+    --tw-divide-opacity: 1;
+    border-color: rgb(229 231 235 / var(--tw-divide-opacity));
+}
+
 /* Fix dropdown/select option styling */
 @layer components {
     /* Remove thick borders from select dropdown options */

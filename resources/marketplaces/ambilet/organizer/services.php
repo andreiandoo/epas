@@ -1737,9 +1737,9 @@ async function updateEmailAudienceCount() {
             const pricePerEmail = audienceType === 'own'
                 ? (servicePricing.email.own_per_email || 0.40)
                 : (servicePricing.email.marketplace_per_email || 0.50);
-            const partialPrice = pricePerEmail / 2;
+            const partialPrice = Math.round((pricePerEmail / 2) * 100) / 100;
             const perfectCost = perfectCount * pricePerEmail;
-            const partialCostVal = partialCount * partialPrice;
+            const partialCostVal = Math.round(partialCount * partialPrice * 100) / 100;
             const totalCost = perfectCost + partialCostVal;
             document.getElementById('email-cost-estimate').textContent = AmbiletUtils.formatCurrency(totalCost);
 

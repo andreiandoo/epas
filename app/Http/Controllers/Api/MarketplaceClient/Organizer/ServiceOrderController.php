@@ -144,7 +144,7 @@ class ServiceOrderController extends BaseController
 
         $validator = Validator::make($request->all(), [
             'service_type' => 'required|in:featuring,email,tracking,campaign',
-            'event_id' => 'required|exists:marketplace_events,id',
+            'event_id' => 'required|integer',
             'payment_method' => 'nullable|in:card,transfer',
             'config' => 'required|array',
         ]);
@@ -335,8 +335,8 @@ class ServiceOrderController extends BaseController
                     : ($pricing['marketplace_per_email'] ?? 0.50);
                 $perfectCount = $config['perfect_count'] ?? ($config['recipient_count'] ?? 0);
                 $partialCount = $config['partial_count'] ?? 0;
-                // Partial matches at half price
-                return ($perfectCount * $pricePerEmail) + ($partialCount * ($pricePerEmail / 2));
+                // Partial matches at half price (rounded to 2 decimals for consistency)
+                return round(($perfectCount * $pricePerEmail) + ($partialCount * round($pricePerEmail / 2, 2)), 2);
 
             case ServiceOrder::TYPE_TRACKING:
                 $platforms = $config['platforms'] ?? [];
