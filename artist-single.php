@@ -128,49 +128,50 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 
-    <!-- Upcoming Events Section -->
-    <section class="mt-10">
-        <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
-                Concerte viitoare
-            </h2>
-            <a href="#" id="viewAllEventsLink" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
-                Vezi toate
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-            </a>
-        </div>
-
-        <div id="eventsList" class="flex flex-col gap-4">
-            <!-- Skeleton events -->
-            <?php for ($i = 0; $i < 3; $i++): ?>
-            <div class="flex flex-col overflow-hidden bg-white border border-gray-200 shadow-sm md:flex-row rounded-2xl">
-                <div class="w-full md:w-[100px] h-16 md:h-auto bg-gray-200 animate-pulse"></div>
-                <div class="flex-1 p-5">
-                    <div class="w-3/4 h-5 mb-3 bg-gray-200 rounded animate-pulse"></div>
-                    <div class="w-1/2 h-4 bg-gray-100 rounded animate-pulse"></div>
-                </div>
-                <div class="flex flex-col items-end justify-center gap-2 p-5">
-                    <div class="w-20 h-4 bg-gray-100 rounded animate-pulse"></div>
-                    <div class="h-10 bg-gray-200 rounded-lg w-28 animate-pulse"></div>
-                </div>
-            </div>
-            <?php endfor; ?>
-        </div>
-    </section>
-
-    <!-- About Section -->
+    
     <section class="mt-10">
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
-            <!-- About Card -->
-            <div id="aboutCard" class="bg-white border border-gray-200 shadow-sm rounded-2xl p-7">
-                <div class="w-full h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
-                <div class="w-5/6 h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
-                <div class="w-4/5 h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
-                <div class="w-3/4 h-4 bg-gray-200 rounded animate-pulse"></div>
-            </div>
+            <div class="">
+                <!-- Upcoming Events Section -->
+                <section class="">
+                    <div class="flex items-center justify-between mb-5">
+                        <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
+                            Concerte viitoare
+                        </h2>
+                        <a href="#" id="viewAllEventsLink" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
+                            Vezi toate
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                    </div>
 
+                    <div id="eventsList" class="flex flex-col gap-4">
+                        <!-- Skeleton events -->
+                        <?php for ($i = 0; $i < 3; $i++): ?>
+                        <div class="flex flex-col overflow-hidden bg-white border border-gray-200 shadow-sm md:flex-row rounded-2xl">
+                            <div class="w-full md:w-[100px] h-16 md:h-auto bg-gray-200 animate-pulse"></div>
+                            <div class="flex-1 p-5">
+                                <div class="w-3/4 h-5 mb-3 bg-gray-200 rounded animate-pulse"></div>
+                                <div class="w-1/2 h-4 bg-gray-100 rounded animate-pulse"></div>
+                            </div>
+                            <div class="flex flex-col items-end justify-center gap-2 p-5">
+                                <div class="w-20 h-4 bg-gray-100 rounded animate-pulse"></div>
+                                <div class="h-10 bg-gray-200 rounded-lg w-28 animate-pulse"></div>
+                            </div>
+                        </div>
+                        <?php endfor; ?>
+                    </div>
+                </section>
+                
+                <!-- About Card -->
+                <div id="aboutCard" class="bg-white border border-gray-200 shadow-sm rounded-2xl p-7">
+                    <div class="w-full h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div class="w-5/6 h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div class="w-4/5 h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div class="w-3/4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+            </div>
             <!-- Quick Facts -->
             <div id="factsCard" class="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
                 <h3 class="flex items-center gap-2 mb-5 text-base font-bold text-gray-900">⚡ Quick Facts</h3>

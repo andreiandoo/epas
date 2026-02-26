@@ -1540,6 +1540,9 @@ select.pr-10 {
 .pt-32 {
     padding-top: 8rem;
 }
+.mt-18 {
+    margin-top: 4.5rem;
+}
 
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 1100px) {
