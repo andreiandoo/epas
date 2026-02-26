@@ -44,10 +44,11 @@ class CheckoutController extends BaseController
             'beneficiaries.*.email' => 'nullable|email|max:255',
             'items' => 'nullable|array', // Accept items directly from frontend
             'items.*.quantity' => 'required_with:items|integer|min:1',
-            'payment_method' => 'nullable|string|in:card,cash,transfer',
+            'payment_method' => 'nullable|string|in:card,card_cultural,cash,transfer',
             'accept_terms' => 'required|accepted',
             'ticket_insurance' => 'nullable|boolean',
             'ticket_insurance_amount' => 'nullable|numeric|min:0',
+            'cultural_card_surcharge' => 'nullable|numeric|min:0',
         ]);
 
         // Get ticket insurance data
@@ -310,6 +311,13 @@ class CheckoutController extends BaseController
                 $orderTotal += $totalCommission;
             }
 
+            // Cultural card surcharge
+            $culturalCardSurcharge = 0;
+            if ($request->input('payment_method') === 'card_cultural' && $request->has('cultural_card_surcharge')) {
+                $culturalCardSurcharge = round((float) $request->input('cultural_card_surcharge'), 2);
+                $orderTotal += $culturalCardSurcharge;
+            }
+
             $currency = isset($cart) ? $cart->currency : ($client->currency ?? 'RON');
             $isMultiEvent = count($eventIds) > 1;
 
@@ -343,6 +351,8 @@ class CheckoutController extends BaseController
                     'user_agent' => $request->userAgent(),
                     'ticket_insurance' => $hasInsurance && $insuranceAmount > 0,
                     'insurance_amount' => $hasInsurance ? $insuranceAmount : 0,
+                    'cultural_card_surcharge' => $culturalCardSurcharge > 0 ? $culturalCardSurcharge : null,
+                    'payment_method' => $request->input('payment_method', 'card'),
                     'commission_mode' => $commissionMode,
                     'multi_event' => $isMultiEvent,
                     'event_ids' => array_keys($eventIds),
