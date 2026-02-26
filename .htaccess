@@ -132,6 +132,10 @@ RewriteRule ^organizator/servicii/comenzi/?$ organizer/service-orders.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/services/([a-f0-9-]+)/?$ organizer/service-order-detail.php?uuid=$1 [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/documente/?$ organizer/documents.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
