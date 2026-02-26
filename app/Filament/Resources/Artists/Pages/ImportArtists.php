@@ -119,12 +119,25 @@ class ImportArtists extends Page implements HasForms
         $downloadImages = $data['download_images'] ?? false;
 
         $handle = fopen($filePath, 'r');
-        $header = fgetcsv($handle);
+
+        // Detect delimiter (comma vs semicolon)
+        $firstLine = fgets($handle);
+        rewind($handle);
+        $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+
+        $header = fgetcsv($handle, 0, $delimiter);
+
+        // Strip UTF-8 BOM from first column if present (Excel adds this)
+        if ($header && isset($header[0])) {
+            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+        }
+        // Trim whitespace from all headers
+        $header = $header ? array_map('trim', $header) : $header;
 
         if ($header === false || !in_array('name', $header)) {
             Notification::make()
                 ->title('Invalid CSV format')
-                ->body('CSV must have at least a "name" column.')
+                ->body('CSV must have at least a "name" column. Found columns: ' . implode(', ', $header ?: []))
                 ->danger()
                 ->send();
             fclose($handle);
@@ -136,7 +149,7 @@ class ImportArtists extends Page implements HasForms
         $skipped = 0;
         $errors = [];
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
             if (count($row) < count($header)) {
                 $row = array_pad($row, count($header), '');
             }
