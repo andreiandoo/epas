@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\Event;
 use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceOrganizer;
@@ -154,7 +155,7 @@ class ServiceOrderController extends BaseController
         }
 
         // Verify event belongs to organizer
-        $event = MarketplaceEvent::where('id', $request->event_id)
+        $event = Event::where('id', $request->event_id)
             ->where('marketplace_organizer_id', $organizer->id)
             ->first();
 
@@ -379,13 +380,17 @@ class ServiceOrderController extends BaseController
         ];
     }
 
-    protected function getEventTitle(?MarketplaceEvent $event): string
+    protected function getEventTitle(?Event $event): string
     {
         if (! $event) {
             return '';
         }
 
-        return $event->name ?? '';
+        $title = $event->title;
+        if (is_array($title)) {
+            return $title['ro'] ?? $title['en'] ?? array_values($title)[0] ?? '';
+        }
+        return $title ?? '';
     }
 
     protected function getOrderDetails(ServiceOrder $order): string
@@ -434,9 +439,13 @@ class ServiceOrderController extends BaseController
                 'id' => $order->event->id,
                 'name' => $this->getEventTitle($order->event),
                 'slug' => $order->event->slug,
-                'starts_at' => $order->event->starts_at?->toIso8601String(),
-                'venue' => $order->event->venue_name,
-                'image' => $order->event->image_url ?? null,
+                'starts_at' => $order->event->event_date
+                    ? \Carbon\Carbon::parse($order->event->event_date->format('Y-m-d') . ' ' . ($order->event->start_time ?? '00:00'))->toIso8601String()
+                    : null,
+                'venue' => $order->event->venue?->getTranslation('name') ?? null,
+                'image' => $order->event->poster_url
+                    ? (str_starts_with($order->event->poster_url, 'http') ? $order->event->poster_url : rtrim(config('app.url'), '/') . '/storage/' . ltrim($order->event->poster_url, '/'))
+                    : null,
             ] : null,
         ]);
     }

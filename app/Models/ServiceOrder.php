@@ -208,7 +208,7 @@ class ServiceOrder extends Model
             if (in_array('category', $locations))             $updates['is_category_featured'] = true;
             if (in_array('city', $locations))                 $updates['is_city_featured']     = true;
             if (! empty($updates)) {
-                MarketplaceEvent::where('id', $this->marketplace_event_id)->update($updates);
+                Event::where('id', $this->marketplace_event_id)->update($updates);
             }
         }
 
@@ -276,7 +276,7 @@ class ServiceOrder extends Model
             }
 
             if (! empty($updates)) {
-                MarketplaceEvent::where('id', $this->marketplace_event_id)->update($updates);
+                Event::where('id', $this->marketplace_event_id)->update($updates);
             }
         }
 
@@ -336,7 +336,7 @@ class ServiceOrder extends Model
     {
         $config = $this->config ?? [];
         $marketplace = $this->marketplaceClient;
-        $event = MarketplaceEvent::find($this->marketplace_event_id);
+        $event = Event::with(['venue', 'artists', 'marketplaceCity'])->find($this->marketplace_event_id);
         $organizer = $this->marketplaceOrganizer;
 
         if (!$marketplace || !$event || !$organizer) {
@@ -363,7 +363,7 @@ class ServiceOrder extends Model
         // Create newsletter
         $newsletter = MarketplaceNewsletter::create([
             'marketplace_client_id' => $marketplace->id,
-            'name' => "Campanie: {$event->name} ({$this->order_number})",
+            'name' => "Campanie: {$this->getEventName($event)} ({$this->order_number})",
             'subject' => $subject,
             'from_name' => $marketplace->getEmailFromName(),
             'from_email' => $marketplace->getEmailFromAddress(),
@@ -496,9 +496,45 @@ class ServiceOrder extends Model
     /**
      * Generate email subject based on template type and variant index from config
      */
-    protected function generateEmailSubject(string $template, MarketplaceEvent $event): string
+    protected function getEventName(Event $event): string
     {
-        $name = $event->name;
+        $title = $event->title;
+        if (is_array($title)) {
+            return $title['ro'] ?? $title['en'] ?? array_values($title)[0] ?? '';
+        }
+        return $title ?? '';
+    }
+
+    protected function getEventStartsAt(Event $event): ?\Carbon\Carbon
+    {
+        if ($event->event_date) {
+            $date = $event->event_date->format('Y-m-d');
+            $time = $event->start_time ?? '00:00';
+            return \Carbon\Carbon::parse("{$date} {$time}");
+        }
+        return null;
+    }
+
+    protected function getEventImageUrl(Event $event): ?string
+    {
+        $path = $event->poster_url;
+        if (empty($path)) return null;
+        if (str_starts_with($path, 'http')) return $path;
+        return rtrim(config('app.url'), '/') . '/storage/' . ltrim($path, '/');
+    }
+
+    protected function getLocalizedField(Model $model, string $field): string
+    {
+        $value = $model->$field;
+        if (is_array($value)) {
+            return $value['ro'] ?? $value['en'] ?? array_values($value)[0] ?? '';
+        }
+        return $value ?? '';
+    }
+
+    protected function generateEmailSubject(string $template, Event $event): string
+    {
+        $name = $this->getEventName($event);
         $variants = self::$subjectVariants[$template] ?? self::$subjectVariants['classic'];
         $config = $this->config ?? [];
         $variantIndices = $config['variant_indices'] ?? [];
@@ -527,10 +563,12 @@ class ServiceOrder extends Model
     /**
      * Build venue info HTML section for email
      */
-    protected function buildEmailVenueBox(MarketplaceEvent $event): string
+    protected function buildEmailVenueBox(Event $event): string
     {
-        $venueName = e($event->venue_name ?? '');
-        $venueCity = e($event->venue_city ?? '');
+        $venue = $event->venue;
+        $rawName = $venue ? $this->getLocalizedField($venue, 'name') : '';
+        $venueName = e($rawName);
+        $venueCity = e($venue->city ?? $event->marketplaceCity?->name ?? '');
         if (!$venueName) return '';
 
         $cityHtml = $venueCity
@@ -565,12 +603,9 @@ HTML;
     /**
      * Build artists HTML section for email
      */
-    protected function buildEmailArtistsBox(MarketplaceEvent $event): string
+    protected function buildEmailArtistsBox(Event $event): string
     {
-        $artistIds = $event->artist_ids;
-        if (empty($artistIds) || !is_array($artistIds)) return '';
-
-        $artists = Artist::whereIn('id', $artistIds)->pluck('name')->filter()->toArray();
+        $artists = $event->artists->pluck('name')->filter()->toArray();
         if (empty($artists)) return '';
 
         $pills = '';
@@ -598,9 +633,11 @@ HTML;
     /**
      * Build description HTML section for email
      */
-    protected function buildEmailDescriptionBox(MarketplaceEvent $event): string
+    protected function buildEmailDescriptionBox(Event $event): string
     {
-        $desc = $event->short_description ?: $event->description;
+        $shortDesc = $this->getLocalizedField($event, 'short_description');
+        $fullDesc = $this->getLocalizedField($event, 'description');
+        $desc = $shortDesc ?: $fullDesc;
         if (!$desc) return '';
 
         $truncated = e(mb_strlen($desc) > 300 ? mb_substr($desc, 0, 300) . '...' : $desc);
@@ -617,14 +654,17 @@ HTML;
     /**
      * Generate responsive email HTML for the campaign
      */
-    protected function generateEmailHtml(string $template, MarketplaceEvent $event, MarketplaceClient $marketplace): string
+    protected function generateEmailHtml(string $template, Event $event, MarketplaceClient $marketplace): string
     {
-        $eventName = e($event->name);
-        $eventDate = $event->starts_at ? $event->starts_at->format('d.m.Y, H:i') : 'TBA';
-        $venueName = e($event->venue_name ?? 'TBA');
-        $venueCity = e($event->venue_city ?? '');
+        $eventName = e($this->getEventName($event));
+        $startsAt = $this->getEventStartsAt($event);
+        $eventDate = $startsAt ? $startsAt->format('d.m.Y, H:i') : 'TBA';
+        $venue = $event->venue;
+        $rawVenueName = $venue ? $this->getLocalizedField($venue, 'name') : 'TBA';
+        $venueName = e($rawVenueName);
+        $venueCity = e($venue->city ?? $event->marketplaceCity?->name ?? '');
         $venueDisplay = $venueCity ? "{$venueName}, {$venueCity}" : $venueName;
-        $imageUrl = $event->image_url;
+        $imageUrl = $this->getEventImageUrl($event);
         $eventUrl = "https://{$marketplace->domain}/{$event->slug}";
         $marketplaceName = e($marketplace->name);
 
@@ -909,7 +949,7 @@ HTML;
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(MarketplaceEvent::class, 'marketplace_event_id');
+        return $this->belongsTo(Event::class, 'marketplace_event_id');
     }
 
     public function assignedUser(): BelongsTo
