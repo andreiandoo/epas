@@ -425,7 +425,7 @@ class ServiceOrderController extends BaseController
     {
         $base = $this->formatOrder($order);
 
-        return array_merge($base, [
+        $detailed = array_merge($base, [
             'config' => $order->config,
             'subtotal' => (float) $order->subtotal,
             'tax' => (float) $order->tax,
@@ -448,6 +448,30 @@ class ServiceOrderController extends BaseController
                     : null,
             ] : null,
         ]);
+
+        // Add newsletter stats for email orders
+        if ($order->service_type === 'email') {
+            $newsletter = $order->getLinkedNewsletter();
+            if ($newsletter) {
+                $detailed['newsletter'] = [
+                    'status' => $newsletter->status,
+                    'total_recipients' => $newsletter->total_recipients,
+                    'sent_count' => $newsletter->sent_count,
+                    'failed_count' => $newsletter->failed_count,
+                    'opened_count' => $newsletter->opened_count,
+                    'clicked_count' => $newsletter->clicked_count,
+                    'unsubscribed_count' => $newsletter->unsubscribed_count ?? 0,
+                    'open_rate' => $newsletter->sent_count > 0
+                        ? round(($newsletter->opened_count / $newsletter->sent_count) * 100, 1) : 0,
+                    'click_rate' => $newsletter->opened_count > 0
+                        ? round(($newsletter->clicked_count / $newsletter->opened_count) * 100, 1) : 0,
+                    'scheduled_at' => $newsletter->scheduled_at?->toIso8601String(),
+                    'completed_at' => $newsletter->completed_at?->toIso8601String(),
+                ];
+            }
+        }
+
+        return $detailed;
     }
 
     /**
