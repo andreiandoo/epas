@@ -8,17 +8,52 @@ use App\Models\Gamification\CustomerExperience;
 use App\Models\Gamification\CustomerPoints;
 use App\Models\Gamification\PointsTransaction;
 use App\Models\Gamification\RewardRedemption;
+use App\Models\MarketplaceCustomer;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class CustomerInsightsService
 {
-    protected Customer $customer;
     protected int $customerId;
+    protected string $email;
+    protected string $orderColumn;
+    protected ?Carbon $createdAt;
+    protected ?Customer $coreCustomer;
 
-    public function __construct(Customer $customer)
+    private function __construct(
+        int $customerId,
+        string $email,
+        string $orderColumn,
+        ?Carbon $createdAt,
+        ?Customer $coreCustomer = null
+    ) {
+        $this->customerId = $customerId;
+        $this->email = $email;
+        $this->orderColumn = $orderColumn;
+        $this->createdAt = $createdAt;
+        $this->coreCustomer = $coreCustomer;
+    }
+
+    public static function forCustomer(Customer $customer): static
     {
-        $this->customer = $customer;
-        $this->customerId = $customer->id;
+        return new static(
+            $customer->id,
+            $customer->email,
+            'customer_id',
+            $customer->created_at,
+            $customer
+        );
+    }
+
+    public static function forMarketplaceCustomer(MarketplaceCustomer $customer): static
+    {
+        return new static(
+            $customer->id,
+            $customer->email,
+            'marketplace_customer_id',
+            $customer->created_at,
+            null
+        );
     }
 
     // ─── Lifetime Stats ───────────────────────────────────────────
@@ -26,30 +61,29 @@ class CustomerInsightsService
     public function lifetimeStats(): array
     {
         $orders = DB::table('orders')
-            ->where('customer_id', $this->customerId)
+            ->where($this->orderColumn, $this->customerId)
             ->selectRaw('COUNT(*) as total_orders, COALESCE(SUM(total_cents), 0) as total_value')
             ->first();
 
         $tickets = DB::table('tickets as t')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->count();
 
         $events = DB::table('events as e')
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->distinct('e.id')
             ->count('e.id');
 
-        $createdAt = $this->customer->created_at;
-        $lifetimeDays = $createdAt ? (int) $createdAt->diffInDays(now()) : 0;
+        $lifetimeDays = $this->createdAt ? (int) $this->createdAt->diffInDays(now()) : 0;
 
         return [
             'lifetime_value' => ($orders->total_value ?? 0) / 100,
             'lifetime_days' => $lifetimeDays,
-            'customer_since' => $createdAt?->format('d.m.Y'),
+            'customer_since' => $this->createdAt?->format('d.m.Y'),
             'total_orders' => $orders->total_orders ?? 0,
             'total_tickets' => $tickets,
             'total_events' => $events,
@@ -61,7 +95,7 @@ class CustomerInsightsService
     public function orderStatusBreakdown(): array
     {
         $rows = DB::table('orders')
-            ->where('customer_id', $this->customerId)
+            ->where($this->orderColumn, $this->customerId)
             ->select(
                 'status',
                 DB::raw('COUNT(*) as cnt'),
@@ -74,7 +108,7 @@ class CustomerInsightsService
         $totalOrders = $rows->sum('cnt');
         $totalTickets = DB::table('tickets as t')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->count();
 
         $paidValue = ($rows->get('paid')?->total_cents ?? 0)
@@ -82,7 +116,7 @@ class CustomerInsightsService
             + ($rows->get('completed')?->total_cents ?? 0);
 
         $refundTotal = DB::table('orders')
-            ->where('customer_id', $this->customerId)
+            ->where($this->orderColumn, $this->customerId)
             ->where('status', 'refunded')
             ->sum(DB::raw('COALESCE(refund_amount, total_cents / 100)'));
 
@@ -105,7 +139,7 @@ class CustomerInsightsService
 
         $rows = DB::table('orders')
             ->selectRaw("MONTH(created_at) as m, COUNT(*) as cnt, COALESCE(SUM(total_cents), 0) as total")
-            ->where('customer_id', $this->customerId)
+            ->where($this->orderColumn, $this->customerId)
             ->whereYear('created_at', $year)
             ->groupBy('m')
             ->orderBy('m')
@@ -114,7 +148,7 @@ class CustomerInsightsService
 
         $revenueRows = DB::table('orders')
             ->selectRaw("MONTH(created_at) as m, COALESCE(SUM(total_cents), 0) as total")
-            ->where('customer_id', $this->customerId)
+            ->where($this->orderColumn, $this->customerId)
             ->whereYear('created_at', $year)
             ->groupBy('m')
             ->orderBy('m')
@@ -144,7 +178,7 @@ class CustomerInsightsService
     {
         $prices = DB::table('tickets as t')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->whereNotNull('t.price')
             ->where('t.price', '>', 0)
             ->pluck('t.price')
@@ -179,7 +213,7 @@ class CustomerInsightsService
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->select(
                 DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(vt.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(vt.name, '$.ro')), vt.name) as label"),
                 DB::raw('COUNT(DISTINCT e.id) as cnt')
@@ -203,7 +237,7 @@ class CustomerInsightsService
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->select(
                 DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.ro')), ag.name) as label"),
                 DB::raw('COUNT(DISTINCT e.id) as cnt')
@@ -225,7 +259,7 @@ class CustomerInsightsService
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->select(
                 DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(et.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(et.name, '$.ro')), et.name) as label"),
                 DB::raw('COUNT(DISTINCT e.id) as cnt')
@@ -247,7 +281,7 @@ class CustomerInsightsService
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->select(
                 DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.ro')), eg.name) as label"),
                 DB::raw('COUNT(DISTINCT e.id) as cnt')
@@ -269,7 +303,7 @@ class CustomerInsightsService
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->select('etag.name as label', DB::raw('COUNT(DISTINCT e.id) as cnt'))
             ->groupBy('etag.name')
             ->orderByDesc('cnt')
@@ -288,7 +322,7 @@ class CustomerInsightsService
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->whereNotNull('e.event_date')
             ->select(DB::raw('DAYOFWEEK(e.event_date) as dow'), DB::raw('COUNT(DISTINCT e.id) as cnt'))
             ->groupBy('dow')
@@ -323,7 +357,7 @@ class CustomerInsightsService
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->whereNotNull('v.city')
             ->where('v.city', '!=', '')
             ->select('v.city as label', DB::raw('COUNT(DISTINCT e.id) as cnt'))
@@ -342,7 +376,7 @@ class CustomerInsightsService
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->whereNotNull('e.start_time')
             ->select(DB::raw("CONCAT(LPAD(HOUR(e.start_time), 2, '0'), ':00') as label"), DB::raw('COUNT(DISTINCT e.id) as cnt'))
             ->groupBy('label')
@@ -366,7 +400,7 @@ class CustomerInsightsService
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->whereNotNull('e.event_date')
             ->select(DB::raw('MONTH(e.event_date) as m'), DB::raw('COUNT(DISTINCT e.id) as cnt'))
             ->groupBy('m')
@@ -388,7 +422,7 @@ class CustomerInsightsService
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->whereNotNull('e.event_date')
             ->select(
                 DB::raw("CASE
@@ -411,7 +445,7 @@ class CustomerInsightsService
     {
         return DB::table('orders as o')
             ->leftJoin('events as e', 'e.id', '=', 'o.event_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->select(
                 'o.id',
                 'o.order_number',
@@ -435,7 +469,7 @@ class CustomerInsightsService
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
             ->leftJoin('events as e', 'e.id', '=', 'tt.event_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->select(
                 't.id',
                 't.code',
@@ -460,7 +494,7 @@ class CustomerInsightsService
     {
         return DB::table('tickets as t')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->whereNotNull('t.attendee_name')
             ->where('t.attendee_name', '!=', '')
             ->select('t.attendee_name', 't.attendee_email')
@@ -476,7 +510,7 @@ class CustomerInsightsService
     {
         return DB::table('email_logs as el')
             ->leftJoin('email_templates as et', 'et.id', '=', 'el.email_template_id')
-            ->where('el.recipient_email', $this->customer->email)
+            ->where('el.recipient_email', $this->email)
             ->select(
                 'el.id',
                 'el.subject',
@@ -496,29 +530,41 @@ class CustomerInsightsService
 
     public function gamificationData(): array
     {
-        $tenantId = $this->customer->primary_tenant_id ?? $this->customer->tenant_id;
+        // Gamification only works for core customers with tenant context
+        if (!$this->coreCustomer) {
+            return [
+                'points' => null,
+                'experience' => null,
+                'transactions' => collect(),
+                'badges' => collect(),
+                'redemptions' => collect(),
+            ];
+        }
+
+        $tenantId = $this->coreCustomer->primary_tenant_id ?? $this->coreCustomer->tenant_id;
+        $coreId = $this->coreCustomer->id;
 
         $points = $tenantId
-            ? CustomerPoints::where('tenant_id', $tenantId)->where('customer_id', $this->customerId)->first()
+            ? CustomerPoints::where('tenant_id', $tenantId)->where('customer_id', $coreId)->first()
             : null;
 
         $experience = $tenantId
-            ? CustomerExperience::where('tenant_id', $tenantId)->where('customer_id', $this->customerId)->first()
+            ? CustomerExperience::where('tenant_id', $tenantId)->where('customer_id', $coreId)->first()
             : null;
 
-        $transactions = PointsTransaction::where('customer_id', $this->customerId)
+        $transactions = PointsTransaction::where('customer_id', $coreId)
             ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))
             ->orderByDesc('created_at')
             ->limit(20)
             ->get();
 
         $badges = CustomerBadge::with('badge')
-            ->where('customer_id', $this->customerId)
+            ->where('customer_id', $coreId)
             ->orderByDesc('earned_at')
             ->get();
 
         $redemptions = RewardRedemption::with('reward')
-            ->where('customer_id', $this->customerId)
+            ->where('customer_id', $coreId)
             ->orderByDesc('created_at')
             ->limit(20)
             ->get();
@@ -538,7 +584,7 @@ class CustomerInsightsService
     {
         return DB::table('orders')
             ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as cnt, SUM(total_cents) as total")
-            ->where('customer_id', $this->customerId)
+            ->where($this->orderColumn, $this->customerId)
             ->groupBy('month')
             ->orderBy('month')
             ->get()
@@ -553,7 +599,7 @@ class CustomerInsightsService
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->select('e.id', DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro'))) as title"))
             ->distinct()
             ->orderByDesc('e.id')
@@ -572,7 +618,7 @@ class CustomerInsightsService
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->select('a.id', 'a.name', DB::raw('COUNT(DISTINCT e.id) as cnt'))
             ->groupBy('a.id', 'a.name')
             ->orderByDesc('cnt')
@@ -587,7 +633,7 @@ class CustomerInsightsService
     {
         return DB::table('tenants as tn')
             ->join('orders as o', 'o.tenant_id', '=', 'tn.id')
-            ->where('o.customer_id', $this->customerId)
+            ->where('o.' . $this->orderColumn, $this->customerId)
             ->select('tn.id', 'tn.name', DB::raw('COUNT(*) as cnt'), DB::raw('SUM(o.total_cents) as total'))
             ->groupBy('tn.id', 'tn.name')
             ->orderByDesc('total')

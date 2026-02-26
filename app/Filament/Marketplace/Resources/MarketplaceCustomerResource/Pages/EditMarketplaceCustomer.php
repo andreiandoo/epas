@@ -13,7 +13,11 @@ class EditMarketplaceCustomer extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\ViewAction::make(),
+            Actions\Action::make('viewProfile')
+                ->label('Profil Client')
+                ->icon('heroicon-o-user-circle')
+                ->color('info')
+                ->url(fn () => static::getResource()::getUrl('view', ['record' => $this->record])),
             Actions\DeleteAction::make(),
         ];
     }

@@ -42,7 +42,7 @@ class ViewCustomer extends ViewRecord
 
         /** @var Customer $customer */
         $customer = $this->record;
-        $service = new CustomerInsightsService($customer);
+        $service = CustomerInsightsService::forCustomer($customer);
 
         // Lifetime stats
         $this->lifetimeStats = $service->lifetimeStats();
