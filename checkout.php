@@ -200,55 +200,62 @@ require_once __DIR__ . '/includes/header.php';
                                 <input type="radio" name="payment" value="card" class="hidden" checked>
                             </label>
 
-                            <!-- Google Pay -->
+                            <!-- Card Cultural -->
                             <label class="flex items-center gap-4 p-4 border-2 cursor-pointer payment-option border-border rounded-xl">
                                 <div class="payment-radio"></div>
                                 <div class="flex items-center justify-between flex-1">
                                     <div class="flex items-center gap-3">
-                                        <div class="flex items-center justify-center w-12 h-8 bg-white border rounded border-border">
-                                            <svg class="h-5" viewBox="0 0 24 24" fill="none">
-                                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                                                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                                                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                                                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                                            </svg>
+                                        <div class="flex items-center justify-center w-12 h-8 rounded bg-gradient-to-r from-purple-600 to-purple-800">
+                                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                                         </div>
                                         <div>
-                                            <p class="font-semibold text-secondary">Google Pay</p>
-                                            <p class="text-xs text-muted">Plată rapidă și securizată</p>
+                                            <p class="font-semibold text-secondary">Card Cultural</p>
+                                            <p class="text-xs text-muted">Edenred, Sodexo, Up România</p>
                                         </div>
                                     </div>
                                 </div>
-                                <input type="radio" name="payment" value="googlepay" class="hidden">
-                            </label>
-
-                            <!-- Apple Pay -->
-                            <label class="flex items-center gap-4 p-4 border-2 cursor-pointer payment-option border-border rounded-xl">
-                                <div class="payment-radio"></div>
-                                <div class="flex items-center justify-between flex-1">
-                                    <div class="flex items-center gap-3">
-                                        <div class="flex items-center justify-center w-12 h-8 bg-black rounded">
-                                            <svg class="h-4" viewBox="0 0 24 24" fill="white">
-                                                <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-                                            </svg>
-                                            <span class="text-white text-[10px] font-semibold ml-0.5">Pay</span>
-                                        </div>
-                                        <div>
-                                            <p class="font-semibold text-secondary">Apple Pay</p>
-                                            <p class="text-xs text-muted">Plată rapidă cu Face ID / Touch ID</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <input type="radio" name="payment" value="applepay" class="hidden">
+                                <input type="radio" name="payment" value="card_cultural" class="hidden">
                             </label>
                         </div>
 
-                        <!-- Card Form Info -->
-                        <div id="cardForm" class="p-4 mt-6 bg-surface rounded-xl">
+                        <!-- Accepted wallets info (informational only) -->
+                        <div class="flex flex-wrap items-center gap-3 px-1 mt-4">
+                            <span class="text-xs text-muted">Acceptăm și:</span>
+                            <div class="flex items-center gap-1.5 px-2.5 py-1 bg-white border rounded-lg border-border">
+                                <svg class="h-3.5" viewBox="0 0 24 24" fill="none">
+                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                </svg>
+                                <span class="text-[11px] font-medium text-secondary">Google Pay</span>
+                            </div>
+                            <div class="flex items-center gap-1 px-2.5 py-1 bg-black rounded-lg">
+                                <svg class="h-3" viewBox="0 0 24 24" fill="white">
+                                    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                                </svg>
+                                <span class="text-[11px] font-medium text-white">Pay</span>
+                            </div>
+                        </div>
+
+                        <!-- Card Form Info (shown for Card bancar) -->
+                        <div id="cardForm" class="p-4 mt-4 bg-surface rounded-xl">
                             <p class="mb-4 text-sm text-muted">Vei fi redirecționat către procesatorul de plăți pentru a introduce datele cardului în siguranță.</p>
                             <div class="flex items-center gap-2 text-xs text-muted">
                                 <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                                 Plățile sunt procesate securizat
+                            </div>
+                        </div>
+
+                        <!-- Cultural Card Info (shown for Card Cultural) -->
+                        <div id="culturalCardForm" class="hidden p-4 mt-4 rounded-xl bg-purple-50">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-5 h-5 mt-0.5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <div>
+                                    <p class="mb-1 text-sm font-medium text-purple-800">Comision adițional Card Cultural</p>
+                                    <p class="text-sm text-purple-700">Tranzacțiile cu card cultural au un comision de procesare suplimentar de <strong>1.5%</strong> din valoarea totală, datorat costurilor mai mari de procesare pentru acest tip de card.</p>
+                                    <p class="mt-2 text-xs text-muted">Vei fi redirecționat către procesatorul de plăți pentru a introduce datele cardului cultural în siguranță.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -309,6 +316,15 @@ require_once __DIR__ . '/includes/header.php';
                                         <span id="insurance-row-label">Taxa de retur</span>
                                     </span>
                                     <span id="insurance-row-amount" class="font-medium text-success">+0.00 lei</span>
+                                </div>
+
+                                <!-- Cultural Card Surcharge Row (shown if card cultural selected) -->
+                                <div id="cultural-card-row" class="flex justify-between hidden p-2 -mx-2 text-sm rounded-lg bg-purple-50">
+                                    <span class="flex items-center gap-1 text-purple-700">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                                        Comision card cultural (1.5%)
+                                    </span>
+                                    <span id="cultural-card-amount" class="font-medium text-purple-700">+0.00 lei</span>
                                 </div>
                             </div>
 
@@ -431,7 +447,8 @@ const CheckoutPage = {
     taxes: [],
     insurance: null,
     insuranceSelected: false,
-    totals: { subtotal: 0, tax: 0, discount: 0, insurance: 0, total: 0, savings: 0 },
+    culturalCardSurchargeRate: 1.5, // % extra for cultural card transactions
+    totals: { subtotal: 0, tax: 0, discount: 0, insurance: 0, culturalCardSurcharge: 0, total: 0, savings: 0 },
     timerInterval: null,
     endTime: null,
 
@@ -664,12 +681,14 @@ const CheckoutPage = {
                 this.classList.add('selected');
                 this.querySelector('input[type="radio"]').checked = true;
 
+                const value = this.querySelector('input').value;
                 const cardForm = document.getElementById('cardForm');
-                if (this.querySelector('input').value === 'card') {
-                    cardForm.style.display = 'block';
-                } else {
-                    cardForm.style.display = 'none';
-                }
+                const culturalCardForm = document.getElementById('culturalCardForm');
+                cardForm.style.display = value === 'card' ? 'block' : 'none';
+                culturalCardForm.style.display = value === 'card_cultural' ? 'block' : 'none';
+
+                // Re-render summary to update cultural card surcharge
+                CheckoutPage.renderSummary();
             });
         });
     },
@@ -998,10 +1017,19 @@ const CheckoutPage = {
 
         // Total = base prices + commission + insurance - discount
         const subtotalWithCommission = baseSubtotal + totalCommission;
-        const total = Math.max(0, subtotalWithCommission + insuranceAmount - promoDiscount);
+        const baseTotal = Math.max(0, subtotalWithCommission + insuranceAmount - promoDiscount);
+
+        // Cultural card surcharge (applied on entire total including insurance)
+        const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value || 'card';
+        let culturalCardSurcharge = 0;
+        if (paymentMethod === 'card_cultural') {
+            culturalCardSurcharge = Math.round(baseTotal * (this.culturalCardSurchargeRate / 100) * 100) / 100;
+        }
+
+        const total = baseTotal + culturalCardSurcharge;
         const points = Math.floor(total / 10);
 
-        this.totals = { subtotal: subtotalWithCommission, tax: 0, discount: promoDiscount, insurance: insuranceAmount, total, savings };
+        this.totals = { subtotal: subtotalWithCommission, tax: 0, discount: promoDiscount, insurance: insuranceAmount, culturalCardSurcharge, total, savings };
 
         // Update DOM
         document.getElementById('summary-items').textContent = totalQty;
@@ -1028,6 +1056,17 @@ const CheckoutPage = {
                 document.getElementById('insurance-row-amount').textContent = '+' + AmbiletUtils.formatCurrency(insuranceAmount);
             } else {
                 insuranceRow.classList.add('hidden');
+            }
+        }
+
+        // Show/hide cultural card surcharge row
+        const culturalCardRow = document.getElementById('cultural-card-row');
+        if (culturalCardRow) {
+            if (culturalCardSurcharge > 0) {
+                culturalCardRow.classList.remove('hidden');
+                document.getElementById('cultural-card-amount').textContent = '+' + AmbiletUtils.formatCurrency(culturalCardSurcharge);
+            } else {
+                culturalCardRow.classList.add('hidden');
             }
         }
 
@@ -1176,6 +1215,11 @@ const CheckoutPage = {
             if (this.insuranceSelected && this.totals.insurance > 0) {
                 checkoutData.ticket_insurance = true;
                 checkoutData.ticket_insurance_amount = this.totals.insurance;
+            }
+
+            // Add cultural card surcharge if applicable
+            if (paymentMethod === 'card_cultural' && this.totals.culturalCardSurcharge > 0) {
+                checkoutData.cultural_card_surcharge = this.totals.culturalCardSurcharge;
             }
 
             const response = await AmbiletAPI.post('/checkout', checkoutData);
