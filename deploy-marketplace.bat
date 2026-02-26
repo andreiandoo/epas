@@ -55,25 +55,20 @@ if errorlevel 1 (
 
 echo [3/6] Copying marketplace files...
 cd /d "%~dp0"
-xcopy "%SOURCE_DIR%\*" "%TEMP_DIR%\" /E /Y /Q >nul
+xcopy "%SOURCE_DIR%\*" "%TEMP_DIR%\" /E /Y /Q /H >nul
 if errorlevel 1 (
     echo [ERROR] Failed to copy files
     rd /s /q "%TEMP_DIR%"
     exit /b 1
 )
 
-echo [4/6] Staging changes...
+:: Write deploy timestamp so there's always a change to push (triggers server webhook)
 cd /d "%TEMP_DIR%"
-git add -A
+for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set "now=%%I"
+echo !now:~0,4!-!now:~4,2!-!now:~6,2! !now:~8,2!:!now:~10,2!:!now:~12,2! > .deploy-timestamp
 
-:: Check if there are changes
-git diff --cached --quiet
-if not errorlevel 1 (
-    echo [INFO] No changes to deploy.
-    cd /d "%~dp0"
-    rd /s /q "%TEMP_DIR%"
-    exit /b 0
-)
+echo [4/6] Staging changes...
+git add -A
 
 echo [5/6] Committing changes...
 git commit -m "%COMMIT_MSG%"
