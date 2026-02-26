@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coș de cumpărături - AmBilet.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #F8FAFC;
+            color: #1E293B;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid #E2E8F0;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .logo-text .am { color: #1E293B; }
+        .logo-text .bilet { color: #A51C30; }
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .header-nav a {
+            color: #64748B;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9375rem;
+            transition: color 0.2s;
+        }
+
+        .header-nav a:hover {
+            color: #A51C30;
+        }
+
+        .cart-icon {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #FEF2F2;
+            border-radius: 0.5rem;
+            color: #A51C30;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .cart-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Page Title */
+        .page-title {
+            margin-bottom: 2rem;
+        }
+
+        .page-title h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1E293B;
+        }
+
+        /* Empty Cart */
+        .empty-cart {
+            background: white;
+            border-radius: 1.5rem;
+            border: 1px solid #E2E8F0;
+            padding: 4rem 2rem;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .empty-illustration {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 2rem;
+            position: relative;
+        }
+
+        .empty-illustration svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .empty-cart h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 0.75rem;
+        }
+
+        .empty-cart p {
+            font-size: 1rem;
+            color: #64748B;
+            max-width: 400px;
+            margin: 0 auto 2rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.75rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 0.9375rem;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #A51C30, #C41E3A);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(165, 28, 48, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #1E293B;
+            border: 1px solid #E2E8F0;
+        }
+
+        .btn-secondary:hover {
+            background: #F8FAFC;
+            border-color: #CBD5E1;
+        }
+
+        .btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .empty-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Features */
+        .features-row {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #E2E8F0;
+            flex-wrap: wrap;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #64748B;
+            font-size: 0.875rem;
+        }
+
+        .feature-item svg {
+            width: 24px;
+            height: 24px;
+            color: #10B981;
+        }
+
+        /* Suggestions Section */
+        .suggestions-section {
+            margin-top: 3rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header h2 {
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: #1E293B;
+        }
+
+        .section-header a {
+            color: #A51C30;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .section-header a:hover {
+            text-decoration: underline;
+        }
+
+        .section-header a svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Events Grid */
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+
+        .event-card {
+            background: white;
+            border-radius: 1rem;
+            border: 1px solid #E2E8F0;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .event-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        .event-image {
+            height: 160px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .event-image-bg {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .event-image-bg svg {
+            width: 48px;
+            height: 48px;
+            color: white;
+            opacity: 0.5;
+        }
+
+        .event-badge {
+            position: absolute;
+            top: 0.75rem;
+            left: 0.75rem;
+            padding: 0.25rem 0.625rem;
+            background: #A51C30;
+            color: white;
+            border-radius: 0.375rem;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .event-badge.hot {
+            background: #F59E0B;
+        }
+
+        .event-badge.new {
+            background: #10B981;
+        }
+
+        .event-wishlist {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 32px;
+            height: 32px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .event-wishlist:hover {
+            transform: scale(1.1);
+        }
+
+        .event-wishlist svg {
+            width: 18px;
+            height: 18px;
+            color: #64748B;
+        }
+
+        .event-content {
+            padding: 1rem;
+        }
+
+        .event-date {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #A51C30;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.375rem;
+        }
+
+        .event-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 0.375rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .event-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .event-title a:hover {
+            color: #A51C30;
+        }
+
+        .event-location {
+            font-size: 0.8125rem;
+            color: #64748B;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .event-location svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .event-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 0.75rem;
+            border-top: 1px solid #F1F5F9;
+        }
+
+        .event-price {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1E293B;
+        }
+
+        .event-price span {
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: #64748B;
+        }
+
+        .event-cta {
+            padding: 0.5rem 0.875rem;
+            background: linear-gradient(135deg, #A51C30, #C41E3A);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .event-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(165, 28, 48, 0.3);
+        }
+
+        /* Categories Section */
+        .categories-section {
+            margin-top: 3rem;
+        }
+
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 1rem;
+        }
+
+        .category-card {
+            background: white;
+            border-radius: 1rem;
+            border: 1px solid #E2E8F0;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .category-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-color: #A51C30;
+        }
+
+        .category-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 0.75rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .category-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .category-icon.music { background: #FEE2E2; color: #DC2626; }
+        .category-icon.theater { background: #E0E7FF; color: #4F46E5; }
+        .category-icon.sports { background: #D1FAE5; color: #059669; }
+        .category-icon.comedy { background: #FEF3C7; color: #D97706; }
+        .category-icon.family { background: #FCE7F3; color: #DB2777; }
+        .category-icon.festivals { background: #DBEAFE; color: #2563EB; }
+
+        .category-name {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1E293B;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .events-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .categories-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+
+            .header-nav {
+                display: none;
+            }
+
+            .main-container {
+                padding: 1rem;
+            }
+
+            .empty-cart {
+                padding: 2rem 1rem;
+            }
+
+            .empty-illustration {
+                width: 150px;
+                height: 150px;
+            }
+
+            .features-row {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: center;
+            }
+
+            .events-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .categories-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .empty-actions {
+                flex-direction: column;
+            }
+
+            .empty-actions .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="12" width="40" height="24" rx="4" fill="url(#grad)"/>
+                    <path d="M4 16C4 13.7909 5.79086 12 8 12H14V36H8C5.79086 36 4 34.2091 4 32V16Z" fill="#1E293B"/>
+                    <circle cx="14" cy="12" r="3" fill="#F8FAFC"/>
+                    <circle cx="14" cy="36" r="3" fill="#F8FAFC"/>
+                    <rect x="20" y="18" width="12" height="2" rx="1" fill="white" opacity="0.8"/>
+                    <rect x="20" y="23" width="18" height="2" rx="1" fill="white" opacity="0.6"/>
+                    <rect x="20" y="28" width="8" height="2" rx="1" fill="white" opacity="0.6"/>
+                    <rect x="36" y="26" width="6" height="6" rx="1" fill="white" opacity="0.4"/>
+                    <defs>
+                        <linearGradient id="grad" x1="4" y1="12" x2="44" y2="36" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#A51C30"/>
+                            <stop offset="1" stop-color="#C41E3A"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <span class="logo-text"><span class="am">Am</span><span class="bilet">Bilet</span></span>
+            </a>
+            <nav class="header-nav">
+                <a href="/events">Evenimente</a>
+                <a href="/venues">Locații</a>
+                <a href="/artists">Artiști</a>
+                <div class="cart-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    Coș (0)
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Page Title -->
+        <div class="page-title">
+            <h1>Coș de cumpărături</h1>
+        </div>
+
+        <!-- Empty Cart State -->
+        <div class="empty-cart">
+            <div class="empty-illustration">
+                <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Cart body -->
+                    <path d="M40 60L50 140H150L165 60H40Z" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="2"/>
+                    <!-- Cart handle -->
+                    <path d="M25 50H40L50 140" stroke="#CBD5E1" stroke-width="4" stroke-linecap="round"/>
+                    <!-- Wheels -->
+                    <circle cx="70" cy="155" r="12" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="2"/>
+                    <circle cx="130" cy="155" r="12" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="2"/>
+                    <!-- Empty indicator - sad ticket -->
+                    <rect x="70" y="80" width="60" height="40" rx="4" fill="#FEE2E2" stroke="#FCA5A5" stroke-width="2"/>
+                    <circle cx="85" cy="95" r="4" fill="#EF4444"/>
+                    <circle cx="115" cy="95" r="4" fill="#EF4444"/>
+                    <path d="M90 108C90 108 95 103 100 103C105 103 110 108 110 108" stroke="#EF4444" stroke-width="2" stroke-linecap="round"/>
+                    <!-- Dotted lines indicating empty -->
+                    <path d="M75 130H125" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="6 4"/>
+                    <!-- Decorative elements -->
+                    <circle cx="170" cy="40" r="8" fill="#FEE2E2"/>
+                    <circle cx="30" cy="90" r="6" fill="#DBEAFE"/>
+                    <circle cx="175" cy="120" r="5" fill="#D1FAE5"/>
+                </svg>
+            </div>
+            <h2>Coșul tău este gol</h2>
+            <p>Nu ai adăugat încă niciun bilet în coș. Descoperă evenimentele disponibile și găsește experiențe memorabile!</p>
+            <div class="empty-actions">
+                <a href="/events" class="btn btn-primary">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    Descoperă evenimente
+                </a>
+                <a href="/account/watchlist" class="btn btn-secondary">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                    Vezi favorite
+                </a>
+            </div>
+
+            <div class="features-row">
+                <div class="feature-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    Plăți securizate 100%
+                </div>
+                <div class="feature-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Bilete instant pe email
+                </div>
+                <div class="feature-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    Suport 24/7
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggestions Section -->
+        <section class="suggestions-section">
+            <div class="section-header">
+                <h2>🔥 Evenimente populare</h2>
+                <a href="/events/popular">
+                    Vezi toate
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+
+            <div class="events-grid">
+                <!-- Event Card 1 -->
+                <div class="event-card">
+                    <div class="event-image">
+                        <div class="event-image-bg" style="background: linear-gradient(135deg, #667EEA, #764BA2);">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                        </div>
+                        <span class="event-badge hot">Hot</span>
+                        <button class="event-wishlist">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                        </button>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-date">15 Iunie 2025</div>
+                        <h3 class="event-title"><a href="#">Coldplay - Music of the Spheres</a></h3>
+                        <div class="event-location">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                            Arena Națională, București
+                        </div>
+                        <div class="event-footer">
+                            <div class="event-price">350 RON <span>de la</span></div>
+                            <button class="event-cta">Cumpără</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Event Card 2 -->
+                <div class="event-card">
+                    <div class="event-image">
+                        <div class="event-image-bg" style="background: linear-gradient(135deg, #F093FB, #F5576C);">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <span class="event-badge">Sold Out Soon</span>
+                        <button class="event-wishlist">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                        </button>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-date">7-10 August 2025</div>
+                        <h3 class="event-title"><a href="#">UNTOLD Festival 2025</a></h3>
+                        <div class="event-location">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                            Cluj Arena, Cluj-Napoca
+                        </div>
+                        <div class="event-footer">
+                            <div class="event-price">499 RON <span>de la</span></div>
+                            <button class="event-cta">Cumpără</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Event Card 3 -->
+                <div class="event-card">
+                    <div class="event-image">
+                        <div class="event-image-bg" style="background: linear-gradient(135deg, #11998E, #38EF7D);">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <span class="event-badge new">Nou</span>
+                        <button class="event-wishlist">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                        </button>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-date">22 Martie 2025</div>
+                        <h3 class="event-title"><a href="#">Stand-up Comedy cu Micutzu</a></h3>
+                        <div class="event-location">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                            Sala Palatului, București
+                        </div>
+                        <div class="event-footer">
+                            <div class="event-price">89 RON <span>de la</span></div>
+                            <button class="event-cta">Cumpără</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Event Card 4 -->
+                <div class="event-card">
+                    <div class="event-image">
+                        <div class="event-image-bg" style="background: linear-gradient(135deg, #FA709A, #FEE140);">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/></svg>
+                        </div>
+                        <button class="event-wishlist">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                        </button>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-date">5 Aprilie 2025</div>
+                        <h3 class="event-title"><a href="#">Cirque du Soleil - Alegría</a></h3>
+                        <div class="event-location">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                            Romexpo, București
+                        </div>
+                        <div class="event-footer">
+                            <div class="event-price">199 RON <span>de la</span></div>
+                            <button class="event-cta">Cumpără</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Categories Section -->
+        <section class="categories-section">
+            <div class="section-header">
+                <h2>Explorează categorii</h2>
+            </div>
+
+            <div class="categories-grid">
+                <a href="/events/music" class="category-card">
+                    <div class="category-icon music">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                    </div>
+                    <div class="category-name">Muzică</div>
+                </a>
+                <a href="/events/theater" class="category-card">
+                    <div class="category-icon theater">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    </div>
+                    <div class="category-name">Teatru</div>
+                </a>
+                <a href="/events/sports" class="category-card">
+                    <div class="category-icon sports">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <div class="category-name">Sport</div>
+                </a>
+                <a href="/events/comedy" class="category-card">
+                    <div class="category-icon comedy">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <div class="category-name">Stand-up</div>
+                </a>
+                <a href="/events/family" class="category-card">
+                    <div class="category-icon family">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    </div>
+                    <div class="category-name">Familie</div>
+                </a>
+                <a href="/events/festivals" class="category-card">
+                    <div class="category-icon festivals">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                    </div>
+                    <div class="category-name">Festivaluri</div>
+                </a>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
