@@ -220,7 +220,7 @@ class CustomerResource extends Resource
                     ->label('Email')
                     ->searchable()
                     ->sortable()
-                    ->url(fn (\App\Models\Customer $record) => static::getUrl('edit', ['record' => $record])),
+                    ->url(fn (\App\Models\Customer $record) => static::getUrl('profile', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('full_name')
                     ->label('Name')

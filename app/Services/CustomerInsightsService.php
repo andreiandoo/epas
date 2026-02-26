@@ -358,7 +358,7 @@ class CustomerInsightsService
                 't.id',
                 't.code',
                 DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro')), 'N/A') as event_title"),
-                DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(tt.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(tt.name, '$.ro')), tt.name) as ticket_type_name"),
+                'tt.name as ticket_type_name',
                 't.attendee_name',
                 't.attendee_email',
                 't.status',
