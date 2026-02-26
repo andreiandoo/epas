@@ -11,7 +11,6 @@ const EventPage = {
     event: null,
     quantities: {},
     ticketTypes: [],
-    galleryImages: [],
     isInterested: false,
     shareMenuOpen: false,
     seatingLayout: null,
@@ -92,7 +91,6 @@ const EventPage = {
         breadcrumbTitle: 'breadcrumb-title',
         mainImage: 'mainImage',
         eventBadges: 'event-badges',
-        galleryThumbs: 'gallery-thumbs',
         eventTitle: 'event-title',
         eventDay: 'event-day',
         eventMonth: 'event-month',
@@ -751,14 +749,6 @@ const EventPage = {
         document.getElementById(this.elements.mainImage).src = mainImg;
         document.getElementById(this.elements.mainImage).alt = e.title;
 
-        // Gallery - include seating map background if available
-        this.galleryImages = e.images?.length ? e.images : [mainImg];
-        if (e.seating_layout?.background_image) {
-            // Add seating map as last gallery image
-            this.galleryImages.push(e.seating_layout.background_image);
-        }
-        this.renderGallery();
-
         // Badges
         this.renderBadges(e);
 
@@ -1024,33 +1014,6 @@ const EventPage = {
         return paragraphs.map(function(p) {
             return '<p class="mb-4 leading-relaxed text-muted">' + p.trim() + '</p>';
         }).join('');
-    },
-
-    /**
-     * Render gallery thumbnails
-     */
-    renderGallery() {
-        const container = document.getElementById(this.elements.galleryThumbs);
-        if (this.galleryImages.length <= 1) {
-            container.innerHTML = '';
-            return;
-        }
-        var self = this;
-        container.innerHTML = this.galleryImages.slice(0, 4).map(function(img, i) {
-            return '<button onclick="EventPage.changeImage(' + i + ')" class="gallery-thumb ' + (i === 0 ? 'active' : '') + ' w-16 h-12 rounded-lg overflow-hidden border-2 border-white/50 opacity-80">' +
-                '<img src="' + img + '" class="object-cover w-full h-full" loading="lazy">' +
-            '</button>';
-        }).join('');
-    },
-
-    /**
-     * Change main gallery image
-     */
-    changeImage(index) {
-        document.getElementById(this.elements.mainImage).src = this.galleryImages[index];
-        document.querySelectorAll('.gallery-thumb').forEach(function(thumb, i) {
-            thumb.classList.toggle('active', i === index);
-        });
     },
 
     /**
