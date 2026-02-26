@@ -130,20 +130,12 @@ require_once __DIR__ . '/includes/header.php';
                 <span class="inline-block px-3 py-1.5 bg-accent/20 text-accent font-bold text-xs rounded-full mb-4 uppercase tracking-wide">Pentru Organizatori</span>
                 <h2 class="mb-3 text-2xl font-bold md:text-3xl text-secondary">Vrei sa-ti vinzi biletele prin <?= SITE_NAME ?>?</h2>
                 <p class="mb-6 text-muted">Comisioane transparente, plati rapide si suport dedicat pentru organizatori.</p>
+            </div>
+            <div class="flex-shrink-0 hidden md:block">
                 <div class="flex flex-wrap gap-3">
                     <a href="/organizator/register" class="inline-flex items-center gap-2 px-6 py-3 font-bold text-white btn-primary rounded-xl">
                         Inregistreaza-te gratuit
                     </a>
-                    <a href="/organizator/landing" class="px-6 py-3 font-bold transition-colors border-2 border-secondary text-secondary rounded-xl hover:bg-secondary hover:text-white">
-                        Afla mai multe
-                    </a>
-                </div>
-            </div>
-            <div class="flex-shrink-0 hidden md:block">
-                <div class="flex items-center justify-center w-40 h-40 bg-primary/10 rounded-2xl">
-                    <svg class="w-20 h-20 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
-                    </svg>
                 </div>
             </div>
         </div>
