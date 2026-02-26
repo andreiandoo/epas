@@ -6,7 +6,6 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\ServiceOrderController;
 use App\Jobs\SendNewsletterJob;
 use App\Services\OrganizerNotificationService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\Event;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -209,7 +208,7 @@ class ServiceOrder extends Model
             if (in_array('category', $locations))             $updates['is_category_featured'] = true;
             if (in_array('city', $locations))                 $updates['is_city_featured']     = true;
             if (! empty($updates)) {
-                Event::where('id', $this->marketplace_event_id)->update($updates);
+                MarketplaceEvent::where('id', $this->marketplace_event_id)->update($updates);
             }
         }
 
@@ -277,7 +276,7 @@ class ServiceOrder extends Model
             }
 
             if (! empty($updates)) {
-                Event::where('id', $this->marketplace_event_id)->update($updates);
+                MarketplaceEvent::where('id', $this->marketplace_event_id)->update($updates);
             }
         }
 
@@ -380,6 +379,7 @@ class ServiceOrder extends Model
         $normalizedFilters = [
             'ageMin' => $filters['age_min'] ?? null,
             'ageMax' => $filters['age_max'] ?? null,
+            'gender' => $filters['gender'] ?? null,
             'cities' => $filters['cities'] ?? [],
             'categories' => $filters['categories'] ?? [],
             'genres' => $filters['genres'] ?? [],
@@ -431,17 +431,178 @@ class ServiceOrder extends Model
     }
 
     /**
-     * Generate email subject based on template type
+     * Subject variants matching the frontend (5 per template)
+     */
+    protected static array $subjectVariants = [
+        'classic' => [
+            '%s - Nu rata!',
+            'Esti pregatit? %s te asteapta!',
+            'Bilete disponibile: %s',
+            'Hai la %s! Asigura-ti locul',
+            '%s - Evenimentul pe care nu vrei sa il ratezi',
+        ],
+        'urgent' => [
+            'ULTIMELE BILETE pentru %s!',
+            'Stoc limitat! %s se vinde rapid',
+            'Nu rata %s - mai sunt putine bilete!',
+            'Ultimele locuri disponibile la %s',
+            'Grabati biletele! %s aproape sold out',
+        ],
+        'reminder' => [
+            'Reminder: %s este in curand!',
+            'Nu uita! %s se apropie',
+            'Mai sunt cateva zile pana la %s',
+            '%s - inca mai poti obtine bilete',
+            'Pregateste-te pentru %s!',
+        ],
+    ];
+
+    /**
+     * Promo text variants matching the frontend (5 per template)
+     */
+    protected static array $promoTextVariants = [
+        'classic' => [
+            'Evenimentul pe care il asteptai este aproape! Asigura-te ca ai bilete pentru a nu rata aceasta experienta unica.',
+            'Un eveniment pe care nu vrei sa il ratezi. Rezerva-ti biletele acum si pregateste-te pentru o seara de neuitat!',
+            'Vino sa traiesti o experienta memorabila! Biletele sunt disponibile, nu amana - asigura-ti locul chiar acum.',
+            'Esti gata pentru o experienta extraordinara? Biletele se vand repede, asa ca nu ezita sa iti faci rezervarea.',
+            'Fii parte din acest eveniment special! Profita de disponibilitate si cumpara biletele cat mai sunt locuri.',
+        ],
+        'urgent' => [
+            'Biletele se vand rapid! Rezerva-ti locul acum pentru a nu ramane pe dinafara.',
+            'Stocul este aproape epuizat! Nu mai sta pe ganduri - aceasta ar putea fi ultima ta sansa.',
+            'Cererea este uriasa si locurile se termina! Actioneaza acum si nu rata acest eveniment.',
+            'Ultimele bilete se vand chiar acum. Daca inca nu ti-ai asigurat locul, acum e momentul!',
+            'Disponibilitatea scade rapid! Fiecare minut conteaza - cumpara biletele inainte sa fie prea tarziu.',
+        ],
+        'reminder' => [
+            'Pregateste-te pentru o experienta de neuitat! Nu uita sa iti rezervi biletele daca nu ai facut-o deja.',
+            'Evenimentul este chiar dupa colt! Daca nu ai bilete inca, mai ai sansa sa le obtii acum.',
+            'Marcheaza-ti in calendar si nu rata! Biletele sunt inca disponibile pentru tine.',
+            'Numaratoarea inversa a inceput! Ai tot ce iti trebuie? Daca nu, biletele te asteapta.',
+            'Evenimentul se apropie cu pasi repezi. Asigura-te ca esti pregatit - cumpara bilete acum!',
+        ],
+    ];
+
+    /**
+     * Generate email subject based on template type and variant index from config
      */
     protected function generateEmailSubject(string $template, MarketplaceEvent $event): string
     {
         $name = $event->name;
+        $variants = self::$subjectVariants[$template] ?? self::$subjectVariants['classic'];
+        $config = $this->config ?? [];
+        $variantIndices = $config['variant_indices'] ?? [];
+        $key = $template . '_subject';
+        $idx = isset($variantIndices[$key]) ? (int) $variantIndices[$key] : array_rand($variants);
+        $idx = max(0, min($idx, count($variants) - 1));
 
-        return match ($template) {
-            'urgent' => "ULTIMELE BILETE pentru {$name}!",
-            'reminder' => "Reminder: {$name} este in curand!",
-            default => "{$name} - Nu rata!",
-        };
+        return sprintf($variants[$idx], $name);
+    }
+
+    /**
+     * Get the promo text based on template type and variant index from config
+     */
+    protected function getPromoText(string $template): string
+    {
+        $variants = self::$promoTextVariants[$template] ?? self::$promoTextVariants['classic'];
+        $config = $this->config ?? [];
+        $variantIndices = $config['variant_indices'] ?? [];
+        $key = $template . '_promo';
+        $idx = isset($variantIndices[$key]) ? (int) $variantIndices[$key] : array_rand($variants);
+        $idx = max(0, min($idx, count($variants) - 1));
+
+        return $variants[$idx];
+    }
+
+    /**
+     * Build venue info HTML section for email
+     */
+    protected function buildEmailVenueBox(MarketplaceEvent $event): string
+    {
+        $venueName = e($event->venue_name ?? '');
+        $venueCity = e($event->venue_city ?? '');
+        if (!$venueName) return '';
+
+        $cityHtml = $venueCity
+            ? "<p style=\"margin: 2px 0 0; font-size: 13px; color: #6b7280;\">{$venueCity}</p>"
+            : '';
+
+        return <<<HTML
+            <tr>
+                <td style="padding: 0 30px 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px;">
+                        <tr>
+                            <td style="padding: 16px 20px;">
+                                <table cellpadding="0" cellspacing="0">
+                                    <tr>
+                                        <td style="vertical-align: top; padding-right: 12px;">
+                                            <div style="width: 40px; height: 40px; background-color: #e5e7eb; border-radius: 8px; text-align: center; line-height: 40px; font-size: 18px;">📍</div>
+                                        </td>
+                                        <td style="vertical-align: top;">
+                                            <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937;">{$venueName}</p>
+                                            {$cityHtml}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+HTML;
+    }
+
+    /**
+     * Build artists HTML section for email
+     */
+    protected function buildEmailArtistsBox(MarketplaceEvent $event): string
+    {
+        $artistIds = $event->artist_ids;
+        if (empty($artistIds) || !is_array($artistIds)) return '';
+
+        $artists = Artist::whereIn('id', $artistIds)->pluck('name')->filter()->toArray();
+        if (empty($artists)) return '';
+
+        $pills = '';
+        foreach ($artists as $artistName) {
+            $name = e($artistName);
+            $pills .= "<span style=\"display: inline-block; background-color: #f3e8ff; color: #7c3aed; font-size: 13px; font-weight: 500; padding: 4px 14px; border-radius: 20px; margin: 3px 4px;\">{$name}</span> ";
+        }
+
+        return <<<HTML
+            <tr>
+                <td style="padding: 0 30px 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px;">
+                        <tr>
+                            <td style="padding: 16px 20px;">
+                                <p style="margin: 0 0 8px; font-size: 11px; font-weight: 700; color: #7c3aed; text-transform: uppercase; letter-spacing: 1px;">Artisti</p>
+                                <div>{$pills}</div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+HTML;
+    }
+
+    /**
+     * Build description HTML section for email
+     */
+    protected function buildEmailDescriptionBox(MarketplaceEvent $event): string
+    {
+        $desc = $event->short_description ?: $event->description;
+        if (!$desc) return '';
+
+        $truncated = e(mb_strlen($desc) > 300 ? mb_substr($desc, 0, 300) . '...' : $desc);
+
+        return <<<HTML
+            <tr>
+                <td style="padding: 0 30px 20px; text-align: center;">
+                    <p style="margin: 0; font-size: 14px; color: #6b7280; line-height: 1.6;">{$truncated}</p>
+                </td>
+            </tr>
+HTML;
     }
 
     /**
@@ -458,20 +619,25 @@ class ServiceOrder extends Model
         $eventUrl = "https://{$marketplace->domain}/{$event->slug}";
         $marketplaceName = e($marketplace->name);
 
+        $bodyText = e($this->getPromoText($template));
+
+        // Extra sections: description, venue, artists
+        $descriptionSection = $this->buildEmailDescriptionBox($event);
+        $venueBox = $this->buildEmailVenueBox($event);
+        $artistsBox = $this->buildEmailArtistsBox($event);
+
         $accentColor = '#6366f1';
         $urgentColor = '#ef4444';
         $reminderColor = '#3b82f6';
 
-        // Template-specific banner
+        // Template-specific settings
         $banner = '';
         $ctaColor = $accentColor;
         $ctaText = 'Cumpara Bilete Acum';
-        $bodyText = 'Evenimentul pe care il asteptai este aproape! Asigura-te ca ai bilete pentru a nu rata aceasta experienta unica.';
 
         if ($template === 'urgent') {
             $ctaColor = $urgentColor;
             $ctaText = 'Cumpara ACUM - Stoc Limitat!';
-            $bodyText = 'Biletele se vand rapid! Rezerva-ti locul acum pentru a nu ramane pe dinafara.';
             $banner = <<<HTML
             <tr>
                 <td style="padding: 0 30px;">
@@ -489,7 +655,6 @@ HTML;
         } elseif ($template === 'reminder') {
             $ctaColor = $reminderColor;
             $ctaText = 'Vezi Detalii & Cumpara Bilete';
-            $bodyText = 'Pregateste-te pentru o experienta de neuitat! Nu uita sa iti rezervi biletele daca nu ai facut-o deja.';
             $banner = <<<HTML
             <tr>
                 <td style="padding: 0 30px;">
@@ -506,7 +671,7 @@ HTML;
 HTML;
         }
 
-        // Image section
+        // Image section - full width for classic/urgent, full width for reminder too
         $imageSection = '';
         if ($imageUrl) {
             $imageSection = <<<HTML
@@ -518,17 +683,88 @@ HTML;
 HTML;
         }
 
-        // Reminder uses a smaller image layout
-        if ($template === 'reminder' && $imageUrl) {
-            $imageSection = <<<HTML
-            <tr>
-                <td style="padding: 0 30px 20px; text-align: center;">
-                    <img src="{$imageUrl}" alt="{$eventName}" width="200" style="width: 200px; height: 200px; object-fit: cover; border-radius: 12px; display: block; margin: 0 auto;" />
-                </td>
-            </tr>
+        // Reminder template layout: banner → title → image → date/venue gradient box → description/venue/artists → promo → CTA
+        if ($template === 'reminder') {
+            return <<<HTML
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{$eventName}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 30px 10px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <tr>
+                        <td style="background-color: {$ctaColor}; padding: 20px 30px; text-align: center;">
+                            <p style="margin: 0; color: #ffffff; font-size: 18px; font-weight: bold;">{$marketplaceName}</p>
+                        </td>
+                    </tr>
+                    <tr><td style="height: 24px;"></td></tr>
+
+                    {$banner}
+
+                    <tr>
+                        <td style="padding: 0 30px 16px; text-align: center;">
+                            <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #1f2937;">{$eventName}</h1>
+                        </td>
+                    </tr>
+
+                    {$imageSection}
+
+                    <!-- Gradient date/venue box -->
+                    <tr>
+                        <td style="padding: 0 30px 20px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(to right, #3b82f6, #8b5cf6); border-radius: 12px;">
+                                <tr>
+                                    <td style="padding: 24px; text-align: center;">
+                                        <p style="margin: 0; font-size: 11px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 1px;">Marcheaza in calendar</p>
+                                        <p style="margin: 8px 0; font-size: 26px; font-weight: bold; color: #ffffff;">{$eventDate}</p>
+                                        <p style="margin: 0; font-size: 16px; color: #ffffff;">{$venueDisplay}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    {$descriptionSection}
+                    {$venueBox}
+                    {$artistsBox}
+
+                    <tr>
+                        <td style="padding: 0 30px 24px; text-align: center;">
+                            <p style="margin: 0; font-size: 15px; color: #6b7280; line-height: 1.6;">{$bodyText}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0 30px 30px; text-align: center;">
+                            <a href="{$eventUrl}" target="_blank" style="display: inline-block; background-color: {$ctaColor}; color: #ffffff; padding: 14px 32px; border-radius: 12px; font-size: 16px; font-weight: bold; text-decoration: none;">{$ctaText}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0 30px;"><hr style="border: none; border-top: 1px solid #e5e7eb; margin: 0;"></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 30px 24px; text-align: center;">
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                Ai primit acest email pentru ca esti abonat la newsletter-ul {$marketplaceName}.<br>
+                                <a href="{{unsubscribe_url}}" style="color: {$ctaColor}; text-decoration: underline;">Dezabonare</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
 HTML;
         }
 
+        // Classic and urgent template layout: banner → image → title → date/venue → description/venue/artists → promo → CTA
         return <<<HTML
 <!DOCTYPE html>
 <html lang="ro">
@@ -542,28 +778,23 @@ HTML;
         <tr>
             <td align="center" style="padding: 30px 10px;">
                 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                    <!-- Header -->
                     <tr>
                         <td style="background-color: {$ctaColor}; padding: 20px 30px; text-align: center;">
                             <p style="margin: 0; color: #ffffff; font-size: 18px; font-weight: bold;">{$marketplaceName}</p>
                         </td>
                     </tr>
-
-                    <!-- Spacer -->
                     <tr><td style="height: 24px;"></td></tr>
 
                     {$banner}
 
                     {$imageSection}
 
-                    <!-- Event Title -->
                     <tr>
                         <td style="padding: 0 30px 16px; text-align: center;">
                             <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #1f2937;">{$eventName}</h1>
                         </td>
                     </tr>
 
-                    <!-- Event Details -->
                     <tr>
                         <td style="padding: 0 30px 20px;">
                             <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 12px;">
@@ -581,28 +812,23 @@ HTML;
                         </td>
                     </tr>
 
-                    <!-- Body Text -->
+                    {$descriptionSection}
+                    {$venueBox}
+                    {$artistsBox}
+
                     <tr>
                         <td style="padding: 0 30px 24px; text-align: center;">
                             <p style="margin: 0; font-size: 15px; color: #6b7280; line-height: 1.6;">{$bodyText}</p>
                         </td>
                     </tr>
-
-                    <!-- CTA Button -->
                     <tr>
                         <td style="padding: 0 30px 30px; text-align: center;">
                             <a href="{$eventUrl}" target="_blank" style="display: inline-block; background-color: {$ctaColor}; color: #ffffff; padding: 14px 32px; border-radius: 12px; font-size: 16px; font-weight: bold; text-decoration: none;">{$ctaText}</a>
                         </td>
                     </tr>
-
-                    <!-- Divider -->
                     <tr>
-                        <td style="padding: 0 30px;">
-                            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 0;">
-                        </td>
+                        <td style="padding: 0 30px;"><hr style="border: none; border-top: 1px solid #e5e7eb; margin: 0;"></td>
                     </tr>
-
-                    <!-- Footer -->
                     <tr>
                         <td style="padding: 20px 30px 24px; text-align: center;">
                             <p style="margin: 0; font-size: 12px; color: #9ca3af;">
@@ -674,7 +900,7 @@ HTML;
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(Event::class, 'marketplace_event_id');
+        return $this->belongsTo(MarketplaceEvent::class, 'marketplace_event_id');
     }
 
     public function assignedUser(): BelongsTo

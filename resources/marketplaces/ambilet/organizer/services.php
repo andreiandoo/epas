@@ -359,12 +359,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             </label>
                         </div>
 
-                        <!-- Audience Filters -->
-                        <div class="border border-border rounded-xl p-4 space-y-4">
-                            <div class="flex items-center justify-between">
-                                <p class="font-medium text-secondary">Filtreaza Audienta</p>
-                                <button type="button" onclick="resetEmailFilters()" class="text-sm text-primary hover:underline">Reseteaza filtre</button>
-                            </div>
+                        <!-- Audience Filters (Collapsible) -->
+                        <div class="border border-border rounded-xl overflow-hidden">
+                            <button type="button" onclick="toggleEmailFilters()" class="w-full p-4 flex items-center justify-between hover:bg-surface/50 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <svg id="email-filters-chevron" class="w-4 h-4 text-muted transition-transform -rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                    <p class="font-medium text-secondary">Filtreaza Audienta</p>
+                                </div>
+                                <span type="button" onclick="event.stopPropagation(); resetEmailFilters()" class="text-sm text-primary hover:underline">Reseteaza filtre</span>
+                            </button>
+                            <div id="email-filters-body" class="hidden p-4 pt-0 space-y-4">
 
                             <!-- Age Range + Gender -->
                             <div class="grid grid-cols-3 gap-4">
@@ -458,6 +462,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <p class="text-[10px] text-muted mt-1 ml-6">Adauga utilizatorii care corespund celorlalte filtre, dar nu au date pentru filtrele care nu se potrivesc</p>
                                 </div>
                             </div>
+                            </div><!-- /email-filters-body -->
                         </div>
 
                         <!-- Cost Summary -->
@@ -1603,8 +1608,29 @@ async function loadEmailFilterOptions() {
         console.log('Failed to load genres:', e.message);
     }
 
-    // Load initial audience counts
+    // Load initial audience counts for BOTH types
     updateEmailAudienceCount();
+    loadInitialAudienceCounts();
+}
+
+async function loadInitialAudienceCounts() {
+    // Load base counts for both audience types (no filters)
+    try {
+        const [ownRes, mpRes] = await Promise.all([
+            AmbiletAPI.get('/organizer/services/email-audiences', { audience_type: 'own' }),
+            AmbiletAPI.get('/organizer/services/email-audiences', { audience_type: 'marketplace' })
+        ]);
+        if (ownRes?.success && ownRes.data) {
+            emailAudiences.own.count = ownRes.data.total_count || 0;
+            document.getElementById('audience-own-count').textContent = AmbiletUtils.formatNumber(ownRes.data.total_count || 0);
+        }
+        if (mpRes?.success && mpRes.data) {
+            emailAudiences.marketplace.count = mpRes.data.total_count || 0;
+            document.getElementById('audience-marketplace-count').textContent = '~' + AmbiletUtils.formatNumber(mpRes.data.total_count || 0);
+        }
+    } catch (e) {
+        console.log('Failed to load initial audience counts:', e.message);
+    }
 }
 
 function setupEmailAudienceToggle() {
@@ -1710,6 +1736,13 @@ async function updateEmailAudienceCount() {
             : (servicePricing.email.marketplace_per_email || 0.50);
         document.getElementById('email-cost-estimate').textContent = AmbiletUtils.formatCurrency(count * pricePerEmail);
     }
+}
+
+function toggleEmailFilters() {
+    const body = document.getElementById('email-filters-body');
+    const chevron = document.getElementById('email-filters-chevron');
+    body.classList.toggle('hidden');
+    chevron.classList.toggle('-rotate-90');
 }
 
 function resetEmailFilters() {
@@ -1858,6 +1891,7 @@ document.getElementById('service-form').addEventListener('submit', async functio
                 template: document.querySelector('input[name="email_template"]:checked')?.value || 'classic',
                 send_date: emailDate + 'T' + emailTime,
                 recipient_count: emailAudiences[emailAudienceType]?.filtered_count || 0,
+                variant_indices: window._emailPreviewVariants || {},
                 filters: {
                     age_min: document.getElementById('email-filter-age-min').value || null,
                     age_max: document.getElementById('email-filter-age-max').value || null,
@@ -1972,17 +2006,131 @@ document.getElementById('service-filter').addEventListener('change', function() 
     activeServices = temp;
 });
 
-// Email Preview Functions
+// Email Preview Functions - Subject & promo text variants per template
+// The selected variant index is locked once chosen so preview = sent content
+
+const emailSubjectVariants = {
+    classic: [
+        (n) => `${n} - Nu rata!`,
+        (n) => `Esti pregatit? ${n} te asteapta!`,
+        (n) => `Bilete disponibile: ${n}`,
+        (n) => `Hai la ${n}! Asigura-ti locul`,
+        (n) => `${n} - Evenimentul pe care nu vrei sa il ratezi`
+    ],
+    urgent: [
+        (n) => `ULTIMELE BILETE pentru ${n}!`,
+        (n) => `Stoc limitat! ${n} se vinde rapid`,
+        (n) => `Nu rata ${n} - mai sunt putine bilete!`,
+        (n) => `Ultimele locuri disponibile la ${n}`,
+        (n) => `Grab ati biletele! ${n} aproape sold out`
+    ],
+    reminder: [
+        (n) => `Reminder: ${n} este in curand!`,
+        (n) => `Nu uita! ${n} se apropie`,
+        (n) => `Mai sunt cateva zile pana la ${n}`,
+        (n) => `${n} - inca mai poti obtine bilete`,
+        (n) => `Pregateste-te pentru ${n}!`
+    ]
+};
+
+const emailPromoTexts = {
+    classic: [
+        'Evenimentul pe care il asteptai este aproape! Asigura-te ca ai bilete pentru a nu rata aceasta experienta unica.',
+        'Un eveniment pe care nu vrei sa il ratezi. Rezerva-ti biletele acum si pregateste-te pentru o seara de neuitat!',
+        'Vino sa traiesti o experienta memorabila! Biletele sunt disponibile, nu amana - asigura-ti locul chiar acum.',
+        'Esti gata pentru o experienta extraordinara? Biletele se vand repede, asa ca nu ezita sa iti faci rezervarea.',
+        'Fii parte din acest eveniment special! Profita de disponibilitate si cumpara biletele cat mai sunt locuri.'
+    ],
+    urgent: [
+        'Biletele se vand rapid! Rezerva-ti locul acum pentru a nu ramane pe dinafara.',
+        'Stocul este aproape epuizat! Nu mai sta pe ganduri - aceasta ar putea fi ultima ta sansa.',
+        'Cererea este uriasa si locurile se termina! Actioneaza acum si nu rata acest eveniment.',
+        'Ultimele bilete se vand chiar acum. Daca inca nu ti-ai asigurat locul, acum e momentul!',
+        'Disponibilitatea scade rapid! Fiecare minut conteaza - cumpara biletele inainte sa fie prea tarziu.'
+    ],
+    reminder: [
+        'Pregateste-te pentru o experienta de neuitat! Nu uita sa iti rezervi biletele daca nu ai facut-o deja.',
+        'Evenimentul este chiar dupa colt! Daca nu ai bilete inca, mai ai sansa sa le obtii acum.',
+        'Marcheaza-ti in calendar si nu rata! Biletele sunt inca disponibile pentru tine.',
+        'Numaratoarea inversa a inceput! Ai tot ce iti trebuie? Daca nu, biletele te asteapta.',
+        'Evenimentul se apropie cu pasi repezi. Asigura-te ca esti pregatit - cumpara bilete acum!'
+    ]
+};
+
+// Locked variant indices - set once on first preview, used for the actual sent email
+let lockedVariants = {};
+
+function getLockedVariantIndex(templateType, variantType, maxLen) {
+    const key = templateType + '_' + variantType;
+    if (lockedVariants[key] === undefined) {
+        lockedVariants[key] = Math.floor(Math.random() * maxLen);
+    }
+    return lockedVariants[key];
+}
+
+// Reset locked variants when template type changes
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('input[name="email_template"]').forEach(radio => {
+        radio.addEventListener('change', () => { lockedVariants = {}; });
+    });
+});
+
+function buildVenueBox(event) {
+    const venueName = event.venue_name || (typeof event.venue === 'object' ? event.venue?.name : event.venue) || '';
+    const venueCity = event.venue_city || (typeof event.venue === 'object' ? event.venue?.city : '') || '';
+    if (!venueName) return '';
+    return `
+        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <div>
+                    <p class="font-semibold text-secondary text-sm">${venueName}</p>
+                    ${venueCity ? `<p class="text-xs text-muted">${venueCity}</p>` : ''}
+                </div>
+            </div>
+        </div>`;
+}
+
+function buildArtistsBox(event) {
+    const artists = event.artists || event.artist_names || [];
+    if (!artists || artists.length === 0) return '';
+    const artistList = Array.isArray(artists) ? artists : [artists];
+    return `
+        <div class="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
+            <p class="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-2">Artisti</p>
+            <div class="flex flex-wrap gap-2">
+                ${artistList.map(a => {
+                    const name = typeof a === 'object' ? (a.name || a.title || '') : a;
+                    return name ? `<span class="inline-block bg-purple-100 text-purple-700 text-xs font-medium px-3 py-1 rounded-full">${name}</span>` : '';
+                }).join('')}
+            </div>
+        </div>`;
+}
+
+function buildDescriptionBox(event) {
+    const desc = event.short_description || event.description || '';
+    if (!desc) return '';
+    const truncated = desc.length > 300 ? desc.substring(0, 300) + '...' : desc;
+    return `<p class="text-muted text-sm mb-6">${truncated}</p>`;
+}
+
 const emailTemplates = {
     classic: {
-        subject: (eventName) => `🎵 ${eventName} - Nu rata!`,
-        body: (event, eventName, eventDate, eventVenue) => `
+        subject: (eventName) => {
+            const variants = emailSubjectVariants.classic;
+            const idx = getLockedVariantIndex('classic', 'subject', variants.length);
+            return variants[idx](eventName);
+        },
+        body: (event, eventName, eventDate, eventVenue) => {
+            const variants = emailPromoTexts.classic;
+            const idx = getLockedVariantIndex('classic', 'promo', variants.length);
+            return `
             <div class="text-center mb-6">
                 <img src="${getStorageUrl(event.image)}" alt="${eventName}" class="w-full max-w-md mx-auto rounded-xl shadow-lg">
             </div>
-
             <h1 class="text-2xl font-bold text-secondary text-center mb-4">${eventName}</h1>
-
             <div class="bg-surface rounded-xl p-4 mb-6">
                 <div class="grid grid-cols-2 gap-4 text-center">
                     <div>
@@ -1995,28 +2143,30 @@ const emailTemplates = {
                     </div>
                 </div>
             </div>
-
-            <p class="text-muted text-center mb-6">
-                Evenimentul pe care il asteptai este aproape! Asigura-te ca ai bilete pentru a nu rata aceasta experienta unica.
-            </p>
-
+            ${buildDescriptionBox(event)}
+            ${buildVenueBox(event)}
+            ${buildArtistsBox(event)}
+            <p class="text-muted text-center mb-6">${variants[idx]}</p>
             <div class="text-center mb-6">
-                <a href="#" class="inline-block bg-primary text-white px-8 py-3 rounded-xl font-semibold hover:bg-primary-dark transition-colors">
-                    Cumpara Bilete Acum
-                </a>
+                <a href="#" class="inline-block bg-primary text-white px-8 py-3 rounded-xl font-semibold hover:bg-primary-dark transition-colors">Cumpara Bilete Acum</a>
             </div>
-
             <hr class="border-border my-6">
-
             <p class="text-xs text-muted text-center">
                 Ai primit acest email pentru ca esti abonat la newsletter-ul Ambilet.<br>
                 <a href="#" class="text-primary hover:underline">Dezabonare</a>
-            </p>
-        `
+            </p>`;
+        }
     },
     urgent: {
-        subject: (eventName) => `⚡ ULTIMELE BILETE pentru ${eventName}!`,
-        body: (event, eventName, eventDate, eventVenue) => `
+        subject: (eventName) => {
+            const variants = emailSubjectVariants.urgent;
+            const idx = getLockedVariantIndex('urgent', 'subject', variants.length);
+            return variants[idx](eventName);
+        },
+        body: (event, eventName, eventDate, eventVenue) => {
+            const variants = emailPromoTexts.urgent;
+            const idx = getLockedVariantIndex('urgent', 'promo', variants.length);
+            return `
             <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -2028,13 +2178,10 @@ const emailTemplates = {
                     </div>
                 </div>
             </div>
-
             <div class="text-center mb-6">
                 <img src="${getStorageUrl(event.image)}" alt="${eventName}" class="w-full max-w-md mx-auto rounded-xl shadow-lg">
             </div>
-
             <h1 class="text-2xl font-bold text-secondary text-center mb-4">${eventName}</h1>
-
             <div class="bg-surface rounded-xl p-4 mb-6">
                 <div class="grid grid-cols-2 gap-4 text-center">
                     <div>
@@ -2047,69 +2194,60 @@ const emailTemplates = {
                     </div>
                 </div>
             </div>
-
-            <p class="text-muted text-center mb-4">
-                Biletele se vand rapid! Rezerva-ti locul acum pentru a nu ramane pe dinafara.
-            </p>
-
+            <p class="text-muted text-center mb-4">${variants[idx]}</p>
             <div class="text-center mb-6">
-                <a href="#" class="inline-block bg-red-500 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-red-600 transition-colors animate-pulse">
-                    🔥 Cumpara ACUM - Stoc Limitat!
-                </a>
+                <a href="#" class="inline-block bg-red-500 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-red-600 transition-colors animate-pulse">Cumpara ACUM - Stoc Limitat!</a>
             </div>
-
             <hr class="border-border my-6">
-
             <p class="text-xs text-muted text-center">
                 Ai primit acest email pentru ca esti abonat la newsletter-ul Ambilet.<br>
                 <a href="#" class="text-primary hover:underline">Dezabonare</a>
-            </p>
-        `
+            </p>`;
+        }
     },
     reminder: {
-        subject: (eventName) => `📅 Reminder: ${eventName} este in curand!`,
-        body: (event, eventName, eventDate, eventVenue) => `
+        subject: (eventName) => {
+            const variants = emailSubjectVariants.reminder;
+            const idx = getLockedVariantIndex('reminder', 'subject', variants.length);
+            return variants[idx](eventName);
+        },
+        body: (event, eventName, eventDate, eventVenue) => {
+            const variants = emailPromoTexts.reminder;
+            const idx = getLockedVariantIndex('reminder', 'promo', variants.length);
+            return `
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                     </div>
                     <div>
-                        <p class="font-bold text-blue-700">🎉 Evenimentul se apropie!</p>
+                        <p class="font-bold text-blue-700">Evenimentul se apropie!</p>
                         <p class="text-sm text-blue-600">Inca mai poti obtine bilete</p>
                     </div>
                 </div>
             </div>
-
             <h1 class="text-2xl font-bold text-secondary text-center mb-4">${eventName}</h1>
-
-            <div class="flex items-center justify-center gap-2 mb-6">
-                <img src="${getStorageUrl(event.image)}" alt="${eventName}" class="w-32 h-32 rounded-xl object-cover shadow-lg">
+            <div class="text-center mb-6">
+                <img src="${getStorageUrl(event.image)}" alt="${eventName}" class="w-full max-w-md mx-auto rounded-xl shadow-lg">
             </div>
-
             <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl p-6 mb-6 text-center">
                 <p class="text-sm uppercase tracking-wide opacity-80">Marcheaza in calendar</p>
                 <p class="text-3xl font-bold my-2">${eventDate ? AmbiletUtils.formatDate(eventDate) : 'TBA'}</p>
                 <p class="text-lg">${eventVenue}</p>
             </div>
-
-            <p class="text-muted text-center mb-6">
-                Pregateste-te pentru o experienta de neuitat! Nu uita sa iti rezervi biletele daca nu ai facut-o deja.
-            </p>
-
+            ${buildDescriptionBox(event)}
+            ${buildVenueBox(event)}
+            ${buildArtistsBox(event)}
+            <p class="text-muted text-center mb-6">${variants[idx]}</p>
             <div class="text-center mb-6">
-                <a href="#" class="inline-block bg-blue-500 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-600 transition-colors">
-                    📍 Vezi Detalii & Cumpara Bilete
-                </a>
+                <a href="#" class="inline-block bg-blue-500 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-600 transition-colors">Vezi Detalii & Cumpara Bilete</a>
             </div>
-
             <hr class="border-border my-6">
-
             <p class="text-xs text-muted text-center">
                 Ai primit acest email pentru ca esti abonat la newsletter-ul Ambilet.<br>
                 <a href="#" class="text-primary hover:underline">Dezabonare</a>
-            </p>
-        `
+            </p>`;
+        }
     }
 };
 
@@ -2130,15 +2268,19 @@ function showEmailPreview() {
     const eventVenue = event.venue_name || (typeof event.venue === 'object' ? event.venue?.name : event.venue) || event.venue_city || 'TBA';
 
     const template = emailTemplates[templateType];
+    const subjectText = template.subject(eventName);
 
     // Update preview header
     document.getElementById('preview-recipients').textContent = AmbiletUtils.formatNumber(recipientCount) + ' destinatari';
-    document.getElementById('preview-subject').textContent = template.subject(eventName);
+    document.getElementById('preview-subject').textContent = subjectText;
 
-    // Generate email preview content
+    // Generate email preview content (uses locked variants - same as what will be sent)
     const previewHtml = template.body(event, eventName, eventDate, eventVenue);
-
     document.getElementById('email-preview-content').innerHTML = previewHtml;
+
+    // Store the locked subject + variant indices in a hidden field for order submission
+    window._emailPreviewSubject = subjectText;
+    window._emailPreviewVariants = { ...lockedVariants };
 
     // Show modal
     document.getElementById('email-preview-modal').classList.remove('hidden');

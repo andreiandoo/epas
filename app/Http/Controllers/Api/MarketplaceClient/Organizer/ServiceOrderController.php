@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
-use App\Models\Event;
 use App\Models\MarketplaceCustomer;
+use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceOrganizer;
 use App\Models\Order;
 use App\Models\ServiceOrder;
@@ -62,7 +62,7 @@ class ServiceOrderController extends BaseController
         $organizer = $this->requireOrganizer($request);
 
         $query = ServiceOrder::forOrganizer($organizer->id)
-            ->with(['event:id,name,slug,starts_at,image']);
+            ->with('event');
 
         // Filters
         if ($request->has('status')) {
@@ -122,7 +122,7 @@ class ServiceOrderController extends BaseController
         $organizer = $this->requireOrganizer($request);
 
         $order = ServiceOrder::forOrganizer($organizer->id)
-            ->with(['event:id,name,slug,starts_at,image,venue_display_name'])
+            ->with('event')
             ->where('uuid', $uuid)
             ->first();
 
@@ -144,7 +144,7 @@ class ServiceOrderController extends BaseController
 
         $validator = Validator::make($request->all(), [
             'service_type' => 'required|in:featuring,email,tracking,campaign',
-            'event_id' => 'required|exists:events,id',
+            'event_id' => 'required|exists:marketplace_events,id',
             'payment_method' => 'nullable|in:card,transfer',
             'config' => 'required|array',
         ]);
@@ -154,7 +154,7 @@ class ServiceOrderController extends BaseController
         }
 
         // Verify event belongs to organizer
-        $event = Event::where('id', $request->event_id)
+        $event = MarketplaceEvent::where('id', $request->event_id)
             ->where('marketplace_organizer_id', $organizer->id)
             ->first();
 
@@ -377,17 +377,13 @@ class ServiceOrderController extends BaseController
         ];
     }
 
-    protected function getEventTitle(?Event $event): string
+    protected function getEventTitle(?MarketplaceEvent $event): string
     {
         if (! $event) {
             return '';
         }
-        $title = $event->title;
-        if (is_array($title)) {
-            return $title['ro'] ?? $title['en'] ?? reset($title) ?? '';
-        }
 
-        return (string) ($title ?? '');
+        return $event->name ?? '';
     }
 
     protected function getOrderDetails(ServiceOrder $order): string
@@ -437,7 +433,7 @@ class ServiceOrderController extends BaseController
                 'name' => $this->getEventTitle($order->event),
                 'slug' => $order->event->slug,
                 'starts_at' => $order->event->starts_at?->toIso8601String(),
-                'venue' => $order->event->venue_display_name,
+                'venue' => $order->event->venue_name,
                 'image' => $order->event->image_url ?? null,
             ] : null,
         ]);
