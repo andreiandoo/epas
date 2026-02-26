@@ -253,7 +253,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <svg class="w-5 h-5 mt-0.5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 <div>
                                     <p class="mb-1 text-sm font-medium text-purple-800">Comision adițional Card Cultural</p>
-                                    <p class="text-sm text-purple-700">Tranzacțiile cu card cultural au un comision de procesare suplimentar de <strong>1.5%</strong> din valoarea totală, datorat costurilor mai mari de procesare pentru acest tip de card.</p>
+                                    <p class="text-sm text-purple-700">Tranzacțiile cu card cultural au un comision de procesare suplimentar de <strong>4%</strong> din valoarea totală, datorat costurilor mai mari de procesare pentru acest tip de card.</p>
                                     <p class="mt-2 text-xs text-muted">Vei fi redirecționat către procesatorul de plăți pentru a introduce datele cardului cultural în siguranță.</p>
                                 </div>
                             </div>
@@ -322,7 +322,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div id="cultural-card-row" class="flex justify-between hidden p-2 -mx-2 text-sm rounded-lg bg-purple-50">
                                     <span class="flex items-center gap-1 text-purple-700">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-                                        Comision card cultural (1.5%)
+                                        Comision card cultural (4%)
                                     </span>
                                     <span id="cultural-card-amount" class="font-medium text-purple-700">+0.00 lei</span>
                                 </div>
@@ -447,7 +447,7 @@ const CheckoutPage = {
     taxes: [],
     insurance: null,
     insuranceSelected: false,
-    culturalCardSurchargeRate: 1.5, // % extra for cultural card transactions
+    culturalCardSurchargeRate: 4, // % extra for cultural card transactions
     totals: { subtotal: 0, tax: 0, discount: 0, insurance: 0, culturalCardSurcharge: 0, total: 0, savings: 0 },
     timerInterval: null,
     endTime: null,
@@ -486,20 +486,31 @@ const CheckoutPage = {
                 if (response.data.ticket_insurance && response.data.ticket_insurance.enabled && response.data.ticket_insurance.show_in_checkout) {
                     this.insurance = response.data.ticket_insurance;
 
-                    // Check refundability of cart items - insurance only applies to refundable tickets
-                    const refundableItems = this.items.filter(item => item.ticketType?.is_refundable);
-                    const nonRefundableItems = this.items.filter(item => !item.ticketType?.is_refundable);
-                    const hasRefundable = refundableItems.length > 0;
-                    const isMixed = hasRefundable && nonRefundableItems.length > 0;
+                    // Determine eligible items based on apply_to setting
+                    const applyTo = this.insurance.apply_to || 'all';
+                    let eligibleItems, ineligibleItems;
 
-                    // Only show insurance if cart has at least one refundable ticket
-                    if (!hasRefundable) {
+                    if (applyTo === 'refundable_only') {
+                        // Only refundable tickets qualify
+                        eligibleItems = this.items.filter(item => item.ticketType?.is_refundable);
+                        ineligibleItems = this.items.filter(item => !item.ticketType?.is_refundable);
+                    } else {
+                        // All tickets qualify
+                        eligibleItems = [...this.items];
+                        ineligibleItems = [];
+                    }
+
+                    const hasEligible = eligibleItems.length > 0;
+                    const isMixed = hasEligible && ineligibleItems.length > 0;
+
+                    // Only show insurance if cart has at least one eligible ticket
+                    if (!hasEligible) {
                         this.insurance = null;
                         return;
                     }
 
-                    // Store refundability info for calculation
-                    this.insurance._refundableItems = refundableItems;
+                    // Store eligibility info for calculation
+                    this.insurance._refundableItems = eligibleItems;
                     this.insurance._isMixed = isMixed;
 
                     this.setupInsuranceUI();
@@ -541,11 +552,11 @@ const CheckoutPage = {
             document.getElementById('insurance-price').textContent = this.insurance.price_percentage + '% din total';
         }
 
-        // Show partial note for mixed carts (some refundable, some not)
+        // Show partial note for mixed carts (some eligible, some not)
         const partialNote = document.getElementById('insurance-partial-note');
         if (partialNote && isMixed) {
-            const refundableNames = refundableItems.map(item => item.ticketType?.name || 'Bilet').join(', ');
-            partialNote.textContent = 'Se aplică doar pentru: ' + refundableNames;
+            const eligibleNames = refundableItems.map(item => item.ticketType?.name || 'Bilet').join(', ');
+            partialNote.textContent = 'Se aplică doar pentru biletele returnabile: ' + eligibleNames;
             partialNote.classList.remove('hidden');
         }
 
