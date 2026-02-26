@@ -56,6 +56,88 @@ class CustomerInsightsService
         ];
     }
 
+    // ─── Order Status Breakdown ─────────────────────────────────
+
+    public function orderStatusBreakdown(): array
+    {
+        $rows = DB::table('orders')
+            ->where('customer_id', $this->customerId)
+            ->select(
+                'status',
+                DB::raw('COUNT(*) as cnt'),
+                DB::raw('COALESCE(SUM(total_cents), 0) as total_cents')
+            )
+            ->groupBy('status')
+            ->get()
+            ->keyBy('status');
+
+        $totalOrders = $rows->sum('cnt');
+        $totalTickets = DB::table('tickets as t')
+            ->join('orders as o', 'o.id', '=', 't.order_id')
+            ->where('o.customer_id', $this->customerId)
+            ->count();
+
+        $paidValue = ($rows->get('paid')?->total_cents ?? 0)
+            + ($rows->get('confirmed')?->total_cents ?? 0)
+            + ($rows->get('completed')?->total_cents ?? 0);
+
+        $refundTotal = DB::table('orders')
+            ->where('customer_id', $this->customerId)
+            ->where('status', 'refunded')
+            ->sum(DB::raw('COALESCE(refund_amount, total_cents / 100)'));
+
+        return [
+            'pending_value' => ($rows->get('pending')?->total_cents ?? 0) / 100,
+            'cancelled_value' => ($rows->get('cancelled')?->total_cents ?? 0) / 100,
+            'failed_value' => (($rows->get('failed')?->total_cents ?? 0) + ($rows->get('expired')?->total_cents ?? 0)) / 100,
+            'refund_value' => $refundTotal ?: (($rows->get('refunded')?->total_cents ?? 0) / 100),
+            'avg_per_order' => $totalOrders > 0 ? round($paidValue / $totalOrders / 100, 2) : 0,
+            'avg_per_ticket' => $totalTickets > 0 ? round($paidValue / $totalTickets / 100, 2) : 0,
+        ];
+    }
+
+    // ─── Monthly Orders (current year, all 12 months) ────────────
+
+    public function monthlyOrdersCurrentYear(): array
+    {
+        $year = date('Y');
+        $monthNames = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        $rows = DB::table('orders')
+            ->selectRaw("MONTH(created_at) as m, COUNT(*) as cnt, COALESCE(SUM(total_cents), 0) as total")
+            ->where('customer_id', $this->customerId)
+            ->whereYear('created_at', $year)
+            ->groupBy('m')
+            ->orderBy('m')
+            ->pluck('cnt', 'm')
+            ->toArray();
+
+        $revenueRows = DB::table('orders')
+            ->selectRaw("MONTH(created_at) as m, COALESCE(SUM(total_cents), 0) as total")
+            ->where('customer_id', $this->customerId)
+            ->whereYear('created_at', $year)
+            ->groupBy('m')
+            ->orderBy('m')
+            ->pluck('total', 'm')
+            ->toArray();
+
+        $labels = [];
+        $counts = [];
+        $revenues = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $labels[] = $monthNames[$i - 1];
+            $counts[] = $rows[$i] ?? 0;
+            $revenues[] = round(($revenueRows[$i] ?? 0) / 100, 2);
+        }
+
+        return [
+            'year' => $year,
+            'labels' => $labels,
+            'counts' => $counts,
+            'revenues' => $revenues,
+        ];
+    }
+
     // ─── Price Range ──────────────────────────────────────────────
 
     public function priceRange(): array

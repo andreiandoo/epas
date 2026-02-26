@@ -248,6 +248,17 @@ class CustomerResource extends Resource
                     ->badge()
                     ->color('warning'),
 
+                Tables\Columns\TextColumn::make('profile_completion')
+                    ->label('Profil %')
+                    ->state(fn (\App\Models\Customer $record) => $record->getProfileCompletionPercentage() . '%')
+                    ->badge()
+                    ->color(fn (\App\Models\Customer $record) => match(true) {
+                        $record->getProfileCompletionPercentage() >= 80 => 'success',
+                        $record->getProfileCompletionPercentage() >= 50 => 'warning',
+                        default => 'danger',
+                    })
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('primaryTenant.name')
                     ->label('Primary Tenant')
                     ->sortable()

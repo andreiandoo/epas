@@ -14,6 +14,7 @@ class ViewCustomer extends ViewRecord
     // ─── Data exposed to blade ────────────────────────────────────
     public array $lifetimeStats = [];
     public array $priceRange = [];
+    public array $orderStatusBreakdown = [];
     public array $venueTypes = [];
     public array $artistGenres = [];
     public array $eventTypes = [];
@@ -30,6 +31,7 @@ class ViewCustomer extends ViewRecord
     public array $emailLogs = [];
     public array $gamification = [];
     public array $monthlyOrders = [];
+    public array $monthlyChart = [];
     public array $recentEvents = [];
     public array $topArtists = [];
     public array $tenantsList = [];
@@ -45,6 +47,7 @@ class ViewCustomer extends ViewRecord
         // Lifetime stats
         $this->lifetimeStats = $service->lifetimeStats();
         $this->priceRange = $service->priceRange();
+        $this->orderStatusBreakdown = $service->orderStatusBreakdown();
 
         // Insights
         $this->venueTypes = $service->venueTypes();
@@ -67,7 +70,8 @@ class ViewCustomer extends ViewRecord
         // Gamification
         $this->gamification = $service->gamificationData();
 
-        // Existing stats data
+        // Chart + existing stats
+        $this->monthlyChart = $service->monthlyOrdersCurrentYear();
         $this->monthlyOrders = $service->monthlyOrders();
         $this->recentEvents = $service->recentEvents();
         $this->topArtists = $service->topArtists();
@@ -95,14 +99,6 @@ class ViewCustomer extends ViewRecord
                 ->label('Editează')
                 ->icon('heroicon-o-pencil-square')
                 ->url(fn () => CustomerResource::getUrl('edit', ['record' => $this->record])),
-            \Filament\Actions\Action::make('seeOrders')
-                ->label('Vezi Comenzi')
-                ->icon('heroicon-o-receipt-percent')
-                ->url(fn () => route('filament.admin.resources.orders.index') . '?tableSearch=' . urlencode($this->record->email)),
-            \Filament\Actions\Action::make('seeTickets')
-                ->label('Vezi Bilete')
-                ->icon('heroicon-o-ticket')
-                ->url(fn () => route('filament.admin.resources.tickets.index') . '?tableSearch=' . urlencode($this->record->email)),
         ];
     }
 }

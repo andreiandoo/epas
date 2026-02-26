@@ -29,149 +29,172 @@
              ═══════════════════════════════════════════════════════════════ --}}
         <div x-show="activeTab === 'overview'" x-cloak>
 
-            {{-- Lifetime Stats Cards --}}
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 mb-6">
-                @foreach([
-                    ['Lifetime Value', number_format($lifetimeStats['lifetime_value'] ?? 0, 2) . ' RON', 'heroicon-o-banknotes', 'text-green-600 dark:text-green-400'],
-                    ['Client din', $lifetimeStats['customer_since'] ?? 'N/A', 'heroicon-o-calendar', 'text-blue-600 dark:text-blue-400'],
-                    ['Zile client', number_format($lifetimeStats['lifetime_days'] ?? 0), 'heroicon-o-clock', 'text-purple-600 dark:text-purple-400'],
-                    ['Comenzi', number_format($lifetimeStats['total_orders'] ?? 0), 'heroicon-o-shopping-cart', 'text-amber-600 dark:text-amber-400'],
-                    ['Bilete', number_format($lifetimeStats['total_tickets'] ?? 0), 'heroicon-o-ticket', 'text-cyan-600 dark:text-cyan-400'],
-                    ['Evenimente', number_format($lifetimeStats['total_events'] ?? 0), 'heroicon-o-calendar-days', 'text-rose-600 dark:text-rose-400'],
-                ] as [$label, $value, $icon, $color])
-                    <div class="rounded-xl bg-white dark:bg-gray-900 p-4 shadow-sm ring-1 ring-gray-950/5 dark:ring-white/10">
-                        <div class="flex items-center gap-2 mb-1">
-                            <x-filament::icon :icon="$icon" class="w-5 h-5 {{ $color }}" />
-                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ $label }}</span>
-                        </div>
-                        <div class="text-xl font-bold {{ $color }}">{{ $value }}</div>
-                    </div>
-                @endforeach
-            </div>
-
-            {{-- Personal Info --}}
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <x-filament::section>
-                    <x-slot name="heading">Informații Personale</x-slot>
-                    <div class="divide-y divide-gray-100 dark:divide-gray-800">
-                        @foreach([
-                            'Nume' => trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) ?: '-',
-                            'Email' => $record->email ?? '-',
-                            'Telefon' => $record->phone ?? '-',
-                            'Oraș' => $record->city ?? '-',
-                            'Țară' => $record->country ?? '-',
-                            'Data nașterii' => $record->date_of_birth?->format('d.m.Y') ?? '-',
-                            'Vârstă' => $record->age ?? '-',
-                            'Cod referral' => $record->referral_code ?? '-',
-                        ] as $fieldLabel => $fieldValue)
-                            <div class="flex justify-between py-2.5 px-1">
-                                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $fieldLabel }}</span>
-                                <span class="text-sm text-gray-900 dark:text-gray-100">{{ $fieldValue }}</span>
-                            </div>
-                        @endforeach
 
-                        {{-- Profile completion --}}
-                        <div class="py-2.5 px-1">
-                            <div class="flex justify-between mb-1">
-                                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Completare profil</span>
-                                <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $record->getProfileCompletionPercentage() }}%</span>
-                            </div>
-                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                <div class="bg-primary-600 h-2 rounded-full transition-all" style="width: {{ $record->getProfileCompletionPercentage() }}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </x-filament::section>
-
-                <x-filament::section>
-                    <x-slot name="heading">Tenant & Sistem</x-slot>
-                    <div class="divide-y divide-gray-100 dark:divide-gray-800">
-                        @foreach([
-                            'Tenant (creat)' => $record->tenant?->name ?? '-',
-                            'Primary Tenant' => $record->primaryTenant?->name ?? '-',
-                            'Creat la' => $record->created_at?->format('d.m.Y H:i') ?? '-',
-                            'Actualizat la' => $record->updated_at?->format('d.m.Y H:i') ?? '-',
-                        ] as $fieldLabel => $fieldValue)
-                            <div class="flex justify-between py-2.5 px-1">
-                                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $fieldLabel }}</span>
-                                <span class="text-sm text-gray-900 dark:text-gray-100">{{ $fieldValue }}</span>
-                            </div>
-                        @endforeach
-
-                        {{-- Member of tenants --}}
-                        <div class="py-2.5 px-1">
-                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Membru în tenants</span>
-                            <div class="flex flex-wrap gap-1 mt-1">
-                                @forelse($record->tenants as $t)
-                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">{{ $t->name }}</span>
-                                @empty
-                                    <span class="text-sm text-gray-400">-</span>
-                                @endforelse
-                            </div>
-                        </div>
-
-                        {{-- Meta --}}
-                        @if(!empty($record->meta))
-                            <div class="py-2.5 px-1">
-                                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Metadata</span>
-                                <div class="mt-1 space-y-1">
-                                    @foreach($record->meta as $key => $val)
-                                        <div class="flex gap-2 text-xs">
-                                            <span class="font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300">{{ $key }}</span>
-                                            <span class="text-gray-700 dark:text-gray-300">{{ is_array($val) ? json_encode($val) : $val }}</span>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endif
-                    </div>
-                </x-filament::section>
-            </div>
-
-            {{-- Price Range --}}
-            @if(($priceRange['max'] ?? 0) > 0)
-                <div class="mt-6">
+                {{-- LEFT COLUMN: Stat Cards (2-col grid) --}}
+                <div class="space-y-6">
                     <x-filament::section>
-                        <x-slot name="heading">Range de Preț (pe bilet)</x-slot>
-                        <div class="flex flex-wrap gap-6">
+                        <x-slot name="heading">Statistici Rapide</x-slot>
+                        <div class="grid grid-cols-2 gap-3">
+                            @php
+                                $topGenre = !empty($artistGenres) ? $artistGenres[0]['label'] : '-';
+                                $top3Artists = !empty($topArtists) ? collect($topArtists)->take(3)->pluck('name')->implode(', ') : '-';
+                                $topEventGenre = !empty($eventGenres) ? $eventGenres[0]['label'] : '-';
+                                $topCity = !empty($preferredCities) ? $preferredCities[0]['label'] : '-';
+                                $topDay = !empty($preferredDays) ? $preferredDays[0]['label'] : '-';
+                                $topMonth = !empty($preferredMonths) ? $preferredMonths[0]['label'] : '-';
+                            @endphp
+
                             @foreach([
-                                ['Min', $priceRange['min'], 'text-blue-600'],
-                                ['Max', $priceRange['max'], 'text-red-600'],
-                                ['Medie', $priceRange['avg'], 'text-green-600'],
-                                ['Median', $priceRange['median'], 'text-purple-600'],
-                            ] as [$prLabel, $prValue, $prColor])
-                                <div>
-                                    <span class="text-xs text-gray-500 uppercase tracking-wide">{{ $prLabel }}</span>
-                                    <div class="text-lg font-bold {{ $prColor }}">{{ number_format($prValue, 2) }} RON</div>
+                                ['Lifetime Value', number_format($lifetimeStats['lifetime_value'] ?? 0, 2) . ' RON', 'heroicon-o-banknotes', 'text-green-600 dark:text-green-400'],
+                                ['Client din', ($lifetimeStats['customer_since'] ?? 'N/A') . ' (' . number_format($lifetimeStats['lifetime_days'] ?? 0) . ' zile)', 'heroicon-o-calendar', 'text-blue-600 dark:text-blue-400'],
+                                ['Comenzi', number_format($lifetimeStats['total_orders'] ?? 0), 'heroicon-o-shopping-cart', 'text-amber-600 dark:text-amber-400'],
+                                ['Bilete', number_format($lifetimeStats['total_tickets'] ?? 0), 'heroicon-o-ticket', 'text-cyan-600 dark:text-cyan-400'],
+                                ['Evenimente', number_format($lifetimeStats['total_events'] ?? 0), 'heroicon-o-calendar-days', 'text-rose-600 dark:text-rose-400'],
+                                ['Top Gen Muzical', $topGenre, 'heroicon-o-musical-note', 'text-violet-600 dark:text-violet-400'],
+                                ['Top 3 Artiști', $top3Artists, 'heroicon-o-microphone', 'text-fuchsia-600 dark:text-fuchsia-400'],
+                                ['Top Gen Eveniment', $topEventGenre, 'heroicon-o-sparkles', 'text-indigo-600 dark:text-indigo-400'],
+                                ['Oraș Preferat', $topCity, 'heroicon-o-map-pin', 'text-emerald-600 dark:text-emerald-400'],
+                                ['Zi Preferată', $topDay, 'heroicon-o-clock', 'text-orange-600 dark:text-orange-400'],
+                                ['Lună Preferată', $topMonth, 'heroicon-o-sun', 'text-yellow-600 dark:text-yellow-400'],
+                                ['Medie / Comandă', number_format($orderStatusBreakdown['avg_per_order'] ?? 0, 2) . ' RON', 'heroicon-o-calculator', 'text-teal-600 dark:text-teal-400'],
+                                ['Medie / Bilet', number_format($orderStatusBreakdown['avg_per_ticket'] ?? 0, 2) . ' RON', 'heroicon-o-tag', 'text-sky-600 dark:text-sky-400'],
+                                ['Pending', number_format($orderStatusBreakdown['pending_value'] ?? 0, 2) . ' RON', 'heroicon-o-clock', 'text-yellow-600 dark:text-yellow-400'],
+                                ['Anulate', number_format($orderStatusBreakdown['cancelled_value'] ?? 0, 2) . ' RON', 'heroicon-o-x-circle', 'text-red-600 dark:text-red-400'],
+                                ['Failed / Expirate', number_format($orderStatusBreakdown['failed_value'] ?? 0, 2) . ' RON', 'heroicon-o-exclamation-triangle', 'text-red-500 dark:text-red-400'],
+                                ['Rambursări', number_format($orderStatusBreakdown['refund_value'] ?? 0, 2) . ' RON', 'heroicon-o-arrow-uturn-left', 'text-gray-600 dark:text-gray-400'],
+                            ] as [$label, $value, $icon, $color])
+                                <div class="rounded-xl bg-white dark:bg-gray-900 p-3 shadow-sm ring-1 ring-gray-950/5 dark:ring-white/10">
+                                    <div class="flex items-center gap-1.5 mb-0.5">
+                                        <x-filament::icon :icon="$icon" class="w-4 h-4 {{ $color }}" />
+                                        <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ $label }}</span>
+                                    </div>
+                                    <div class="text-sm font-bold {{ $color }} truncate" title="{{ $value }}">{{ $value }}</div>
                                 </div>
                             @endforeach
                         </div>
                     </x-filament::section>
-                </div>
-            @endif
 
-            {{-- Beneficiaries / Attendees --}}
-            @if(!empty($attendees))
+                    {{-- Price Range --}}
+                    @if(($priceRange['max'] ?? 0) > 0)
+                        <x-filament::section>
+                            <x-slot name="heading">Range de Preț (per bilet)</x-slot>
+                            <div class="grid grid-cols-4 gap-3">
+                                @foreach([
+                                    ['Min', $priceRange['min'], 'text-blue-600'],
+                                    ['Max', $priceRange['max'], 'text-red-600'],
+                                    ['Medie', $priceRange['avg'], 'text-green-600'],
+                                    ['Median', $priceRange['median'], 'text-purple-600'],
+                                ] as [$prLabel, $prValue, $prColor])
+                                    <div class="text-center">
+                                        <span class="text-[10px] text-gray-500 uppercase tracking-wide">{{ $prLabel }}</span>
+                                        <div class="text-sm font-bold {{ $prColor }}">{{ number_format($prValue, 2) }} RON</div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </x-filament::section>
+                    @endif
+
+                    {{-- Beneficiaries / Attendees --}}
+                    @if(!empty($attendees))
+                        <x-filament::section>
+                            <x-slot name="heading">Beneficiari ({{ count($attendees) }})</x-slot>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                                    <thead class="bg-gray-50 dark:bg-gray-800">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Nume</th>
+                                            <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Email</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                        @foreach($attendees as $att)
+                                            <tr>
+                                                <td class="px-3 py-2 text-gray-800 dark:text-gray-200">{{ $att->attendee_name }}</td>
+                                                <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $att->attendee_email ?? '-' }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </x-filament::section>
+                    @endif
+                </div>
+
+                {{-- RIGHT COLUMN: Personal Info + Tenant & System --}}
+                <div>
+                    <x-filament::section>
+                        <x-slot name="heading">Informații Client</x-slot>
+                        <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                            @foreach([
+                                'Nume' => trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) ?: '-',
+                                'Email' => $record->email ?? '-',
+                                'Telefon' => $record->phone ?? '-',
+                                'Oraș' => $record->city ?? '-',
+                                'Țară' => $record->country ?? '-',
+                                'Data nașterii' => $record->date_of_birth?->format('d.m.Y') ?? '-',
+                                'Vârstă' => $record->age ?? '-',
+                                'Cod referral' => $record->referral_code ?? '-',
+                                'Tenant (creat)' => $record->tenant?->name ?? '-',
+                                'Primary Tenant' => $record->primaryTenant?->name ?? '-',
+                                'Creat la' => $record->created_at?->format('d.m.Y H:i') ?? '-',
+                                'Actualizat la' => $record->updated_at?->format('d.m.Y H:i') ?? '-',
+                            ] as $fieldLabel => $fieldValue)
+                                <div class="flex justify-between py-2 px-1">
+                                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $fieldLabel }}</span>
+                                    <span class="text-sm text-gray-900 dark:text-gray-100">{{ $fieldValue }}</span>
+                                </div>
+                            @endforeach
+
+                            {{-- Profile completion --}}
+                            <div class="py-2 px-1">
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Completare profil</span>
+                                    <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $record->getProfileCompletionPercentage() }}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                    <div class="bg-primary-600 h-2 rounded-full transition-all" style="width: {{ $record->getProfileCompletionPercentage() }}%"></div>
+                                </div>
+                            </div>
+
+                            {{-- Member of tenants --}}
+                            <div class="py-2 px-1">
+                                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Membru în tenants</span>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    @forelse($record->tenants as $t)
+                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">{{ $t->name }}</span>
+                                    @empty
+                                        <span class="text-sm text-gray-400">-</span>
+                                    @endforelse
+                                </div>
+                            </div>
+
+                            {{-- Meta --}}
+                            @if(!empty($record->meta))
+                                <div class="py-2 px-1">
+                                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Metadata</span>
+                                    <div class="mt-1 space-y-1">
+                                        @foreach($record->meta as $key => $val)
+                                            <div class="flex gap-2 text-xs">
+                                                <span class="font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300">{{ $key }}</span>
+                                                <span class="text-gray-700 dark:text-gray-300">{{ is_array($val) ? json_encode($val) : $val }}</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </x-filament::section>
+                </div>
+            </div>
+
+            {{-- Orders by Month Chart --}}
+            @if(!empty($monthlyChart['labels']))
                 <div class="mt-6">
                     <x-filament::section>
-                        <x-slot name="heading">Beneficiari (Attendees)</x-slot>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
-                                <thead class="bg-gray-50 dark:bg-gray-800">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Nume</th>
-                                        <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Email</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                                    @foreach($attendees as $att)
-                                        <tr>
-                                            <td class="px-3 py-2 text-gray-800 dark:text-gray-200">{{ $att->attendee_name }}</td>
-                                            <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $att->attendee_email ?? '-' }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                        <x-slot name="heading">Comenzi pe luni - {{ $monthlyChart['year'] }}</x-slot>
+                        <div style="position:relative; height:280px;">
+                            <canvas id="profileMonthlyChart"></canvas>
                         </div>
                     </x-filament::section>
                 </div>
@@ -371,13 +394,14 @@
                                     <th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">Total</th>
                                     <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Status</th>
                                     <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Data</th>
-                                    <th class="px-3 py-2"></th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                                 @foreach($ordersList as $ord)
-                                    <tr>
-                                        <td class="px-3 py-2 font-mono text-xs text-gray-800 dark:text-gray-200">{{ $ord->order_number ?? '#' . str_pad($ord->id, 6, '0', STR_PAD_LEFT) }}</td>
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onclick="window.location='{{ route('filament.admin.resources.orders.edit', ['record' => $ord->id]) }}'">
+                                        <td class="px-3 py-2 font-mono text-xs">
+                                            <a href="{{ route('filament.admin.resources.orders.edit', ['record' => $ord->id]) }}" class="text-primary-600 hover:underline">{{ $ord->order_number ?? '#' . str_pad($ord->id, 6, '0', STR_PAD_LEFT) }}</a>
+                                        </td>
                                         <td class="px-3 py-2 text-gray-800 dark:text-gray-200 max-w-xs truncate">{{ $ord->event_title }}</td>
                                         <td class="px-3 py-2 text-right font-semibold text-gray-800 dark:text-gray-200">{{ number_format(($ord->total_cents ?? 0) / 100, 2) }} {{ $ord->currency ?? 'RON' }}</td>
                                         <td class="px-3 py-2">
@@ -391,9 +415,6 @@
                                                 } }}">{{ ucfirst($ord->status) }}</span>
                                         </td>
                                         <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ \Carbon\Carbon::parse($ord->created_at)->format('d.m.Y H:i') }}</td>
-                                        <td class="px-3 py-2">
-                                            <a href="{{ route('filament.admin.resources.orders.edit', ['record' => $ord->id]) }}" class="text-primary-600 hover:underline text-xs">Deschide</a>
-                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -425,8 +446,10 @@
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                                     @foreach($ticketsList as $tkt)
-                                        <tr>
-                                            <td class="px-3 py-2 font-mono text-xs text-gray-800 dark:text-gray-200">{{ $tkt->code ?? '-' }}</td>
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onclick="window.location='{{ route('filament.admin.resources.tickets.index') }}?tableSearch={{ urlencode($tkt->code ?? '') }}'">
+                                            <td class="px-3 py-2 font-mono text-xs">
+                                                <a href="{{ route('filament.admin.resources.tickets.index') }}?tableSearch={{ urlencode($tkt->code ?? '') }}" class="text-primary-600 hover:underline">{{ $tkt->code ?? '-' }}</a>
+                                            </td>
                                             <td class="px-3 py-2 text-gray-800 dark:text-gray-200 max-w-xs truncate">{{ $tkt->event_title }}</td>
                                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $tkt->ticket_type_name ?? '-' }}</td>
                                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $tkt->attendee_name ?? '-' }}</td>
@@ -533,10 +556,7 @@
              ═══════════════════════════════════════════════════════════════ --}}
         <div x-show="activeTab === 'insights'" x-cloak>
 
-            {{-- Insight Lists - 3 columns --}}
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-
-                {{-- Event Types --}}
                 <x-filament::section>
                     <x-slot name="heading">Tipuri Eveniment</x-slot>
                     @if(!empty($eventTypes))
@@ -553,7 +573,6 @@
                     @endif
                 </x-filament::section>
 
-                {{-- Event Genres --}}
                 <x-filament::section>
                     <x-slot name="heading">Genuri Eveniment</x-slot>
                     @if(!empty($eventGenres))
@@ -570,7 +589,6 @@
                     @endif
                 </x-filament::section>
 
-                {{-- Event Tags --}}
                 <x-filament::section>
                     <x-slot name="heading">Tag-uri Eveniment</x-slot>
                     @if(!empty($eventTags))
@@ -589,8 +607,6 @@
             </div>
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3 mt-6">
-
-                {{-- Venue Types --}}
                 <x-filament::section>
                     <x-slot name="heading">Tipuri Locație</x-slot>
                     @if(!empty($venueTypes))
@@ -607,7 +623,6 @@
                     @endif
                 </x-filament::section>
 
-                {{-- Artist Genres --}}
                 <x-filament::section>
                     <x-slot name="heading">Genuri Muzicale (Artiști)</x-slot>
                     @if(!empty($artistGenres))
@@ -624,7 +639,6 @@
                     @endif
                 </x-filament::section>
 
-                {{-- Top Artists --}}
                 <x-filament::section>
                     <x-slot name="heading">Top Artiști</x-slot>
                     @if(!empty($topArtists))
@@ -642,10 +656,7 @@
                 </x-filament::section>
             </div>
 
-            {{-- Temporal Preferences --}}
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3 mt-6">
-
-                {{-- Preferred Days --}}
                 <x-filament::section>
                     <x-slot name="heading">Top 3 Zile Preferate</x-slot>
                     @if(!empty($preferredDays))
@@ -662,7 +673,6 @@
                     @endif
                 </x-filament::section>
 
-                {{-- Preferred Cities --}}
                 <x-filament::section>
                     <x-slot name="heading">Orașe Preferate</x-slot>
                     @if(!empty($preferredCities))
@@ -679,7 +689,6 @@
                     @endif
                 </x-filament::section>
 
-                {{-- Preferred Start Times --}}
                 <x-filament::section>
                     <x-slot name="heading">Ora Start Preferată</x-slot>
                     @if(!empty($preferredStartTimes))
@@ -698,8 +707,6 @@
             </div>
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-6">
-
-                {{-- Preferred Months --}}
                 <x-filament::section>
                     <x-slot name="heading">Luni Preferate ale Anului</x-slot>
                     @if(!empty($preferredMonths))
@@ -716,7 +723,6 @@
                     @endif
                 </x-filament::section>
 
-                {{-- Month Periods --}}
                 <x-filament::section>
                     <x-slot name="heading">Perioadă Lunară Preferată</x-slot>
                     @if(!empty($preferredMonthPeriods))
@@ -734,7 +740,6 @@
                 </x-filament::section>
             </div>
 
-            {{-- Recent Events --}}
             @if(!empty($recentEvents))
                 <div class="mt-6">
                     <x-filament::section>
@@ -753,4 +758,54 @@
         </div>
 
     </div>
+
+    {{-- Chart.js for Monthly Orders --}}
+    @if(!empty($monthlyChart['labels']))
+        @push('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const ctx = document.getElementById('profileMonthlyChart');
+                if (!ctx) return;
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: @json($monthlyChart['labels']),
+                        datasets: [
+                            {
+                                label: 'Comenzi',
+                                data: @json($monthlyChart['counts']),
+                                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                                borderColor: 'rgb(59, 130, 246)',
+                                borderWidth: 1,
+                                yAxisID: 'y',
+                                order: 2,
+                            },
+                            {
+                                label: 'Venit (RON)',
+                                data: @json($monthlyChart['revenues']),
+                                type: 'line',
+                                borderColor: 'rgb(34, 197, 94)',
+                                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                                tension: 0.3,
+                                fill: true,
+                                yAxisID: 'y1',
+                                order: 1,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            y: { beginAtZero: true, position: 'left', title: { display: true, text: 'Comenzi' } },
+                            y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'RON' } },
+                        }
+                    }
+                });
+            });
+        </script>
+        @endpush
+    @endif
 </x-filament-panels::page>
