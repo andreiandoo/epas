@@ -534,7 +534,7 @@ const AmbiletEventCard = {
             venueCity: venueCity,
             location: venueCity ? (venueName) : venueName, // + ', ' + venueCity if both exist
             minPrice: minPrice,
-            priceFormatted: minPrice > 0 ? (hasMultipleTicketTypes ? 'De la ' : 'Bilete: ') + minPrice + ' lei' : 'Gratuit',
+            priceFormatted: minPrice > 0 ? (hasMultipleTicketTypes ? '<span class="font-semibold text-slate-700 text-xs">De la</span> ' : '<span class="font-semibold text-slate-800 text-xs">Bilete: </span>') + minPrice + ' lei' : 'Gratuit',
             categoryName: categoryName,
             isSoldOut: apiEvent.is_sold_out || false,
             isCancelled: apiEvent.is_cancelled || false,
