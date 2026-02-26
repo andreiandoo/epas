@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Http\Controllers\Controller;
 use App\Models\MarketplaceNewsletterRecipient;
+use App\Models\MarketplaceEmailLog;
 use App\Models\MarketplaceContactList;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -37,6 +38,9 @@ class NewsletterTrackingController extends Controller
         // Mark as opened
         $recipient->markOpened();
 
+        // Also update the corresponding email log
+        $this->updateEmailLog($recipient, 'opened');
+
         return $this->transparentPixel();
     }
 
@@ -67,6 +71,9 @@ class NewsletterTrackingController extends Controller
 
         // Mark as clicked
         $recipient->markClicked();
+
+        // Also update the corresponding email log
+        $this->updateEmailLog($recipient, 'clicked');
 
         return redirect($url);
     }
@@ -221,6 +228,29 @@ class NewsletterTrackingController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Preferences updated']);
+    }
+
+    /**
+     * Update the corresponding MarketplaceEmailLog entry for this recipient
+     */
+    protected function updateEmailLog(MarketplaceNewsletterRecipient $recipient, string $action): void
+    {
+        try {
+            $log = MarketplaceEmailLog::where('to_email', $recipient->email)
+                ->where('template_slug', 'newsletter')
+                ->whereJsonContains('metadata->recipient_id', $recipient->id)
+                ->first();
+
+            if (!$log) return;
+
+            if ($action === 'opened') {
+                $log->markOpened();
+            } elseif ($action === 'clicked') {
+                $log->markClicked();
+            }
+        } catch (\Exception $e) {
+            // Don't let log updates break tracking
+        }
     }
 
     /**
