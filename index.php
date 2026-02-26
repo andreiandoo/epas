@@ -17,7 +17,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Carousel - 3D Poster Stack -->
-<section class="relative py-8 pt-40 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 mt-18 mobile:pt-10" id="heroSlider">
+<section class="relative pt-16 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 mt-18 mobile:pt-10" id="heroSlider">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="hero-carousel-wrapper">
             <!-- 3D Carousel Container -->
@@ -44,7 +44,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Promoted & Recommended Events -->
 <section class="py-10 bg-gray-900 md:py-14">
     <div class="px-4 mx-auto max-w-7xl">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-6 lg:grid-cols-8 md:gap-5" id="promotedEventsGrid">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-6 lg:grid-cols-6 md:gap-5" id="promotedEventsGrid">
             <!-- Promoted events will be loaded dynamically -->
             <?php for ($i = 0; $i < 12; $i++): ?>
             <div class="overflow-hidden bg-white border rounded-xl border-border">
@@ -63,7 +63,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Categories -->
 <section class="py-8 bg-primary lazy-section" id="categoriesSection" data-lazy-load="categories">
     <div class="px-4 mx-auto max-w-7xl">
-        <h2 class="mb-4 text-lg font-bold text-center text-white md:text-2xl">Explorează dupa categorie</h2>
+        <h2 class="mb-4 text-lg font-bold text-center text-white md:text-2xl">Explorează după categorie</h2>
 
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 md:gap-4" id="categoriesGrid">
             <!-- Categories will be loaded dynamically -->
@@ -94,6 +94,7 @@ require_once __DIR__ . '/includes/header.php';
 
     <div class="py-8 bg-white ">
         <div class="px-4 mx-auto max-w-7xl">
+            <span class="block w-full mb-4 text-lg font-bold text-center text-second-text md:text-2xl">ultimele evenimente adăugate</span>
             <!-- Events Grid (filtered by city) -->
             <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="cityEventsGrid">
                 <!-- Events will be loaded dynamically -->
@@ -193,13 +194,12 @@ const HeroSlider = {
             const venue = event.venue_name || (event.venue ? event.venue.name : '') || '';
             const locationText = city ? (venue ? city + ', ' + venue : city) : venue;
             const priceFrom = event.price_from ? 'De la ' + event.price_from + ' Lei' : '';
-            const isPromoted = event.has_paid_promotion === true;
 
             return '<div class="hero-item" data-index="' + index + '" style="--r: ' + (index - this.currentIndex) + ';">' +
                 '<a href="/bilete/' + (event.slug || '') + '" class="hero-item-inner">' +
                     '<img src="' + image + '" alt="' + title + '" loading="' + (index < 5 ? 'eager' : 'lazy') + '">' +
                     '<div class="hero-item-overlay"></div>' +
-                    (isPromoted ? '<div class="hero-item-promoted"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>Promovat</div>' : '') +
+
                     '<div class="hero-item-content">' +
                         '<h3 class="hero-item-title">' + title + '</h3>' +
                         '<div class="hero-item-meta">' +
@@ -456,7 +456,7 @@ const CityEventsFilter = {
 
         // Use AmbiletEventCard component for rendering
         if (typeof AmbiletEventCard !== 'undefined') {
-            container.innerHTML = AmbiletEventCard.renderMany(events.slice(0, 10), {
+            container.innerHTML = AmbiletEventCard.renderMany(events.slice(0, 25), {
                 urlPrefix: '/bilete/',
                 showCategory: true,
                 showPrice: true,
