@@ -35,6 +35,7 @@ class ViewCustomer extends ViewRecord
     public array $recentEvents = [];
     public array $topArtists = [];
     public array $tenantsList = [];
+    public array $trackingData = [];
 
     public function mount($record): void
     {
@@ -76,6 +77,9 @@ class ViewCustomer extends ViewRecord
         $this->recentEvents = $service->recentEvents();
         $this->topArtists = $service->topArtists();
         $this->tenantsList = $service->tenantsList();
+
+        // CoreCustomer tracking data (Meta, Google, TikTok)
+        $this->trackingData = $service->trackingData();
     }
 
     public function getTitle(): string

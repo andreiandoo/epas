@@ -34,6 +34,7 @@ class ViewMarketplaceCustomer extends ViewRecord
     public array $recentEvents = [];
     public array $topArtists = [];
     public array $tenantsList = [];
+    public array $gamification = [];
 
     public function mount($record): void
     {
@@ -65,6 +66,9 @@ class ViewMarketplaceCustomer extends ViewRecord
         $this->ticketsList = $service->ticketsList();
         $this->attendees = $service->attendees();
         $this->emailLogs = $service->emailLogs();
+
+        // Gamification
+        $this->gamification = $service->gamificationData();
 
         // Chart + existing stats
         $this->monthlyChart = $service->monthlyOrdersCurrentYear();

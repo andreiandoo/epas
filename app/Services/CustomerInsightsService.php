@@ -9,6 +9,7 @@ use App\Models\Gamification\CustomerPoints;
 use App\Models\Gamification\PointsTransaction;
 use App\Models\Gamification\RewardRedemption;
 use App\Models\MarketplaceCustomer;
+use App\Models\Platform\CoreCustomer;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -19,19 +20,25 @@ class CustomerInsightsService
     protected string $orderColumn;
     protected ?Carbon $createdAt;
     protected ?Customer $coreCustomer;
+    protected ?int $marketplaceCustomerId;
+    protected ?int $marketplaceClientId;
 
     private function __construct(
         int $customerId,
         string $email,
         string $orderColumn,
         ?Carbon $createdAt,
-        ?Customer $coreCustomer = null
+        ?Customer $coreCustomer = null,
+        ?int $marketplaceCustomerId = null,
+        ?int $marketplaceClientId = null
     ) {
         $this->customerId = $customerId;
         $this->email = $email;
         $this->orderColumn = $orderColumn;
         $this->createdAt = $createdAt;
         $this->coreCustomer = $coreCustomer;
+        $this->marketplaceCustomerId = $marketplaceCustomerId;
+        $this->marketplaceClientId = $marketplaceClientId;
     }
 
     public static function forCustomer(Customer $customer): static
@@ -52,7 +59,9 @@ class CustomerInsightsService
             $customer->email,
             'marketplace_customer_id',
             $customer->created_at,
-            null
+            null,
+            $customer->id,
+            $customer->marketplace_client_id
         );
     }
 
@@ -530,52 +539,77 @@ class CustomerInsightsService
 
     public function gamificationData(): array
     {
-        // Gamification only works for core customers with tenant context
-        if (!$this->coreCustomer) {
-            return [
-                'points' => null,
-                'experience' => null,
-                'transactions' => collect(),
-                'badges' => collect(),
-                'redemptions' => collect(),
-            ];
+        $empty = [
+            'points' => null,
+            'experience' => null,
+            'transactions' => collect(),
+            'badges' => collect(),
+            'redemptions' => collect(),
+        ];
+
+        // Core customer path
+        if ($this->coreCustomer) {
+            $tenantId = $this->coreCustomer->primary_tenant_id ?? $this->coreCustomer->tenant_id;
+            $coreId = $this->coreCustomer->id;
+
+            $points = $tenantId
+                ? CustomerPoints::where('tenant_id', $tenantId)->where('customer_id', $coreId)->first()
+                : null;
+
+            $experience = $tenantId
+                ? CustomerExperience::where('tenant_id', $tenantId)->where('customer_id', $coreId)->first()
+                : null;
+
+            $transactions = PointsTransaction::where('customer_id', $coreId)
+                ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))
+                ->orderByDesc('created_at')
+                ->limit(20)
+                ->get();
+
+            $badges = CustomerBadge::with('badge')
+                ->where('customer_id', $coreId)
+                ->orderByDesc('earned_at')
+                ->get();
+
+            $redemptions = RewardRedemption::with('reward')
+                ->where('customer_id', $coreId)
+                ->orderByDesc('created_at')
+                ->limit(20)
+                ->get();
+
+            return compact('points', 'experience', 'transactions', 'badges', 'redemptions');
         }
 
-        $tenantId = $this->coreCustomer->primary_tenant_id ?? $this->coreCustomer->tenant_id;
-        $coreId = $this->coreCustomer->id;
+        // Marketplace customer path
+        if ($this->marketplaceCustomerId && $this->marketplaceClientId) {
+            $points = CustomerPoints::where('marketplace_client_id', $this->marketplaceClientId)
+                ->where('marketplace_customer_id', $this->marketplaceCustomerId)
+                ->first();
 
-        $points = $tenantId
-            ? CustomerPoints::where('tenant_id', $tenantId)->where('customer_id', $coreId)->first()
-            : null;
+            $experience = CustomerExperience::where('marketplace_customer_id', $this->marketplaceCustomerId)
+                ->first();
 
-        $experience = $tenantId
-            ? CustomerExperience::where('tenant_id', $tenantId)->where('customer_id', $coreId)->first()
-            : null;
+            $transactions = PointsTransaction::where('marketplace_customer_id', $this->marketplaceCustomerId)
+                ->when($this->marketplaceClientId, fn ($q) => $q->where('marketplace_client_id', $this->marketplaceClientId))
+                ->orderByDesc('created_at')
+                ->limit(20)
+                ->get();
 
-        $transactions = PointsTransaction::where('customer_id', $coreId)
-            ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))
-            ->orderByDesc('created_at')
-            ->limit(20)
-            ->get();
+            $badges = CustomerBadge::with('badge')
+                ->where('marketplace_customer_id', $this->marketplaceCustomerId)
+                ->orderByDesc('earned_at')
+                ->get();
 
-        $badges = CustomerBadge::with('badge')
-            ->where('customer_id', $coreId)
-            ->orderByDesc('earned_at')
-            ->get();
+            $redemptions = RewardRedemption::with('reward')
+                ->where('marketplace_customer_id', $this->marketplaceCustomerId)
+                ->orderByDesc('created_at')
+                ->limit(20)
+                ->get();
 
-        $redemptions = RewardRedemption::with('reward')
-            ->where('customer_id', $coreId)
-            ->orderByDesc('created_at')
-            ->limit(20)
-            ->get();
+            return compact('points', 'experience', 'transactions', 'badges', 'redemptions');
+        }
 
-        return [
-            'points' => $points,
-            'experience' => $experience,
-            'transactions' => $transactions,
-            'badges' => $badges,
-            'redemptions' => $redemptions,
-        ];
+        return $empty;
     }
 
     // ─── Monthly Orders ───────────────────────────────────────────
@@ -639,6 +673,66 @@ class CustomerInsightsService
             ->orderByDesc('total')
             ->get()
             ->toArray();
+    }
+
+    // ─── CoreCustomer Tracking Data ─────────────────────────────────
+
+    public function trackingData(): array
+    {
+        $hash = hash('sha256', strtolower(trim($this->email)));
+        $cc = CoreCustomer::where('email_hash', $hash)->first();
+
+        if (! $cc) {
+            return [];
+        }
+
+        return [
+            'core_customer_id' => $cc->id,
+            'uuid' => $cc->uuid,
+            'segment' => $cc->customer_segment,
+            'rfm_segment' => $cc->rfm_segment,
+            'health_score' => $cc->health_score,
+            'engagement_score' => $cc->engagement_score,
+            // Attribution - Google
+            'first_gclid' => $cc->first_gclid,
+            'last_gclid' => $cc->last_gclid,
+            'google_user_id' => $cc->google_user_id,
+            // Attribution - Meta
+            'first_fbclid' => $cc->first_fbclid,
+            'last_fbclid' => $cc->last_fbclid,
+            'facebook_user_id' => $cc->facebook_user_id,
+            // Attribution - TikTok
+            'first_ttclid' => $cc->first_ttclid,
+            'last_ttclid' => $cc->last_ttclid,
+            // Attribution - LinkedIn
+            'first_li_fat_id' => $cc->first_li_fat_id,
+            'last_li_fat_id' => $cc->last_li_fat_id,
+            // UTM
+            'first_utm_source' => $cc->first_utm_source,
+            'first_utm_medium' => $cc->first_utm_medium,
+            'first_utm_campaign' => $cc->first_utm_campaign,
+            'last_utm_source' => $cc->last_utm_source,
+            'last_utm_medium' => $cc->last_utm_medium,
+            'last_utm_campaign' => $cc->last_utm_campaign,
+            // Activity
+            'first_seen_at' => $cc->first_seen_at?->format('d.m.Y H:i'),
+            'last_seen_at' => $cc->last_seen_at?->format('d.m.Y H:i'),
+            'total_visits' => $cc->total_visits,
+            'total_pageviews' => $cc->total_pageviews,
+            'total_sessions' => $cc->total_sessions,
+            // Device
+            'primary_device' => $cc->primary_device,
+            'primary_browser' => $cc->primary_browser,
+            // Email engagement
+            'emails_sent' => $cc->emails_sent,
+            'emails_opened' => $cc->emails_opened,
+            'emails_clicked' => $cc->emails_clicked,
+            'email_open_rate' => $cc->email_open_rate,
+            'email_click_rate' => $cc->email_click_rate,
+            // External IDs
+            'stripe_customer_id' => $cc->stripe_customer_id,
+            'visitor_id' => $cc->visitor_id,
+        ];
     }
 
     // ─── Helper: total expression (handles both total_cents and total columns) ─
