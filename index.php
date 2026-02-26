@@ -17,7 +17,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Carousel - 3D Poster Stack -->
-<section class="relative py-8 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 mt-18 pt-40 mobile:pt-10" id="heroSlider">
+<section class="relative py-8 pt-40 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 mt-18 mobile:pt-10" id="heroSlider">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="hero-carousel-wrapper">
             <!-- 3D Carousel Container -->
@@ -43,7 +43,7 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- Promoted & Recommended Events -->
 <section class="py-10 bg-gray-900 md:py-14">
-    <div class="px-4 mx-auto">
+    <div class="px-4 mx-auto max-w-7xl">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-6 lg:grid-cols-8 md:gap-5" id="promotedEventsGrid">
             <!-- Promoted events will be loaded dynamically -->
             <?php for ($i = 0; $i < 12; $i++): ?>
@@ -63,7 +63,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Categories -->
 <section class="py-8 bg-primary lazy-section" id="categoriesSection" data-lazy-load="categories">
     <div class="px-4 mx-auto max-w-7xl">
-        <h2 class="mb-4 text-lg text-center font-bold md:text-2xl text-white">Explorează dupa categorie</h2>
+        <h2 class="mb-4 text-lg font-bold text-center text-white md:text-2xl">Explorează dupa categorie</h2>
 
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 md:gap-4" id="categoriesGrid">
             <!-- Categories will be loaded dynamically -->
@@ -81,7 +81,7 @@ require_once __DIR__ . '/includes/header.php';
 <section class="lazy-section" id="cityEventsSection" data-lazy-load="cityEvents">
     <div class="pb-2 bg-primary ">
         <div class="px-4 mx-auto max-w-7xl">
-            <span class="mb-4 block w-full text-lg text-center font-bold md:text-2xl text-white">sau dupa oraș</span>
+            <span class="block w-full mb-4 text-lg font-bold text-center text-white md:text-2xl">sau dupa oraș</span>
             <!-- City Filter Buttons -->
             <div class="flex flex-wrap justify-center gap-2 mb-8" id="cityFilterButtons">
                 <button class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-full city-filter-btn active bg-primary" data-city="">
@@ -92,10 +92,10 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 
-    <div class="bg-white py-8 ">
+    <div class="py-8 bg-white ">
         <div class="px-4 mx-auto max-w-7xl">
             <!-- Events Grid (filtered by city) -->
-            <div class="grid gap-4 grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="cityEventsGrid">
+            <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="cityEventsGrid">
                 <!-- Events will be loaded dynamically -->
                 <?php for ($i = 0; $i < 10; $i++): ?>
                 <div class="overflow-hidden bg-white border rounded-2xl border-border">
@@ -643,8 +643,8 @@ function renderCategories(categories) {
     }
 
     container.innerHTML = categories.slice(0, 6).map(cat => `
-        <a href="/${cat.slug}" class="flex items-center gap-3 py-2 px-3 bg-white border category-pill rounded-lg border-border group">
-            <div class="flex items-center justify-center w-8 h-8 transition-colors bg-primary/10 rounded-lg group-hover:bg-white/20">
+        <a href="/${cat.slug}" class="flex items-center gap-3 px-3 py-2 bg-white border rounded-lg category-pill border-border group">
+            <div class="flex items-center justify-center w-8 h-8 transition-colors rounded-lg bg-primary/10 group-hover:bg-white/20">
                 <span class="text-lg">${icons[cat.slug] || '🎫'}</span>
             </div>
             <span class="text-sm font-semibold transition-colors md:text-base text-secondary group-hover:text-white">${cat.name}</span>
