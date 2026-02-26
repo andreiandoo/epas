@@ -66,7 +66,7 @@ function getColorClasses($color) {
     <?php include 'includes/header.php'; ?>
 
     <!-- Breadcrumb & Header -->
-    <section class="px-6 py-8 bg-white border-b border-gray-200 mt-28 mobile:mt-18">
+    <section class="px-6 py-8 bg-white border-b border-gray-200 mt-18 mobile:mt-18">
         <div class="max-w-4xl mx-auto">
             <!-- Breadcrumb -->
             <nav class="flex items-center gap-2 mb-6 text-sm text-gray-500">
@@ -78,7 +78,7 @@ function getColorClasses($color) {
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="9 18 15 12 9 6"/>
                 </svg>
-                <span class="text-secondary font-medium"><?= htmlspecialchars($category['name']) ?></span>
+                <span class="font-medium text-secondary"><?= htmlspecialchars($category['name']) ?></span>
             </nav>
 
             <!-- Category Header -->

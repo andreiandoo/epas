@@ -32,7 +32,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Section -->
-<section class="relative h-[800px] overflow-hidden mt-24 mobile:mt-0" id="artistHero">
+<section class="relative h-[800px] overflow-hidden mt-18 mobile:mt-0" id="artistHero">
     <!-- Skeleton -->
     <div class="absolute inset-0 bg-gray-200 skeleton-hero animate-pulse"></div>
     <!-- Hero Image (loaded via JS) -->

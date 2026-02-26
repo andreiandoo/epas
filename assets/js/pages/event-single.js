@@ -1126,11 +1126,11 @@ const EventPage = {
             venueAddress = venueAddress ? venueAddress + ', ' + venue.state : venue.state;
         }
 
-        var html = '<div class="flex flex-col gap-6 md:flex-row">' +
-            '<div class="md:w-1/5">' +
-                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-36 mb-4 rounded-2xl" loading="lazy">' +
+        var html = '<div class="flex flex-col md:items-center gap-6 md:flex-row px-8">' +
+            '<div class="md:w-1/4">' +
+                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-32 mb-4 rounded-2xl" loading="lazy">' +
             '</div>' +
-            '<div class="md:w-4/5">' +
+            '<div class="md:w-3/4">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
                 '<p class="mb-2 text-muted">' + venueAddress + '</p>' +
                 '<div class="leading-relaxed text-muted text-sm">' + (venue.description || '') + '</div>';

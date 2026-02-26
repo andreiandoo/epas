@@ -244,7 +244,7 @@ const AmbiletEventCard = {
             priceHtml = '<span class="text-sm font-bold text-red-500">SOLD OUT</span>';
             buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-gray-400 rounded-lg text-white text-sm font-semibold cursor-not-allowed" disabled>Indisponibil</button>' : '';
         } else {
-            priceHtml = '<div class="text-xs text-muted">De la <strong class="text-lg font-bold text-success">' + event.priceFormatted + '</strong></div>';
+            priceHtml = '<div class="text-sm font-bold text-primary">' + event.priceFormatted + '</div>';
             buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-secondary hover:bg-secondary/90 rounded-lg text-white text-sm font-semibold transition-all">Cumpără bilete</button>' : '';
         }
 

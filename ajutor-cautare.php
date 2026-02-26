@@ -55,7 +55,7 @@ function highlightTerms($text, $query) {
     <?php include 'includes/header.php'; ?>
 
     <!-- Search Header -->
-    <section class="px-6 py-8 bg-white border-b border-gray-200 mt-28 mobile:mt-18">
+    <section class="px-6 py-8 bg-white border-b border-gray-200 mt-18 mobile:mt-18">
         <div class="max-w-4xl mx-auto">
             <!-- Breadcrumb -->
             <nav class="flex items-center gap-2 mb-6 text-sm text-gray-500">
@@ -67,7 +67,7 @@ function highlightTerms($text, $query) {
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="9 18 15 12 9 6"/>
                 </svg>
-                <span class="text-secondary font-medium">Cautare</span>
+                <span class="font-medium text-secondary">Cautare</span>
             </nav>
 
             <h1 class="mb-6 text-3xl font-bold text-secondary">Cautare in baza de cunostinte</h1>
@@ -107,7 +107,7 @@ function highlightTerms($text, $query) {
 
         <?php elseif (strlen($query) < 2): ?>
         <!-- Query too short -->
-        <div class="p-8 text-center bg-yellow-50 border border-yellow-200 rounded-2xl">
+        <div class="p-8 text-center border border-yellow-200 bg-yellow-50 rounded-2xl">
             <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 text-yellow-600 bg-yellow-100 rounded-xl">
                 <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
@@ -133,7 +133,7 @@ function highlightTerms($text, $query) {
             <p class="mb-6 text-gray-500">Nu am gasit articole care sa contina "<strong><?= htmlspecialchars($query) ?></strong>".</p>
             <div class="text-sm text-gray-500">
                 <p class="mb-2">Sugestii:</p>
-                <ul class="text-left max-w-xs mx-auto space-y-1">
+                <ul class="max-w-xs mx-auto space-y-1 text-left">
                     <li>• Verifica daca ai scris corect</li>
                     <li>• Incearca cuvinte cheie mai simple</li>
                     <li>• Foloseste termeni mai generali</li>
@@ -159,7 +159,7 @@ function highlightTerms($text, $query) {
                     <?= getIconSvg($article['icon'] ?? ($article['type'] === 'faq' ? 'heroicon-o-question-mark-circle' : 'heroicon-o-document-text'), 'w-5 h-5') ?>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <div class="text-base font-semibold text-secondary mb-1 group-hover:text-primary transition-colors">
+                    <div class="mb-1 text-base font-semibold transition-colors text-secondary group-hover:text-primary">
                         <?= highlightTerms($article['type'] === 'faq' ? ($article['question'] ?? '') : ($article['title'] ?? ''), $query) ?>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 text-xs text-gray-400">
@@ -174,7 +174,7 @@ function highlightTerms($text, $query) {
                         <?php endif; ?>
                     </div>
                 </div>
-                <div class="text-gray-300 transition-transform group-hover:translate-x-1 flex-shrink-0 mt-2">
+                <div class="flex-shrink-0 mt-2 text-gray-300 transition-transform group-hover:translate-x-1">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="9 18 15 12 9 6"/>
                     </svg>

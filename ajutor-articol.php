@@ -109,7 +109,7 @@ function getColorClasses($color) {
     <?php include 'includes/header.php'; ?>
 
     <!-- Breadcrumb & Header -->
-    <section class="px-6 py-8 bg-white border-b border-gray-200 mt-28 mobile:mt-18">
+    <section class="px-6 py-8 bg-white border-b border-gray-200 mt-18 mobile:mt-18">
         <div class="max-w-4xl mx-auto">
             <!-- Breadcrumb -->
             <nav class="flex flex-wrap items-center gap-2 mb-6 text-sm text-gray-500">
@@ -127,7 +127,7 @@ function getColorClasses($color) {
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="9 18 15 12 9 6"/>
                 </svg>
-                <span class="text-secondary font-medium"><?= htmlspecialchars(mb_substr($articleTitle, 0, 40)) ?><?= mb_strlen($articleTitle) > 40 ? '...' : '' ?></span>
+                <span class="font-medium text-secondary"><?= htmlspecialchars(mb_substr($articleTitle, 0, 40)) ?><?= mb_strlen($articleTitle) > 40 ? '...' : '' ?></span>
             </nav>
 
             <!-- Article Header -->
@@ -231,18 +231,18 @@ function getColorClasses($color) {
                         <?= getIconSvg($related['icon'] ?? ($relatedIsFaq ? 'heroicon-o-question-mark-circle' : 'heroicon-o-document-text'), 'w-4 h-4') ?>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <span class="text-sm font-medium text-secondary group-hover:text-primary transition-colors line-clamp-1"><?= htmlspecialchars($relatedTitle) ?></span>
+                        <span class="text-sm font-medium transition-colors text-secondary group-hover:text-primary line-clamp-1"><?= htmlspecialchars($relatedTitle) ?></span>
                         <?php if ($relatedIsFaq): ?>
                         <span class="ml-2 px-1.5 py-0.5 text-xs bg-purple-100 text-purple-600 rounded font-medium">FAQ</span>
                         <?php endif; ?>
                     </div>
-                    <svg class="w-4 h-4 text-gray-300 transition-transform group-hover:translate-x-1 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="flex-shrink-0 w-4 h-4 text-gray-300 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="9 18 15 12 9 6"/>
                     </svg>
                 </a>
                 <?php endforeach; ?>
             </div>
-            <a href="/ajutor/<?= htmlspecialchars($category['slug']) ?>" class="inline-flex items-center gap-2 mt-4 text-sm font-medium text-primary hover:text-primary-dark transition-colors">
+            <a href="/ajutor/<?= htmlspecialchars($category['slug']) ?>" class="inline-flex items-center gap-2 mt-4 text-sm font-medium transition-colors text-primary hover:text-primary-dark">
                 Vezi toate articolele din aceasta categorie
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -269,7 +269,7 @@ function getColorClasses($color) {
             </a>
             <?php endif; ?>
 
-            <a href="/contact" class="inline-flex items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary-dark">
+            <a href="/contact" class="inline-flex items-center gap-2 text-sm font-medium transition-colors text-primary hover:text-primary-dark">
                 Mai ai intrebari? Contacteaza-ne
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
