@@ -17,7 +17,7 @@ class ExportStatus extends Page
     protected static ?string $navigationLabel = 'Exports';
     protected static ?int $navigationSort = 90;
 
-    protected static string $view = 'filament.pages.export-status';
+    protected string $view = 'filament.pages.export-status';
 
     public function getExports(): Collection
     {
