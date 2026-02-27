@@ -31,9 +31,9 @@ class VenuePolicy
      */
     protected function belongsToTenant(Authenticatable $user, Venue $venue): bool
     {
-        // Marketplace admin — scoped by marketplace_client_id in the resource query
+        // Marketplace admin — check via pivot table (marketplace_venue_partners)
         if ($user instanceof MarketplaceAdmin) {
-            return !$venue->marketplace_client_id || $venue->marketplace_client_id === $user->marketplace_client_id;
+            return $venue->isInMarketplace($user->marketplace_client_id);
         }
 
         // If user has tenant_id, check if it matches venue's tenant_id
