@@ -130,15 +130,19 @@ class MarketplaceEventSeatingService
                         $baseStatus = $seat->status ?? 'active';
                         $eventSeatStatus = ($baseStatus === 'imposibil') ? 'disabled' : 'available';
 
-                        EventSeat::create([
-                            'event_seating_id' => $eventSeating->id,
-                            'seat_uid' => $seat->seat_uid,
-                            'section_name' => $section->name,
-                            'row_label' => $row->label,
-                            'seat_label' => $seat->label,
-                            'status' => $eventSeatStatus,
-                            'version' => 1,
-                        ]);
+                        EventSeat::updateOrCreate(
+                            [
+                                'event_seating_id' => $eventSeating->id,
+                                'seat_uid' => $seat->seat_uid,
+                            ],
+                            [
+                                'section_name' => $section->name,
+                                'row_label' => $row->label,
+                                'seat_label' => $seat->label,
+                                'status' => $eventSeatStatus,
+                                'version' => 1,
+                            ]
+                        );
                     }
                 }
             }
@@ -259,15 +263,19 @@ class MarketplaceEventSeatingService
                         $baseStatus = $seat->status ?? 'active';
                         $eventSeatStatus = ($baseStatus === 'imposibil') ? 'disabled' : 'available';
 
-                        EventSeat::create([
-                            'event_seating_id' => $eventSeating->id,
-                            'seat_uid' => $seat->seat_uid,
-                            'section_name' => $section->name,
-                            'row_label' => $row->label,
-                            'seat_label' => $seat->label,
-                            'status' => $eventSeatStatus,
-                            'version' => 1,
-                        ]);
+                        EventSeat::updateOrCreate(
+                            [
+                                'event_seating_id' => $eventSeating->id,
+                                'seat_uid' => $seat->seat_uid,
+                            ],
+                            [
+                                'section_name' => $section->name,
+                                'row_label' => $row->label,
+                                'seat_label' => $seat->label,
+                                'status' => $eventSeatStatus,
+                                'version' => 1,
+                            ]
+                        );
                     }
                 }
             }

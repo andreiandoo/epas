@@ -569,15 +569,19 @@ class EditEvent extends EditRecord
                 foreach ($section->rows as $row) {
                     foreach ($row->seats as $seat) {
                         $baseStatus = $seat->status ?? 'active';
-                        \App\Models\Seating\EventSeat::create([
-                            'event_seating_id' => $eventSeating->id,
-                            'seat_uid' => $seat->seat_uid,
-                            'section_name' => $section->name,
-                            'row_label' => $row->label,
-                            'seat_label' => $seat->label,
-                            'status' => ($baseStatus === 'imposibil') ? 'disabled' : 'available',
-                            'version' => 1,
-                        ]);
+                        \App\Models\Seating\EventSeat::updateOrCreate(
+                            [
+                                'event_seating_id' => $eventSeating->id,
+                                'seat_uid' => $seat->seat_uid,
+                            ],
+                            [
+                                'section_name' => $section->name,
+                                'row_label' => $row->label,
+                                'seat_label' => $seat->label,
+                                'status' => ($baseStatus === 'imposibil') ? 'disabled' : 'available',
+                                'version' => 1,
+                            ]
+                        );
                         $seatCount++;
                     }
                 }
