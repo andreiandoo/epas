@@ -615,7 +615,9 @@ switch ($action) {
             echo json_encode(['error' => 'Missing event slug']);
             exit;
         }
-        $endpoint = '/events/' . urlencode($slug);
+        $params = [];
+        if (isset($_GET['preview'])) $params['preview'] = $_GET['preview'];
+        $endpoint = '/events/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
         break;
 
     case 'event.track-view':
