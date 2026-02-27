@@ -130,9 +130,10 @@ const CategoryPage = {
         try {
             const params = this.category ? '?category=' + this.category : '';
             const response = await AmbiletAPI.get('/events/cities' + params);
-            if (response.data) {
+            const cities = response.data?.cities || (Array.isArray(response.data) ? response.data : []);
+            if (cities.length > 0) {
                 const optionsHtml = '<option value="">Toate orasele</option>' +
-                    response.data.map(city => '<option value="' + city.slug + '">' + city.name + ' (' + (city.events_count || 0) + ')</option>').join('');
+                    cities.map(city => '<option value="' + city.name + '">' + city.name + ' (' + (city.event_count || 0) + ')</option>').join('');
                 const select = document.getElementById(this.elements.filterCity);
                 if (select) {
                     select.innerHTML = optionsHtml;
@@ -145,7 +146,7 @@ const CategoryPage = {
                 // Update cities count
                 const citiesCountEl = document.getElementById(this.elements.citiesCount);
                 if (citiesCountEl) {
-                    citiesCountEl.textContent = response.data.length + ' orase';
+                    citiesCountEl.textContent = cities.length + ' orase';
                 }
             }
         } catch (e) {
@@ -366,18 +367,29 @@ const CategoryPage = {
                 }
 
                 if (events.length > 0) {
-                    // Group events by month
-                    const monthGroups = this.groupEventsByMonth(events);
+                    const sortValue = sortEl?.value || 'date_asc';
 
-                    // Render grouped events
-                    let html = '';
-                    monthGroups.forEach(group => {
-                        html += this.renderMonthGroup(group);
-                    });
+                    if (sortValue.startsWith('date_')) {
+                        // Group events by month for date sorts
+                        const monthGroups = this.groupEventsByMonth(events);
+                        if (sortValue === 'date_desc') {
+                            monthGroups.reverse();
+                        }
 
-                    container.innerHTML = html;
-                    container.classList.remove('grid');
-                    container.classList.add('flex', 'flex-col', 'gap-8');
+                        let html = '';
+                        monthGroups.forEach(group => {
+                            html += this.renderMonthGroup(group);
+                        });
+
+                        container.innerHTML = html;
+                        container.classList.remove('grid');
+                        container.classList.add('flex', 'flex-col', 'gap-8');
+                    } else {
+                        // Flat grid for price/popularity sorts — preserve API order
+                        container.innerHTML = events.map(e => AmbiletEventCard.render(e)).join('');
+                        container.classList.remove('flex', 'flex-col', 'gap-8');
+                        container.classList.add('grid');
+                    }
                 } else {
                     container.innerHTML = AmbiletEmptyState.noEvents({
                         onButtonClick: () => this.clearFilters()
