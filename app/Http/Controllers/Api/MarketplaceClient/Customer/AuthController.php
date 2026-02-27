@@ -79,14 +79,10 @@ class AuthController extends BaseController
             $referralInfo = $this->trackReferralRegistration($client->id, $customer->id, $validated['referral_code']);
         }
 
-        // Send verification email synchronously (notifyNow bypasses queue)
+        // Send verification email via marketplace transport
         $verificationToken = $customer->generateEmailVerificationToken();
         try {
-            $customer->notifyNow(new MarketplaceEmailVerificationNotification(
-                $verificationToken,
-                'customer',
-                $client->domain
-            ));
+            $this->sendVerificationEmail($client, $customer, $verificationToken);
         } catch (\Exception $e) {
             \Log::channel('marketplace')->warning('Failed to send verification email', [
                 'customer_id' => $customer->id,
@@ -412,12 +408,8 @@ class AuthController extends BaseController
             'created_at' => now(),
         ]);
 
-        // Send notification synchronously (bypass queue)
-        $customer->notifyNow(new MarketplacePasswordResetNotification(
-            $token,
-            'customer',
-            $client->domain
-        ));
+        // Send password reset email via marketplace transport
+        $this->sendPasswordResetEmail($client, $customer, $token);
 
         return $this->success(null, 'If an account exists with this email, you will receive a password reset link.');
     }
@@ -545,11 +537,7 @@ class AuthController extends BaseController
         }
 
         $verificationToken = $customer->generateEmailVerificationToken();
-        $customer->notify(new MarketplaceEmailVerificationNotification(
-            $verificationToken,
-            'customer',
-            $client->domain
-        ));
+        $this->sendVerificationEmail($client, $customer, $verificationToken);
 
         return $this->success(null, 'Verification email sent');
     }
@@ -692,5 +680,89 @@ class AuthController extends BaseController
             'subscribed' => true,
             'is_new' => true,
         ], 'Te-ai abonat cu succes la newsletter!', 201);
+    }
+
+    /**
+     * Send verification email via marketplace transport.
+     */
+    protected function sendVerificationEmail($client, MarketplaceCustomer $customer, string $token): void
+    {
+        $domain = rtrim($client->domain, '/');
+        if ($domain && !str_starts_with($domain, 'http')) {
+            $domain = 'https://' . $domain;
+        }
+
+        $verifyUrl = sprintf('%s/verify-email?token=%s&email=%s&type=customer', $domain, $token, urlencode($customer->email));
+        $firstName = $customer->first_name ?: 'Client';
+        $siteName = $client->name ?? 'bilete.online';
+
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;background:#f8fafc">'
+            . '<div style="max-width:600px;margin:0 auto;padding:40px 20px">'
+            . '<div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">'
+            . '<div style="background:linear-gradient(135deg,#A51C30 0%,#8B1728 100%);padding:32px;text-align:center">'
+            . '<h1 style="color:white;margin:0;font-size:24px">Verifică adresa de email</h1>'
+            . '</div>'
+            . '<div style="padding:32px">'
+            . '<p style="font-size:16px;color:#1e293b;margin:0 0 16px">Bine ai venit, ' . htmlspecialchars($firstName) . '!</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 16px">Mulțumim pentru înregistrare! Te rugăm să-ți verifici adresa de email pentru a finaliza configurarea contului.</p>'
+            . '<div style="text-align:center;margin:24px 0">'
+            . '<a href="' . htmlspecialchars($verifyUrl) . '" style="display:inline-block;background:#A51C30;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px">Verifică adresa de email</a>'
+            . '</div>'
+            . '<p style="font-size:13px;color:#94a3b8;margin:16px 0 0;text-align:center">Linkul de verificare expiră în 24 de ore.</p>'
+            . '<p style="font-size:13px;color:#94a3b8;margin:8px 0 0;text-align:center">Dacă nu ai creat un cont, poți ignora acest email.</p>'
+            . '</div>'
+            . '<div style="padding:16px 32px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0">'
+            . '<p style="font-size:13px;color:#94a3b8;margin:0">Echipa ' . htmlspecialchars($siteName) . '</p>'
+            . '</div>'
+            . '</div></div></body></html>';
+
+        $this->sendMarketplaceEmail($client, $customer->email, $firstName, 'Verifică adresa de email', $html, [
+            'marketplace_customer_id' => $customer->id,
+            'template_slug' => 'email_verification',
+        ]);
+    }
+
+    /**
+     * Send password reset email via marketplace transport.
+     */
+    protected function sendPasswordResetEmail($client, MarketplaceCustomer $customer, string $token): void
+    {
+        $domain = $client->domain ? rtrim($client->domain, '/') : config('app.url');
+        if ($domain && !str_starts_with($domain, 'http')) {
+            $domain = 'https://' . $domain;
+        }
+
+        $resetUrl = $domain . '/reset-password?' . http_build_query([
+            'token' => $token,
+            'email' => $customer->email,
+        ]);
+        $firstName = $customer->first_name ?: 'Client';
+        $siteName = $client->name ?? 'bilete.online';
+        $expireMinutes = config('auth.passwords.marketplace.expire', 60);
+
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;background:#f8fafc">'
+            . '<div style="max-width:600px;margin:0 auto;padding:40px 20px">'
+            . '<div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">'
+            . '<div style="background:linear-gradient(135deg,#A51C30 0%,#8B1728 100%);padding:32px;text-align:center">'
+            . '<h1 style="color:white;margin:0;font-size:24px">Resetare parolă</h1>'
+            . '</div>'
+            . '<div style="padding:32px">'
+            . '<p style="font-size:16px;color:#1e293b;margin:0 0 16px">Salut ' . htmlspecialchars($firstName) . ',</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 16px">Ai primit acest email deoarece am primit o cerere de resetare a parolei pentru contul tău.</p>'
+            . '<div style="text-align:center;margin:24px 0">'
+            . '<a href="' . htmlspecialchars($resetUrl) . '" style="display:inline-block;background:#A51C30;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px">Resetează parola</a>'
+            . '</div>'
+            . '<p style="font-size:13px;color:#94a3b8;margin:16px 0 0;text-align:center">Linkul expiră în ' . $expireMinutes . ' de minute.</p>'
+            . '<p style="font-size:13px;color:#94a3b8;margin:8px 0 0;text-align:center">Dacă nu ai solicitat resetarea parolei, nu este necesară nicio acțiune.</p>'
+            . '</div>'
+            . '<div style="padding:16px 32px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0">'
+            . '<p style="font-size:13px;color:#94a3b8;margin:0">Echipa ' . htmlspecialchars($siteName) . '</p>'
+            . '</div>'
+            . '</div></div></body></html>';
+
+        $this->sendMarketplaceEmail($client, $customer->email, $firstName, 'Resetare parolă', $html, [
+            'marketplace_customer_id' => $customer->id,
+            'template_slug' => 'password_reset',
+        ]);
     }
 }

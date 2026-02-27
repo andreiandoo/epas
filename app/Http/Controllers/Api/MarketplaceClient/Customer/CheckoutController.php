@@ -513,7 +513,8 @@ class CheckoutController extends BaseController
 
             DB::commit();
 
-            // Send account created email with set-password link (synchronous to bypass queue)
+            // Send account created email with set-password link
+            // Uses marketplace mail transport (same as order confirmation) for reliable delivery
             if ($autoCreatedPassword) {
                 try {
                     // Generate password reset token so user can set their own password
@@ -531,12 +532,7 @@ class CheckoutController extends BaseController
                         'created_at' => now(),
                     ]);
 
-                    $customer->notifyNow(new \App\Notifications\MarketplaceAccountCreatedNotification(
-                        $autoCreatedPassword,
-                        $client->domain,
-                        $client->name,
-                        $setPasswordToken
-                    ));
+                    $this->sendAccountCreatedEmail($client, $customer, $setPasswordToken);
                 } catch (\Exception $e) {
                     Log::channel('marketplace')->warning('Failed to send account created email', [
                         'customer_id' => $customer->id,
@@ -771,5 +767,51 @@ class CheckoutController extends BaseController
 
         // Fallback: generate deterministic ID from IP and user agent
         return md5($request->ip() . $request->userAgent());
+    }
+
+    /**
+     * Send account created email via marketplace mail transport.
+     */
+    protected function sendAccountCreatedEmail($client, MarketplaceCustomer $customer, string $setPasswordToken): void
+    {
+        $siteName = $client->name ?? 'bilete.online';
+        $domain = $client->domain ? rtrim($client->domain, '/') : config('app.url');
+        if ($domain && !str_starts_with($domain, 'http')) {
+            $domain = 'https://' . $domain;
+        }
+
+        $setPasswordUrl = $domain . '/reset-password?' . http_build_query([
+            'token' => $setPasswordToken,
+            'email' => $customer->email,
+        ]);
+
+        $firstName = $customer->first_name ?: 'Client';
+        $subject = "Contul tău pe {$siteName}";
+
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;background:#f8fafc">'
+            . '<div style="max-width:600px;margin:0 auto;padding:40px 20px">'
+            . '<div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">'
+            . '<div style="background:linear-gradient(135deg,#A51C30 0%,#8B1728 100%);padding:32px;text-align:center">'
+            . '<h1 style="color:white;margin:0;font-size:24px">Bine ai venit!</h1>'
+            . '</div>'
+            . '<div style="padding:32px">'
+            . '<p style="font-size:16px;color:#1e293b;margin:0 0 16px">Salut ' . htmlspecialchars($firstName) . ',</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 16px">Ți-am creat automat un cont pe <strong>' . htmlspecialchars($siteName) . '</strong> folosind datele de la ultima ta comandă.</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 8px"><strong>Email:</strong> ' . htmlspecialchars($customer->email) . '</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 24px">Setează-ți o parolă pentru a-ți activa contul:</p>'
+            . '<div style="text-align:center;margin:24px 0">'
+            . '<a href="' . htmlspecialchars($setPasswordUrl) . '" style="display:inline-block;background:#A51C30;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px">Setează parola</a>'
+            . '</div>'
+            . '<p style="font-size:13px;color:#94a3b8;margin:16px 0 0;text-align:center">Linkul expiră în 60 de minute.</p>'
+            . '</div>'
+            . '<div style="padding:16px 32px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0">'
+            . '<p style="font-size:13px;color:#94a3b8;margin:0">Echipa ' . htmlspecialchars($siteName) . '</p>'
+            . '</div>'
+            . '</div></div></body></html>';
+
+        $this->sendMarketplaceEmail($client, $customer->email, $firstName, $subject, $html, [
+            'marketplace_customer_id' => $customer->id,
+            'template_slug' => 'account_created',
+        ]);
     }
 }

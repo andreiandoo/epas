@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\MarketplaceClient;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 abstract class BaseController extends Controller
 {
@@ -68,6 +70,51 @@ abstract class BaseController extends Controller
         }
 
         return response()->json($response, $code);
+    }
+
+    /**
+     * Send email via marketplace mail transport with fallback to Laravel default mailer.
+     * This ensures emails are sent from the marketplace's configured SMTP/provider,
+     * matching the behavior of order confirmation emails.
+     */
+    protected function sendMarketplaceEmail(MarketplaceClient $client, string $toEmail, string $toName, string $subject, string $html, array $logExtra = []): void
+    {
+        $fromAddress = $client->getEmailFromAddress();
+        $fromName = $client->getEmailFromName();
+
+        // Log the email
+        $log = \App\Models\MarketplaceEmailLog::create(array_merge([
+            'marketplace_client_id' => $client->id,
+            'to_email' => $toEmail,
+            'to_name' => $toName,
+            'from_email' => $fromAddress,
+            'from_name' => $fromName,
+            'subject' => $subject,
+            'body_html' => $html,
+            'status' => 'pending',
+        ], $logExtra));
+
+        // Try marketplace-specific mail config first
+        if ($client->hasMailConfigured()) {
+            $transport = $client->getMailTransport();
+            if ($transport) {
+                $email = (new \Symfony\Component\Mime\Email())
+                    ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
+                    ->to(new \Symfony\Component\Mime\Address($toEmail, $toName))
+                    ->subject($subject)
+                    ->html($html);
+
+                $transport->send($email);
+                $log->markSent();
+                return;
+            }
+        }
+
+        // Fallback to Laravel default mailer
+        Mail::html($html, function ($message) use ($toEmail, $toName, $subject) {
+            $message->to($toEmail, $toName)->subject($subject);
+        });
+        $log->markSent();
     }
 
     /**
