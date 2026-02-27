@@ -564,7 +564,36 @@ const EventPage = {
                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>' +
                     'Înapoi acasă' +
                 '</a>' +
-            '</div>';
+            '</div>' +
+            '<div id="error-recommended" class="mt-12 text-left"></div>';
+
+        // Load recommended events
+        this.loadErrorRecommendations();
+    },
+
+    async loadErrorRecommendations() {
+        try {
+            const response = await AmbiletAPI.getFeaturedEvents(8);
+            const events = response?.data?.events || response?.data || [];
+            if (!Array.isArray(events) || events.length === 0) return;
+
+            const container = document.getElementById('error-recommended');
+            if (!container) return;
+
+            container.innerHTML =
+                '<h2 class="mb-6 text-xl font-bold text-secondary flex items-center gap-2.5">' +
+                    '<svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" stroke-width="2"/></svg>' +
+                    'Evenimente recomandate' +
+                '</h2>' +
+                '<div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">' +
+                    AmbiletEventCard.renderMany(events.slice(0, 8), {
+                        urlPrefix: '/bilete/',
+                        showPromotedBadge: true
+                    }) +
+                '</div>';
+        } catch (err) {
+            console.error('Failed to load recommended events:', err);
+        }
     },
 
     /**
