@@ -104,13 +104,14 @@ class PromoCodeController extends BaseController
             return $this->error('Promo code is not active (status: ' . $couponCode->status . ')', 400);
         }
 
-        // Check start date
-        if ($couponCode->starts_at && $couponCode->starts_at->isFuture()) {
+        // Check start date — dates are stored as local time (Europe/Bucharest) but cast as UTC
+        $now = now('Europe/Bucharest');
+        if ($couponCode->starts_at && $couponCode->starts_at->shiftTimezone('Europe/Bucharest')->isAfter($now)) {
             return $this->error('Promo code has not started yet', 400);
         }
 
         // Check expiry date
-        if ($couponCode->expires_at && $couponCode->expires_at->isPast()) {
+        if ($couponCode->expires_at && $couponCode->expires_at->shiftTimezone('Europe/Bucharest')->isBefore($now)) {
             return $this->error('Promo code has expired', 400);
         }
 
