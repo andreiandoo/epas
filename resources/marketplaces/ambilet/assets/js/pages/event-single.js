@@ -2718,7 +2718,7 @@ const EventPage = {
                         }
 
                         // Selected seats: larger radius and font
-                        var drawRadius = isSelected ? seatRadius2 * 1.5 : seatRadius2;
+                        var drawRadius = isSelected ? seatRadius2 * 1.4 : seatRadius2;
                         var drawFontSize = isSelected ? Math.round(seatRadius2 * 1.2 * 10) / 10 : seatFontSize2;
                         var drawStrokeWidth = isSelected ? '1.5' : '0.5';
 
@@ -2942,7 +2942,7 @@ const EventPage = {
                         }
 
                         // Selected seats: larger radius and font
-                        var drawRadius = isSelected ? seatRadius * 1.5 : seatRadius;
+                        var drawRadius = isSelected ? seatRadius * 1.4 : seatRadius;
                         var drawFontSize = isSelected ? Math.round(seatRadius * 1.2 * 10) / 10 : seatFontSize;
                         var drawStrokeWidth = isSelected ? '1.5' : '0.5';
 

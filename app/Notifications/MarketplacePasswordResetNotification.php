@@ -41,6 +41,10 @@ class MarketplacePasswordResetNotification extends Notification implements Shoul
         $baseUrl = $this->clientDomain
             ? rtrim($this->clientDomain, '/')
             : config('app.url');
+        // Ensure domain has protocol
+        if ($baseUrl && !str_starts_with($baseUrl, 'http')) {
+            $baseUrl = 'https://' . $baseUrl;
+        }
 
         $path = $this->type === 'organizer'
             ? '/organizer/reset-password'

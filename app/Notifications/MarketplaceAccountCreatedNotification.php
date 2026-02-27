@@ -14,7 +14,8 @@ class MarketplaceAccountCreatedNotification extends Notification implements Shou
     public function __construct(
         public string $password,
         public ?string $clientDomain = null,
-        public ?string $clientName = null
+        public ?string $clientName = null,
+        public ?string $setPasswordToken = null
     ) {}
 
     public function via(object $notifiable): array
@@ -25,20 +26,35 @@ class MarketplaceAccountCreatedNotification extends Notification implements Shou
     public function toMail(object $notifiable): MailMessage
     {
         $siteName = $this->clientName ?? 'bilete.online';
-        $loginUrl = $this->clientDomain
-            ? rtrim($this->clientDomain, '/') . '/cont'
-            : config('app.url') . '/cont';
+        $domain = $this->clientDomain ? rtrim($this->clientDomain, '/') : config('app.url');
+        // Ensure domain has protocol
+        if ($domain && !str_starts_with($domain, 'http')) {
+            $domain = 'https://' . $domain;
+        }
 
-        return (new MailMessage)
+        $mail = (new MailMessage)
             ->subject("Contul tău pe {$siteName}")
             ->greeting("Salut {$notifiable->first_name},")
             ->line("Ți-am creat automat un cont pe {$siteName} folosind datele de la ultima ta comandă.")
-            ->line('Datele tale de autentificare:')
-            ->line("**Email:** {$notifiable->email}")
-            ->line("**Parola:** {$this->password}")
-            ->action('Intră în cont', $loginUrl)
-            ->line('Îți recomandăm să îți schimbi parola după prima autentificare.')
-            ->salutation("Echipa {$siteName}");
+            ->line("**Email:** {$notifiable->email}");
+
+        if ($this->setPasswordToken) {
+            // Include a set-password link
+            $setPasswordUrl = $domain . '/reset-password?' . http_build_query([
+                'token' => $this->setPasswordToken,
+                'email' => $notifiable->email,
+            ]);
+            $mail->line('Setează-ți o parolă pentru a-ți activa contul:')
+                ->action('Setează parola', $setPasswordUrl)
+                ->line('Linkul expiră în 60 de minute.');
+        } else {
+            // Fallback: show the auto-generated password
+            $mail->line("**Parola:** {$this->password}")
+                ->action('Intră în cont', $domain . '/cont')
+                ->line('Îți recomandăm să îți schimbi parola după prima autentificare.');
+        }
+
+        return $mail->salutation("Echipa {$siteName}");
     }
 
     public function toArray(object $notifiable): array

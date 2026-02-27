@@ -61,6 +61,10 @@ class MarketplaceEmailVerificationNotification extends Notification implements S
     protected function buildVerificationUrl(object $notifiable): string
     {
         $baseUrl = rtrim($this->marketplaceDomain, '/');
+        // Ensure domain has protocol
+        if ($baseUrl && !str_starts_with($baseUrl, 'http')) {
+            $baseUrl = 'https://' . $baseUrl;
+        }
 
         // URL structure: /verify-email?token={token}&email={email}&type={type}
         return sprintf(

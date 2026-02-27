@@ -79,13 +79,20 @@ class AuthController extends BaseController
             $referralInfo = $this->trackReferralRegistration($client->id, $customer->id, $validated['referral_code']);
         }
 
-        // Send verification email
+        // Send verification email synchronously (notifyNow bypasses queue)
         $verificationToken = $customer->generateEmailVerificationToken();
-        $customer->notify(new MarketplaceEmailVerificationNotification(
-            $verificationToken,
-            'customer',
-            $client->domain
-        ));
+        try {
+            $customer->notifyNow(new MarketplaceEmailVerificationNotification(
+                $verificationToken,
+                'customer',
+                $client->domain
+            ));
+        } catch (\Exception $e) {
+            \Log::channel('marketplace')->warning('Failed to send verification email', [
+                'customer_id' => $customer->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         $token = $customer->createToken('customer-api')->plainTextToken;
 
@@ -405,8 +412,8 @@ class AuthController extends BaseController
             'created_at' => now(),
         ]);
 
-        // Send notification
-        $customer->notify(new MarketplacePasswordResetNotification(
+        // Send notification synchronously (bypass queue)
+        $customer->notifyNow(new MarketplacePasswordResetNotification(
             $token,
             'customer',
             $client->domain

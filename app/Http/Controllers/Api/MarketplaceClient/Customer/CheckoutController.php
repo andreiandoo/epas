@@ -513,13 +513,29 @@ class CheckoutController extends BaseController
 
             DB::commit();
 
-            // Send account created email with password (after commit, queued)
+            // Send account created email with set-password link (synchronous to bypass queue)
             if ($autoCreatedPassword) {
                 try {
-                    $customer->notify(new \App\Notifications\MarketplaceAccountCreatedNotification(
+                    // Generate password reset token so user can set their own password
+                    $setPasswordToken = \Illuminate\Support\Str::random(64);
+                    DB::table('marketplace_password_resets')
+                        ->where('email', $customer->email)
+                        ->where('type', 'customer')
+                        ->where('marketplace_client_id', $client->id)
+                        ->delete();
+                    DB::table('marketplace_password_resets')->insert([
+                        'email' => $customer->email,
+                        'type' => 'customer',
+                        'marketplace_client_id' => $client->id,
+                        'token' => Hash::make($setPasswordToken),
+                        'created_at' => now(),
+                    ]);
+
+                    $customer->notifyNow(new \App\Notifications\MarketplaceAccountCreatedNotification(
                         $autoCreatedPassword,
                         $client->domain,
-                        $client->name
+                        $client->name,
+                        $setPasswordToken
                     ));
                 } catch (\Exception $e) {
                     Log::channel('marketplace')->warning('Failed to send account created email', [
