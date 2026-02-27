@@ -274,18 +274,92 @@ class OrdersController extends BaseController
     /**
      * Get order status
      */
-    public function show(Request $request, int $orderId): JsonResponse
+    public function show(Request $request, string $orderId): JsonResponse
     {
         $client = $this->requireClient($request);
 
-        $order = Order::with(['items.ticketType', 'tickets'])
-            ->where('id', $orderId)
+        $order = Order::where(function ($q) use ($orderId) {
+                if (is_numeric($orderId)) {
+                    $q->where('id', (int) $orderId);
+                } else {
+                    $q->where('order_number', $orderId);
+                }
+            })
             ->where('marketplace_client_id', $client->id)
+            ->with([
+                'marketplaceEvent',
+                'event.venue',
+                'tickets.marketplaceTicketType',
+                'tickets.ticketType',
+            ])
             ->first();
 
         if (!$order) {
             return $this->error('Order not found', 404);
         }
+
+        // Build event data
+        $eventData = null;
+        if ($order->marketplaceEvent) {
+            $eventData = [
+                'id' => $order->marketplaceEvent->id,
+                'name' => $order->marketplaceEvent->name,
+                'slug' => $order->marketplaceEvent->slug,
+                'date' => $order->marketplaceEvent->starts_at?->toIso8601String(),
+                'doors_open' => $order->marketplaceEvent->doors_open_at?->toIso8601String(),
+                'venue' => $order->marketplaceEvent->venue_name,
+                'city' => $order->marketplaceEvent->venue_city,
+                'image' => $order->marketplaceEvent->image_url,
+            ];
+        } elseif ($order->event) {
+            $imageUrl = null;
+            if ($order->event->featured_image) {
+                $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($order->event->featured_image);
+            } elseif ($order->event->poster_url) {
+                $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($order->event->poster_url);
+            }
+            $eventTitle = is_array($order->event->title)
+                ? ($order->event->title['ro'] ?? $order->event->title['en'] ?? reset($order->event->title))
+                : $order->event->title;
+            $eventData = [
+                'id' => $order->event->id,
+                'name' => $eventTitle,
+                'slug' => $order->event->slug,
+                'date' => $order->event->event_date?->toIso8601String(),
+                'doors_open' => $order->event->door_time,
+                'venue' => $order->event->venue?->name,
+                'city' => $order->event->venue?->city,
+                'image' => $imageUrl,
+            ];
+        }
+
+        // Build items grouped by ticket type
+        $items = $order->tickets->groupBy(function ($ticket) {
+            return $ticket->marketplace_ticket_type_id ?? $ticket->ticket_type_id ?? 0;
+        })->map(function ($tickets) {
+            $first = $tickets->first();
+            $ticketType = $first->marketplaceTicketType ?? $first->ticketType;
+            $price = (float) ($first->price ?? $ticketType?->price ?? 0);
+            return [
+                'name' => $ticketType?->name ?? 'Bilet',
+                'quantity' => $tickets->count(),
+                'price' => $price,
+                'total' => $price * $tickets->count(),
+            ];
+        })->values()->toArray();
+
+        // Payment method display
+        $paymentMethod = match($order->payment_processor) {
+            'netopia', 'payment-netopia' => 'Card bancar (Netopia)',
+            'stripe', 'payment-stripe' => 'Card bancar (Stripe)',
+            'cash' => 'Numerar',
+            default => $order->payment_processor ? ucfirst(str_replace(['_', '-'], ' ', $order->payment_processor)) : 'Card',
+        };
+
+        // Service fee calculation
+        $discount = (float) ($order->discount_amount ?? $order->promo_discount ?? 0);
+        $insuranceAmount = (float) ($order->meta['insurance_amount'] ?? 0);
+        $serviceFee = max(0, (float) $order->total - (float) $order->subtotal + $discount - $insuranceAmount);
 
         return $this->success([
             'order' => [
@@ -293,34 +367,43 @@ class OrdersController extends BaseController
                 'order_number' => $order->order_number,
                 'status' => $order->status,
                 'payment_status' => $order->payment_status,
-                'subtotal' => $order->subtotal,
-                'commission_amount' => $order->commission_amount,
-                'total' => $order->total,
-                'currency' => $order->currency,
-                'customer' => [
-                    'email' => $order->customer_email,
-                    'name' => $order->customer_name,
-                    'phone' => $order->customer_phone,
-                ],
-                'items' => $order->items->map(function ($item) {
-                    return [
-                        'id' => $item->id,
-                        'name' => $item->name,
-                        'quantity' => $item->quantity,
-                        'unit_price' => $item->unit_price,
-                        'total' => $item->total,
-                    ];
-                }),
-                'tickets' => $order->status === 'completed' ? $order->tickets->map(function ($ticket) {
+                'subtotal' => number_format((float) $order->subtotal, 2, '.', ''),
+                'service_fee' => number_format($serviceFee, 2, '.', ''),
+                'insurance_amount' => number_format($insuranceAmount, 2, '.', ''),
+                'discount' => number_format($discount, 2, '.', ''),
+                'total' => number_format((float) $order->total, 2, '.', ''),
+                'currency' => $order->currency ?? 'RON',
+                'event' => $eventData,
+                'items' => $items,
+                'tickets' => $order->tickets->map(function ($ticket) {
+                    $ticketType = $ticket->marketplaceTicketType ?? $ticket->ticketType;
+                    $seatDetails = $ticket->getSeatDetails();
+                    $seatData = null;
+                    if ($seatDetails || $ticket->seat_label) {
+                        $seatData = [
+                            'label' => $ticket->seat_label,
+                            'section_name' => $seatDetails['section_name'] ?? null,
+                            'row_label' => $seatDetails['row_label'] ?? null,
+                            'seat_number' => $seatDetails['seat_number'] ?? null,
+                        ];
+                    }
                     return [
                         'id' => $ticket->id,
+                        'code' => $ticket->code,
                         'barcode' => $ticket->barcode,
+                        'type' => $ticketType?->name,
+                        'price' => (float) ($ticketType?->price ?? $ticket->price ?? 0),
                         'status' => $ticket->status,
-                        'ticket_type' => $ticket->ticketType?->name,
+                        'attendee_name' => $ticket->attendee_name,
+                        'seat' => $seatData,
+                        'has_insurance' => (bool) ($ticket->meta['has_insurance'] ?? false),
                     ];
-                }) : [],
+                }),
+                'customer_email' => $order->customer_email,
+                'customer_name' => $order->customer_name,
+                'payment_method' => $paymentMethod,
+                'can_download_tickets' => in_array($order->status, ['completed', 'paid', 'confirmed']) || $order->payment_status === 'paid',
                 'created_at' => $order->created_at->toIso8601String(),
-                'expires_at' => $order->expires_at?->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),
             ],
         ]);
