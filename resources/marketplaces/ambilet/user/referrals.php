@@ -201,10 +201,8 @@ const ReferralsPage = {
 
     buildReferralLink(code) {
         if (!code) return '';
-        // Use current domain for the referral link
         const domain = window.location.hostname;
-        return domain + '/?ref=' + code;
-        console.log('Built referral link:', domain + '/?ref=' + code);
+        return 'https://' + domain + '/?ref=' + code;
     },
 
     updateStats(stats) {

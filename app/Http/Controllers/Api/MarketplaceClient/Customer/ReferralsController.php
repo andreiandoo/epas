@@ -385,6 +385,8 @@ class ReferralsController extends BaseController
     protected function buildReferralLink($client, string $code): string
     {
         $domain = $client->domain ?? 'bilete.online';
+        $domain = preg_replace('#^https?://#', '', $domain);
+        $domain = rtrim($domain, '/');
         return 'https://' . $domain . '/?ref=' . $code;
     }
 
