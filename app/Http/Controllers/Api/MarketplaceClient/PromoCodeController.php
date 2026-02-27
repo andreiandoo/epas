@@ -130,13 +130,19 @@ class PromoCodeController extends BaseController
             return $this->error("Minimum purchase of {$couponCode->min_purchase_amount} required", 400);
         }
 
-        // Check per-user usage limit
-        if (!empty($validated['customer_email'])) {
+        // Check per-user usage limit (direct query, avoid isValidForUser which re-runs isValid with wrong timezone)
+        if ($couponCode->max_uses_per_user && !empty($validated['customer_email'])) {
             $userId = MarketplaceCustomer::where('marketplace_client_id', $couponCode->marketplace_client_id)
                 ->where('email', $validated['customer_email'])
                 ->value('id');
-            if ($userId && !$couponCode->isValidForUser($userId)) {
-                return $this->error('You have already used this promo code the maximum number of times', 400);
+            if ($userId) {
+                $userUsages = $couponCode->redemptions()
+                    ->where('user_id', $userId)
+                    ->where('status', '!=', 'cancelled')
+                    ->count();
+                if ($userUsages >= $couponCode->max_uses_per_user) {
+                    return $this->error('You have already used this promo code the maximum number of times', 400);
+                }
             }
         }
 
