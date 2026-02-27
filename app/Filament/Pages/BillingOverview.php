@@ -198,25 +198,9 @@ class BillingOverview extends Page
 
                 $grossRevenue = (float) $grossRevenueQuery->sum('total');
 
-                // Commission: use pre-calculated commission_amount from orders
-                $commissionQuery = Order::where('marketplace_client_id', $client->id)
-                    ->whereIn('status', ['paid', 'confirmed', 'completed']);
-
-                if ($periodStart) {
-                    $commissionQuery->where('created_at', '>=', $periodStart);
-                }
-                if ($periodEnd) {
-                    $commissionQuery->where('created_at', '<=', $periodEnd->endOfDay());
-                }
-
-                $expectedAmount = (float) $commissionQuery->sum('commission_amount');
-
+                // Platform commission = gross revenue × client's commission rate
                 $commissionRate = $client->commission_rate ?? 0;
-
-                // If no pre-calculated commission, fall back to rate calculation
-                if ($expectedAmount <= 0 && $commissionRate > 0) {
-                    $expectedAmount = round($grossRevenue * ($commissionRate / 100), 2);
-                }
+                $expectedAmount = round($grossRevenue * ($commissionRate / 100), 2);
 
                 $daysUntilBilling = $periodEnd ? $today->diffInDays($periodEnd, false) : null;
 
@@ -416,18 +400,9 @@ class BillingOverview extends Page
             ->where('created_at', '<=', $periodEnd->endOfDay())
             ->sum('total');
 
-        // Use pre-calculated commission_amount from orders
-        $subtotal = (float) Order::where('marketplace_client_id', $client->id)
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('created_at', '>=', $periodStart)
-            ->where('created_at', '<=', $periodEnd->endOfDay())
-            ->sum('commission_amount');
-
-        // Fallback to rate-based calculation
+        // Platform commission = gross revenue × client's commission rate
         $commissionRate = $client->commission_rate ?? 0;
-        if ($subtotal <= 0 && $commissionRate > 0) {
-            $subtotal = round($grossRevenue * ($commissionRate / 100), 2);
-        }
+        $subtotal = round($grossRevenue * ($commissionRate / 100), 2);
 
         if ($subtotal <= 0) {
             Notification::make()

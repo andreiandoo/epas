@@ -311,9 +311,9 @@ class MarketplaceClientResource extends Resource
                                         ),
 
                                     Forms\Components\Placeholder::make('total_commission')
-                                        ->label('Total Commission (All Time)')
+                                        ->label('Total Platform Commission (All Time)')
                                         ->content(fn ($record) => $record
-                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed', 'completed'])->sum('commission_amount'), 2) . ' ' . ($record->currency ?? 'RON')
+                                            ? number_format((float) \App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed', 'completed'])->sum('total') * (($record->commission_rate ?? 0) / 100), 2) . ' ' . ($record->currency ?? 'RON')
                                             : '0.00'
                                         ),
 

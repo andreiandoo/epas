@@ -149,15 +149,11 @@ class ClientEarnings extends Page
         // Calculate totals
         if ($this->type === 'marketplace') {
             $this->totalRevenue = (float) $ordersRaw->sum('total');
-            $this->totalCommission = (float) $ordersRaw->sum('commission_amount');
-            // Fallback if commission not pre-calculated
-            if ($this->totalCommission <= 0 && ($this->client['commission_rate'] ?? 0) > 0) {
-                $this->totalCommission = round($this->totalRevenue * (($this->client['commission_rate'] ?? 0) / 100), 2);
-            }
         } else {
             $this->totalRevenue = $ordersRaw->sum('total_cents') / 100;
-            $this->totalCommission = round($this->totalRevenue * (($this->client['commission_rate'] ?? 0) / 100), 2);
         }
+        // Platform commission = gross revenue × client's commission rate
+        $this->totalCommission = round($this->totalRevenue * (($this->client['commission_rate'] ?? 0) / 100), 2);
 
         $this->orderCount = $ordersRaw->count();
 
@@ -167,9 +163,8 @@ class ClientEarnings extends Page
                 ? (float) $order->total
                 : ($order->total_cents / 100);
 
-            $commission = $this->type === 'marketplace'
-                ? (float) ($order->commission_amount ?? 0)
-                : round($revenue * (($this->client['commission_rate'] ?? 0) / 100), 2);
+            // Platform commission = order revenue × client's commission rate
+            $commission = round($revenue * (($this->client['commission_rate'] ?? 0) / 100), 2);
 
             return [
                 'id' => $order->id,
@@ -188,14 +183,11 @@ class ClientEarnings extends Page
             ->map(function ($dayOrders, $date) {
                 if ($this->type === 'marketplace') {
                     $revenue = (float) $dayOrders->sum('total');
-                    $commission = (float) $dayOrders->sum('commission_amount');
-                    if ($commission <= 0 && ($this->client['commission_rate'] ?? 0) > 0) {
-                        $commission = round($revenue * (($this->client['commission_rate'] ?? 0) / 100), 2);
-                    }
                 } else {
                     $revenue = $dayOrders->sum('total_cents') / 100;
-                    $commission = round($revenue * (($this->client['commission_rate'] ?? 0) / 100), 2);
                 }
+                // Platform commission = day revenue × client's commission rate
+                $commission = round($revenue * (($this->client['commission_rate'] ?? 0) / 100), 2);
 
                 return [
                     'date' => $date,
