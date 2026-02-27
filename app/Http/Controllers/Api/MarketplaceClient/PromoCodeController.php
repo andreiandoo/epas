@@ -178,6 +178,11 @@ class PromoCodeController extends BaseController
 
         return $this->success([
             'valid' => true,
+            // Flat fields for cart.js compatibility
+            'discount_type' => $couponCode->discount_type === 'percentage' ? 'percentage' : 'fixed',
+            'discount_value' => (float) $couponCode->discount_value,
+            'discount_amount' => $discount,
+            // Nested for detailed consumers
             'promo_code' => [
                 'id' => $couponCode->id,
                 'code' => $couponCode->code,
