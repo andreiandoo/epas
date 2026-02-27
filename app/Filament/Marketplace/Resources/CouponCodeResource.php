@@ -140,7 +140,7 @@ class CouponCodeResource extends Resource
                                     $query->where('marketplace_organizer_id', $organizerId);
                                 }
 
-                                return $query->orderBy('start_date', 'desc')
+                                return $query->orderBy('event_date', 'desc')
                                     ->get()
                                     ->mapWithKeys(fn ($event) => [
                                         $event->id => $event->getTranslation('title', app()->getLocale()) ?? $event->title,
