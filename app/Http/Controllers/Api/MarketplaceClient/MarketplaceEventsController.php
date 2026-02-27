@@ -1302,6 +1302,8 @@ class MarketplaceEventsController extends BaseController
                 'color' => $section->color_hex,
                 'color_hex' => $section->color_hex,
                 'seat_color' => $section->seat_color,
+                'background_color' => $section->background_color,
+                'corner_radius' => $section->corner_radius,
                 'x' => $section->x_position,
                 'y' => $section->y_position,
                 'width' => $section->width,

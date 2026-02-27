@@ -2459,6 +2459,69 @@ const EventPage = {
     },
 
     /**
+     * Render a decorative section (text, line, polygon) as SVG markup
+     * Used by both renderSeatingMap and renderSeatingMapAllSections
+     */
+    renderDecorativeSectionSvg(section) {
+        var metadata = section.metadata || {};
+        var shape = metadata.shape || 'polygon';
+        var opacity = parseFloat(metadata.opacity) || 0.3;
+        var color = section.background_color || section.color_hex || '#10B981';
+
+        var svg = '';
+
+        if (shape === 'polygon' && metadata.points) {
+            // Draw filled polygon from stored points
+            var points = metadata.points;
+            var minX = section.x;
+            var minY = section.y;
+
+            // Convert absolute points to relative (offset by section position)
+            var svgPoints = '';
+            for (var i = 0; i < points.length; i += 2) {
+                var px = points[i] - minX;
+                var py = points[i + 1] - minY;
+                svgPoints += px + ',' + py + ' ';
+            }
+
+            // Position group at section x,y so relative points align correctly
+            svg += '<g transform="translate(' + section.x + ',' + section.y + ')">';
+            svg += '<polygon points="' + svgPoints.trim() + '" fill="' + color + '" opacity="' + opacity + '" stroke="' + color + '" stroke-width="1"/>';
+
+            // Label inside polygon if it has a name
+            if (metadata.label || section.name) {
+                svg += '<text x="10" y="20" font-size="12" font-family="Arial" fill="#1f2937" opacity="0.8">' + (metadata.label || section.name) + '</text>';
+            }
+            svg += '</g>';
+
+        } else if (shape === 'text') {
+            // Draw text label
+            var fontSize = parseInt(metadata.fontSize) || 16;
+            var fontFamily = metadata.fontFamily || 'Arial';
+            var fontWeight = metadata.fontWeight || 'normal';
+            var textContent = metadata.text || section.name || 'Text';
+
+            svg += '<text x="' + section.x + '" y="' + (section.y + fontSize) + '" font-size="' + fontSize + '" font-family="' + fontFamily + '" font-weight="' + fontWeight + '" fill="' + color + '">' + textContent + '</text>';
+
+        } else if (shape === 'line') {
+            // Draw line from stored points
+            var linePoints = metadata.points || [0, 0, 100, 0];
+            var strokeWidth = parseInt(metadata.strokeWidth) || 2;
+            var strokeColor = metadata.strokeColor || color;
+
+            // Points are relative to section position
+            var x1 = section.x + (linePoints[0] || 0);
+            var y1 = section.y + (linePoints[1] || 0);
+            var x2 = section.x + (linePoints[2] || 100);
+            var y2 = section.y + (linePoints[3] || 0);
+
+            svg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '" stroke-linecap="round"/>';
+        }
+
+        return svg;
+    },
+
+    /**
      * Render the seating map SVG
      */
     renderSeatingMap(allowedSectionIds, ticketTypeId) {
@@ -2563,6 +2626,13 @@ const EventPage = {
 
                 svg += '</g>'; // Close section group
                 return; // Skip rest of section rendering for icons
+            }
+
+            // Handle DECORATIVE sections (text, line, polygon)
+            if (section.section_type === 'decorative') {
+                svg += self.renderDecorativeSectionSvg(section);
+                svg += '</g>';
+                return;
             }
 
             // Seat size from section metadata (matching admin designer)
@@ -2755,6 +2825,13 @@ const EventPage = {
                 var labelX = iconX + (iconSize / 2);
                 svg += '<text x="' + labelX + '" y="' + labelY + '" text-anchor="middle" font-size="10" font-weight="500" fill="#1F2937" style="text-shadow: 0 0 3px white, 0 0 3px white;">' + (section.icon_label || section.name) + '</text>';
 
+                svg += '</g>';
+                return;
+            }
+
+            // Handle DECORATIVE sections (text, line, polygon)
+            if (section.section_type === 'decorative') {
+                svg += self.renderDecorativeSectionSvg(section);
                 svg += '</g>';
                 return;
             }
