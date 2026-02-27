@@ -531,7 +531,7 @@ const AmbiletEventCard = {
             date: date,
             day: date ? date.getDate() : '',
             month: date ? this.MONTHS[date.getMonth()] : '',
-            time: apiEvent.start_time || (date ? String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0') : '20:00'),
+            time: apiEvent.start_time || (rawDate && typeof rawDate === 'string' && rawDate.includes('T') ? rawDate.split('T')[1].substring(0, 5) : (date ? String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0') : '20:00')),
             venueName: venueName,
             venueCity: venueCity,
             location: venueCity ? (venueName) : venueName, // + ', ' + venueCity if both exist

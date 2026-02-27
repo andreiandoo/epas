@@ -137,6 +137,9 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/venues' || endpoint.includes('/organizer/venues?')) return 'organizer.venues';
         if (endpoint === '/organizer/artists' || endpoint.includes('/organizer/artists?')) return 'organizer.artists';
 
+        // Newsletter
+        if (endpoint === '/newsletter/subscribe') return 'newsletter.subscribe';
+
         // Public endpoints
         if (endpoint.includes('/search')) return 'search';
         if (endpoint.includes('/marketplace-events/categories')) return 'categories';
