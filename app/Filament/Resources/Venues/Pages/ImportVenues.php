@@ -62,7 +62,7 @@ class ImportVenues extends Page implements HasForms
 
                         FC\Toggle::make('update_existing')
                             ->label('Update Existing Venues')
-                            ->helperText('If enabled, existing venues (matched by slug) will be updated with new data')
+                            ->helperText('If enabled, existing venues (matched by slug column from CSV) will be updated with new data')
                             ->default(true)
                             ->live()
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
@@ -73,7 +73,7 @@ class ImportVenues extends Page implements HasForms
 
                         FC\Toggle::make('skip_existing')
                             ->label('Skip Existing Venues')
-                            ->helperText('If enabled, only new venues will be imported — existing venues (matched by slug) are skipped entirely')
+                            ->helperText('If enabled, only new venues will be imported — existing venues (matched by slug column from CSV) are skipped. Rows without a slug column always create new venues.')
                             ->default(false)
                             ->live()
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
@@ -310,7 +310,9 @@ class ImportVenues extends Page implements HasForms
 
     protected function processVenueRow(array $data, bool $updateExisting, bool $downloadImages): string
     {
-        $slug = $data['slug'] ?? Str::slug($data['name']);
+        // Only use explicit slug from CSV for matching — never auto-generate for matching
+        $csvSlug = !empty($data['slug']) ? trim($data['slug']) : null;
+        $slug = $csvSlug ?? Str::slug($data['name']);
 
         // Build translatable name
         $nameEn = $data['name_en'] ?? $data['name(en)'] ?? $data['name'] ?? '';
@@ -415,30 +417,35 @@ class ImportVenues extends Page implements HasForms
         $venueTypeSlugs = $this->parsePipeSeparatedSlugs($data['venue_types'] ?? '');
         $venueCategorySlugs = $this->parsePipeSeparatedSlugs($data['venue_categories'] ?? '');
 
-        // Check if exists by slug
-        $existing = Venue::where('slug', $slug)->first();
+        // Only match existing venues when CSV provides an explicit slug
+        if ($csvSlug) {
+            $existing = Venue::where('slug', $csvSlug)->first();
 
-        if ($existing) {
-            if ($updateExisting) {
-                $existing->update(array_filter($venueData, fn($v) => $v !== null));
+            if ($existing) {
+                if ($updateExisting) {
+                    $existing->update(array_filter($venueData, fn($v) => $v !== null));
 
-                if (!empty($venueTypeSlugs)) {
-                    $typeIds = VenueType::whereIn('slug', $venueTypeSlugs)->pluck('id')->toArray();
-                    if (!empty($typeIds)) {
-                        $existing->venueTypes()->sync($typeIds);
+                    if (!empty($venueTypeSlugs)) {
+                        $typeIds = VenueType::whereIn('slug', $venueTypeSlugs)->pluck('id')->toArray();
+                        if (!empty($typeIds)) {
+                            $existing->venueTypes()->sync($typeIds);
+                        }
                     }
-                }
 
-                if (!empty($venueCategorySlugs)) {
-                    $catIds = VenueCategory::whereIn('slug', $venueCategorySlugs)->pluck('id')->toArray();
-                    if (!empty($catIds)) {
-                        $existing->coreCategories()->sync($catIds);
+                    if (!empty($venueCategorySlugs)) {
+                        $catIds = VenueCategory::whereIn('slug', $venueCategorySlugs)->pluck('id')->toArray();
+                        if (!empty($catIds)) {
+                            $existing->coreCategories()->sync($catIds);
+                        }
                     }
-                }
 
-                return 'updated';
+                    return 'updated';
+                }
+                return 'skipped';
             }
-            return 'skipped';
+        } else {
+            // No slug in CSV — leave blank so Venue::booted() auto-generates a unique one
+            $venueData['slug'] = '';
         }
 
         $venue = Venue::create($venueData);
