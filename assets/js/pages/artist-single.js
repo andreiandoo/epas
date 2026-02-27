@@ -117,6 +117,21 @@ const ArtistPage = {
             profileSection.style.display = 'none';
         }
 
+        // Hide Spotify section
+        var spotifySection = document.getElementById('spotifySection');
+        if (spotifySection) {
+            spotifySection.closest('.px-6')?.style && (spotifySection.closest('.px-6').style.display = 'none');
+        }
+
+        // Hide Similar Artists section
+        var similarArtists = document.getElementById('similarArtists');
+        if (similarArtists) {
+            var similarSection = similarArtists.closest('section');
+            if (similarSection && similarSection.closest('.px-6')) {
+                similarSection.closest('.px-6').style.display = 'none';
+            }
+        }
+
         // Update page title
         document.title = 'Artist negăsit - ' + (window.AMBILET_CONFIG?.SITE_NAME || 'Ambilet');
     },
@@ -151,6 +166,21 @@ const ArtistPage = {
         var profileSection = document.getElementById('profile-section');
         if (profileSection) {
             profileSection.style.display = 'none';
+        }
+
+        // Hide Spotify section
+        var spotifySection = document.getElementById('spotifySection');
+        if (spotifySection) {
+            spotifySection.closest('.px-6')?.style && (spotifySection.closest('.px-6').style.display = 'none');
+        }
+
+        // Hide Similar Artists section
+        var similarArtists = document.getElementById('similarArtists');
+        if (similarArtists) {
+            var similarSection = similarArtists.closest('section');
+            if (similarSection && similarSection.closest('.px-6')) {
+                similarSection.closest('.px-6').style.display = 'none';
+            }
         }
 
         // Update page title

@@ -661,7 +661,7 @@ function fetchTrendingEventsFromAPI(): array {
     require_once __DIR__ . '/../includes/config.php';
 
     // First try featured events
-    $apiUrl = API_BASE_URL . '/events/featured?type=any&limit=4';
+    $apiUrl = API_BASE_URL . '/events/featured?type=any&limit=3';
 
     $context = stream_context_create([
         'http' => [
@@ -691,7 +691,7 @@ function fetchTrendingEventsFromAPI(): array {
 
     // If no featured events, try upcoming events sorted by date
     if (empty($events)) {
-        $apiUrl = API_BASE_URL . '/events?per_page=4&sort=date_asc';
+        $apiUrl = API_BASE_URL . '/events?per_page=3&sort=date_asc';
 
         $response = @file_get_contents($apiUrl, false, $context);
 

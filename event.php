@@ -310,6 +310,11 @@ require_once __DIR__ . '/includes/head.php';
                             </div>
                         </div>
 
+                        <!-- Empty State -->
+                        <div id="emptyCart" class="p-4 text-center border-t border-border">
+                            <p class="text-sm text-muted">Selectează cel puțin un bilet pentru a continua</p>
+                        </div>
+
                         <!-- Ticket Terms Section -->
                         <div id="ticket-terms-section" class="mb-4">
                             <div id="ticket-terms-content" class="p-4 text-xs prose text-blue-800 prose-slate max-w-none">
@@ -317,10 +322,7 @@ require_once __DIR__ . '/includes/head.php';
                             </div>
                         </div>
                         
-                        <!-- Empty State -->
-                        <div id="emptyCart" class="p-4 text-center border-t border-border">
-                            <p class="text-sm text-muted">Selectează cel puțin un bilet pentru a continua</p>
-                        </div>
+                        
                     </div>
                 </div>
             </div>
@@ -388,6 +390,12 @@ require_once __DIR__ . '/includes/head.php';
         </div>
         <!-- Drawer Content (will be populated by JS) -->
         <div id="drawerTicketTypes" class="p-4 space-y-2 overflow-y-auto max-h-[50vh]"></div>
+        <!-- Drawer Ticket Terms -->
+        <div id="drawer-ticket-terms-section" class="px-4" style="display: none;">
+            <div id="drawer-ticket-terms-content" class="p-4 text-xs prose text-blue-800 prose-slate max-w-none">
+                <!-- Loaded dynamically by JS -->
+            </div>
+        </div>
         <!-- Drawer Footer with summary -->
         <div id="drawerCartSummary" class="p-4 border-t border-border bg-surface/50" style="display: none;">
             <!-- Points Earned -->
