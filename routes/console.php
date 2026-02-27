@@ -694,10 +694,13 @@ Schedule::command('marketplace:deactivate-expired-featuring')
 */
 
 // Deactivate ticket types that have passed their active_until date (every minute)
+// Note: active_until is stored in Europe/Bucharest time (from Filament DateTimePicker),
+// so we must compare with now() in the same timezone
 Schedule::call(function () {
+    $now = now('Europe/Bucharest');
     $count = \App\Models\TicketType::where('status', 'active')
         ->whereNotNull('active_until')
-        ->where('active_until', '<=', now())
+        ->where('active_until', '<=', $now)
         ->update(['status' => 'hidden']);
     if ($count > 0) {
         \Log::info("Auto-deactivated {$count} ticket types (active_until reached)");

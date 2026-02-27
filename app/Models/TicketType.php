@@ -180,7 +180,7 @@ class TicketType extends Model
         return $query->where('status', 'active')
             ->where(function ($q) {
                 $q->whereNull('active_until')
-                  ->orWhere('active_until', '>', now());
+                  ->orWhere('active_until', '>', now('Europe/Bucharest'));
             });
     }
 
