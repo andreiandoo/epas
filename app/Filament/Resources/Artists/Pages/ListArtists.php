@@ -2,8 +2,11 @@
 
 namespace App\Filament\Resources\Artists\Pages;
 
+use App\Filament\Exports\ArtistExporter;
 use App\Filament\Resources\Artists\ArtistResource;
 use Filament\Actions;
+use Filament\Actions\ExportAction;
+use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
@@ -50,6 +53,15 @@ class ListArtists extends ListRecords
                         ->success()
                         ->send();
                 }),
+
+            ExportAction::make()
+                ->exporter(ArtistExporter::class)
+                ->label('Export CSV')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('success')
+                ->chunkSize(500)
+                ->columnMapping(false)
+                ->formats([ExportFormat::Csv]),
         ];
     }
 }

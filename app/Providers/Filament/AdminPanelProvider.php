@@ -39,6 +39,7 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Amber,
             ])
             ->darkMode(condition: true)
+            ->databaseNotifications()
 
             // Auto-discover resources, pages, and widgets
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')

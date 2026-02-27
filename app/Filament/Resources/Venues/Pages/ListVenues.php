@@ -1,8 +1,11 @@
 <?php
 namespace App\Filament\Resources\Venues\Pages;
 
+use App\Filament\Exports\VenueExporter;
 use App\Filament\Resources\Venues\VenueResource;
 use Filament\Actions;
+use Filament\Actions\ExportAction;
+use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
@@ -64,6 +67,15 @@ class ListVenues extends ListRecords
                     // Delete uploaded file after import
                     Storage::disk('local')->delete($data['file']);
                 }),
+
+            ExportAction::make()
+                ->exporter(VenueExporter::class)
+                ->label('Export CSV')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('success')
+                ->chunkSize(500)
+                ->columnMapping(false)
+                ->formats([ExportFormat::Csv]),
         ];
     }
 }
