@@ -377,9 +377,9 @@ require_once __DIR__ . '/includes/head.php';
 
     <!-- Mobile Ticket Drawer -->
     <div id="ticketDrawerBackdrop" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden" onclick="closeTicketDrawer()"></div>
-    <div id="ticketDrawer" class="fixed bottom-0 left-0 right-0 z-[1000] overflow-hidden bg-white lg:hidden rounded-t-3xl max-h-[85vh]">
+    <div id="ticketDrawer" class="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col overflow-hidden bg-white lg:hidden rounded-t-3xl max-h-[85vh]">
         <!-- Drawer Header -->
-        <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-border">
+        <div class="flex items-center justify-between flex-shrink-0 p-4 bg-white border-b border-border">
             <div>
                 <h2 class="text-lg font-bold text-secondary">Selectează bilete</h2>
                 <p class="text-sm text-muted">Alege tipul și cantitatea</p>
@@ -388,12 +388,22 @@ require_once __DIR__ . '/includes/head.php';
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
-        <!-- Drawer Content (will be populated by JS) -->
-        <div id="drawerTicketTypes" class="p-4 space-y-2 overflow-y-auto max-h-[50vh]"></div>
-        <!-- Drawer Ticket Terms -->
-        <div id="drawer-ticket-terms-section" class="px-4" style="display: none;">
-            <div id="drawer-ticket-terms-content" class="p-4 text-xs prose text-blue-800 prose-slate max-w-none">
-                <!-- Loaded dynamically by JS -->
+        <!-- Scrollable area: ticket types + collapsible terms -->
+        <div class="flex-1 overflow-y-auto">
+            <!-- Drawer Content (will be populated by JS) -->
+            <div id="drawerTicketTypes" class="p-4 space-y-2"></div>
+            <!-- Drawer Ticket Terms (collapsible) -->
+            <div id="drawer-ticket-terms-section" class="px-4 pb-4" style="display: none;">
+                <button type="button" onclick="toggleDrawerTerms()" class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium transition-colors rounded-xl text-primary bg-primary/5 hover:bg-primary/10">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Vezi termeni și condiții
+                    </span>
+                    <svg id="drawer-terms-chevron" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="drawer-ticket-terms-content" class="hidden p-4 mt-2 overflow-y-auto text-xs prose text-blue-800 border prose-slate max-w-none rounded-xl border-primary/10 bg-primary/5 max-h-40">
+                    <!-- Loaded dynamically by JS -->
+                </div>
             </div>
         </div>
         <!-- Drawer Footer with summary -->
@@ -421,9 +431,9 @@ require_once __DIR__ . '/includes/head.php';
                     <span id="drawerTotalPrice" class="text-primary">0 lei</span>
                 </div>
             </div>
-            <button onclick="EventPage.addToCart(); closeTicketDrawer();" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                Adaugă în coș
+            <button onclick="closeTicketDrawer(); EventPage.handleCheckout();" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                Cumpără bilete
             </button>
         </div>
         <div id="drawerEmptyCart" class="p-4 text-center border-t border-border">
@@ -444,6 +454,15 @@ require_once __DIR__ . '/includes/head.php';
         document.getElementById('ticketDrawerBackdrop').classList.remove('open');
         document.getElementById('ticketDrawer').classList.remove('open');
         document.body.style.overflow = '';
+    }
+
+    function toggleDrawerTerms() {
+        var content = document.getElementById('drawer-ticket-terms-content');
+        var chevron = document.getElementById('drawer-terms-chevron');
+        if (!content) return;
+        var isHidden = content.classList.contains('hidden');
+        content.classList.toggle('hidden', !isHidden);
+        if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
     }
 
     // Sync drawer content with main ticket selection

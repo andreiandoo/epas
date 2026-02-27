@@ -278,8 +278,9 @@ $scriptsExtra = <<<'SCRIPTS'
     .tickets-carousel { opacity: 0; transform: translateY(30px); animation: showCarousel 0.8s ease forwards; animation-delay: 2.5s; }
     @keyframes showCarousel { to { opacity: 1; transform: translateY(0); } }
 
-    .tickets-scroll { display: flex; gap: 16px; overflow-x: visible; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding: 20px 0; scrollbar-width: none; }
+    .tickets-scroll { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding: 20px 0; scrollbar-width: none; cursor: grab; }
     .tickets-scroll::-webkit-scrollbar { display: none; }
+    .tickets-scroll.dragging { cursor: grabbing; scroll-snap-type: none; user-select: none; }
 
     .ticket-card { flex-shrink: 0; scroll-snap-align: center; width: 280px; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.12); transition: transform 0.3s ease, box-shadow 0.3s ease; }
     .ticket-card:hover { transform: translateY(-5px); box-shadow: 0 20px 50px rgba(165, 28, 48, 0.2); }
@@ -683,6 +684,33 @@ const ThankYouPage = {
                 const cardWidth = container.querySelector('.ticket-card')?.offsetWidth + 16 || 296;
                 container.scrollTo({ left: index * cardWidth, behavior: 'smooth' });
             });
+        });
+
+        // Mouse drag support for desktop
+        let isDragging = false, startX = 0, scrollStart = 0;
+        container.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.pageX;
+            scrollStart = container.scrollLeft;
+            container.classList.add('dragging');
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            container.scrollLeft = scrollStart - (e.pageX - startX);
+        });
+        document.addEventListener('mouseup', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            container.classList.remove('dragging');
+        });
+
+        // Keyboard arrow support
+        container.setAttribute('tabindex', '0');
+        container.addEventListener('keydown', (e) => {
+            const cardWidth = container.querySelector('.ticket-card')?.offsetWidth + 16 || 296;
+            if (e.key === 'ArrowRight') { e.preventDefault(); container.scrollBy({ left: cardWidth, behavior: 'smooth' }); }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); container.scrollBy({ left: -cardWidth, behavior: 'smooth' }); }
         });
     },
 
