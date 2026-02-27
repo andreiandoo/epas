@@ -134,18 +134,21 @@ class CheckoutController extends BaseController
                 ->where('email', $validated['customer']['email'])
                 ->first();
 
+            $autoCreatedPassword = null;
             if (!$customer) {
+                $plainPassword = $validated['customer']['password'] ?? null;
                 $customer = MarketplaceCustomer::create([
                     'marketplace_client_id' => $client->id,
                     'email' => $validated['customer']['email'],
                     'first_name' => $validated['customer']['first_name'],
                     'last_name' => $validated['customer']['last_name'],
                     'phone' => $validated['customer']['phone'] ?? null,
-                    'password' => isset($validated['customer']['password'])
-                        ? Hash::make($validated['customer']['password'])
-                        : null,
+                    'password' => $plainPassword ? Hash::make($plainPassword) : null,
                     'status' => 'active',
                 ]);
+                if ($plainPassword) {
+                    $autoCreatedPassword = $plainPassword;
+                }
             } else {
                 // Update customer details
                 $customer->update([
@@ -153,6 +156,12 @@ class CheckoutController extends BaseController
                     'last_name' => $validated['customer']['last_name'],
                     'phone' => $validated['customer']['phone'] ?? $customer->phone,
                 ]);
+                // If customer exists but has no password and one was provided, set it
+                if (!$customer->password && !empty($validated['customer']['password'])) {
+                    $plainPassword = $validated['customer']['password'];
+                    $customer->update(['password' => Hash::make($plainPassword)]);
+                    $autoCreatedPassword = $plainPassword;
+                }
             }
 
             // Process all cart items into a single order (supports multi-event carts)
@@ -503,6 +512,22 @@ class CheckoutController extends BaseController
             }
 
             DB::commit();
+
+            // Send account created email with password (after commit, queued)
+            if ($autoCreatedPassword) {
+                try {
+                    $customer->notify(new \App\Notifications\MarketplaceAccountCreatedNotification(
+                        $autoCreatedPassword,
+                        $client->domain,
+                        $client->name
+                    ));
+                } catch (\Exception $e) {
+                    Log::channel('marketplace')->warning('Failed to send account created email', [
+                        'customer_id' => $customer->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
             // Build response (keep orders array format for backwards compatibility)
             $orders = [[
