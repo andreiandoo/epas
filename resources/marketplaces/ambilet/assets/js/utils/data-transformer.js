@@ -116,7 +116,7 @@ const AmbiletDataTransformer = {
             day: eventDate ? eventDate.getDate() : '',
             month: eventDate ? this.MONTHS_SHORT[eventDate.getMonth()] : '',
             weekday: eventDate ? this.WEEKDAYS[eventDate.getDay()] : '',
-            time: apiEvent.start_time || (eventDate ? this.formatTime(eventDate) : ''),
+            time: apiEvent.start_time || this.extractTimeFromIso(rawDate) || (eventDate ? this.formatTime(eventDate) : ''),
 
             // Date range for multi-day events (festivals)
             durationMode: durationMode,
@@ -145,6 +145,9 @@ const AmbiletDataTransformer = {
             isLowStock: isLowStock,
             isFeatured: isFeatured,
             hasAvailability: apiEvent.has_availability !== false && !isSoldOut,
+
+            // Artists
+            artists: apiEvent.artists || [],
 
             // Original data for anything else needed
             _raw: apiEvent
@@ -278,6 +281,17 @@ const AmbiletDataTransformer = {
 
         // Different year
         return startDay + ' ' + startMonth + ' ' + startYear + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
+    },
+
+    /**
+     * Extract time (HH:MM) from ISO date string without timezone conversion.
+     * E.g. "2026-02-28T20:00:00.000000Z" → "20:00"
+     */
+    extractTimeFromIso(rawDate) {
+        if (!rawDate || typeof rawDate !== 'string' || !rawDate.includes('T')) return '';
+        const timePart = rawDate.split('T')[1];
+        if (!timePart) return '';
+        return timePart.substring(0, 5);
     },
 
     /**
