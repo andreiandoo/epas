@@ -94,6 +94,14 @@ require_once __DIR__ . '/includes/header.php';
                                 <label class="block mb-2 text-sm font-medium text-secondary">Telefon *</label>
                                 <input type="tel" id="buyer-phone" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
                             </div>
+                            <!-- Auto-create account checkbox (guests only) -->
+                            <div id="create-account-row" class="hidden md:col-span-2">
+                                <label class="flex items-center gap-3 cursor-pointer select-none">
+                                    <input type="checkbox" id="createAccountCheckbox" class="w-5 h-5 border-2 rounded accent-primary border-border">
+                                    <span class="text-sm text-secondary">Creează un cont automat folosind datele de mai sus</span>
+                                </label>
+                                <p class="mt-1 ml-8 text-xs text-muted">Vei primi parola pe email după finalizarea comenzii</p>
+                            </div>
                         </div>
                     </div>
 
@@ -722,6 +730,7 @@ const CheckoutPage = {
     prefillBuyerInfo() {
         const user = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getUser() : null;
         const loginBtn = document.getElementById('guest-login-btn');
+        const createAccountRow = document.getElementById('create-account-row');
 
         if (user) {
             // User is logged in - prefill fields
@@ -730,15 +739,17 @@ const CheckoutPage = {
             document.getElementById('buyer-email').value = user.email || '';
             document.getElementById('buyer-email-confirm').value = user.email || '';
             document.getElementById('buyer-phone').value = user.phone || '';
-            // Hide login button
+            // Hide login button and create account checkbox
             if (loginBtn) loginBtn.classList.add('hidden');
             loginBtn?.classList.remove('flex');
+            if (createAccountRow) createAccountRow.classList.add('hidden');
         } else {
-            // Guest - show login button
+            // Guest - show login button and create account checkbox
             if (loginBtn) {
                 loginBtn.classList.remove('hidden');
                 loginBtn.classList.add('flex');
             }
+            if (createAccountRow) createAccountRow.classList.remove('hidden');
         }
 
         // Add email confirmation validation on blur
@@ -792,12 +803,14 @@ const CheckoutPage = {
                     document.getElementById('buyer-phone').value = user.phone || '';
                 }
 
-                // Hide login button
+                // Hide login button and create account checkbox
                 const loginBtn = document.getElementById('guest-login-btn');
                 if (loginBtn) {
                     loginBtn.classList.add('hidden');
                     loginBtn.classList.remove('flex');
                 }
+                const createAccountRow = document.getElementById('create-account-row');
+                if (createAccountRow) createAccountRow.classList.add('hidden');
             } else {
                 AmbiletNotifications.error(result.message || 'Email sau parola incorectă');
             }
@@ -1199,6 +1212,16 @@ const CheckoutPage = {
             email: document.getElementById('buyer-email').value.trim(),
             phone: document.getElementById('buyer-phone').value.trim()
         };
+
+        // Auto-create account if checkbox is checked (guest only)
+        const createAccountCheckbox = document.getElementById('createAccountCheckbox');
+        if (createAccountCheckbox && createAccountCheckbox.checked) {
+            // Generate a random 12-char password
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+            let password = '';
+            for (let i = 0; i < 12; i++) password += chars.charAt(Math.floor(Math.random() * chars.length));
+            customer.password = password;
+        }
 
         const beneficiaries = this.getBeneficiaries();
         const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value || 'card';
