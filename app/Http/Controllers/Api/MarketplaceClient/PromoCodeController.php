@@ -99,9 +99,24 @@ class PromoCodeController extends BaseController
         $eventId = (int) $validated['event_id'];
         $cartTotal = (float) $validated['cart_total'];
 
-        // Check basic validity (status, dates, usage limits)
-        if (!$couponCode->isValid()) {
-            return $this->error('Promo code is not active or has expired', 400);
+        // Check status
+        if ($couponCode->status !== 'active') {
+            return $this->error('Promo code is not active (status: ' . $couponCode->status . ')', 400);
+        }
+
+        // Check start date
+        if ($couponCode->starts_at && $couponCode->starts_at->isFuture()) {
+            return $this->error('Promo code has not started yet', 400);
+        }
+
+        // Check expiry date
+        if ($couponCode->expires_at && $couponCode->expires_at->isPast()) {
+            return $this->error('Promo code has expired', 400);
+        }
+
+        // Check usage limits
+        if ($couponCode->max_uses_total && $couponCode->current_uses >= $couponCode->max_uses_total) {
+            return $this->error('Promo code has reached its usage limit', 400);
         }
 
         // Check time restrictions (day of week, hours)
