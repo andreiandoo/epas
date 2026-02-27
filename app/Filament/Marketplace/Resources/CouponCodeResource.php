@@ -4,11 +4,16 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\CouponCodeResource\Pages;
 use App\Models\Coupon\CouponCode;
+use App\Models\Event;
+use App\Models\MarketplaceOrganizer;
+use App\Models\TicketType;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Actions;
@@ -93,6 +98,91 @@ class CouponCodeResource extends Resource
                             ])
                             ->default('active')
                             ->required(),
+                    ])->columns(3),
+
+                SC\Section::make('Event & Ticket Targeting')
+                    ->schema([
+                        Forms\Components\Select::make('marketplace_organizer_id')
+                            ->label('Organizer')
+                            ->options(function () use ($marketplace) {
+                                return MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id');
+                            })
+                            ->searchable()
+                            ->preload()
+                            ->dehydrated(false)
+                            ->live()
+                            ->afterStateUpdated(function (Set $set) {
+                                $set('applicable_events', []);
+                                $set('applicable_ticket_types', []);
+                            })
+                            ->afterStateHydrated(function (Set $set, $record) {
+                                if ($record && !empty($record->applicable_events)) {
+                                    $organizerId = Event::whereIn('id', $record->applicable_events)
+                                        ->value('marketplace_organizer_id');
+                                    if ($organizerId) {
+                                        $set('marketplace_organizer_id', $organizerId);
+                                    }
+                                }
+                            }),
+
+                        Forms\Components\Select::make('applicable_events')
+                            ->label('Events')
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->options(function (Get $get) use ($marketplace) {
+                                $query = Event::where('marketplace_client_id', $marketplace?->id);
+
+                                $organizerId = $get('marketplace_organizer_id');
+                                if ($organizerId) {
+                                    $query->where('marketplace_organizer_id', $organizerId);
+                                }
+
+                                return $query->orderBy('start_date', 'desc')
+                                    ->get()
+                                    ->mapWithKeys(fn ($event) => [
+                                        $event->id => $event->getTranslation('title', app()->getLocale()) ?? $event->title,
+                                    ]);
+                            })
+                            ->live()
+                            ->afterStateUpdated(function ($state, Set $set) {
+                                $set('applicable_ticket_types', []);
+
+                                if (!empty($state)) {
+                                    $organizerIds = Event::whereIn('id', $state)
+                                        ->distinct()
+                                        ->pluck('marketplace_organizer_id')
+                                        ->filter()
+                                        ->unique();
+
+                                    if ($organizerIds->count() === 1) {
+                                        $set('marketplace_organizer_id', $organizerIds->first());
+                                    }
+                                }
+                            })
+                            ->helperText('Select events this code applies to. Leave empty for all events.'),
+
+                        Forms\Components\Select::make('applicable_ticket_types')
+                            ->label('Ticket Types')
+                            ->multiple()
+                            ->searchable()
+                            ->options(function (Get $get) {
+                                $eventIds = $get('applicable_events');
+                                if (empty($eventIds)) {
+                                    return [];
+                                }
+
+                                return TicketType::whereIn('event_id', $eventIds)
+                                    ->with('event')
+                                    ->get()
+                                    ->mapWithKeys(fn ($tt) => [
+                                        $tt->id => ($tt->event?->getTranslation('title', app()->getLocale()) ?? '') . ' — ' . $tt->name,
+                                    ]);
+                            })
+                            ->visible(fn (Get $get) => !empty($get('applicable_events')))
+                            ->helperText('Leave empty to apply to all ticket types of selected events.'),
                     ])->columns(3),
 
                 SC\Section::make('Discount')
