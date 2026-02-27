@@ -1037,6 +1037,14 @@ switch ($action) {
         $endpoint = '/orders/' . urlencode($orderId) . '/payment-status';
         break;
 
+    // ==================== NEWSLETTER ====================
+
+    case 'newsletter.subscribe':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/newsletter/subscribe';
+        break;
+
     // ==================== CUSTOMER AUTH ====================
 
     case 'customer.register':

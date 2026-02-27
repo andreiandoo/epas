@@ -509,7 +509,8 @@ const VenuePage = {
         // Use AmbiletEventCard for consistent rendering with commission support
         container.innerHTML = AmbiletEventCard.renderManyHorizontal(events, {
             urlPrefix: '/bilete/',
-            showBuyButton: true
+            showBuyButton: true,
+            showArtists: true
         });
     },
 
