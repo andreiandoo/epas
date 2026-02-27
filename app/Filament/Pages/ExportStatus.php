@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use BackedEnum;
 use Filament\Actions\Exports\Models\Export;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
@@ -10,7 +11,7 @@ use UnitEnum;
 
 class ExportStatus extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-down-tray';
+    protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-arrow-down-tray';
     protected static string | UnitEnum | null $navigationGroup = 'Tools';
     protected static ?string $title = 'Data Exports';
     protected static ?string $navigationLabel = 'Exports';
