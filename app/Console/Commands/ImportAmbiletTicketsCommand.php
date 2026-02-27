@@ -36,6 +36,9 @@ class ImportAmbiletTicketsCommand extends Command
         $ticketsMapFile = $mapDir . '/tickets_map.json';
 
         // Load prerequisite maps (from storage, written by previous import commands)
+        // events_map: wp_event_id => events.id
+        // ticket_types_map: wp_product_id => ticket_types.id
+        // orders_map: wp_order_id => orders.id
         $eventsMap = $this->loadJsonMap($mapDir . '/events_map.json', 'events');
         $ttMap     = $this->loadJsonMap($mapDir . '/ticket_types_map.json', 'ticket types');
         $ordersMap = $this->loadJsonMap($mapDir . '/orders_map.json', 'orders');
@@ -80,7 +83,7 @@ class ImportAmbiletTicketsCommand extends Command
                 continue;
             }
 
-            // Resolve Tixello event and marketplace ticket type
+            // Resolve Tixello event (events.id) and ticket type (ticket_types.id)
             $tixelloEventId = $eventsMap[$data['wp_event_id']] ?? null;
             $tixelloTtId    = $ttMap[$data['wp_product_id']] ?? null;
 
@@ -113,13 +116,12 @@ class ImportAmbiletTicketsCommand extends Command
 
             $createdAt = $this->parseDate($data['created_at']) ?? now()->toDateTimeString();
 
-            // ticket_type_id is now nullable (migration 2026_02_23_100000).
-            // Marketplace tickets use marketplace_ticket_type_id instead.
+            // Now using event_id (FK to events) and ticket_type_id (FK to ticket_types)
+            // instead of marketplace_event_id / marketplace_ticket_type_id.
             $ticketData = [
-                'ticket_type_id'             => null,         // nullable after migration
+                'ticket_type_id'             => $tixelloTtId,
+                'event_id'                   => $tixelloEventId,
                 'marketplace_client_id'      => $clientId,
-                'marketplace_event_id'       => $tixelloEventId,
-                'marketplace_ticket_type_id' => $tixelloTtId,
                 'order_id'                   => $tixelloOrderId,
                 'code'                       => Str::random(64),
                 'barcode'                    => $this->n($data['ticket_code']),
@@ -169,81 +171,66 @@ class ImportAmbiletTicketsCommand extends Command
         // =====================================================================
         // POST-IMPORT ANALYTICS UPDATES
         // Run after all tickets are inserted. Does NOT touch available_balance.
+        // Uses events table (not marketplace_events) and ticket_types (not marketplace_ticket_types).
         // =====================================================================
 
         $this->info('');
         $this->info('Running post-import analytics updates...');
 
-        // 1. Set marketplace_ticket_types.quantity_sold from actual ticket count
-        $this->info('  [1/4] Updating ticket type quantity_sold...');
+        // 1. Set ticket_types.quota_sold from actual ticket count
+        $this->info('  [1/3] Updating ticket type quota_sold...');
         DB::statement("
-            UPDATE marketplace_ticket_types mtt
-            SET quantity_sold = (
+            UPDATE ticket_types tt
+            SET quota_sold = (
                 SELECT COUNT(*) FROM tickets t
-                WHERE t.marketplace_ticket_type_id = mtt.id AND t.status = 'valid'
+                WHERE t.ticket_type_id = tt.id AND t.status = 'valid'
             )
-            WHERE mtt.marketplace_event_id IN (
-                SELECT id FROM marketplace_events WHERE marketplace_client_id = {$clientId}
+            WHERE tt.event_id IN (
+                SELECT id FROM events WHERE marketplace_client_id = {$clientId}
             )
         ");
 
-        // 2. Set orders.marketplace_event_id and orders.marketplace_organizer_id
+        // 2. Set orders.event_id and orders.marketplace_organizer_id
         //    using the first ticket in each order.
         //    This enables per-organizer and per-event order filtering.
         //    NOTE: Does NOT touch available_balance (already paid out in old platform).
-        $this->info('  [2/4] Linking orders to events and organizers...');
+        $this->info('  [2/3] Linking orders to events and organizers...');
         DB::statement("
             UPDATE orders o
             INNER JOIN (
                 SELECT
                     t.order_id,
-                    t.marketplace_event_id,
-                    me.marketplace_organizer_id
+                    t.event_id,
+                    e.marketplace_organizer_id
                 FROM tickets t
-                INNER JOIN marketplace_events me ON t.marketplace_event_id = me.id
+                INNER JOIN events e ON t.event_id = e.id
                 WHERE t.marketplace_client_id = {$clientId}
                   AND t.order_id IS NOT NULL
                 GROUP BY t.order_id
             ) sub ON o.id = sub.order_id
             SET
-                o.marketplace_event_id      = sub.marketplace_event_id,
+                o.event_id                  = sub.event_id,
                 o.marketplace_organizer_id  = sub.marketplace_organizer_id
             WHERE o.marketplace_client_id = {$clientId}
-              AND o.marketplace_organizer_id IS NULL
+              AND o.event_id IS NULL
         ");
 
-        // 3. Update marketplace_events cached stats: tickets_sold, revenue
-        $this->info('  [3/4] Updating event tickets_sold and revenue...');
-        DB::statement("
-            UPDATE marketplace_events me
-            SET
-                tickets_sold = (
-                    SELECT COUNT(*) FROM tickets t
-                    WHERE t.marketplace_event_id = me.id AND t.status = 'valid'
-                ),
-                revenue = (
-                    SELECT COALESCE(SUM(o.total), 0) FROM orders o
-                    WHERE o.marketplace_event_id = me.id AND o.status = 'completed'
-                )
-            WHERE me.marketplace_client_id = {$clientId}
-        ");
-
-        // 4. Update marketplace_organizers cached stats: total_events, total_tickets_sold, total_revenue
+        // 3. Update marketplace_organizers cached stats: total_events, total_tickets_sold, total_revenue
         //    NOTE: available_balance, pending_balance, total_paid_out are NOT touched —
         //    historical funds were already paid out through the old platform.
-        $this->info('  [4/4] Updating organizer stats (total_events, total_tickets_sold, total_revenue)...');
+        $this->info('  [3/3] Updating organizer stats (total_events, total_tickets_sold, total_revenue)...');
         DB::statement("
             UPDATE marketplace_organizers mo
             SET
                 total_events = (
-                    SELECT COUNT(*) FROM marketplace_events me
-                    WHERE me.marketplace_organizer_id = mo.id
-                      AND me.marketplace_client_id = {$clientId}
+                    SELECT COUNT(*) FROM events e
+                    WHERE e.marketplace_organizer_id = mo.id
+                      AND e.marketplace_client_id = {$clientId}
                 ),
                 total_tickets_sold = (
                     SELECT COUNT(*) FROM tickets t
-                    INNER JOIN marketplace_events me ON t.marketplace_event_id = me.id
-                    WHERE me.marketplace_organizer_id = mo.id
+                    INNER JOIN events e ON t.event_id = e.id
+                    WHERE e.marketplace_organizer_id = mo.id
                       AND t.marketplace_client_id = {$clientId}
                       AND t.status = 'valid'
                 ),

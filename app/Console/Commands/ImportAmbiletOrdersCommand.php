@@ -119,7 +119,7 @@ class ImportAmbiletOrdersCommand extends Command
                     $customerName = null;
                 }
 
-                // Note: marketplace_organizer_id and marketplace_event_id are populated
+                // Note: event_id and marketplace_organizer_id are populated
                 // in a post-import step at the end of import:ambilet-tickets,
                 // once we know which tickets (→ events → organizers) belong to each order.
                 $orderData = [

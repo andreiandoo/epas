@@ -13,7 +13,7 @@ class ImportAmbiletTicketTypesCommand extends Command
         {--dry-run}
         {--fresh : Ignore existing map and re-process all rows}';
 
-    protected $description = 'Import AmBilet ticket types from CSV into Tixello MarketplaceTicketType';
+    protected $description = 'Import AmBilet ticket types from CSV into Tixello ticket_types table';
 
     public function handle(): int
     {
@@ -73,25 +73,25 @@ class ImportAmbiletTicketTypesCommand extends Command
                 continue;
             }
 
-            $price = is_numeric($data['price']) ? (float) $data['price'] : 0.0;
-            $qty   = ($data['stock_qty'] !== 'NULL' && is_numeric($data['stock_qty']))
+            $price     = is_numeric($data['price']) ? (float) $data['price'] : 0.0;
+            $priceCents = (int) round($price * 100);
+            $qty       = ($data['stock_qty'] !== 'NULL' && is_numeric($data['stock_qty']))
                 ? (int) $data['stock_qty']
-                : null;
+                : 0;
 
             $now = now()->toDateTimeString();
 
-            // Use DB::table() to preserve timestamps — MarketplaceTicketType::create()
-            // would override created_at since it's not in $fillable
+            // Insert into ticket_types (the table used by Filament EventResource).
+            // price_cents stores price in bani (RON * 100).
+            // status='hidden' for historical types — not active, not for sale.
             $ttData = [
-                'marketplace_event_id'             => $tixelloEventId,
-                'name'                             => $data['name'],
-                'price'                            => $price,
+                'event_id'                         => $tixelloEventId,
+                'name'                             => mb_substr($data['name'], 0, 120),
+                'price_cents'                      => $priceCents,
                 'currency'                         => 'RON',
-                'quantity'                         => $qty,
-                'quantity_sold'                    => 0,
-                'quantity_reserved'                => 0,
-                'status'                           => 'sold_out',
-                'is_visible'                       => 0,
+                'quota_total'                      => $qty,
+                'quota_sold'                       => 0,
+                'status'                           => 'hidden',
                 'is_refundable'                    => 0,
                 'sort_order'                       => 0,
                 'autostart_when_previous_sold_out' => 0,
@@ -100,14 +100,14 @@ class ImportAmbiletTicketTypesCommand extends Command
             ];
 
             if ($dryRun) {
-                $this->line("[DRY RUN] Would create ticket type: {$data['name']} for event #{$tixelloEventId}");
+                $this->line("[DRY RUN] Would create ticket type: {$data['name']} ({$priceCents} bani) for event #{$tixelloEventId}");
                 $map[$wpProductId] = 0;
                 $created++;
                 continue;
             }
 
             try {
-                $id                = DB::table('marketplace_ticket_types')->insertGetId($ttData);
+                $id                = DB::table('ticket_types')->insertGetId($ttData);
                 $map[$wpProductId] = $id;
                 $created++;
 

@@ -15,7 +15,7 @@ class ImportAmbiletEventsCommand extends Command
         {--dry-run : Simulate without writing to DB}
         {--fresh : Ignore existing map and re-process all rows}';
 
-    protected $description = 'Import AmBilet events from CSV into Tixello MarketplaceEvent';
+    protected $description = 'Import AmBilet events from CSV into Tixello events table';
 
     private string $mapFile;
     private array $map = []; // wp_event_id => tixello_event_id
@@ -89,46 +89,97 @@ class ImportAmbiletEventsCommand extends Command
                 }
             }
 
-            $createdAt = $this->parseDate($data['created_at']) ?? now()->toDateTimeString();
-            $status    = $data['post_status'] === 'publish' ? 'published' : 'draft';
-            $slug      = $this->generateUniqueSlug($this->n($data['name']) ?? '', $clientId);
+            // Parse starts_at/ends_at datetime into event_date + start_time + end_time
+            $startsAt  = $this->parseDate($data['starts_at']);
+            $endsAt    = $this->parseDate($data['ends_at']);
+            $eventDate = null;
+            $startTime = null;
+            $endTime   = null;
+            $durationMode = 'single_day';
+            $rangeStartDate = null;
+            $rangeEndDate   = null;
+            $rangeStartTime = null;
+            $rangeEndTime   = null;
+
+            if ($startsAt) {
+                $startDt  = new \DateTime($startsAt);
+                $eventDate = $startDt->format('Y-m-d');
+                $startTime = $startDt->format('H:i');
+            }
+            if ($endsAt) {
+                $endDt   = new \DateTime($endsAt);
+                $endTime = $endDt->format('H:i');
+
+                // If event spans multiple days, use range mode
+                if ($eventDate && $endDt->format('Y-m-d') !== $eventDate) {
+                    $durationMode   = 'range';
+                    $rangeStartDate = $eventDate;
+                    $rangeEndDate   = $endDt->format('Y-m-d');
+                    $rangeStartTime = $startTime;
+                    $rangeEndTime   = $endTime;
+                    // Clear single-day fields for range events
+                    $eventDate = null;
+                    $startTime = null;
+                    $endTime   = null;
+                }
+            }
+
+            $createdAt   = $this->parseDate($data['created_at']) ?? now()->toDateTimeString();
+            $isPublished = $data['post_status'] === 'publish';
+            $slug        = $this->generateUniqueSlug($this->n($data['name']) ?? '');
+
+            // events.title is JSON translatable: {"ro": "Event Name"}
+            $name        = $data['name'];
+            $description = $this->n($data['description']);
+            $ticketTerms = $this->n($data['ticket_terms']);
 
             $eventData = [
-                'marketplace_client_id'    => $clientId,
-                'marketplace_organizer_id' => $organizerId,
-                'name'                     => $data['name'],
-                'slug'                     => $slug,
-                'description'              => $this->n($data['description']),
-                'ticket_terms'             => $this->n($data['ticket_terms']),
-                'starts_at'                => $this->parseDate($data['starts_at']),
-                'ends_at'                  => $this->parseDate($data['ends_at']),
-                'venue_name'               => $venueName,
-                'venue_city'               => $venueCity,
-                'venue_address'            => $location,
-                'image'                    => $this->n($data['image_url']),
-                'status'                   => $status,
-                'is_public'                => 1,
-                'is_featured'              => 0,
-                'tickets_sold'             => 0,
-                'revenue'                  => 0,
-                'views'                    => 0,
-                'submitted_at'             => $createdAt,
-                'approved_at'              => $createdAt,
-                'created_at'               => $createdAt,
-                'updated_at'               => $createdAt,
+                'tenant_id'                  => null,
+                'marketplace_client_id'      => $clientId,
+                'marketplace_organizer_id'   => $organizerId,
+                'title'                      => json_encode(['ro' => $name]),
+                'slug'                       => $slug,
+                'description'                => $description ? json_encode(['ro' => $description]) : null,
+                'ticket_terms'               => $ticketTerms ? json_encode(['ro' => $ticketTerms]) : null,
+                'duration_mode'              => $durationMode,
+                'event_date'                 => $eventDate,
+                'start_time'                 => $startTime,
+                'end_time'                   => $endTime,
+                'range_start_date'           => $rangeStartDate,
+                'range_end_date'             => $rangeEndDate,
+                'range_start_time'           => $rangeStartTime,
+                'range_end_time'             => $rangeEndTime,
+                'venue_name'                 => $venueName,
+                'city'                       => $venueCity,
+                'address'                    => $location,
+                'poster_url'                 => $this->n($data['image_url']),
+                'status'                     => $isPublished ? 'published' : 'draft',
+                'is_published'               => $isPublished ? 1 : 0,
+                'is_featured'                => 0,
+                'is_sold_out'                => 0,
+                'is_cancelled'               => 0,
+                'is_postponed'               => 0,
+                'views_count'                => 0,
+                'created_at'                 => $createdAt,
+                'updated_at'                 => $createdAt,
             ];
 
             if ($dryRun) {
-                $this->line("[DRY RUN] Would create event: {$data['name']} ({$createdAt})");
+                $this->line("[DRY RUN] Would create event: {$name} ({$createdAt}) [slug: {$slug}]");
                 $this->map[$wpEventId] = 0;
                 $created++;
                 continue;
             }
 
             try {
-                // Use DB::table() to bypass Eloquent timestamp override and preserve original dates
-                $eventId                 = DB::table('marketplace_events')->insertGetId($eventData);
-                $this->map[$wpEventId]   = $eventId;
+                $eventId = DB::table('events')->insertGetId($eventData);
+
+                // Set event_series (normally done by Event model boot, but we use DB::table)
+                DB::table('events')->where('id', $eventId)->update([
+                    'event_series' => 'AMB-' . $eventId,
+                ]);
+
+                $this->map[$wpEventId] = $eventId;
                 $created++;
 
                 if ($created % 100 === 0) {
@@ -136,7 +187,7 @@ class ImportAmbiletEventsCommand extends Command
                     $this->line("Progress: {$created} created, {$skipped} skipped...");
                 }
             } catch (\Exception $e) {
-                $this->error("Failed event '{$data['name']}': " . $e->getMessage());
+                $this->error("Failed event '{$name}': " . $e->getMessage());
                 $failed++;
             }
         }
@@ -151,20 +202,15 @@ class ImportAmbiletEventsCommand extends Command
     }
 
     /**
-     * Generate a unique slug within the marketplace client's event namespace.
-     * Uses DB::table() to avoid triggering Eloquent observers.
+     * Generate a globally unique slug for the events table.
      */
-    private function generateUniqueSlug(string $name, int $clientId): string
+    private function generateUniqueSlug(string $name): string
     {
         $base = Str::slug($name) ?: 'event';
         $slug = $base;
         $i    = 1;
 
-        while (DB::table('marketplace_events')
-            ->where('marketplace_client_id', $clientId)
-            ->where('slug', $slug)
-            ->exists()
-        ) {
+        while (DB::table('events')->where('slug', $slug)->exists()) {
             $slug = $base . '-' . $i++;
         }
 
