@@ -117,6 +117,21 @@ const ArtistPage = {
             profileSection.style.display = 'none';
         }
 
+        // Hide Spotify section
+        var spotifySection = document.getElementById('spotifySection');
+        if (spotifySection) {
+            spotifySection.closest('.px-6')?.style && (spotifySection.closest('.px-6').style.display = 'none');
+        }
+
+        // Hide Similar Artists section
+        var similarArtists = document.getElementById('similarArtists');
+        if (similarArtists) {
+            var similarSection = similarArtists.closest('section');
+            if (similarSection && similarSection.closest('.px-6')) {
+                similarSection.closest('.px-6').style.display = 'none';
+            }
+        }
+
         // Update page title
         document.title = 'Artist negăsit - ' + (window.AMBILET_CONFIG?.SITE_NAME || 'Ambilet');
     },
@@ -151,6 +166,21 @@ const ArtistPage = {
         var profileSection = document.getElementById('profile-section');
         if (profileSection) {
             profileSection.style.display = 'none';
+        }
+
+        // Hide Spotify section
+        var spotifySection = document.getElementById('spotifySection');
+        if (spotifySection) {
+            spotifySection.closest('.px-6')?.style && (spotifySection.closest('.px-6').style.display = 'none');
+        }
+
+        // Hide Similar Artists section
+        var similarArtists = document.getElementById('similarArtists');
+        if (similarArtists) {
+            var similarSection = similarArtists.closest('section');
+            if (similarSection && similarSection.closest('.px-6')) {
+                similarSection.closest('.px-6').style.display = 'none';
+            }
         }
 
         // Update page title
@@ -500,12 +530,12 @@ const ArtistPage = {
                         '</span>English' +
                     '</button>' +
                 '</div>' +
-                '<div id="aboutContent-ro" class="text-base leading-[1.8] text-gray-600 prose prose-sm max-w-none">' + bioRo + '</div>' +
-                '<div id="aboutContent-en" class="hidden text-base leading-[1.8] text-gray-600 prose prose-sm max-w-none">' + bioEn + '</div>';
+                '<div id="aboutContent-ro" class="text-base flex flex-col gap-y-2 leading-[1.8] text-gray-600 prose prose-sm max-w-none">' + bioRo + '</div>' +
+                '<div id="aboutContent-en" class="hidden text-base flex flex-col gap-y-2 leading-[1.8] text-gray-600 prose prose-sm max-w-none">' + bioEn + '</div>';
         } else {
             // Single language
             container.innerHTML = about.map(function(text) {
-                return '<div class="text-base leading-[1.8] text-gray-600 mb-4 last:mb-0 prose prose-sm max-w-none">' + text + '</div>';
+                return '<div class="text-base flex flex-col gap-y-2 leading-[1.8] text-gray-600 mb-4 last:mb-0 prose prose-sm max-w-none">' + text + '</div>';
             }).join('');
         }
     },
@@ -517,9 +547,9 @@ const ArtistPage = {
         // Update tab buttons
         document.querySelectorAll('#aboutTabs .about-tab').forEach(function(btn) {
             if (btn.dataset.tab === lang) {
-                btn.className = 'about-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all bg-white text-gray-900 shadow-sm';
+                btn.className = 'px-4 py-2 text-sm font-semibold text-gray-900 transition-all bg-white rounded-lg shadow-sm about-tab';
             } else {
-                btn.className = 'about-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all text-gray-500 hover:text-gray-700';
+                btn.className = 'px-4 py-2 text-sm font-semibold text-gray-500 transition-all rounded-lg about-tab hover:text-gray-700';
             }
         });
         // Show/hide content
@@ -635,7 +665,7 @@ const ArtistPage = {
             grid.className = 'max-w-4xl mx-auto';
             grid.innerHTML = self._videoCard(validVideos[0], 'large');
         } else if (count === 2) {
-            grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+            grid.className = 'grid grid-cols-1 gap-4 md:grid-cols-2';
             grid.innerHTML = validVideos.map(function(v) {
                 return self._videoCard(v, 'medium');
             }).join('');
@@ -655,7 +685,7 @@ const ArtistPage = {
         var self = this;
         var count = videos.length;
 
-        grid.className = 'grid grid-cols-1 lg:grid-cols-4 gap-4';
+        grid.className = 'grid grid-cols-1 gap-4 lg:grid-cols-4';
 
         // Main player (3/4)
         var firstTitle = self.escapeHtml(videos[0].title) || 'Se incarca...';
