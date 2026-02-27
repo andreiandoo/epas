@@ -7,6 +7,7 @@ use App\Services\YouTubeService;
 use App\Services\SpotifyService;
 use App\Services\FacebookService;
 use App\Services\TikTokService;
+use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 
 class FetchArtistSocialStats implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
     public int $backoff = 60; // seconds between retries
@@ -27,7 +28,6 @@ class FetchArtistSocialStats implements ShouldQueue
     public function __construct(int $artistId)
     {
         $this->artistId = $artistId;
-        $this->onQueue('social-stats'); // Use dedicated queue for rate limiting
     }
 
     public function handle(): void
