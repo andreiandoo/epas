@@ -143,11 +143,11 @@ require_once __DIR__ . '/includes/head.php';
                     </div>
 
                     <!-- Event Info -->
-                    <div class="p-6 md:p-8 mobile:px-4">
-                        <h1 id="event-title" class="mb-4 text-2xl font-extrabold md:text-4xl text-secondary"></h1>
+                    <div class="p-6 md:p-8 mobile:px-0">
+                        <h1 id="event-title" class="mb-4 text-2xl font-extrabold md:text-4xl text-secondary mobile:px-4"></h1>
 
                         <!-- Key Details -->
-                        <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="grid grid-cols-1 gap-4 mb-6 mobile:px-4 md:grid-cols-2">
                             <div class="flex items-center gap-3 p-4 bg-surface rounded-xl mobile:rounded-none mobile:p-0 mobile:bg-transparent">
                                 <div class="flex-shrink-0 px-3 py-2 text-center text-white date-badge rounded-xl">
                                     <span id="event-day" class="block text-xl font-bold leading-none">--</span>
@@ -178,7 +178,7 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
 
                         <!-- Social Stats -->
-                        <div id="social-stats" class="flex flex-wrap items-center gap-4 mb-8 mobile:justify-between">
+                        <div id="social-stats" class="flex flex-wrap items-center gap-4 mb-8 mobile:justify-between mobile:border-t mobile:border-b border-slate-200 mobile:p-4">
                             <!-- Interested Button -->
                             <button id="interest-btn" onclick="EventPage.toggleInterest()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all rounded-full border border-border hover:border-primary hover:text-primary">
                                 <svg id="interest-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
@@ -216,7 +216,7 @@ require_once __DIR__ . '/includes/head.php';
                             </div>
                         </div>
 
-                        <div id="event-description" class="prose prose-slate max-w-none"></div>
+                        <div id="event-description" class="prose prose-slate max-w-none mobile:px-4"></div>
                     </div>
                 </div>
 
@@ -375,7 +375,7 @@ require_once __DIR__ . '/includes/head.php';
 
     <!-- Mobile Ticket Drawer -->
     <div id="ticketDrawerBackdrop" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden" onclick="closeTicketDrawer()"></div>
-    <div id="ticketDrawer" class="fixed bottom-0 left-0 right-0 z-50 overflow-hidden bg-white lg:hidden rounded-t-3xl max-h-[85vh]">
+    <div id="ticketDrawer" class="fixed bottom-0 left-0 right-0 z-[1000] overflow-hidden bg-white lg:hidden rounded-t-3xl max-h-[85vh]">
         <!-- Drawer Header -->
         <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-border">
             <div>
