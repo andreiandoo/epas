@@ -349,27 +349,35 @@ class ImportVenues extends Page implements HasForms
         $paymentRaw = $data['accepted_payment'] ?? $data['payment_methods'] ?? '';
         $acceptedPayment = !empty($paymentRaw) ? implode('|', array_map('trim', explode('|', $paymentRaw))) : null;
 
-        // Helper: empty string → null (prevents MySQL enum/type errors)
-        $str = fn($key, $alt = null) => !empty($data[$key]) ? trim($data[$key]) : (!empty($alt) && !empty($data[$alt]) ? trim($data[$alt]) : null);
+        // Helper: empty string → null, with optional max length truncation
+        $str = function ($key, $altOrMax = null, $max = null) use ($data) {
+            // $str('key') or $str('key', 255) or $str('key', 'alt_key') or $str('key', 'alt_key', 255)
+            $alt = is_string($altOrMax) ? $altOrMax : null;
+            $limit = is_int($altOrMax) ? $altOrMax : $max;
+
+            $val = !empty($data[$key]) ? trim($data[$key]) : (!empty($alt) && !empty($data[$alt]) ? trim($data[$alt]) : null);
+
+            return $val !== null && $limit ? Str::limit($val, $limit, '') : $val;
+        };
 
         $venueData = [
             'name' => $name ?: ['en' => $data['name']],
             'slug' => $slug,
-            'address' => $str('address'),
-            'city' => $str('city'),
-            'state' => $str('state'),
-            'country' => $str('country'),
-            'website_url' => $str('website_url', 'website'),
-            'phone' => $str('phone'),
-            'phone2' => $str('phone2'),
-            'email' => $str('email'),
-            'email2' => $str('email2'),
-            'facebook_url' => $str('facebook_url'),
-            'instagram_url' => $str('instagram_url'),
-            'tiktok_url' => $str('tiktok_url'),
-            'image_url' => $str('image_url', 'main_image'),
+            'address' => $str('address', 255),
+            'city' => $str('city', 255),
+            'state' => $str('state', 255),
+            'country' => $str('country', 255),
+            'website_url' => $str('website_url', 'website', 500),
+            'phone' => $str('phone', 64),
+            'phone2' => $str('phone2', 50),
+            'email' => $str('email', 255),
+            'email2' => $str('email2', 255),
+            'facebook_url' => $str('facebook_url', 500),
+            'instagram_url' => $str('instagram_url', 500),
+            'tiktok_url' => $str('tiktok_url', 500),
+            'image_url' => $str('image_url', 'main_image', 500),
             'video_type' => $str('video_type'),
-            'video_url' => $str('video_url'),
+            'video_url' => $str('video_url', 500),
             'gallery' => $gallery,
             'capacity' => !empty($data['capacity']) ? (int) $data['capacity'] : null,
             'capacity_total' => !empty($data['capacity_total']) ? (int) $data['capacity_total'] : null,
@@ -377,12 +385,12 @@ class ImportVenues extends Page implements HasForms
             'capacity_seated' => !empty($data['capacity_seated']) ? (int) $data['capacity_seated'] : null,
             'lat' => !empty($data['lat']) ? (float) $data['lat'] : null,
             'lng' => !empty($data['lng']) ? (float) $data['lng'] : null,
-            'google_maps_url' => $str('google_maps_url'),
+            'google_maps_url' => $str('google_maps_url', 500),
             'established_at' => !empty($data['established_at']) ? $data['established_at'] : null,
-            'timezone' => $str('timezone'),
-            'open_hours' => $str('open_hours'),
-            'general_rules' => $str('general_rules'),
-            'child_rules' => $str('child_rules'),
+            'timezone' => $str('timezone', 100),
+            'open_hours' => $str('open_hours', 255),
+            'general_rules' => $str('general_rules'),  // text column, no limit
+            'child_rules' => $str('child_rules'),       // text column, no limit
             'accepted_payment' => $acceptedPayment,
             'has_historical_monument_tax' => isset($data['has_historical_monument_tax']) && $data['has_historical_monument_tax'] !== '' ? (bool) $data['has_historical_monument_tax'] : null,
             'facilities' => $facilities,
