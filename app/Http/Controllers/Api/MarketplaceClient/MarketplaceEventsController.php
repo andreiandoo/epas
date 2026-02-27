@@ -63,14 +63,21 @@ class MarketplaceEventsController extends BaseController
             }
         }
 
-        // Filter by category (slug or name)
+        // Filter by category (resolve by slug, partial slug, or case-insensitive name)
         if ($request->has('category')) {
-            $categorySlug = $request->category;
-            $query->whereHas('marketplaceEventCategory', function ($q) use ($categorySlug) {
-                $q->where('slug', $categorySlug)
-                    ->orWhere('name->ro', 'like', "%{$categorySlug}%")
-                    ->orWhere('name->en', 'like', "%{$categorySlug}%");
-            });
+            $categoryParam = $request->category;
+            $category = $this->resolveCategory($client->id, $categoryParam);
+
+            if ($category) {
+                $categoryIds = collect([$category->id]);
+                $childIds = $category->children()->pluck('id');
+                if ($childIds->isNotEmpty()) {
+                    $categoryIds = $categoryIds->merge($childIds);
+                }
+                $query->whereIn('marketplace_event_category_id', $categoryIds);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         if ($request->has('city')) {
@@ -1337,6 +1344,26 @@ class MarketplaceEventsController extends BaseController
             'background_opacity' => $layout->background_opacity,
             'sections' => $sections,
         ];
+    }
+
+    /**
+     * Resolve a category from slug, partial slug, or case-insensitive name.
+     * Categories table is small, so loading all for a marketplace is fine.
+     */
+    private function resolveCategory(int $marketplaceClientId, string $param): ?MarketplaceEventCategory
+    {
+        $categories = MarketplaceEventCategory::where('marketplace_client_id', $marketplaceClientId)->get();
+        $paramLower = mb_strtolower($param);
+
+        // 1. Exact slug match
+        return $categories->first(fn ($c) => $c->slug === $param)
+            // 2. Partial slug match (e.g. "concerte" matches "bilete-concerte")
+            ?? $categories->first(fn ($c) => str_contains($c->slug, $paramLower))
+            // 3. Case-insensitive name match (ro or en)
+            ?? $categories->first(function ($c) use ($paramLower) {
+                return mb_strtolower($c->getTranslation('name', 'ro')) === $paramLower
+                    || mb_strtolower($c->getTranslation('name', 'en')) === $paramLower;
+            });
     }
 
     /**

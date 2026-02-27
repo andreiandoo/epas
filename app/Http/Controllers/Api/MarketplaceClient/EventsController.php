@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 use App\Models\Event;
 use App\Models\MarketplaceCity;
 use App\Models\MarketplaceCustomer;
+use App\Models\MarketplaceEventCategory;
 use App\Models\TicketType;
 use App\Models\Tax\GeneralTax;
 use Illuminate\Http\Request;
@@ -80,11 +81,21 @@ class EventsController extends BaseController
         }
 
         if ($request->has('category')) {
-            $categorySlug = $request->category;
-            // Filter by marketplace_event_category relationship (events table has no 'category' column)
-            $query->whereHas('marketplaceEventCategory', function ($cq) use ($categorySlug) {
-                $cq->where('slug', $categorySlug);
-            });
+            $categoryParam = $request->category;
+            // Resolve category by slug, partial slug, or name
+            $categories = MarketplaceEventCategory::where('marketplace_client_id', $client->id)->get();
+            $paramLower = mb_strtolower($categoryParam);
+            $category = $categories->first(fn ($c) => $c->slug === $categoryParam)
+                ?? $categories->first(fn ($c) => str_contains($c->slug, $paramLower))
+                ?? $categories->first(fn ($c) => mb_strtolower($c->getTranslation('name', 'ro')) === $paramLower
+                    || mb_strtolower($c->getTranslation('name', 'en')) === $paramLower);
+
+            if ($category) {
+                $categoryIds = collect([$category->id])->merge($category->children()->pluck('id'));
+                $query->whereIn('marketplace_event_category_id', $categoryIds);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         if ($request->has('city')) {

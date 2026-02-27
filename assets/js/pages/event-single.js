@@ -1930,11 +1930,11 @@ const EventPage = {
 
         if (category && categorySlug) {
             document.getElementById(this.elements.relatedCategoryText).textContent = 'Evenimente similare din categoria ' + category;
-            seeAllLink.href = '/evenimente?category=' + encodeURIComponent(categorySlug);
+            seeAllLink.href = '/evenimente?categorie=' + encodeURIComponent(categorySlug);
         } else if (category) {
             document.getElementById(this.elements.relatedCategoryText).textContent = 'Evenimente similare din categoria ' + category;
             var slug = category.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-            seeAllLink.href = '/evenimente?category=' + encodeURIComponent(slug);
+            seeAllLink.href = '/evenimente?categorie=' + encodeURIComponent(slug);
         } else {
             document.getElementById(this.elements.relatedCategoryText).textContent = 'Evenimente similare';
             seeAllLink.href = '/evenimente';
