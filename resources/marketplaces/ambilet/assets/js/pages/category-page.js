@@ -403,76 +403,6 @@ const CategoryPage = {
     },
 
     /**
-     * Custom event card rendering with category-specific badges
-     * Uses base AmbiletEventCard but adds genre colors and stock status
-     */
-    renderEventCard(event) {
-        // Normalize event data
-        const normalized = AmbiletDataTransformer.normalizeEvent(event);
-        if (!normalized) return '';
-
-        // Genre color mapping
-        const genreColors = {
-            'rock': 'bg-accent',
-            'pop': 'bg-blue-600',
-            'jazz': 'bg-yellow-600',
-            'electronic': 'bg-purple-600',
-            'folk': 'bg-emerald-600',
-            'metal': 'bg-red-800',
-            'alternative': 'bg-purple-600'
-        };
-
-        // Build custom status badge
-        let statusBadge = '';
-        if (normalized.isSoldOut) {
-            statusBadge = '<span class="bg-secondary text-white text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase animate-pulse">Sold Out</span>';
-        } else if (event.genre?.name) {
-            const genreBg = genreColors[event.genre?.slug] || 'bg-accent';
-            statusBadge = '<span class="' + genreBg + ' text-white text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase">' + AmbiletEventCard.escapeHtml(event.genre.name) + '</span>';
-        }
-
-        // Build price display with stock status
-        let priceDisplay = '';
-        if (normalized.isSoldOut) {
-            priceDisplay = '<span class="font-bold line-through text-muted">' + normalized.priceFormatted + '</span><span class="text-xs font-semibold text-primary">Epuizat</span>';
-        } else if (event.is_low_stock) {
-            priceDisplay = '<span class="font-bold text-primary">' + normalized.priceFormatted + '</span><span class="text-xs font-semibold text-accent">Ultimele locuri</span>';
-        } else {
-            priceDisplay = '<span class="font-bold text-primary">' + normalized.priceFormatted + '</span><span class="text-xs text-muted"></span>';
-        }
-
-        // Date badge - show range for festivals, single date otherwise
-        let dateBadgeHtml;
-        if (normalized.isDateRange && normalized.dateRangeFormatted) {
-            dateBadgeHtml = '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
-                '<span class="block text-xs font-semibold leading-tight">' + AmbiletEventCard.escapeHtml(normalized.dateRangeFormatted) + '</span>' +
-            '</div>';
-        } else {
-            dateBadgeHtml = '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
-                '<span class="block text-xl font-bold leading-none">' + normalized.day + '</span>' +
-                '<span class="block text-[10px] uppercase tracking-wide mt-0.5">' + normalized.month + '</span>' +
-            '</div>';
-        }
-
-        return '<a href="/bilete/' + normalized.slug + '" class="overflow-hidden bg-white border event-card rounded-2xl border-border group hover:-translate-y-1 hover:shadow-xl hover:border-primary transition-all">' +
-            '<div class="relative h-48 overflow-hidden">' +
-                (normalized.isSoldOut ? '<div class="absolute inset-0 z-10 bg-black/30"></div>' : '') +
-                '<img src="' + (normalized.image || AmbiletEventCard.PLACEHOLDER) + '" alt="' + AmbiletEventCard.escapeHtml(normalized.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy" onerror="this.src=\'' + AmbiletEventCard.PLACEHOLDER + '\'">' +
-                '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>' +
-                (statusBadge ? '<div class="absolute top-3 right-3 z-20">' + statusBadge + '</div>' : '') +
-            '</div>' +
-            '<div class="p-4">' +
-                '<h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + AmbiletEventCard.escapeHtml(normalized.title) + '</h3>' +
-                '<p class="text-sm text-muted mt-2 flex items-center gap-1.5">' +
-                    '<svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
-                    AmbiletEventCard.escapeHtml(normalized.location || 'Romania') +
-                '</p>' +
-                '<div class="flex items-center justify-between pt-3 mt-3 border-t border-border">' + priceDisplay + '</div>' +
-            '</div>' +
-        '</a>';
-    },
-
-    /**
      * Group events by month
      */
     groupEventsByMonth(events) {
@@ -505,7 +435,7 @@ const CategoryPage = {
      * Render a month group with header and events grid
      */
     renderMonthGroup(group) {
-        const eventsHtml = group.events.map(e => this.renderEventCard(e)).join('');
+        const eventsHtml = group.events.map(e => AmbiletEventCard.render(e)).join('');
 
         return '<div class="month-group">' +
             '<div class="flex items-center gap-4 mb-6">' +
