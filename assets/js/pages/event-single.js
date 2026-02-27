@@ -1842,6 +1842,14 @@ const EventPage = {
 
         content.innerHTML = termsHtml;
         section.style.display = 'block';
+
+        // Also populate mobile drawer version
+        var drawerSection = document.getElementById('drawer-ticket-terms-section');
+        var drawerContent = document.getElementById('drawer-ticket-terms-content');
+        if (drawerSection && drawerContent) {
+            drawerContent.innerHTML = termsHtml;
+            drawerSection.style.display = 'block';
+        }
     },
 
     /**
