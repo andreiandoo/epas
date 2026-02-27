@@ -16,7 +16,7 @@ include __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Page Hero -->
-<section class="relative pt-32 pb-16 overflow-hidden text-center bg-gradient-to-br from-primary to-primary-dark">
+<section class="relative pb-16 overflow-hidden text-center pt-28 bg-gradient-to-br from-primary to-primary-dark">
     <div class="absolute -top-1/2 -right-1/5 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(255,255,255,0.1)_0%,transparent_70%)] rounded-full"></div>
     <div class="relative z-10 max-w-2xl px-6 mx-auto">
         <h1 class="mb-4 text-4xl font-extrabold text-white">Orașe</h1>
@@ -25,7 +25,7 @@ include __DIR__ . '/includes/header.php';
 </section>
 
 <!-- Search -->
-<section class="px-6">
+<section class="hidden px-6">
     <div class="relative z-10 max-w-xl mx-auto -mt-7">
         <div class="flex items-center p-2 bg-white shadow-xl rounded-2xl">
             <input type="text" id="citySearch" placeholder="Caută un oraș..." class="flex-1 px-5 py-4 text-base bg-transparent border-none outline-none">

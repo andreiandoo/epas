@@ -23,7 +23,7 @@ require_once __DIR__ . '/includes/head.php';
 <?php require_once __DIR__ . '/includes/header.php'; ?>
 
 <!-- Page Hero -->
-<section class="relative pt-40 pb-16 overflow-hidden bg-gradient-to-br from-secondary via-secondary to-secondary/90">
+<section class="relative pb-16 overflow-hidden pt-28 bg-gradient-to-br from-secondary via-secondary to-secondary/90">
     <div class="absolute rounded-full -top-24 -right-24 w-96 h-96 bg-primary/20 blur-3xl"></div>
     <div class="absolute rounded-full -bottom-32 -left-24 w-80 h-80 bg-primary/15 blur-3xl"></div>
     <div class="relative z-10 px-4 mx-auto text-center max-w-7xl">
@@ -33,7 +33,7 @@ require_once __DIR__ . '/includes/head.php';
 </section>
 
 <!-- Search Section -->
-<section class="px-4 -mt-7">
+<section class="hidden px-4 -mt-7">
     <div class="max-w-2xl mx-auto">
         <div class="relative z-10 flex items-center gap-2 p-2 bg-white shadow-xl rounded-2xl">
             <input type="text" id="artistSearch" placeholder="Cauta un artist..." class="flex-1 px-5 py-4 text-base border-0 outline-none text-secondary placeholder-muted">
