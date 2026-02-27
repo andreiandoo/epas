@@ -12,11 +12,11 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <div class="absolute top-0 right-0 w-1/2 h-full opacity-30 bg-gradient-radial from-primary/50 to-transparent"></div>
                 <div class="relative z-10 grid gap-8 lg:grid-cols-2 lg:items-center">
                     <div>
-                        <h1 class="mb-4 text-2xl font-extrabold lg:text-3xl">Invita prieteni,<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-yellow-400">castiga credit</span></h1>
-                        <p class="mb-6 text-gray-400">Primesti 25 RON credit pentru fiecare prieten care isi face cont si cumpara primul bilet. Prietenul tau primeste 15 RON discount la prima comanda!</p>
+                        <h1 class="mb-4 text-2xl font-extrabold lg:text-3xl">Invita prieteni,<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-yellow-400">castiga puncte</span></h1>
+                        <p class="mb-6 text-gray-400">Primesti 100 de puncte pentru fiecare prieten care isi face cont si cumpara primul bilet. Prietenul tau primeste 50 de puncte pe care le poate folosi la prima achizitie!</p>
                         <div class="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-white/10 backdrop-blur-sm">
-                            <span class="text-3xl font-extrabold text-yellow-400">25 RON</span>
-                            <span class="text-sm text-gray-400">credit pentru tine<strong class="block text-white">pentru fiecare invitatie</strong></span>
+                            <span class="text-3xl font-extrabold text-yellow-400">100 puncte</span>
+                            <span class="text-sm text-gray-400">pentru tine<strong class="block text-white">pentru fiecare invitatie</strong></span>
                         </div>
                     </div>
                     <div class="p-5 rounded-xl bg-white/5">
@@ -71,10 +71,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 </div>
                 <div class="p-5 text-center bg-white border rounded-xl border-border">
                     <div class="flex items-center justify-center mx-auto gap-x-2">
-                        <div class="text-3xl font-extrabold text-secondary" id="stat-credit">0 RON</div>
+                        <div class="text-3xl font-extrabold text-secondary" id="stat-credit">0</div>
                         <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-                    <div class="text-sm text-muted">Credit castigat</div>
+                    <div class="text-sm text-muted">Puncte castigate</div>
                 </div>
             </div>
 
@@ -95,15 +95,15 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                     </div>
                     <h3 class="mb-2 font-semibold text-secondary">Prietenul cumpara</h3>
-                    <p class="text-sm text-muted">Prietenul tau isi face cont si cumpara primul bilet cu 15 RON discount</p>
+                    <p class="text-sm text-muted">Prietenul tau isi face cont si cumpara primul bilet cu 50 de puncte bonus</p>
                 </div>
                 <div class="relative p-6 pt-8 text-center bg-white border rounded-xl border-border">
                     <div class="absolute flex items-center justify-center w-8 h-8 text-sm font-bold text-white -translate-x-1/2 rounded-full -top-3 left-1/2 bg-gradient-to-r from-primary to-primary/80">3</div>
                     <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-xl bg-surface">
                         <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-                    <h3 class="mb-2 font-semibold text-secondary">Primesti credit</h3>
-                    <p class="text-sm text-muted">25 RON credit se adauga automat in contul tau pentru urmatoarea comanda</p>
+                    <h3 class="mb-2 font-semibold text-secondary">Primesti puncte</h3>
+                    <p class="text-sm text-muted">100 de puncte se adauga automat in contul tau dupa achizitia prietenului</p>
                 </div>
             </div>
 
@@ -120,14 +120,14 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <svg class="w-10 h-10 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                     </div>
                     <h3 class="mb-2 font-semibold text-secondary">Nu ai invitat inca pe nimeni</h3>
-                    <p class="text-muted">Distribuie link-ul tau pentru a incepe sa castigi credit.</p>
+                    <p class="text-muted">Distribuie link-ul tau pentru a incepe sa castigi puncte.</p>
                 </div>
             </div>
 
             <!-- Credit History -->
             <div class="overflow-hidden bg-white border rounded-2xl border-border">
                 <div class="p-5 border-b border-border">
-                    <h2 class="font-semibold text-secondary">Istoricul creditului</h2>
+                    <h2 class="font-semibold text-secondary">Istoricul punctelor</h2>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full" id="credit-history-table">
@@ -213,7 +213,7 @@ const ReferralsPage = {
         document.getElementById('stat-completed').textContent = stats.conversions || stats.completed || '0';
         const pending = (stats.registrations || 0) - (stats.conversions || 0);
         document.getElementById('stat-pending').textContent = stats.pending || (pending > 0 ? pending : 0);
-        document.getElementById('stat-credit').textContent = (stats.total_earnings || stats.credit || 0) + ' ' + (stats.currency || 'RON');
+        document.getElementById('stat-credit').textContent = (stats.total_earnings || stats.credit || 0) + ' ' + (stats.currency || 'puncte');
     },
 
     renderReferrals(referrals) {
@@ -243,8 +243,8 @@ const ReferralsPage = {
                     ${ref.completed ? 'Completat' : 'In asteptare'}
                 </span>
                 <div class="text-right min-w-[80px]">
-                    <div class="font-bold ${ref.completed ? 'text-green-600' : 'text-gray-400'}">${ref.completed ? '+25 RON' : '—'}</div>
-                    <div class="text-xs text-muted">${ref.completed ? 'credit primit' : 'nu a cumparat'}</div>
+                    <div class="font-bold ${ref.completed ? 'text-green-600' : 'text-gray-400'}">${ref.completed ? '+100 puncte' : '—'}</div>
+                    <div class="text-xs text-muted">${ref.completed ? 'puncte primite' : 'nu a cumparat'}</div>
                 </div>
             </div>
         `).join('');
@@ -277,8 +277,8 @@ const ReferralsPage = {
                     </div>
                 </td>
                 <td class="px-5 py-4 text-muted">${item.date}</td>
-                <td class="px-5 py-4 font-semibold ${item.type === 'credit' ? 'text-green-600' : 'text-muted'}">${item.type === 'credit' ? '+' : '-'}${item.amount} RON</td>
-                <td class="px-5 py-4 font-semibold text-secondary">${item.balance} RON</td>
+                <td class="px-5 py-4 font-semibold ${item.type === 'credit' ? 'text-green-600' : 'text-muted'}">${item.type === 'credit' ? '+' : '-'}${item.amount} puncte</td>
+                <td class="px-5 py-4 font-semibold text-secondary">${item.balance} puncte</td>
             </tr>
         `).join('');
     },
@@ -311,15 +311,15 @@ function shareOnFacebook() {
 function shareOnWhatsApp() {
     const link = document.getElementById('referral-link').value;
     const url = link.startsWith('http') ? link : 'https://' + link;
-    const text = 'Inregistreaza-te folosind link-ul meu si primesti discount la prima comanda! ' + url;
+    const text = 'Inregistreaza-te folosind link-ul meu si primesti 50 de puncte bonus la prima achizitie! ' + url;
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
 }
 
 function shareByEmail() {
     const link = document.getElementById('referral-link').value;
     const url = link.startsWith('http') ? link : 'https://' + link;
-    const subject = 'Ti-am trimis un discount pentru bilete!';
-    const body = 'Salut!\n\nInregistreaza-te folosind link-ul meu si primesti discount la prima comanda!\n\n' + url + '\n\nNe vedem la concert!';
+    const subject = 'Ti-am trimis puncte bonus pentru bilete!';
+    const body = 'Salut!\n\nInregistreaza-te folosind link-ul meu si primesti 50 de puncte bonus la prima achizitie de bilete!\n\n' + url + '\n\nNe vedem la concert!';
     window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
 }
 
