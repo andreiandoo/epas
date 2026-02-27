@@ -37,21 +37,37 @@ $currentYear = date('Y');
                 <h2 class="text-2xl lg:text-[28px] font-extrabold text-white mb-2">Nu rata niciun eveniment!</h2>
                 <p class="text-base text-white/80">Primește recomandări personalizate și oferte exclusive direct în inbox.</p>
             </div>
-            <form id="newsletterForm" class="flex flex-col flex-1 w-full max-w-md gap-3 sm:flex-row">
-                <div class="relative flex-1">
-                    <svg class="absolute w-5 h-5 -translate-y-1/2 left-4 top-1/2 text-white/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                        <polyline points="22,6 12,13 2,6"/>
-                    </svg>
-                    <input type="email" name="email" placeholder="Adresa ta de email" required
-                        class="w-full pl-12 pr-5 py-4 bg-white/15 border border-white/20 rounded-xl text-[15px] text-white placeholder-white/50 outline-none focus:border-white focus:bg-white/20 transition-all">
+            <form id="newsletterForm" class="flex flex-col flex-1 w-full max-w-md gap-2">
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <svg class="absolute w-4 h-4 -translate-y-1/2 left-3 top-1/2 text-white/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <input type="text" name="name" placeholder="Numele tău" class="w-full pl-9 pr-3 py-3 bg-white/15 border border-white/20 rounded-xl text-sm text-white placeholder-white/50 outline-none focus:border-white focus:bg-white/20 transition-all">
+                    </div>
+                    <div class="relative flex-1">
+                        <svg class="absolute w-4 h-4 -translate-y-1/2 left-3 top-1/2 text-white/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        <input type="text" name="city" placeholder="Orașul tău" class="w-full pl-9 pr-3 py-3 bg-white/15 border border-white/20 rounded-xl text-sm text-white placeholder-white/50 outline-none focus:border-white focus:bg-white/20 transition-all">
+                    </div>
                 </div>
-                <button type="submit" class="px-7 py-4 bg-white border-none rounded-xl text-primary text-[15px] font-semibold cursor-pointer hover:-translate-y-0.5 hover:shadow-lg transition-all whitespace-nowrap flex items-center justify-center gap-2">
-                    Abonează-te
-                    <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                    </svg>
-                </button>
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <svg class="absolute w-5 h-5 -translate-y-1/2 left-4 top-1/2 text-white/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                            <polyline points="22,6 12,13 2,6"/>
+                        </svg>
+                        <input type="email" name="email" placeholder="Adresa ta de email" required
+                            class="w-full pl-12 pr-5 py-3 bg-white/15 border border-white/20 rounded-xl text-[15px] text-white placeholder-white/50 outline-none focus:border-white focus:bg-white/20 transition-all">
+                    </div>
+                    <button type="submit" class="px-7 py-3 bg-white border-none rounded-xl text-primary text-[15px] font-semibold cursor-pointer hover:-translate-y-0.5 hover:shadow-lg transition-all whitespace-nowrap flex items-center justify-center gap-2">
+                        Abonează-te
+                        <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
             </form>
             <p id="newsletterMessage" class="hidden mt-4 text-white/80"></p>
         </div>
@@ -69,7 +85,7 @@ $currentYear = date('Y');
                     </a>
                     <a href="/" class="flex items-center mobile:justify-center gap-2.5 mb-4">
                         <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo  <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
-                        <svg class="w-10 h-10 mobile:h-12 mobile:w-12" viewBox="0 0 48 48" fill="none">
+                        <svg class="hidden w-10 h-10 mobile:h-12 mobile:w-12" viewBox="0 0 48 48" fill="none">
                             <path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="white"></path>
                             <line x1="17" y1="15" x2="31" y2="15" stroke="#151f31" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/>
                             <line x1="15" y1="19" x2="33" y2="19" stroke="#151f31" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/>
@@ -96,12 +112,12 @@ $currentYear = date('Y');
                                 <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
                             </svg>
                         </a>
-                        <a href="<?= htmlspecialchars($socialLinks['tiktok']) ?>" target="_blank" rel="noopener" class="w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/70 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                        <a href="<?= htmlspecialchars($socialLinks['tiktok']) ?>" target="_blank" rel="noopener" class="hidden w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/70 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
                             </svg>
                         </a>
-                        <a href="<?= htmlspecialchars($socialLinks['youtube']) ?>" target="_blank" rel="noopener" class="w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/70 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                        <a href="<?= htmlspecialchars($socialLinks['youtube']) ?>" target="_blank" rel="noopener" class="hidden w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/70 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
                                 <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#0F172A"/>
@@ -127,6 +143,7 @@ $currentYear = date('Y');
                             <li><a href="/teatru" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Teatru & Spectacole</a></li>
                             <li><a href="/evenimente-copii" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Evenimente copii</a></li>
                             <li><a href="/comedie" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Stand-up Comedy</a></li>
+                            <li><a href="/festivaluri-moto" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Festivaluri Moto</a></li>
                             <li><a href="/calendar" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Calendar evenimente</a></li>
                         </ul>
                     </div>
@@ -138,8 +155,8 @@ $currentYear = date('Y');
                             <li><a href="/orase" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Orașe</a></li>
                             <li><a href="/locatii" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Locații</a></li>
                             <li><a href="/artisti" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Artiști</a></li>
-                            <li><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Organizatori</a></li>
-                            <li>
+                            <li class="hidden"><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Organizatori</a></li>
+                            <li class="hidden">
                                 <a href="/card-cadou" class="inline-flex items-center gap-2 text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">
                                     Carduri cadou
                                     <span class="px-2 py-0.5 bg-primary rounded text-[10px] font-bold text-white uppercase">Nou</span>
@@ -167,11 +184,11 @@ $currentYear = date('Y');
                     <div class="mobile:text-right">
                         <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Organizatori</h4>
                         <ul class="space-y-3">
-                            <li><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Vinde bilete</a></li>
+                            <li class="hidden"><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Vinde bilete</a></li>
                             <li><a href="/organizator/inregistrare" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Înregistrare organizator</a></li>
                             <li><a href="/organizator/login" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Login organizator</a></li>
                             <li><a href="/ghid-organizator" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Ghid organizatori</a></li>
-                            <li><a href="/comisioane" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Comisioane</a></li>
+                            <li class="hidden"><a href="/comisioane" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Comisioane</a></li>
                         </ul>
                     </div>
                 </div>
@@ -271,6 +288,8 @@ document.getElementById('newsletterForm')?.addEventListener('submit', async func
     e.preventDefault();
     const form = this;
     const email = form.email.value;
+    const name = form.name.value.trim();
+    const city = form.city.value.trim();
     const message = document.getElementById('newsletterMessage');
     const button = form.querySelector('button');
 
@@ -278,9 +297,11 @@ document.getElementById('newsletterForm')?.addEventListener('submit', async func
     button.innerHTML = '<span class="inline-block w-4 h-4 mr-2 border-2 rounded-full border-primary animate-spin border-t-transparent"></span> Se trimite...';
 
     try {
-        // Try to submit to API
         if (typeof AmbiletAPI !== 'undefined') {
-            await AmbiletAPI.post('/newsletter/subscribe', { email });
+            const payload = { email };
+            if (name) payload.name = name;
+            if (city) payload.city = city;
+            await AmbiletAPI.post('/newsletter/subscribe', payload);
         }
         message.textContent = 'Te-ai abonat cu succes! Vei primi cele mai tari evenimente.';
         message.classList.remove('hidden', 'text-error');

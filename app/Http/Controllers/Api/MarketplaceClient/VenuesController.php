@@ -186,11 +186,20 @@ class VenuesController extends BaseController
                 // Get category name
                 $categoryName = $event->marketplaceEventCategory?->getTranslation('name', $language);
 
+                // Resolve artist names from artist_ids JSON
+                $artistNames = [];
+                if (!empty($event->artist_ids)) {
+                    $artistNames = \App\Models\Artist::whereIn('id', $event->artist_ids)
+                        ->pluck('name')
+                        ->toArray();
+                }
+
                 return [
                     'id' => $event->id,
                     'name' => $event->name,
                     'slug' => $event->slug,
                     'starts_at' => $event->starts_at?->toIso8601String(),
+                    'start_time' => $event->starts_at?->format('H:i'),
                     'price_from' => $minPrice,
                     'currency' => $event->ticketTypes->first()?->currency ?? 'RON',
                     'image' => $imageUrl,
@@ -198,6 +207,7 @@ class VenuesController extends BaseController
                     'category' => $categoryName ? ['name' => $categoryName] : null,
                     'commission_mode' => $commissionMode,
                     'commission_rate' => $commissionRate,
+                    'artists' => $artistNames,
                 ];
             });
 
@@ -216,7 +226,7 @@ class VenuesController extends BaseController
             ->where(function ($q) {
                 $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
             })
-            ->with(['ticketTypes'])
+            ->with(['ticketTypes', 'artists:id,name'])
             ->orderBy('starts_at')
             ->limit(10)
             ->get()
@@ -227,12 +237,14 @@ class VenuesController extends BaseController
                     ->filter()->min();
 
                 $imageUrl = $this->formatImageUrl($event->image ?? $event->image_url);
+                $startsAt = $event->starts_at ?? $event->event_date;
 
                 return [
                     'id' => $event->id,
                     'name' => $event->getTranslation('title', $language) ?: $event->title,
                     'slug' => $event->slug,
-                    'starts_at' => ($event->starts_at ?? $event->event_date)?->toIso8601String(),
+                    'starts_at' => $startsAt?->toIso8601String(),
+                    'start_time' => $startsAt?->format('H:i'),
                     'price_from' => $minPrice,
                     'currency' => $event->ticketTypes->first()?->currency ?? 'RON',
                     'image' => $imageUrl,
@@ -240,6 +252,7 @@ class VenuesController extends BaseController
                     'category' => null,
                     'commission_mode' => $client?->commission_mode ?? 'included',
                     'commission_rate' => (float) ($client?->commission_rate ?? 5.0),
+                    'artists' => $event->artists->pluck('name')->toArray(),
                 ];
             });
 

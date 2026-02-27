@@ -7,7 +7,7 @@ require_once 'includes/config.php';
 require_once 'includes/api.php';
 
 $pageTitle = 'Centru de Ajutor — ' . SITE_NAME;
-$transparentHeader = true;
+$transparentHeader = false;
 $pageDescription = 'Găsește răspunsuri la întrebările tale despre bilete, plăți, cont și multe altele. Centrul de ajutor Ambilet.';
 
 // Fetch KB categories from API

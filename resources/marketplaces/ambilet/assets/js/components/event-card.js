@@ -233,7 +233,8 @@ const AmbiletEventCard = {
 
         const {
             urlPrefix = '/bilete/',
-            showBuyButton = true
+            showBuyButton = true,
+            showArtists = false
         } = options;
 
         const eventUrl = urlPrefix + event.slug;
@@ -267,12 +268,13 @@ const AmbiletEventCard = {
             '<div class="flex flex-col justify-center flex-1 px-5 py-4 mobile:py-2 mobile:px-4 mobile:border-b mobile:border-border">' +
                 (event.categoryName ? '<div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">' + this.escapeHtml(event.categoryName) + '</div>' : '') +
                 '<h3 class="mb-2 text-base font-bold leading-tight text-secondary mobile:text-lg mobile:leading-tight">' + this.escapeHtml(event.title) + '</h3>' +
-                '<div class="flex gap-4 text-sm text-muted">' +
+                '<div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">' +
                     '<span class="flex items-center gap-1 mobile:hidden">' +
                         '<svg class="w-3.5 h-3.5 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
                         event.time +
                     '</span>' +
                     (event.venueName ? '<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + this.escapeHtml(event.venueName) + '</span>' : '') +
+                    (showArtists && event.artists && event.artists.length > 0 ? '<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' + this.escapeHtml(event.artists.join(', ')) + '</span>' : '') +
                 '</div>' +
             '</div>' +
             '</div>' +
@@ -542,6 +544,7 @@ const AmbiletEventCard = {
             postponedDate: apiEvent.postponed_date || null,
             isDateRange: isDateRange,
             dateRangeFormatted: dateRangeFormatted,
+            artists: apiEvent.artists || [],
             _raw: apiEvent
         };
     },

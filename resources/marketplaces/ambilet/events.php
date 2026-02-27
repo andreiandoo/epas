@@ -43,7 +43,7 @@ if ($searchQuery) {
 
 $pageDescription = 'Descoperă cele mai bune evenimente din România. Concerte, festivaluri, teatru, stand-up și multe altele.';
 $currentPage = 'events';
-$transparentHeader = true;
+$transparentHeader = false;
 
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';

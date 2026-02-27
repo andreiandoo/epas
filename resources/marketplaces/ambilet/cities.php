@@ -9,7 +9,7 @@ require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Orașe';
 $pageDescription = 'Găsește evenimente în orașul tău sau descoperă ce se întâmplă în alte orașe din România.';
 $bodyClass = 'bg-surface min-h-screen';
-$transparentHeader = true;
+$transparentHeader = false;
 
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';

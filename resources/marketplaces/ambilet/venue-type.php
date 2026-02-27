@@ -91,7 +91,7 @@ $currentType = $venueTypes[$typeSlug];
 $pageTitle = $currentType['name'] . ' - Locații pentru Evenimente';
 $pageDescription = $currentType['meta_description'];
 $bodyClass = 'bg-slate-50 min-h-screen';
-$transparentHeader = true;
+$transparentHeader = false;
 
 // All venue types for navigation
 $allTypes = [

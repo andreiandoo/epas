@@ -35,7 +35,7 @@ if ($searchQuery) {
 
 $pageDescription = 'Explorează evenimentele trecute din România. Concerte, festivaluri, teatru, stand-up și multe altele care au avut loc.';
 $currentPage = 'past-events';
-$transparentHeader = true;
+$transparentHeader = false;
 
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';

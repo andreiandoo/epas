@@ -586,4 +586,78 @@ class AuthController extends BaseController
             'created_at' => $customer->created_at->toIso8601String(),
         ];
     }
+
+    /**
+     * Subscribe to newsletter - creates or updates a marketplace customer
+     * as a guest with accepts_marketing = true
+     */
+    public function subscribeNewsletter(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'email' => 'required|email|max:255',
+            'name' => 'nullable|string|max:200',
+            'city' => 'nullable|string|max:100',
+        ]);
+
+        $existing = MarketplaceCustomer::where('marketplace_client_id', $client->id)
+            ->where('email', $validated['email'])
+            ->first();
+
+        if ($existing) {
+            // Update marketing consent + optional fields
+            $updateData = [
+                'accepts_marketing' => true,
+                'marketing_consent_at' => $existing->accepts_marketing ? $existing->marketing_consent_at : now(),
+            ];
+
+            if (!empty($validated['name']) && !$existing->first_name) {
+                $nameParts = explode(' ', trim($validated['name']), 2);
+                $updateData['first_name'] = $nameParts[0];
+                if (isset($nameParts[1])) {
+                    $updateData['last_name'] = $nameParts[1];
+                }
+            }
+
+            if (!empty($validated['city']) && !$existing->city) {
+                $updateData['city'] = $validated['city'];
+            }
+
+            $existing->update($updateData);
+
+            return $this->success([
+                'subscribed' => true,
+                'is_new' => false,
+            ], 'Te-ai abonat cu succes la newsletter!');
+        }
+
+        // Create new guest customer
+        $createData = [
+            'marketplace_client_id' => $client->id,
+            'email' => $validated['email'],
+            'accepts_marketing' => true,
+            'marketing_consent_at' => now(),
+            'status' => 'active',
+        ];
+
+        if (!empty($validated['name'])) {
+            $nameParts = explode(' ', trim($validated['name']), 2);
+            $createData['first_name'] = $nameParts[0];
+            if (isset($nameParts[1])) {
+                $createData['last_name'] = $nameParts[1];
+            }
+        }
+
+        if (!empty($validated['city'])) {
+            $createData['city'] = $validated['city'];
+        }
+
+        MarketplaceCustomer::create($createData);
+
+        return $this->success([
+            'subscribed' => true,
+            'is_new' => true,
+        ], 'Te-ai abonat cu succes la newsletter!', 201);
+    }
 }

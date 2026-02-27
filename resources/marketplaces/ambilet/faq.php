@@ -6,7 +6,7 @@
 require_once 'includes/config.php';
 
 $pageTitle = 'Întrebări Frecvente — ' . SITE_NAME;
-$transparentHeader = true;
+$transparentHeader = false;
 $pageDescription = 'Răspunsuri rapide la cele mai comune întrebări despre Ambilet - bilete, plăți, rambursări și setări cont.';
 
 // FAQ Categories with icons

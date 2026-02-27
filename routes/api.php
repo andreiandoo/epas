@@ -1855,6 +1855,8 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         ->name('api.marketplace-client.customer.verify-email');
     Route::post('/resend-verification', [CustomerAuthController::class, 'resendVerification'])
         ->name('api.marketplace-client.customer.resend-verification');
+    Route::post('/newsletter/subscribe', [CustomerAuthController::class, 'subscribeNewsletter'])
+        ->name('api.marketplace-client.customer.newsletter.subscribe');
 
     // Protected routes (require customer auth)
     Route::middleware('auth:sanctum')->group(function () {
