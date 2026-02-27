@@ -9,11 +9,8 @@ use Filament\Schemas\Components\Section;
 use Filament\Forms;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Actions\ViewAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Tables\Actions\BulkActionGroup;
-use Filament\Tables\Actions\DeleteBulkAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Illuminate\Support\HtmlString;
 use BackedEnum;
 use UnitEnum;
@@ -219,11 +216,8 @@ class MarketplaceTaxTemplateResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_default')
                     ->label('Default'),
             ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
+            ->actions([])
+            ->bulkActions([])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
