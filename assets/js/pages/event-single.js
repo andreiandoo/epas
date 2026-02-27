@@ -556,7 +556,9 @@ const EventPage = {
      * Show error state
      */
     showError(message) {
-        document.getElementById(this.elements.loadingState).innerHTML =
+        const el = document.getElementById(this.elements.loadingState);
+        el.className = 'flex flex-col gap-8';
+        el.innerHTML =
             '<div class="w-full py-16 text-center">' +
                 '<svg class="w-16 h-16 mx-auto mb-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
                 '<h1 class="mb-4 text-2xl font-bold text-secondary">' + message + '</h1>' +
