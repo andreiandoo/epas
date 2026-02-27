@@ -140,7 +140,7 @@ class ImportAmbiletOrdersCommand extends Command
                     'payment_processor'       => $this->n($data['payment_method']),
                     'source'                  => 'legacy_import',
                     'paid_at'                 => $paidAt,
-                    'metadata'                => json_encode([
+                    'meta'                    => json_encode([
                         'wp_order_id'   => $wpOrderId,
                         'imported_from' => 'ambilet',
                     ]),
