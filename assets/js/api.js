@@ -159,6 +159,10 @@ const AmbiletAPI = {
         if (endpoint === '/customer/favorites/venues') return 'customer.favorites.venues';
         if (endpoint === '/customer/favorites/summary') return 'customer.favorites.summary';
 
+        // Venue categories
+        if (endpoint.match(/\/venue-categories\/[a-z0-9-]+$/i)) return 'venue-category';
+        if (endpoint.includes('/venue-categories')) return 'venue-categories';
+
         // Venues endpoints - specific patterns first, then fallback
         if (endpoint.includes('/venues/featured')) return 'venues.featured';
         if (endpoint.match(/\/venues\/[a-z0-9-]+\/toggle-favorite$/i)) return 'venue.toggle-favorite';
@@ -396,6 +400,12 @@ const AmbiletAPI = {
         const eventTrackingMatch = endpoint.match(/\/events\/([a-z0-9-]+)\/(track-view|toggle-interest|check-interest)$/i);
         if (eventTrackingMatch) {
             return `slug=${encodeURIComponent(eventTrackingMatch[1])}`;
+        }
+
+        // Venue category slug extraction
+        const venueCategoryMatch = endpoint.match(/\/venue-categories\/([a-z0-9-]+)$/i);
+        if (venueCategoryMatch) {
+            return `slug=${encodeURIComponent(venueCategoryMatch[1])}`;
         }
 
         // Venue favorite endpoints - extract slug before /toggle-favorite or /check-favorite
@@ -820,6 +830,13 @@ const AmbiletAPI = {
      */
     async getVenues(params = {}) {
         return this.get('/venues', params);
+    },
+
+    /**
+     * Get venue categories
+     */
+    async getVenueCategories() {
+        return this.get('/venue-categories');
     },
 
     /**

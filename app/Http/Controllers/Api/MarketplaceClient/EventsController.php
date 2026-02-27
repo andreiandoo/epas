@@ -28,7 +28,7 @@ class EventsController extends BaseController
                 $q->where('status', 'active')
                     ->select(['id', 'event_id', 'name', 'price_cents', 'sale_price_cents', 'quota_total', 'quota_sold', 'currency']);
             }])
-            ->where('status', 'published')
+            ->where('is_published', true)
             ->where(function ($q) {
                 $q->where('is_public', true)->orWhereNull('is_public');
             })
@@ -316,7 +316,7 @@ class EventsController extends BaseController
             $query->where('slug', $identifier);
         }
 
-        $event = $query->where('status', 'published')
+        $event = $query->where('is_published', true)
             ->where(function ($q) {
                 $q->where('is_public', true)->orWhereNull('is_public');
             })
@@ -475,7 +475,7 @@ class EventsController extends BaseController
             'tour_events' => $event->tour_id
                 ? \App\Models\Event::where('tour_id', $event->tour_id)
                     ->where('id', '!=', $event->id)
-                    ->where('status', 'published')
+                    ->where('is_published', true)
                     ->with('venue:id,name,city')
                     ->orderByRaw("COALESCE(event_date, DATE(starts_at)) ASC")
                     ->get()
@@ -513,7 +513,7 @@ class EventsController extends BaseController
                 $q->where('status', 'active')
                     ->select(['id', 'event_id', 'name', 'price_cents', 'sale_price_cents', 'quota_total', 'quota_sold']);
             }])
-            ->where('status', 'published')
+            ->where('is_published', true)
             ->where(function ($q) {
                 $q->where('is_public', true)->orWhereNull('is_public');
             })
@@ -627,7 +627,7 @@ class EventsController extends BaseController
         $client = $this->requireClient($request);
 
         $query = Event::query()
-            ->where('status', 'published')
+            ->where('is_published', true)
             ->where('is_public', true)
             ->where('starts_at', '>=', now())
             ->whereNotNull('category');

@@ -669,7 +669,7 @@ class MarketplaceEventsController extends BaseController
             'tour_events' => $event->tour_id
                 ? Event::where('tour_id', $event->tour_id)
                     ->where('id', '!=', $event->id)
-                    ->where('status', 'published')
+                    ->where('is_published', true)
                     ->with('venue:id,name,city')
                     ->orderByRaw("COALESCE(event_date, DATE(starts_at)) ASC")
                     ->get()

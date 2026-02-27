@@ -214,7 +214,7 @@ class VenuesController extends BaseController
         // Also get upcoming events from Event table (events created via organizer panel)
         $upcomingCoreEvents = \App\Models\Event::query()
             ->where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
+            ->where('is_published', true)
             ->where('venue_id', $venue->id)
             ->where(function ($q) {
                 $q->where(function ($inner) {
@@ -377,7 +377,7 @@ class VenuesController extends BaseController
 
         // Count from Event table
         $count += \App\Models\Event::where('marketplace_client_id', $marketplaceClientId)
-            ->where('status', 'published')
+            ->where('is_published', true)
             ->where('venue_id', $venue->id)
             ->where(function ($q) {
                 $q->where(function ($inner) {

@@ -96,7 +96,7 @@ class SearchController extends BaseController
                 $q->where('status', 'active')
                     ->select(['id', 'event_id', 'price_cents', 'sale_price_cents']);
             }])
-            ->where('status', 'published')
+            ->where('is_published', true)
             ->where(function ($q) {
                 $q->where('is_public', true)->orWhereNull('is_public');
             })

@@ -233,7 +233,7 @@ class LocationsController extends BaseController
         // Base query filters (consistent with EventsController listing)
         $baseFilters = function ($query) use ($clientId) {
             $query->where('marketplace_client_id', $clientId)
-                ->where('status', 'published')
+                ->where('is_published', true)
                 ->where(function ($q) {
                     $q->where('is_public', true)->orWhereNull('is_public');
                 })
