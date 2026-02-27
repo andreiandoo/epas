@@ -1054,9 +1054,34 @@ class EventResource extends Resource
                                     ->reorderableWithDragAndDrop()
                                     ->orderColumn('sort_order')
                                     ->addActionLabel($t('Adaugă tip bilet', 'Add ticket type'))
-                                    ->itemLabel(fn (array $state) => ($state['is_active'] ?? true)
-                                        ? '✓ ' . ($state['name'] ?? $t('Bilet', 'Ticket'))
-                                        : '○ ' . ($state['name'] ?? $t('Bilet', 'Ticket')))
+                                    ->itemLabel(function (array $state) use ($t) {
+                                        $name = e($state['name'] ?? $t('Bilet', 'Ticket'));
+                                        $isActive = $state['is_active'] ?? true;
+
+                                        if ($isActive) {
+                                            return '✓ ' . $name;
+                                        }
+
+                                        // Expired: active_until is set and in the past
+                                        $activeUntil = $state['active_until'] ?? null;
+                                        if ($activeUntil && \Carbon\Carbon::parse($activeUntil, 'Europe/Bucharest')->isPast()) {
+                                            return new \Illuminate\Support\HtmlString(
+                                                '○ ' . $name . ' <span style="font-size:11px;font-weight:600;color:#dc2626;background:#fef2f2;padding:1px 6px;border-radius:4px;margin-left:6px;">Expirat</span>'
+                                            );
+                                        }
+
+                                        // Autostart: waiting for previous ticket type to sell out
+                                        if ($state['autostart_when_previous_sold_out'] ?? false) {
+                                            return new \Illuminate\Support\HtmlString(
+                                                '○ ' . $name . ' <span style="font-size:11px;font-weight:600;color:#2563eb;background:#eff6ff;padding:1px 6px;border-radius:4px;margin-left:6px;">Autostart</span>'
+                                            );
+                                        }
+
+                                        // Manually deactivated
+                                        return new \Illuminate\Support\HtmlString(
+                                            '○ ' . $name . ' <span style="font-size:11px;font-weight:600;color:#d97706;background:#fffbeb;padding:1px 6px;border-radius:4px;margin-left:6px;">Dezactivat</span>'
+                                        );
+                                    })
                                     ->extraItemActions([
                                         Action::make('duplicateTicketType')
                                             ->icon('heroicon-m-document-duplicate')
