@@ -306,28 +306,28 @@ class MarketplaceClientResource extends Resource
                                     Forms\Components\Placeholder::make('total_revenue')
                                         ->label('Total Revenue (All Time)')
                                         ->content(fn ($record) => $record
-                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed'])->sum('total'), 2) . ' ' . ($record->currency ?? 'RON')
+                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed', 'completed'])->sum('total'), 2) . ' ' . ($record->currency ?? 'RON')
                                             : '0.00'
                                         ),
 
                                     Forms\Components\Placeholder::make('total_commission')
                                         ->label('Total Commission (All Time)')
                                         ->content(fn ($record) => $record
-                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed'])->sum('commission_amount'), 2) . ' ' . ($record->currency ?? 'RON')
+                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed', 'completed'])->sum('commission_amount'), 2) . ' ' . ($record->currency ?? 'RON')
                                             : '0.00'
                                         ),
 
                                     Forms\Components\Placeholder::make('this_month_revenue')
                                         ->label('This Month Revenue')
                                         ->content(fn ($record) => $record
-                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed'])->where('created_at', '>=', now()->startOfMonth())->sum('total'), 2) . ' ' . ($record->currency ?? 'RON')
+                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed', 'completed'])->where('created_at', '>=', now()->startOfMonth())->sum('total'), 2) . ' ' . ($record->currency ?? 'RON')
                                             : '0.00'
                                         ),
 
                                     Forms\Components\Placeholder::make('total_orders')
                                         ->label('Total Orders')
                                         ->content(fn ($record) => $record
-                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed'])->count())
+                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed', 'completed'])->count())
                                             : '0'
                                         ),
 

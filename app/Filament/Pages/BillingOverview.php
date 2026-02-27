@@ -46,7 +46,7 @@ class BillingOverview extends Page
             ->get();
 
         // Total revenue this month (from paid/confirmed orders) - tenant orders (total_cents)
-        $tenantMonthlyRevenue = Order::whereIn('status', ['paid', 'confirmed'])
+        $tenantMonthlyRevenue = Order::whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereNotNull('tenant_id')
             ->whereNull('marketplace_client_id')
             ->where('created_at', '>=', $startOfMonth)
@@ -54,7 +54,7 @@ class BillingOverview extends Page
             ->first();
 
         // Marketplace orders revenue (total field, decimal)
-        $marketplaceMonthlyRevenue = Order::whereIn('status', ['paid', 'confirmed'])
+        $marketplaceMonthlyRevenue = Order::whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereNotNull('marketplace_client_id')
             ->where('created_at', '>=', $startOfMonth)
             ->selectRaw('SUM(total) as total')
@@ -105,7 +105,7 @@ class BillingOverview extends Page
 
                 // Calculate gross revenue from orders in current period (total_cents / 100)
                 $grossRevenueQuery = Order::where('tenant_id', $tenant->id)
-                    ->whereIn('status', ['paid', 'confirmed']);
+                    ->whereIn('status', ['paid', 'confirmed', 'completed']);
 
                 if ($periodStart) {
                     $grossRevenueQuery->where('created_at', '>=', $periodStart);
@@ -187,7 +187,7 @@ class BillingOverview extends Page
 
                 // Calculate gross revenue from marketplace orders (uses `total` decimal field)
                 $grossRevenueQuery = Order::where('marketplace_client_id', $client->id)
-                    ->whereIn('status', ['paid', 'confirmed']);
+                    ->whereIn('status', ['paid', 'confirmed', 'completed']);
 
                 if ($periodStart) {
                     $grossRevenueQuery->where('created_at', '>=', $periodStart);
@@ -200,7 +200,7 @@ class BillingOverview extends Page
 
                 // Commission: use pre-calculated commission_amount from orders
                 $commissionQuery = Order::where('marketplace_client_id', $client->id)
-                    ->whereIn('status', ['paid', 'confirmed']);
+                    ->whereIn('status', ['paid', 'confirmed', 'completed']);
 
                 if ($periodStart) {
                     $commissionQuery->where('created_at', '>=', $periodStart);
@@ -294,7 +294,7 @@ class BillingOverview extends Page
 
         // Calculate gross revenue for the period
         $grossRevenue = Order::where('tenant_id', $tenant->id)
-            ->whereIn('status', ['paid', 'confirmed'])
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->where('created_at', '>=', $periodStart)
             ->where('created_at', '<=', $periodEnd->endOfDay())
             ->sum('total_cents') / 100;
@@ -411,14 +411,14 @@ class BillingOverview extends Page
 
         // Calculate gross revenue (marketplace orders use `total` decimal)
         $grossRevenue = (float) Order::where('marketplace_client_id', $client->id)
-            ->whereIn('status', ['paid', 'confirmed'])
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->where('created_at', '>=', $periodStart)
             ->where('created_at', '<=', $periodEnd->endOfDay())
             ->sum('total');
 
         // Use pre-calculated commission_amount from orders
         $subtotal = (float) Order::where('marketplace_client_id', $client->id)
-            ->whereIn('status', ['paid', 'confirmed'])
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->where('created_at', '>=', $periodStart)
             ->where('created_at', '<=', $periodEnd->endOfDay())
             ->sum('commission_amount');

@@ -133,7 +133,7 @@ class ClientEarnings extends Page
         $from = Carbon::parse($this->dateFrom)->startOfDay();
         $to = Carbon::parse($this->dateTo)->endOfDay();
 
-        $query = Order::whereIn('status', ['paid', 'confirmed'])
+        $query = Order::whereIn('status', ['paid', 'confirmed', 'completed'])
             ->where('created_at', '>=', $from)
             ->where('created_at', '<=', $to);
 
