@@ -28,9 +28,12 @@ class ImportAmbiletOrdersCommand extends Command
             return 1;
         }
 
-        $dir              = dirname($files[0]);
-        $ordersMapFile    = $dir . '/orders_map.json';
-        $customersMapFile = $dir . '/customers_map.json';
+        $mapDir = storage_path('app/import_maps');
+        if (!is_dir($mapDir)) {
+            mkdir($mapDir, 0755, true);
+        }
+        $ordersMapFile    = $mapDir . '/orders_map.json';
+        $customersMapFile = $mapDir . '/customers_map.json';
 
         $ordersMap    = [];
         $customersMap = [];

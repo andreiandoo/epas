@@ -28,15 +28,19 @@ class ImportAmbiletTicketsCommand extends Command
             return 1;
         }
 
-        $dir            = dirname($file);
-        $ticketsMapFile = $dir . '/tickets_map.json';
+        $dir    = dirname($file);
+        $mapDir = storage_path('app/import_maps');
+        if (!is_dir($mapDir)) {
+            mkdir($mapDir, 0755, true);
+        }
+        $ticketsMapFile = $mapDir . '/tickets_map.json';
 
-        // Load prerequisite maps
-        $eventsMap = $this->loadJsonMap($dir . '/events_map.json', 'events');
-        $ttMap     = $this->loadJsonMap($dir . '/ticket_types_map.json', 'ticket types');
-        $ordersMap = $this->loadJsonMap($dir . '/orders_map.json', 'orders');
+        // Load prerequisite maps (from storage, written by previous import commands)
+        $eventsMap = $this->loadJsonMap($mapDir . '/events_map.json', 'events');
+        $ttMap     = $this->loadJsonMap($mapDir . '/ticket_types_map.json', 'ticket types');
+        $ordersMap = $this->loadJsonMap($mapDir . '/orders_map.json', 'orders');
 
-        // Load order_item_map.csv: order_item_id => wp_order_id
+        // Load order_item_map.csv from CSV source directory (not storage)
         $orderItemMapFile = $dir . '/order_item_map.csv';
         if (!file_exists($orderItemMapFile)) {
             $this->error("order_item_map.csv not found in: {$dir}");

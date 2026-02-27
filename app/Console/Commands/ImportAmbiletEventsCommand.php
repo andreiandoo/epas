@@ -32,8 +32,11 @@ class ImportAmbiletEventsCommand extends Command
             return 1;
         }
 
-        $dir           = dirname($file);
-        $this->mapFile = $dir . '/events_map.json';
+        $mapDir = storage_path('app/import_maps');
+        if (!is_dir($mapDir)) {
+            mkdir($mapDir, 0755, true);
+        }
+        $this->mapFile = $mapDir . '/events_map.json';
 
         if (!$fresh && file_exists($this->mapFile)) {
             $this->map = json_decode(file_get_contents($this->mapFile), true) ?? [];

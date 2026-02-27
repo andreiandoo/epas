@@ -27,9 +27,12 @@ class ImportAmbiletTicketTypesCommand extends Command
             return 1;
         }
 
-        $dir           = dirname($file);
-        $eventsMapFile = $dir . '/events_map.json';
-        $mapFile       = $dir . '/ticket_types_map.json';
+        $mapDir = storage_path('app/import_maps');
+        if (!is_dir($mapDir)) {
+            mkdir($mapDir, 0755, true);
+        }
+        $eventsMapFile = $mapDir . '/events_map.json';
+        $mapFile       = $mapDir . '/ticket_types_map.json';
 
         if (!file_exists($eventsMapFile)) {
             $this->error('events_map.json not found. Run import:ambilet-events first.');
