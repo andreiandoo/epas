@@ -2495,13 +2495,14 @@ const EventPage = {
             svg += '</g>';
 
         } else if (shape === 'text') {
-            // Draw text label
+            // Draw text label — centered vertically in section bounds
             var fontSize = parseInt(metadata.fontSize) || 16;
             var fontFamily = metadata.fontFamily || 'Arial';
             var fontWeight = metadata.fontWeight || 'normal';
             var textContent = metadata.text || section.name || 'Text';
+            var textY = section.height > 0 ? section.y + section.height / 2 : section.y + fontSize;
 
-            svg += '<text x="' + section.x + '" y="' + (section.y + fontSize) + '" font-size="' + fontSize + '" font-family="' + fontFamily + '" font-weight="' + fontWeight + '" fill="' + color + '">' + textContent + '</text>';
+            svg += '<text x="' + section.x + '" y="' + textY + '" dominant-baseline="central" font-size="' + fontSize + '" font-family="' + fontFamily + '" font-weight="' + fontWeight + '" fill="' + color + '">' + textContent + '</text>';
 
         } else if (shape === 'line') {
             // Draw line from stored points
@@ -2543,7 +2544,7 @@ const EventPage = {
         var canvasH = layout.canvas_height || 1080;
 
         // Build SVG with tooltip styles and seat shapes
-        var svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" class="w-full h-full" style="min-width: ' + canvasW + 'px; min-height: ' + canvasH + 'px;" preserveAspectRatio="xMidYMid meet">';
+        var svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" class="w-full h-full" style="min-width: ' + canvasW + 'px; min-height: ' + canvasH + 'px;" overflow="visible" preserveAspectRatio="xMidYMid meet">';
         svg += '<style>' +
             '.seat-hover { transition: all 0.2s ease; }' +
             '.seat-hover:hover { transform: scale(1.15); filter: brightness(1.2); }' +
@@ -2716,12 +2717,17 @@ const EventPage = {
                             else if (status === 'held') tooltipText += ' — rezervat';
                         }
 
+                        // Selected seats: larger radius and font
+                        var drawRadius = isSelected ? seatRadius2 * 1.5 : seatRadius2;
+                        var drawFontSize = isSelected ? Math.round(seatRadius2 * 1.2 * 10) / 10 : seatFontSize2;
+                        var drawStrokeWidth = isSelected ? '1.5' : '0.5';
+
                         svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + ';">' +
                             '<title>' + tooltipText + '</title>' +
-                            '<circle cx="' + seatCX + '" cy="' + seatCY + '" r="' + seatRadius2 + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="0.5"/>';
+                            '<circle cx="' + seatCX + '" cy="' + seatCY + '" r="' + drawRadius + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="' + drawStrokeWidth + '"/>';
 
                         if (!isDisabled && status !== 'blocked') {
-                            svg += '<text x="' + seatCX + '" y="' + (seatCY + seatRadius2 * 0.35) + '" text-anchor="middle" font-size="' + seatFontSize2 + '" font-weight="600" fill="white" class="pointer-events-none select-none">' + seat.label + '</text>';
+                            svg += '<text x="' + seatCX + '" y="' + (seatCY + drawRadius * 0.35) + '" text-anchor="middle" font-size="' + drawFontSize + '" font-weight="600" fill="white" class="pointer-events-none select-none">' + seat.label + '</text>';
                         }
 
                         if (isDisabled || status === 'blocked') {
@@ -2760,7 +2766,7 @@ const EventPage = {
         var canvasW = layout.canvas_width || 1920;
         var canvasH = layout.canvas_height || 1080;
 
-        var svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" class="w-full h-full" style="min-width: ' + canvasW + 'px; min-height: ' + canvasH + 'px;" preserveAspectRatio="xMidYMid meet">';
+        var svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" class="w-full h-full" style="min-width: ' + canvasW + 'px; min-height: ' + canvasH + 'px;" overflow="visible" preserveAspectRatio="xMidYMid meet">';
         svg += '<style>' +
             '.seat-hover { transition: transform 0.15s ease, filter 0.15s ease; }' +
             '.seat-hover:hover { filter: brightness(1.2); }' +
@@ -2935,15 +2941,19 @@ const EventPage = {
                             }
                         }
 
+                        // Selected seats: larger radius and font
+                        var drawRadius = isSelected ? seatRadius * 1.5 : seatRadius;
+                        var drawFontSize = isSelected ? Math.round(seatRadius * 1.2 * 10) / 10 : seatFontSize;
+                        var drawStrokeWidth = isSelected ? '1.5' : '0.5';
+
                         // Render seat as circle at actual position (matching admin layout)
-                        var seatTransform = isSelected ? ' transform="translate(' + seatCX + ',' + seatCY + ') scale(1.1) translate(' + (-seatCX) + ',' + (-seatCY) + ')"' : '';
-                        svg += '<g class="seat-hover"' + seatTransform + ' ' + clickHandler + ' style="cursor: ' + cursor + ';">' +
+                        svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + ';">' +
                             '<title>' + tooltipText + '</title>' +
-                            '<circle cx="' + seatCX + '" cy="' + seatCY + '" r="' + seatRadius + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="' + (isSelected ? '1' : '0.5') + '"/>';
+                            '<circle cx="' + seatCX + '" cy="' + seatCY + '" r="' + drawRadius + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="' + drawStrokeWidth + '"/>';
 
                         // Seat label inside circle
                         if (!isDisabled && status !== 'blocked') {
-                            svg += '<text x="' + seatCX + '" y="' + (seatCY + seatRadius * 0.35) + '" text-anchor="middle" font-size="' + seatFontSize + '" font-weight="600" fill="white" class="pointer-events-none select-none">' + seat.label + '</text>';
+                            svg += '<text x="' + seatCX + '" y="' + (seatCY + drawRadius * 0.35) + '" text-anchor="middle" font-size="' + drawFontSize + '" font-weight="600" fill="white" class="pointer-events-none select-none">' + seat.label + '</text>';
                         }
 
                         // X marker for disabled/blocked seats
