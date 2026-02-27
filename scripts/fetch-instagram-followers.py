@@ -182,7 +182,7 @@ def main():
             social_stats_updated_at IS NULL
             OR social_stats_updated_at < {ph}
           )
-        ORDER BY social_stats_updated_at ASC NULLS FIRST, id ASC
+        ORDER BY social_stats_updated_at IS NOT NULL, social_stats_updated_at ASC, id ASC
     """
 
     if args.limit > 0:
