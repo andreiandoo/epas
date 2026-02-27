@@ -128,16 +128,26 @@ class MarketplacePanelProvider extends PanelProvider
             // Set dark mode as default if not already set
             ->renderHook('panels::head.end', fn () => '<script>if(!localStorage.getItem("theme")){localStorage.setItem("theme","dark");document.documentElement.classList.add("dark");}</script>')
 
-            // Preserve scroll position during Livewire morph updates (fixes Repeater scroll jump)
+            // Preserve scroll position AND repeater collapse state during Livewire morph updates
             ->renderHook('panels::body.end', fn () => <<<'HTML'
             <script>
             document.addEventListener('livewire:init', () => {
                 let savedScrollY = null;
                 let isFormSubmit = false;
+                let savedCollapseStates = new Map();
 
                 Livewire.hook('commit.prepare', ({ component }) => {
                     savedScrollY = window.scrollY;
                     isFormSubmit = false;
+
+                    // Save collapse states of all repeater items
+                    savedCollapseStates.clear();
+                    document.querySelectorAll('.fi-fo-repeater-item').forEach(el => {
+                        const key = el.getAttribute('wire:key');
+                        if (key) {
+                            savedCollapseStates.set(key, el.classList.contains('fi-collapsed'));
+                        }
+                    });
                 });
 
                 Livewire.hook('commit', ({ component, commit, respond, succeed, fail }) => {
@@ -151,14 +161,35 @@ class MarketplacePanelProvider extends PanelProvider
                     }
 
                     succeed(({ snapshot, effects }) => {
-                        if (savedScrollY !== null && !isFormSubmit) {
-                            requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            // Restore scroll position
+                            if (savedScrollY !== null && !isFormSubmit) {
                                 window.scrollTo({ top: savedScrollY, behavior: 'instant' });
-                                savedScrollY = null;
-                            });
-                        } else {
+                            }
                             savedScrollY = null;
-                        }
+
+                            // Restore repeater collapse states
+                            if (!isFormSubmit && savedCollapseStates.size > 0) {
+                                document.querySelectorAll('.fi-fo-repeater-item').forEach(el => {
+                                    const key = el.getAttribute('wire:key');
+                                    if (key && savedCollapseStates.has(key)) {
+                                        const wasCollapsed = savedCollapseStates.get(key);
+                                        const isCollapsed = el.classList.contains('fi-collapsed');
+                                        if (wasCollapsed !== isCollapsed) {
+                                            // Toggle via Alpine's reactive data
+                                            if (el._x_dataStack) {
+                                                el._x_dataStack[0].isCollapsed = wasCollapsed;
+                                            } else if (wasCollapsed) {
+                                                el.classList.add('fi-collapsed');
+                                            } else {
+                                                el.classList.remove('fi-collapsed');
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            savedCollapseStates.clear();
+                        });
                     });
                 });
             });

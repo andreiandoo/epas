@@ -95,8 +95,8 @@ class EventResource extends Resource
     {
         $today = Carbon::today();
         $marketplace = static::getMarketplaceClient();
-        // Inline labels for ticket type fields — set to false to revert to stacked labels
-        $il = true;
+        // Inline labels for ticket type fields — set to true for inline, false for stacked
+        $il = false;
 
         // Get tenant's language (check both 'language' and 'locale' columns)
         // Default to 'ro' (Romanian) for this marketplace
@@ -1062,19 +1062,35 @@ class EventResource extends Resource
                                             ->icon('heroicon-m-document-duplicate')
                                             ->color('gray')
                                             ->tooltip($t('Duplică tipul de bilet', 'Duplicate ticket type'))
-                                            ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                            ->action(function (array $arguments, Forms\Components\Repeater $component, SGet $get) {
                                                 $state = $component->getState();
                                                 $itemKey = $arguments['item'];
                                                 $itemData = $state[$itemKey] ?? null;
                                                 if (!$itemData) return;
 
+                                                $newName = '[DUP] ' . ($itemData['name'] ?? '');
+                                                $newSku = Str::upper(Str::slug($newName, '-'));
+                                                $capacity = $itemData['capacity'] ?? null;
+                                                $eventSeries = $get('event_series');
+
                                                 $newData = $itemData;
-                                                $newData['name'] = '[DUP] ' . ($newData['name'] ?? '');
+                                                $newData['name'] = $newName;
                                                 $newData['id'] = null;
-                                                $newData['sku'] = '';
-                                                $newData['series_start'] = null;
-                                                $newData['series_end'] = null;
+                                                $newData['sku'] = $newSku;
                                                 $newData['quota_sold'] = 0;
+
+                                                // Generate new series based on event_series + new SKU
+                                                if ($eventSeries && $newSku) {
+                                                    $newData['series_start'] = $eventSeries . '-' . $newSku . '-00001';
+                                                    if ($capacity && (int) $capacity > 0) {
+                                                        $newData['series_end'] = $eventSeries . '-' . $newSku . '-' . str_pad((int) $capacity, 5, '0', STR_PAD_LEFT);
+                                                    } else {
+                                                        $newData['series_end'] = null;
+                                                    }
+                                                } else {
+                                                    $newData['series_start'] = null;
+                                                    $newData['series_end'] = null;
+                                                }
 
                                                 $newUuid = (string) Str::uuid();
                                                 $state[$newUuid] = $newData;
