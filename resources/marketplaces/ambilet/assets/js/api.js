@@ -20,8 +20,11 @@ const AmbiletAPI = {
     async request(endpoint, options = {}) {
         // Build proxy URL - the API key is handled server-side
         const baseUrl = this.getApiUrl();
-        const action = this.getProxyAction(endpoint);
-        const params = this.getProxyParams(endpoint);
+
+        // Separate path from query string so routing regexes match correctly
+        const [endpointPath, endpointQuery] = endpoint.split('?');
+        const action = this.getProxyAction(endpointPath);
+        const params = this.getProxyParams(endpointPath);
 
         // Handle unknown endpoints
         if (!action) {
@@ -31,6 +34,10 @@ const AmbiletAPI = {
         let url = `${baseUrl}?action=${action}`;
         if (params) {
             url += '&' + params;
+        }
+        // Forward any extra query params (e.g. preview=true)
+        if (endpointQuery) {
+            url += '&' + endpointQuery;
         }
 
         const headers = {
