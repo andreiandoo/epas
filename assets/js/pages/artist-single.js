@@ -51,6 +51,12 @@ const ArtistPage = {
         this.artistSlug = window.ARTIST_SLUG || '';
         this.loadArtistData();
         this.loadFollowStatus();
+
+        // Close video modal on Escape key
+        var self = this;
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') self.closeVideoModal();
+        });
     },
 
     /**
@@ -66,6 +72,11 @@ const ArtistPage = {
         try {
             var response = await AmbiletAPI.get('/artists/' + this.artistSlug);
             if (response.success && response.data) {
+                // Check if this is a Core-only artist (coming soon)
+                if (response.data.is_coming_soon) {
+                    this.showComingSoon(response.data);
+                    return;
+                }
                 this.artistData = response.data;
                 this.render(this.transformApiData(response.data));
             } else {
@@ -108,6 +119,42 @@ const ArtistPage = {
 
         // Update page title
         document.title = 'Artist negăsit - ' + (window.AMBILET_CONFIG?.SITE_NAME || 'Ambilet');
+    },
+
+    /**
+     * Show coming soon page for Core-only artists
+     */
+    showComingSoon(data) {
+        var heroSection = document.getElementById(this.elements.artistHero);
+        if (heroSection) {
+            var imageHtml = data.image || data.portrait || data.logo
+                ? '<img src="' + this.escapeHtml(data.image || data.portrait || data.logo) + '" alt="' + this.escapeHtml(data.name) + '" class="object-cover w-32 h-32 mb-6 rounded-full shadow-lg">'
+                : '<svg class="w-32 h-32 mb-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                      '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>' +
+                  '</svg>';
+
+            heroSection.innerHTML =
+                '<div class="flex flex-col items-center justify-center h-full bg-gradient-to-br from-primary/5 to-primary/10">' +
+                    imageHtml +
+                    '<h1 class="mb-3 text-3xl font-bold text-gray-800">' + this.escapeHtml(data.name) + '</h1>' +
+                    '<p class="mb-8 text-gray-600">Detalii despre artist vor fi disponibile în curând.</p>' +
+                    '<a href="/artisti" class="inline-flex items-center gap-2 px-6 py-3 font-semibold text-white transition-all rounded-xl bg-primary hover:bg-primary-dark hover:shadow-lg">' +
+                        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>' +
+                        '</svg>' +
+                        'Înapoi la artiști' +
+                    '</a>' +
+                '</div>';
+        }
+
+        // Hide profile section
+        var profileSection = document.getElementById('profile-section');
+        if (profileSection) {
+            profileSection.style.display = 'none';
+        }
+
+        // Update page title
+        document.title = data.name + ' - ' + (window.AMBILET_CONFIG?.SITE_NAME || 'Ambilet');
     },
 
     /**
@@ -155,6 +202,7 @@ const ArtistPage = {
                 spotifyListenersRaw: api.stats?.spotify_listeners || 0  
             },
             about: api.biography ? [api.biography] : ['Informații despre acest artist vor fi adăugate în curând.'],
+            aboutTranslations: api.biography_translations || {},
             facts: [
                 { label: 'Origine', value: [api.city, api.country].filter(Boolean).join(', ') || '-' },
                 { label: 'Gen muzical', value: (api.genres || []).map(function(g) { return g.name || g; }).join(', ') || '-' },
@@ -270,7 +318,7 @@ const ArtistPage = {
         this.renderEvents(data.rawEvents && data.rawEvents.length > 0 ? data.rawEvents : data.events);
 
         // About
-        this.renderAbout(data.about);
+        this.renderAbout(data.about, data.aboutTranslations);
 
         // Facts
         this.renderFacts(data.facts);
@@ -424,17 +472,61 @@ const ArtistPage = {
     },
 
     /**
-     * Render about section
+     * Render about section with RO/EN tabs if both translations exist
      * Note: Biography content comes from trusted admin panel and may contain HTML formatting
      */
-    renderAbout(about) {
+    renderAbout(about, translations) {
         var container = document.getElementById(this.elements.aboutCard);
         if (!container) return;
 
-        container.innerHTML = about.map(function(text) {
-            // Render HTML content directly - content is from trusted source (admin panel)
-            return '<div class="text-base leading-[1.8] text-gray-600 mb-4 last:mb-0 prose prose-sm max-w-none">' + text + '</div>';
-        }).join('');
+        var bioRo = translations?.ro || '';
+        var bioEn = translations?.en || '';
+        var hasBoth = bioRo && bioEn;
+
+        if (hasBoth) {
+            // Tabbed layout with RO and EN
+            container.innerHTML =
+                '<div class="flex gap-1 p-1 mb-5 bg-gray-100 rounded-xl w-fit" id="aboutTabs">' +
+                    '<button onclick="ArtistPage.switchAboutTab(\'ro\')" class="about-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all bg-white text-gray-900 shadow-sm" data-tab="ro">' +
+                        '<span class="inline-block w-5 h-3.5 mr-1.5 align-middle rounded-sm overflow-hidden relative" style="top:-1px">' +
+                            '<span class="absolute inset-x-0 top-0 h-1/3 bg-[#002B7F]"></span>' +
+                            '<span class="absolute inset-x-0 top-1/3 h-1/3 bg-[#FCD116]"></span>' +
+                            '<span class="absolute inset-x-0 bottom-0 h-1/3 bg-[#CE1126]"></span>' +
+                        '</span>Română' +
+                    '</button>' +
+                    '<button onclick="ArtistPage.switchAboutTab(\'en\')" class="about-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all text-gray-500 hover:text-gray-700" data-tab="en">' +
+                        '<span class="inline-block w-5 h-3.5 mr-1.5 align-middle rounded-sm overflow-hidden relative" style="top:-1px">' +
+                            '<svg viewBox="0 0 60 30" class="w-full h-full"><clipPath id="t"><rect width="60" height="30"/></clipPath><g clip-path="url(#t)"><rect width="60" height="30" fill="#00247D"/><path d="M0 0l60 30M60 0L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30M60 0L0 30" clip-path="url(#t)" stroke="#CF142B" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#CF142B" stroke-width="6"/></g></svg>' +
+                        '</span>English' +
+                    '</button>' +
+                '</div>' +
+                '<div id="aboutContent-ro" class="text-base leading-[1.8] text-gray-600 prose prose-sm max-w-none">' + bioRo + '</div>' +
+                '<div id="aboutContent-en" class="hidden text-base leading-[1.8] text-gray-600 prose prose-sm max-w-none">' + bioEn + '</div>';
+        } else {
+            // Single language
+            container.innerHTML = about.map(function(text) {
+                return '<div class="text-base leading-[1.8] text-gray-600 mb-4 last:mb-0 prose prose-sm max-w-none">' + text + '</div>';
+            }).join('');
+        }
+    },
+
+    /**
+     * Switch between RO/EN about tabs
+     */
+    switchAboutTab(lang) {
+        // Update tab buttons
+        document.querySelectorAll('#aboutTabs .about-tab').forEach(function(btn) {
+            if (btn.dataset.tab === lang) {
+                btn.className = 'about-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all bg-white text-gray-900 shadow-sm';
+            } else {
+                btn.className = 'about-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all text-gray-500 hover:text-gray-700';
+            }
+        });
+        // Show/hide content
+        var roContent = document.getElementById('aboutContent-ro');
+        var enContent = document.getElementById('aboutContent-en');
+        if (roContent) roContent.classList.toggle('hidden', lang !== 'ro');
+        if (enContent) enContent.classList.toggle('hidden', lang !== 'en');
     },
 
     /**
@@ -514,6 +606,8 @@ const ArtistPage = {
 
     /**
      * Render YouTube videos section
+     * 1-2 videos: thumbnail cards in columns
+     * 3-5 videos: player (3/4) + playlist sidebar (1/4)
      */
     renderYoutubeVideos(videos) {
         var section = document.getElementById(this.elements.youtubeVideosSection);
@@ -521,23 +615,235 @@ const ArtistPage = {
 
         if (!section || !grid || !videos || videos.length === 0) return;
 
+        var self = this;
+        var validVideos = videos.map(function(video) {
+            var videoId = self.extractYoutubeId(video.url);
+            if (!videoId) return null;
+            return { id: videoId, title: video.title || '', url: video.url };
+        }).filter(Boolean);
+
+        if (validVideos.length === 0) return;
         section.classList.remove('hidden');
 
-        var self = this;
-        grid.innerHTML = videos.map(function(video) {
-            var videoId = self.extractYoutubeId(video.url);
-            if (!videoId) return '';
+        // Store for playlist switching
+        this._videoList = validVideos;
+        this._activeVideoIndex = 0;
 
-            return '<div class="overflow-hidden bg-white border border-gray-200 rounded-xl">' +
+        var count = validVideos.length;
+
+        if (count === 1) {
+            grid.className = 'max-w-4xl mx-auto';
+            grid.innerHTML = self._videoCard(validVideos[0], 'large');
+        } else if (count === 2) {
+            grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+            grid.innerHTML = validVideos.map(function(v) {
+                return self._videoCard(v, 'medium');
+            }).join('');
+        } else {
+            // 3-5 videos: player + playlist layout
+            self._renderPlayerPlaylist(grid, validVideos);
+        }
+
+        // Fetch real titles from YouTube oEmbed for videos without titles
+        self._fetchVideoTitles(validVideos);
+    },
+
+    /**
+     * Render player + playlist layout for 3-5 videos
+     */
+    _renderPlayerPlaylist(grid, videos) {
+        var self = this;
+        var count = videos.length;
+
+        grid.className = 'grid grid-cols-1 lg:grid-cols-4 gap-4';
+
+        // Main player (3/4)
+        var firstTitle = self.escapeHtml(videos[0].title) || 'Se incarca...';
+        var playerHtml = '<div class="lg:col-span-3">' +
+            '<div class="overflow-hidden bg-gray-900 rounded-2xl">' +
                 '<div class="relative aspect-video">' +
-                    '<iframe class="w-full h-full" src="https://www.youtube.com/embed/' + videoId + '" ' +
-                        'title="' + self.escapeHtml(video.title || 'Video') + '" frameborder="0" ' +
+                    '<iframe id="videoPlayer" class="w-full h-full" ' +
+                        'src="https://www.youtube.com/embed/' + videos[0].id + '?rel=0" ' +
+                        'title="' + firstTitle + '" frameborder="0" ' +
                         'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" ' +
-                        'allowfullscreen loading="lazy"></iframe>' +
+                        'allowfullscreen></iframe>' +
                 '</div>' +
-                (video.title ? '<div class="p-4"><h3 class="font-semibold text-gray-900 text-[15px] line-clamp-2">' + self.escapeHtml(video.title) + '</h3></div>' : '') +
+                '<div class="px-5 py-4">' +
+                    '<h3 id="videoPlayerTitle" class="text-lg font-semibold text-white truncate">' + firstTitle + '</h3>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // Playlist sidebar (1/4)
+        var playlistHtml = '<div class="lg:col-span-1">' +
+            '<div class="overflow-hidden bg-white border border-gray-200 rounded-2xl h-full flex flex-col">' +
+                '<div class="px-4 py-3 border-b border-gray-100 bg-gray-50 flex-shrink-0">' +
+                    '<span class="text-sm font-semibold text-gray-700">' + count + ' videoclipuri</span>' +
+                '</div>' +
+                '<div class="overflow-y-auto divide-y divide-gray-100 flex-1" id="videoPlaylist">';
+
+        videos.forEach(function(v, i) {
+            var thumbUrl = 'https://img.youtube.com/vi/' + v.id + '/mqdefault.jpg';
+            var activeClass = i === 0 ? 'bg-primary/5 border-l-[3px] border-l-primary' : 'border-l-[3px] border-l-transparent hover:bg-gray-50';
+            var displayTitle = self.escapeHtml(v.title) || 'Video ' + (i + 1);
+
+            playlistHtml += '<div class="flex gap-3 p-3 transition-colors cursor-pointer playlist-item ' + activeClass + '" ' +
+                'data-index="' + i + '" onclick="ArtistPage.playVideo(' + i + ')">' +
+                '<div class="relative flex-shrink-0 overflow-hidden rounded-lg w-28 group">' +
+                    '<img src="' + thumbUrl + '" alt="" class="object-cover w-full h-full aspect-video" loading="lazy">' +
+                    '<div class="absolute inset-0 flex items-center justify-center transition-colors bg-black/30 group-hover:bg-black/40">' +
+                        '<svg class="w-6 h-6 text-white drop-shadow" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="flex-1 min-w-0 py-0.5">' +
+                    '<p class="text-[13px] font-medium text-gray-900 line-clamp-2 leading-snug video-title-' + i + '">' + displayTitle + '</p>' +
+                    '<span class="block mt-1 text-xs text-gray-400">YouTube</span>' +
+                '</div>' +
             '</div>';
-        }).filter(function(html) { return html !== ''; }).join('');
+        });
+
+        playlistHtml += '</div></div></div>';
+        grid.innerHTML = playerHtml + playlistHtml;
+    },
+
+    /**
+     * Fetch real video titles from YouTube oEmbed API
+     */
+    _fetchVideoTitles(videos) {
+        var self = this;
+        videos.forEach(function(v, i) {
+            if (v.title) return; // Already has a title
+
+            var oembedUrl = 'https://noembed.com/embed?url=https://www.youtube.com/watch?v=' + v.id;
+            fetch(oembedUrl)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.title) return;
+
+                    // Update stored title
+                    v.title = data.title;
+                    if (self._videoList && self._videoList[i]) {
+                        self._videoList[i].title = data.title;
+                    }
+
+                    // Update playlist item title
+                    var titleEl = document.querySelector('.video-title-' + i);
+                    if (titleEl) titleEl.textContent = data.title;
+
+                    // Update player title if this is the active video
+                    if (self._activeVideoIndex === i) {
+                        var playerTitle = document.getElementById('videoPlayerTitle');
+                        if (playerTitle) playerTitle.textContent = data.title;
+                    }
+
+                    // Update thumbnail card title if in 1-2 video layout
+                    var cardTitle = document.querySelector('[data-video-title-' + i + ']');
+                    if (cardTitle) cardTitle.textContent = data.title;
+                })
+                .catch(function() {}); // Silently fail
+        });
+    },
+
+    /**
+     * Switch active video in the player (for playlist layout)
+     */
+    playVideo(index) {
+        if (!this._videoList || !this._videoList[index]) return;
+
+        var video = this._videoList[index];
+        var iframe = document.getElementById('videoPlayer');
+        var titleEl = document.getElementById('videoPlayerTitle');
+
+        if (iframe) {
+            iframe.src = 'https://www.youtube.com/embed/' + video.id + '?autoplay=1&rel=0';
+        }
+        if (titleEl) {
+            titleEl.textContent = video.title || 'Video ' + (index + 1);
+        }
+
+        // Update active state in playlist
+        this._activeVideoIndex = index;
+        var items = document.querySelectorAll('#videoPlaylist .playlist-item');
+        items.forEach(function(item, i) {
+            if (i === index) {
+                item.className = item.className
+                    .replace('border-l-transparent', 'border-l-primary')
+                    .replace('hover:bg-gray-50', '');
+                if (!item.classList.contains('bg-primary/5')) {
+                    item.classList.add('bg-primary/5');
+                }
+            } else {
+                item.className = item.className
+                    .replace('border-l-primary', 'border-l-transparent')
+                    .replace('bg-primary/5', '');
+                if (!item.classList.contains('hover:bg-gray-50')) {
+                    item.classList.add('hover:bg-gray-50');
+                }
+            }
+        });
+    },
+
+    /**
+     * Build a single video thumbnail card (used for 1-2 videos)
+     */
+    _videoCard(video, size) {
+        var thumbUrl = 'https://img.youtube.com/vi/' + video.id + '/maxresdefault.jpg';
+        var thumbFallback = 'https://img.youtube.com/vi/' + video.id + '/hqdefault.jpg';
+        var title = this.escapeHtml(video.title);
+        var isLarge = size === 'large';
+
+        return '<div class="relative overflow-hidden cursor-pointer group rounded-2xl bg-gray-900" onclick="ArtistPage.openVideoModal(\'' + video.id + '\', \'' + title.replace(/'/g, "\\'") + '\')">' +
+            '<div class="aspect-video">' +
+                '<img src="' + thumbUrl + '" alt="' + title + '" ' +
+                    'class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy" ' +
+                    'onerror="this.src=\'' + thumbFallback + '\'">' +
+            '</div>' +
+            '<div class="absolute inset-0 transition-colors bg-gradient-to-t from-black/80 via-black/20 to-transparent group-hover:from-black/90"></div>' +
+            '<div class="absolute inset-0 flex items-center justify-center">' +
+                '<div class="flex items-center justify-center transition-all duration-300 rounded-full shadow-lg ' +
+                    (isLarge ? 'w-20 h-20' : 'w-16 h-16') + ' bg-white/95 group-hover:scale-110 group-hover:bg-white group-hover:shadow-xl">' +
+                    '<svg class="' + (isLarge ? 'w-8 h-8' : 'w-6 h-6') + ' ml-1 text-[#FF0000]" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+                '</div>' +
+            '</div>' +
+            (title ? '<div class="absolute bottom-0 left-0 right-0 p-4 ' + (isLarge ? 'pb-5' : 'pb-4') + '">' +
+                '<h3 class="font-semibold text-white ' + (isLarge ? 'text-lg' : 'text-[15px]') + ' line-clamp-2 drop-shadow-lg">' + title + '</h3>' +
+            '</div>' : '') +
+        '</div>';
+    },
+
+    /**
+     * Open video in modal lightbox (used for 1-2 video layouts)
+     */
+    openVideoModal(videoId, title) {
+        var modal = document.getElementById('videoModal');
+        var iframe = document.getElementById('videoModalIframe');
+        var titleEl = document.getElementById('videoModalTitle');
+
+        if (!modal || !iframe) return;
+
+        iframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&rel=0';
+        if (titleEl) titleEl.textContent = title || '';
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    },
+
+    /**
+     * Close video modal
+     */
+    closeVideoModal(event) {
+        if (event && event.target !== event.currentTarget) return;
+
+        var modal = document.getElementById('videoModal');
+        var iframe = document.getElementById('videoModalIframe');
+
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        if (iframe) iframe.src = '';
+        document.body.style.overflow = '';
     },
 
     /**
@@ -556,7 +862,7 @@ const ArtistPage = {
                 '</div>' : '';
 
             return '<div class="relative overflow-hidden cursor-pointer rounded-xl group ' + spanClass + ' aspect-square">' +
-                '<img src="' + self.escapeHtml(item.url) + '" alt="Gallery" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105">' +
+                '<img src="' + self.escapeHtml(item.url) + '" alt="Gallery" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy">' +
                 '<div class="absolute inset-0 flex items-center justify-center transition-colors bg-black/0 group-hover:bg-black/30">' + videoIcon + '</div>' +
             '</div>';
         }).join('');
@@ -578,7 +884,7 @@ const ArtistPage = {
         container.innerHTML = artists.map(function(artist) {
             return '<a href="/artist/' + self.escapeHtml(artist.slug) + '" class="text-center transition-transform group hover:-translate-y-1">' +
                 '<div class="w-full aspect-square rounded-full overflow-hidden mb-3 border-[3px] border-gray-200 group-hover:border-primary transition-colors">' +
-                    '<img src="' + self.escapeHtml(artist.image) + '" alt="' + self.escapeHtml(artist.name) + '" class="object-cover w-full h-full">' +
+                    '<img src="' + self.escapeHtml(artist.image) + '" alt="' + self.escapeHtml(artist.name) + '" class="object-cover w-full h-full" loading="lazy">' +
                 '</div>' +
                 '<h3 class="text-[15px] font-bold text-gray-900 mb-0.5">' + self.escapeHtml(artist.name) + '</h3>' +
                 '<p class="text-[13px] text-gray-500">' + self.escapeHtml(artist.genre) + '</p>' +

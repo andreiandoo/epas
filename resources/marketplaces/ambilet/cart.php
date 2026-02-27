@@ -181,7 +181,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="p-4 mt-4 bg-white border rounded-2xl border-border">
                         <p class="mb-3 text-xs text-center text-muted">Metode de plată acceptate</p>
                         <div class="flex items-center justify-center gap-4">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/200px-Visa_Inc._logo.svg.png" alt="Visa" class="h-6 opacity-60">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5c/Visa_Inc._logo_%282021%E2%80%93present%29.svg" alt="Visa" class="h-6 opacity-60">
                             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/200px-Mastercard-logo.svg.png" alt="Mastercard" class="h-6 opacity-60">
                             <div class="px-2 py-1 text-xs font-semibold rounded bg-surface text-muted">Apple Pay</div>
                             <div class="px-2 py-1 text-xs font-semibold rounded bg-surface text-muted">Google Pay</div>

@@ -355,12 +355,12 @@ class VenueResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
-                    ->formatStateUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en') ?: '-')
+                    ->getStateUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en') ?: '-')
                     ->searchable(query: function ($query, string $search) {
-                        return $query->where('name', 'like', "%{$search}%");
+                        return $query->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%']);
                     })
                     ->sortable()
-                    ->url(fn ($record) => static::getUrl('view', ['record' => $record->slug])),
+                    ->url(fn ($record) => static::getUrl('edit', ['record' => $record->slug])),
 
                 Tables\Columns\TextColumn::make('venueTypes.slug')
                     ->label('Types')

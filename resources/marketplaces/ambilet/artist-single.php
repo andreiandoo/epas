@@ -203,8 +203,9 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </section>
 
-    
+</div>
 
+<div class="px-6 mx-auto max-w-7xl">
     <!-- YouTube Videos Section -->
     <section id="youtubeVideosSection" class="hidden mt-10">
         <div class="flex items-center justify-between mb-6">
@@ -235,7 +236,9 @@ require_once __DIR__ . '/includes/header.php';
             <p id="videoModalTitle" class="mt-4 text-lg font-semibold text-center text-white"></p>
         </div>
     </div>
+</div>
 
+<div class="px-6 mx-auto max-w-7xl">
     <!-- Gallery Section -->
     <section class="hidden mt-10">
         <div class="flex items-center justify-between mb-5">
@@ -254,7 +257,8 @@ require_once __DIR__ . '/includes/header.php';
             <div class="bg-gray-200 aspect-square rounded-xl animate-pulse"></div>
         </div>
     </section>
-
+</div>
+<div class="px-6 mx-auto max-w-7xl">
     <!-- Spotify Section -->
     <section id="spotifySection" class="mt-10">
         <div class="grid items-center grid-cols-1 gap-10 p-8 bg-white lg:grid-cols-2 mobile:p-0">
@@ -278,7 +282,8 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
     </section>
-
+</div>
+<div class="px-6 mx-auto max-w-7xl">
     <!-- Similar Artists Section -->
     <section class="mt-10 mb-16">
         <div class="flex items-center justify-between mb-5">

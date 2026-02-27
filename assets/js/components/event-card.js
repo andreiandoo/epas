@@ -187,7 +187,7 @@ const AmbiletEventCard = {
                 '<span class="">' + (event.venueCity ? (event.venueName ? '<strong>' + this.escapeHtml(event.venueCity) + '</strong>, ' + this.escapeHtml(event.venueName) : this.escapeHtml(event.venueCity)) : this.escapeHtml(event.venueName)) + '</span>' +
             '</p>' : '';
 
-        return '<a href="' + eventUrl + '" class="overflow-hidden relative transition-all bg-gray-900 border group rounded-md border-transparent hover:-translate-y-1 hover:shadow-xl hover:scale-105 duration-300 ease-in-out">' +
+        return '<a href="' + eventUrl + '" class="overflow-hidden relative transition-all bg-primary border group rounded-md border-transparent hover:-translate-y-1 hover:shadow-xl hover:scale-105 duration-300 ease-in-out">' +
             '<div class="relative aspect-[2/3] overflow-hidden mobile:aspect-auto">' +
                 '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:hidden object-cover w-full h-full transition-transform duration-300" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '<img src="' + heroSrc + '" alt="' + this.escapeHtml(event.title) + '" class="hidden mobile:block object-cover w-full h-52 transition-transform duration-300 relative" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
