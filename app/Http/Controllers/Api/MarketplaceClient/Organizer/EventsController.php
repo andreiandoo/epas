@@ -1548,8 +1548,19 @@ class EventsController extends BaseController
         $pageViews = $event->views_count ?? 0;
         $conversionRate = $pageViews > 0 ? round(($ticketsSold / $pageViews) * 100, 2) : 0;
 
+        // Tickets sold today
+        $ticketsToday = (int) $event->orders()
+            ->whereIn('status', $validStatuses)
+            ->whereDate('created_at', today())
+            ->withCount('tickets')
+            ->get()
+            ->sum('tickets_count');
+
+        // Capacity from ticket types
+        $capacity = $event->ticketTypes()->sum('quota_total') ?: ($event->capacity ?? 0);
+
         // Previous period for comparison
-        $periodDays = $rangeStart->diffInDays($rangeEnd);
+        $periodDays = max(1, $rangeStart->diffInDays($rangeEnd));
         $prevStart = $rangeStart->copy()->subDays($periodDays);
         $prevEnd = $rangeStart->copy()->subSecond();
 
@@ -1559,8 +1570,22 @@ class EventsController extends BaseController
         $prevRevenue = (float) $prevOrdersQuery->sum('total');
         $prevTickets = (int) $prevOrdersQuery->withCount('tickets')->get()->sum('tickets_count');
 
-        $revenueChange = $prevRevenue > 0 ? round((($totalRevenue - $prevRevenue) / $prevRevenue) * 100, 1) : 0;
-        $ticketsChange = $prevTickets > 0 ? round((($ticketsSold - $prevTickets) / $prevTickets) * 100, 1) : 0;
+        // Revenue change: handle case where previous period had 0
+        if ($prevRevenue > 0) {
+            $revenueChange = round((($totalRevenue - $prevRevenue) / $prevRevenue) * 100, 1);
+        } elseif ($totalRevenue > 0) {
+            $revenueChange = 100.0; // New revenue where there was none
+        } else {
+            $revenueChange = 0;
+        }
+
+        if ($prevTickets > 0) {
+            $ticketsChange = round((($ticketsSold - $prevTickets) / $prevTickets) * 100, 1);
+        } elseif ($ticketsSold > 0) {
+            $ticketsChange = 100.0;
+        } else {
+            $ticketsChange = 0;
+        }
 
         // Chart data - daily revenue, tickets, and views
         $chartLabels = [];
@@ -1623,29 +1648,75 @@ class EventsController extends BaseController
             }
         }
 
-        // Traffic sources (simplified - would need proper tracking implementation)
-        $trafficSources = [
-            ['source' => 'Direct', 'visitors' => max(1, intval($pageViews * 0.4)), 'revenue' => round($totalRevenue * 0.4, 2)],
-            ['source' => 'Facebook', 'visitors' => intval($pageViews * 0.25), 'revenue' => round($totalRevenue * 0.25, 2)],
-            ['source' => 'Google', 'visitors' => intval($pageViews * 0.2), 'revenue' => round($totalRevenue * 0.2, 2)],
-            ['source' => 'Instagram', 'visitors' => intval($pageViews * 0.1), 'revenue' => round($totalRevenue * 0.1, 2)],
-            ['source' => 'Other', 'visitors' => intval($pageViews * 0.05), 'revenue' => round($totalRevenue * 0.05, 2)],
-        ];
+        // Traffic sources from real tracking data (CoreCustomerEvent)
+        $trafficSources = [];
+        $trackingQuery = \App\Models\Platform\CoreCustomerEvent::where(function ($q) use ($event) {
+            $q->where('event_id', $event->id)
+              ->orWhere('marketplace_event_id', $event->id);
+        })->whereBetween('created_at', [$rangeStart, $rangeEnd]);
 
-        // Ticket performance
-        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $validStatuses) {
-            $sold = $event->orders()
-                ->whereIn('status', $validStatuses)
-                ->whereHas('tickets', fn ($q) => $q->where('ticket_type_id', $tt->id))
-                ->withCount(['tickets' => fn ($q) => $q->where('ticket_type_id', $tt->id)])
+        if ($trackingQuery->exists()) {
+            $sourceCase = "CASE
+                WHEN fbclid IS NOT NULL OR utm_source = 'facebook' THEN 'Facebook'
+                WHEN gclid IS NOT NULL OR utm_source = 'google' THEN 'Google'
+                WHEN utm_source = 'instagram' OR referrer LIKE '%instagram%' THEN 'Instagram'
+                WHEN ttclid IS NOT NULL OR utm_source = 'tiktok' THEN 'TikTok'
+                WHEN utm_medium = 'email' THEN 'Email'
+                WHEN referrer IS NULL OR referrer = '' THEN 'Direct'
+                ELSE 'Organic'
+            END";
+
+            $trafficSources = (clone $trackingQuery)
+                ->selectRaw("{$sourceCase} as source, COUNT(DISTINCT visitor_id) as visitors, SUM(CASE WHEN event_type = 'purchase' THEN event_value ELSE 0 END) as revenue")
+                ->groupByRaw($sourceCase)
+                ->orderByDesc('visitors')
                 ->get()
-                ->sum('tickets_count');
+                ->toArray();
+        }
+
+        // Ticket performance with trend and conversion
+        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $validStatuses, $rangeStart, $rangeEnd, $periodDays, $pageViews) {
+            $sold = \App\Models\Ticket::where('ticket_type_id', $tt->id)
+                ->whereIn('status', ['valid', 'checked_in'])
+                ->count();
+
+            $revenue = (float) \App\Models\Ticket::where('ticket_type_id', $tt->id)
+                ->whereIn('status', ['valid', 'checked_in'])
+                ->sum('price');
+
+            // Trend: compare sales in current period vs previous period
+            $currentPeriodSold = \App\Models\Ticket::where('ticket_type_id', $tt->id)
+                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+                ->count();
+
+            $prevPeriodSold = \App\Models\Ticket::where('ticket_type_id', $tt->id)
+                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereBetween('created_at', [
+                    $rangeStart->copy()->subDays($periodDays),
+                    $rangeStart->copy()->subSecond(),
+                ])
+                ->count();
+
+            if ($prevPeriodSold > 0) {
+                $trend = round((($currentPeriodSold - $prevPeriodSold) / $prevPeriodSold) * 100, 0);
+            } elseif ($currentPeriodSold > 0) {
+                $trend = 100; // New sales where there were none
+            } else {
+                $trend = 0;
+            }
+
+            // Conversion rate: tickets sold / page views (simplified)
+            $convRate = $pageViews > 0 ? round(($sold / $pageViews) * 100, 1) : 0;
 
             return [
                 'name' => $tt->name,
                 'price' => $tt->display_price,
                 'sold' => $sold,
+                'revenue' => $revenue,
                 'capacity' => $tt->quota_total,
+                'trend' => $trend,
+                'conversion_rate' => $convRate,
             ];
         });
 
@@ -1699,7 +1770,10 @@ class EventsController extends BaseController
             'overview' => [
                 'total_revenue' => $totalRevenue,
                 'tickets_sold' => $ticketsSold,
+                'tickets_today' => $ticketsToday,
+                'capacity' => $capacity,
                 'page_views' => $pageViews,
+                'unique_visitors' => $pageViews, // Approximate: real unique tracking requires CoreCustomerEvent
                 'conversion_rate' => $conversionRate,
                 'revenue_change' => $revenueChange,
                 'tickets_change' => $ticketsChange,

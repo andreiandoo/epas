@@ -1156,10 +1156,43 @@ function toggleChartMetric(metric) {
 }
 
 function updateForecast(overview) {
-    // Simple forecast based on daily average
-    const avgDailyRevenue = overview.total_revenue / 30 || 0;
-    const avgDailyTickets = overview.tickets_sold / 30 || 0;
     const daysRemaining = overview.days_until || 7;
+    const chart = eventData?.chart;
+
+    // Use actual chart data for daily averages instead of dividing by arbitrary number
+    let avgDailyRevenue = 0;
+    let avgDailyTickets = 0;
+
+    if (chart && chart.revenue && chart.revenue.length > 0) {
+        // Only count days that have actually passed (have data)
+        const daysWithData = chart.revenue.length;
+        const totalChartRevenue = chart.revenue.reduce((sum, v) => sum + (v || 0), 0);
+        const totalChartTickets = chart.tickets ? chart.tickets.reduce((sum, v) => sum + (v || 0), 0) : 0;
+
+        if (daysWithData > 0) {
+            // Weight recent days more heavily (last 7 days get 2x weight)
+            const recentDays = Math.min(7, daysWithData);
+            const recentRevenue = chart.revenue.slice(-recentDays).reduce((sum, v) => sum + (v || 0), 0);
+            const recentTickets = chart.tickets ? chart.tickets.slice(-recentDays).reduce((sum, v) => sum + (v || 0), 0) : 0;
+
+            if (recentDays < daysWithData && totalChartRevenue > 0) {
+                // Blend: 60% recent trend, 40% overall average
+                avgDailyRevenue = (recentRevenue / recentDays) * 0.6 + (totalChartRevenue / daysWithData) * 0.4;
+                avgDailyTickets = (recentTickets / recentDays) * 0.6 + (totalChartTickets / daysWithData) * 0.4;
+            } else {
+                avgDailyRevenue = totalChartRevenue / daysWithData;
+                avgDailyTickets = totalChartTickets / daysWithData;
+            }
+        }
+    } else if (overview.total_revenue > 0) {
+        // Fallback: if no chart data, use event creation to now
+        const createdAt = eventData?.event?.created_at;
+        const daysSinceCreation = createdAt
+            ? Math.max(1, Math.ceil((Date.now() - new Date(createdAt)) / (1000 * 60 * 60 * 24)))
+            : 1;
+        avgDailyRevenue = overview.total_revenue / daysSinceCreation;
+        avgDailyTickets = overview.tickets_sold / daysSinceCreation;
+    }
 
     document.getElementById('forecast-revenue').textContent = formatCurrency(avgDailyRevenue * 7);
     document.getElementById('forecast-tickets').textContent = '+' + Math.round(avgDailyTickets * 7);
