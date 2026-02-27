@@ -9,6 +9,7 @@ class Invoice extends Model
 {
     protected $fillable = [
         'tenant_id',
+        'marketplace_client_id',
         'number',
         'type',
         'description',
@@ -46,6 +47,25 @@ class Invoice extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function marketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    /**
+     * Get the client name (tenant or marketplace client)
+     */
+    public function getClientNameAttribute(): string
+    {
+        if ($this->tenant) {
+            return $this->tenant->public_name ?? $this->tenant->name;
+        }
+        if ($this->marketplaceClient) {
+            return $this->marketplaceClient->name;
+        }
+        return '-';
     }
 
     // Scopes
@@ -136,6 +156,20 @@ class Invoice extends Model
         }
 
         // Add billing period
+        if ($periodStart && $periodEnd) {
+            $description .= " - Perioada {$periodStart->format('d.m.Y')} - {$periodEnd->format('d.m.Y')}";
+        }
+
+        return $description;
+    }
+
+    /**
+     * Generate description for marketplace client invoice
+     */
+    public static function generateMarketplaceDescription(MarketplaceClient $client, ?\Carbon\Carbon $periodStart = null, ?\Carbon\Carbon $periodEnd = null): string
+    {
+        $description = "Comision servicii marketplace - {$client->name}";
+
         if ($periodStart && $periodEnd) {
             $description .= " - Perioada {$periodStart->format('d.m.Y')} - {$periodEnd->format('d.m.Y')}";
         }

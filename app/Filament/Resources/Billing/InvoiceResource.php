@@ -34,33 +34,54 @@ class InvoiceResource extends Resource
                     Forms\Components\Select::make('tenant_id')
                         ->relationship('tenant','name')
                         ->label('Tenant')
-                        ->required()
                         ->searchable()
                         ->preload()
                         ->live()
                         ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                             if ($state) {
+                                $set('marketplace_client_id', null);
                                 $tenant = \App\Models\Tenant::find($state);
                                 if ($tenant) {
-                                    // Set description with contract number
                                     if ($tenant->contract_number) {
                                         $set('description', "Servicii digitale conform contract nr {$tenant->contract_number}");
                                     } else {
                                         $set('description', "Servicii digitale conform contract");
                                     }
-
-                                    // Set billing period from tenant
                                     if ($tenant->billing_starts_at) {
                                         $billingStart = $tenant->billing_starts_at;
                                         $billingCycleDays = $tenant->billing_cycle_days ?? 30;
                                         $billingEnd = $billingStart->copy()->addDays($billingCycleDays);
-
                                         $set('period_start', $billingStart->toDateString());
                                         $set('period_end', $billingEnd->toDateString());
                                     }
                                 }
                             }
-                        }),
+                        })
+                        ->helperText('Select either a Tenant or a Marketplace Client'),
+
+                    Forms\Components\Select::make('marketplace_client_id')
+                        ->relationship('marketplaceClient','name')
+                        ->label('Marketplace Client')
+                        ->searchable()
+                        ->preload()
+                        ->live()
+                        ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
+                            if ($state) {
+                                $set('tenant_id', null);
+                                $client = \App\Models\MarketplaceClient::find($state);
+                                if ($client) {
+                                    $set('description', "Comision servicii marketplace - {$client->name}");
+                                    if ($client->billing_starts_at) {
+                                        $billingStart = $client->billing_starts_at;
+                                        $billingCycleDays = $client->billing_cycle_days ?? 30;
+                                        $billingEnd = $billingStart->copy()->addDays($billingCycleDays);
+                                        $set('period_start', $billingStart->toDateString());
+                                        $set('period_end', $billingEnd->toDateString());
+                                    }
+                                }
+                            }
+                        })
+                        ->helperText('Select either a Tenant or a Marketplace Client'),
 
                     Forms\Components\TextInput::make('number')
                         ->label('Invoice Number')
@@ -217,10 +238,16 @@ class InvoiceResource extends Resource
                     ])
                     ->formatStateUsing(fn ($state) => $state === 'proforma' ? 'Proforma' : 'Fiscal')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('tenant.name')
-                    ->label('Tenant')
-                    ->sortable()
-                    ->searchable(),
+                Tables\Columns\TextColumn::make('client_name')
+                    ->label('Client')
+                    ->getStateUsing(fn ($record) => $record->client_name)
+                    ->searchable(query: function ($query, string $search) {
+                        $query->where(function ($q) use ($search) {
+                            $q->whereHas('tenant', fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('public_name', 'like', "%{$search}%"))
+                              ->orWhereHas('marketplaceClient', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+                        });
+                    })
+                    ->description(fn ($record) => $record->marketplace_client_id ? 'Marketplace' : ($record->tenant_id ? 'Tenant' : null)),
                 Tables\Columns\TextColumn::make('issue_date')
                     ->date()
                     ->sortable(),
@@ -269,6 +296,7 @@ class InvoiceResource extends Resource
             ->defaultSort('issue_date', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('tenant_id')->relationship('tenant','name')->label('Tenant'),
+                Tables\Filters\SelectFilter::make('marketplace_client_id')->relationship('marketplaceClient','name')->label('Marketplace Client'),
                 Tables\Filters\SelectFilter::make('status')->options([
                     'new'=>'New','outstanding'=>'Outstanding','paid'=>'Paid','cancelled'=>'Cancelled'
                 ]),

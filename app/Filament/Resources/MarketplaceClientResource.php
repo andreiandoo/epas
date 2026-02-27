@@ -120,6 +120,42 @@ class MarketplaceClientResource extends Resource
                                 ])
                                 ->columns(1),
 
+                            SC\Section::make('Billing Settings')
+                                ->schema([
+                                    Forms\Components\DatePicker::make('billing_starts_at')
+                                        ->label('Billing Start Date')
+                                        ->native(false)
+                                        ->helperText('When the first billing cycle begins'),
+
+                                    Forms\Components\TextInput::make('billing_cycle_days')
+                                        ->label('Billing Cycle (days)')
+                                        ->numeric()
+                                        ->minValue(1)
+                                        ->default(30)
+                                        ->suffix('days'),
+
+                                    Forms\Components\DatePicker::make('next_billing_date')
+                                        ->label('Next Billing Date')
+                                        ->native(false)
+                                        ->helperText('Auto-calculated when billing starts'),
+
+                                    Forms\Components\DatePicker::make('last_billing_date')
+                                        ->label('Last Billing Date')
+                                        ->native(false)
+                                        ->disabled()
+                                        ->dehydrated(),
+
+                                    Forms\Components\Placeholder::make('earnings_link')
+                                        ->label('')
+                                        ->content(fn ($record) => $record
+                                            ? new \Illuminate\Support\HtmlString(
+                                                '<a href="' . \App\Filament\Pages\ClientEarnings::getUrl(['type' => 'marketplace', 'id' => $record->id]) . '" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>View Earnings & Usage</a>'
+                                            )
+                                            : 'Save the client first to view earnings.'
+                                        ),
+                                ])
+                                ->columns(2),
+
                             SC\Section::make('Notes')
                                 ->schema([
                                     Forms\Components\Textarea::make('notes')
@@ -265,6 +301,54 @@ class MarketplaceClientResource extends Resource
                     SC\Tabs\Tab::make('Statistics')
                         ->icon('heroicon-o-chart-bar')
                         ->schema([
+                            SC\Section::make('Financial Overview')
+                                ->schema([
+                                    Forms\Components\Placeholder::make('total_revenue')
+                                        ->label('Total Revenue (All Time)')
+                                        ->content(fn ($record) => $record
+                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed'])->sum('total'), 2) . ' ' . ($record->currency ?? 'RON')
+                                            : '0.00'
+                                        ),
+
+                                    Forms\Components\Placeholder::make('total_commission')
+                                        ->label('Total Commission (All Time)')
+                                        ->content(fn ($record) => $record
+                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed'])->sum('commission_amount'), 2) . ' ' . ($record->currency ?? 'RON')
+                                            : '0.00'
+                                        ),
+
+                                    Forms\Components\Placeholder::make('this_month_revenue')
+                                        ->label('This Month Revenue')
+                                        ->content(fn ($record) => $record
+                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed'])->where('created_at', '>=', now()->startOfMonth())->sum('total'), 2) . ' ' . ($record->currency ?? 'RON')
+                                            : '0.00'
+                                        ),
+
+                                    Forms\Components\Placeholder::make('total_orders')
+                                        ->label('Total Orders')
+                                        ->content(fn ($record) => $record
+                                            ? number_format(\App\Models\Order::where('marketplace_client_id', $record->id)->whereIn('status', ['paid', 'confirmed'])->count())
+                                            : '0'
+                                        ),
+
+                                    Forms\Components\Placeholder::make('unpaid_invoices')
+                                        ->label('Unpaid Invoices')
+                                        ->content(fn ($record) => $record
+                                            ? \App\Models\Invoice::where('marketplace_client_id', $record->id)->whereIn('status', ['pending', 'overdue', 'outstanding', 'new'])->count() . ' (' . number_format(\App\Models\Invoice::where('marketplace_client_id', $record->id)->whereIn('status', ['pending', 'overdue', 'outstanding', 'new'])->sum('amount'), 2) . ' ' . ($record->currency ?? 'RON') . ')'
+                                            : '0'
+                                        ),
+
+                                    Forms\Components\Placeholder::make('view_earnings')
+                                        ->label('')
+                                        ->content(fn ($record) => $record
+                                            ? new \Illuminate\Support\HtmlString(
+                                                '<a href="' . \App\Filament\Pages\ClientEarnings::getUrl(['type' => 'marketplace', 'id' => $record->id]) . '" class="inline-flex items-center gap-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>View Detailed Earnings & Usage</a>'
+                                            )
+                                            : ''
+                                        ),
+                                ])
+                                ->columns(3),
+
                             SC\Section::make('Usage Statistics')
                                 ->schema([
                                     Forms\Components\Placeholder::make('api_calls_count')

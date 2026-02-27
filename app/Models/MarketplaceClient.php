@@ -42,6 +42,10 @@ class MarketplaceClient extends Model
         'commission_rate',
         'fixed_commission',
         'commission_mode',
+        'billing_starts_at',
+        'billing_cycle_days',
+        'next_billing_date',
+        'last_billing_date',
         'allowed_tenants',
         'settings',
         'notes',
@@ -63,6 +67,9 @@ class MarketplaceClient extends Model
         'smtp_settings' => 'array',
         'email_settings' => 'array',
         'last_api_call_at' => 'datetime',
+        'billing_starts_at' => 'date',
+        'next_billing_date' => 'date',
+        'last_billing_date' => 'date',
     ];
 
     protected $hidden = [
@@ -722,5 +729,69 @@ class MarketplaceClient extends Model
     public function getCurrentContractNumber(): int
     {
         return $this->next_contract_number ?? 1;
+    }
+
+    /**
+     * Calculate next billing date based on last billing or billing start
+     */
+    public function calculateNextBillingDate(): ?\Carbon\Carbon
+    {
+        $cycleDays = $this->billing_cycle_days ?? 30;
+
+        if ($this->last_billing_date) {
+            return $this->last_billing_date->copy()->addDays($cycleDays);
+        }
+
+        if ($this->billing_starts_at) {
+            return $this->billing_starts_at->copy()->addDays($cycleDays);
+        }
+
+        return null;
+    }
+
+    /**
+     * Advance billing cycle after invoicing
+     */
+    public function advanceBillingCycle(): void
+    {
+        $this->last_billing_date = $this->next_billing_date ?? now();
+        $this->next_billing_date = $this->calculateNextBillingDate();
+        $this->save();
+    }
+
+    /**
+     * Get current billing period start date
+     */
+    public function getCurrentPeriodStart(): ?\Carbon\Carbon
+    {
+        if ($this->last_billing_date) {
+            return $this->last_billing_date->copy();
+        }
+
+        if ($this->billing_starts_at) {
+            return $this->billing_starts_at->copy();
+        }
+
+        return null;
+    }
+
+    /**
+     * Get current billing period end date
+     */
+    public function getCurrentPeriodEnd(): ?\Carbon\Carbon
+    {
+        return $this->next_billing_date?->copy();
+    }
+
+    /**
+     * Check if billing is overdue
+     */
+    public function isBillingOverdue(): bool
+    {
+        if (!$this->next_billing_date) {
+            return false;
+        }
+
+        return $this->next_billing_date->isPast();
     }
 }
