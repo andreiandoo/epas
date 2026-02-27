@@ -200,8 +200,8 @@ class ImportAmbiletTicketsCommand extends Command
             INNER JOIN (
                 SELECT
                     t.order_id,
-                    t.event_id,
-                    e.marketplace_organizer_id
+                    MIN(t.event_id) AS event_id,
+                    MIN(e.marketplace_organizer_id) AS marketplace_organizer_id
                 FROM tickets t
                 INNER JOIN events e ON t.event_id = e.id
                 WHERE t.marketplace_client_id = {$clientId}
