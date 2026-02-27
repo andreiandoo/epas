@@ -1638,13 +1638,7 @@ const EventPage = {
 
         if (addedAny) {
             setTimeout(function() {
-                if (typeof window.openCartDrawer === 'function') {
-                    window.openCartDrawer();
-                } else if (typeof AmbiletCart !== 'undefined' && AmbiletCart.openDrawer) {
-                    AmbiletCart.openDrawer();
-                } else {
-                    window.location.href = '/cos';
-                }
+                window.location.href = '/cos';
             }, 300);
         }
     },
