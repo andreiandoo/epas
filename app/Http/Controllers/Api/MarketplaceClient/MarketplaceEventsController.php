@@ -258,6 +258,9 @@ class MarketplaceEventsController extends BaseController
             case 'name_desc':
                 $query->orderBy("title->{$language}", 'desc');
                 break;
+            case 'popularity':
+                $query->orderBy('views_count', 'desc')->orderBy('event_date', 'asc');
+                break;
             case 'newest':
             case 'latest':
                 // Sort by creation date (newest first)
