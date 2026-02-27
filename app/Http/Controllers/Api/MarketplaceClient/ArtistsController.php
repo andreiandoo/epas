@@ -323,6 +323,10 @@ class ArtistsController extends BaseController
             'logo' => $artist->logo_full_url,
             'portrait' => $artist->portrait_full_url,
             'biography' => $artist->getTranslation('bio_html', $language),
+            'biography_translations' => array_filter([
+                'ro' => $artist->getTranslation('bio_html', 'ro'),
+                'en' => $artist->getTranslation('bio_html', 'en'),
+            ]),
             'city' => $artist->city,
             'country' => $artist->country,
             'is_verified' => $artist->is_featured,
