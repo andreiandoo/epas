@@ -1841,7 +1841,7 @@ class EventResource extends Resource
                                 ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când este activat, evenimentul va fi vizibil pe site-ul marketplace. Când este dezactivat, evenimentul nu va apărea nicăieri.', 'When enabled, the event will be visible on the marketplace site. When disabled, the event will not appear anywhere.'))
                                 ->onIcon('heroicon-m-eye')
                                 ->offIcon('heroicon-m-eye-slash')
-                                ->default(true)
+                                ->default(false)
                                 ->live(),
                             Forms\Components\Placeholder::make('preview_link')
                                 ->content(function (?Event $record) use ($marketplace, $t) {
