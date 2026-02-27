@@ -1101,6 +1101,18 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'order-confirmation':
+        $method = 'GET';
+        $orderId = $_GET['id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order ID']);
+            exit;
+        }
+        $endpoint = '/orders/' . urlencode($orderId);
+        // No auth required — uses marketplace API key only
+        break;
+
     case 'customer.orders':
         $method = 'GET';
         $params = [];
