@@ -560,7 +560,9 @@ const ArtistPage = {
     },
 
     /**
-     * Render YouTube videos section — adaptive bento layout with thumbnail cards
+     * Render YouTube videos section
+     * 1-2 videos: thumbnail cards in columns
+     * 3-5 videos: player (3/4) + playlist sidebar (1/4)
      */
     renderYoutubeVideos(videos) {
         var section = document.getElementById(this.elements.youtubeVideosSection);
@@ -568,7 +570,6 @@ const ArtistPage = {
 
         if (!section || !grid || !videos || videos.length === 0) return;
 
-        // Filter valid videos
         var self = this;
         var validVideos = videos.map(function(video) {
             var videoId = self.extractYoutubeId(video.url);
@@ -581,43 +582,114 @@ const ArtistPage = {
 
         var count = validVideos.length;
 
-        // Build adaptive grid layout based on video count
-        var gridClass = '';
-        var cards = [];
+        // Store for playlist switching
+        this._videoList = validVideos;
+        this._activeVideoIndex = 0;
 
         if (count === 1) {
-            // Single video — large centered
-            gridClass = 'max-w-4xl mx-auto';
-            cards.push(self._videoCard(validVideos[0], 'large'));
+            // Single video — large centered thumbnail, click opens modal
+            grid.className = 'max-w-4xl mx-auto';
+            grid.innerHTML = self._videoCard(validVideos[0], 'large');
         } else if (count === 2) {
-            // Two equal columns
-            gridClass = 'grid grid-cols-1 md:grid-cols-2 gap-4';
-            validVideos.forEach(function(v) { cards.push(self._videoCard(v, 'medium')); });
-        } else if (count === 3) {
-            // Bento: first large spanning 2 cols, two smaller below
-            gridClass = 'grid grid-cols-1 md:grid-cols-2 gap-4';
-            cards.push('<div class="md:col-span-2">' + self._videoCard(validVideos[0], 'large') + '</div>');
-            cards.push(self._videoCard(validVideos[1], 'medium'));
-            cards.push(self._videoCard(validVideos[2], 'medium'));
-        } else if (count === 4) {
-            // 2x2 grid
-            gridClass = 'grid grid-cols-1 md:grid-cols-2 gap-4';
-            validVideos.forEach(function(v) { cards.push(self._videoCard(v, 'medium')); });
+            // Two equal columns, each opens modal
+            grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+            grid.innerHTML = validVideos.map(function(v) {
+                return self._videoCard(v, 'medium');
+            }).join('');
         } else {
-            // 5 videos: hero + 4 in 2x2
-            gridClass = 'grid grid-cols-1 md:grid-cols-2 gap-4';
-            cards.push('<div class="md:col-span-2">' + self._videoCard(validVideos[0], 'large') + '</div>');
-            for (var i = 1; i < validVideos.length; i++) {
-                cards.push(self._videoCard(validVideos[i], 'medium'));
-            }
-        }
+            // 3-5 videos: player + playlist layout
+            grid.className = 'grid grid-cols-1 lg:grid-cols-4 gap-4';
 
-        grid.className = gridClass;
-        grid.innerHTML = cards.join('');
+            // Main player (3/4)
+            var playerHtml = '<div class="lg:col-span-3">' +
+                '<div class="overflow-hidden bg-gray-900 rounded-2xl">' +
+                    '<div class="relative aspect-video">' +
+                        '<iframe id="videoPlayer" class="w-full h-full" ' +
+                            'src="https://www.youtube.com/embed/' + validVideos[0].id + '?rel=0" ' +
+                            'title="' + self.escapeHtml(validVideos[0].title) + '" frameborder="0" ' +
+                            'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" ' +
+                            'allowfullscreen></iframe>' +
+                    '</div>' +
+                    '<div class="px-5 py-4">' +
+                        '<h3 id="videoPlayerTitle" class="text-lg font-semibold text-white truncate">' + self.escapeHtml(validVideos[0].title) + '</h3>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+            // Playlist sidebar (1/4)
+            var playlistHtml = '<div class="lg:col-span-1">' +
+                '<div class="overflow-hidden bg-white border border-gray-200 rounded-2xl">' +
+                    '<div class="px-4 py-3 border-b border-gray-100 bg-gray-50">' +
+                        '<span class="text-sm font-semibold text-gray-700">' + count + ' videoclipuri</span>' +
+                    '</div>' +
+                    '<div class="overflow-y-auto divide-y divide-gray-100 lg:max-h-[calc(100%-44px)]" id="videoPlaylist">';
+
+            validVideos.forEach(function(v, i) {
+                var thumbUrl = 'https://img.youtube.com/vi/' + v.id + '/mqdefault.jpg';
+                var activeClass = i === 0 ? 'bg-primary/5 border-l-[3px] border-l-primary' : 'border-l-[3px] border-l-transparent hover:bg-gray-50';
+
+                playlistHtml += '<div class="flex gap-3 p-3 transition-colors cursor-pointer playlist-item ' + activeClass + '" ' +
+                    'data-index="' + i + '" onclick="ArtistPage.playVideo(' + i + ')">' +
+                    '<div class="relative flex-shrink-0 overflow-hidden rounded-lg w-28 group">' +
+                        '<img src="' + thumbUrl + '" alt="" class="object-cover w-full h-full aspect-video" loading="lazy">' +
+                        '<div class="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">' +
+                            '<svg class="w-6 h-6 text-white drop-shadow" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="flex-1 min-w-0 py-0.5">' +
+                        '<p class="text-[13px] font-medium text-gray-900 line-clamp-2 leading-snug">' + self.escapeHtml(v.title) + '</p>' +
+                        '<span class="text-xs text-gray-400 mt-1 block">YouTube</span>' +
+                    '</div>' +
+                '</div>';
+            });
+
+            playlistHtml += '</div></div></div>';
+
+            grid.innerHTML = playerHtml + playlistHtml;
+        }
     },
 
     /**
-     * Build a single video thumbnail card
+     * Switch active video in the player (for playlist layout)
+     */
+    playVideo(index) {
+        if (!this._videoList || !this._videoList[index]) return;
+
+        var video = this._videoList[index];
+        var iframe = document.getElementById('videoPlayer');
+        var titleEl = document.getElementById('videoPlayerTitle');
+
+        if (iframe) {
+            iframe.src = 'https://www.youtube.com/embed/' + video.id + '?autoplay=1&rel=0';
+        }
+        if (titleEl) {
+            titleEl.textContent = video.title;
+        }
+
+        // Update active state in playlist
+        this._activeVideoIndex = index;
+        var items = document.querySelectorAll('#videoPlaylist .playlist-item');
+        items.forEach(function(item, i) {
+            if (i === index) {
+                item.className = item.className
+                    .replace('border-l-transparent', 'border-l-primary')
+                    .replace('hover:bg-gray-50', '');
+                if (!item.classList.contains('bg-primary/5')) {
+                    item.classList.add('bg-primary/5');
+                }
+            } else {
+                item.className = item.className
+                    .replace('border-l-primary', 'border-l-transparent')
+                    .replace('bg-primary/5', '');
+                if (!item.classList.contains('hover:bg-gray-50')) {
+                    item.classList.add('hover:bg-gray-50');
+                }
+            }
+        });
+    },
+
+    /**
+     * Build a single video thumbnail card (used for 1-2 videos)
      */
     _videoCard(video, size) {
         var thumbUrl = 'https://img.youtube.com/vi/' + video.id + '/maxresdefault.jpg';
@@ -631,16 +703,13 @@ const ArtistPage = {
                     'class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy" ' +
                     'onerror="this.src=\'' + thumbFallback + '\'">' +
             '</div>' +
-            // Dark gradient overlay
             '<div class="absolute inset-0 transition-colors bg-gradient-to-t from-black/80 via-black/20 to-transparent group-hover:from-black/90"></div>' +
-            // Play button
             '<div class="absolute inset-0 flex items-center justify-center">' +
                 '<div class="flex items-center justify-center transition-all duration-300 rounded-full shadow-lg ' +
                     (isLarge ? 'w-20 h-20' : 'w-16 h-16') + ' bg-white/95 group-hover:scale-110 group-hover:bg-white group-hover:shadow-xl">' +
                     '<svg class="' + (isLarge ? 'w-8 h-8' : 'w-6 h-6') + ' ml-1 text-[#FF0000]" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
                 '</div>' +
             '</div>' +
-            // Title overlay at bottom
             (title ? '<div class="absolute bottom-0 left-0 right-0 p-4 ' + (isLarge ? 'pb-5' : 'pb-4') + '">' +
                 '<h3 class="font-semibold text-white ' + (isLarge ? 'text-lg' : 'text-[15px]') + ' line-clamp-2 drop-shadow-lg">' + title + '</h3>' +
             '</div>' : '') +
@@ -648,7 +717,7 @@ const ArtistPage = {
     },
 
     /**
-     * Open video in modal lightbox
+     * Open video in modal lightbox (used for 1-2 video layouts)
      */
     openVideoModal(videoId, title) {
         var modal = document.getElementById('videoModal');
@@ -669,7 +738,6 @@ const ArtistPage = {
      * Close video modal
      */
     closeVideoModal(event) {
-        // If called from backdrop click, only close if clicking the backdrop itself
         if (event && event.target !== event.currentTarget) return;
 
         var modal = document.getElementById('videoModal');
