@@ -207,7 +207,7 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- YouTube Videos Section -->
     <section id="youtubeVideosSection" class="hidden mt-10">
-        <div class="flex items-center justify-between mb-5">
+        <div class="flex items-center justify-between mb-6">
             <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
                 <svg class="w-7 h-7 text-[#FF0000]" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
@@ -216,10 +216,25 @@ require_once __DIR__ . '/includes/header.php';
             </h2>
         </div>
 
-        <div id="youtubeVideosGrid" class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div id="youtubeVideosGrid">
             <!-- Videos will be loaded dynamically -->
         </div>
     </section>
+
+    <!-- Video Modal -->
+    <div id="videoModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/90 backdrop-blur-sm" onclick="ArtistPage.closeVideoModal(event)">
+        <button onclick="ArtistPage.closeVideoModal()" class="absolute z-10 flex items-center justify-center w-10 h-10 text-white transition-colors rounded-full top-4 right-4 bg-white/10 hover:bg-white/20">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <div class="w-full max-w-5xl px-4 mx-auto" onclick="event.stopPropagation()">
+            <div class="relative overflow-hidden shadow-2xl aspect-video rounded-2xl">
+                <iframe id="videoModalIframe" class="w-full h-full" src="" title="Video" frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen></iframe>
+            </div>
+            <p id="videoModalTitle" class="mt-4 text-lg font-semibold text-center text-white"></p>
+        </div>
+    </div>
 
     <!-- Gallery Section -->
     <section class="hidden mt-10">

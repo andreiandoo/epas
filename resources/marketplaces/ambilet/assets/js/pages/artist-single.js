@@ -51,6 +51,12 @@ const ArtistPage = {
         this.artistSlug = window.ARTIST_SLUG || '';
         this.loadArtistData();
         this.loadFollowStatus();
+
+        // Close video modal on Escape key
+        var self = this;
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') self.closeVideoModal();
+        });
     },
 
     /**
@@ -554,7 +560,7 @@ const ArtistPage = {
     },
 
     /**
-     * Render YouTube videos section
+     * Render YouTube videos section — adaptive bento layout with thumbnail cards
      */
     renderYoutubeVideos(videos) {
         var section = document.getElementById(this.elements.youtubeVideosSection);
@@ -562,23 +568,119 @@ const ArtistPage = {
 
         if (!section || !grid || !videos || videos.length === 0) return;
 
+        // Filter valid videos
+        var self = this;
+        var validVideos = videos.map(function(video) {
+            var videoId = self.extractYoutubeId(video.url);
+            if (!videoId) return null;
+            return { id: videoId, title: video.title || '', url: video.url };
+        }).filter(Boolean);
+
+        if (validVideos.length === 0) return;
         section.classList.remove('hidden');
 
-        var self = this;
-        grid.innerHTML = videos.map(function(video) {
-            var videoId = self.extractYoutubeId(video.url);
-            if (!videoId) return '';
+        var count = validVideos.length;
 
-            return '<div class="overflow-hidden bg-white border border-gray-200 rounded-xl">' +
-                '<div class="relative aspect-video">' +
-                    '<iframe class="w-full h-full" src="https://www.youtube.com/embed/' + videoId + '" ' +
-                        'title="' + self.escapeHtml(video.title || 'Video') + '" frameborder="0" ' +
-                        'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" ' +
-                        'allowfullscreen loading="lazy"></iframe>' +
+        // Build adaptive grid layout based on video count
+        var gridClass = '';
+        var cards = [];
+
+        if (count === 1) {
+            // Single video — large centered
+            gridClass = 'max-w-4xl mx-auto';
+            cards.push(self._videoCard(validVideos[0], 'large'));
+        } else if (count === 2) {
+            // Two equal columns
+            gridClass = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+            validVideos.forEach(function(v) { cards.push(self._videoCard(v, 'medium')); });
+        } else if (count === 3) {
+            // Bento: first large spanning 2 cols, two smaller below
+            gridClass = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+            cards.push('<div class="md:col-span-2">' + self._videoCard(validVideos[0], 'large') + '</div>');
+            cards.push(self._videoCard(validVideos[1], 'medium'));
+            cards.push(self._videoCard(validVideos[2], 'medium'));
+        } else if (count === 4) {
+            // 2x2 grid
+            gridClass = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+            validVideos.forEach(function(v) { cards.push(self._videoCard(v, 'medium')); });
+        } else {
+            // 5 videos: hero + 4 in 2x2
+            gridClass = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+            cards.push('<div class="md:col-span-2">' + self._videoCard(validVideos[0], 'large') + '</div>');
+            for (var i = 1; i < validVideos.length; i++) {
+                cards.push(self._videoCard(validVideos[i], 'medium'));
+            }
+        }
+
+        grid.className = gridClass;
+        grid.innerHTML = cards.join('');
+    },
+
+    /**
+     * Build a single video thumbnail card
+     */
+    _videoCard(video, size) {
+        var thumbUrl = 'https://img.youtube.com/vi/' + video.id + '/maxresdefault.jpg';
+        var thumbFallback = 'https://img.youtube.com/vi/' + video.id + '/hqdefault.jpg';
+        var title = this.escapeHtml(video.title);
+        var isLarge = size === 'large';
+
+        return '<div class="relative overflow-hidden cursor-pointer group rounded-2xl bg-gray-900" onclick="ArtistPage.openVideoModal(\'' + video.id + '\', \'' + title.replace(/'/g, "\\'") + '\')">' +
+            '<div class="aspect-video">' +
+                '<img src="' + thumbUrl + '" alt="' + title + '" ' +
+                    'class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy" ' +
+                    'onerror="this.src=\'' + thumbFallback + '\'">' +
+            '</div>' +
+            // Dark gradient overlay
+            '<div class="absolute inset-0 transition-colors bg-gradient-to-t from-black/80 via-black/20 to-transparent group-hover:from-black/90"></div>' +
+            // Play button
+            '<div class="absolute inset-0 flex items-center justify-center">' +
+                '<div class="flex items-center justify-center transition-all duration-300 rounded-full shadow-lg ' +
+                    (isLarge ? 'w-20 h-20' : 'w-16 h-16') + ' bg-white/95 group-hover:scale-110 group-hover:bg-white group-hover:shadow-xl">' +
+                    '<svg class="' + (isLarge ? 'w-8 h-8' : 'w-6 h-6') + ' ml-1 text-[#FF0000]" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
                 '</div>' +
-                (video.title ? '<div class="p-4"><h3 class="font-semibold text-gray-900 text-[15px] line-clamp-2">' + self.escapeHtml(video.title) + '</h3></div>' : '') +
-            '</div>';
-        }).filter(function(html) { return html !== ''; }).join('');
+            '</div>' +
+            // Title overlay at bottom
+            (title ? '<div class="absolute bottom-0 left-0 right-0 p-4 ' + (isLarge ? 'pb-5' : 'pb-4') + '">' +
+                '<h3 class="font-semibold text-white ' + (isLarge ? 'text-lg' : 'text-[15px]') + ' line-clamp-2 drop-shadow-lg">' + title + '</h3>' +
+            '</div>' : '') +
+        '</div>';
+    },
+
+    /**
+     * Open video in modal lightbox
+     */
+    openVideoModal(videoId, title) {
+        var modal = document.getElementById('videoModal');
+        var iframe = document.getElementById('videoModalIframe');
+        var titleEl = document.getElementById('videoModalTitle');
+
+        if (!modal || !iframe) return;
+
+        iframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&rel=0';
+        if (titleEl) titleEl.textContent = title || '';
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    },
+
+    /**
+     * Close video modal
+     */
+    closeVideoModal(event) {
+        // If called from backdrop click, only close if clicking the backdrop itself
+        if (event && event.target !== event.currentTarget) return;
+
+        var modal = document.getElementById('videoModal');
+        var iframe = document.getElementById('videoModalIframe');
+
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        if (iframe) iframe.src = '';
+        document.body.style.overflow = '';
     },
 
     /**
