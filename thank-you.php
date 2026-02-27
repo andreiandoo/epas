@@ -583,9 +583,9 @@ const ThankYouPage = {
                         <div style="text-align: right;"><div style="font-size: 11px; color: #64748B;">PREȚ</div><div style="font-weight: 700; color: #A51C30;">${AmbiletUtils.formatCurrency(ticket.price)}</div></div>
                     </div>
                     <div style="text-align: center; padding-top: 12px; border-top: 1px solid #E2E8F0;">
-                        ${(ticket.barcode || ticket.code) ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(ticket.barcode || ticket.code)}" style="width: 150px; height: 150px;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
-                        <div style="display:none;padding:10px;border:2px solid #1E293B;border-radius:8px;font-family:monospace;font-size:14px;font-weight:bold;word-break:break-all">${ticket.barcode || ticket.code}</div>` : '<div style="padding:10px;color:#94A3B8;font-size:12px;">Cod indisponibil</div>'}
-                        <div style="font-family: monospace; font-size: 11px; color: #64748B; margin-top: 6px;">${ticket.barcode || ticket.code || ''}</div>
+                        ${(ticket.code || ticket.barcode) ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(ticket.code || ticket.barcode)}" style="width: 150px; height: 150px;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
+                        <div style="display:none;padding:10px;border:2px solid #1E293B;border-radius:8px;font-family:monospace;font-size:14px;font-weight:bold;word-break:break-all">${ticket.code || ticket.barcode}</div>` : '<div style="padding:10px;color:#94A3B8;font-size:12px;">Cod indisponibil</div>'}
+                        <div style="font-family: monospace; font-size: 11px; color: #64748B; margin-top: 6px;">${ticket.code || ticket.barcode || ''}</div>
                     </div>
                 </div>
             `;
@@ -768,7 +768,7 @@ const ThankYouPage = {
                     </div>
 
                     <div class="ticket-barcode">${barcodeLines}</div>
-                    <p class="text-center text-[10px] text-muted mt-2">${ticket.barcode || ticket.code || ''}</p>
+                    <p class="text-center text-[10px] text-muted mt-2">${ticket.code || ticket.barcode || ''}</p>
                 </div>
             </div>
         `;
