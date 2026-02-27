@@ -29,9 +29,9 @@ class GiftCardResource extends Resource
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-gift';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 6;
-    protected static ?string $navigationLabel = 'Gift Cards';
+    protected static ?string $navigationLabel = 'Carduri cadou';
     protected static ?string $modelLabel = 'Gift Card';
-    protected static ?string $pluralModelLabel = 'Gift Cards';
+    protected static ?string $pluralModelLabel = 'Carduri cadou';
 
     public static function getNavigationBadge(): ?string
     {

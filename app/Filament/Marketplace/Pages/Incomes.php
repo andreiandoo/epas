@@ -19,8 +19,8 @@ class Incomes extends Page
     use HasMarketplaceContext;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-currency-dollar';
-    protected static ?string $navigationLabel = 'Incomes';
-    protected static ?string $title = 'Incomes';
+    protected static ?string $navigationLabel = 'Venituri';
+    protected static ?string $title = 'Venituri';
     protected static string|\UnitEnum|null $navigationGroup = 'Reports';
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.marketplace.pages.incomes';

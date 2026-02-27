@@ -16,6 +16,7 @@ class TicketResource extends Resource
     use HasMarketplaceContext;
 
     protected static ?string $model = Ticket::class;
+    protected static ?string $navigationLabel = 'Bilete';
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 2;

@@ -21,6 +21,7 @@ use Filament\Support\Enums\IconPosition;
 class PayoutResource extends Resource
 {
     protected static ?string $model = MarketplacePayout::class;
+    protected static ?string $navigationLabel = 'Deconturi';
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-banknotes';
 

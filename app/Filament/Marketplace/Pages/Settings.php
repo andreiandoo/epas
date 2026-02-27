@@ -20,7 +20,7 @@ class Settings extends Page
     use Forms\Concerns\InteractsWithForms;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-cog-6-tooth';
-    protected static ?string $navigationLabel = 'Settings';
+    protected static ?string $navigationLabel = 'Setări';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.marketplace.pages.settings';

@@ -19,8 +19,8 @@ class Balances extends Page implements HasForms, HasTable
     use InteractsWithTable;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-banknotes';
-    protected static ?string $navigationLabel = 'Balances';
-    protected static ?string $title = 'Organizer Balances';
+    protected static ?string $navigationLabel = 'Balanțe';
+    protected static ?string $title = 'Balanțe organizatori';
     protected static \UnitEnum|string|null $navigationGroup = 'Organizers';
     protected static ?int $navigationSort = 3;
     protected string $view = 'filament.marketplace.pages.balances';

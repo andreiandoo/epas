@@ -19,7 +19,7 @@ class PaymentConfig extends Page implements HasForms
     use InteractsWithForms;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-credit-card';
-    protected static ?string $navigationLabel = 'Payment Methods';
+    protected static ?string $navigationLabel = 'Metode de plată';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 10;
     protected string $view = 'filament.marketplace.pages.payment-config';

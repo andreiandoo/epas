@@ -27,11 +27,11 @@ class ServiceOrderResource extends Resource
 
     protected static ?int $navigationSort = 5;
 
-    protected static ?string $navigationLabel = 'Service Orders';
+    protected static ?string $navigationLabel = 'Comenzi servicii';
 
     protected static ?string $modelLabel = 'Service Order';
 
-    protected static ?string $pluralModelLabel = 'Service Orders';
+    protected static ?string $pluralModelLabel = 'Comenzi servicii';
 
     protected static ?string $recordTitleAttribute = 'order_number';
 

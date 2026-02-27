@@ -27,9 +27,9 @@ class MarketplaceAdminResource extends Resource
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 0;
-    protected static ?string $navigationLabel = 'Platform Users';
+    protected static ?string $navigationLabel = 'Utilizatori';
     protected static ?string $modelLabel = 'Platform User';
-    protected static ?string $pluralModelLabel = 'Platform Users';
+    protected static ?string $pluralModelLabel = 'Utilizatori';
 
     public static function shouldRegisterNavigation(): bool
     {

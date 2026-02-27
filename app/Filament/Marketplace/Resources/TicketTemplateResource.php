@@ -27,7 +27,7 @@ class TicketTemplateResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
 
-    protected static ?string $navigationLabel = 'Ticket Templates';
+    protected static ?string $navigationLabel = 'Template bilete';
 
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
 
@@ -35,7 +35,7 @@ class TicketTemplateResource extends Resource
 
     protected static ?string $modelLabel = 'Template';
 
-    protected static ?string $pluralModelLabel = 'Ticket Templates';
+    protected static ?string $pluralModelLabel = 'Template bilete';
 
     protected static ?string $slug = 'ticket-templates';
 

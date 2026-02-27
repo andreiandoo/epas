@@ -27,11 +27,11 @@ class OrganizerDocumentResource extends Resource
 
     protected static ?int $navigationSort = 3;
 
-    protected static ?string $navigationLabel = 'Documents';
+    protected static ?string $navigationLabel = 'Documente';
 
     protected static ?string $modelLabel = 'Document';
 
-    protected static ?string $pluralModelLabel = 'Documents';
+    protected static ?string $pluralModelLabel = 'Documente';
 
     protected static ?string $slug = 'organizer-documents';
 

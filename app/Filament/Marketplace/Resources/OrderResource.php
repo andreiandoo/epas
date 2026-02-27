@@ -24,6 +24,7 @@ class OrderResource extends Resource
     use HasMarketplaceContext;
 
     protected static ?string $model = Order::class;
+    protected static ?string $navigationLabel = 'Comenzi';
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-shopping-cart';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 1;

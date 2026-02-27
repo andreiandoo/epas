@@ -32,9 +32,9 @@ class SeatingLayoutResource extends Resource
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-square-3-stack-3d';
     protected static UnitEnum|string|null $navigationGroup = null;
     protected static ?int $navigationSort = 4;
-    protected static ?string $navigationLabel = 'Seating Layouts';
+    protected static ?string $navigationLabel = 'Hărți';
     protected static ?string $modelLabel = 'Seating Layout';
-    protected static ?string $pluralModelLabel = 'Seating Layouts';
+    protected static ?string $pluralModelLabel = 'Hărți';
 
     public static function getEloquentQuery(): Builder
     {

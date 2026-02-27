@@ -8,6 +8,11 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// Expire ticket type sale discounts when sales_end_at passes (every minute)
+Schedule::command('ticket-types:expire-sales')
+    ->everyMinute()
+    ->timezone('Europe/Bucharest');
+
 // Schedule automatic invoice generation for tenants
 Schedule::command('invoices:generate-tenant')
     ->dailyAt('02:00')

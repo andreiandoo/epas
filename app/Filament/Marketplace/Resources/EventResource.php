@@ -46,6 +46,7 @@ class EventResource extends Resource
     use HasMarketplaceContext;
 
     protected static ?string $model = Event::class;
+    protected static ?string $navigationLabel = 'Evenimente';
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-calendar';
     protected static \UnitEnum|string|null $navigationGroup = null;
     protected static ?int $navigationSort = 2;

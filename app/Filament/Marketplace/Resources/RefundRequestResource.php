@@ -26,7 +26,7 @@ class RefundRequestResource extends Resource
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-arrow-uturn-left';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 5;
-    protected static ?string $navigationLabel = 'Refund Requests';
+    protected static ?string $navigationLabel = 'Cereri retur';
 
     public static function getNavigationBadge(): ?string
     {

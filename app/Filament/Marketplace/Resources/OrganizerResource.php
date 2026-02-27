@@ -25,6 +25,7 @@ use Filament\Actions\BulkActionGroup;
 class OrganizerResource extends Resource
 {
     protected static ?string $model = MarketplaceOrganizer::class;
+    protected static ?string $navigationLabel = 'Organizatori';
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
 

@@ -30,9 +30,9 @@ class MarketplaceCustomerResource extends Resource
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
     protected static \UnitEnum|string|null $navigationGroup = 'Customers';
     protected static ?int $navigationSort = 1;
-    protected static ?string $navigationLabel = 'Registered Users';
+    protected static ?string $navigationLabel = 'Clienți';
     protected static ?string $modelLabel = 'User';
-    protected static ?string $pluralModelLabel = 'Registered Users';
+    protected static ?string $pluralModelLabel = 'Clienți';
 
     public static function getEloquentQuery(): Builder
     {
