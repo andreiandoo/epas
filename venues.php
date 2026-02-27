@@ -54,12 +54,6 @@ include __DIR__ . '/includes/header.php';
         </div>
         <select id="cityFilter" class="py-3.5 pl-4 pr-10 bg-white border border-border rounded-xl text-sm font-medium text-secondary cursor-pointer hover:border-muted focus:outline-none focus:border-primary transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_14px_center]">
             <option value="">Toate orașele</option>
-            <option value="bucuresti">București</option>
-            <option value="cluj">Cluj-Napoca</option>
-            <option value="timisoara">Timișoara</option>
-            <option value="iasi">Iași</option>
-            <option value="brasov">Brașov</option>
-            <option value="constanta">Constanța</option>
         </select>
         <select id="capacityFilter" class="py-3.5 pl-4 pr-10 bg-white border border-border rounded-xl text-sm font-medium text-secondary cursor-pointer hover:border-muted focus:outline-none focus:border-primary transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_14px_center]">
             <option value="">Capacitate</option>
@@ -77,55 +71,9 @@ include __DIR__ . '/includes/header.php';
         </select>
     </div>
 
-    <!-- Category Tabs -->
+    <!-- Category Tabs (populated by JS from API) -->
     <div id="categoryTabs" class="flex flex-wrap gap-2 mb-8">
-        <button class="flex items-center gap-2 px-5 py-3 text-sm font-medium text-white transition-all border rounded-full category-tab active bg-primary border-primary" data-category="all">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="7" height="7"/>
-                <rect x="14" y="3" width="7" height="7"/>
-                <rect x="14" y="14" width="7" height="7"/>
-                <rect x="3" y="14" width="7" height="7"/>
-            </svg>
-            Toate
-            <span class="px-2 py-0.5 bg-white/20 rounded-full text-xs font-semibold" id="totalCount">0</span>
-        </button>
-        <button class="flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all bg-white border rounded-full category-tab border-border text-muted hover:border-muted hover:text-secondary" data-category="arena">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 21h18"/>
-                <path d="M5 21V7l8-4v18"/>
-                <path d="M19 21V11l-6-4"/>
-            </svg>
-            Arene & Stadioane
-            <span class="px-2 py-0.5 bg-black/10 rounded-full text-xs font-semibold">24</span>
-        </button>
-        <button class="flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all bg-white border rounded-full category-tab border-border text-muted hover:border-muted hover:text-secondary" data-category="theater">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                <line x1="9" y1="9" x2="9.01" y2="9"/>
-                <line x1="15" y1="9" x2="15.01" y2="9"/>
-            </svg>
-            Teatre & Săli
-            <span class="px-2 py-0.5 bg-black/10 rounded-full text-xs font-semibold">86</span>
-        </button>
-        <button class="flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all bg-white border rounded-full category-tab border-border text-muted hover:border-muted hover:text-secondary" data-category="club">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 18V5l12-2v13"/>
-                <circle cx="6" cy="18" r="3"/>
-                <circle cx="18" cy="16" r="3"/>
-            </svg>
-            Cluburi & Baruri
-            <span class="px-2 py-0.5 bg-black/10 rounded-full text-xs font-semibold">142</span>
-        </button>
-        <button class="flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all bg-white border rounded-full category-tab border-border text-muted hover:border-muted hover:text-secondary" data-category="openair">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="5"/>
-                <line x1="12" y1="1" x2="12" y2="3"/>
-                <line x1="12" y1="21" x2="12" y2="23"/>
-            </svg>
-            Open Air
-            <span class="px-2 py-0.5 bg-black/10 rounded-full text-xs font-semibold">38</span>
-        </button>
+        <!-- Populated dynamically -->
     </div>
 
     <!-- Results Info -->
@@ -197,24 +145,42 @@ $scriptsExtra = <<<'SCRIPTS'
 <script>
 const VenuesPage = {
     venues: [],
+    filteredVenues: [],
+    categories: [],
     currentPage: 1,
     itemsPerPage: 9,
 
+    // Remove diacritics for search comparison
+    normalize(str) {
+        return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    },
+
+    // Shuffle array (Fisher-Yates)
+    shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    },
+
     async init() {
-        await this.loadVenues();
+        await Promise.all([this.loadVenues(), this.loadCategories()]);
+        this.buildCityDropdown();
         this.bindEvents();
+        this.filterVenues();
     },
 
     bindEvents() {
-        // Search
-        document.getElementById('searchInput')?.addEventListener('input', AmbiletUtils.debounce(() => this.filterVenues(), 300));
+        const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
-        // Filters
+        document.getElementById('searchInput')?.addEventListener('input', debounce(() => this.filterVenues(), 300));
         document.getElementById('cityFilter')?.addEventListener('change', () => this.filterVenues());
         document.getElementById('capacityFilter')?.addEventListener('change', () => this.filterVenues());
         document.getElementById('sortFilter')?.addEventListener('change', () => this.filterVenues());
+    },
 
-        // Category tabs
+    bindCategoryTabs() {
         document.querySelectorAll('.category-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.category-tab').forEach(t => {
@@ -230,7 +196,7 @@ const VenuesPage = {
 
     async loadVenues() {
         try {
-            const response = await AmbiletAPI.getVenues({ per_page: 50 });
+            const response = await AmbiletAPI.getVenues({ per_page: 100 });
             const raw = response.data || response || [];
             this.venues = (Array.isArray(raw) ? raw : []).map(v => ({
                 id: v.id,
@@ -242,16 +208,71 @@ const VenuesPage = {
                 eventsCount: v.events_count || 0,
                 featured: v.is_featured || false,
                 type: (v.categories && v.categories[0]?.name) || 'Locație',
-                category: (v.categories && v.categories[0]?.slug) || 'other',
+                categorySlugs: v.categories ? v.categories.map(c => c.slug) : [],
                 eventTypes: v.categories ? v.categories.map(c => c.name).join(', ') : ''
             }));
+            // Shuffle for random default order
+            this.shuffle(this.venues);
             this.renderFeatured();
-            this.renderVenues();
         } catch (err) {
             console.error('Failed to load venues:', err);
             this.venues = [];
-            this.renderVenues();
         }
+    },
+
+    async loadCategories() {
+        try {
+            const response = await AmbiletAPI.getVenueCategories();
+            const data = response.data || response || {};
+            this.categories = data.categories || [];
+        } catch (err) {
+            console.error('Failed to load venue categories:', err);
+            this.categories = [];
+        }
+        this.renderCategoryTabs();
+    },
+
+    renderCategoryTabs() {
+        const container = document.getElementById('categoryTabs');
+        if (!container) return;
+
+        // "Toate" tab
+        let html = `<button class="flex items-center gap-2 px-5 py-3 text-sm font-medium text-white transition-all border rounded-full category-tab active bg-primary border-primary" data-category="all">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+            </svg>
+            Toate
+            <span class="px-2 py-0.5 bg-white/20 rounded-full text-xs font-semibold" id="totalCount">${this.venues.length}</span>
+        </button>`;
+
+        for (const cat of this.categories) {
+            const count = cat.venues_count || 0;
+            if (count === 0) continue;
+            html += `<button class="flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all bg-white border rounded-full category-tab border-border text-muted hover:border-muted hover:text-secondary" data-category="${cat.slug}">
+                ${cat.name}
+                <span class="px-2 py-0.5 bg-black/10 rounded-full text-xs font-semibold">${count}</span>
+            </button>`;
+        }
+
+        container.innerHTML = html;
+        this.bindCategoryTabs();
+    },
+
+    buildCityDropdown() {
+        const select = document.getElementById('cityFilter');
+        if (!select) return;
+
+        // Extract unique cities, sorted alphabetically
+        const cities = [...new Set(this.venues.map(v => v.location).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ro'));
+
+        // Keep "Toate orașele" and add real cities
+        select.innerHTML = '<option value="">Toate orașele</option>';
+        cities.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            select.appendChild(opt);
+        });
     },
 
     renderFeatured() {
@@ -301,28 +322,61 @@ const VenuesPage = {
     },
 
     filterVenues() {
-        const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+        const searchRaw = document.getElementById('searchInput')?.value || '';
+        const search = this.normalize(searchRaw);
         const city = document.getElementById('cityFilter')?.value || '';
+        const capacityRange = document.getElementById('capacityFilter')?.value || '';
+        const sort = document.getElementById('sortFilter')?.value || '';
         const activeTab = document.querySelector('.category-tab.active')?.dataset.category || 'all';
 
         let filtered = this.venues.filter(v => {
-            const matchSearch = !search || v.name.toLowerCase().includes(search) || v.location.toLowerCase().includes(search);
-            const matchCity = !city || v.location.toLowerCase().includes(city);
-            const matchCategory = activeTab === 'all' || v.category === activeTab;
-            return matchSearch && matchCity && matchCategory;
+            // Search: case + diacritics insensitive
+            const matchSearch = !search || this.normalize(v.name).includes(search) || this.normalize(v.location).includes(search);
+            // City: exact match
+            const matchCity = !city || v.location === city;
+            // Capacity range
+            let matchCapacity = true;
+            if (capacityRange === 'small') matchCapacity = v.capacity > 0 && v.capacity < 500;
+            else if (capacityRange === 'medium') matchCapacity = v.capacity >= 500 && v.capacity <= 2000;
+            else if (capacityRange === 'large') matchCapacity = v.capacity > 2000 && v.capacity <= 10000;
+            else if (capacityRange === 'xlarge') matchCapacity = v.capacity > 10000;
+            // Category: venue can belong to multiple categories
+            const matchCategory = activeTab === 'all' || v.categorySlugs.includes(activeTab);
+            return matchSearch && matchCity && matchCapacity && matchCategory;
         });
 
+        // Sort
+        if (sort === 'name') {
+            filtered.sort((a, b) => a.name.localeCompare(b.name, 'ro'));
+        } else if (sort === 'events') {
+            filtered.sort((a, b) => b.eventsCount - a.eventsCount);
+        } else if (sort === 'capacity') {
+            filtered.sort((a, b) => b.capacity - a.capacity);
+        } else if (sort === 'popular') {
+            filtered.sort((a, b) => b.eventsCount - a.eventsCount);
+        }
+        // No sort = random (already shuffled)
+
+        this.filteredVenues = filtered;
         this.currentPage = 1;
-        this.renderVenues(filtered);
+        this.renderVenues();
     },
 
-    renderVenues(venues = this.venues) {
+    renderVenues() {
+        const venues = this.filteredVenues;
         const grid = document.getElementById('venuesGrid');
         const start = (this.currentPage - 1) * this.itemsPerPage;
         const paginated = venues.slice(start, start + this.itemsPerPage);
 
-        document.getElementById('totalCount').textContent = venues.length;
+        const totalEl = document.getElementById('totalCount');
+        if (totalEl) totalEl.textContent = venues.length;
         document.getElementById('resultsCount').textContent = venues.length;
+
+        if (!paginated.length) {
+            grid.innerHTML = '<div class="col-span-3 py-16 text-center text-muted"><p class="text-lg">Nu s-au găsit locații care să corespundă filtrelor selectate.</p></div>';
+            document.getElementById('pagination').innerHTML = '';
+            return;
+        }
 
         grid.innerHTML = paginated.map(v => `
             <a href="/locatie/${v.slug}" class="overflow-hidden transition-all duration-300 bg-white border rounded-2xl border-border hover:-translate-y-1 hover:shadow-lg hover:border-primary">

@@ -18,7 +18,7 @@ include __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero -->
-<section class="relative h-[300px] sm:h-[400px] lg:h-[600px] overflow-hidden" id="venueHero">
+<section class="relative h-[300px] sm:h-[400px] lg:h-[550px] overflow-hidden" id="venueHero">
     <!-- Skeleton -->
     <div class="absolute inset-0 bg-gray-200 skeleton-hero animate-pulse"></div>
 

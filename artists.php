@@ -27,8 +27,8 @@ require_once __DIR__ . '/includes/head.php';
     <div class="absolute rounded-full -top-24 -right-24 w-96 h-96 bg-primary/20 blur-3xl"></div>
     <div class="absolute rounded-full -bottom-32 -left-24 w-80 h-80 bg-primary/15 blur-3xl"></div>
     <div class="relative z-10 px-4 mx-auto text-center max-w-7xl">
-        <h1 class="mb-4 text-4xl font-extrabold text-white md:text-5xl">Artisti</h1>
-        <p class="max-w-xl mx-auto text-lg text-white/70">Descopera artistii tai preferati si nu rata urmatoarele lor concerte si evenimente in Romania.</p>
+        <h1 class="mb-4 text-4xl font-extrabold text-white">Artisti</h1>
+        <p class="text-lg leading-relaxed text-white/70">Descopera artistii tai preferati si nu rata urmatoarele lor concerte si evenimente in Romania.</p>
     </div>
 </section>
 
