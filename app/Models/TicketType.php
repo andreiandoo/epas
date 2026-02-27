@@ -140,13 +140,35 @@ class TicketType extends Model
     {
         parent::boot();
 
-        // Transform data before saving
+        // Auto-generate SKU if empty
         static::saving(function ($model) {
-            \Log::info('TicketType saving', [
-                'id' => $model->id,
-                'attributes' => $model->attributes,
-                'original' => $model->getOriginal(),
-            ]);
+            if (empty($model->sku) && !empty($model->name)) {
+                $model->sku = \Illuminate\Support\Str::upper(\Illuminate\Support\Str::slug($model->name, '-'));
+            }
+        });
+
+        // Auto-generate series_start/series_end after create (needs ID)
+        static::created(function ($model) {
+            $needsUpdate = false;
+            $event = $model->event;
+            $eventSeries = $event?->event_series;
+            $capacity = $model->quota_total;
+            $identifier = $model->id;
+
+            if ($eventSeries && $identifier) {
+                if (empty($model->series_start)) {
+                    $model->series_start = $eventSeries . '-' . $identifier . '-00001';
+                    $needsUpdate = true;
+                }
+                if (empty($model->series_end) && $capacity && (int) $capacity > 0) {
+                    $model->series_end = $eventSeries . '-' . $identifier . '-' . str_pad((int) $capacity, 5, '0', STR_PAD_LEFT);
+                    $needsUpdate = true;
+                }
+            }
+
+            if ($needsUpdate) {
+                $model->saveQuietly();
+            }
         });
     }
 

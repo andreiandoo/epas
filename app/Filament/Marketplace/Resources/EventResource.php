@@ -1062,35 +1062,20 @@ class EventResource extends Resource
                                             ->icon('heroicon-m-document-duplicate')
                                             ->color('gray')
                                             ->tooltip($t('Duplică tipul de bilet', 'Duplicate ticket type'))
-                                            ->action(function (array $arguments, Forms\Components\Repeater $component, SGet $get) {
+                                            ->action(function (array $arguments, Forms\Components\Repeater $component) {
                                                 $state = $component->getState();
                                                 $itemKey = $arguments['item'];
                                                 $itemData = $state[$itemKey] ?? null;
                                                 if (!$itemData) return;
 
-                                                $newName = '[DUP] ' . ($itemData['name'] ?? '');
-                                                $newSku = Str::upper(Str::slug($newName, '-'));
-                                                $capacity = $itemData['capacity'] ?? null;
-                                                $eventSeries = $get('event_series');
-
                                                 $newData = $itemData;
-                                                $newData['name'] = $newName;
+                                                $newData['name'] = '[DUP] ' . ($newData['name'] ?? '');
                                                 $newData['id'] = null;
-                                                $newData['sku'] = $newSku;
+                                                $newData['sku'] = '';
                                                 $newData['quota_sold'] = 0;
-
-                                                // Generate new series based on event_series + new SKU
-                                                if ($eventSeries && $newSku) {
-                                                    $newData['series_start'] = $eventSeries . '-' . $newSku . '-00001';
-                                                    if ($capacity && (int) $capacity > 0) {
-                                                        $newData['series_end'] = $eventSeries . '-' . $newSku . '-' . str_pad((int) $capacity, 5, '0', STR_PAD_LEFT);
-                                                    } else {
-                                                        $newData['series_end'] = null;
-                                                    }
-                                                } else {
-                                                    $newData['series_start'] = null;
-                                                    $newData['series_end'] = null;
-                                                }
+                                                // Series will auto-generate on save using the new ticket type ID
+                                                $newData['series_start'] = null;
+                                                $newData['series_end'] = null;
 
                                                 $newUuid = (string) Str::uuid();
                                                 $state[$newUuid] = $newData;
@@ -1121,7 +1106,6 @@ class EventResource extends Resource
                                             ->label($t('Culoare pe hartă', 'Map color'))
                                             ->hexColor()
                                             ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
-                                            ->live(onBlur: true)
                                             ->columnSpan(3),
 
                                         Forms\Components\Textarea::make('description')
@@ -1144,21 +1128,7 @@ class EventResource extends Resource
                                                 ->placeholder($t('ex: 120.00', 'e.g. 120.00'))
                                                 ->numeric()
                                                 ->minValue(0)
-                                                ->required()
-                                                ->live(onBlur: true)
-                                                ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                                    $price = (float) $state;
-                                                    $sale = $get('price');
-                                                    $disc = $get('discount_percent');
-                                                    if ($price > 0 && !$sale && is_numeric($disc)) {
-                                                        $disc = max(0, min(100, (float)$disc));
-                                                        $set('price', round($price * (1 - $disc/100), 2));
-                                                    }
-                                                    if ($price > 0 && $sale) {
-                                                        $d = round((1 - ((float)$sale / $price)) * 100, 2);
-                                                        $set('discount_percent', max(0, min(100, $d)));
-                                                    }
-                                                }),
+                                                ->required(),
                                             Forms\Components\TextInput::make('capacity')
                                                 ->label($t('Stoc bilete', 'Ticket stock'))
                                                 ->inlineLabel($il)
@@ -1172,34 +1142,6 @@ class EventResource extends Resource
                                                     return $record && $record->quota_sold > 0
                                                         ? $t('Vândute', 'Sold') . ": {$record->quota_sold}"
                                                         : null;
-                                                })
-                                                ->live(onBlur: true)
-                                                ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                                    // Auto-generate series_end based on quantity if not already set
-                                                    // Use capacity if set, otherwise use general_stock
-                                                    $seriesEnd = $get('series_end');
-                                                    $capacity = $state && (int)$state > 0 ? (int)$state : null;
-                                                    $generalStock = $get('../../general_stock');
-                                                    $stockToUse = $capacity ?? ($generalStock ? (int)$generalStock : null);
-
-                                                    if (!$seriesEnd && $stockToUse) {
-                                                        $eventSeries = $get('../../event_series');
-                                                        // Use ticket type ID if available, otherwise use SKU
-                                                        $ticketTypeIdentifier = $get('id') ?: $get('sku');
-                                                        if ($eventSeries && $ticketTypeIdentifier) {
-                                                            $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($stockToUse, 5, '0', STR_PAD_LEFT));
-                                                        }
-                                                    }
-                                                    // Auto-generate series_start if not already set
-                                                    $seriesStart = $get('series_start');
-                                                    if (!$seriesStart && $stockToUse) {
-                                                        $eventSeries = $get('../../event_series');
-                                                        // Use ticket type ID if available, otherwise use SKU
-                                                        $ticketTypeIdentifier = $get('id') ?: $get('sku');
-                                                        if ($eventSeries && $ticketTypeIdentifier) {
-                                                            $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
-                                                        }
-                                                    }
                                                 }),
                                         ])->columnSpan(12),
 
