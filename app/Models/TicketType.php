@@ -150,6 +150,18 @@ class TicketType extends Model
         });
     }
 
+    /**
+     * Scope: only ticket types that are currently active AND not past their active_until date
+     */
+    public function scopeEffectivelyActive($query)
+    {
+        return $query->where('status', 'active')
+            ->where(function ($q) {
+                $q->whereNull('active_until')
+                  ->orWhere('active_until', '>', now());
+            });
+    }
+
     // Getters
     public function getPriceMaxAttribute()
     {

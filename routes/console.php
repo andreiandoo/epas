@@ -686,3 +686,20 @@ Schedule::command('marketplace:deactivate-expired-featuring')
     ->onFailure(function () {
         \Log::error('Failed to deactivate expired featuring orders');
     });
+
+/*
+|--------------------------------------------------------------------------
+| Ticket Type Auto-Deactivation
+|--------------------------------------------------------------------------
+*/
+
+// Deactivate ticket types that have passed their active_until date (every minute)
+Schedule::call(function () {
+    $count = \App\Models\TicketType::where('status', 'active')
+        ->whereNotNull('active_until')
+        ->where('active_until', '<=', now())
+        ->update(['status' => 'hidden']);
+    if ($count > 0) {
+        \Log::info("Auto-deactivated {$count} ticket types (active_until reached)");
+    }
+})->everyMinute()->name('ticket-types:deactivate-expired');

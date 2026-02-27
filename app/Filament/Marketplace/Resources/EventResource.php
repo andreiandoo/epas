@@ -95,6 +95,8 @@ class EventResource extends Resource
     {
         $today = Carbon::today();
         $marketplace = static::getMarketplaceClient();
+        // Inline labels for ticket type fields — set to false to revert to stacked labels
+        $il = true;
 
         // Get tenant's language (check both 'language' and 'locale' columns)
         // Default to 'ro' (Romanian) for this marketplace
@@ -1055,6 +1057,30 @@ class EventResource extends Resource
                                     ->itemLabel(fn (array $state) => ($state['is_active'] ?? true)
                                         ? '✓ ' . ($state['name'] ?? $t('Bilet', 'Ticket'))
                                         : '○ ' . ($state['name'] ?? $t('Bilet', 'Ticket')))
+                                    ->extraItemActions([
+                                        Action::make('duplicateTicketType')
+                                            ->icon('heroicon-m-document-duplicate')
+                                            ->color('gray')
+                                            ->tooltip($t('Duplică tipul de bilet', 'Duplicate ticket type'))
+                                            ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                                $state = $component->getState();
+                                                $itemKey = $arguments['item'];
+                                                $itemData = $state[$itemKey] ?? null;
+                                                if (!$itemData) return;
+
+                                                $newData = $itemData;
+                                                $newData['name'] = '[DUP] ' . ($newData['name'] ?? '');
+                                                $newData['id'] = null;
+                                                $newData['sku'] = '';
+                                                $newData['series_start'] = null;
+                                                $newData['series_end'] = null;
+                                                $newData['quota_sold'] = 0;
+
+                                                $newUuid = (string) Str::uuid();
+                                                $state[$newUuid] = $newData;
+                                                $component->state($state);
+                                            }),
+                                    ])
                                     ->columns(12)
                                     ->schema([
                                         Forms\Components\Hidden::make('id'),
@@ -1063,6 +1089,7 @@ class EventResource extends Resource
                                             ->placeholder($t('ex: Early Bird, Standard, VIP', 'e.g. Early Bird, Standard, VIP'))
                                             ->datalist(['Early Bird','Standard','VIP','Backstage','Student','Senior','Child'])
                                             ->required()
+                                            ->inlineLabel($il)
                                             ->columnSpan(5)
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
@@ -1071,6 +1098,7 @@ class EventResource extends Resource
                                             }),
                                         Forms\Components\TextInput::make('sku')
                                             ->label('SKU')
+                                            ->inlineLabel($il)
                                             ->placeholder($t('Se generează automat dacă lași gol', 'AUTO-GEN if left empty'))
                                             ->columnSpan(4),
                                         Forms\Components\ColorPicker::make('color')
@@ -1082,6 +1110,7 @@ class EventResource extends Resource
 
                                         Forms\Components\Textarea::make('description')
                                             ->label($t('Descriere', 'Description'))
+                                            ->inlineLabel($il)
                                             ->placeholder($t('Descriere opțională tip bilet (ex: "Include acces backstage și meet & greet")', 'Optional ticket type description (e.g. "Includes backstage access and meet & greet")'))
                                             ->rows(2)
                                             ->columnSpan(12),
@@ -1089,11 +1118,13 @@ class EventResource extends Resource
                                         SC\Grid::make(3)->schema([
                                             Forms\Components\TextInput::make('currency')
                                                 ->label($t('Monedă', 'Currency'))
+                                                ->inlineLabel($il)
                                                 ->default($marketplace?->currency ?? 'RON')
                                                 ->disabled()
                                                 ->dehydrated(true),
                                             Forms\Components\TextInput::make('price_max')
                                                 ->label($t('Preț', 'Price'))
+                                                ->inlineLabel($il)
                                                 ->placeholder($t('ex: 120.00', 'e.g. 120.00'))
                                                 ->numeric()
                                                 ->minValue(0)
@@ -1114,6 +1145,7 @@ class EventResource extends Resource
                                                 }),
                                             Forms\Components\TextInput::make('capacity')
                                                 ->label($t('Stoc bilete', 'Ticket stock'))
+                                                ->inlineLabel($il)
                                                 ->placeholder($t('Necompletat = folosește stoc general', 'Empty = use general stock'))
                                                 ->numeric()
                                                 ->minValue(0)
@@ -1159,12 +1191,14 @@ class EventResource extends Resource
                                         SC\Grid::make(2)->schema([
                                             Forms\Components\TextInput::make('min_per_order')
                                                 ->label($t('Min bilete/comandă', 'Min tickets/order'))
+                                                ->inlineLabel($il)
                                                 ->numeric()
                                                 ->minValue(1)
                                                 ->default(1)
                                                 ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul minim de bilete care pot fi cumpărate într-o comandă', 'Minimum tickets that can be purchased in a single order')),
                                             Forms\Components\TextInput::make('max_per_order')
                                                 ->label($t('Max bilete/comandă', 'Max tickets/order'))
+                                                ->inlineLabel($il)
                                                 ->numeric()
                                                 ->minValue(1)
                                                 ->default(10)
@@ -1176,6 +1210,7 @@ class EventResource extends Resource
                                             ->schema([
                                                 Forms\Components\Select::make('commission_type')
                                                     ->label($t('Tip comision', 'Commission type'))
+                                                    ->inlineLabel($il)
                                                     ->options([
                                                         '' => $t('Moștenește setările', 'Inherit settings'),
                                                         'percentage' => $t('Procentual', 'Percentage'),
@@ -1204,6 +1239,7 @@ class EventResource extends Resource
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('commission_rate')
                                                     ->label($t('Procent %', 'Rate %'))
+                                                    ->inlineLabel($il)
                                                     ->numeric()
                                                     ->minValue(0)
                                                     ->maxValue(100)
@@ -1217,6 +1253,7 @@ class EventResource extends Resource
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('commission_fixed')
                                                     ->label($t('Sumă fixă', 'Fixed amount'))
+                                                    ->inlineLabel($il)
                                                     ->numeric()
                                                     ->minValue(0)
                                                     ->step(0.01)
@@ -1226,6 +1263,7 @@ class EventResource extends Resource
                                                     ->columnSpan(3),
                                                 Forms\Components\Select::make('commission_mode')
                                                     ->label($t('Mod comision', 'Commission mode'))
+                                                    ->inlineLabel($il)
                                                     ->options([
                                                         'included' => $t('Inclus în preț', 'Included in price'),
                                                         'added_on_top' => $t('Adăugat la preț', 'Added on top'),
@@ -1247,6 +1285,7 @@ class EventResource extends Resource
                                             ->schema([
                                                 Forms\Components\TextInput::make('series_start')
                                                     ->label($t('Serie start', 'Series start'))
+                                                    ->inlineLabel($il)
                                                     ->placeholder($t('Ex: AMB-5-00001', 'E.g. AMB-5-00001'))
                                                     ->maxLength(50)
                                                     ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
@@ -1262,6 +1301,7 @@ class EventResource extends Resource
                                                     ->columnSpan(4),
                                                 Forms\Components\TextInput::make('series_end')
                                                     ->label($t('Serie end', 'Series end'))
+                                                    ->inlineLabel($il)
                                                     ->placeholder($t('Ex: AMB-5-00500', 'E.g. AMB-5-00500'))
                                                     ->maxLength(50)
                                                     ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
@@ -1295,6 +1335,7 @@ class EventResource extends Resource
                                                     ->columnSpan(6),
                                                 Forms\Components\DateTimePicker::make('active_until')
                                                     ->label($t('Activ până la', 'Active until'))
+                                                    ->inlineLabel($il)
                                                     ->native(false)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
@@ -1305,6 +1346,7 @@ class EventResource extends Resource
                                                 // Scheduling fields - shown when ticket is NOT active
                                                 Forms\Components\DateTimePicker::make('scheduled_at')
                                                     ->label($t('Programează activare', 'Schedule Activation'))
+                                                    ->inlineLabel($il)
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când acest tip de bilet ar trebui să devină automat activ', 'When this ticket type should automatically become active'))
                                                     ->native(false)
                                                     ->seconds(false)
@@ -1339,6 +1381,7 @@ class EventResource extends Resource
 
                                                 Forms\Components\TextInput::make('price')
                                                     ->label($t('Preț promoțional', 'Sale price'))
+                                                    ->inlineLabel($il)
                                                     ->placeholder($t('lasă gol dacă nu e reducere', 'leave empty if no sale'))
                                                     ->numeric()
                                                     ->minValue(0)
@@ -1357,6 +1400,7 @@ class EventResource extends Resource
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('discount_percent')
                                                     ->label($t('Reducere %', 'Discount %'))
+                                                    ->inlineLabel($il)
                                                     ->placeholder($t('ex: 20', 'e.g. 20'))
                                                     ->numeric()
                                                     ->minValue(0)
@@ -1388,6 +1432,7 @@ class EventResource extends Resource
                                                     ->columnSpan(3),
                                                 Forms\Components\DateTimePicker::make('sales_start_at')
                                                     ->label($t('Început reducere', 'Sale starts'))
+                                                    ->inlineLabel($il)
                                                     ->native(false)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
@@ -1412,6 +1457,7 @@ class EventResource extends Resource
                                                     ->columnSpan(3),
                                                 Forms\Components\DateTimePicker::make('sales_end_at')
                                                     ->label($t('Sfârșit reducere', 'Sale ends'))
+                                                    ->inlineLabel($il)
                                                     ->native(false)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
@@ -1420,6 +1466,7 @@ class EventResource extends Resource
 
                                                 Forms\Components\TextInput::make('sale_stock')
                                                     ->label($t('Stoc reducere', 'Sale stock'))
+                                                    ->inlineLabel($il)
                                                     ->placeholder($t('Nelimitat', 'Unlimited'))
                                                     ->numeric()
                                                     ->minValue(0)
