@@ -4,6 +4,7 @@ namespace App\Models\Gamification;
 
 use App\Models\Customer;
 use App\Models\MarketplaceClient;
+use App\Models\MarketplaceCustomer;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -188,10 +189,10 @@ class Badge extends Model
     }
 
     /**
-     * Evaluate conditions for a customer
+     * Evaluate conditions for a customer (supports both Customer and MarketplaceCustomer)
      * Returns true if customer meets all conditions
      */
-    public function evaluateConditions(Customer $customer, array $context = []): bool
+    public function evaluateConditions(Customer|MarketplaceCustomer $customer, array $context = []): bool
     {
         if (empty($this->conditions)) {
             return false; // No conditions means badge cannot be auto-awarded
@@ -203,7 +204,7 @@ class Badge extends Model
     /**
      * Recursively evaluate a condition rule
      */
-    protected function evaluateRule(array $rule, Customer $customer, array $context): bool
+    protected function evaluateRule(array $rule, Customer|MarketplaceCustomer $customer, array $context): bool
     {
         // Compound rule (AND/OR)
         if (isset($rule['type']) && $rule['type'] === 'compound') {
@@ -250,35 +251,62 @@ class Badge extends Model
 
     /**
      * Get metric value for condition evaluation
+     * Context values take priority over CustomerExperience (allows marketplace data override)
      */
-    protected function getMetricValue(string $metric, Customer $customer, array $context, array $params): mixed
+    protected function getMetricValue(string $metric, Customer|MarketplaceCustomer $customer, array $context, array $params): mixed
     {
-        // Get customer experience record for stats
-        $experience = CustomerExperience::where('customer_id', $customer->id)
-            ->where(function ($q) {
-                if ($this->tenant_id) {
-                    $q->where('tenant_id', $this->tenant_id);
-                }
-                if ($this->marketplace_client_id) {
-                    $q->where('marketplace_client_id', $this->marketplace_client_id);
-                }
-            })
-            ->first();
+        // Parameterized metrics (need special lookup in context sub-arrays)
+        if ($metric === 'genre_attendance') {
+            $key = $params['genre_slug'] ?? $params['genre_id'] ?? 0;
+            return $context['genre_attendance'][$key] ?? 0;
+        }
+        if ($metric === 'event_type_attendance') {
+            $key = $params['event_type_slug'] ?? $params['event_type_id'] ?? 0;
+            return $context['event_type_attendance'][$key] ?? 0;
+        }
+        if ($metric === 'category_attendance') {
+            $key = $params['category_slug'] ?? $params['category_id'] ?? 0;
+            return $context['category_attendance'][$key] ?? 0;
+        }
+        if ($metric === 'event_tag_attendance') {
+            $key = $params['tag'] ?? $params['tag_slug'] ?? 0;
+            return $context['event_tag_attendance'][$key] ?? 0;
+        }
+        if ($metric === 'season_attendance') {
+            $key = $params['season'] ?? '';
+            return $context['season_attendance'][$key] ?? 0;
+        }
 
-        return match ($metric) {
-            'events_attended' => $experience?->events_attended ?? 0,
-            'reviews_submitted' => $experience?->reviews_submitted ?? 0,
-            'referrals_converted' => $experience?->referrals_converted ?? 0,
-            'total_badges_earned' => $experience?->total_badges_earned ?? 0,
-            'current_level' => $experience?->current_level ?? 1,
-            'total_xp' => $experience?->total_xp ?? 0,
-            'genre_attendance' => $context['genre_attendance'][$params['genre_id'] ?? 0] ?? 0,
-            'event_type_attendance' => $context['event_type_attendance'][$params['event_type_id'] ?? 0] ?? 0,
-            'total_spent' => $context['total_spent'] ?? 0,
-            'orders_count' => $context['orders_count'] ?? 0,
-            'first_purchase' => $context['first_purchase'] ?? false,
-            default => $context[$metric] ?? 0,
-        };
+        // Check context first (allows marketplace controllers to pass computed values)
+        if (array_key_exists($metric, $context)) {
+            return $context[$metric];
+        }
+
+        // Fallback to CustomerExperience record (only for Customer model)
+        if ($customer instanceof Customer) {
+            $experience = CustomerExperience::where('customer_id', $customer->id)
+                ->where(function ($q) {
+                    if ($this->tenant_id) {
+                        $q->where('tenant_id', $this->tenant_id);
+                    }
+                    if ($this->marketplace_client_id) {
+                        $q->where('marketplace_client_id', $this->marketplace_client_id);
+                    }
+                })
+                ->first();
+
+            return match ($metric) {
+                'events_attended' => $experience?->events_attended ?? 0,
+                'reviews_submitted' => $experience?->reviews_submitted ?? 0,
+                'referrals_converted' => $experience?->referrals_converted ?? 0,
+                'total_badges_earned' => $experience?->total_badges_earned ?? 0,
+                'current_level' => $experience?->current_level ?? 1,
+                'total_xp' => $experience?->total_xp ?? 0,
+                default => 0,
+            };
+        }
+
+        return 0;
     }
 
     /**

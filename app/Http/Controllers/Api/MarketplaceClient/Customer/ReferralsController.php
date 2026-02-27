@@ -295,7 +295,7 @@ class ReferralsController extends BaseController
         }
 
         $settings = $this->getReferralSettings($client->id);
-        $pointsPerReferral = $settings['referrer_reward'] ?? 50;
+        $pointsPerReferral = $settings['referrer_reward'] ?? 100;
         $totalPoints = $pendingReferrals->count() * $pointsPerReferral;
 
         DB::beginTransaction();
@@ -395,8 +395,8 @@ class ReferralsController extends BaseController
     {
         // Default settings
         $defaults = [
-            'referrer_reward' => 50, // 50 points or RON
-            'referred_reward' => 25, // 25 points or RON for new user
+            'referrer_reward' => 100, // 100 points for inviter
+            'referred_reward' => 50, // 50 points for new user (usable on first purchase)
             'reward_type' => 'points', // 'points' or 'credit'
             'min_purchase' => 0, // Minimum purchase for conversion
         ];

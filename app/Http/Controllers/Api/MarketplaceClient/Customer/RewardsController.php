@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceCustomer;
+use App\Models\Order;
 use App\Models\Gamification\CustomerPoints;
 use App\Models\Gamification\PointsTransaction;
 use App\Models\Gamification\CustomerExperience;
@@ -16,6 +17,7 @@ use App\Models\Gamification\GamificationConfig;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class RewardsController extends BaseController
 {
@@ -27,8 +29,15 @@ class RewardsController extends BaseController
         $customer = $this->requireCustomer($request);
         $client = $this->requireClient($request);
 
-        // Get points balance
-        $customerPoints = CustomerPoints::where('marketplace_customer_id', $customer->id)->first();
+        // Auto-sync points from orders if no points record exists
+        $customerPoints = CustomerPoints::where('marketplace_customer_id', $customer->id)
+            ->where('marketplace_client_id', $client->id)
+            ->first();
+
+        if (!$customerPoints) {
+            $customerPoints = $this->syncPointsFromOrders($customer, $client);
+        }
+
         $pointsBalance = $customerPoints ? $customerPoints->current_balance : 0;
         $lifetimePoints = $customerPoints ? $customerPoints->total_earned : 0;
         $lifetimeSpent = $customerPoints ? $customerPoints->total_spent : 0;
@@ -43,9 +52,10 @@ class RewardsController extends BaseController
 
         // Get gamification config for this marketplace
         $config = GamificationConfig::where('marketplace_client_id', $client->id)->first();
-        $pointsName = $config ? ($config->points_name['ro'] ?? 'Puncte') : 'Puncte';
-        $pointsPerCurrency = $config ? $config->points_per_currency : 2;
-        $pointsValue = $config ? $config->points_value : 0.01; // 1 point = 0.01 RON
+        $pointsNameRaw = $config->points_name ?? 'Puncte';
+        $pointsName = is_array($pointsNameRaw) ? ($pointsNameRaw['ro'] ?? 'Puncte') : $pointsNameRaw;
+        $pointsPerCurrency = $config ? ($config->earn_percentage ?? 5) : 5;
+        $pointsValue = $config ? $config->point_value : 0.01; // 1 point = 0.01 RON
 
         // Get badges count
         $badgesEarned = CustomerBadge::where('marketplace_customer_id', $customer->id)->count();
@@ -155,18 +165,93 @@ class RewardsController extends BaseController
     }
 
     /**
-     * Get customer's badges
+     * Get customer's badges — evaluates conditions from marketplace order data
      */
     public function badges(Request $request): JsonResponse
     {
         $customer = $this->requireCustomer($request);
         $client = $this->requireClient($request);
 
-        // Get earned badges
+        // Build context from real marketplace data
+        $context = $this->buildBadgeContext($customer, $client);
+
+        // Get all active badges for this marketplace
+        $allBadges = Badge::where('marketplace_client_id', $client->id)
+            ->where('is_active', true)
+            ->where('is_secret', false)
+            ->orderBy('sort_order')
+            ->get();
+
+        // Get already-earned badge IDs
+        $earnedBadgeIds = CustomerBadge::where('marketplace_customer_id', $customer->id)
+            ->pluck('badge_id')
+            ->toArray();
+
+        // Evaluate and auto-award badges that aren't yet earned
+        $newlyEarned = [];
+        foreach ($allBadges as $badge) {
+            if (in_array($badge->id, $earnedBadgeIds)) {
+                continue; // Already earned
+            }
+            try {
+                if ($badge->evaluateConditions($customer, $context)) {
+                    // Award this badge
+                    CustomerBadge::create([
+                        'marketplace_client_id' => $client->id,
+                        'marketplace_customer_id' => $customer->id,
+                        'badge_id' => $badge->id,
+                        'xp_awarded' => $badge->xp_reward ?? 0,
+                        'points_awarded' => $badge->bonus_points ?? 0,
+                        'earned_at' => now(),
+                    ]);
+                    $earnedBadgeIds[] = $badge->id;
+                    $newlyEarned[] = $badge->id;
+
+                    // Award bonus points if badge grants them
+                    if (($badge->bonus_points ?? 0) > 0) {
+                        $this->awardBadgeBonusPoints($customer, $client, $badge);
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning("Badge evaluation failed for badge {$badge->slug}: " . $e->getMessage());
+            }
+        }
+
+        // Update total_badges_earned in context for collector-type badges
+        if (!empty($newlyEarned)) {
+            $context['total_badges_earned'] = count($earnedBadgeIds);
+            // Re-check collector badges
+            foreach ($allBadges as $badge) {
+                if (in_array($badge->id, $earnedBadgeIds)) {
+                    continue;
+                }
+                $conditions = $badge->conditions ?? [];
+                if (($conditions['metric'] ?? '') === 'total_badges_earned') {
+                    try {
+                        if ($badge->evaluateConditions($customer, $context)) {
+                            CustomerBadge::create([
+                                'marketplace_client_id' => $client->id,
+                                'marketplace_customer_id' => $customer->id,
+                                'badge_id' => $badge->id,
+                                'xp_awarded' => $badge->xp_reward ?? 0,
+                                'points_awarded' => $badge->bonus_points ?? 0,
+                                'earned_at' => now(),
+                            ]);
+                            $earnedBadgeIds[] = $badge->id;
+                        }
+                    } catch (\Exception $e) {
+                        // Ignore
+                    }
+                }
+            }
+        }
+
+        // Build response
         $earnedBadges = CustomerBadge::where('marketplace_customer_id', $customer->id)
             ->with('badge')
             ->orderByDesc('earned_at')
             ->get()
+            ->filter(fn ($cb) => $cb->badge !== null)
             ->map(function ($cb) {
                 return [
                     'id' => $cb->badge->id,
@@ -182,14 +267,9 @@ class RewardsController extends BaseController
                 ];
             });
 
-        // Get available badges (not yet earned, not secret)
-        $earnedIds = $earnedBadges->pluck('id')->toArray();
-        $availableBadges = Badge::where('marketplace_client_id', $client->id)
-            ->where('is_active', true)
-            ->where('is_secret', false)
-            ->whereNotIn('id', $earnedIds)
-            ->orderBy('rarity_level')
-            ->get()
+        $availableBadges = $allBadges
+            ->filter(fn ($b) => !in_array($b->id, $earnedBadgeIds))
+            ->values()
             ->map(function ($badge) {
                 return [
                     'id' => $badge->id,
@@ -213,6 +293,161 @@ class RewardsController extends BaseController
                 'available_count' => $availableBadges->count(),
                 'total_xp_from_badges' => $earnedBadges->sum('xp_reward'),
             ],
+        ]);
+    }
+
+    /**
+     * Build badge evaluation context from marketplace order data
+     */
+    protected function buildBadgeContext(MarketplaceCustomer $customer, $client): array
+    {
+        // Get completed orders with event and ticket type data
+        $orders = Order::where('marketplace_customer_id', $customer->id)
+            ->where('marketplace_client_id', $client->id)
+            ->where('status', 'completed')
+            ->with(['marketplaceEvent.eventCategory', 'items'])
+            ->get();
+
+        // Basic metrics
+        $ordersCount = $orders->count();
+        $totalSpent = (float) ($customer->total_spent ?? $orders->sum('total'));
+        $ticketsPurchased = $orders->sum(fn ($o) => $o->items->sum('quantity'));
+        $uniqueEvents = $orders->pluck('marketplace_event_id')->filter()->unique();
+
+        // Account age
+        $accountAgeDays = $customer->created_at ? now()->diffInDays($customer->created_at) : 0;
+
+        // Early bird and VIP ticket detection (by ticket type name)
+        $earlyBirdCount = 0;
+        $vipCount = 0;
+        foreach ($orders as $order) {
+            foreach ($order->items as $item) {
+                $itemName = mb_strtolower($item->name ?? '');
+                if (str_contains($itemName, 'early') || str_contains($itemName, 'bird')) {
+                    $earlyBirdCount += $item->quantity;
+                }
+                if (str_contains($itemName, 'vip') || str_contains($itemName, 'premium')) {
+                    $vipCount += $item->quantity;
+                }
+            }
+        }
+
+        // Category attendance (count orders per event category slug)
+        $categoryAttendance = [];
+        $uniqueCities = [];
+        $lateNightEvents = 0;
+        $seasonAttendance = ['summer' => 0, 'winter' => 0, 'spring' => 0, 'autumn' => 0];
+
+        foreach ($uniqueEvents as $eventId) {
+            $order = $orders->firstWhere('marketplace_event_id', $eventId);
+            $event = $order?->marketplaceEvent;
+            if (!$event) continue;
+
+            // Category
+            $category = $event->eventCategory;
+            if ($category) {
+                $slug = $category->slug ?? '';
+                $categoryAttendance[$slug] = ($categoryAttendance[$slug] ?? 0) + 1;
+                // Also match partial slugs (e.g., 'bilete-concerte' matches 'concerte')
+                if (str_contains($slug, 'festival')) {
+                    $categoryAttendance['festival'] = ($categoryAttendance['festival'] ?? 0) + 1;
+                }
+                if (str_contains($slug, 'comedy') || str_contains($slug, 'comedie')) {
+                    $categoryAttendance['comedy'] = ($categoryAttendance['comedy'] ?? 0) + 1;
+                }
+            }
+
+            // City
+            $city = $event->venue_city ?? '';
+            if ($city) {
+                $uniqueCities[$city] = true;
+            }
+
+            // Late night (starts after 22:00)
+            if ($event->starts_at) {
+                $hour = (int) $event->starts_at->format('H');
+                if ($hour >= 22 || $hour < 4) {
+                    $lateNightEvents++;
+                }
+
+                // Season
+                $month = (int) $event->starts_at->format('m');
+                if ($month >= 6 && $month <= 8) $seasonAttendance['summer']++;
+                elseif ($month >= 12 || $month <= 2) $seasonAttendance['winter']++;
+                elseif ($month >= 3 && $month <= 5) $seasonAttendance['spring']++;
+                else $seasonAttendance['autumn']++;
+            }
+        }
+
+        // Referrals converted
+        $referralsConverted = DB::table('marketplace_referrals')
+            ->where('referrer_id', $customer->id)
+            ->where('marketplace_client_id', $client->id)
+            ->where('status', 'converted')
+            ->count();
+
+        // Total badges earned (before this evaluation)
+        $totalBadgesEarned = CustomerBadge::where('marketplace_customer_id', $customer->id)->count();
+
+        return [
+            'orders_count' => $ordersCount,
+            'total_spent' => $totalSpent,
+            'tickets_purchased' => $ticketsPurchased,
+            'events_attended' => $uniqueEvents->count(),
+            'first_purchase' => $ordersCount > 0,
+            'account_age_days' => $accountAgeDays,
+            'early_bird_purchases' => $earlyBirdCount,
+            'vip_purchases' => $vipCount,
+            'category_attendance' => $categoryAttendance,
+            'unique_cities_visited' => count($uniqueCities),
+            'late_night_events' => $lateNightEvents,
+            'season_attendance' => $seasonAttendance,
+            'referrals_converted' => $referralsConverted,
+            'total_badges_earned' => $totalBadgesEarned,
+            'unique_genres_attended' => 0, // Cannot determine genre IDs without mapping
+            'reviews_submitted' => 0, // Not implemented for marketplace
+        ];
+    }
+
+    /**
+     * Award bonus points when a badge is earned
+     */
+    protected function awardBadgeBonusPoints(MarketplaceCustomer $customer, $client, Badge $badge): void
+    {
+        $points = $badge->bonus_points;
+
+        $customerPoints = CustomerPoints::firstOrCreate(
+            [
+                'marketplace_customer_id' => $customer->id,
+                'marketplace_client_id' => $client->id,
+            ],
+            [
+                'current_balance' => 0,
+                'total_earned' => 0,
+                'total_spent' => 0,
+                'total_expired' => 0,
+                'pending_points' => 0,
+            ]
+        );
+
+        $newBalance = $customerPoints->current_balance + $points;
+
+        PointsTransaction::create([
+            'marketplace_client_id' => $client->id,
+            'marketplace_customer_id' => $customer->id,
+            'type' => 'earned',
+            'points' => $points,
+            'balance_after' => $newBalance,
+            'action_type' => 'badge_bonus',
+            'description' => ['en' => "Badge earned: {$badge->getTranslation('name', 'en')}", 'ro' => "Badge obținut: {$badge->getTranslation('name', 'ro')}"],
+            'reference_type' => 'badge',
+            'reference_id' => $badge->id,
+        ]);
+
+        $customerPoints->update([
+            'current_balance' => $newBalance,
+            'total_earned' => $customerPoints->total_earned + $points,
+            'last_earned_at' => now(),
         ]);
     }
 
@@ -410,6 +645,85 @@ class RewardsController extends BaseController
                 'total' => $redemptions->total(),
             ],
         ]);
+    }
+
+    /**
+     * Retroactively sync points from completed orders (one-time bootstrap)
+     */
+    protected function syncPointsFromOrders(MarketplaceCustomer $customer, $client): ?CustomerPoints
+    {
+        $orders = Order::where('marketplace_customer_id', $customer->id)
+            ->where('marketplace_client_id', $client->id)
+            ->where('status', 'completed')
+            ->whereNotExists(function ($q) use ($customer) {
+                $q->select(DB::raw(1))
+                    ->from('points_transactions')
+                    ->where('marketplace_customer_id', $customer->id)
+                    ->whereColumn('reference_id', 'orders.id')
+                    ->where('reference_type', 'order');
+            })
+            ->get();
+
+        if ($orders->isEmpty()) {
+            return null;
+        }
+
+        $config = GamificationConfig::where('marketplace_client_id', $client->id)->first();
+        $earnPercentage = $config ? (float) $config->earn_percentage : 5.0;
+
+        $totalPointsEarned = 0;
+        $balance = 0;
+
+        // Get or create customer points record
+        $customerPoints = CustomerPoints::firstOrCreate(
+            [
+                'marketplace_customer_id' => $customer->id,
+                'marketplace_client_id' => $client->id,
+            ],
+            [
+                'current_balance' => 0,
+                'total_earned' => 0,
+                'total_spent' => 0,
+                'total_expired' => 0,
+                'pending_points' => 0,
+            ]
+        );
+
+        $balance = $customerPoints->current_balance;
+
+        foreach ($orders as $order) {
+            $orderTotal = (float) $order->total;
+            $points = (int) floor($orderTotal * $earnPercentage / 100);
+
+            if ($points <= 0) continue;
+
+            $balance += $points;
+            $totalPointsEarned += $points;
+
+            PointsTransaction::create([
+                'marketplace_client_id' => $client->id,
+                'marketplace_customer_id' => $customer->id,
+                'type' => 'earned',
+                'points' => $points,
+                'balance_after' => $balance,
+                'action_type' => 'purchase',
+                'description' => ['en' => "Points for order #{$order->order_number}", 'ro' => "Puncte pentru comanda #{$order->order_number}"],
+                'reference_type' => 'order',
+                'reference_id' => $order->id,
+            ]);
+        }
+
+        if ($totalPointsEarned > 0) {
+            $customerPoints->update([
+                'current_balance' => $balance,
+                'total_earned' => $customerPoints->total_earned + $totalPointsEarned,
+                'last_earned_at' => now(),
+            ]);
+
+            Log::info("Retroactively awarded {$totalPointsEarned} points to marketplace customer {$customer->id} for {$orders->count()} orders");
+        }
+
+        return $customerPoints->fresh();
     }
 
     /**

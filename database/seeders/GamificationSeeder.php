@@ -474,7 +474,7 @@ class GamificationSeeder extends Seeder
                     ],
                 ],
                 'is_secret' => false,
-                'is_active' => true,
+                'is_active' => false, // Undeterminable: genre_attendance requires genre ID mapping
                 'is_featured' => true,
                 'rarity_level' => 3,
                 'sort_order' => 10,
@@ -693,7 +693,7 @@ class GamificationSeeder extends Seeder
                     'value' => 180,
                 ],
                 'is_secret' => true,
-                'is_active' => true,
+                'is_active' => false, // Undeterminable: requires inactivity gap tracking
                 'is_featured' => false,
                 'rarity_level' => 2,
                 'sort_order' => 70,
@@ -760,7 +760,7 @@ class GamificationSeeder extends Seeder
                     'value' => 10,
                 ],
                 'is_secret' => false,
-                'is_active' => true,
+                'is_active' => false, // Undeterminable: reviews not implemented for marketplace
                 'is_featured' => false,
                 'rarity_level' => 2,
                 'sort_order' => 85,
@@ -781,7 +781,7 @@ class GamificationSeeder extends Seeder
                     'value' => 25,
                 ],
                 'is_secret' => false,
-                'is_active' => true,
+                'is_active' => false, // Undeterminable: no photo upload feature
                 'is_featured' => false,
                 'rarity_level' => 3,
                 'sort_order' => 90,
@@ -804,7 +804,7 @@ class GamificationSeeder extends Seeder
                     'description' => 'Awarded manually to beta testers',
                 ],
                 'is_secret' => true,
-                'is_active' => true,
+                'is_active' => false, // Undeterminable: manual award only
                 'is_featured' => true,
                 'rarity_level' => 5,
                 'sort_order' => 95,
@@ -872,7 +872,7 @@ class GamificationSeeder extends Seeder
                     'params' => ['tag' => 'new-years-eve'],
                 ],
                 'is_secret' => false,
-                'is_active' => true,
+                'is_active' => false, // Undeterminable: event tag tracking not implemented
                 'is_featured' => false,
                 'rarity_level' => 2,
                 'sort_order' => 110,
@@ -915,7 +915,7 @@ class GamificationSeeder extends Seeder
                     'value' => 3,
                 ],
                 'is_secret' => false,
-                'is_active' => true,
+                'is_active' => false, // Undeterminable: seat row data unavailable in marketplace orders
                 'is_featured' => false,
                 'rarity_level' => 3,
                 'sort_order' => 120,
@@ -937,7 +937,7 @@ class GamificationSeeder extends Seeder
                     'params' => ['genre_slug' => 'metal'],
                 ],
                 'is_secret' => false,
-                'is_active' => true,
+                'is_active' => false, // Undeterminable: genre_attendance requires genre ID mapping
                 'is_featured' => false,
                 'rarity_level' => 3,
                 'sort_order' => 125,
