@@ -62,7 +62,7 @@ class ImportVenues extends Page implements HasForms
 
                         FC\Toggle::make('update_existing')
                             ->label('Update Existing Venues')
-                            ->helperText('If enabled, existing venues (matched by slug column from CSV) will be updated with new data')
+                            ->helperText('If enabled, existing venues (matched by slug) will be updated. If disabled, a new venue is created with a unique slug.')
                             ->default(true)
                             ->live()
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
@@ -73,7 +73,7 @@ class ImportVenues extends Page implements HasForms
 
                         FC\Toggle::make('skip_existing')
                             ->label('Skip Existing Venues')
-                            ->helperText('If enabled, only new venues will be imported — existing venues (matched by slug column from CSV) are skipped. Rows without a slug column always create new venues.')
+                            ->helperText('If enabled, rows with a slug that already exists in DB are skipped entirely. If disabled, a new venue is created with a unique slug.')
                             ->default(false)
                             ->live()
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
@@ -208,6 +208,7 @@ class ImportVenues extends Page implements HasForms
         Cache::put($this->importCacheKey(), [
             'rows' => $allRows,
             'updateExisting' => $updateExisting,
+            'skipExisting' => $skipExisting,
             'downloadImages' => $data['download_images'] ?? false,
             'imported' => 0,
             'updated' => 0,
@@ -245,7 +246,7 @@ class ImportVenues extends Page implements HasForms
             $this->currentVenueName = $rowData['name'] ?? '';
 
             try {
-                $result = $this->processVenueRow($rowData, $state['updateExisting'], $state['downloadImages']);
+                $result = $this->processVenueRow($rowData, $state['updateExisting'], $state['skipExisting'] ?? false, $state['downloadImages']);
 
                 if ($result === 'imported') {
                     $state['imported']++;
@@ -308,7 +309,7 @@ class ImportVenues extends Page implements HasForms
             ->send();
     }
 
-    protected function processVenueRow(array $data, bool $updateExisting, bool $downloadImages): string
+    protected function processVenueRow(array $data, bool $updateExisting, bool $skipExisting, bool $downloadImages): string
     {
         // Only use explicit slug from CSV for matching — never auto-generate for matching
         $csvSlug = !empty($data['slug']) ? trim($data['slug']) : null;
@@ -417,7 +418,7 @@ class ImportVenues extends Page implements HasForms
         $venueTypeSlugs = $this->parsePipeSeparatedSlugs($data['venue_types'] ?? '');
         $venueCategorySlugs = $this->parsePipeSeparatedSlugs($data['venue_categories'] ?? '');
 
-        // Only match existing venues when CSV provides an explicit slug
+        // Check for existing venue by slug
         if ($csvSlug) {
             $existing = Venue::where('slug', $csvSlug)->first();
 
@@ -441,7 +442,13 @@ class ImportVenues extends Page implements HasForms
 
                     return 'updated';
                 }
-                return 'skipped';
+
+                if ($skipExisting) {
+                    return 'skipped';
+                }
+
+                // Both toggles OFF — create new venue with unique slug
+                $venueData['slug'] = '';
             }
         } else {
             // No slug in CSV — leave blank so Venue::booted() auto-generates a unique one
