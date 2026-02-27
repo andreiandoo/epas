@@ -455,6 +455,7 @@ class VenueResource extends Resource
         return [
             'index'  => Pages\ListVenues::route('/'),
             'create' => Pages\CreateVenue::route('/create'),
+            'import' => Pages\ImportVenues::route('/import'),
             'view'   => Pages\ViewVenue::route('/{record}'),
             'edit'   => Pages\EditVenue::route('/{record}/edit'),
             'stats'  => Pages\VenueStats::route('/{record}/stats'),
