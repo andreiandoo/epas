@@ -2131,6 +2131,11 @@ const EventPage = {
         // Show modal
         document.getElementById('seat-selection-modal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+
+        // Auto-center map after modal is visible (needs a frame to measure container)
+        requestAnimationFrame(function() {
+            self.centerMapToContent();
+        });
     },
 
     // Zoom level for seating map
@@ -2301,6 +2306,37 @@ const EventPage = {
         this.mapPan = { x: 0, y: 0 };
         this.applyMapTransform();
         document.getElementById('zoom-level').textContent = '100%';
+    },
+
+    /**
+     * Center and fit the seating map within the visible container
+     */
+    centerMapToContent() {
+        var wrapper = document.getElementById('seat-map-wrapper');
+        var svgEl = document.querySelector('#seat-map-svg svg');
+        if (!wrapper || !svgEl) return;
+
+        var wrapperRect = wrapper.getBoundingClientRect();
+        var canvasW = this.seatingLayout?.canvas_width || 1920;
+        var canvasH = this.seatingLayout?.canvas_height || 1080;
+
+        // Calculate zoom to fit the canvas in the visible area with some padding
+        var padX = 40, padY = 40;
+        var availW = wrapperRect.width - padX;
+        var availH = wrapperRect.height - padY;
+        var fitZoom = Math.min(availW / canvasW, availH / canvasH);
+        fitZoom = Math.max(0.5, Math.min(2, fitZoom));
+
+        // Calculate pan to center
+        var scaledW = canvasW * fitZoom;
+        var scaledH = canvasH * fitZoom;
+        var panX = (wrapperRect.width - scaledW) / 2;
+        var panY = (wrapperRect.height - scaledH) / 2;
+
+        this.mapZoom = fitZoom;
+        this.mapPan = { x: panX, y: panY };
+        this.applyMapTransform();
+        document.getElementById('zoom-level').textContent = Math.round(fitZoom * 100) + '%';
     },
 
     /**
@@ -2656,7 +2692,7 @@ const EventPage = {
 
         var svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" class="w-full h-full" style="min-width: ' + canvasW + 'px; min-height: ' + canvasH + 'px;" preserveAspectRatio="xMidYMid meet">';
         svg += '<style>' +
-            '.seat-hover { transition: all 0.15s ease; }' +
+            '.seat-hover { transition: transform 0.15s ease, filter 0.15s ease; }' +
             '.seat-hover:hover { filter: brightness(1.2); }' +
         '</style>';
 
@@ -2823,9 +2859,10 @@ const EventPage = {
                         }
 
                         // Render seat as circle at actual position (matching admin layout)
-                        svg += '<g class="seat-hover" ' + clickHandler + ' style="cursor: ' + cursor + ';">' +
+                        var seatTransform = isSelected ? ' transform="translate(' + seatCX + ',' + seatCY + ') scale(1.1) translate(' + (-seatCX) + ',' + (-seatCY) + ')"' : '';
+                        svg += '<g class="seat-hover"' + seatTransform + ' ' + clickHandler + ' style="cursor: ' + cursor + ';">' +
                             '<title>' + tooltipText + '</title>' +
-                            '<circle cx="' + seatCX + '" cy="' + seatCY + '" r="' + seatRadius + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="0.5"/>';
+                            '<circle cx="' + seatCX + '" cy="' + seatCY + '" r="' + seatRadius + '" fill="' + seatColor + '" stroke="' + strokeColor + '" stroke-width="' + (isSelected ? '1' : '0.5') + '"/>';
 
                         // Seat label inside circle
                         if (!isDisabled && status !== 'blocked') {
@@ -2957,7 +2994,8 @@ const EventPage = {
 
         var html = '<div class="bg-white rounded-xl shadow-2xl p-5 max-w-xs w-full mx-4">';
         html += '<div class="text-sm font-semibold text-gray-700 mb-1">Alege tipul de bilet</div>';
-        html += '<div class="text-xs text-gray-500 mb-3">' + sectionName + ', Rând ' + rowLabel + ', Loc ' + seatLabel + '</div>';
+        html += '<div class="text-xs text-gray-500 mb-2">' + sectionName + ', Rând ' + rowLabel + ', Loc ' + seatLabel + '</div>';
+        html += '<div class="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2 mb-3">Acest loc are alocate mai multe tipuri de bilete. Alege-l pe cel care ți se potrivește.</div>';
 
         var self = this;
         ticketTypes.forEach(function(tt) {

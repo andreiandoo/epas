@@ -362,7 +362,7 @@ const ThankYouPage = {
         }
 
         try {
-            const response = await AmbiletAPI.get(`/customer/orders/${orderRef}`);
+            const response = await AmbiletAPI.get(`/order-confirmation/${orderRef}`);
             if (response.success && response.data?.order) {
                 this.order = response.data.order;
                 this.renderOrderData();
