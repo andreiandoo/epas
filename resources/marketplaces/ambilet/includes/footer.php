@@ -43,13 +43,13 @@ $currentYear = date('Y');
                         <svg class="absolute w-4 h-4 -translate-y-1/2 left-3 top-1/2 text-white/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                         </svg>
-                        <input type="text" name="name" placeholder="Numele tău" class="w-full pl-9 pr-3 py-3 bg-white/15 border border-white/20 rounded-xl text-sm text-white placeholder-white/50 outline-none focus:border-white focus:bg-white/20 transition-all">
+                        <input type="text" name="name" placeholder="Numele tău" class="w-full py-3 pr-3 text-sm text-white transition-all border outline-none pl-9 bg-white/15 border-white/20 rounded-xl placeholder-white/50 focus:border-white focus:bg-white/20">
                     </div>
                     <div class="relative flex-1">
                         <svg class="absolute w-4 h-4 -translate-y-1/2 left-3 top-1/2 text-white/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
                         </svg>
-                        <input type="text" name="city" placeholder="Orașul tău" class="w-full pl-9 pr-3 py-3 bg-white/15 border border-white/20 rounded-xl text-sm text-white placeholder-white/50 outline-none focus:border-white focus:bg-white/20 transition-all">
+                        <input type="text" name="city" placeholder="Orașul tău" class="w-full py-3 pr-3 text-sm text-white transition-all border outline-none pl-9 bg-white/15 border-white/20 rounded-xl placeholder-white/50 focus:border-white focus:bg-white/20">
                     </div>
                 </div>
                 <div class="flex gap-2">
@@ -144,7 +144,6 @@ $currentYear = date('Y');
                             <li><a href="/evenimente-copii" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Evenimente copii</a></li>
                             <li><a href="/comedie" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Stand-up Comedy</a></li>
                             <li><a href="/festivaluri-moto" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Festivaluri Moto</a></li>
-                            <li><a href="/calendar" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Calendar evenimente</a></li>
                         </ul>
                     </div>
 
@@ -154,7 +153,8 @@ $currentYear = date('Y');
                         <ul class="space-y-3">
                             <li><a href="/orase" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Orașe</a></li>
                             <li><a href="/locatii" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Locații</a></li>
-                            <li><a href="/artisti" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Artiști</a></li>
+                            <li><a href="/artisti" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Artiști</a></li>                            
+                            <li><a href="/calendar" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Calendar evenimente</a></li>
                             <li class="hidden"><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Organizatori</a></li>
                             <li class="hidden">
                                 <a href="/card-cadou" class="inline-flex items-center gap-2 text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">

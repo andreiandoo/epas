@@ -612,6 +612,13 @@ class AuthController extends BaseController
                 'marketing_consent_at' => $existing->accepts_marketing ? $existing->marketing_consent_at : now(),
             ];
 
+            // Set newsletter preference in settings
+            $currentSettings = $existing->settings ?? [];
+            $notifPrefs = $currentSettings['notification_preferences'] ?? [];
+            $notifPrefs['newsletter'] = true;
+            $currentSettings['notification_preferences'] = $notifPrefs;
+            $updateData['settings'] = $currentSettings;
+
             if (!empty($validated['name']) && !$existing->first_name) {
                 $nameParts = explode(' ', trim($validated['name']), 2);
                 $updateData['first_name'] = $nameParts[0];
@@ -626,6 +633,14 @@ class AuthController extends BaseController
 
             $existing->update($updateData);
 
+            // Send welcome email if first time subscribing
+            if (!$existing->getOriginal('accepts_marketing')) {
+                $existing->notify(new \App\Notifications\MarketplaceNewsletterWelcomeNotification(
+                    $client->domain,
+                    $client->name
+                ));
+            }
+
             return $this->success([
                 'subscribed' => true,
                 'is_new' => false,
@@ -639,6 +654,11 @@ class AuthController extends BaseController
             'accepts_marketing' => true,
             'marketing_consent_at' => now(),
             'status' => 'active',
+            'settings' => [
+                'notification_preferences' => [
+                    'newsletter' => true,
+                ],
+            ],
         ];
 
         if (!empty($validated['name'])) {
@@ -653,7 +673,13 @@ class AuthController extends BaseController
             $createData['city'] = $validated['city'];
         }
 
-        MarketplaceCustomer::create($createData);
+        $customer = MarketplaceCustomer::create($createData);
+
+        // Send welcome email
+        $customer->notify(new \App\Notifications\MarketplaceNewsletterWelcomeNotification(
+            $client->domain,
+            $client->name
+        ));
 
         return $this->success([
             'subscribed' => true,

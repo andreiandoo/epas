@@ -17,7 +17,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Carousel - 3D Poster Stack -->
-<section class="relative pt-16 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 mt-18 mobile:pt-10" id="heroSlider">
+<section class="relative pt-0 pb-4 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 mt-18 mobile:pt-10" id="heroSlider">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="hero-carousel-wrapper">
             <!-- 3D Carousel Container -->
@@ -42,8 +42,9 @@ require_once __DIR__ . '/includes/header.php';
 <?php // require_once __DIR__ . '/includes/featured-carousel.php'; ?>
 
 <!-- Promoted & Recommended Events -->
-<section class="py-10 bg-gray-900 md:py-14">
+<section class="py-10 bg-primary md:py-14">
     <div class="px-4 mx-auto max-w-7xl">
+        <h2 class="mb-4 text-lg font-bold text-center text-white md:text-2xl">Nu rata aceste evenimente</h2>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-6 lg:grid-cols-6 md:gap-5" id="promotedEventsGrid">
             <!-- Promoted events will be loaded dynamically -->
             <?php for ($i = 0; $i < 12; $i++): ?>
@@ -81,7 +82,6 @@ require_once __DIR__ . '/includes/header.php';
 <section class="lazy-section" id="cityEventsSection" data-lazy-load="cityEvents">
     <div class="pb-2 bg-primary ">
         <div class="px-4 mx-auto max-w-7xl">
-            <span class="block w-full mb-4 text-lg font-bold text-center text-white md:text-2xl">sau dupa oraș</span>
             <!-- City Filter Buttons -->
             <div class="flex flex-wrap justify-center gap-2 mb-8" id="cityFilterButtons">
                 <button class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-full city-filter-btn active bg-primary" data-city="">

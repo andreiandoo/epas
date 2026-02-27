@@ -244,7 +244,7 @@ class VenuesController extends BaseController
                     'name' => $event->getTranslation('title', $language) ?: $event->title,
                     'slug' => $event->slug,
                     'starts_at' => $startsAt?->toIso8601String(),
-                    'start_time' => $startsAt?->format('H:i'),
+                    'start_time' => $event->start_time ?? $startsAt?->format('H:i'),
                     'price_from' => $minPrice,
                     'currency' => $event->ticketTypes->first()?->currency ?? 'RON',
                     'image' => $imageUrl,
