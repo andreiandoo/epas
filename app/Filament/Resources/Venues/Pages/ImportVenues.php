@@ -388,7 +388,7 @@ class ImportVenues extends Page implements HasForms
             'google_maps_url' => $str('google_maps_url', 500),
             'established_at' => !empty($data['established_at']) ? $data['established_at'] : null,
             'timezone' => $str('timezone', 100),
-            'open_hours' => $str('open_hours', 255),
+            'open_hours' => $str('open_hours', 500),
             'general_rules' => $str('general_rules'),  // text column, no limit
             'child_rules' => $str('child_rules'),       // text column, no limit
             'accepted_payment' => $acceptedPayment,
