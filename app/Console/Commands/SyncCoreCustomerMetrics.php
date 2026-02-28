@@ -55,21 +55,14 @@ class SyncCoreCustomerMetrics extends Command
         $changes = 0;
         $updates = [];
 
-        // Get all paid/completed orders for this customer (by email hash)
-        $emailHash = $customer->email_hash;
-        if (!$emailHash) {
+        // Get all paid/completed orders for this customer by email
+        $email = $customer->email;
+        if (!$email) {
             return 0;
         }
 
-        // Find orders by customer email hash
-        $orders = Order::where(function ($q) use ($emailHash, $customer) {
-                $q->where('customer_email_hash', $emailHash);
-
-                // Also try matching by decrypted email if hash column doesn't exist
-                if ($customer->email) {
-                    $q->orWhere('customer_email', $customer->email);
-                }
-            })
+        // Find orders by customer email
+        $orders = Order::where('customer_email', $email)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->get();
 
