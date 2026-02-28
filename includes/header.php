@@ -468,7 +468,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                 </a>
 
                 <!-- User Menu (shown when logged in) -->
-                <div id="headerUserMenu" class="mobile:hidden" style="display: none;">
+                <div id="headerUserMenu" class="" style="display: none;">
                     <div class="relative dropdown">
                         <button onclick="this.parentElement.classList.toggle('active')" class="flex items-center gap-2 p-1.5 rounded-xl hover:bg-surface transition-colors">
                             <div class="flex items-center justify-center rounded-full w-9 h-9 bg-primary/10">
@@ -1136,7 +1136,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         mobileMenu.classList.toggle('block', !isOpen);
         const svg = mobileMenuBtn.querySelector('svg');
         if (!isOpen) {
-            svg.innerHTML = '<path d="M18 6L6 18M6 6l12 12"/>';
+            svg.innerHTML = '<path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />';
         } else {
             svg.innerHTML = '<path d="M3 12h18M3 6h18M3 18h18"/>';
         }

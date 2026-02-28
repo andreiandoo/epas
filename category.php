@@ -86,8 +86,8 @@ require_once __DIR__ . '/includes/header.php'; ?>
     <!-- Premium gradient background -->
     <div class="absolute inset-0 bg-gradient-to-b from-primary to-primary/80"></div>
     <!-- Decorative elements -->
-    <div class="absolute top-0 left-0 w-64 h-64 rounded-full bg-white/5 -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
-    <div class="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-secondary/10 translate-x-1/3 translate-y-1/3 blur-3xl"></div>
+    <div class="absolute top-0 left-0 w-64 h-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5 blur-3xl"></div>
+    <div class="absolute bottom-0 right-0 rounded-full w-96 h-96 bg-secondary/10 translate-x-1/3 translate-y-1/3 blur-3xl"></div>
     <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] opacity-30"></div>
 
     <div class="relative px-4 py-10 mx-auto md:py-14 max-w-7xl">
@@ -110,12 +110,16 @@ require_once __DIR__ . '/includes/header.php'; ?>
             Filtre
             <span id="mobileFilterCount" class="hidden px-2 py-0.5 text-xs font-bold text-white rounded-full bg-primary">0</span>
         </button>
-        <select id="sortEventsMobile" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('sortEvents').value = this.value; CategoryPage.loadEvents();">
-            <option value="date_asc">Data</option>
-            <option value="popularity">Popular</option>
-            <option value="price_asc">Preț ↑</option>
-            <option value="price_desc">Preț ↓</option>
-        </select>
+        <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-500">Sortare:</span>
+            
+            <select id="sortEventsMobile" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('sortEvents').value = this.value; CategoryPage.loadEvents();">
+                <option value="date_asc">Data</option>
+                <option value="popularity">Popular</option>
+                <option value="price_asc">Preț ↑</option>
+                <option value="price_desc">Preț ↓</option>
+            </select>
+        </div>
     </div>
 </section>
 
@@ -162,20 +166,20 @@ require_once __DIR__ . '/includes/header.php'; ?>
 <div id="catFiltersDrawer" class="fixed bottom-0 left-0 right-0 z-[110] overflow-hidden transition-transform duration-300 bg-white lg:hidden rounded-t-3xl max-h-[85vh]" style="transform: translateY(100%);">
     <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-200">
         <h2 class="text-lg font-bold text-gray-900">Filtre</h2>
-        <button onclick="closeCatFiltersDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-gray-100 hover:bg-gray-200">
+        <button onclick="closeCatFiltersDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors bg-gray-100 rounded-full hover:bg-gray-200">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
     </div>
     <div class="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
         <div>
             <label class="block mb-2 text-sm font-medium text-gray-700">Oraș</label>
-            <select id="filterCityMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('filterCity').value = this.value;">
+            <select id="filterCityMobile" class="w-full px-4 py-3 text-sm font-medium border border-gray-200 bg-gray-50 rounded-xl" onchange="document.getElementById('filterCity').value = this.value;">
                 <option value="">Toate orasele</option>
             </select>
         </div>
         <div>
             <label class="block mb-2 text-sm font-medium text-gray-700">Dată</label>
-            <select id="filterDateMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('filterDate').value = this.value;">
+            <select id="filterDateMobile" class="w-full px-4 py-3 text-sm font-medium border border-gray-200 bg-gray-50 rounded-xl" onchange="document.getElementById('filterDate').value = this.value;">
                 <option value="">Oricand</option>
                 <option value="today">Astazi</option>
                 <option value="tomorrow">Maine</option>
@@ -187,7 +191,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
         </div>
         <div>
             <label class="block mb-2 text-sm font-medium text-gray-700">Preț</label>
-            <select id="filterPriceMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('filterPrice').value = this.value;">
+            <select id="filterPriceMobile" class="w-full px-4 py-3 text-sm font-medium border border-gray-200 bg-gray-50 rounded-xl" onchange="document.getElementById('filterPrice').value = this.value;">
                 <option value="">Orice pret</option>
                 <option value="0-50">Sub 50 lei</option>
                 <option value="50-100">50 - 100 lei</option>
@@ -235,7 +239,7 @@ function clearCatFilters() {
 </script>
 
 <!-- Events Content -->
-<section class="py-8 md:py-12">
+<section class="py-8 md:py-12 mobile:py-6">
     <div class="px-4 mx-auto max-w-7xl">
         <!-- Events Grid -->
         <div id="eventsGrid" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
