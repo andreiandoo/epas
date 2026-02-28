@@ -241,7 +241,7 @@ const FeaturedCarousel = {
 
         return '<a href="/bilete/' + (event.slug || '') + '" class="featured-carousel-card group relative overflow-hidden rounded-2xl bg-white shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">' +
             '<div class="relative h-48 overflow-hidden">' +
-                '<img src="' + image + '" alt="' + this.escapeHtml(title) + '" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">' +
+                '<img src="' + image + '" alt="' + this.escapeHtml(title) + '" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy" width="300" height="192">' +
                 '<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>' +
                 // Category badge
                 (category ? '<div class="absolute top-3 left-3"><span class="px-3 py-1 text-[10px] font-bold text-white uppercase bg-primary/90 backdrop-blur-sm rounded-full">' + this.escapeHtml(category) + '</span></div>' : '') +
