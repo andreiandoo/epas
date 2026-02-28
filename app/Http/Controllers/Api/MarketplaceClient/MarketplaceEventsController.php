@@ -44,8 +44,11 @@ class MarketplaceEventsController extends BaseController
                 },
             ]);
 
-        // Filter upcoming only by default - exclude events that have already started
-        if (!$request->has('include_past')) {
+        // Filter by time scope: upcoming (default), past, or all
+        $timeScope = $request->get('time_scope', 'upcoming');
+        if ($timeScope === 'past') {
+            $this->applyPastFilter($query);
+        } elseif ($timeScope !== 'all' && !$request->has('include_past')) {
             $this->applyUpcomingFilter($query);
         }
 
@@ -240,8 +243,13 @@ class MarketplaceEventsController extends BaseController
                 ->orWhere('is_general_featured', true);
         }
 
-        // Sorting
-        $sort = $request->get('sort', 'date_asc');
+        // Sorting — for past events, default to newest-first (date_desc)
+        $defaultSort = ($timeScope === 'past') ? 'date_desc' : 'date_asc';
+        $sort = $request->get('sort', $defaultSort);
+        // JS sends 'date' — normalize to the appropriate date sort
+        if ($sort === 'date') {
+            $sort = $defaultSort;
+        }
         switch ($sort) {
             case 'date_desc':
                 $query->orderBy('event_date', 'desc')->orderBy('start_time', 'desc');
@@ -1375,6 +1383,53 @@ class MarketplaceEventsController extends BaseController
      * Apply upcoming event filter - excludes events that have already started/ended
      * based on their duration mode and respective date+time fields.
      */
+    /**
+     * Filter to only past events (inverse of applyUpcomingFilter)
+     */
+    private function applyPastFilter($query): void
+    {
+        $now = now();
+        $today = $now->toDateString();
+        $currentTime = $now->format('H:i:s');
+
+        $query->where(function ($q) use ($today, $currentTime) {
+            // Range events: ended when range_end_date + range_end_time has passed
+            $q->where(function ($q2) use ($today, $currentTime) {
+                $q2->where('duration_mode', 'range')
+                    ->where(function ($q3) use ($today, $currentTime) {
+                        $q3->where('range_end_date', '<', $today)
+                            ->orWhere(function ($q4) use ($today, $currentTime) {
+                                $q4->where('range_end_date', $today)
+                                    ->where(function ($q5) use ($currentTime) {
+                                        $q5->whereNotNull('range_end_time')
+                                            ->where('range_end_time', '<=', $currentTime);
+                                    });
+                            });
+                    });
+            })
+            // Single day events: past when event_date < today, or event_date = today and start_time passed
+            ->orWhere(function ($q2) use ($today, $currentTime) {
+                $q2->where(function ($q3) {
+                        $q3->where('duration_mode', 'single_day')
+                            ->orWhereNull('duration_mode');
+                    })
+                    ->where(function ($q3) use ($today, $currentTime) {
+                        $q3->where('event_date', '<', $today)
+                            ->orWhere(function ($q4) use ($today, $currentTime) {
+                                $q4->where('event_date', $today)
+                                    ->whereNotNull('start_time')
+                                    ->where('start_time', '<=', $currentTime);
+                            });
+                    });
+            })
+            // Multi-day: past when event_date < today
+            ->orWhere(function ($q2) use ($today) {
+                $q2->where('duration_mode', 'multi_day')
+                    ->where('event_date', '<', $today);
+            });
+        });
+    }
+
     private function applyUpcomingFilter($query): void
     {
         $now = now();
