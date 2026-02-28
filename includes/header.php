@@ -199,7 +199,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         <div class="flex items-center justify-between h-[72px]">
             <!-- Logo -->
             <a href="/" class="flex items-center gap-2.5 no-underline flex-shrink-0">
-                <img src="/assets/images/ambilet_logo.webp" alt="<?= SITE_NAME ?>" class="h-10 w-auto header-logo <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
+                <img src="/assets/images/ambilet_logo.webp" alt="<?= SITE_NAME ?>" class="h-10 w-auto header-logo mobile:hidden <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
                 
                 <svg class="hidden w-8 h-8" viewBox="0 0 48 48" fill="none">
                     <defs>
@@ -468,7 +468,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                 </a>
 
                 <!-- User Menu (shown when logged in) -->
-                <div id="headerUserMenu" style="display: none;">
+                <div id="headerUserMenu" class="mobile:hidden" style="display: none;">
                     <div class="relative dropdown">
                         <button onclick="this.parentElement.classList.toggle('active')" class="flex items-center gap-2 p-1.5 rounded-xl hover:bg-surface transition-colors">
                             <div class="flex items-center justify-center rounded-full w-9 h-9 bg-primary/10">
@@ -550,10 +550,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     </div>
                 </div>
                 
-                <button class="action-btn flex items-center justify-center w-10 h-10 rounded-lg lg:hidden <?= $transparentHeader ? 'text-white bg-white/10 hover:bg-white/20' : 'text-gray-900 bg-gray-100' ?>" id="mobileMenuBtn" aria-label="Meniu">
-                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 12h18M3 6h18M3 18h18"/>
-                    </svg>
+                <button class="action-btn flex items-center justify-center w-10 h-10 rounded-lg lg:hidden <?= $transparentHeader ? 'text-white bg-white/10 hover:bg-white/20' : 'text-primary bg-gray-100' ?>" id="mobileMenuBtn" aria-label="Meniu">
+                    <svg viewBox="0 0 24 24" style="enable-background:new 0 0 512 512" class="w-6 h-6"><g><g fill="currentColor"><path d="M11.25 7.75A.75.75 0 0 1 12 7h5.25a.75.75 0 0 1 0 1.5H12a.75.75 0 0 1-.75-.75zM11.25 12a.75.75 0 0 1 .75-.75h5.25a.75.75 0 0 1 0 1.5H12a.75.75 0 0 1-.75-.75zM6.75 15.5a.75.75 0 0 0 0 1.5h10.5a.75.75 0 0 0 0-1.5zM9.5 8a.75.75 0 0 0-1.28-.53l-2 2a.75.75 0 0 0 0 1.06l2 2A.75.75 0 0 0 9.5 12z" fill="currentColor"  class=""></path></g></g></svg>
                 </button>
             </div>
         </div>

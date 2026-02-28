@@ -102,7 +102,7 @@ include __DIR__ . '/includes/header.php';
     </div>
 
     <!-- Venues Grid -->
-    <div id="venuesGrid" class="grid grid-cols-3 gap-6 mb-12">
+    <div id="venuesGrid" class="grid gap-6 mb-12 md:grid-cols-3 mobile:grid-cols-1">
         <!-- Skeleton cards -->
         <div class="overflow-hidden bg-white border rounded-2xl border-border animate-pulse">
             <div class="aspect-[16/10] bg-gray-200"></div>
@@ -384,8 +384,18 @@ const VenuesPage = {
                     <img src="${v.image}" alt="${v.name}" class="object-cover w-full h-full transition-transform duration-500 hover:scale-105" loading="lazy">
                     <span class="absolute top-3 left-3 px-3 py-1.5 bg-white/95 rounded-md text-xs font-semibold text-gray-600 uppercase tracking-wide">${v.type}</span>
                     <span class="absolute top-3 right-3 px-3 py-1.5 bg-primary rounded-md text-xs font-semibold text-white">${v.eventsCount} evenimente</span>
+                    <div class="absolute top-0 left-0 z-0 w-full h-full bg-gradient-to-b from-transparent to-black/10"></div>
+                    <div class="absolute z-10 text-white left-4 bottom-2">
+                        <h3 class="mb-2 text-lg font-bold leading-tight text-white">${v.name}</h3>
+                        <div class="flex items-center gap-1.5 text-sm text-gray-100">
+                            <svg class="w-4 h-4 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            ${v.location}
+                    </div>
                 </div>
-                <div class="p-5">
+                <div class="p-5 mobile:hidden">
                     <h3 class="mb-2 text-lg font-bold leading-tight text-secondary">${v.name}</h3>
                     <div class="flex items-center gap-1.5 text-sm text-muted mb-3">
                         <svg class="w-4 h-4 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -394,7 +404,7 @@ const VenuesPage = {
                         </svg>
                         ${v.location}
                     </div>
-                    <div class="flex gap-4 pt-3 border-t border-gray-100">
+                    <div class="flex gap-4 pt-3 border-t border-gray-100 mobile:hidden">
                         <span class="flex items-center gap-1.5 text-sm text-muted">
                             <svg class="w-4 h-4 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>

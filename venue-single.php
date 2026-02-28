@@ -61,7 +61,7 @@ include __DIR__ . '/includes/header.php';
 <!-- Main Content -->
 <main class="max-w-6xl px-6 mx-auto">
     <!-- Info Cards -->
-    <div class="relative z-20 grid grid-cols-4 gap-5 mb-10 -mt-16" id="infoCards">
+    <div class="relative z-20 grid grid-cols-4 gap-5 mb-10 -mt-16 mobile:grid-cols-2" id="infoCards">
         <div class="p-6 text-center bg-white shadow-lg rounded-2xl">
             <div class="flex items-center justify-center w-12 h-12 mx-auto mb-3 bg-red-50 rounded-xl text-primary">
                 <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -216,7 +216,7 @@ include __DIR__ . '/includes/header.php';
 
                 <div id="quickInfo" class="space-y-0">
                     <!-- Skeleton -->
-                    <div class="flex items-start gap-3.5 py-3.5 border-b border-gray-100 animate-pulse">
+                    <div class="flex items-start gap-3.5 py-3.5 border-b border-gray-100 animate-pulse mobile:truncate">
                         <div class="w-10 h-10 bg-gray-200 rounded-xl"></div>
                         <div class="flex-1">
                             <div class="h-3 bg-gray-200 rounded w-12 mb-1.5"></div>
