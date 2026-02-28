@@ -274,8 +274,17 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <script type="application/ld+json"><?= json_encode($breadcrumbSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?></script>
     <?php endif; ?>
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>">
+    <!-- Critical CSS (inline for fast first paint) -->
+    <style>
+    :root{--primary:#A51C30;--primary-dark:#8B1728;--primary-light:#C41E3A;--secondary:#1E293B;--accent:#E67E22;--surface:#F8FAFC;--muted:#64748B;--border:#E2E8F0;--success:#10B981;--warning:#F59E0B;--error:#EF4444}
+    *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:'Plus Jakarta Sans',sans-serif;background-color:#fff;color:var(--secondary);line-height:1.6}
+    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#F1F5F9}::-webkit-scrollbar-thumb{background:var(--primary);border-radius:3px}
+    a:hover{text-decoration:none}.scrollbar-hide{scrollbar-width:none;-ms-overflow-style:none}.scrollbar-hide::-webkit-scrollbar{display:none}
+    </style>
+    <!-- Full CSS (non-render-blocking: preload + print swap) -->
+    <link rel="preload" as="style" href="<?= asset('assets/css/custom.css') ?>">
+    <link href="<?= asset('assets/css/custom.css') ?>" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>"></noscript>
 
     <!-- Preconnect for Performance -->
     <link rel="preconnect" href="https://core.tixello.com">
@@ -285,8 +294,10 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <link rel="preconnect" href="https://cdn.tailwindcss.com">
     <link rel="dns-prefetch" href="//images.unsplash.com">
 
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Fonts (non-render-blocking: preload + print swap) -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 
     <!-- Tailwind CSS CDN & Config -->
     <?php require_once __DIR__ . '/tailwind-config.php'; ?>

@@ -11,34 +11,34 @@
             currencySymbol: 'lei'
         };
     </script>
-    <script src="<?= asset('assets/js/config.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/config.js') ?>"></script>
     <!-- Utilities -->
-    <script src="<?= asset('assets/js/utils.js') ?>"></script>
-    <script src="<?= asset('assets/js/utils/data-transformer.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/utils.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/utils/data-transformer.js') ?>"></script>
 
     <!-- Core -->
-    <script src="<?= asset('assets/js/api.js') ?>"></script>
-    <script src="<?= asset('assets/js/auth.js') ?>"></script>
-    <script src="<?= asset('assets/js/cart.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/api.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/auth.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/cart.js') ?>"></script>
 
     <!-- Components -->
     <?php if (empty($skipJsComponents)): ?>
-    <script src="<?= asset('assets/js/components/header.js') ?>"></script>
-    <script src="<?= asset('assets/js/components/search.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/components/header.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/components/search.js') ?>"></script>
     <?php endif; ?>
-    <script src="<?= asset('assets/js/components/notifications.js') ?>"></script>
-    <script src="<?= asset('assets/js/components/notification-sound.js') ?>"></script>
-    <script src="<?= asset('assets/js/components/notification-poller.js') ?>"></script>
-    <script src="<?= asset('assets/js/components/event-card.js') ?>"></script>
-    <script src="<?= asset('assets/js/components/pagination.js') ?>"></script>
-    <script src="<?= asset('assets/js/components/empty-state.js') ?>"></script>
-    <script src="<?= asset('assets/js/components/featured-carousel.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/components/notifications.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/components/notification-sound.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/components/notification-poller.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/components/event-card.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/components/pagination.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/components/empty-state.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/components/featured-carousel.js') ?>"></script>
 
     <!-- Page-specific scripts -->
     <?php if (isset($scriptsExtra)) echo $scriptsExtra; ?>
 
     <!-- EPAS Tracking -->
-    <script src="<?= asset('assets/js/tracking.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/tracking.js') ?>"></script>
     <?php
     // Get marketplace client ID from cached config
     if (!isset($trackingClientId)) {
@@ -48,11 +48,13 @@
     }
     if ($trackingClientId): ?>
     <script>
-    EPASTracking.init({
-        apiUrl: '/api/tracking.php',
-        marketplaceClientId: <?= (int) $trackingClientId ?>,
-        autoTrackPageViews: true,
-        autoTrackClicks: true
+    document.addEventListener('DOMContentLoaded', function() {
+        EPASTracking.init({
+            apiUrl: '/api/tracking.php',
+            marketplaceClientId: <?= (int) $trackingClientId ?>,
+            autoTrackPageViews: true,
+            autoTrackClicks: true
+        });
     });
     </script>
     <?php endif; ?>

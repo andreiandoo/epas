@@ -695,12 +695,12 @@ const EventPage = {
         banner.id = 'event-ended-banner';
         banner.className = 'w-full mb-8';
         banner.innerHTML =
-            '<div class="bg-primary text-white rounded-2xl p-6">' +
+            '<div class="bg-primary text-white rounded-2xl p-6 mobile:rounded-none">' +
                 '<div class="flex items-center justify-center gap-3">' +
                     '<h2 class="text-xl font-bold">Evenimentul s-a încheiat</h2>' +
                 '</div>' +
                 '<p class="mb-6 text-center">dar încă mai găsești bilete la:</p>' +
-                '<div id="ended-related-events" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>' +
+                '<div id="ended-related-events" class="grid gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>' +
                 '<div id="ended-related-loading" class="py-8 text-sm text-center">Se caută sugestii de evenimente...</div>' +
             '</div>';
 
@@ -1137,7 +1137,7 @@ const EventPage = {
             allHtml += '<div class="flex flex-col gap-6 md:flex-row ' + containerClass + (i > 0 ? ' pt-6 mt-6' + (isHeadliner ? '' : ' border-t border-border') : '') + '">' +
                 '<div class="' + imageColClass + '">' +
                     '<a href="' + artistLink + '" class="relative block">' +
-                        '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105" loading="lazy">' +
+                        '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105 mobile:h-40" loading="lazy">' +
                         (isHeadliner ? '<div class="absolute px-2 py-1 text-xs font-bold text-white rounded-lg shadow-lg top-3 left-3 bg-gradient-to-r from-amber-500 to-amber-600">★ HEADLINER</div>' : '') +
                     '</a>' +
                 '</div>' +
@@ -1179,7 +1179,7 @@ const EventPage = {
             venueAddress = venueAddress ? venueAddress + ', ' + venue.state : venue.state;
         }
 
-        var html = '<div class="flex flex-col md:items-center gap-6 md:flex-row px-8">' +
+        var html = '<div class="flex flex-col md:items-center gap-6 md:flex-row px-8 mobile:px-0">' +
             '<div class="md:w-1/4">' +
                 '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-32 mb-4 rounded-2xl" loading="lazy">' +
             '</div>' +

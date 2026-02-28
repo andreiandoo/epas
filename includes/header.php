@@ -1138,7 +1138,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         if (!isOpen) {
             svg.innerHTML = '<path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />';
         } else {
-            svg.innerHTML = '<path d="M3 12h18M3 6h18M3 18h18"/>';
+            svg.innerHTML = '<path d="M11.25 7.75A.75.75 0 0 1 12 7h5.25a.75.75 0 0 1 0 1.5H12a.75.75 0 0 1-.75-.75zM11.25 12a.75.75 0 0 1 .75-.75h5.25a.75.75 0 0 1 0 1.5H12a.75.75 0 0 1-.75-.75zM6.75 15.5a.75.75 0 0 0 0 1.5h10.5a.75.75 0 0 0 0-1.5zM9.5 8a.75.75 0 0 0-1.28-.53l-2 2a.75.75 0 0 0 0 1.06l2 2A.75.75 0 0 0 9.5 12z" fill="currentColor"  class=""></path>';
         }
     });
 

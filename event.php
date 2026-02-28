@@ -241,7 +241,7 @@ require_once __DIR__ . '/includes/head.php';
                 </section>
 
                 <!-- Artist Section -->
-                <div class="px-8 mb-8 mobile:mb-0" id="artist-section" style="display:none;">
+                <div class="px-8 mb-8 mobile:mb-0 mobile:p-0" id="artist-section" style="display:none;">
                     <div id="artist-content" class="mobile:p-4"></div>
                 </div>
 
