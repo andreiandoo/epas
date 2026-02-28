@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "../partials/_base.css";
+@import "../partials/_buttons.css";
+@import "../partials/_cards.css";
+@import "../partials/_forms.css";
+@import "../partials/_badges.css";
+@import "../partials/_scroll.css";
+@import "../partials/_nav.css";
+@import "../partials/_animations.css";
+@import "../partials/_toast.css";
+@import "../partials/_loading.css";
+@import "../partials/_tooltips.css";
+@import "../partials/_header.css";
+@import "../partials/_footer.css";
