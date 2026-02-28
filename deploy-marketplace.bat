@@ -62,6 +62,41 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:: Minify JS files using terser (if available)
+echo [3.5/6] Minifying JavaScript files...
+cd /d "%TEMP_DIR%"
+where npx >nul 2>&1
+if not errorlevel 1 (
+    set "MINIFIED=0"
+    for /r "assets\js" %%f in (*.js) do (
+        echo       Minifying: %%~nxf
+        npx terser "%%f" --compress --mangle -o "%%f.tmp" 2>nul
+        if not errorlevel 1 (
+            move /y "%%f.tmp" "%%f" >nul
+            set /a MINIFIED+=1
+        ) else (
+            del "%%f.tmp" 2>nul
+            echo       [WARN] Failed to minify %%~nxf, keeping original
+        )
+    )
+    echo       Minified !MINIFIED! JS files.
+) else (
+    echo       [SKIP] npx not found, skipping JS minification
+)
+
+:: Minify custom.css using clean-css-cli or simple whitespace removal
+echo [3.6/6] Minifying CSS files...
+if exist "assets\css\custom.css" (
+    npx clean-css-cli -o "assets\css\custom.css.tmp" "assets\css\custom.css" 2>nul
+    if not errorlevel 1 (
+        move /y "assets\css\custom.css.tmp" "assets\css\custom.css" >nul
+        echo       Minified custom.css
+    ) else (
+        del "assets\css\custom.css.tmp" 2>nul
+        echo       [SKIP] clean-css-cli not available, keeping original CSS
+    )
+)
+
 :: Write deploy timestamp so there's always a change to push (triggers server webhook)
 cd /d "%TEMP_DIR%"
 for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set "now=%%I"
