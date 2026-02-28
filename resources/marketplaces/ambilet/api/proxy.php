@@ -605,6 +605,7 @@ switch ($action) {
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
         if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 50);
         if (isset($_GET['sort'])) $params['sort'] = $_GET['sort'];
+        if (isset($_GET['time_scope'])) $params['time_scope'] = $_GET['time_scope'];
         $endpoint = '/events?' . http_build_query($params);
         break;
 
