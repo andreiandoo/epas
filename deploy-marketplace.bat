@@ -141,9 +141,9 @@ goto :eof
 :: Subroutine: Minify a single JS file
 :: ============================================================
 :minify_one_js
-call npx terser %1 --compress --mangle -o %1.tmp 2>nul
-if exist %1.tmp (
-    move /y %1.tmp %1 >nul
+call npx terser "%~1" --compress --mangle -o "%~1.tmp" 2>nul
+if exist "%~1.tmp" (
+    move /y "%~1.tmp" "%~1" >nul
     set /a MINIFIED+=1
 ) else (
     echo       [WARN] Failed to minify %~2
