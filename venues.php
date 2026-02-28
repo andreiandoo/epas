@@ -19,7 +19,7 @@ include __DIR__ . '/includes/header.php';
 <section class="pb-8 text-center pt-28 bg-gradient-to-br from-secondary to-slate-600">
     <div class="max-w-2xl px-6 mx-auto">
         <h1 class="mb-4 text-4xl font-extrabold text-white">Locații</h1>
-        <p class="text-lg leading-relaxed text-white/70">Descoperă cele mai populare locații pentru evenimente din România. De la arene și stadioane la teatre și cluburi.</p>
+        <p class="text-lg leading-relaxed text-white/90">Descoperă cele mai populare locații pentru evenimente din România. De la arene și stadioane la teatre și cluburi.</p>
     </div>
 </section>
 

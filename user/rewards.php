@@ -42,12 +42,12 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <div class="grid gap-6 lg:grid-cols-3 lg:gap-8">
                         <!-- Points Balance -->
                         <div class="lg:col-span-1">
-                            <p class="mb-1 text-sm text-white/70">Punctele tale</p>
+                            <p class="mb-1 text-sm text-white/90">Punctele tale</p>
                             <div class="flex items-baseline gap-2">
                                 <span class="text-4xl font-extrabold lg:text-5xl" id="user-points">0</span>
-                                <span class="text-white/70">puncte</span>
+                                <span class="text-white/90">puncte</span>
                             </div>
-                            <p class="mt-2 text-sm text-white/60" id="points-value">≈ 0 lei reducere</p>
+                            <p class="mt-2 text-sm text-white/90" id="points-value">≈ 0 lei reducere</p>
                         </div>
 
                         <!-- Level Progress -->
@@ -59,18 +59,18 @@ require_once dirname(__DIR__) . '/includes/header.php';
                                     </div>
                                     <div>
                                         <p class="text-lg font-bold" id="level-info">Nivel 0 - Loading...</p>
-                                        <p class="text-sm text-white/70" id="level-remaining">... XP pana la nivelul urmator</p>
+                                        <p class="text-sm text-white/90" id="level-remaining">... XP pana la nivelul urmator</p>
                                     </div>
                                 </div>
                                 <div class="hidden text-right sm:block">
                                     <p class="text-2xl font-bold" id="xp-progress">0 / 0</p>
-                                    <p class="text-xs text-white/70">XP</p>
+                                    <p class="text-xs text-white/90">XP</p>
                                 </div>
                             </div>
                             <div class="h-4 overflow-hidden rounded-full bg-white/20">
                                 <div class="h-full transition-all duration-1000 rounded-full level-progress" style="width: 0%" id="level-bar"></div>
                             </div>
-                            <div class="flex justify-between mt-2 text-xs text-white/60">
+                            <div class="flex justify-between mt-2 text-xs text-white/90">
                                 <span id="level-current">Nivel 0</span>
                                 <span id="level-next">Nivel 1 - Loading...</span>
                             </div>

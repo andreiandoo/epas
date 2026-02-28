@@ -28,8 +28,8 @@ require_once __DIR__ . '/includes/header.php';
             </svg>
         </div>
         <h1 class="text-[42px] font-extrabold text-white mb-4">Politica de Confidențialitate</h1>
-        <p class="text-lg leading-relaxed text-white/70">Află cum colectăm, utilizăm și protejăm datele tale personale când folosești serviciile Ambilet.</p>
-        <div class="flex flex-col items-center justify-center gap-2 mt-5 text-sm sm:flex-row sm:gap-6 text-white/60">
+        <p class="text-lg leading-relaxed text-white/90">Află cum colectăm, utilizăm și protejăm datele tale personale când folosești serviciile Ambilet.</p>
+        <div class="flex flex-col items-center justify-center gap-2 mt-5 text-sm sm:flex-row sm:gap-6 text-white/90">
             <span class="flex items-center gap-1.5">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>

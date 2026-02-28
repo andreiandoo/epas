@@ -18,8 +18,8 @@ $pageTitle = 'Politica de Returnare';
                 <svg class="w-10 h-10 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             </div>
             <h1 class="text-3xl md:text-[44px] font-extrabold text-white mb-4">Politica de Returnare</h1>
-            <p class="text-lg text-white/70 leading-relaxed">Informatii complete despre rambursari, anulari si procedurile de returnare a biletelor.</p>
-            <div class="mt-6 text-sm text-white/50">Ultima actualizare: 15 Decembrie 2024</div>
+            <p class="text-lg text-white/90 leading-relaxed">Informatii complete despre rambursari, anulari si procedurile de returnare a biletelor.</p>
+            <div class="mt-6 text-sm text-white/90">Ultima actualizare: 15 Decembrie 2024</div>
         </div>
     </section>
 
@@ -263,7 +263,7 @@ $pageTitle = 'Politica de Returnare';
 
                 <div class="bg-gradient-to-br from-secondary to-slate-600 rounded-2xl p-8 mt-8">
                     <h3 class="text-xl font-bold text-white mb-3">Echipa de suport</h3>
-                    <p class="text-[15px] text-white/70 mb-5">Timpul mediu de raspuns: sub 4 ore in zilele lucratoare.</p>
+                    <p class="text-[15px] text-white/90 mb-5">Timpul mediu de raspuns: sub 4 ore in zilele lucratoare.</p>
                     <div class="flex flex-col md:flex-row gap-4">
                         <a href="mailto:suport@ambilet.ro" class="flex items-center gap-2.5 px-5 py-3 bg-white/10 rounded-xl text-white text-sm font-medium hover:bg-white/15 transition-colors">
                             <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>

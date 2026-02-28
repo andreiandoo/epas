@@ -33,7 +33,7 @@ require_once 'includes/header.php';
                     Biletele tale, <span class="bg-gradient-to-r from-red-400 to-amber-400 bg-clip-text text-transparent">mereu la îndemână</span>
                 </h1>
 
-                <p class="text-lg text-white/70 leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
+                <p class="text-lg text-white/90 leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
                     Descarcă aplicația AmBilet și ai toate biletele în buzunar. Scanare rapidă, notificări pentru evenimente și acces instant la experiențe.
                 </p>
 
@@ -63,15 +63,15 @@ require_once 'includes/header.php';
                 <div class="flex gap-10 justify-center lg:justify-start">
                     <div>
                         <div class="text-3xl font-extrabold text-white">50K+</div>
-                        <div class="text-sm text-white/50">Descărcări</div>
+                        <div class="text-sm text-white/90">Descărcări</div>
                     </div>
                     <div>
                         <div class="text-3xl font-extrabold text-white">4.8★</div>
-                        <div class="text-sm text-white/50">Rating mediu</div>
+                        <div class="text-sm text-white/90">Rating mediu</div>
                     </div>
                     <div>
                         <div class="text-3xl font-extrabold text-white">100K+</div>
-                        <div class="text-sm text-white/50">Bilete scanate</div>
+                        <div class="text-sm text-white/90">Bilete scanate</div>
                     </div>
                 </div>
             </div>
@@ -224,7 +224,7 @@ require_once 'includes/header.php';
         <div class="bg-gradient-to-br from-slate-800 to-slate-600 rounded-[32px] p-10 md:p-16 overflow-hidden">
             <div class="text-center mb-12">
                 <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-4">Preview aplicație</h2>
-                <p class="text-lg text-white/60">Explorează interfața intuitivă și descoperă cât de ușor e să folosești AmBilet.</p>
+                <p class="text-lg text-white/90">Explorează interfața intuitivă și descoperă cât de ușor e să folosești AmBilet.</p>
             </div>
             <div class="flex gap-6 justify-center flex-wrap">
                 <div class="w-48 bg-white rounded-3xl p-2 transition-transform duration-300 hover:scale-105">

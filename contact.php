@@ -230,20 +230,20 @@ require_once __DIR__ . '/includes/header.php';
 
                 <div class="space-y-0">
                     <div class="flex justify-between py-3 border-b border-white/10">
-                        <span class="text-sm text-white/70">Luni - Vineri</span>
+                        <span class="text-sm text-white/90">Luni - Vineri</span>
                         <span class="text-sm font-semibold text-white">09:00 - 18:00</span>
                     </div>
                     <div class="flex justify-between py-3 border-b border-white/10">
-                        <span class="text-sm text-white/70">Sâmbătă</span>
+                        <span class="text-sm text-white/90">Sâmbătă</span>
                         <span class="text-sm font-semibold text-white">10:00 - 14:00</span>
                     </div>
                     <div class="flex justify-between py-3">
-                        <span class="text-sm text-white/70">Duminică</span>
+                        <span class="text-sm text-white/90">Duminică</span>
                         <span class="text-sm font-semibold text-red-400">Închis</span>
                     </div>
                 </div>
 
-                <div class="mt-4 p-3 bg-white/10 rounded-lg text-[13px] text-white/70 flex items-start gap-2">
+                <div class="mt-4 p-3 bg-white/10 rounded-lg text-[13px] text-white/90 flex items-start gap-2">
                     <svg class="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/>
                         <line x1="12" y1="16" x2="12" y2="12"/>

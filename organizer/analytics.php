@@ -232,7 +232,7 @@ $eventId = $_GET['event'] ?? null;
                     </div>
                     <div>
                         <h2 class="text-lg font-semibold">Estimări</h2>
-                        <p class="text-xs text-white/60">Predicții bazate pe trend</p>
+                        <p class="text-xs text-white/90">Predicții bazate pe trend</p>
                     </div>
                 </div>
                 <div class="p-4 mb-4 rounded-xl bg-white/10">
@@ -243,11 +243,11 @@ $eventId = $_GET['event'] ?? null;
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <div id="forecast-revenue" class="text-xl font-bold">0 lei</div>
-                            <div class="text-xs text-white/50">Venituri estimate</div>
+                            <div class="text-xs text-white/90">Venituri estimate</div>
                         </div>
                         <div>
                             <div id="forecast-tickets" class="text-xl font-bold">+0</div>
-                            <div class="text-xs text-white/50">Bilete estimate</div>
+                            <div class="text-xs text-white/90">Bilete estimate</div>
                         </div>
                     </div>
                 </div>
@@ -258,11 +258,11 @@ $eventId = $_GET['event'] ?? null;
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <div id="forecast-total-revenue" class="text-xl font-bold">0 lei</div>
-                            <div class="text-xs text-white/50">Total estimat</div>
+                            <div class="text-xs text-white/90">Total estimat</div>
                         </div>
                         <div>
                             <div id="forecast-total-tickets" class="text-xl font-bold">0</div>
-                            <div class="text-xs text-white/50">Bilete total</div>
+                            <div class="text-xs text-white/90">Bilete total</div>
                         </div>
                     </div>
                 </div>

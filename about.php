@@ -16,7 +16,7 @@ require_once __DIR__ . '/includes/header.php';
                 Echipa AmBilet
             </div>
             <h1 class="text-4xl md:text-[56px] font-extrabold text-white mb-5 leading-tight tracking-tight">Conectam oamenii cu experiente memorabile</h1>
-            <p class="max-w-2xl mx-auto text-lg leading-relaxed md:text-xl text-white/70">Suntem o echipa pasionata de tehnologie si evenimente, dedicata sa transformam modul in care romanii descopera si participa la evenimente.</p>
+            <p class="max-w-2xl mx-auto text-lg leading-relaxed md:text-xl text-white/90">Suntem o echipa pasionata de tehnologie si evenimente, dedicata sa transformam modul in care romanii descopera si participa la evenimente.</p>
         </div>
     </section>
 
@@ -79,7 +79,7 @@ require_once __DIR__ . '/includes/header.php';
                         <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     </div>
                     <h3 class="mb-4 text-2xl font-bold text-white">Viziunea noastra</h3>
-                    <p class="text-base leading-relaxed text-white/70">Sa devenim platforma preferata de ticketing din Europa de Est, recunoscuta pentru inovatie, fiabilitate si focus pe comunitate.</p>
+                    <p class="text-base leading-relaxed text-white/90">Sa devenim platforma preferata de ticketing din Europa de Est, recunoscuta pentru inovatie, fiabilitate si focus pe comunitate.</p>
                 </div>
             </div>
         </section>
@@ -239,7 +239,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="absolute -top-[150px] -right-[150px] w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(165,28,48,0.2),transparent_70%)] pointer-events-none"></div>
             <div class="relative z-10">
                 <h2 class="text-3xl md:text-[40px] font-extrabold text-white mb-4">Hai sa construim impreuna</h2>
-                <p class="max-w-lg mx-auto mb-8 text-lg text-white/70">Vrei sa faci parte din echipa AmBilet sau sa colaborezi cu noi?</p>
+                <p class="max-w-lg mx-auto mb-8 text-lg text-white/90">Vrei sa faci parte din echipa AmBilet sau sa colaborezi cu noi?</p>
                 <div class="flex flex-col justify-center gap-4 sm:flex-row">
                     <a href="/cariere" class="inline-flex items-center justify-center gap-2.5 px-8 py-4 md:px-9 md:py-[18px] rounded-xl text-base font-bold bg-gradient-to-br from-primary to-red-600 text-white hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(165,28,48,0.4)] transition-all">
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>

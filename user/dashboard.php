@@ -33,7 +33,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     </div>
                 </div>
                 <div>
-                    <p class="text-sm text-white/70">Bun venit inapoi,</p>
+                    <p class="text-sm text-white/90">Bun venit inapoi,</p>
                     <h1 id="welcome-name" class="text-xl font-bold lg:text-2xl">--</h1>
                     <div class="flex items-center gap-2 mt-1">
                         <span id="user-badge" class="px-2 py-0.5 bg-accent/20 text-accent text-xs font-bold rounded">ROCK ENTHUSIAST</span>
@@ -44,13 +44,13 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <!-- Level Progress -->
             <div class="lg:w-80">
                 <div class="flex items-center justify-between mb-2">
-                    <span id="level-title" class="text-sm text-white/70">Nivel 1 - Incepator</span>
+                    <span id="level-title" class="text-sm text-white/90">Nivel 1 - Incepator</span>
                     <span id="level-xp" class="text-sm font-bold">0 / 500 XP</span>
                 </div>
                 <div class="h-3 overflow-hidden rounded-full bg-white/20">
                     <div id="level-progress" class="h-full rounded-full level-progress" style="width: 0%"></div>
                 </div>
-                <p id="level-remaining" class="mt-1 text-xs text-white/50">500 XP pana la nivelul 2</p>
+                <p id="level-remaining" class="mt-1 text-xs text-white/90">500 XP pana la nivelul 2</p>
             </div>
         </div>
     </div>

@@ -316,7 +316,7 @@ const OrderDetailPage = {
             <div class="flex gap-5 pb-5 mb-5 border-b border-border last:border-0 last:pb-0 last:mb-0">
                 <div class="flex items-center justify-center flex-shrink-0 w-28 h-28 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500">
                     ${item.image ? `<img src="${item.image}" alt="${item.event_title}" class="object-cover w-full h-full rounded-xl">` : `
-                    <svg class="w-12 h-12 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                    <svg class="w-12 h-12 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
                     `}
                 </div>
                 <div class="flex-1">
