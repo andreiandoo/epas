@@ -32,6 +32,14 @@ class VenueResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = null;
     protected static ?int $navigationSort = 3;
 
+    public static function getNavigationBadge(): ?string
+    {
+        $marketplace = static::getMarketplaceClient();
+        if (!$marketplace) return null;
+
+        return (string) static::getEloquentQuery()->count();
+    }
+
     public static function getEloquentQuery(): Builder
     {
         $marketplace = static::getMarketplaceClient();

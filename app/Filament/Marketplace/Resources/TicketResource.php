@@ -21,6 +21,14 @@ class TicketResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 2;
 
+    public static function getNavigationBadge(): ?string
+    {
+        $marketplace = static::getMarketplaceClient();
+        if (!$marketplace) return null;
+
+        return (string) static::getEloquentQuery()->count();
+    }
+
     public static function getEloquentQuery(): Builder
     {
         $marketplace = static::getMarketplaceClient();

@@ -31,16 +31,9 @@ class RefundRequestResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         $marketplace = static::getMarketplaceClient();
-        $count = MarketplaceRefundRequest::where('marketplace_client_id', $marketplace?->id)
-            ->whereIn('status', ['pending', 'under_review', 'approved'])
-            ->count();
+        if (!$marketplace) return null;
 
-        return $count > 0 ? (string) $count : null;
-    }
-
-    public static function getNavigationBadgeColor(): ?string
-    {
-        return 'warning';
+        return (string) static::getEloquentQuery()->count();
     }
 
     public static function getEloquentQuery(): Builder

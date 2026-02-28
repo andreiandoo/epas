@@ -8,13 +8,21 @@ use Filament\Forms;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Notifications\Notification;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 
 class ListOrganizers extends ListRecords
 {
     protected static string $resource = OrganizerResource::class;
+
+    public function getHeading(): string|Htmlable
+    {
+        $count = number_format(static::getResource()::getEloquentQuery()->count());
+        return new HtmlString("Organizatori <span class=\"ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300\">{$count}</span>");
+    }
 
     protected function getHeaderActions(): array
     {

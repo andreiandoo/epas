@@ -51,37 +51,12 @@ class EventResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = null;
     protected static ?int $navigationSort = 2;
 
-    /**
-     * Navigation badge showing pending events count
-     */
     public static function getNavigationBadge(): ?string
     {
         $marketplace = static::getMarketplaceClient();
-        if (!$marketplace) {
-            return null;
-        }
+        if (!$marketplace) return null;
 
-        $pendingCount = static::getEloquentQuery()
-            ->where('status', 'pending')
-            ->count();
-
-        return $pendingCount > 0 ? (string) $pendingCount : null;
-    }
-
-    /**
-     * Navigation badge color
-     */
-    public static function getNavigationBadgeColor(): ?string
-    {
-        return 'warning';
-    }
-
-    /**
-     * Navigation badge tooltip
-     */
-    public static function getNavigationBadgeTooltip(): ?string
-    {
-        return 'Pending events awaiting approval';
+        return (string) static::getEloquentQuery()->count();
     }
 
     public static function getEloquentQuery(): Builder

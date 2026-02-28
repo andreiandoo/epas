@@ -40,16 +40,7 @@ class ServiceOrderResource extends Resource
         $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
         if (!$marketplaceAdmin) return null;
 
-        $count = static::getEloquentQuery()
-            ->where('status', ServiceOrder::STATUS_PENDING_PAYMENT)
-            ->count();
-
-        return $count > 0 ? (string) $count : null;
-    }
-
-    public static function getNavigationBadgeColor(): ?string
-    {
-        return 'warning';
+        return (string) static::getEloquentQuery()->count();
     }
 
     public static function getEloquentQuery(): Builder
