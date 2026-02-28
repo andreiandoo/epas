@@ -526,6 +526,7 @@ const CartPage = {
             '<div class="items-center justify-between hidden px-2 pb-2 mobile:flex">' +
                 '<div class="relative inline-block tooltip-trigger">' +
                     '<div class="flex items-center gap-2">' +
+                        '<span class="w-8 font-semibold text-center">' + quantity + ' x </span>' +
                         '<span class="inline-flex items-center py-1 pr-2 text-sm font-semibold text-secondary">' + ticketTypeName +
                             (hasDiscount ? ' <span class="discount-badge text-white text-[10px] font-bold py-0.5 px-1.5 rounded-full ml-1">-' + discountPercent + '%</span>' : '') +
                         '</span>' +
@@ -542,7 +543,6 @@ const CartPage = {
                     '</div>' +
                     (hasSeats ?
                     '<div class="flex items-center gap-2 ml-auto">' +
-                        '<span class="w-8 font-semibold text-center">' + quantity + '</span>' +
                         '<a href="/bilete/' + eventSlug + '" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors flex-none">' +
                             '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
                             'Adaugă locuri' +
