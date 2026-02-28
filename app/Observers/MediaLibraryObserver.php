@@ -55,6 +55,7 @@ class MediaLibraryObserver
         try {
             $service = new ImageCompressionService();
             $service->quality($this->defaultQuality);
+            $service->convertToWebp(true);
 
             if ($this->maxDimension) {
                 $service->maxDimension($this->maxDimension);

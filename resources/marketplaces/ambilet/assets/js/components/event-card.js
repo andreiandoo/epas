@@ -80,7 +80,7 @@ const AmbiletEventCard = {
             '<div class="relative h-40 mobile:h-64 overflow-hidden">' +
                 '<picture>' +
                     '<source media="(min-width: 768px)" srcset="' + heroSrc + '">' +
-                    '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-lg rounded-tr-lg" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                    '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-lg rounded-tr-lg" loading="lazy" width="400" height="256" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '</picture>' +
                 (promotedBadge ? promotedBadge : '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>') +
                 statusBadge +
@@ -189,8 +189,8 @@ const AmbiletEventCard = {
 
         return '<a href="' + eventUrl + '" class="overflow-hidden relative transition-all bg-primary border group rounded-md border-transparent hover:-translate-y-1 hover:shadow-xl hover:scale-105 duration-300 ease-in-out">' +
             '<div class="relative aspect-[2/3] overflow-hidden mobile:aspect-auto">' +
-                '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:hidden object-cover w-full h-full transition-transform duration-300" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
-                '<img src="' + heroSrc + '" alt="' + this.escapeHtml(event.title) + '" class="hidden mobile:block object-cover w-full h-52 transition-transform duration-300 relative" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:hidden object-cover w-full h-full transition-transform duration-300" loading="lazy" width="300" height="450" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                '<img src="' + heroSrc + '" alt="' + this.escapeHtml(event.title) + '" class="hidden mobile:block object-cover w-full h-52 transition-transform duration-300 relative" loading="lazy" width="400" height="208" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '<div class="opacity-0 z-10 bg-gradient-to-b from-transparent via-gray-900/70 to-gray-900 w-full h-full bottom-0 absolute transition-opacity duration-250 ease-in-out group-hover:opacity-100 "></div>' +
                 '<div class="absolute z-20 bottom-0 flex items-end gap-x-2 p-2">' +
                     '<div class="flex z-10">' + dateBadgeHtml + '</div>' +
@@ -319,7 +319,7 @@ const AmbiletEventCard = {
         return '<article class="event-card group relative bg-white rounded-3xl overflow-hidden cursor-pointer shadow-lg" onclick="window.location.href=\'' + eventUrl + '\'">' +
             '<div class="flex flex-col lg:flex-row">' +
                 '<div class="relative lg:w-2/3 aspect-video lg:aspect-auto overflow-hidden">' +
-                    '<img src="' + getStorageUrl(event.image) + '" alt="' + this.escapeHtml(event.title) + '" class="event-image w-full h-full object-cover" loading="lazy">' +
+                    '<img src="' + getStorageUrl(event.image) + '" alt="' + this.escapeHtml(event.title) + '" class="event-image w-full h-full object-cover" loading="lazy" width="800" height="450">' +
                     '<div class="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black/60 to-transparent"></div>' +
                     '<div class="absolute top-4 left-4">' +
                         '<span class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-full">' +
@@ -367,7 +367,7 @@ const AmbiletEventCard = {
 
         return '<a href="' + eventUrl + '" class="flex gap-4 p-3 rounded-xl hover:bg-surface transition-colors group">' +
             '<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">' +
-                '<img src="' + getStorageUrl(event.image) + '" alt="' + this.escapeHtml(event.title) + '" class="w-full h-full object-cover" loading="lazy">' +
+                '<img src="' + getStorageUrl(event.image) + '" alt="' + this.escapeHtml(event.title) + '" class="w-full h-full object-cover" loading="lazy" width="64" height="64">' +
             '</div>' +
             '<div class="flex-1 min-w-0">' +
                 '<h4 class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">' + this.escapeHtml(event.title) + '</h4>' +
