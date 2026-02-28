@@ -201,14 +201,18 @@ const EventsPage = {
      * Uses AmbiletEventCard.render() for grid view and AmbiletEventCard.renderHorizontal() for list view
      */
     renderMonthGroup(group) {
+        // Hide prices for past events
+        const showPrice = this.filters.time_scope !== 'past';
+        const cardOptions = { showPrice };
+
         // Use the unified AmbiletEventCard component based on current view
         let eventsHtml;
         if (this.view === 'list') {
             // List view - horizontal cards
-            eventsHtml = group.events.map(item => AmbiletEventCard.renderHorizontal(item.raw)).join('');
+            eventsHtml = group.events.map(item => AmbiletEventCard.renderHorizontal(item.raw, cardOptions)).join('');
         } else {
             // Grid view - standard grid cards
-            eventsHtml = group.events.map(item => AmbiletEventCard.render(item.raw)).join('');
+            eventsHtml = group.events.map(item => AmbiletEventCard.render(item.raw, cardOptions)).join('');
         }
 
         const gridClass = this.view === 'grid'

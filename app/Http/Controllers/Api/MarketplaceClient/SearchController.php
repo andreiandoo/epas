@@ -92,7 +92,7 @@ class SearchController extends BaseController
         $normalizedQuery = $this->normalizeSearch($query);
 
         $events = Event::query()
-            ->with(['venue:id,name,city', 'ticketTypes' => function ($q) {
+            ->with(['venue:id,name,city', 'marketplaceEventCategory', 'ticketTypes' => function ($q) {
                 $q->where('status', 'active')
                     ->select(['id', 'event_id', 'price_cents', 'sale_price_cents']);
             }])
@@ -143,21 +143,35 @@ class SearchController extends BaseController
                 ? ($event->getTranslation('title', $language) ?? $event->name)
                 : $event->name;
 
-            // Get image
-            $image = $isMarketplaceEvent
+            // Get images (poster for mobile, hero for desktop)
+            $posterUrl = $isMarketplaceEvent
                 ? ($event->poster_url ?? $event->hero_image_url ?? $event->image_url)
                 : $event->image_url;
+            $heroUrl = $isMarketplaceEvent
+                ? ($event->hero_image_url ?? $event->poster_url ?? $event->image_url)
+                : $event->image_url;
 
-            if ($image && !str_starts_with($image, 'http')) {
-                $image = rtrim(config('app.url'), '/') . '/storage/' . ltrim($image, '/');
+            $storagePrefix = rtrim(config('app.url'), '/') . '/storage/';
+            if ($posterUrl && !str_starts_with($posterUrl, 'http')) {
+                $posterUrl = $storagePrefix . ltrim($posterUrl, '/');
+            }
+            if ($heroUrl && !str_starts_with($heroUrl, 'http')) {
+                $heroUrl = $storagePrefix . ltrim($heroUrl, '/');
             }
 
-            // Get venue name
+            // Get venue info
             $venueName = null;
+            $venueCity = null;
             if ($event->venue) {
                 $venueName = $event->venue->getTranslation('name', $language)
                     ?? (is_array($event->venue->name) ? ($event->venue->name[$language] ?? $event->venue->name['ro'] ?? null) : $event->venue->name);
+                $venueCity = $event->venue->city;
             }
+
+            // Get category
+            $category = $isMarketplaceEvent
+                ? ($event->marketplaceEventCategory?->getTranslation('name', $language) ?? $event->category)
+                : $event->category;
 
             // Calculate min price (skip free/0-price tickets when paid tickets exist)
             $allPrices = $event->ticketTypes->map(function ($tt) {
@@ -172,14 +186,29 @@ class SearchController extends BaseController
 
             return [
                 'id' => $event->id,
+                'name' => $title,
                 'title' => $title,
                 'slug' => $event->slug,
+                'event_date' => $event->event_date?->format('Y-m-d'),
                 'start_date' => $event->event_date?->format('Y-m-d') ?? ($event->starts_at ? $event->starts_at->format('Y-m-d') : null),
-                'image' => $image,
-                'poster_url' => $image,
-                'venue' => $venueName ? ['name' => $venueName] : null,
+                'start_time' => $event->start_time,
+                'image' => $posterUrl,
+                'image_url' => $posterUrl,
+                'poster_url' => $posterUrl,
+                'hero_image_url' => $heroUrl,
+                'venue' => $venueName,
                 'venue_name' => $venueName,
+                'venue_city' => $venueCity,
+                'city' => $venueCity,
+                'category' => $category,
+                'price_from' => $minPrice,
                 'min_price' => $minPrice,
+                'duration_mode' => $event->duration_mode ?? 'single_day',
+                'range_start_date' => $event->range_start_date?->format('Y-m-d'),
+                'range_end_date' => $event->range_end_date?->format('Y-m-d'),
+                'is_sold_out' => (bool) $event->is_sold_out,
+                'is_cancelled' => (bool) $event->is_cancelled,
+                'is_postponed' => (bool) $event->is_postponed,
             ];
         })->toArray();
     }

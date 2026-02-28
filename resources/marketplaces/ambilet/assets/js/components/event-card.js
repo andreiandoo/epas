@@ -234,19 +234,22 @@ const AmbiletEventCard = {
         const {
             urlPrefix = '/bilete/',
             showBuyButton = true,
-            showArtists = false
+            showArtists = false,
+            showPrice = true
         } = options;
 
         const eventUrl = urlPrefix + event.slug;
 
         // Price display
-        let priceHtml, buttonHtml;
-        if (event.isSoldOut) {
-            priceHtml = '<span class="text-sm font-bold text-red-500">SOLD OUT</span>';
-            buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-gray-400 rounded-lg text-white text-sm font-semibold cursor-not-allowed" disabled>Indisponibil</button>' : '';
-        } else {
-            priceHtml = '<div class="text-sm font-bold text-primary">' + event.priceFormatted + '</div>';
-            buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-secondary hover:bg-secondary/90 rounded-lg text-white text-sm font-semibold transition-all">Cumpără bilete</button>' : '';
+        let priceHtml = '', buttonHtml = '';
+        if (showPrice) {
+            if (event.isSoldOut) {
+                priceHtml = '<span class="text-sm font-bold text-red-500">SOLD OUT</span>';
+                buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-gray-400 rounded-lg text-white text-sm font-semibold cursor-not-allowed" disabled>Indisponibil</button>' : '';
+            } else {
+                priceHtml = '<div class="text-sm font-bold text-primary">' + event.priceFormatted + '</div>';
+                buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-secondary hover:bg-secondary/90 rounded-lg text-white text-sm font-semibold transition-all">Cumpără bilete</button>' : '';
+            }
         }
 
         // Date section - show range for festivals
@@ -278,10 +281,11 @@ const AmbiletEventCard = {
                 '</div>' +
             '</div>' +
             '</div>' +
-            '<div class="py-4 px-5 flex flex-col items-end justify-center gap-1.5 mobile:flex-row mobile:items-center mobile:justify-between mobile:py-2 mobile:px-2">' +
-                priceHtml +
-                buttonHtml +
-            '</div>' +
+            (showPrice ?
+                '<div class="py-4 px-5 flex flex-col items-end justify-center gap-1.5 mobile:flex-row mobile:items-center mobile:justify-between mobile:py-2 mobile:px-2">' +
+                    priceHtml +
+                    buttonHtml +
+                '</div>' : '') +
         '</a>';
     },
 
