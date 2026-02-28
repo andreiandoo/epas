@@ -62,6 +62,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:: Rebuild Tailwind CSS (scans PHP/JS for used classes)
+cd /d "%TEMP_DIR%"
+call :rebuild_tailwind
+
 :: Minify JS and CSS
 cd /d "%TEMP_DIR%"
 call :minify_assets
@@ -105,6 +109,29 @@ cd /d "%~dp0"
 rd /s /q "%TEMP_DIR%"
 
 exit /b 0
+
+
+:: ============================================================
+:: Subroutine: Rebuild Tailwind CSS from source
+:: ============================================================
+:rebuild_tailwind
+where tailwindcss >nul 2>&1
+if errorlevel 1 (
+    echo [3.5/7] [SKIP] tailwindcss not found. Install with: npm install -g tailwindcss
+    goto :eof
+)
+echo [3.5/7] Rebuilding Tailwind CSS...
+if exist "tailwind.config.cjs" (
+    call tailwindcss -c tailwind.config.cjs -i assets\css\tailwind-input.css -o assets\css\tailwind.min.css --minify 2>nul
+    if exist "assets\css\tailwind.min.css" (
+        echo       Tailwind CSS built successfully.
+    ) else (
+        echo       [WARN] Tailwind build failed, using existing CSS
+    )
+) else (
+    echo       [SKIP] tailwind.config.cjs not found
+)
+goto :eof
 
 
 :: ============================================================
