@@ -31,14 +31,14 @@ if "%COMMIT_MSG%"=="" (
     set "COMMIT_MSG=Deploy marketplace !datetime:~0,4!-!datetime:~4,2!-!datetime:~6,2! !datetime:~8,2!:!datetime:~10,2!"
 )
 
-echo [1/6] Creating temporary directory...
+echo [1/7] Creating temporary directory...
 mkdir "%TEMP_DIR%" 2>nul
 if errorlevel 1 (
     echo [ERROR] Failed to create temp directory
     exit /b 1
 )
 
-echo [2/6] Cloning marketplace branch...
+echo [2/7] Cloning marketplace branch...
 git clone --branch %TARGET_BRANCH% --single-branch --depth 1 "%REPO_URL%" "%TEMP_DIR%" 2>nul
 if errorlevel 1 (
     echo       Branch doesn't exist, creating new orphan branch...
@@ -53,7 +53,7 @@ if errorlevel 1 (
     for /f "delims=" %%i in ('dir /b /ad 2^>nul ^| findstr /v /i "^\.git$ ^data$"') do rd /s /q "%%i" 2>nul
 )
 
-echo [3/6] Copying marketplace files...
+echo [3/7] Copying marketplace files...
 cd /d "%~dp0"
 xcopy "%SOURCE_DIR%\*" "%TEMP_DIR%\" /E /Y /Q /H >nul
 if errorlevel 1 (
@@ -62,50 +62,19 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: Minify JS files using terser (if available)
-echo [3.5/6] Minifying JavaScript files...
+:: Minify JS and CSS
 cd /d "%TEMP_DIR%"
-where npx >nul 2>&1
-if not errorlevel 1 (
-    set "MINIFIED=0"
-    for /r "assets\js" %%f in (*.js) do (
-        echo       Minifying: %%~nxf
-        npx terser "%%f" --compress --mangle -o "%%f.tmp" 2>nul
-        if not errorlevel 1 (
-            move /y "%%f.tmp" "%%f" >nul
-            set /a MINIFIED+=1
-        ) else (
-            del "%%f.tmp" 2>nul
-            echo       [WARN] Failed to minify %%~nxf, keeping original
-        )
-    )
-    echo       Minified !MINIFIED! JS files.
-) else (
-    echo       [SKIP] npx not found, skipping JS minification
-)
-
-:: Minify custom.css using clean-css-cli or simple whitespace removal
-echo [3.6/6] Minifying CSS files...
-if exist "assets\css\custom.css" (
-    npx clean-css-cli -o "assets\css\custom.css.tmp" "assets\css\custom.css" 2>nul
-    if not errorlevel 1 (
-        move /y "assets\css\custom.css.tmp" "assets\css\custom.css" >nul
-        echo       Minified custom.css
-    ) else (
-        del "assets\css\custom.css.tmp" 2>nul
-        echo       [SKIP] clean-css-cli not available, keeping original CSS
-    )
-)
+call :minify_assets
 
 :: Write deploy timestamp so there's always a change to push (triggers server webhook)
 cd /d "%TEMP_DIR%"
 for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set "now=%%I"
 echo !now:~0,4!-!now:~4,2!-!now:~6,2! !now:~8,2!:!now:~10,2!:!now:~12,2! > .deploy-timestamp
 
-echo [4/6] Staging changes...
+echo [5/7] Staging changes...
 git add -A
 
-echo [5/6] Committing changes...
+echo [6/7] Committing changes...
 git commit -m "%COMMIT_MSG%"
 if errorlevel 1 (
     echo [ERROR] Commit failed
@@ -114,7 +83,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [6/6] Pushing to remote...
+echo [7/7] Pushing to remote...
 git push -u origin %TARGET_BRANCH%
 if errorlevel 1 (
     echo [ERROR] Push failed. Check your credentials.
@@ -136,3 +105,47 @@ cd /d "%~dp0"
 rd /s /q "%TEMP_DIR%"
 
 exit /b 0
+
+
+:: ============================================================
+:: Subroutine: Minify JS and CSS assets
+:: ============================================================
+:minify_assets
+echo [4/7] Minifying assets...
+
+where npx >nul 2>&1
+if errorlevel 1 (
+    echo       [SKIP] npx not found, skipping minification
+    goto :eof
+)
+
+set "MINIFIED=0"
+for /r "assets\js" %%f in (*.js) do call :minify_one_js "%%f" "%%~nxf"
+
+echo       JS: !MINIFIED! files minified.
+
+:: Minify CSS
+if exist "assets\css\custom.css" (
+    call npx clean-css-cli -o "assets\css\custom.css.tmp" "assets\css\custom.css" 2>nul
+    if exist "assets\css\custom.css.tmp" (
+        move /y "assets\css\custom.css.tmp" "assets\css\custom.css" >nul
+        echo       CSS: custom.css minified.
+    ) else (
+        echo       CSS: [SKIP] clean-css-cli not available
+    )
+)
+goto :eof
+
+
+:: ============================================================
+:: Subroutine: Minify a single JS file
+:: ============================================================
+:minify_one_js
+call npx terser %1 --compress --mangle -o %1.tmp 2>nul
+if exist %1.tmp (
+    move /y %1.tmp %1 >nul
+    set /a MINIFIED+=1
+) else (
+    echo       [WARN] Failed to minify %~2
+)
+goto :eof
