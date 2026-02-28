@@ -464,6 +464,18 @@ class MarketplaceCustomerResource extends Resource
 
                 Tables\Filters\TernaryFilter::make('accepts_marketing')
                     ->label('Marketing Consent'),
+
+                Tables\Filters\TernaryFilter::make('imported')
+                    ->label('Importat AmBilet')
+                    ->trueLabel('Doar importați')
+                    ->falseLabel('Doar noi')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereRaw("JSON_EXTRACT(settings, '$.imported_from') = ?", ['ambilet']),
+                        false: fn (Builder $query) => $query->where(function (Builder $q) {
+                            $q->whereNull('settings')
+                                ->orWhereRaw("JSON_EXTRACT(settings, '$.imported_from') IS NULL");
+                        }),
+                    ),
             ])
             ->recordActions([
                 ViewAction::make(),

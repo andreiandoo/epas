@@ -33,18 +33,28 @@ class ListOrders extends ListRecords
     {
         return [
             'all' => Tab::make('Toate'),
+            'completed' => Tab::make('Finalizate')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'completed'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'completed')->count())
+                ->badgeColor('success'),
+            'paid' => Tab::make('Plătite')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'paid'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'paid')->count())
+                ->badgeColor('success'),
             'pending' => Tab::make('În așteptare')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'pending'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'pending')->count())
                 ->badgeColor('warning'),
-            'paid' => Tab::make('Plătite')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('status', ['paid', 'confirmed']))
-                ->badge(fn () => $this->getResource()::getEloquentQuery()->whereIn('status', ['paid', 'confirmed'])->count())
-                ->badgeColor('success'),
+            'failed' => Tab::make('Eșuate')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'failed'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'failed')->count())
+                ->badgeColor('danger'),
             'cancelled' => Tab::make('Anulate')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'cancelled')),
             'refunded' => Tab::make('Rambursate')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'refunded')),
+            'expired' => Tab::make('Expirate')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'expired')),
         ];
     }
 }

@@ -203,6 +203,60 @@ class FixAmbiletPostImportCommand extends Command
             $this->info("Newsletter enabled for {$updated} customers.");
         }
 
+        // =====================================================================
+        // STEP 4: Unify 'confirmed' orders → 'completed'
+        // =====================================================================
+        $this->info('');
+        $this->info('=== STEP 4: Confirmed orders → completed ===');
+
+        if ($dryRun) {
+            $count = DB::table('orders')
+                ->where('marketplace_client_id', $clientId)
+                ->where('status', 'confirmed')
+                ->count();
+            $this->info("[DRY RUN] Would update {$count} confirmed orders to 'completed'.");
+        } else {
+            $affected = DB::table('orders')
+                ->where('marketplace_client_id', $clientId)
+                ->where('status', 'confirmed')
+                ->update(['status' => 'completed', 'updated_at' => now()]);
+            $this->info("Updated {$affected} confirmed orders to 'completed'.");
+        }
+
+        // =====================================================================
+        // STEP 5: Mark all imported customers with settings.imported_from
+        // =====================================================================
+        $this->info('');
+        $this->info('=== STEP 5: Mark imported customers ===');
+
+        if ($dryRun) {
+            $count = DB::table('marketplace_customers')
+                ->where('marketplace_client_id', $clientId)
+                ->whereRaw("JSON_EXTRACT(meta, '$.imported_from') IS NULL OR JSON_EXTRACT(settings, '$.imported_from') IS NULL")
+                ->whereRaw("EXISTS (SELECT 1 FROM orders o WHERE o.marketplace_customer_id = marketplace_customers.id AND o.source = 'legacy_import')")
+                ->count();
+            $this->info("[DRY RUN] Would mark ~{$count} customers as imported from ambilet.");
+        } else {
+            // Mark customers that have at least one legacy_import order
+            $affected = DB::statement("
+                UPDATE marketplace_customers mc
+                SET mc.settings = JSON_SET(COALESCE(mc.settings, '{}'), '$.imported_from', 'ambilet'),
+                    mc.updated_at = NOW()
+                WHERE mc.marketplace_client_id = {$clientId}
+                  AND EXISTS (
+                      SELECT 1 FROM orders o
+                      WHERE o.marketplace_customer_id = mc.id
+                        AND o.source = 'legacy_import'
+                  )
+            ");
+            // Count how many were marked
+            $marked = DB::table('marketplace_customers')
+                ->where('marketplace_client_id', $clientId)
+                ->whereRaw("JSON_EXTRACT(settings, '$.imported_from') = ?", ['ambilet'])
+                ->count();
+            $this->info("Marked {$marked} customers as imported from ambilet.");
+        }
+
         $this->info('');
         $this->info('All post-import fixes complete.');
 

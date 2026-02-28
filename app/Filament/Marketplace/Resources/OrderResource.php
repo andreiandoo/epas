@@ -321,16 +321,19 @@ class OrderResource extends Resource
                     ->label('Status')
                     ->colors([
                         'warning' => 'pending',
-                        'success' => fn ($state) => in_array($state, ['confirmed', 'paid']),
-                        'danger' => 'cancelled',
-                        'gray' => 'refunded',
+                        'success' => fn ($state) => in_array($state, ['completed', 'paid', 'confirmed']),
+                        'danger' => fn ($state) => in_array($state, ['cancelled', 'failed']),
+                        'gray' => fn ($state) => in_array($state, ['refunded', 'expired']),
                     ])
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'pending' => 'În așteptare',
                         'paid' => 'Plătită',
                         'confirmed' => 'Confirmată',
+                        'completed' => 'Finalizată',
                         'cancelled' => 'Anulată',
                         'refunded' => 'Rambursată',
+                        'failed' => 'Eșuată',
+                        'expired' => 'Expirată',
                         default => ucfirst($state),
                     }),
                 Tables\Columns\TextColumn::make('created_at')
@@ -344,8 +347,11 @@ class OrderResource extends Resource
                         'pending' => 'În așteptare',
                         'paid' => 'Plătită',
                         'confirmed' => 'Confirmată',
+                        'completed' => 'Finalizată',
                         'cancelled' => 'Anulată',
                         'refunded' => 'Rambursată',
+                        'failed' => 'Eșuată',
+                        'expired' => 'Expirată',
                     ]),
             ])
             ->defaultSort('created_at', 'desc');
