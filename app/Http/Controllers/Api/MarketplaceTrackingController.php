@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Platform\CoreCustomer;
 use App\Models\Platform\CoreCustomerEvent;
 use App\Models\Platform\CoreSession;
 use App\Models\MarketplaceEvent;
@@ -120,6 +121,9 @@ class MarketplaceTrackingController extends Controller
 
         // Update or create session
         $this->updateSession($sessionId, $visitorId, $request, $event);
+
+        // Update CoreCustomer metrics (link visitor to customer if email known)
+        $this->updateCoreCustomer($visitorId, $request, $event);
 
         // INSTANT: Write to Redis for real-time analytics (globe, live visitors)
         $eventId = $request->input('marketplace_event_id');
@@ -341,6 +345,70 @@ class MarketplaceTrackingController extends Controller
                     'conversion_type' => 'purchase',
                 ]);
             }
+        }
+    }
+
+    /**
+     * Update CoreCustomer metrics from tracking event
+     */
+    protected function updateCoreCustomer(string $visitorId, Request $request, CoreCustomerEvent $event): void
+    {
+        try {
+            // Find customer by visitor_id
+            $customer = CoreCustomer::where('visitor_id', $visitorId)->first();
+
+            // If not found by visitor, try linking via email in request
+            $email = $request->input('email') ?? $request->input('customer_email');
+            if (!$customer && $email) {
+                $customer = CoreCustomer::findByEmail($email);
+                if ($customer && !$customer->visitor_id) {
+                    $customer->update(['visitor_id' => $visitorId]);
+                }
+            }
+
+            if (!$customer) {
+                // Create minimal customer from visitor data (will be enriched on purchase)
+                $customer = CoreCustomer::create([
+                    'visitor_id' => $visitorId,
+                    'ip_address' => $request->ip(),
+                    'device_type' => $event->device_type,
+                    'browser' => $event->browser,
+                    'os' => $event->os,
+                    'country_code' => $event->country_code,
+                    'city' => $event->city,
+                    'region' => $event->region,
+                    'first_seen_at' => now(),
+                    'last_seen_at' => now(),
+                    'first_source' => $this->determineSource($request),
+                    'first_medium' => $request->input('utm_medium'),
+                    'first_campaign' => $request->input('utm_campaign'),
+                    'first_referrer' => $request->input('referrer'),
+                    'first_landing_page' => $request->input('page_url'),
+                    'first_utm_source' => $request->input('utm_source'),
+                    'first_utm_medium' => $request->input('utm_medium'),
+                    'first_utm_campaign' => $request->input('utm_campaign'),
+                    'first_gclid' => $request->input('gclid'),
+                    'first_fbclid' => $request->input('fbclid'),
+                    'first_ttclid' => $request->input('ttclid'),
+                ]);
+            }
+
+            // Link event to customer
+            $event->update(['customer_id' => $customer->id]);
+
+            // Update visit metrics
+            $customer->recordVisit([
+                'referrer' => $request->input('referrer'),
+                'utm_source' => $request->input('utm_source'),
+                'utm_medium' => $request->input('utm_medium'),
+                'utm_campaign' => $request->input('utm_campaign'),
+                'gclid' => $request->input('gclid'),
+                'fbclid' => $request->input('fbclid'),
+                'ttclid' => $request->input('ttclid'),
+            ]);
+        } catch (\Exception $e) {
+            // Don't fail the tracking request if customer update fails
+            \Log::warning('Failed to update CoreCustomer from tracking: ' . $e->getMessage());
         }
     }
 

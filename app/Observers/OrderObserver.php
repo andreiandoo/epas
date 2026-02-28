@@ -155,22 +155,21 @@ class OrderObserver
         // Create new CoreCustomer from order data
         $customer = $order->customer;
 
+        // Use correct amount: marketplace orders use `total` (decimal), tenant orders use `total_cents`
+        $orderAmount = $order->marketplace_client_id
+            ? (float) $order->total
+            : ($order->total_cents ?? 0) / 100;
+
         return CoreCustomer::create([
-            'tenant_id' => $order->tenant_id,
             'email' => $order->customer_email,
-            'email_hash' => hash('sha256', strtolower(trim($order->customer_email))),
             'first_name' => $customer?->first_name ?? $order->meta['first_name'] ?? null,
             'last_name' => $customer?->last_name ?? $order->meta['last_name'] ?? null,
             'phone' => $customer?->phone ?? $order->meta['phone'] ?? null,
-            'phone_hash' => isset($order->meta['phone'])
-                ? hash('sha256', preg_replace('/[^0-9]/', '', $order->meta['phone']))
-                : null,
             'first_seen_at' => now(),
             'last_seen_at' => now(),
-            'total_orders' => 1,
-            'total_spent' => $order->total_cents / 100,
-            'first_order_at' => now(),
-            'last_order_at' => now(),
+            'first_purchase_at' => now(),
+            'last_purchase_at' => now(),
+            'currency' => $order->currency ?? ($order->marketplace_client_id ? 'RON' : 'EUR'),
         ]);
     }
 
@@ -179,12 +178,17 @@ class OrderObserver
      */
     protected function buildTrackingData(Order $order, ?CoreCustomer $coreCustomer): array
     {
+        // Use correct amount: marketplace orders use `total` (decimal), tenant orders use `total_cents`
+        $orderTotal = $order->marketplace_client_id
+            ? (float) $order->total
+            : ($order->total_cents ?? 0) / 100;
+
         $data = [
             'tenant_id' => $order->tenant_id,
             'email' => $order->customer_email,
             'order_id' => $order->id,
-            'order_total' => $order->total_cents / 100,
-            'currency' => $order->meta['currency'] ?? 'USD',
+            'order_total' => $orderTotal,
+            'currency' => $order->currency ?? $order->meta['currency'] ?? 'EUR',
             'ticket_count' => $order->tickets()->count(),
             'event_data' => [
                 'order_source' => 'backend',

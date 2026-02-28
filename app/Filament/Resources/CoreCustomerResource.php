@@ -95,13 +95,13 @@ class CoreCustomerResource extends Resource
                         Forms\Components\Placeholder::make('display_segment')
                             ->label('Customer Segment')
                             ->content(fn ($record) => $record?->customer_segment
-                                ? new HtmlString('<span class="fi-badge inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ' . self::getSegmentClass($record->customer_segment) . '">' . e($record->customer_segment) . '</span>')
+                                ? new HtmlString('<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:500;' . self::getSegmentStyle($record->customer_segment) . '">' . e($record->customer_segment) . '</span>')
                                 : '-'),
 
                         Forms\Components\Placeholder::make('display_rfm_segment')
                             ->label('RFM Segment')
                             ->content(fn ($record) => $record?->rfm_segment
-                                ? new HtmlString('<span class="fi-badge inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ' . self::getRfmClass($record->rfm_segment) . '">' . e($record->rfm_segment) . '</span>')
+                                ? new HtmlString('<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:500;' . self::getRfmStyle($record->rfm_segment) . '">' . e($record->rfm_segment) . '</span>')
                                 : '-'),
 
                         Forms\Components\Placeholder::make('display_rfm_scores')
@@ -193,7 +193,7 @@ class CoreCustomerResource extends Resource
                         Forms\Components\Placeholder::make('display_cart_abandoned')
                             ->label('Cart Abandoned')
                             ->content(fn ($record) => $record?->has_cart_abandoned
-                                ? new HtmlString('<span class="text-warning-600 font-medium">Yes</span>' . ($record->last_cart_abandoned_at ? ' (' . $record->last_cart_abandoned_at->format('d M Y') . ')' : ''))
+                                ? new HtmlString('<span style="color:#d97706;font-weight:500;">Yes</span>' . ($record->last_cart_abandoned_at ? ' (' . $record->last_cart_abandoned_at->format('d M Y') . ')' : ''))
                                 : 'No'),
                     ])
                     ->columns(5),
@@ -324,26 +324,26 @@ class CoreCustomerResource extends Resource
                                 Forms\Components\Placeholder::make('display_gclid')
                                     ->label('Google Ads (gclid)')
                                     ->content(fn ($record) => $record?->first_gclid
-                                        ? new HtmlString('<span class="text-xs text-success-600 font-medium">First: ' . e(substr($record->first_gclid, 0, 20)) . '...</span>' . ($record->last_gclid ? '<br><span class="text-xs text-gray-500">Last: ' . e(substr($record->last_gclid, 0, 20)) . '...</span>' : ''))
-                                        : new HtmlString('<span class="text-gray-400">-</span>')),
+                                        ? new HtmlString('<span style="font-size:0.75rem;color:#16a34a;font-weight:500;">First: ' . e(substr($record->first_gclid, 0, 20)) . '...</span>' . ($record->last_gclid ? '<br><span style="font-size:0.75rem;color:#6b7280;">Last: ' . e(substr($record->last_gclid, 0, 20)) . '...</span>' : ''))
+                                        : new HtmlString('<span style="color:#9ca3af;">-</span>')),
 
                                 Forms\Components\Placeholder::make('display_fbclid')
                                     ->label('Facebook (fbclid)')
                                     ->content(fn ($record) => $record?->first_fbclid
-                                        ? new HtmlString('<span class="text-xs text-info-600 font-medium">First: ' . e(substr($record->first_fbclid, 0, 20)) . '...</span>' . ($record->last_fbclid ? '<br><span class="text-xs text-gray-500">Last: ' . e(substr($record->last_fbclid, 0, 20)) . '...</span>' : ''))
-                                        : new HtmlString('<span class="text-gray-400">-</span>')),
+                                        ? new HtmlString('<span style="font-size:0.75rem;color:#2563eb;font-weight:500;">First: ' . e(substr($record->first_fbclid, 0, 20)) . '...</span>' . ($record->last_fbclid ? '<br><span style="font-size:0.75rem;color:#6b7280;">Last: ' . e(substr($record->last_fbclid, 0, 20)) . '...</span>' : ''))
+                                        : new HtmlString('<span style="color:#9ca3af;">-</span>')),
 
                                 Forms\Components\Placeholder::make('display_ttclid')
                                     ->label('TikTok (ttclid)')
                                     ->content(fn ($record) => $record?->first_ttclid
-                                        ? new HtmlString('<span class="text-xs text-warning-600 font-medium">' . e(substr($record->first_ttclid, 0, 20)) . '...</span>')
-                                        : new HtmlString('<span class="text-gray-400">-</span>')),
+                                        ? new HtmlString('<span style="font-size:0.75rem;color:#d97706;font-weight:500;">' . e(substr($record->first_ttclid, 0, 20)) . '...</span>')
+                                        : new HtmlString('<span style="color:#9ca3af;">-</span>')),
 
                                 Forms\Components\Placeholder::make('display_li_fat_id')
                                     ->label('LinkedIn (li_fat_id)')
                                     ->content(fn ($record) => $record?->first_li_fat_id
-                                        ? new HtmlString('<span class="text-xs text-primary-600 font-medium">' . e(substr($record->first_li_fat_id, 0, 20)) . '...</span>')
-                                        : new HtmlString('<span class="text-gray-400">-</span>')),
+                                        ? new HtmlString('<span style="font-size:0.75rem;color:#7c3aed;font-weight:500;">' . e(substr($record->first_li_fat_id, 0, 20)) . '...</span>')
+                                        : new HtmlString('<span style="color:#9ca3af;">-</span>')),
                             ])
                             ->columns(4),
                     ]),
@@ -403,8 +403,8 @@ class CoreCustomerResource extends Resource
                         Forms\Components\Placeholder::make('display_email_subscribed')
                             ->label('Subscribed')
                             ->content(fn ($record) => $record?->email_subscribed
-                                ? new HtmlString('<span class="text-success-600 font-medium">Yes</span>')
-                                : new HtmlString('<span class="text-danger-600 font-medium">No</span>' . ($record?->email_unsubscribed_at ? ' (since ' . $record->email_unsubscribed_at->format('d M Y') . ')' : ''))),
+                                ? new HtmlString('<span style="color:#16a34a;font-weight:500;">Yes</span>')
+                                : new HtmlString('<span style="color:#dc2626;font-weight:500;">No</span>' . ($record?->email_unsubscribed_at ? ' (since ' . $record->email_unsubscribed_at->format('d M Y') . ')' : ''))),
 
                         Forms\Components\Placeholder::make('display_emails_sent')
                             ->label('Emails Sent')
@@ -464,7 +464,7 @@ class CoreCustomerResource extends Resource
                         Forms\Components\Placeholder::make('display_anonymized')
                             ->label('GDPR Anonymized')
                             ->content(fn ($record) => $record?->is_anonymized
-                                ? new HtmlString('<span class="text-danger-600 font-medium">Yes</span> (' . ($record->anonymized_at?->format('d M Y') ?? '') . ')')
+                                ? new HtmlString('<span style="color:#dc2626;font-weight:500;">Yes</span> (' . ($record->anonymized_at?->format('d M Y') ?? '') . ')')
                                 : 'No'),
                     ])
                     ->columns(3),
@@ -701,54 +701,53 @@ class CoreCustomerResource extends Resource
 
     // ===== HELPER METHODS =====
 
-    protected static function getSegmentClass(string $segment): string
+    protected static function getSegmentStyle(string $segment): string
     {
         return match ($segment) {
-            'VIP' => 'bg-success-50 text-success-700 dark:bg-success-400/10 dark:text-success-400',
-            'Champions' => 'bg-success-50 text-success-700 dark:bg-success-400/10 dark:text-success-400',
-            'Repeat Buyer' => 'bg-info-50 text-info-700 dark:bg-info-400/10 dark:text-info-400',
-            'First-Time Buyer' => 'bg-warning-50 text-warning-700 dark:bg-warning-400/10 dark:text-warning-400',
-            'At Risk', 'Lapsed VIP' => 'bg-danger-50 text-danger-700 dark:bg-danger-400/10 dark:text-danger-400',
-            default => 'bg-gray-50 text-gray-700 dark:bg-gray-400/10 dark:text-gray-400',
+            'VIP', 'Champions' => 'background:#dcfce7;color:#15803d;',
+            'Repeat Buyer', 'Loyal' => 'background:#dbeafe;color:#1d4ed8;',
+            'First-Time Buyer' => 'background:#fef9c3;color:#a16207;',
+            'At Risk', 'Lapsed VIP' => 'background:#fee2e2;color:#b91c1c;',
+            default => 'background:#f3f4f6;color:#374151;',
         };
     }
 
-    protected static function getRfmClass(string $segment): string
+    protected static function getRfmStyle(string $segment): string
     {
         return match ($segment) {
-            'Champions', 'Loyal' => 'bg-success-50 text-success-700 dark:bg-success-400/10 dark:text-success-400',
-            'Potential Loyalist', 'New Customers', 'Promising' => 'bg-info-50 text-info-700 dark:bg-info-400/10 dark:text-info-400',
-            'Need Attention', 'About To Sleep' => 'bg-warning-50 text-warning-700 dark:bg-warning-400/10 dark:text-warning-400',
-            'At Risk', 'Cannot Lose Them' => 'bg-danger-50 text-danger-700 dark:bg-danger-400/10 dark:text-danger-400',
-            'Hibernating', 'Lost' => 'bg-gray-50 text-gray-700 dark:bg-gray-400/10 dark:text-gray-400',
-            default => 'bg-gray-50 text-gray-700 dark:bg-gray-400/10 dark:text-gray-400',
+            'Champions', 'Loyal' => 'background:#dcfce7;color:#15803d;',
+            'Potential Loyalist', 'New Customers', 'Promising' => 'background:#dbeafe;color:#1d4ed8;',
+            'Need Attention', 'About To Sleep' => 'background:#fef9c3;color:#a16207;',
+            'At Risk', 'Cannot Lose Them' => 'background:#fee2e2;color:#b91c1c;',
+            'Hibernating', 'Lost' => 'background:#f3f4f6;color:#374151;',
+            default => 'background:#f3f4f6;color:#374151;',
         };
     }
 
     protected static function renderScoreBar(float $score, string $label, bool $invertColor = false): string
     {
         $color = $invertColor
-            ? ($score >= 70 ? 'danger' : ($score >= 40 ? 'warning' : 'success'))
-            : ($score >= 70 ? 'success' : ($score >= 40 ? 'warning' : 'danger'));
+            ? ($score >= 70 ? '#ef4444' : ($score >= 40 ? '#f59e0b' : '#22c55e'))
+            : ($score >= 70 ? '#22c55e' : ($score >= 40 ? '#f59e0b' : '#ef4444'));
 
-        $colorClass = match ($color) {
-            'success' => 'bg-success-500',
-            'warning' => 'bg-warning-500',
-            'danger' => 'bg-danger-500',
-            default => 'bg-gray-500',
-        };
+        $width = min(100, max(0, $score));
 
-        return '<div class="flex items-center gap-2"><div class="w-24 bg-gray-200 rounded-full h-2 dark:bg-gray-700"><div class="' . $colorClass . ' h-2 rounded-full" style="width: ' . min(100, max(0, $score)) . '%"></div></div><span class="text-sm font-medium">' . number_format($score, 0) . '/100</span></div>';
+        return '<div class="flex items-center gap-2">'
+            . '<div style="width:6rem;height:0.5rem;background:#e5e7eb;border-radius:9999px;overflow:hidden;">'
+            . '<div style="width:' . $width . '%;height:100%;background:' . $color . ';border-radius:9999px;"></div>'
+            . '</div>'
+            . '<span class="text-sm font-medium">' . number_format($score, 0) . '/100</span>'
+            . '</div>';
     }
 
     protected static function renderConsentBadge(?bool $consent): HtmlString
     {
         if ($consent === null) {
-            return new HtmlString('<span class="text-gray-400">Unknown</span>');
+            return new HtmlString('<span style="color:#9ca3af;">Unknown</span>');
         }
         return $consent
-            ? new HtmlString('<span class="text-success-600 font-medium">Granted</span>')
-            : new HtmlString('<span class="text-danger-600 font-medium">Denied</span>');
+            ? new HtmlString('<span style="color:#16a34a;font-weight:500;">Granted</span>')
+            : new HtmlString('<span style="color:#dc2626;font-weight:500;">Denied</span>');
     }
 
     // ===== EXPORT =====
