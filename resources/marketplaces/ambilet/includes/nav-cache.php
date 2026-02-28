@@ -1057,12 +1057,53 @@ function fetchVenueCategoriesFromAPI(): array {
         $categories[] = [
             'name' => $category['name'],
             'slug' => $category['slug'],
-            'icon' => $category['icon'] ?? '',
+            'icon' => resolveVenueCategoryIcon($category['icon'] ?? '', $category['slug'] ?? ''),
             'count' => $category['venues_count'] ?? 0,
         ];
     }
 
     return $categories;
+}
+
+/**
+ * Resolve venue category icon to SVG path elements.
+ * Handles: heroicon names, raw SVG paths, or empty → slug-based fallback.
+ */
+function resolveVenueCategoryIcon(string $icon, string $slug): string {
+    // Already contains SVG markup (path/circle/rect/line/polygon/polyline)
+    if ($icon && preg_match('/<(path|circle|rect|line|polygon|polyline)\b/', $icon)) {
+        return $icon;
+    }
+
+    // Try heroicon name conversion
+    if ($icon) {
+        $resolved = getHeroiconPath($icon);
+        if ($resolved) return $resolved;
+    }
+
+    // Fallback: map common venue category slugs to icons
+    $slugIcons = [
+        'arene' => '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/>',
+        'stadioane' => '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/>',
+        'teatre' => '<path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><line x1="2" y1="20" x2="2" y2="20"/>',
+        'sali' => '<path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/>',
+        'cluburi' => '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+        'baruri' => '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+        'open-air' => '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
+        'restaurante' => '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+        'centre-culturale' => '<path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/>',
+    ];
+
+    // Try exact slug match
+    if (isset($slugIcons[$slug])) return $slugIcons[$slug];
+
+    // Try partial slug match
+    foreach ($slugIcons as $key => $path) {
+        if (str_contains($slug, $key) || str_contains($key, $slug)) return $path;
+    }
+
+    // Generic building icon as ultimate fallback
+    return '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/>';
 }
 
 /**
