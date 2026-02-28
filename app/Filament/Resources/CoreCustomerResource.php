@@ -25,9 +25,11 @@ class CoreCustomerResource extends Resource
 {
     protected static ?string $model = CoreCustomer::class;
 
+    protected static ?string $slug = 'customers';
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
 
-    protected static ?string $navigationLabel = 'Customers';
+    protected static ?string $navigationLabel = 'All Customers';
 
     protected static UnitEnum|string|null $navigationGroup = 'Platform Marketing';
 

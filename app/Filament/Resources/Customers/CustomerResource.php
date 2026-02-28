@@ -25,8 +25,11 @@ class CustomerResource extends Resource
 {
     protected static ?string $model = Customer::class;
 
+    protected static ?string $slug = 'tenant-customers';
+
     // Filament v4 typing
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
+    protected static ?string $navigationLabel = 'Tenant Customers';
     protected static UnitEnum|string|null $navigationGroup = 'Core';
     protected static ?int $navigationSort = 30;
 
