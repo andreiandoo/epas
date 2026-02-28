@@ -49,7 +49,7 @@ require_once __DIR__ . '/includes/head.php';
 </section>
 
 <!-- Main Content -->
-<main class="px-4 py-12 mx-auto max-w-7xl">
+<main class="px-4 py-12 mx-auto max-w-7xl mobile:py-6">
 
     <!-- Featured Artists -->
     <section class="mb-16" id="featuredSection">
@@ -61,7 +61,7 @@ require_once __DIR__ . '/includes/head.php';
                 Artisti populari
             </h2>
         </div>
-        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4" id="featuredGrid">
+        <div class="grid grid-cols-2 gap-6 lg:grid-cols-4" id="featuredGrid">
             <!-- Loading skeletons -->
             <div class="relative overflow-hidden rounded-2xl aspect-[3/4]">
                 <div class="w-full h-full skeleton"></div>
@@ -164,7 +164,7 @@ require_once __DIR__ . '/includes/head.php';
     </section>
 
     <!-- Results Info -->
-    <div class="flex flex-col items-start justify-between gap-4 mb-6 md:flex-row md:items-center">
+    <div class="flex flex-row items-center justify-between gap-4 mb-6 lg:flex-col lg:items-start">
         <span class="text-sm text-muted">Se afiseaza <strong class="text-secondary" id="resultsCount">--</strong> artisti</span>
         <select id="sortSelect" class="px-4 py-3 pr-10 text-sm font-medium bg-white border appearance-none cursor-pointer rounded-xl border-border text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2394A3B8%27 stroke-width=%272%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 0.75rem center;">
             <option value="popular" <?= $sortBy === 'popular' ? 'selected' : '' ?>>Cei mai populari</option>
@@ -176,7 +176,7 @@ require_once __DIR__ . '/includes/head.php';
     </div>
 
     <!-- Artists Grid -->
-    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" id="artistsGrid">
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mobile:grid-cols-2" id="artistsGrid">
         <!-- Loading skeletons -->
         <?php for ($i = 0; $i < 8; $i++): ?>
         <div class="overflow-hidden bg-white border rounded-2xl border-border">

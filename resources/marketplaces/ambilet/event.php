@@ -13,8 +13,9 @@ if ($eventSlug) {
     $eventPreload = api_cached('event_preload_' . $eventSlug, function () use ($eventSlug) {
         return api_get('/events/' . urlencode($eventSlug));
     }, 120); // 2min cache
-    if (!empty($eventPreload['data'])) {
-        $ev = $eventPreload['data'];
+    // API returns: { data: { event: {...}, venue: {...}, ... } }
+    $ev = $eventPreload['data']['event'] ?? null;
+    if ($ev) {
         $pageTitle = $ev['name'] ?? $ev['title'] ?? $pageTitle;
         $pageDescription = !empty($ev['short_description']) ? mb_substr(strip_tags($ev['short_description']), 0, 160) : $pageDescription;
     }
@@ -22,8 +23,7 @@ if ($eventSlug) {
 
 // Build LCP image URL for preload
 $lcpImageUrl = '';
-if (!empty($eventPreload['data'])) {
-    $ev = $eventPreload['data'];
+if (!empty($ev)) {
     $heroImg = $ev['hero_image_url'] ?? $ev['cover_image_url'] ?? $ev['poster_url'] ?? $ev['image_url'] ?? $ev['image'] ?? '';
     if ($heroImg) {
         $lcpImageUrl = (str_starts_with($heroImg, 'http') ? '' : STORAGE_URL . '/') . $heroImg;
@@ -366,6 +366,9 @@ require_once __DIR__ . '/includes/head.php';
             </button>
         </div>
     </main>
+
+    <!-- Sentinel for lazy-loading related events (always visible, zero height) -->
+    <div id="related-events-sentinel" aria-hidden="true"></div>
 
     <!-- Custom Recommended Events (Îți recomandăm) - Premium Section -->
     <section class="relative mt-16 -mx-4 overflow-hidden md:-mx-8 lg:-mx-12" id="custom-related-section" style="display:none;">

@@ -44,8 +44,8 @@ $judete = [
 <?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
             <!-- Page Header -->
             <div class="mb-6">
-                <h1 class="text-2xl font-bold text-secondary">Setari cont</h1>
-                <p class="mt-1 text-sm text-muted">Gestioneaza datele personale si preferintele contului tau</p>
+                <h1 class="text-2xl font-bold text-secondary">Setări cont</h1>
+                <p class="mt-1 text-sm text-muted">Gestionează datele personale și preferințele contului tău</p>
             </div>
 
             <div class="space-y-6">
@@ -55,11 +55,11 @@ $judete = [
                         <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                         </svg>
-                        Informatii personale
+                        Informații personale
                     </h2>
 
                     <form id="profileForm">
-                        <div class="grid gap-4 md:grid-cols-2">
+                        <div class="grid gap-4 md:grid-cols-2 mobile:gap-y-0">
                             <div class="form-group">
                                 <label for="last_name">Nume</label>
                                 <input type="text" id="last_name" name="last_name" placeholder="Popescu">
@@ -71,16 +71,16 @@ $judete = [
                             <div class="form-group md:col-span-2">
                                 <label for="email">Email</label>
                                 <input type="email" id="email" name="email" disabled>
-                                <p class="hint">Adresa de email nu poate fi modificata</p>
+                                <p class="hint">Adresa de email nu poate fi modificată</p>
                             </div>
                             <div class="form-group">
-                                <label for="birth_date">Data nasterii</label>
+                                <label for="birth_date">Data nașterii</label>
                                 <input type="date" id="birth_date" name="birth_date">
                             </div>
                             <div class="form-group">
                                 <label for="gender">Sex</label>
                                 <select id="gender" name="gender">
-                                    <option value="">Selecteaza</option>
+                                    <option value="">Selectează</option>
                                     <option value="male">Masculin</option>
                                     <option value="female">Feminin</option>
                                     <option value="other">Altul</option>
@@ -91,23 +91,23 @@ $judete = [
                                 <input type="tel" id="phone" name="phone" placeholder="+40 7XX XXX XXX">
                             </div>
                             <div class="form-group">
-                                <label for="state">Judet</label>
+                                <label for="state">Județ</label>
                                 <select id="state" name="state">
-                                    <option value="">Selecteaza judetul</option>
+                                    <option value="">Selectează județul</option>
                                     <?php foreach ($judete as $code => $name): ?>
                                     <option value="<?= $code ?>"><?= $name ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="city">Oras</label>
-                                <input type="text" id="city" name="city" placeholder="Bucuresti">
+                                <label for="city">Oraș</label>
+                                <input type="text" id="city" name="city" placeholder="București">
                             </div>
                         </div>
 
                         <div class="flex justify-end mt-4">
                             <button type="submit" class="btn btn-primary" id="saveProfileBtn">
-                                Salveaza modificarile
+                                Salvează modificările
                             </button>
                         </div>
                     </form>
@@ -119,29 +119,29 @@ $judete = [
                         <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                         </svg>
-                        Schimbare parola
+                        Schimbare parolă
                     </h2>
 
                     <form id="passwordForm">
                         <div class="grid gap-4 md:grid-cols-2">
                             <div class="form-group md:col-span-2">
-                                <label for="current_password">Parola curenta</label>
-                                <input type="password" id="current_password" name="current_password" placeholder="Introdu parola curenta">
+                                <label for="current_password">Parola curentă</label>
+                                <input type="password" id="current_password" name="current_password" placeholder="Introdu parola curentă">
                             </div>
                             <div class="form-group">
-                                <label for="new_password">Parola noua</label>
+                                <label for="new_password">Parola nouă</label>
                                 <input type="password" id="new_password" name="password" placeholder="Minim 8 caractere">
                                 <div class="password-strength" id="passwordStrength"></div>
                             </div>
                             <div class="form-group">
-                                <label for="confirm_password">Confirma parola noua</label>
-                                <input type="password" id="confirm_password" name="password_confirmation" placeholder="Repeta parola noua">
+                                <label for="confirm_password">Confirmă parola nouă</label>
+                                <input type="password" id="confirm_password" name="password_confirmation" placeholder="Repetă parola nouă">
                             </div>
                         </div>
 
                         <div class="flex justify-end mt-4">
                             <button type="submit" class="btn btn-primary" id="changePasswordBtn">
-                                Schimba parola
+                                Schimbă parola
                             </button>
                         </div>
                     </form>
@@ -155,42 +155,42 @@ $judete = [
                         </svg>
                         Adresa de facturare
                     </h2>
-                    <p class="mb-4 text-sm text-muted">Aceasta adresa va fi folosita pentru generarea facturilor.</p>
+                    <p class="mb-4 text-sm text-muted">Aceasta adresă va fi folosită pentru generarea facturilor.</p>
 
                     <form id="billingAddressForm">
-                        <div class="grid gap-4 md:grid-cols-2">
+                        <div class="grid gap-4 md:grid-cols-2 mobile:gap-y-0">
                             <div class="form-group md:col-span-2">
-                                <label for="billing_address">Adresa</label>
-                                <input type="text" id="billing_address" name="billing_address" placeholder="Strada, numar, bloc, apartament">
+                                <label for="billing_address">Adresă</label>
+                                <input type="text" id="billing_address" name="billing_address" placeholder="Strada, număr, bloc, apartament">
                             </div>
                             <div class="form-group">
-                                <label for="billing_city">Oras</label>
-                                <input type="text" id="billing_city" name="billing_city" placeholder="Bucuresti">
+                                <label for="billing_city">Oraș</label>
+                                <input type="text" id="billing_city" name="billing_city" placeholder="București">
                             </div>
                             <div class="form-group">
-                                <label for="billing_state">Judet</label>
+                                <label for="billing_state">Județ</label>
                                 <select id="billing_state" name="billing_state">
-                                    <option value="">Selecteaza judetul</option>
+                                    <option value="">Selectează județul</option>
                                     <?php foreach ($judete as $code => $name): ?>
                                     <option value="<?= $code ?>"><?= $name ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="billing_postal_code">Cod postal</label>
+                                <label for="billing_postal_code">Cod poștal</label>
                                 <input type="text" id="billing_postal_code" name="billing_postal_code" placeholder="012345">
                             </div>
                             <div class="form-group">
-                                <label for="billing_country">Tara</label>
+                                <label for="billing_country">Țara</label>
                                 <select id="billing_country" name="billing_country">
-                                    <option value="RO" selected>Romania</option>
+                                    <option value="RO" selected>România</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="flex justify-end mt-4">
                             <button type="submit" class="btn btn-primary" id="saveBillingBtn">
-                                Salveaza adresa
+                                Salvează adresa
                             </button>
                         </div>
                     </form>
@@ -202,14 +202,14 @@ $judete = [
                         <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
                         </svg>
-                        Limba si regiune
+                        Limbă și regiune
                     </h2>
 
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="form-group">
                             <label for="language">Limba</label>
                             <select id="language">
-                                <option value="ro" selected>Romana</option>
+                                <option value="ro" selected>Română</option>
                                 <option value="en">English</option>
                             </select>
                         </div>
@@ -219,7 +219,7 @@ $judete = [
                                 <option value="RON" selected>RON (Lei)</option>
                                 <option value="EUR">EUR (Euro)</option>
                             </select>
-                            <p class="hint">Moneda este determinata automat</p>
+                            <p class="hint">Moneda este determinată automat</p>
                         </div>
                     </div>
                 </div>
@@ -230,62 +230,62 @@ $judete = [
                         <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                         </svg>
-                        Notificari email
+                        Notificări email
                     </h2>
 
                     <div class="space-y-4">
                         <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
                             <div>
                                 <p class="font-medium text-secondary">Confirmare comenzi</p>
-                                <p class="text-sm text-muted">Primeste email cu detaliile comenzii si biletele</p>
+                                <p class="text-sm text-muted">Primește email cu detaliile comenzii și biletele</p>
                             </div>
-                            <input type="checkbox" class="toggle" id="notif-orders" checked disabled>
+                            <input type="checkbox" class="flex-none toggle" id="notif-orders" checked disabled>
                         </label>
 
                         <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
                             <div>
                                 <p class="font-medium text-secondary">Remindere evenimente</p>
-                                <p class="text-sm text-muted">Primeste reminder cu 24h inainte de eveniment</p>
+                                <p class="text-sm text-muted">Primește reminder cu 24h înainte de eveniment</p>
                             </div>
-                            <input type="checkbox" class="toggle" id="notif-reminders">
+                            <input type="checkbox" class="flex-none toggle" id="notif-reminders">
                         </label>
 
                         <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
                             <div>
-                                <p class="font-medium text-secondary">Newsletter si oferte</p>
-                                <p class="text-sm text-muted">Afla despre evenimente noi si oferte speciale</p>
+                                <p class="font-medium text-secondary">Newsletter și oferte</p>
+                                <p class="text-sm text-muted">Află despre evenimente noi și oferte speciale</p>
                             </div>
-                            <input type="checkbox" class="toggle" id="notif-newsletter">
+                            <input type="checkbox" class="flex-none toggle" id="notif-newsletter">
                         </label>
 
                         <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
                             <div>
-                                <p class="font-medium text-secondary">Actualizari favorite</p>
-                                <p class="text-sm text-muted">Primeste notificari cand evenimentele favorite se apropie</p>
+                                <p class="font-medium text-secondary">Actualizări favorite</p>
+                                <p class="text-sm text-muted">Primește notificări când evenimentele favorite se apropie</p>
                             </div>
-                            <input type="checkbox" class="toggle" id="notif-favorites">
+                            <input type="checkbox" class="flex-none toggle" id="notif-favorites">
                         </label>
 
                         <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
                             <div>
                                 <p class="font-medium text-secondary">Istoric navigare</p>
-                                <p class="text-sm text-muted">Salveaza evenimentele vizualizate pentru recomandari personalizate</p>
+                                <p class="text-sm text-muted">Salvează evenimentele vizualizate pentru recomandări personalizate</p>
                             </div>
-                            <input type="checkbox" class="toggle" id="notif-history">
+                            <input type="checkbox" class="flex-none toggle" id="notif-history">
                         </label>
 
                         <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
                             <div>
                                 <p class="font-medium text-secondary">Cookie-uri marketing</p>
-                                <p class="text-sm text-muted">Permite afisarea de reclame personalizate</p>
+                                <p class="text-sm text-muted">Permite afișarea de reclame personalizate</p>
                             </div>
-                            <input type="checkbox" class="toggle" id="notif-marketing">
+                            <input type="checkbox" class="flex-none toggle" id="notif-marketing">
                         </label>
                     </div>
 
                     <div class="flex justify-end mt-4">
                         <button onclick="saveNotificationSettings()" class="btn btn-primary" id="saveNotificationsBtn">
-                            Salveaza preferintele
+                            Salvează preferințele
                         </button>
                     </div>
                 </div>
@@ -296,19 +296,19 @@ $judete = [
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                         </svg>
-                        Stergere cont
+                        Ștergere cont
                     </h2>
 
                     <p class="mb-4 text-sm text-muted">
-                        Odata ce contul este sters, toate datele tale vor fi sterse permanent. Aceasta actiune este ireversibila.
-                        Daca ai bilete pentru evenimente viitoare, nu vei putea sterge contul pana cand acestea nu au loc.
+                        Odată ce contul este șters, toate datele tale vor fi șterse permanent. Aceasta acțiune este ireversibilă.
+                        Dacă ai bilete pentru evenimente viitoare, nu vei putea șterge contul până când acestea nu au loc.
                     </p>
 
                     <button onclick="showDeleteConfirmation()" class="btn btn-danger" id="deleteAccountBtn">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                         </svg>
-                        Sterge contul meu
+                        Șterge contul meu
                     </button>
                 </div>
             </div>
@@ -316,9 +316,9 @@ $judete = [
             <!-- Delete Account Modal -->
             <div id="deleteModal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black/50">
                 <div class="w-full max-w-md p-6 mx-4 bg-white rounded-2xl">
-                    <h3 class="mb-4 text-lg font-bold text-error">Confirma stergerea contului</h3>
+                    <h3 class="mb-4 text-lg font-bold text-error">Confirmă ștergerea contului</h3>
                     <p class="mb-4 text-sm text-muted">
-                        Aceasta actiune este <strong>permanenta si ireversibila</strong>. Pentru a confirma, introdu parola ta.
+                        Aceasta acțiune este <strong>permanentă și ireversibilă</strong>. Pentru a confirma, introdu parola ta.
                     </p>
 
                     <form id="deleteAccountForm">
@@ -327,23 +327,23 @@ $judete = [
                             <input type="password" id="delete_password" name="password" placeholder="Introdu parola ta" required>
                         </div>
                         <div class="form-group">
-                            <label for="delete_reason">Motiv (optional)</label>
+                            <label for="delete_reason">Motiv (opțional)</label>
                             <select id="delete_reason" name="reason">
-                                <option value="">Selecteaza un motiv</option>
+                                <option value="">Selectează un motiv</option>
                                 <option value="Nu mai am nevoie de cont">Nu mai am nevoie de cont</option>
                                 <option value="Am un alt cont">Am un alt cont</option>
                                 <option value="Primesc prea multe emailuri">Primesc prea multe emailuri</option>
-                                <option value="Probleme de confidentialitate">Probleme de confidentialitate</option>
+                                <option value="Probleme de confidențialitate">Probleme de confidențialitate</option>
                                 <option value="Alt motiv">Alt motiv</option>
                             </select>
                         </div>
 
                         <div class="flex gap-3 mt-6">
                             <button type="button" onclick="hideDeleteConfirmation()" class="flex-1 btn bg-surface text-secondary hover:bg-gray-200">
-                                Anuleaza
+                                Anulează
                             </button>
                             <button type="submit" class="flex-1 btn btn-danger" id="confirmDeleteBtn">
-                                Sterge definitiv
+                                Șterge definitiv
                             </button>
                         </div>
                     </form>
@@ -381,7 +381,7 @@ const SettingsPage = {
             }
         } catch (error) {
             console.error('Failed to load profile:', error);
-            AmbiletNotifications.error('Eroare la incarcarea profilului');
+            AmbiletNotifications.error('Eroare la încărcarea profilului');
         }
     },
 
@@ -491,7 +491,7 @@ const SettingsPage = {
     async saveProfile() {
         const btn = document.getElementById('saveProfileBtn');
         const originalText = btn.innerHTML;
-        btn.innerHTML = '<span class="loading-spinner"></span> Se salveaza...';
+        btn.innerHTML = '<span class="loading-spinner"></span> Se salvează...';
         btn.disabled = true;
 
         try {
@@ -541,12 +541,12 @@ const SettingsPage = {
         const confirmPassword = document.getElementById('confirm_password').value;
 
         if (!currentPassword || !newPassword || !confirmPassword) {
-            AmbiletNotifications.error('Completeaza toate campurile');
+            AmbiletNotifications.error('Completează toate câmpurile');
             return;
         }
 
         if (newPassword.length < 8) {
-            AmbiletNotifications.error('Parola trebuie sa aiba minim 8 caractere');
+            AmbiletNotifications.error('Parola trebuie să aibă minim 8 caractere');
             return;
         }
 
@@ -557,14 +557,14 @@ const SettingsPage = {
 
         const btn = document.getElementById('changePasswordBtn');
         const originalText = btn.innerHTML;
-        btn.innerHTML = '<span class="loading-spinner"></span> Se schimba...';
+        btn.innerHTML = '<span class="loading-spinner"></span> Se schimbă...';
         btn.disabled = true;
 
         try {
             const response = await AmbiletAPI.customer.changePassword(currentPassword, newPassword, confirmPassword);
 
             if (response.success) {
-                AmbiletNotifications.success('Parola a fost schimbata cu succes!');
+                AmbiletNotifications.success('Parola a fost schimbată cu succes!');
                 document.getElementById('passwordForm').reset();
                 document.getElementById('passwordStrength').className = 'password-strength';
             } else {
@@ -590,24 +590,24 @@ const SettingsPage = {
 
         const btn = document.getElementById('confirmDeleteBtn');
         const originalText = btn.innerHTML;
-        btn.innerHTML = '<span class="loading-spinner"></span> Se sterge...';
+        btn.innerHTML = '<span class="loading-spinner"></span> Se șterge...';
         btn.disabled = true;
 
         try {
             const response = await AmbiletAPI.customer.deleteAccount(password, reason);
 
             if (response.success) {
-                AmbiletNotifications.success('Contul a fost sters');
+                AmbiletNotifications.success('Contul a fost șters');
                 AmbiletAuth.logout();
                 setTimeout(() => {
                     window.location.href = '/';
                 }, 1500);
             } else {
-                AmbiletNotifications.error(response.message || 'Eroare la stergerea contului');
+                AmbiletNotifications.error(response.message || 'Eroare la ștergerea contului');
             }
         } catch (error) {
             console.error('Delete account error:', error);
-            AmbiletNotifications.error(error.message || 'Eroare la stergerea contului');
+            AmbiletNotifications.error(error.message || 'Eroare la ștergerea contului');
         } finally {
             btn.innerHTML = originalText;
             btn.disabled = false;
@@ -617,7 +617,7 @@ const SettingsPage = {
     async saveBillingAddress() {
         const btn = document.getElementById('saveBillingBtn');
         const originalText = btn.innerHTML;
-        btn.innerHTML = '<span class="loading-spinner"></span> Se salveaza...';
+        btn.innerHTML = '<span class="loading-spinner"></span> Se salvează...';
         btn.disabled = true;
 
         try {
@@ -635,7 +635,7 @@ const SettingsPage = {
             });
 
             if (response.success) {
-                AmbiletNotifications.success('Adresa de facturare a fost salvata!');
+                AmbiletNotifications.success('Adresa de facturare a fost salvată!');
             } else {
                 AmbiletNotifications.error(response.message || 'Eroare la salvare');
             }
@@ -661,7 +661,7 @@ function hideDeleteConfirmation() {
 async function saveNotificationSettings() {
     const btn = document.getElementById('saveNotificationsBtn');
     const originalText = btn.innerHTML;
-    btn.innerHTML = '<span class="loading-spinner"></span> Se salveaza...';
+    btn.innerHTML = '<span class="loading-spinner"></span> Se salvează...';
     btn.disabled = true;
 
     try {
@@ -682,7 +682,7 @@ async function saveNotificationSettings() {
         AmbiletNotifications.success('Preferintele au fost salvate!');
     } catch (error) {
         console.error('Save notification settings error:', error);
-        AmbiletNotifications.error('Eroare la salvare. Incearca din nou.');
+        AmbiletNotifications.error('Eroare la salvare. Încearcă din nou.');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;

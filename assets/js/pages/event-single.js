@@ -1700,17 +1700,9 @@ const EventPage = {
      */
     setupLazyRelatedEvents() {
         var self = this;
-        var target = document.getElementById(this.elements.relatedEventsSection) ||
-                     document.getElementById(this.elements.customRelatedSection);
-        // Fallback: if no section element, use the wrapper div
-        if (!target) {
-            target = document.querySelector('.max-w-7xl > .related-events-scroll')?.closest('section');
-        }
-        // Use the parent container that wraps both related sections
-        var wrapper = document.querySelector('#related-events-section')?.parentElement;
-        if (!wrapper) wrapper = target;
-        if (!wrapper) {
-            // Fallback: just load immediately
+        // Use the always-visible sentinel div placed before the hidden sections
+        var sentinel = document.getElementById('related-events-sentinel');
+        if (!sentinel) {
             this.loadRelatedEvents();
             return;
         }
@@ -1721,9 +1713,8 @@ const EventPage = {
                     self.loadRelatedEvents();
                 }
             }, { rootMargin: '400px' }); // Start loading 400px before visible
-            observer.observe(wrapper);
+            observer.observe(sentinel);
         } else {
-            // Fallback for old browsers
             this.loadRelatedEvents();
         }
     },

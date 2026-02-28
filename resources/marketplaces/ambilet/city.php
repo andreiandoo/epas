@@ -114,12 +114,15 @@ require_once __DIR__ . '/includes/header.php'; ?>
             Filtre
             <span id="mobileFilterCount" class="hidden px-2 py-0.5 text-xs font-bold text-white rounded-full bg-primary">0</span>
         </button>
-        <select id="sortSelectMobile" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('sortSelect').value = this.value; CityPage.filter();">
-            <option value="date">Data</option>
-            <option value="popular">Popular</option>
-            <option value="price_asc">Preț ↑</option>
-            <option value="price_desc">Preț ↓</option>
-        </select>
+        <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-500">Sortare:</span>
+            <select id="sortSelectMobile" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="document.getElementById('sortSelect').value = this.value; CityPage.filter();">
+                <option value="date">Data</option>
+                <option value="popular">Popular</option>
+                <option value="price_asc">Preț ↑</option>
+                <option value="price_desc">Preț ↓</option>
+            </select>
+        </div>
     </div>
 </section>
 
@@ -250,7 +253,7 @@ function clearCityFilters() {
 </script>
 
 <!-- Events Grid -->
-<main class="px-4 py-12 mx-auto max-w-7xl">
+<main class="px-4 py-12 mx-auto max-w-7xl mobile:py-6">
     <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" id="eventsGrid">
         <!-- Loading skeletons -->
         <?php for ($i = 0; $i < 8; $i++): ?>
