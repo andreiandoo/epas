@@ -872,9 +872,9 @@ const EventPage = {
             this.renderTourEvents(e.tour_events, e.tour_name);
         }
 
-        // Related events (skip for ended events - banner already shows them)
+        // Related events — lazy-load when section scrolls into view
         if (!this.eventEnded) {
-            this.loadRelatedEvents();
+            this.setupLazyRelatedEvents();
         }
     },
 
@@ -1692,6 +1692,39 @@ const EventPage = {
             setTimeout(function() {
                 window.location.href = '/cos';
             }, 300);
+        }
+    },
+
+    /**
+     * Setup lazy loading for related events using Intersection Observer
+     */
+    setupLazyRelatedEvents() {
+        var self = this;
+        var target = document.getElementById(this.elements.relatedEventsSection) ||
+                     document.getElementById(this.elements.customRelatedSection);
+        // Fallback: if no section element, use the wrapper div
+        if (!target) {
+            target = document.querySelector('.max-w-7xl > .related-events-scroll')?.closest('section');
+        }
+        // Use the parent container that wraps both related sections
+        var wrapper = document.querySelector('#related-events-section')?.parentElement;
+        if (!wrapper) wrapper = target;
+        if (!wrapper) {
+            // Fallback: just load immediately
+            this.loadRelatedEvents();
+            return;
+        }
+        if ('IntersectionObserver' in window) {
+            var observer = new IntersectionObserver(function(entries) {
+                if (entries[0].isIntersecting) {
+                    observer.disconnect();
+                    self.loadRelatedEvents();
+                }
+            }, { rootMargin: '400px' }); // Start loading 400px before visible
+            observer.observe(wrapper);
+        } else {
+            // Fallback for old browsers
+            this.loadRelatedEvents();
         }
     },
 

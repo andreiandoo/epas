@@ -277,6 +277,9 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>">
 
+    <!-- Page-specific preloads (LCP image, etc.) -->
+    <?php if (!empty($extraHead)) echo $extraHead . "\n"; ?>
+
     <!-- Preconnect for Performance -->
     <link rel="preconnect" href="https://core.tixello.com">
     <link rel="dns-prefetch" href="https://core.tixello.com">
