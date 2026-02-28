@@ -66,6 +66,13 @@ require_once __DIR__ . '/includes/head.php';
 
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
+        /* Prevent event description from overflowing on mobile */
+        #event-description { overflow-x: hidden; overflow-wrap: break-word; word-break: break-word; }
+        #event-description img, #event-description iframe, #event-description video, #event-description table, #event-description pre {
+            max-width: 100%; height: auto;
+        }
+        #event-description table { display: block; overflow-x: auto; }
+
         .points-counter { animation: pointsPulse 0.3s ease; }
         @keyframes pointsPulse {
             0%, 100% { transform: scale(1); }
@@ -590,7 +597,19 @@ require_once __DIR__ . '/includes/head.php';
                 if (EventPage.eventEnded) return;
                 const mobileBtn = document.getElementById('mobileTicketBtn');
                 const minPriceEl = document.getElementById('mobileMinPrice');
+                const mobileBtnText = mobileBtn?.querySelector('span:not(#mobileMinPrice)');
                 if (mobileBtn) {
+                    // Check if event has seating
+                    const hasSeating = EventPage.seatingLayout && EventPage.ticketTypes.some(t => t.has_seating);
+
+                    // Update button text for seating events
+                    if (hasSeating && mobileBtnText) {
+                        mobileBtnText.textContent = 'Alege locul';
+                        // Override drawer open to open seating modal directly
+                        mobileBtn.querySelector('button').setAttribute('onclick',
+                            'if (EventPage.seatingLayout) { EventPage.openSeatSelection(); } else { openTicketDrawer(); }');
+                    }
+
                     // Find minimum price (skip 0-price if paid tickets exist)
                     const allPrices = EventPage.ticketTypes
                         .filter(t => !t.is_sold_out && t.available > 0)

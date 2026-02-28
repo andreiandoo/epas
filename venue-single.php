@@ -265,7 +265,7 @@ include __DIR__ . '/includes/header.php';
             <!-- Contact CTA -->
             <div class="p-6 bg-gradient-to-br from-secondary to-slate-600 rounded-2xl">
                 <h3 class="mb-4 text-base font-bold text-white">Organizezi un eveniment?</h3>
-                <button class="flex items-center justify-center gap-2 w-full py-3.5 bg-primary hover:bg-primary-dark rounded-xl text-white text-sm font-semibold transition-all mb-3">
+                <button onclick="VenuePage.openContactModal()" class="flex items-center justify-center gap-2 w-full py-3.5 bg-primary hover:bg-primary-dark rounded-xl text-white text-sm font-semibold transition-all mb-3">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                         <polyline points="22,6 12,13 2,6"/>
@@ -307,6 +307,49 @@ include __DIR__ . '/includes/header.php';
         </div>
     </section>
 </main>
+
+<!-- Contact Venue Modal -->
+<div id="contactVenueModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/60 backdrop-blur-sm" onclick="VenuePage.closeContactModal(event)">
+    <div class="w-full max-w-lg mx-4 bg-white shadow-2xl rounded-2xl" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-border">
+            <div>
+                <h2 class="text-lg font-bold text-secondary">Contactează locația</h2>
+                <p id="contactVenueName" class="text-sm text-muted"></p>
+            </div>
+            <button onclick="VenuePage.closeContactModal()" class="p-2 transition-colors rounded-lg hover:bg-surface">
+                <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form id="contactVenueForm" onsubmit="VenuePage.submitContactForm(event)" class="p-6 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block mb-1 text-sm font-medium text-secondary">Numele tău</label>
+                    <input type="text" name="name" required maxlength="100" class="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" placeholder="Nume și prenume">
+                </div>
+                <div>
+                    <label class="block mb-1 text-sm font-medium text-secondary">Email</label>
+                    <input type="email" name="email" required maxlength="150" class="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" placeholder="exemplu@email.com">
+                </div>
+            </div>
+            <div>
+                <label class="block mb-1 text-sm font-medium text-secondary">Subiect</label>
+                <input type="text" name="subject" required maxlength="200" class="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" placeholder="Despre ce este mesajul?">
+            </div>
+            <div>
+                <label class="block mb-1 text-sm font-medium text-secondary">Mesajul tău</label>
+                <textarea name="message" required maxlength="2000" rows="5" class="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none" placeholder="Scrie mesajul tău aici..."></textarea>
+            </div>
+            <div id="contactFormError" class="hidden p-3 text-sm text-red-700 bg-red-50 rounded-xl"></div>
+            <div id="contactFormSuccess" class="hidden p-3 text-sm text-green-700 bg-green-50 rounded-xl"></div>
+            <button type="submit" id="contactSubmitBtn" class="flex items-center justify-center w-full gap-2 py-3 text-sm font-semibold text-white transition-all bg-primary rounded-xl hover:bg-primary-dark">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                </svg>
+                <span>Trimite mesajul</span>
+            </button>
+        </form>
+    </div>
+</div>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
 

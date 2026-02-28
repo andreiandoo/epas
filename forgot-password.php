@@ -2,20 +2,21 @@
 require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Resetare Parolă';
 $pageDescription = 'Resetează parola contului tău';
+$bodyClass = 'min-h-screen flex bg-surface';
 require_once __DIR__ . '/includes/head.php';
 ?>
-<body class="min-h-screen flex">
+<body class="flex min-h-screen">
     <!-- Left Side - Branding -->
-    <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary-dark to-secondary bg-pattern relative overflow-hidden">
+    <div class="relative hidden overflow-hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary-dark to-secondary bg-pattern">
         <div class="absolute inset-0">
-            <div class="absolute top-20 left-20 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
-            <div class="absolute bottom-20 right-20 w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
+            <div class="absolute w-64 h-64 rounded-full top-20 left-20 bg-white/5 blur-3xl"></div>
+            <div class="absolute rounded-full bottom-20 right-20 w-96 h-96 bg-accent/10 blur-3xl"></div>
         </div>
 
         <div class="relative z-10 flex flex-col justify-between p-12 text-white">
             <div>
                 <a href="/" class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+                    <div class="flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur rounded-xl">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                     </div>
                     <span class="text-2xl font-extrabold"><?= SITE_NAME ?></span>
@@ -23,20 +24,20 @@ require_once __DIR__ . '/includes/head.php';
             </div>
 
             <div>
-                <h1 class="text-4xl font-bold mb-4">Ai uitat parola?</h1>
-                <p class="text-lg text-white/80 mb-8">Nu-ți face griji! Se întâmplă. Te vom ajuta să îți resetezi parola în câțiva pași simpli.</p>
+                <h1 class="mb-4 text-4xl font-bold">Ai uitat parola?</h1>
+                <p class="mb-8 text-lg text-white/80">Nu-ți face griji! Se întâmplă. Te vom ajuta să îți resetezi parola în câțiva pași simpli.</p>
 
                 <div class="space-y-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                        <div class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-full bg-white/20">1</div>
                         <span class="text-white/90">Introdu adresa de email</span>
                     </div>
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                        <div class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-full bg-white/20">2</div>
                         <span class="text-white/90">Verifică inbox-ul pentru link</span>
                     </div>
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                        <div class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-full bg-white/20">3</div>
                         <span class="text-white/90">Setează noua parolă</span>
                     </div>
                 </div>
@@ -49,38 +50,38 @@ require_once __DIR__ . '/includes/head.php';
     </div>
 
     <!-- Right Side - Form -->
-    <div class="flex-1 flex flex-col bg-surface">
+    <div class="flex flex-col flex-1 bg-surface">
         <!-- Mobile Header -->
-        <div class="lg:hidden p-4 border-b border-border bg-white">
+        <div class="p-4 bg-white border-b lg:hidden border-border">
             <a href="/" class="flex items-center gap-2">
-                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                <div class="flex items-center justify-center w-10 h-10 bg-primary rounded-xl">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 </div>
                 <span class="text-xl font-extrabold text-secondary"><?= SITE_NAME ?></span>
             </a>
         </div>
 
-        <div class="flex-1 flex items-center justify-center p-6 lg:p-12">
+        <div class="flex items-center justify-center flex-1 p-6 lg:p-12">
             <div class="w-full max-w-md">
                 <!-- Initial State - Request Form -->
                 <div id="requestForm">
-                    <a href="/autentificare" class="inline-flex items-center gap-2 text-sm text-muted hover:text-primary mb-8">
+                    <a href="/autentificare" class="inline-flex items-center gap-2 mb-8 text-sm text-muted hover:text-primary">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         Înapoi la autentificare
                     </a>
 
-                    <div class="text-center mb-8">
-                        <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <div class="mb-8 text-center">
+                        <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-2xl">
                             <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                         </div>
-                        <h2 class="text-2xl lg:text-3xl font-bold text-secondary mb-2">Resetare parolă</h2>
+                        <h2 class="mb-2 text-2xl font-bold lg:text-3xl text-secondary">Resetare parolă</h2>
                         <p class="text-muted">Introdu adresa de email asociată contului tău și îți vom trimite un link de resetare.</p>
                     </div>
 
                     <form onsubmit="ForgotPage.submit(event)" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-secondary mb-2">Email</label>
-                            <input type="email" id="emailInput" placeholder="nume@email.com" required class="input-focus w-full px-4 py-3 bg-white border border-border rounded-xl text-sm focus:outline-none transition-all">
+                            <label class="block mb-2 text-sm font-medium text-secondary">Email</label>
+                            <input type="email" id="emailInput" placeholder="nume@email.com" required class="w-full px-4 py-3 text-sm transition-all bg-white border input-focus border-border rounded-xl focus:outline-none">
                         </div>
 
                         <button type="submit" id="submitBtn" class="btn-primary w-full py-3.5 text-white font-semibold rounded-xl text-sm">
@@ -88,24 +89,24 @@ require_once __DIR__ . '/includes/head.php';
                         </button>
                     </form>
 
-                    <p class="text-center text-sm text-muted mt-6">
+                    <p class="mt-6 text-sm text-center text-muted">
                         Ți-ai amintit parola?
-                        <a href="/autentificare" class="text-primary font-semibold">Autentifică-te</a>
+                        <a href="/autentificare" class="font-semibold text-primary">Autentifică-te</a>
                     </p>
                 </div>
 
                 <!-- Success State - Email Sent -->
                 <div id="successState" class="hidden">
                     <div class="text-center">
-                        <div class="email-sent-animation w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <div class="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full email-sent-animation bg-success/10">
                             <svg class="w-10 h-10 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                         </div>
-                        <h2 class="text-2xl font-bold text-secondary mb-2">Verifică-ți email-ul</h2>
-                        <p class="text-muted mb-2">Am trimis instrucțiunile de resetare la:</p>
-                        <p id="sentEmail" class="text-secondary font-semibold mb-6">email@example.com</p>
+                        <h2 class="mb-2 text-2xl font-bold text-secondary">Verifică-ți email-ul</h2>
+                        <p class="mb-2 text-muted">Am trimis instrucțiunile de resetare la:</p>
+                        <p id="sentEmail" class="mb-6 font-semibold text-secondary">email@example.com</p>
 
-                        <div class="bg-white rounded-xl p-4 mb-6 text-left border border-border">
-                            <p class="text-sm text-muted mb-3">Nu ai primit email-ul? Verifică:</p>
+                        <div class="p-4 mb-6 text-left bg-white border rounded-xl border-border">
+                            <p class="mb-3 text-sm text-muted">Nu ai primit email-ul? Verifică:</p>
                             <ul class="space-y-2 text-sm text-muted">
                                 <li class="flex items-center gap-2">
                                     <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -122,11 +123,11 @@ require_once __DIR__ . '/includes/head.php';
                             </ul>
                         </div>
 
-                        <button onclick="ForgotPage.resend()" id="resendBtn" class="w-full py-3 bg-white border border-border text-secondary font-medium rounded-xl text-sm hover:bg-primary/10 hover:text-primary hover:border-primary transition-colors mb-3">
+                        <button onclick="ForgotPage.resend()" id="resendBtn" class="w-full py-3 mb-3 text-sm font-medium transition-colors bg-white border border-border text-secondary rounded-xl hover:bg-primary/10 hover:text-primary hover:border-primary">
                             Retrimite email-ul
                         </button>
 
-                        <a href="/login" class="block w-full py-3 text-center text-primary font-medium text-sm">
+                        <a href="/autentificare" class="block w-full py-3 text-sm font-medium text-center text-primary">
                             Înapoi la autentificare
                         </a>
                     </div>
@@ -135,7 +136,7 @@ require_once __DIR__ . '/includes/head.php';
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t border-border lg:hidden bg-white">
+        <div class="p-4 bg-white border-t border-border lg:hidden">
             <p class="text-xs text-center text-muted">© <?= date('Y') ?> <?= SITE_NAME ?>. Toate drepturile rezervate.</p>
         </div>
     </div>

@@ -285,7 +285,7 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <link rel="dns-prefetch" href="https://core.tixello.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <!-- cdn.tailwindcss.com removed: using pre-built tailwind.min.css -->
     <link rel="dns-prefetch" href="//images.unsplash.com">
 
     <!-- Fonts (non-render-blocking: preload + print swap) -->
@@ -293,8 +293,8 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 
-    <!-- Tailwind CSS CDN & Config -->
-    <?php require_once __DIR__ . '/tailwind-config.php'; ?>
+    <!-- Tailwind CSS (pre-built, replaces CDN) -->
+    <link rel="stylesheet" href="<?= asset('assets/css/tailwind.min.css') ?>">
 
     <!-- Google Consent Mode v2 — MUST be before any tracking scripts -->
     <script>

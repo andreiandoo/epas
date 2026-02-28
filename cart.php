@@ -465,7 +465,7 @@ const CartPage = {
 
         return '<div class="bg-white border-2 cart-item rounded-2xl border-border" data-item-key="' + itemKey + '" data-index="' + index + '">' +
             '<div class="flex gap-4 p-3">' +
-                '<div class="w-24 h-24 overflow-hidden rounded-xl shrink-0">' +
+                '<div class="w-24 h-24 overflow-hidden rounded-xl shrink-0 mobile:w-12 mobile:h-12">' +
                     '<img src="' + eventImage + '" alt="' + eventTitle + '" class="object-cover w-full h-full" loading="lazy">' +
                 '</div>' +
                 '<div class="flex-1 min-w-0">' +
@@ -483,7 +483,7 @@ const CartPage = {
                             '</svg>' +
                         '</button>' +
                     '</div>' +
-                    '<div class="flex items-center justify-between mt-3">' +
+                    '<div class="flex items-center justify-between mt-3 mobile:hidden">' +
                         '<div class="relative inline-block tooltip-trigger">' +
                             '<div class="flex items-center gap-2">' +
                                 '<span class="inline-flex items-center px-2 py-1 text-sm font-semibold text-secondary">' + ticketTypeName +
@@ -521,6 +521,46 @@ const CartPage = {
                             '<div class="font-bold text-primary">' + AmbiletUtils.formatCurrency(price * quantity) + '</div>' +
                         '</div>' +
                     '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="items-center justify-between hidden px-2 pb-2 mobile:flex">' +
+                '<div class="relative inline-block tooltip-trigger">' +
+                    '<div class="flex items-center gap-2">' +
+                        '<span class="inline-flex items-center py-1 pr-2 text-sm font-semibold text-secondary">' + ticketTypeName +
+                            (hasDiscount ? ' <span class="discount-badge text-white text-[10px] font-bold py-0.5 px-1.5 rounded-full ml-1">-' + discountPercent + '%</span>' : '') +
+                        '</span>' +
+                        '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+                    '</div>' +
+                    (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
+                    (seats.length > 0 ? '<p class="mt-1 mr-4 text-xs text-primary"><svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
+                    '<div class="absolute left-0 z-10 p-4 mt-2 text-white shadow-xl tooltip top-full w-72 bg-secondary rounded-xl">' + tooltipHtml + '</div>' +
+                '</div>' +
+                '<div class="flex-none text-right">' +
+                    '<div class="flex items-center gap-2">' +
+                        (hasDiscount ? '<div class="text-sm line-through text-muted">' + AmbiletUtils.formatCurrency(originalPrice * quantity) + '</div>' : '') +
+                        '<div class="font-bold text-primary">' + AmbiletUtils.formatCurrency(price * quantity) + '</div>' +
+                    '</div>' +
+                    (hasSeats ?
+                    '<div class="flex items-center gap-2 ml-auto">' +
+                        '<span class="w-8 font-semibold text-center">' + quantity + '</span>' +
+                        '<a href="/bilete/' + eventSlug + '" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors flex-none">' +
+                            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+                            'Adaugă locuri' +
+                        '</a>' +
+                    '</div>' :
+                    '<div class="flex items-center gap-2 ml-auto">' +
+                        '<button onclick="CartPage.updateQuantity(' + index + ', -1)" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
+                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>' +
+                            '</svg>' +
+                        '</button>' +
+                        '<span class="w-8 font-semibold text-center">' + quantity + '</span>' +
+                        '<button onclick="CartPage.updateQuantity(' + index + ', 1)" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
+                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>' +
+                            '</svg>' +
+                        '</button>' +
+                    '</div>') +
                 '</div>' +
             '</div>' +
         '</div>';
