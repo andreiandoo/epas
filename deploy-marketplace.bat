@@ -113,9 +113,9 @@ exit /b 0
 :minify_assets
 echo [4/7] Minifying assets...
 
-where npx >nul 2>&1
+where terser >nul 2>&1
 if errorlevel 1 (
-    echo       [SKIP] npx not found, skipping minification
+    echo       [SKIP] terser not found. Install with: npm install -g terser
     goto :eof
 )
 
@@ -125,13 +125,14 @@ for /r "assets\js" %%f in (*.js) do call :minify_one_js "%%f" "%%~nxf"
 echo       JS: !MINIFIED! files minified.
 
 :: Minify CSS
-if exist "assets\css\custom.css" (
-    call npx clean-css-cli -o "assets\css\custom.css.tmp" "assets\css\custom.css" 2>nul
-    if exist "assets\css\custom.css.tmp" (
-        move /y "assets\css\custom.css.tmp" "assets\css\custom.css" >nul
-        echo       CSS: custom.css minified.
-    ) else (
-        echo       CSS: [SKIP] clean-css-cli not available
+where cleancss >nul 2>&1
+if not errorlevel 1 (
+    if exist "assets\css\custom.css" (
+        call cleancss -o "assets\css\custom.css.tmp" "assets\css\custom.css" 2>nul
+        if exist "assets\css\custom.css.tmp" (
+            move /y "assets\css\custom.css.tmp" "assets\css\custom.css" >nul
+            echo       CSS: custom.css minified.
+        )
     )
 )
 goto :eof
@@ -141,7 +142,7 @@ goto :eof
 :: Subroutine: Minify a single JS file
 :: ============================================================
 :minify_one_js
-call npx terser "%~1" --compress --mangle -o "%~1.tmp" 2>nul
+call terser "%~1" --compress --mangle -o "%~1.tmp" 2>nul
 if exist "%~1.tmp" (
     move /y "%~1.tmp" "%~1" >nul
     set /a MINIFIED+=1
