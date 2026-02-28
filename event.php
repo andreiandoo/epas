@@ -1,10 +1,39 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/api.php';
 
 $eventSlug = $_GET['slug'] ?? '';
 $pageTitle = 'Eveniment';
 $pageDescription = 'Detalii eveniment si cumparare bilete';
 $bodyClass = 'bg-surface';
+
+// Server-side: fetch event data for LCP image preload and SEO meta
+$eventPreload = null;
+if ($eventSlug) {
+    $eventPreload = api_cached('event_preload_' . $eventSlug, function () use ($eventSlug) {
+        return api_get('/events/' . urlencode($eventSlug));
+    }, 120); // 2min cache
+    if (!empty($eventPreload['data'])) {
+        $ev = $eventPreload['data'];
+        $pageTitle = $ev['name'] ?? $ev['title'] ?? $pageTitle;
+        $pageDescription = !empty($ev['short_description']) ? mb_substr(strip_tags($ev['short_description']), 0, 160) : $pageDescription;
+    }
+}
+
+// Build LCP image URL for preload
+$lcpImageUrl = '';
+if (!empty($eventPreload['data'])) {
+    $ev = $eventPreload['data'];
+    $heroImg = $ev['hero_image_url'] ?? $ev['cover_image_url'] ?? $ev['poster_url'] ?? $ev['image_url'] ?? $ev['image'] ?? '';
+    if ($heroImg) {
+        $lcpImageUrl = (str_starts_with($heroImg, 'http') ? '' : STORAGE_URL . '/') . $heroImg;
+    }
+}
+
+// Extra head tags for LCP preload
+if ($lcpImageUrl) {
+    $extraHead = '<link rel="preload" as="image" href="' . htmlspecialchars($lcpImageUrl) . '" fetchpriority="high">';
+}
 
 require_once __DIR__ . '/includes/head.php';
 ?>
@@ -137,7 +166,7 @@ require_once __DIR__ . '/includes/head.php';
                 <div class="mb-8 bg-white border rounded-3xl border-border mobile:border-0 mobile:border-b mobile:rounded-none">
                     <!-- Main Image -->
                     <div class="relative overflow-hidden rounded-t-3xl mobile:rounded-none" style="aspect-ratio: 1.904/1;">
-                        <img id="mainImage" src="" alt="" class="object-cover w-full h-full">
+                        <img id="mainImage" src="<?= htmlspecialchars($lcpImageUrl) ?>" alt="<?= htmlspecialchars($pageTitle) ?>" class="object-cover w-full h-full" fetchpriority="high" width="800" height="420">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                         <div class="absolute flex gap-2 top-4 left-4" id="event-badges"></div>
                     </div>

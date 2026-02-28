@@ -872,9 +872,9 @@ const EventPage = {
             this.renderTourEvents(e.tour_events, e.tour_name);
         }
 
-        // Related events (skip for ended events - banner already shows them)
+        // Related events — lazy-load when section scrolls into view
         if (!this.eventEnded) {
-            this.loadRelatedEvents();
+            this.setupLazyRelatedEvents();
         }
     },
 
@@ -1137,7 +1137,7 @@ const EventPage = {
             allHtml += '<div class="flex flex-col gap-6 md:flex-row ' + containerClass + (i > 0 ? ' pt-6 mt-6' + (isHeadliner ? '' : ' border-t border-border') : '') + '">' +
                 '<div class="' + imageColClass + '">' +
                     '<a href="' + artistLink + '" class="relative block">' +
-                        '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105 mobile:h-40" loading="lazy">' +
+                        '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105 mobile:h-40" loading="lazy" width="300" height="300">' +
                         (isHeadliner ? '<div class="absolute px-2 py-1 text-xs font-bold text-white rounded-lg shadow-lg top-3 left-3 bg-gradient-to-r from-amber-500 to-amber-600">★ HEADLINER</div>' : '') +
                     '</a>' +
                 '</div>' +
@@ -1181,7 +1181,7 @@ const EventPage = {
 
         var html = '<div class="flex flex-col md:items-center gap-6 md:flex-row px-8 mobile:px-0">' +
             '<div class="md:w-1/4">' +
-                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-32 mb-4 rounded-2xl" loading="lazy">' +
+                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-32 mb-4 rounded-2xl" loading="lazy" width="300" height="128">' +
             '</div>' +
             '<div class="md:w-3/4">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
@@ -1696,6 +1696,39 @@ const EventPage = {
     },
 
     /**
+     * Setup lazy loading for related events using Intersection Observer
+     */
+    setupLazyRelatedEvents() {
+        var self = this;
+        var target = document.getElementById(this.elements.relatedEventsSection) ||
+                     document.getElementById(this.elements.customRelatedSection);
+        // Fallback: if no section element, use the wrapper div
+        if (!target) {
+            target = document.querySelector('.max-w-7xl > .related-events-scroll')?.closest('section');
+        }
+        // Use the parent container that wraps both related sections
+        var wrapper = document.querySelector('#related-events-section')?.parentElement;
+        if (!wrapper) wrapper = target;
+        if (!wrapper) {
+            // Fallback: just load immediately
+            this.loadRelatedEvents();
+            return;
+        }
+        if ('IntersectionObserver' in window) {
+            var observer = new IntersectionObserver(function(entries) {
+                if (entries[0].isIntersecting) {
+                    observer.disconnect();
+                    self.loadRelatedEvents();
+                }
+            }, { rootMargin: '400px' }); // Start loading 400px before visible
+            observer.observe(wrapper);
+        } else {
+            // Fallback for old browsers
+            this.loadRelatedEvents();
+        }
+    },
+
+    /**
      * Load related events from the same category
      */
     async loadRelatedEvents() {
@@ -1787,7 +1820,7 @@ const EventPage = {
 
             // Image container with overlay
             '<div class="relative h-52 overflow-hidden">' +
-                '<img src="' + image + '" alt="' + esc(title) + '" class="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110" loading="lazy">' +
+                '<img src="' + image + '" alt="' + esc(title) + '" class="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110" loading="lazy" width="400" height="208">' +
 
                 // Gradient overlay
                 '<div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>' +
@@ -1905,7 +1938,7 @@ const EventPage = {
             html += '</div>';
             // Image
             html += '<div class="flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden hidden sm:block">';
-            html += '<img src="' + imgSrc + '" alt="' + te.name + '" class="w-full h-full object-cover">';
+            html += '<img src="' + imgSrc + '" alt="' + te.name + '" class="w-full h-full object-cover" width="64" height="48">';
             html += '</div>';
             // Info
             html += '<div class="flex-1 min-w-0">';
