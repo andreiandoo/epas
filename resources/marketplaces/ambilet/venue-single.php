@@ -316,7 +316,7 @@ include __DIR__ . '/includes/header.php';
                 <h2 class="text-lg font-bold text-secondary">Contactează locația</h2>
                 <p id="contactVenueName" class="text-sm text-muted"></p>
             </div>
-            <button onclick="VenuePage.closeContactModal()" class="p-2 transition-colors rounded-lg hover:bg-surface">
+            <button onclick="VenuePage.closeContactModal()" class="p-2 transition-colors rounded-lg hover:bg-surface" aria-label="Închide">
                 <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>

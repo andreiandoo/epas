@@ -5,7 +5,7 @@
 ?>
 
 <!-- Organizer Footer -->
-<footer class="bg-gradient-to-br from-slate-900 to-slate-800 px-4 py-3.5 md:px-6 rounded-b-xl border-t border-primary/30">
+<footer class="bg-gradient-to-br from-slate-900 to-slate-800 px-4 py-3.5 md:px-6 rounded-b-xl border-t border-primary/30 mobile:rounded-none">
     <div class="flex flex-col items-center justify-between max-w-6xl gap-3 mx-auto md:flex-row md:gap-5">
         <!-- Left: Brand & Links -->
         <div class="flex flex-col items-center gap-3 md:flex-row md:gap-5">
@@ -18,15 +18,15 @@
             </div>
             <div class="hidden w-px h-5 bg-white/10 md:block"></div>
             <div class="flex items-center gap-4">
-                <a href="/organizator/docs" class="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors">
+                <a href="/organizator/docs" class="flex items-center gap-1.5 text-xs text-white/90 hover:text-white transition-colors">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     Documentatie
                 </a>
-                <a href="/organizator/api" class="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors">
+                <a href="/organizator/api" class="flex items-center gap-1.5 text-xs text-white/90 hover:text-white transition-colors">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                     API
                 </a>
-                <a href="/organizator/terms" class="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors">
+                <a href="/organizator/terms" class="flex items-center gap-1.5 text-xs text-white/90 hover:text-white transition-colors">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>
                     Termeni
                 </a>
@@ -49,7 +49,7 @@
                     <img src="https://tixello.com/wp-content/themes/tix/assets/images/tixello-white.svg" alt="Tixello" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>
                 </a>
             </div>
-            <a href="/organizator/support" class="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-md text-[11px] font-semibold text-white/60 hover:bg-white/10 hover:text-white transition-all">
+            <a href="/organizator/support" class="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-md text-[11px] font-semibold text-white/90 hover:bg-white/10 hover:text-white transition-all">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 Suport prioritar
             </a>

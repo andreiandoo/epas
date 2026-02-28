@@ -101,7 +101,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
         <div class="absolute rounded-full -bottom-36 -left-24 w-80 h-80 bg-primary/20 blur-3xl"></div>
         <div class="relative z-10 max-w-2xl mx-auto">
             <h1 class="mb-4 text-4xl font-extrabold text-white md:text-5xl">Organizatori</h1>
-            <p class="text-lg leading-relaxed text-white/70">Descoperă organizatorii de evenimente din România. De la festivaluri mari la petreceri intime, găsește evenimentele perfecte pentru tine.</p>
+            <p class="text-lg leading-relaxed text-white/90">Descoperă organizatorii de evenimente din România. De la festivaluri mari la petreceri intime, găsește evenimentele perfecte pentru tine.</p>
         </div>
     </section>
 
@@ -192,7 +192,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
                         <?php endif; ?>
                         <h3 class="mb-1 text-xl font-bold text-white"><?= htmlspecialchars($org['name']) ?></h3>
                         <?php if (!empty($org['city'])): ?>
-                        <p class="flex items-center gap-1.5 mb-4 text-sm text-white/60">
+                        <p class="flex items-center gap-1.5 mb-4 text-sm text-white/90">
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
                             </svg>
@@ -204,7 +204,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
                         <div class="flex gap-5">
                             <div class="text-center">
                                 <div class="text-lg font-bold text-white"><?= (int) ($org['event_count'] ?? 0) ?></div>
-                                <div class="text-[11px] text-white/50 uppercase tracking-wider">Evenimente</div>
+                                <div class="text-[11px] text-white/90 uppercase tracking-wider">Evenimente</div>
                             </div>
                         </div>
                     </div>
@@ -357,7 +357,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
             <div class="relative z-10">
                 <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-primary/20 border border-primary/30 rounded-full text-xs font-semibold text-red-300 mb-4">Pentru organizatori</span>
                 <h2 class="mb-3 text-3xl font-extrabold text-white">Organizezi evenimente?</h2>
-                <p class="mb-6 leading-relaxed text-white/70">Alătură-te comunității de organizatori și ajunge la mii de pasionați de evenimente. Vânzări online, statistici în timp real și suport dedicat.</p>
+                <p class="mb-6 leading-relaxed text-white/90">Alătură-te comunității de organizatori și ajunge la mii de pasionați de evenimente. Vânzări online, statistici în timp real și suport dedicat.</p>
                 <a href="/become-organizer" class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-primary-dark rounded-xl text-white font-semibold hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/40 transition-all">
                     Începe acum gratuit
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -390,7 +390,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
                     </div>
                     <div>
                         <h4 class="mb-1 text-base font-bold text-white"><?= $feature['title'] ?></h4>
-                        <p class="text-sm text-white/60"><?= $feature['desc'] ?></p>
+                        <p class="text-sm text-white/90"><?= $feature['desc'] ?></p>
                     </div>
                 </div>
                 <?php endforeach; ?>

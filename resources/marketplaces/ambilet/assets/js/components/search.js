@@ -288,13 +288,13 @@ const AmbiletSearch = {
         const venue = event.venue?.name || event.venue_name || '';
 
         return `
-            <a href="/bilete/${event.slug}" class="flex gap-3 p-3 transition-all border border-transparent rounded-xl hover:bg-gray-50 hover:border-gray-200">
+            <a href="/bilete/${event.slug}" class="flex gap-3 p-3 items-center transition-all border border-transparent rounded-xl hover:bg-gray-50 hover:border-gray-200">
                 <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-lg bg-gray-100">
                     <img src="${image}" alt="${this.escapeHtml(event.title)}" class="object-cover w-full h-full" loading="lazy">
                 </div>
                 <div class="flex-1 min-w-0">
-                    <div class="text-sm font-semibold text-gray-900 truncate">${this.escapeHtml(event.title)}</div>
-                    <div class="text-xs text-gray-500 truncate">${date}${venue ? ' • ' + this.escapeHtml(venue) : ''}</div>
+                    <div class="text font-semibold text-gray-900 truncate">${this.escapeHtml(event.title)}</div>
+                    <div class="text-sm text-gray-500 truncate">${date}${venue ? ' • ' + this.escapeHtml(venue) : ''}</div>
                     ${price ? `<div class="text-xs font-semibold text-primary mt-1">${price}</div>` : ''}
                 </div>
             </a>

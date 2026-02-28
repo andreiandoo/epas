@@ -15,7 +15,7 @@ require_once __DIR__ . '/includes/header.php';
                 Media Resources
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">Press Kit</h1>
-            <p class="text-lg text-white/70 leading-relaxed mb-8 max-w-xl mx-auto">Tot ce ai nevoie pentru a scrie despre AmBilet. Logo-uri, culori, fonturi si informatii despre brand.</p>
+            <p class="text-lg text-white/90 leading-relaxed mb-8 max-w-xl mx-auto">Tot ce ai nevoie pentru a scrie despre AmBilet. Logo-uri, culori, fonturi si informatii despre brand.</p>
             <a href="/assets/downloads/ambilet-press-kit.zip" class="inline-flex items-center gap-2.5 px-8 py-4 bg-gradient-to-br from-primary to-red-600 text-white rounded-xl text-[15px] font-bold hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(165,28,48,0.4)] transition-all">
                 <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Descarca Press Kit
@@ -236,7 +236,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="absolute -top-[100px] -right-[100px] w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(165,28,48,0.2),transparent_70%)] pointer-events-none"></div>
             <div class="relative z-10">
                 <h2 class="text-2xl md:text-[32px] font-extrabold text-white mb-3">Contact pentru presa</h2>
-                <p class="text-base text-white/70 mb-8">Pentru interviuri, parteneriate media sau informatii suplimentare.</p>
+                <p class="text-base text-white/90 mb-8">Pentru interviuri, parteneriate media sau informatii suplimentare.</p>
                 <div class="inline-flex items-center gap-3 px-8 py-4 bg-white/10 border border-white/20 rounded-xl">
                     <svg class="w-6 h-6 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                     <a href="mailto:press@ambilet.ro" class="text-lg font-semibold text-white">press@ambilet.ro</a>

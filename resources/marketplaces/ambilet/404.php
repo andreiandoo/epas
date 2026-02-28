@@ -82,7 +82,7 @@ $darkPage = true;
 
             <!-- Title & Message -->
             <h1 class="text-2xl md:text-[32px] font-bold text-white mb-4">Biletul nu a fost gasit</h1>
-            <p class="mb-10 text-base leading-relaxed md:text-lg text-white/60">Se pare ca aceasta pagina nu exista sau a fost mutata. Poate biletul a fost deja scanat?</p>
+            <p class="mb-10 text-base leading-relaxed md:text-lg text-white/90">Se pare ca aceasta pagina nu exista sau a fost mutata. Poate biletul a fost deja scanat?</p>
 
             <!-- Action Buttons -->
             <div class="flex flex-col justify-center gap-4 sm:flex-row">
@@ -100,15 +100,15 @@ $darkPage = true;
             <div class="pt-10 border-t mt-14 border-white/10">
                 <div class="mb-5 text-sm font-semibold tracking-wider uppercase text-white/40">Link-uri utile</div>
                 <div class="flex flex-wrap justify-center gap-6">
-                    <a href="/ajutor" class="flex items-center gap-1.5 text-[15px] text-white/60 hover:text-accent transition-colors">
+                    <a href="/ajutor" class="flex items-center gap-1.5 text-[15px] text-white/90 hover:text-accent transition-colors">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                         Centru de ajutor
                     </a>
-                    <a href="/contact" class="flex items-center gap-1.5 text-[15px] text-white/60 hover:text-accent transition-colors">
+                    <a href="/contact" class="flex items-center gap-1.5 text-[15px] text-white/90 hover:text-accent transition-colors">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                         Contact
                     </a>
-                    <a href="/cont/bilete" class="flex items-center gap-1.5 text-[15px] text-white/60 hover:text-accent transition-colors">
+                    <a href="/cont/bilete" class="flex items-center gap-1.5 text-[15px] text-white/90 hover:text-accent transition-colors">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 3 3v1a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1a3 3 0 0 1 0-6V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v1a3 3 0 0 1-3 3Z"/></svg>
                         Biletele mele
                     </a>

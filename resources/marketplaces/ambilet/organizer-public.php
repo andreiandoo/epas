@@ -250,7 +250,7 @@ require_once __DIR__ . '/includes/header.php';
             <!-- Contact Card -->
             <div class="p-6 bg-gradient-to-br from-gray-900 to-gray-700 rounded-2xl">
                 <h3 class="mb-2 text-base font-bold text-white">Interesat de colaborare?</h3>
-                <p class="mb-5 text-sm text-white/70">Contactează organizatorul pentru evenimente private sau corporate.</p>
+                <p class="mb-5 text-sm text-white/90">Contactează organizatorul pentru evenimente private sau corporate.</p>
                 <button class="w-full flex items-center justify-center gap-2 py-3.5 bg-primary rounded-lg text-white text-sm font-semibold hover:bg-primary-dark transition-colors mb-3">
                     <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>

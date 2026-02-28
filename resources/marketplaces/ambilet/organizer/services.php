@@ -2367,8 +2367,8 @@ const placementPreviews = {
                     <div class="absolute inset-0 flex flex-col justify-end p-5">
                         <div class="flex items-center gap-2 mb-1.5">
                             <span class="text-[10px] text-yellow-400 font-bold uppercase tracking-widest">★ Promovat</span>
-                            <span class="text-[10px] text-white/50">•</span>
-                            <span class="text-[10px] text-white/70 uppercase tracking-wide">Concert</span>
+                            <span class="text-[10px] text-white/90">•</span>
+                            <span class="text-[10px] text-white/90 uppercase tracking-wide">Concert</span>
                         </div>
                         <h2 class="text-white text-xl font-black mb-1 max-w-sm drop-shadow-lg leading-tight">${eventName}</h2>
                         <p class="text-gray-300 text-xs mb-3 flex items-center gap-2">

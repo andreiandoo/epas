@@ -214,7 +214,7 @@ const ReviewsPage = {
                 <div class="flex flex-col gap-4 p-5 md:flex-row">
                     <div class="flex items-center justify-center flex-shrink-0 w-full h-32 md:w-24 md:h-24 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500">
                         ${review.event_image ? `<img src="${review.event_image}" alt="${review.event_title}" class="object-cover w-full h-full rounded-xl">` : `
-                        <svg class="w-10 h-10 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                        <svg class="w-10 h-10 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
                         `}
                     </div>
                     <div class="flex-1 min-w-0">

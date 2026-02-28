@@ -73,29 +73,29 @@ $eventId = $_GET['event'] ?? null;
                     <div>
                         <h2 id="report-event-title" class="text-2xl font-bold">Raport Final</h2>
                         <p id="report-event-date" class="text-white/80 text-sm mt-1"></p>
-                        <p id="report-event-venue" class="text-white/60 text-sm"></p>
+                        <p id="report-event-venue" class="text-white/90 text-sm"></p>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <div class="p-4 bg-white/10 rounded-xl text-center">
                         <div id="summary-revenue" class="text-2xl font-bold">0 lei</div>
-                        <div class="text-xs text-white/70">Venituri totale</div>
+                        <div class="text-xs text-white/90">Venituri totale</div>
                     </div>
                     <div class="p-4 bg-white/10 rounded-xl text-center">
                         <div id="summary-tickets" class="text-2xl font-bold">0</div>
-                        <div class="text-xs text-white/70">Bilete vândute</div>
+                        <div class="text-xs text-white/90">Bilete vândute</div>
                     </div>
                     <div class="p-4 bg-white/10 rounded-xl text-center">
                         <div id="summary-commission" class="text-2xl font-bold">0%</div>
-                        <div id="summary-commission-label" class="text-xs text-white/70">Comision</div>
+                        <div id="summary-commission-label" class="text-xs text-white/90">Comision</div>
                     </div>
                     <div class="p-4 bg-white/10 rounded-xl text-center">
                         <div id="summary-views" class="text-2xl font-bold">0</div>
-                        <div class="text-xs text-white/70">Vizualizări</div>
+                        <div class="text-xs text-white/90">Vizualizări</div>
                     </div>
                     <div class="p-4 bg-white/10 rounded-xl text-center">
                         <div id="summary-conversion" class="text-2xl font-bold">0%</div>
-                        <div class="text-xs text-white/70">Rată conversie</div>
+                        <div class="text-xs text-white/90">Rată conversie</div>
                     </div>
                 </div>
             </div>
@@ -190,19 +190,19 @@ $eventId = $_GET['event'] ?? null;
             <h2 class="mb-6 text-lg font-semibold">Sumar financiar</h2>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
                 <div>
-                    <div class="text-sm text-white/60 mb-1">Venituri brute</div>
+                    <div class="text-sm text-white/90 mb-1">Venituri brute</div>
                     <div id="financial-gross" class="text-2xl font-bold">0 lei</div>
                 </div>
                 <div>
-                    <div class="text-sm text-white/60 mb-1">Rambursări</div>
+                    <div class="text-sm text-white/90 mb-1">Rambursări</div>
                     <div id="financial-refunds" class="text-2xl font-bold text-red-400">-0 lei</div>
                 </div>
                 <div>
-                    <div id="financial-commission-label" class="text-sm text-white/60 mb-1">Comision platformă (5%)</div>
+                    <div id="financial-commission-label" class="text-sm text-white/90 mb-1">Comision platformă (5%)</div>
                     <div id="financial-commission" class="text-2xl font-bold text-amber-400">-0 lei</div>
                 </div>
                 <div>
-                    <div class="text-sm text-white/60 mb-1">Venituri nete</div>
+                    <div class="text-sm text-white/90 mb-1">Venituri nete</div>
                     <div id="financial-net" class="text-2xl font-bold text-emerald-400">0 lei</div>
                 </div>
             </div>

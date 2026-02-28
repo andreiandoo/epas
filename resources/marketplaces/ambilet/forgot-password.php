@@ -43,7 +43,7 @@ require_once __DIR__ . '/includes/head.php';
                 </div>
             </div>
 
-            <div class="text-sm text-white/60">
+            <div class="text-sm text-white/90">
                 © <?= date('Y') ?> <?= SITE_NAME ?>. Toate drepturile rezervate.
             </div>
         </div>

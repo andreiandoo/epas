@@ -59,7 +59,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
     <img id="categoryBanner" src="<?= htmlspecialchars($categoryHeroImage) ?>" alt="<?= htmlspecialchars($pageTitle) ?>" class="absolute inset-0 object-cover w-full h-full">
     <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/40"></div>
     <div class="relative flex flex-col justify-end h-full px-4 pb-12 mx-auto max-w-7xl">
-        <nav class="flex items-center gap-2 mb-4 text-sm text-white/60">
+        <nav class="flex items-center gap-2 mb-4 text-sm text-white/90">
             <a href="/" class="transition-colors hover:text-white">Acasa</a>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             <span class="text-white" id="breadcrumbTitle"><?= htmlspecialchars($pageTitle) ?></span>

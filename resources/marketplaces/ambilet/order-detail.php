@@ -238,7 +238,7 @@ require_once 'includes/header.php';
             <!-- Help Box -->
             <div class="bg-gradient-to-br from-slate-800 to-slate-600 rounded-2xl p-6 mt-6">
                 <h4 class="text-[15px] font-bold text-white mb-2">Ai nevoie de ajutor?</h4>
-                <p class="text-[13px] text-white/70 mb-4">Contactează-ne pentru orice întrebare despre această comandă.</p>
+                <p class="text-[13px] text-white/90 mb-4">Contactează-ne pentru orice întrebare despre această comandă.</p>
                 <a href="/contact" class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-red-400 no-underline">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     Contactează suportul

@@ -318,13 +318,32 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     })();
     </script>
 
-    <!-- Tracking Scripts (head) -->
+    <!-- Tracking Scripts (head) — deferred until user interaction or 3.5s -->
     <?php
     if (!isset($trackingHeadScripts)) {
         require_once __DIR__ . '/tracking.php';
     }
-    if (!empty($trackingHeadScripts)) echo $trackingHeadScripts . "\n";
-    ?>
+    if (!empty($trackingHeadScripts)): ?>
+    <script>
+    (function(){
+        var h=<?= json_encode($trackingHeadScripts) ?>;
+        var done=false;
+        function go(){
+            if(done)return;done=true;
+            var d=document.createElement('div');d.innerHTML=h;
+            d.querySelectorAll('script').forEach(function(s){
+                var n=document.createElement('script');
+                if(s.src){n.src=s.src;n.async=true}else{n.textContent=s.textContent}
+                document.head.appendChild(n);
+            });
+        }
+        ['scroll','click','touchstart','mousemove','keydown'].forEach(function(e){
+            window.addEventListener(e,go,{once:true,passive:true});
+        });
+        setTimeout(go,3500);
+    })();
+    </script>
+    <?php endif; ?>
 
     <!-- Page-specific head content -->
     <?php if (isset($headExtra)) echo $headExtra; ?>

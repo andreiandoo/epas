@@ -24,9 +24,9 @@ require_once __DIR__ . '/includes/header.php';
         <div class="max-w-3xl mx-auto relative z-10">
             <!-- Breadcrumb -->
             <nav class="flex items-center gap-2 mb-6">
-                <a href="/" class="text-sm text-white/60 hover:text-white transition-colors">Acasa</a>
+                <a href="/" class="text-sm text-white/90 hover:text-white transition-colors">Acasa</a>
                 <span class="text-sm text-white/40">/</span>
-                <a href="/blog" class="text-sm text-white/60 hover:text-white transition-colors">Blog</a>
+                <a href="/blog" class="text-sm text-white/90 hover:text-white transition-colors">Blog</a>
                 <span class="text-sm text-white/40">/</span>
                 <span class="text-sm text-white/80"><?= htmlspecialchars($article['category']) ?></span>
             </nav>
@@ -43,15 +43,15 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-red-600 flex items-center justify-center text-base font-bold text-white"><?= htmlspecialchars($article['author']['initials']) ?></div>
                     <div>
                         <div class="text-[15px] font-semibold text-white"><?= htmlspecialchars($article['author']['name']) ?></div>
-                        <div class="text-sm text-white/60"><?= htmlspecialchars($article['author']['role']) ?></div>
+                        <div class="text-sm text-white/90"><?= htmlspecialchars($article['author']['role']) ?></div>
                     </div>
                 </div>
                 <div class="flex items-center gap-5">
-                    <span class="flex items-center gap-1.5 text-sm text-white/60">
+                    <span class="flex items-center gap-1.5 text-sm text-white/90">
                         <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         <?= htmlspecialchars($article['date']) ?>
                     </span>
-                    <span class="flex items-center gap-1.5 text-sm text-white/60">
+                    <span class="flex items-center gap-1.5 text-sm text-white/90">
                         <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         <?= htmlspecialchars($article['read_time']) ?>
                     </span>
@@ -184,8 +184,8 @@ require_once __DIR__ . '/includes/header.php';
             <!-- Newsletter -->
             <div class="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl p-7">
                 <h3 class="text-base font-bold text-white mb-5">Newsletter</h3>
-                <p class="text-sm text-white/70 mb-4">Primeste articole noi direct in inbox.</p>
-                <input type="email" placeholder="Email-ul tau" class="w-full px-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-sm text-white placeholder:text-white/50 mb-3 focus:outline-none focus:border-white/40">
+                <p class="text-sm text-white/90 mb-4">Primeste articole noi direct in inbox.</p>
+                <input type="email" placeholder="Email-ul tau" class="w-full px-4 py-3.5 bg-white/10 border border-white/20 rounded-xl text-sm text-white placeholder:text-white/90 mb-3 focus:outline-none focus:border-white/40">
                 <button class="w-full py-3.5 bg-gradient-to-br from-primary to-red-600 rounded-xl text-sm font-bold text-white hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(165,28,48,0.4)] transition-all">Aboneaza-te</button>
             </div>
 

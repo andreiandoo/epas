@@ -363,7 +363,7 @@ const RegionPage = {
         const imageHtml = city.image
             ? `<img src="${city.image}" alt="${city.name}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">`
             : `<div class="flex items-center justify-center w-full h-full bg-gradient-to-br ${gradient}">
-                <svg class="w-10 h-10 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-10 h-10 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                 </svg>
                </div>`;
@@ -456,7 +456,7 @@ const RegionPage = {
                 <div class="grid grid-cols-1 md:grid-cols-[200px_1fr]">
                     <div class="relative flex items-center justify-center h-40 md:h-full bg-gradient-to-br ${fest.gradient}">
                         ${fest.badge ? `<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded top-3 left-3 bg-amber-500">${fest.badge}</span>` : ''}
-                        <svg class="w-12 h-12 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-12 h-12 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                         </svg>
                     </div>

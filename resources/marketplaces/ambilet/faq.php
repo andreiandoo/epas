@@ -165,7 +165,7 @@ $sectionTitles = [
         <div class="absolute rounded-full -top-24 -right-24 w-96 h-96 bg-primary/30 blur-3xl"></div>
         <div class="relative z-10 max-w-2xl mx-auto">
             <h1 class="mb-4 text-4xl font-extrabold text-white md:text-5xl">Întrebări Frecvente</h1>
-            <p class="text-lg text-white/70">Răspunsuri rapide la cele mai comune întrebări despre Ambilet</p>
+            <p class="text-lg text-white/90">Răspunsuri rapide la cele mai comune întrebări despre Ambilet</p>
         </div>
     </section>
 
@@ -275,7 +275,7 @@ $sectionTitles = [
             <div class="absolute w-48 h-48 rounded-full -top-12 -right-12 bg-primary/30 blur-2xl"></div>
             <div class="relative z-10">
                 <h2 class="mb-3 text-2xl font-bold text-white">Nu ai găsit răspunsul?</h2>
-                <p class="mb-6 text-white/70">Echipa noastră de suport este disponibilă să te ajute cu orice întrebare.</p>
+                <p class="mb-6 text-white/90">Echipa noastră de suport este disponibilă să te ajute cu orice întrebare.</p>
                 <div class="flex flex-col justify-center gap-3 sm:flex-row">
                     <a href="/contact" class="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-gradient-to-r from-primary to-primary-dark rounded-xl text-white font-semibold hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/40 transition-all">
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

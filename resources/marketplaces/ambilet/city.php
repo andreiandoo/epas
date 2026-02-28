@@ -80,7 +80,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
     <img src="<?= htmlspecialchars($cityConfig['hero_image']) ?>" alt="<?= htmlspecialchars($cityConfig['name']) ?>" class="absolute inset-0 object-cover w-full h-full">
     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/30"></div>
     <div class="relative flex flex-col justify-end h-full px-4 pb-12 mx-auto max-w-7xl">
-        <nav class="flex items-center gap-2 mb-4 text-sm text-white/60">
+        <nav class="flex items-center gap-2 mb-4 text-sm text-white/90">
             <a href="/" class="transition-colors hover:text-white">Acasa</a>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             <a href="/orase" class="transition-colors hover:text-white">Orașe</a>
@@ -95,7 +95,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
                 </svg>
             </div>
             <div>
-                <span class="text-sm font-medium tracking-wider uppercase text-white/60">Evenimente în</span>
+                <span class="text-sm font-medium tracking-wider uppercase text-white/90">Evenimente în</span>
                 <h1 class="text-4xl font-extrabold text-white md:text-5xl"><?= htmlspecialchars($cityConfig['name']) ?></h1>
             </div>
         </div>

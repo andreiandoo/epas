@@ -134,11 +134,11 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <p class="mb-4 font-mono text-xl tracking-widest" id="cardNumberPreview">**** **** **** ****</p>
                     <div class="flex items-end justify-between">
                         <div>
-                            <p class="text-xs uppercase text-white/60">Titular</p>
+                            <p class="text-xs uppercase text-white/90">Titular</p>
                             <p class="font-medium" id="cardNamePreview">NUME PRENUME</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-xs uppercase text-white/60">Expira</p>
+                            <p class="text-xs uppercase text-white/90">Expira</p>
                             <p class="font-medium" id="cardExpiryPreview">MM/YY</p>
                         </div>
                     </div>

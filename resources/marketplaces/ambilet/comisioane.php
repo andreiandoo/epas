@@ -15,7 +15,7 @@ require_once __DIR__ . '/includes/header.php';
                 Preturi transparente
             </div>
             <h1 class="mb-4 text-4xl font-extrabold tracking-tight text-white md:text-5xl">Comisioane simple si corecte</h1>
-            <p class="text-lg leading-relaxed text-white/70">Fara costuri ascunse. Platesti doar pentru ce folosesti. Primii 100 de bilete sunt intotdeauna gratuit.</p>
+            <p class="text-lg leading-relaxed text-white/90">Fara costuri ascunse. Platesti doar pentru ce folosesti. Primii 100 de bilete sunt intotdeauna gratuit.</p>
         </div>
     </section>
 
@@ -125,7 +125,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="grid items-center gap-10 p-8 bg-gradient-to-br from-slate-800 to-slate-700 rounded-3xl md:p-12 md:grid-cols-2 md:gap-12">
                 <div>
                     <h3 class="text-2xl md:text-[28px] font-bold text-white mb-4">Calculeaza costurile</h3>
-                    <p class="text-base leading-relaxed text-white/70">Introdu detaliile evenimentului tau pentru a vedea exact cat vei plati. Nicio surpriza, doar transparenta.</p>
+                    <p class="text-base leading-relaxed text-white/90">Introdu detaliile evenimentului tau pentru a vedea exact cat vei plati. Nicio surpriza, doar transparenta.</p>
                 </div>
                 <div class="p-6 border bg-white/5 rounded-2xl md:p-8 border-white/10">
                     <div class="grid grid-cols-2 gap-4 mb-6">
@@ -147,11 +147,11 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                     <div class="pt-6 space-y-3 border-t border-white/10">
                         <div class="flex items-center justify-between">
-                            <span class="text-sm text-white/60">Venituri totale</span>
+                            <span class="text-sm text-white/90">Venituri totale</span>
                             <span class="text-base font-semibold text-white" id="totalRevenue">50,000 RON</span>
                         </div>
                         <div class="flex items-center justify-between">
-                            <span class="text-sm text-white/60">Comision AmBilet</span>
+                            <span class="text-sm text-white/90">Comision AmBilet</span>
                             <span class="text-base font-semibold text-white" id="totalFee">1,500 RON</span>
                         </div>
                         <div class="flex items-center justify-between pt-4 mt-2 border-t border-white/10">

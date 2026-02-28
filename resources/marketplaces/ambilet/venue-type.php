@@ -150,9 +150,9 @@ $typeEmoji = match($typeSlug) {
     <div class="relative z-10 max-w-7xl px-6 mx-auto">
         <!-- Breadcrumb -->
         <nav class="flex items-center gap-2 mb-6 text-sm">
-            <a href="/" class="transition-colors text-white/60 hover:text-white">Acasă</a>
+            <a href="/" class="transition-colors text-white/90 hover:text-white">Acasă</a>
             <svg class="w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><?= getVenueIconPath('chevron-right') ?></svg>
-            <a href="/locatii" class="transition-colors text-white/60 hover:text-white">Locații</a>
+            <a href="/locatii" class="transition-colors text-white/90 hover:text-white">Locații</a>
             <svg class="w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><?= getVenueIconPath('chevron-right') ?></svg>
             <span class="text-red-300"><?= htmlspecialchars($currentType['short_name']) ?></span>
         </nav>
@@ -495,7 +495,7 @@ const VenueTypePage = {
             return `<article class="overflow-hidden transition-all bg-white border rounded-2xl border-slate-200 hover:-translate-y-1 hover:shadow-lg hover:border-primary group">
                 <a href="/locatie/${v.slug}" class="block">
                     <div class="relative h-[180px] ${!v.image ? `bg-gradient-to-br ${gradient}` : ''} flex items-center justify-center">
-                        ${v.image ? `<img src="${v.image}" alt="${v.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy">` : `<svg class="w-12 h-12 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5"/></svg>`}
+                        ${v.image ? `<img src="${v.image}" alt="${v.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy">` : `<svg class="w-12 h-12 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5"/></svg>`}
                         <span class="absolute flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-black/60 backdrop-blur-sm top-3 left-3 rounded-md">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857"/></svg>
                             ${(v.capacity || 0).toLocaleString('ro-RO')} locuri

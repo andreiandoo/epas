@@ -136,7 +136,7 @@ require_once __DIR__ . '/includes/header.php';
     <!-- Drawer Header -->
     <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-200">
         <h2 class="text-lg font-bold text-gray-900">Filtre</h2>
-        <button onclick="closeFiltersDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-gray-100 hover:bg-gray-200">
+        <button onclick="closeFiltersDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors bg-gray-100 rounded-full hover:bg-gray-200">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
     </div>
@@ -145,7 +145,7 @@ require_once __DIR__ . '/includes/header.php';
         <!-- City Filter -->
         <div>
             <label class="block mb-2 text-sm font-medium text-gray-700">Oraș</label>
-            <select id="cityFilterMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="syncFilters('city')">
+            <select id="cityFilterMobile" class="w-full px-4 py-3 text-sm font-medium border border-gray-200 bg-gray-50 rounded-xl" onchange="syncFilters('city')">
                 <option value="">Toate orașele</option>
                 <?php foreach ($featuredCities as $city): ?>
                 <option value="<?= htmlspecialchars($city['slug']) ?>" <?= $filterCity === $city['slug'] ? 'selected' : '' ?>><?= htmlspecialchars($city['name']) ?></option>
@@ -156,7 +156,7 @@ require_once __DIR__ . '/includes/header.php';
         <!-- Genre Filter -->
         <div>
             <label class="block mb-2 text-sm font-medium text-gray-700">Gen muzical</label>
-            <select id="genreFilterMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="syncFilters('genre')">
+            <select id="genreFilterMobile" class="w-full px-4 py-3 text-sm font-medium border border-gray-200 bg-gray-50 rounded-xl" onchange="syncFilters('genre')">
                 <option value="">Toate genurile</option>
                 <?php foreach ($eventGenres as $genre): ?>
                 <option value="<?= htmlspecialchars($genre['slug']) ?>" <?= $filterGenre === $genre['slug'] ? 'selected' : '' ?>><?= htmlspecialchars($genre['name']) ?></option>
@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <!-- Events Container -->
-        <div id="eventsGrid" class="hidden grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>
+        <div id="eventsGrid" class="hidden grid-cols-2 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"></div>
 
         <!-- Empty State -->
         <div id="emptyState" class="hidden py-20 text-center">

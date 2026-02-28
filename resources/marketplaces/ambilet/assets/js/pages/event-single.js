@@ -1332,12 +1332,12 @@ const EventPage = {
             // Tooltip HTML - show commission as "Taxe procesare"
             var tooltipHtml = '<p class="mb-2 text-sm font-semibold">Detalii pret bilet:</p><div class="space-y-1 text-xs">';
             if (ticketComm.mode === 'included') {
-                tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Pret bilet:</span><span>' + basePrice.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionLabel + '):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                tooltipHtml += '<div class="flex justify-between"><span class="text-white/90">Pret bilet:</span><span>' + basePrice.toFixed(2) + ' lei</span></div>' +
+                    '<div class="flex justify-between"><span class="text-white/90">Taxe procesare (' + commissionLabel + '):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
                     '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + totalPrice.toFixed(2) + ' lei</span></div>';
             } else {
-                tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Pret bilet:</span><span>' + tt.price.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionLabel + '):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                tooltipHtml += '<div class="flex justify-between"><span class="text-white/90">Pret bilet:</span><span>' + tt.price.toFixed(2) + ' lei</span></div>' +
+                    '<div class="flex justify-between"><span class="text-white/90">Taxe procesare (' + commissionLabel + '):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
                     '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total la plata:</span><span class="font-semibold">' + totalPrice.toFixed(2) + ' lei</span></div>';
             }
             tooltipHtml += '</div>';
@@ -2230,7 +2230,7 @@ const EventPage = {
                                 '</div>' +
                             '</div>' +
                             // Legend in bottom-left corner of map
-                            '<div class="absolute bottom-3 left-3 flex flex-wrap items-center gap-2 md:gap-4 text-[10px] md:text-sm bg-white/90 backdrop-blur-sm rounded-lg px-2 md:px-3 py-1.5 md:py-2 shadow-sm">' +
+                            '<div class="absolute bottom-3 left-3 flex flex-wrap items-center gap-2 md:gap-4 text-[10px] md:text-sm bg-white/90 backdrop-blur-sm rounded-lg px-2 md:px-3 py-1.5 md:py-2 shadow-sm mobile:text-sm mobile:w-full mobile:justify-center">' +
                                 '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded" style="background-color: #a51c30;"></span> Selectat</div>' +
                                 '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-300"></span> Ocupat</div>' +
                                 '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded relative" style="background-color: #D1D5DB;"><span class="absolute inset-0 flex items-center justify-center text-gray-500 font-bold" style="font-size:8px;line-height:1">&times;</span></span> Indisponibil</div>' +
@@ -2262,9 +2262,9 @@ const EventPage = {
                 '</div>' +
                 // Mobile bottom bar - shows selected seats count and buy button (visible on < lg)
                 '<div class="lg:hidden border-t border-border bg-white px-4 py-3 flex items-center justify-between gap-3" id="seat-mobile-bottom-bar">' +
-                    '<div class="flex-1 min-w-0">' +
+                    '<div class="flex-1 min-w-0 mobile:flex mobile:flex-col">' +
                         '<span class="text-sm font-bold text-secondary" id="mobile-seats-count">0 locuri</span>' +
-                        '<span class="text-sm text-muted ml-2" id="mobile-seats-total">0 lei</span>' +
+                        '<span class="text-sm text-muted ml-2 mobile:ml-0" id="mobile-seats-total">0 lei</span>' +
                     '</div>' +
                     '<div class="flex gap-2 flex-shrink-0">' +
                         '<button onclick="EventPage.clearAllSelections()" class="p-2.5 text-muted border border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all" title="Golește">' +
@@ -3181,7 +3181,7 @@ const EventPage = {
         popup.className = 'fixed inset-0 z-[9999] flex items-center justify-center';
         popup.style.background = 'rgba(0,0,0,0.4)';
 
-        var html = '<div class="bg-white rounded-xl shadow-2xl p-5 max-w-xs w-full mx-4">';
+        var html = '<div class="bg-white rounded-xl shadow-2xl p-5 max-w-xs w-full mx-4 mobile:max-w-md">';
         html += '<div class="text-sm font-semibold text-gray-700 mb-1">Alege tipul de bilet</div>';
         html += '<div class="text-xs text-gray-500 mb-2">' + sectionName + ', Rând ' + rowLabel + ', Loc ' + seatLabel + '</div>';
         html += '<div class="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2 mb-3">Acest loc are alocate mai multe tipuri de bilete. Alege-l pe cel care ți se potrivește.</div>';

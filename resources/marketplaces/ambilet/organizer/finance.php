@@ -24,7 +24,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="grid gap-6 mb-8 lg:grid-cols-3">
                 <div class="p-6 text-white bg-gradient-to-br from-primary to-primary-dark rounded-2xl">
                     <div class="flex items-center gap-3 mb-4"><div class="flex items-center justify-center w-12 h-12 bg-white/20 rounded-xl"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><p class="text-sm text-white/80">Balanta Disponibila</p><p class="text-3xl font-bold" id="available-balance">0 RON</p></div></div>
-                    <p class="text-sm text-white/70">Suma disponibila pentru retragere</p>
+                    <p class="text-sm text-white/90">Suma disponibila pentru retragere</p>
                 </div>
                 <div class="p-6 bg-white border rounded-2xl border-border">
                     <div class="flex items-center gap-3 mb-4"><div class="flex items-center justify-center w-12 h-12 bg-warning/10 rounded-xl"><svg class="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><p class="text-sm text-muted">In Procesare</p><p class="text-3xl font-bold text-secondary" id="pending-balance">0 RON</p></div></div>

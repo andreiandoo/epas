@@ -98,7 +98,7 @@ require_once __DIR__ . '/includes/header.php';
                     </svg>
                     <span id="follow-text">Urmărește</span>
                 </button>
-                <button class="flex items-center justify-center w-12 h-12 text-gray-500 transition-colors bg-gray-100 rounded-xl hover:bg-gray-200 hover:text-gray-900">
+                <button class="flex items-center justify-center w-12 h-12 text-gray-500 transition-colors bg-gray-100 rounded-xl hover:bg-gray-200 hover:text-gray-900" aria-label="Distribuie">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="18" cy="5" r="3"/>
                         <circle cx="6" cy="12" r="3"/>
@@ -236,7 +236,7 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- Video Modal -->
     <div id="videoModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/90 backdrop-blur-sm" onclick="ArtistPage.closeVideoModal(event)">
-        <button onclick="ArtistPage.closeVideoModal()" class="absolute z-10 flex items-center justify-center w-10 h-10 text-white transition-colors rounded-full top-4 right-4 bg-white/10 hover:bg-white/20">
+        <button onclick="ArtistPage.closeVideoModal()" class="absolute z-10 flex items-center justify-center w-10 h-10 text-white transition-colors rounded-full top-4 right-4 bg-white/10 hover:bg-white/20" aria-label="Închide videoul">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
         <div class="w-full max-w-5xl px-4 mx-auto" onclick="event.stopPropagation()">

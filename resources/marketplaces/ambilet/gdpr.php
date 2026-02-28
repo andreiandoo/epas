@@ -29,7 +29,7 @@ require_once __DIR__ . '/includes/header.php';
             </svg>
         </div>
         <h1 class="text-[42px] font-extrabold text-white mb-4">Drepturile Tale GDPR</h1>
-        <p class="text-lg leading-relaxed text-white/70">Ai control deplin asupra datelor tale personale. Află ce drepturi îți garantează GDPR și cum le poți exercita.</p>
+        <p class="text-lg leading-relaxed text-white/90">Ai control deplin asupra datelor tale personale. Află ce drepturi îți garantează GDPR și cum le poți exercita.</p>
     </div>
 </section>
 
@@ -281,7 +281,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="relative z-10">
             <div class="mb-10 text-center">
                 <h2 class="mb-3 text-2xl font-bold text-white lg:text-3xl">Cum îți exerciți drepturile</h2>
-                <p class="text-white/70">Alege metoda care ți se potrivește cel mai bine</p>
+                <p class="text-white/90">Alege metoda care ți se potrivește cel mai bine</p>
             </div>
             <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <div class="p-7 bg-white/10 border border-white/15 rounded-2xl text-center hover:bg-white/15 hover:-translate-y-1 transition-all">
@@ -292,7 +292,7 @@ require_once __DIR__ . '/includes/header.php';
                         </svg>
                     </div>
                     <h3 class="mb-2 text-lg font-bold text-white">Din contul tău</h3>
-                    <p class="mb-4 text-sm text-white/70">Accesează setările contului pentru a-ți descărca, modifica sau șterge datele.</p>
+                    <p class="mb-4 text-sm text-white/90">Accesează setările contului pentru a-ți descărca, modifica sau șterge datele.</p>
                     <a href="/cont/profil" class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-400">
                         Mergi la setări
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -308,7 +308,7 @@ require_once __DIR__ . '/includes/header.php';
                         </svg>
                     </div>
                     <h3 class="mb-2 text-lg font-bold text-white">Prin email</h3>
-                    <p class="mb-4 text-sm text-white/70">Trimite o cerere la DPO-ul nostru. Răspundem în maximum 30 de zile.</p>
+                    <p class="mb-4 text-sm text-white/90">Trimite o cerere la DPO-ul nostru. Răspundem în maximum 30 de zile.</p>
                     <a href="mailto:dpo@ambilet.ro" class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-400">
                         dpo@ambilet.ro
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -326,7 +326,7 @@ require_once __DIR__ . '/includes/header.php';
                         </svg>
                     </div>
                     <h3 class="mb-2 text-lg font-bold text-white">Formular dedicat</h3>
-                    <p class="mb-4 text-sm text-white/70">Completează formularul nostru securizat pentru cereri GDPR.</p>
+                    <p class="mb-4 text-sm text-white/90">Completează formularul nostru securizat pentru cereri GDPR.</p>
                     <a href="/contact" class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-400">
                         Completează formularul
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

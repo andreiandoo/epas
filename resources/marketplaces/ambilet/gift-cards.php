@@ -63,7 +63,7 @@ $faqs = [
             <h1 class="mb-4 text-4xl font-extrabold leading-tight text-white md:text-5xl">
                 Dăruiește <span class="text-transparent bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text">experiențe</span><br>nu obiecte
             </h1>
-            <p class="mb-8 text-lg leading-relaxed text-white/70">Oferă-le celor dragi libertatea de a alege orice eveniment doresc. Cardurile cadou Ambilet sunt valabile pentru concerte, festivaluri, teatru și multe altele.</p>
+            <p class="mb-8 text-lg leading-relaxed text-white/90">Oferă-le celor dragi libertatea de a alege orice eveniment doresc. Cardurile cadou Ambilet sunt valabile pentru concerte, festivaluri, teatru și multe altele.</p>
             <a href="#buy" class="inline-flex items-center gap-2 px-9 py-4 bg-gradient-to-r from-primary to-primary-dark rounded-2xl text-white font-semibold hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/40 transition-all">
                 Cumpără un card cadou
                 <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -78,19 +78,19 @@ $faqs = [
         <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-center items-center gap-4 md:gap-[-30px]">
             <div class="gift-card w-72 h-44 md:w-80 md:h-48 rounded-2xl p-6 relative overflow-hidden bg-gradient-to-br from-primary to-[#7f1627] shadow-2xl transition-all hover:rotate-0 hover:-translate-y-3 hover:scale-105 hover:z-10 md:-rotate-6 md:translate-y-5">
                 <div class="mb-10 text-xl font-extrabold text-white">Ambilet</div>
-                <div class="text-xs tracking-widest uppercase text-white/60">Card Cadou</div>
+                <div class="text-xs tracking-widest uppercase text-white/90">Card Cadou</div>
                 <div class="text-3xl font-extrabold text-white">100 LEI</div>
                 <div class="absolute w-12 h-10 rounded-md bottom-6 right-6 bg-gradient-to-br from-amber-500 to-amber-600"></div>
             </div>
             <div class="gift-card w-72 h-44 md:w-80 md:h-48 rounded-2xl p-6 relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-700 shadow-2xl transition-all hover:rotate-0 hover:-translate-y-3 hover:scale-105 z-[2]">
                 <div class="mb-10 text-xl font-extrabold text-white">Ambilet</div>
-                <div class="text-xs tracking-widest uppercase text-white/60">Card Cadou</div>
+                <div class="text-xs tracking-widest uppercase text-white/90">Card Cadou</div>
                 <div class="text-3xl font-extrabold text-white">250 LEI</div>
                 <div class="absolute w-12 h-10 rounded-md bottom-6 right-6 bg-gradient-to-br from-amber-500 to-amber-600"></div>
             </div>
             <div class="relative p-6 overflow-hidden transition-all shadow-2xl gift-card w-72 h-44 md:w-80 md:h-48 rounded-2xl bg-gradient-to-br from-purple-600 to-purple-800 hover:rotate-0 hover:-translate-y-3 hover:scale-105 hover:z-10 md:rotate-6 md:translate-y-5">
                 <div class="mb-10 text-xl font-extrabold text-white">Ambilet</div>
-                <div class="text-xs tracking-widest uppercase text-white/60">Card Cadou</div>
+                <div class="text-xs tracking-widest uppercase text-white/90">Card Cadou</div>
                 <div class="text-3xl font-extrabold text-white">500 LEI</div>
                 <div class="absolute w-12 h-10 rounded-md bottom-6 right-6 bg-gradient-to-br from-amber-500 to-amber-600"></div>
             </div>

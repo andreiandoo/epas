@@ -100,7 +100,7 @@ function getColorClasses($color) {
         <div class="absolute rounded-full -top-24 -right-24 w-96 h-96 bg-primary/30 blur-3xl"></div>
         <div class="relative z-10 max-w-2xl mx-auto">
             <h1 class="mb-4 text-4xl font-extrabold text-white md:text-5xl">Cum te putem ajuta?</h1>
-            <p class="mb-8 text-lg text-white/70">Caută în baza noastră de cunoștințe sau explorează categoriile de mai jos.</p>
+            <p class="mb-8 text-lg text-white/90">Caută în baza noastră de cunoștințe sau explorează categoriile de mai jos.</p>
 
             <!-- Search Box -->
             <div class="relative max-w-xl mx-auto">
@@ -263,7 +263,7 @@ function getColorClasses($color) {
             <div class="absolute w-48 h-48 rounded-full -top-12 -right-12 bg-primary/30 blur-2xl"></div>
             <div class="relative z-10">
                 <h2 class="mb-3 text-2xl font-bold text-white">Nu ai găsit răspunsul?</h2>
-                <p class="text-white/70">Echipa noastră de suport este aici să te ajute cu orice întrebare ai avea.</p>
+                <p class="text-white/90">Echipa noastră de suport este aici să te ajute cu orice întrebare ai avea.</p>
             </div>
             <a href="/contact" class="relative z-10 inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-primary-dark rounded-xl text-white font-semibold hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/40 transition-all">
                 Trimite o cerere

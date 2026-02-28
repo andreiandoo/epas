@@ -16,7 +16,7 @@ require_once __DIR__ . '/includes/header.php';
                 Parteneri AmBilet
             </div>
             <h1 class="text-4xl md:text-[56px] font-extrabold text-white mb-5 leading-tight tracking-tight">Crestem impreuna</h1>
-            <p class="text-lg md:text-xl text-white/70 leading-relaxed max-w-2xl mx-auto">Alatura-te retelei noastre de parteneri si beneficiaza de avantaje exclusive. Impreuna construim viitorul evenimentelor din Romania.</p>
+            <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mx-auto">Alatura-te retelei noastre de parteneri si beneficiaza de avantaje exclusive. Impreuna construim viitorul evenimentelor din Romania.</p>
         </div>
     </section>
 
@@ -25,19 +25,19 @@ require_once __DIR__ . '/includes/header.php';
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 bg-gradient-to-br from-slate-800 to-slate-700 rounded-3xl p-8 md:p-12 mb-20">
             <div class="text-center">
                 <div class="text-4xl md:text-5xl font-extrabold text-white mb-2">50+</div>
-                <div class="text-sm text-white/60">Parteneri activi</div>
+                <div class="text-sm text-white/90">Parteneri activi</div>
             </div>
             <div class="text-center">
                 <div class="text-4xl md:text-5xl font-extrabold text-white mb-2">100K+</div>
-                <div class="text-sm text-white/60">Clienti referiti</div>
+                <div class="text-sm text-white/90">Clienti referiti</div>
             </div>
             <div class="text-center">
                 <div class="text-4xl md:text-5xl font-extrabold text-white mb-2">25%</div>
-                <div class="text-sm text-white/60">Comision mediu</div>
+                <div class="text-sm text-white/90">Comision mediu</div>
             </div>
             <div class="text-center">
                 <div class="text-4xl md:text-5xl font-extrabold text-white mb-2">48h</div>
-                <div class="text-sm text-white/60">Timp de aprobare</div>
+                <div class="text-sm text-white/90">Timp de aprobare</div>
             </div>
         </div>
 
@@ -237,7 +237,7 @@ require_once __DIR__ . '/includes/header.php';
                 <h2 class="text-3xl md:text-[40px] font-extrabold text-white mb-4">Devino partener AmBilet</h2>
                 <p class="text-lg text-white/80 mb-8 max-w-lg mx-auto">Lasa-ne adresa ta de email si te contactam pentru a discuta despre oportunitati.</p>
                 <form class="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto">
-                    <input type="email" placeholder="Adresa ta de email" class="flex-1 px-6 py-[18px] bg-white/15 border border-white/25 rounded-xl text-base text-white placeholder:text-white/60 focus:outline-none focus:bg-white/20 focus:border-white/40">
+                    <input type="email" placeholder="Adresa ta de email" class="flex-1 px-6 py-[18px] bg-white/15 border border-white/25 rounded-xl text-base text-white placeholder:text-white/90 focus:outline-none focus:bg-white/20 focus:border-white/40">
                     <button type="submit" class="px-9 py-[18px] bg-white rounded-xl text-base font-bold text-primary hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(0,0,0,0.2)] transition-all">Trimite</button>
                 </form>
             </div>

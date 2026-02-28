@@ -18,8 +18,8 @@ $pageTitle = 'Declaratie de Accesibilitate';
                 <svg class="w-10 h-10 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </div>
             <h1 class="text-3xl md:text-[44px] font-extrabold text-white mb-4">Declaratie de Accesibilitate</h1>
-            <p class="text-lg text-white/70 leading-relaxed">Ne angajam sa oferim o experienta digitala accesibila tuturor utilizatorilor, indiferent de abilitatile lor.</p>
-            <div class="mt-6 text-sm text-white/50">Ultima actualizare: 15 Decembrie 2024</div>
+            <p class="text-lg text-white/90 leading-relaxed">Ne angajam sa oferim o experienta digitala accesibila tuturor utilizatorilor, indiferent de abilitatile lor.</p>
+            <div class="mt-6 text-sm text-white/90">Ultima actualizare: 15 Decembrie 2024</div>
         </div>
     </section>
 
@@ -247,7 +247,7 @@ $pageTitle = 'Declaratie de Accesibilitate';
 
                 <div class="bg-gradient-to-br from-secondary to-slate-600 rounded-2xl p-8 mt-8">
                     <h3 class="text-xl font-bold text-white mb-3">Contacteaza echipa de accesibilitate</h3>
-                    <p class="text-[15px] text-white/70 mb-5">Suntem aici sa va ajutam sa aveti cea mai buna experienta pe platforma noastra.</p>
+                    <p class="text-[15px] text-white/90 mb-5">Suntem aici sa va ajutam sa aveti cea mai buna experienta pe platforma noastra.</p>
                     <div class="flex flex-col md:flex-row gap-4">
                         <a href="mailto:accesibilitate@ambilet.ro" class="flex items-center gap-2.5 px-5 py-3 bg-white/10 rounded-xl text-white text-sm font-medium hover:bg-white/15 transition-colors">
                             <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>

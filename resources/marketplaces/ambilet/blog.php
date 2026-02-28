@@ -34,7 +34,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="absolute -top-[200px] -right-[200px] w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(165,28,48,0.15)_0%,transparent_70%)] pointer-events-none"></div>
         <div class="max-w-3xl mx-auto text-center relative z-10">
             <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-4">Blog</h1>
-            <p class="text-lg text-white/70 leading-relaxed">Noutati, ghiduri si inspiratie din lumea evenimentelor</p>
+            <p class="text-lg text-white/90 leading-relaxed">Noutati, ghiduri si inspiratie din lumea evenimentelor</p>
         </div>
     </section>
 
@@ -118,9 +118,9 @@ require_once __DIR__ . '/includes/header.php';
             <div class="absolute -top-[100px] -right-[100px] w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(165,28,48,0.2),transparent_70%)] pointer-events-none"></div>
             <div class="relative z-10 max-w-lg mx-auto">
                 <h2 class="text-2xl md:text-[28px] font-extrabold text-white mb-3">Aboneaza-te la newsletter</h2>
-                <p class="text-base text-white/70 mb-8">Primeste cele mai noi articole si noutati direct in inbox.</p>
+                <p class="text-base text-white/90 mb-8">Primeste cele mai noi articole si noutati direct in inbox.</p>
                 <form class="flex flex-col sm:flex-row gap-3">
-                    <input type="email" placeholder="Adresa ta de email" class="flex-1 px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-[15px] text-white placeholder:text-white/50 focus:outline-none focus:border-primary focus:bg-white/15">
+                    <input type="email" placeholder="Adresa ta de email" class="flex-1 px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-[15px] text-white placeholder:text-white/90 focus:outline-none focus:border-primary focus:bg-white/15">
                     <button type="submit" class="px-7 py-4 bg-gradient-to-br from-primary to-red-600 rounded-xl text-[15px] font-bold text-white hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(165,28,48,0.4)] transition-all">Aboneaza-te</button>
                 </form>
             </div>

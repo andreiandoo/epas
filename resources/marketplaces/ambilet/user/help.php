@@ -12,10 +12,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <div class="absolute top-0 right-0 w-64 h-64 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5"></div>
             <div class="relative">
                 <h1 class="mb-2 text-2xl font-bold lg:text-3xl">Cum te putem ajuta?</h1>
-                <p class="mb-6 text-white/70">Cauta raspunsuri sau contacteaza echipa de suport</p>
+                <p class="mb-6 text-white/90">Cauta raspunsuri sau contacteaza echipa de suport</p>
                 <div class="relative max-w-lg mx-auto">
                     <input type="text" id="search-input" placeholder="Cauta un subiect..." class="w-full py-4 pl-12 pr-4 text-white border bg-white/10 border-white/20 rounded-xl placeholder-white/50 focus:outline-none focus:bg-white/20 focus:border-white/40">
-                    <svg class="absolute w-5 h-5 -translate-y-1/2 text-white/50 left-4 top-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <svg class="absolute w-5 h-5 -translate-y-1/2 text-white/90 left-4 top-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>
             </div>
         </div>

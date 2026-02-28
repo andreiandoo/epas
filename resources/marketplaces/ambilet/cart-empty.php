@@ -172,7 +172,7 @@ $pageTitle = 'Cos de cumparaturi';
             <div class="bg-white rounded-2xl border border-border overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all">
                 <div class="h-40 relative overflow-hidden">
                     <div class="w-full h-full bg-gradient-to-br ${randomGradient} flex items-center justify-center">
-                        <svg class="w-12 h-12 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                        <svg class="w-12 h-12 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
                     </div>
                     ${event.badge ? `<span class="absolute top-3 left-3 px-2.5 py-1 bg-primary text-white rounded-md text-xs font-bold uppercase tracking-wide">${event.badge}</span>` : ''}
                     <button class="absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform">
@@ -207,7 +207,7 @@ $pageTitle = 'Cos de cumparaturi';
             <div class="bg-white rounded-2xl border border-border overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all">
                 <div class="h-40 relative overflow-hidden">
                     <div class="w-full h-full bg-gradient-to-br ${event.gradient} flex items-center justify-center">
-                        <svg class="w-12 h-12 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                        <svg class="w-12 h-12 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
                     </div>
                     ${event.badge ? `<span class="absolute top-3 left-3 px-2.5 py-1 ${event.badge === 'Hot' ? 'bg-amber-500' : event.badge === 'Nou' ? 'bg-green-500' : 'bg-primary'} text-white rounded-md text-xs font-bold uppercase tracking-wide">${event.badge}</span>` : ''}
                     <button class="absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform">

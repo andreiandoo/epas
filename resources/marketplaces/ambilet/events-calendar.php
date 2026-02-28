@@ -17,7 +17,7 @@ include 'includes/header.php'; ?>
         <div class="relative z-10 flex flex-col items-center justify-between gap-6 px-6 mx-auto max-w-7xl md:flex-row">
             <div>
                 <h1 class="mb-2 text-3xl font-extrabold text-white md:text-4xl">Calendar Evenimente</h1>
-                <p class="text-base text-white/70">Planifică-ți experiențele. Vezi toate evenimentele într-un singur loc.</p>
+                <p class="text-base text-white/90">Planifică-ți experiențele. Vezi toate evenimentele într-un singur loc.</p>
             </div>
             <div class="flex gap-2 bg-white/10 p-1.5 rounded-xl" id="viewToggle">
                 <button id="monthViewBtn" data-view="month" class="flex items-center gap-2 px-5 py-2.5 bg-white text-secondary rounded-lg text-sm font-semibold transition-all">
@@ -29,7 +29,7 @@ include 'includes/header.php'; ?>
                     </svg>
                     Lună
                 </button>
-                <button id="listViewBtn" data-view="list" class="flex items-center gap-2 px-5 py-2.5 bg-transparent text-white/60 rounded-lg text-sm font-semibold hover:text-white transition-all">
+                <button id="listViewBtn" data-view="list" class="flex items-center gap-2 px-5 py-2.5 bg-transparent text-white/90 rounded-lg text-sm font-semibold hover:text-white transition-all">
                     <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="8" y1="6" x2="21" y2="6"/>
                         <line x1="8" y1="12" x2="21" y2="12"/>
@@ -527,12 +527,12 @@ include 'includes/header.php'; ?>
 
             if (view === 'month') {
                 monthBtn.className = 'flex items-center gap-2 px-5 py-2.5 bg-white text-secondary rounded-lg text-sm font-semibold transition-all';
-                listBtn.className = 'flex items-center gap-2 px-5 py-2.5 bg-transparent text-white/60 rounded-lg text-sm font-semibold hover:text-white transition-all';
+                listBtn.className = 'flex items-center gap-2 px-5 py-2.5 bg-transparent text-white/90 rounded-lg text-sm font-semibold hover:text-white transition-all';
                 calendarView.classList.remove('hidden');
                 listView.classList.add('hidden');
             } else {
                 listBtn.className = 'flex items-center gap-2 px-5 py-2.5 bg-white text-secondary rounded-lg text-sm font-semibold transition-all';
-                monthBtn.className = 'flex items-center gap-2 px-5 py-2.5 bg-transparent text-white/60 rounded-lg text-sm font-semibold hover:text-white transition-all';
+                monthBtn.className = 'flex items-center gap-2 px-5 py-2.5 bg-transparent text-white/90 rounded-lg text-sm font-semibold hover:text-white transition-all';
                 calendarView.classList.add('hidden');
                 listView.classList.remove('hidden');
                 this.renderListView();
