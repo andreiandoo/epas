@@ -94,7 +94,7 @@ class PlatformTrackingStats extends StatsOverviewWidget
                 ->description("{$identifiedCustomers} identified")
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('primary')
-                ->url(route('filament.admin.resources.core-customers.index')),
+                ->url(route('filament.admin.resources.customers.index')),
 
             Stat::make('Issues', $failedConversions + $accountsWithIssues)
                 ->description($this->getIssueDescription($failedConversions, $accountsWithIssues))
