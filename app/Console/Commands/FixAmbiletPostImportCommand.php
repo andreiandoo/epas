@@ -232,7 +232,7 @@ class FixAmbiletPostImportCommand extends Command
         if ($dryRun) {
             $count = DB::table('marketplace_customers')
                 ->where('marketplace_client_id', $clientId)
-                ->whereRaw("JSON_EXTRACT(meta, '$.imported_from') IS NULL OR JSON_EXTRACT(settings, '$.imported_from') IS NULL")
+                ->whereRaw("(settings IS NULL OR JSON_EXTRACT(settings, '$.imported_from') IS NULL)")
                 ->whereRaw("EXISTS (SELECT 1 FROM orders o WHERE o.marketplace_customer_id = marketplace_customers.id AND o.source = 'legacy_import')")
                 ->count();
             $this->info("[DRY RUN] Would mark ~{$count} customers as imported from ambilet.");
