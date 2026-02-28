@@ -1,0 +1,348 @@
+function toggleOrder(btn) {
+    const card = btn.closest('.order-card');
+    card.classList.toggle('expanded');
+}
+
+const UserOrders = {
+    orders: [],
+
+    async init() {
+        if (!AmbiletAuth.isAuthenticated()) {
+            window.location.href = '/autentificare?redirect=/cont/comenzi';
+            return;
+        }
+        this.loadUserInfo();
+        await this.loadOrders();
+
+        document.getElementById('filter-status').addEventListener('change', () => this.filterOrders());
+    },
+
+    loadUserInfo() {
+        const user = AmbiletAuth.getUser();
+        if (user) {
+            const initials = user.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U';
+            const headerAvatar = document.getElementById('header-user-avatar');
+            if (headerAvatar) {
+                headerAvatar.innerHTML = `<span class="text-sm font-bold text-white">${initials}</span>`;
+            }
+            const headerPoints = document.getElementById('header-user-points');
+            if (headerPoints) {
+                headerPoints.textContent = (user.points || 0).toLocaleString();
+            }
+        }
+    },
+
+    async loadOrders() {
+        try {
+            const response = await AmbiletAPI.customer.getOrders();
+            if (response.success && response.data) {
+                this.orders = response.data.orders || response.data || [];
+            } else {
+                console.warn('No orders in API response');
+                this.orders = [];
+            }
+        } catch (error) {
+            console.error('Failed to load orders:', error);
+            this.orders = [];
+        }
+
+        this.updateStats();
+        this.renderOrders();
+    },
+
+
+    updateStats() {
+        // Only count confirmed/paid orders for stats
+        const confirmed = this.orders.filter(o => ['confirmed', 'paid', 'completed'].includes(o.status));
+        const totalSpent = confirmed.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+        // Use the calculated savings field from API (includes promo discount + target price savings)
+        const totalSaved = confirmed.reduce((sum, o) => {
+            return sum + (parseFloat(o.savings) || 0);
+        }, 0);
+
+        document.getElementById('stat-total').textContent = this.orders.length;
+        document.getElementById('stat-spent').textContent = totalSpent.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' lei';
+        document.getElementById('stat-saved').textContent = totalSaved.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' lei';
+    },
+
+    filterOrders() {
+        this.renderOrders();
+    },
+
+    renderOrders() {
+        const container = document.getElementById('orders-list');
+        const filter = document.getElementById('filter-status').value;
+
+        let filtered = this.orders;
+        if (filter) {
+            filtered = this.orders.filter(o => o.status === filter);
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="py-12 text-center bg-white border rounded-xl border-border">
+                    <p class="mb-4 text-muted">Nu ai comenzi ${filter ? 'in aceasta categorie' : 'inca'}</p>
+                    <a href="/" class="btn btn-primary inline-flex px-6 py-2.5 text-white font-semibold rounded-xl">Descopera evenimente</a>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = filtered.map(order => this.renderOrderCard(order)).join('');
+        document.getElementById('load-more').classList.remove('hidden');
+    },
+
+    renderOrderCard(order) {
+        const statusClass = {
+            'confirmed': 'bg-success/10 text-success',
+            'completed': 'bg-muted/20 text-muted',
+            'pending': 'bg-warning/10 text-warning',
+            'paid': 'bg-success/10 text-success',
+            'refunded': 'bg-error/10 text-error'
+        }[order.status] || 'bg-muted/20 text-muted';
+
+        const statusLabel = {
+            'confirmed': 'CONFIRMAT',
+            'completed': 'ÎNCHEIAT',
+            'pending': 'ÎN AȘTEPTARE',
+            'paid': 'PLĂTIT',
+            'refunded': 'RAMBURSAT'
+        }[order.status] || (order.status || 'UNKNOWN').toUpperCase();
+
+        const isPast = order.status === 'completed' || order.status === 'refunded';
+
+        // Get event info with fallbacks
+        const eventImage = order.event?.image || order.event?.featured_image || order.tickets?.[0]?.event?.image || '/assets/images/default-event.png';
+        const eventTitle = order.event?.title || order.event_name || order.tickets?.[0]?.event?.title || 'Eveniment';
+        const orderRef = order.reference || order.order_number || '#' + String(order.id).padStart(6, '0');
+
+        // Get items info with fallbacks
+        const items = order.items || order.order_items || [];
+        const ticketCount = order.tickets_count || items.reduce((sum, i) => sum + (i.quantity || 1), 0) || order.tickets?.length || 0;
+        const ticketName = items[0]?.name || order.tickets?.[0]?.ticketType?.name || 'Bilet';
+
+        return `
+            <div class="overflow-hidden bg-white border order-card rounded-xl border-border">
+                <button onclick="toggleOrder(this)" class="w-full p-4 text-left lg:p-5">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 ${isPast ? 'grayscale opacity-75' : ''}">
+                            <img src="${eventImage}" class="object-cover w-full h-full" alt="" onerror="this.src='/assets/images/default-event.png'" loading="lazy">
+                        </div>
+                        <div class="mobile:flex-col mobile:flex">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-mono text-xs text-muted">${orderRef}</span>
+                                </div>
+                                <h3 class="font-semibold text-secondary">${eventTitle}</h3>
+                                <p class="text-sm text-muted">${this.formatDateTime(order.created_at)} • ${ticketCount < 2 ? '1 bilet' : ticketCount + ' bilete'} ${ticketName}</p>
+                            </div>
+                            <div class="mobile:items-center mobile:gap-4 mobile:flex">
+                                <div class="flex items-center flex-shrink-0 text-right gap-x-4">
+                                    ${order.status === 'refunded' ?
+                                        `<p class="font-bold line-through text-muted">${order.total} lei</p><p class="text-xs text-error">Rambursat</p>` :
+                                        `<span class="flex items-center justify-center px-2 py-0.5 ${statusClass} text-xs font-bold rounded">${statusLabel}</span> <p class="font-bold text-secondary">${order.total} lei</p>${order.points_earned ? `<p class="text-xs text-success">+${order.points_earned} puncte</p>` : ''}`
+                                    }
+                                </div>
+                                <svg class="w-5 h-5 expand-icon text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </button>
+
+                <div class="border-t order-details border-border">
+                    <div class="p-4 lg:p-5 bg-surface/50">
+                        ${order.status === 'refunded' ? this.renderRefundDetails(order) : this.renderOrderDetails(order)}
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderOrderDetails(order) {
+        return `
+            ${order.status === 'confirmed' ? `
+            <div class="mb-6">
+                <h4 class="mb-3 text-sm font-semibold text-secondary">Status comandă</h4>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center flex-1">
+                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-success">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <div class="w-full h-1 bg-success"></div>
+                    </div>
+                    <div class="flex items-center flex-1">
+                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-success">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <div class="w-full h-1 bg-success"></div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-success">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-between mt-2 text-xs text-muted">
+                    <span>Comanda plasată</span>
+                    <span>Plata confirmată</span>
+                    <span>Bilete emise</span>
+                </div>
+            </div>
+            ` : ''}
+
+            ${order.checked_in ? `
+            <div class="mb-4">
+                <div class="flex items-center gap-2 p-3 rounded-lg bg-success/10">
+                    <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span class="text-sm font-medium text-success">Check-in efectuat</span>
+                </div>
+            </div>
+            ` : ''}
+
+            <div class="grid gap-4 mb-4 sm:grid-cols-2">
+                <div>
+                    <h4 class="mb-2 text-sm font-semibold text-secondary">Detalii bilete</h4>
+                    <div class="space-y-2">
+                        ${order.items.map(item => `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-muted">${item.quantity}x ${item.name}</span>
+                            <span class="text-secondary">${(item.quantity * item.price).toFixed(2)} lei</span>
+                        </div>
+                        `).join('')}
+                        ${order.commission_amount > 0 && ['on_top', 'add_on_top', 'added_on_top'].includes(order.commission_mode) ? `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-muted">Comision servicii ${order.commission_rate ? `(${order.commission_rate}%)` : ''}</span>
+                            <span class="text-secondary">${parseFloat(order.commission_amount).toFixed(2)} lei</span>
+                        </div>
+                        ` : ''}
+                        ${order.discount ? `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-muted">Cod promoțional ${order.promo_code ? `(${order.promo_code})` : ''}</span>
+                            <span class="text-success">-${parseFloat(order.discount).toFixed(2)} lei</span>
+                        </div>
+                        ` : ''}
+                        <hr class="border-border">
+                        <div class="flex justify-between font-semibold">
+                            <span class="text-secondary">Total plătit</span>
+                            <span class="text-secondary">${(['on_top', 'add_on_top', 'added_on_top'].includes(order.commission_mode) ? parseFloat(order.total) + parseFloat(order.commission_amount || 0) : parseFloat(order.total)).toFixed(2)} lei</span>
+                        </div>
+                        ${order.commission_amount > 0 && order.commission_mode === 'included' ? `
+                        <div class="flex justify-between text-xs text-muted">
+                            <span>din care comision inclus</span>
+                            <span>${parseFloat(order.commission_amount).toFixed(2)} lei</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div>
+                    <h4 class="mb-2 text-sm font-semibold text-secondary">Informații plată</h4>
+                    <div class="space-y-2 text-sm">
+                        ${order.payment_method ? `
+                        <div class="flex justify-between">
+                            <span class="text-muted">Metoda</span>
+                            <span class="text-secondary">${order.payment_method}</span>
+                        </div>
+                        ` : `
+                        <div class="flex justify-between">
+                            <span class="text-muted">Metoda</span>
+                            <span class="text-secondary">-</span>
+                        </div>
+                        `}
+                        <div class="flex justify-between">
+                            <span class="text-muted">Status</span>
+                            <span class="${(order.payment_status === 'paid' || order.status === 'paid' || order.status === 'confirmed') ? 'text-success' : 'text-warning'}">${(order.payment_status === 'paid' || order.status === 'paid' || order.status === 'confirmed') ? 'Plătit' : order.payment_status === 'pending' ? 'În așteptare' : (order.payment_status || order.status)}</span>
+                        </div>
+                        ${order.paid_at ? `
+                        <div class="flex justify-between">
+                            <span class="text-muted">Data plății</span>
+                            <span class="text-secondary">${this.formatDateTime(order.paid_at)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-4 border-t border-border">
+                ${order.status === 'confirmed' || order.status === 'paid' ? `
+                <a href="/cont/bilete" class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary hover:bg-primary-dark">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                    Vezi biletele
+                </a>
+                ` : ''}
+                ${order.can_request_refund ? `
+                <button onclick="UserOrders.requestRefund(${order.id}, '${order.refund_reason || ''}')" class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 transition-colors border border-red-300 rounded-lg hover:bg-red-50 hover:border-red-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                    Returneaza comanda
+                </button>
+                ` : ''}
+                <button class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-surface text-secondary hover:bg-primary/10 hover:text-primary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Descarcă factura
+                </button>
+                <button class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg text-muted hover:bg-surface">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Ajutor
+                </button>
+            </div>
+        `;
+    },
+
+    renderRefundDetails(order) {
+        return `
+            <div class="p-4 mb-4 border bg-error/5 border-error/20 rounded-xl">
+                <div class="flex items-start gap-3">
+                    <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-lg bg-error/10">
+                        <svg class="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-error">${order.refund_reason || 'Comandă rambursată'}</p>
+                        <p class="mt-1 text-sm text-muted">Rambursarea a fost procesată automat în contul tău pe ${order.refund_date}.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <h4 class="mb-2 text-sm font-semibold text-secondary">Detalii rambursare</h4>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-muted">Suma rambursată</span>
+                            <span class="font-medium text-success">${order.refunded_amount} lei</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-muted">Data rambursării</span>
+                            <span class="text-secondary">${order.refund_date}</span>
+                        </div>
+                        ${order.points_earned ? `
+                        <div class="flex justify-between">
+                            <span class="text-muted">Puncte returnate</span>
+                            <span class="text-secondary">-${order.points_earned} puncte</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    formatDateTime(dateStr) {
+        const date = new Date(dateStr);
+        const day = date.getDate();
+        const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const hours = date.getHours().toString().padStart(2, '0');
+        const mins = date.getMinutes().toString().padStart(2, '0');
+        return `${day} ${months[date.getMonth()]} ${date.getFullYear()}, ${hours}:${mins}`;
+    },
+
+    logout() {
+        AmbiletAuth.logout();
+        window.location.href = '/login';
+    },
+
+    requestRefund(orderId, refundReason) {
+        console.log('Requesting refund for order:', orderId, 'reason:', refundReason);
+        // Navigate to refund request page with order info
+        window.location.href = '/cont/cerere-rambursare?order=' + orderId + '&reason=' + encodeURIComponent(refundReason || '');
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => UserOrders.init());
