@@ -44,35 +44,39 @@ include __DIR__ . '/includes/header.php';
     </section>
 
     <!-- Filters -->
-    <div class="flex flex-wrap items-center gap-4 mb-8">
-        <div class="flex-1 min-w-[280px] relative">
+    <div class="mb-8 space-y-3">
+        <!-- Search -->
+        <div class="relative">
             <svg class="absolute w-5 h-5 -translate-y-1/2 left-4 top-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"/>
                 <path d="M21 21l-4.35-4.35"/>
             </svg>
             <input type="text" id="searchInput" placeholder="Caută locații..." class="w-full py-3.5 pl-12 pr-5 bg-white border border-border rounded-xl text-base focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
         </div>
-        <select id="cityFilter" class="py-3.5 pl-4 pr-10 bg-white border border-border rounded-xl text-sm font-medium text-secondary cursor-pointer hover:border-muted focus:outline-none focus:border-primary transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_14px_center]">
-            <option value="">Toate orașele</option>
-        </select>
-        <select id="capacityFilter" class="py-3.5 pl-4 pr-10 bg-white border border-border rounded-xl text-sm font-medium text-secondary cursor-pointer hover:border-muted focus:outline-none focus:border-primary transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_14px_center]">
-            <option value="">Capacitate</option>
-            <option value="small">Sub 500 locuri</option>
-            <option value="medium">500 - 2.000 locuri</option>
-            <option value="large">2.000 - 10.000 locuri</option>
-            <option value="xlarge">Peste 10.000 locuri</option>
-        </select>
-        <select id="sortFilter" class="py-3.5 pl-4 pr-10 bg-white border border-border rounded-xl text-sm font-medium text-secondary cursor-pointer hover:border-muted focus:outline-none focus:border-primary transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_14px_center]">
-            <option value="">Sortare</option>
-            <option value="popular">Cele mai populare</option>
-            <option value="events">După evenimente</option>
-            <option value="capacity">După capacitate</option>
-            <option value="name">Alfabetic</option>
-        </select>
+        <!-- Selects row: scrollable on mobile, flex-wrap on desktop -->
+        <div class="flex items-center gap-3 pb-1 overflow-x-auto lg:flex-wrap scrollbar-hide mobile:-mx-6 mobile:px-6">
+            <select id="cityFilter" class="flex-shrink-0 py-3 pl-4 pr-10 bg-white border border-border rounded-xl text-sm font-medium text-secondary cursor-pointer hover:border-muted focus:outline-none focus:border-primary transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_14px_center]">
+                <option value="">Toate orașele</option>
+            </select>
+            <select id="capacityFilter" class="flex-shrink-0 py-3 pl-4 pr-10 bg-white border border-border rounded-xl text-sm font-medium text-secondary cursor-pointer hover:border-muted focus:outline-none focus:border-primary transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_14px_center]">
+                <option value="">Capacitate</option>
+                <option value="small">Sub 500</option>
+                <option value="medium">500 - 2.000</option>
+                <option value="large">2.000 - 10.000</option>
+                <option value="xlarge">Peste 10.000</option>
+            </select>
+            <select id="sortFilter" class="flex-shrink-0 py-3 pl-4 pr-10 bg-white border border-border rounded-xl text-sm font-medium text-secondary cursor-pointer hover:border-muted focus:outline-none focus:border-primary transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_14px_center]">
+                <option value="">Sortare</option>
+                <option value="popular">Cele mai populare</option>
+                <option value="events">După evenimente</option>
+                <option value="capacity">După capacitate</option>
+                <option value="name">Alfabetic</option>
+            </select>
+        </div>
     </div>
 
     <!-- Category Tabs (populated by JS from API) -->
-    <div id="categoryTabs" class="flex flex-wrap gap-2 mb-8">
+    <div id="categoryTabs" class="flex items-center gap-3 pb-2 overflow-x-auto lg:flex-wrap scrollbar-hide snap-x snap-mandatory mobile:pl-1 mobile:-mr-6 mb-8">
         <!-- Populated dynamically -->
     </div>
 
@@ -184,11 +188,11 @@ const VenuesPage = {
         document.querySelectorAll('.category-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.category-tab').forEach(t => {
-                    t.classList.remove('active', 'bg-primary', 'border-primary', 'text-white');
-                    t.classList.add('bg-white', 'border-border', 'text-muted');
+                    t.classList.remove('active', 'bg-primary', 'text-white');
+                    t.classList.add('bg-gray-100', 'text-gray-700');
                 });
-                tab.classList.add('active', 'bg-primary', 'border-primary', 'text-white');
-                tab.classList.remove('bg-white', 'border-border', 'text-muted');
+                tab.classList.add('active', 'bg-primary', 'text-white');
+                tab.classList.remove('bg-gray-100', 'text-gray-700');
                 this.filterVenues();
             });
         });
@@ -236,19 +240,24 @@ const VenuesPage = {
         const container = document.getElementById('categoryTabs');
         if (!container) return;
 
+        // Compute real counts from loaded venues
+        const countBySlug = {};
+        this.venues.forEach(v => {
+            (v.categorySlugs || []).forEach(slug => {
+                countBySlug[slug] = (countBySlug[slug] || 0) + 1;
+            });
+        });
+
         // "Toate" tab
-        let html = `<button class="flex items-center gap-2 px-5 py-3 text-sm font-medium text-white transition-all border rounded-full category-tab active bg-primary border-primary" data-category="all">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-            </svg>
+        let html = `<button class="flex-shrink-0 snap-start flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white transition-all rounded-full category-tab active bg-primary cursor-pointer" data-category="all">
             Toate
             <span class="px-2 py-0.5 bg-white/20 rounded-full text-xs font-semibold" id="totalCount">${this.venues.length}</span>
         </button>`;
 
         for (const cat of this.categories) {
-            const count = cat.venues_count || 0;
+            const count = countBySlug[cat.slug] || 0;
             if (count === 0) continue;
-            html += `<button class="flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all bg-white border rounded-full category-tab border-border text-muted hover:border-muted hover:text-secondary" data-category="${cat.slug}">
+            html += `<button class="flex-shrink-0 snap-start flex items-center gap-2 px-5 py-2.5 text-sm font-semibold transition-all rounded-full category-tab bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer" data-category="${cat.slug}">
                 ${cat.name}
                 <span class="px-2 py-0.5 bg-black/10 rounded-full text-xs font-semibold">${count}</span>
             </button>`;
