@@ -16,12 +16,12 @@ require_once __DIR__ . '/includes/auth-branding.php';
 ?>
 
     <!-- Right Side - Login Form -->
-    <div class="flex-1 flex items-center justify-center p-8">
+    <div class="flex items-center justify-center flex-1 p-8">
         <div class="w-full max-w-md">
             <!-- Mobile Logo -->
-            <div class="lg:hidden text-center mb-8">
+            <div class="mb-8 text-center lg:hidden">
                 <a href="/" class="inline-flex items-center gap-3">
-                    <div class="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
+                    <div class="flex items-center justify-center w-12 h-12 bg-primary rounded-xl">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
                         </svg>
@@ -30,17 +30,17 @@ require_once __DIR__ . '/includes/auth-branding.php';
                 </a>
             </div>
 
-            <div class="bg-white rounded-2xl border border-border p-8">
-                <div class="text-center mb-8">
+            <div class="p-8 bg-white border rounded-2xl border-border">
+                <div class="mb-8 text-center">
                     <h2 class="text-2xl font-bold text-secondary">Conectează-te</h2>
-                    <p class="text-muted mt-2">Introdu datele tale pentru a accesa contul</p>
+                    <p class="mt-2 text-muted">Introdu datele tale pentru a accesa contul</p>
                 </div>
 
                 <form id="login-form" class="space-y-6">
                     <div>
-                        <label for="email" class="block text-sm font-medium text-secondary mb-2">Email</label>
+                        <label for="email" class="block mb-2 text-sm font-medium text-secondary">Email</label>
                         <input type="email" id="email" name="email" required
-                               class="input w-full"
+                               class="w-full input"
                                placeholder="email@exemplu.ro">
                     </div>
 
@@ -50,22 +50,22 @@ require_once __DIR__ . '/includes/auth-branding.php';
                             <a href="/parola-uitata" class="text-sm text-primary">Ai uitat parola?</a>
                         </div>
                         <input type="password" id="password" name="password" required
-                               class="input w-full"
+                               class="w-full input"
                                placeholder="••••••••">
                     </div>
 
                     <div class="flex items-center">
                         <input type="checkbox" id="remember" name="remember"
-                               class="w-4 h-4 text-primary border-border rounded focus:ring-primary">
+                               class="w-4 h-4 rounded text-primary border-border focus:ring-primary">
                         <label for="remember" class="ml-2 text-sm text-muted">Ține-mă minte</label>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-full btn-lg">
+                    <button type="submit" class="w-full btn btn-primary btn-lg">
                         Conectează-te
                     </button>
                 </form>
 
-                <div class="mt-8">
+                <div class="hidden mt-8">
                     <div class="relative">
                         <div class="absolute inset-0 flex items-center">
                             <div class="w-full border-t border-border"></div>
@@ -75,8 +75,8 @@ require_once __DIR__ . '/includes/auth-branding.php';
                         </div>
                     </div>
 
-                    <div class="mt-6 grid grid-cols-2 gap-4">
-                        <button type="button" class="btn btn-secondary flex items-center justify-center gap-2">
+                    <div class="grid grid-cols-2 gap-4 mt-6">
+                        <button type="button" class="flex items-center justify-center gap-2 btn btn-secondary">
                             <svg class="w-5 h-5" viewBox="0 0 24 24">
                                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                                 <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -85,7 +85,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
                             </svg>
                             Google
                         </button>
-                        <button type="button" class="btn btn-secondary flex items-center justify-center gap-2">
+                        <button type="button" class="flex items-center justify-center gap-2 btn btn-secondary">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                             </svg>
@@ -94,9 +94,9 @@ require_once __DIR__ . '/includes/auth-branding.php';
                     </div>
                 </div>
 
-                <p class="text-center text-muted mt-8">
+                <p class="mt-8 text-center text-muted">
                     Nu ai cont?
-                    <a href="/inregistrare" class="text-primary font-medium">Creează cont gratuit</a>
+                    <a href="/inregistrare" class="font-medium text-primary">Creează cont gratuit</a>
                 </p>
             </div>
         </div>

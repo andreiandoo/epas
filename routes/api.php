@@ -2277,6 +2277,9 @@ Route::prefix('marketplace-client/venues')->middleware(['throttle:120,1', 'marke
         ->name('api.marketplace-client.venues.featured');
     Route::get('/{slug}', [MarketplaceVenuesController::class, 'show'])
         ->name('api.marketplace-client.venues.show');
+    Route::post('/{slug}/contact', [MarketplaceVenuesController::class, 'contact'])
+        ->name('api.marketplace-client.venues.contact')
+        ->middleware('throttle:5,10'); // 5 requests per 10 minutes
 });
 
 // Artists

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 use App\Models\Venue;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Mail;
 
 class VenuesController extends BaseController
 {
@@ -392,6 +393,56 @@ class VenuesController extends BaseController
             ->count();
 
         return $count;
+    }
+
+    /**
+     * Send a contact message to a venue
+     */
+    public function contact(Request $request, string $slug): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $venue = Venue::query()
+            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_client_id', $client->id))
+            ->where('slug', $slug)
+            ->first();
+
+        if (!$venue) {
+            return $this->error('Venue not found', 404);
+        }
+
+        $venueEmail = $venue->email;
+        if (!$venueEmail) {
+            return $this->error('Această locație nu are o adresă de email configurată.', 422);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'email' => 'required|email|max:150',
+            'subject' => 'required|string|max:200',
+            'message' => 'required|string|max:2000',
+        ]);
+
+        $siteName = $client->name ?? 'Bilete.online';
+
+        Mail::send([], [], function ($m) use ($validated, $venueEmail, $venue, $siteName) {
+            $body = '<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">';
+            $body .= '<h2 style="color:#A51C30;">Mesaj nou de pe ' . e($siteName) . '</h2>';
+            $body .= '<p><strong>De la:</strong> ' . e($validated['name']) . ' (' . e($validated['email']) . ')</p>';
+            $body .= '<p><strong>Subiect:</strong> ' . e($validated['subject']) . '</p>';
+            $body .= '<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">';
+            $body .= '<div style="white-space:pre-line;color:#374151;">' . e($validated['message']) . '</div>';
+            $body .= '<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">';
+            $body .= '<p style="color:#9ca3af;font-size:12px;">Acest mesaj a fost trimis prin intermediul ' . e($siteName) . ' pentru locația ' . e($venue->name) . '.</p>';
+            $body .= '</div>';
+
+            $m->to($venueEmail)
+              ->replyTo($validated['email'], $validated['name'])
+              ->subject('[' . $siteName . '] ' . $validated['subject'])
+              ->html($body);
+        });
+
+        return $this->success(['message' => 'Mesajul a fost trimis cu succes.']);
     }
 
     /**

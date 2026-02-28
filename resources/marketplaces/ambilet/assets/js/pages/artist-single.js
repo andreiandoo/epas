@@ -516,7 +516,7 @@ const ArtistPage = {
         if (hasBoth) {
             // Tabbed layout with RO and EN
             container.innerHTML =
-                '<div class="flex gap-1 p-1 mb-5 bg-gray-100 rounded-xl w-fit" id="aboutTabs">' +
+                '<div class="flex gap-1 p-1 mb-5 bg-gray-100 rounded-xl justify-center" id="aboutTabs">' +
                     '<button onclick="ArtistPage.switchAboutTab(\'ro\')" class="about-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all bg-white text-gray-900 shadow-sm" data-tab="ro">' +
                         '<span class="inline-block w-5 h-3.5 mr-1.5 align-middle rounded-sm overflow-hidden relative" style="top:-1px">' +
                             '<span class="absolute inset-x-0 top-0 h-1/3 bg-[#002B7F]"></span>' +
@@ -530,12 +530,12 @@ const ArtistPage = {
                         '</span>English' +
                     '</button>' +
                 '</div>' +
-                '<div id="aboutContent-ro" class="text-base flex flex-col gap-y-2 leading-[1.8] text-gray-600 prose prose-sm max-w-none">' + bioRo + '</div>' +
-                '<div id="aboutContent-en" class="hidden text-base flex flex-col gap-y-2 leading-[1.8] text-gray-600 prose prose-sm max-w-none">' + bioEn + '</div>';
+                '<div id="aboutContent-ro" class="text-base flex flex-col gap-y-2 leading-[1.8] text-gray-600 prose prose-sm max-w-none bg-white border border-gray-200 shadow-sm rounded-2xl p-4">' + bioRo + '</div>' +
+                '<div id="aboutContent-en" class="hidden text-base flex flex-col gap-y-2 leading-[1.8] text-gray-600 prose prose-sm max-w-none bg-white border border-gray-200 shadow-sm rounded-2xl p-4">' + bioEn + '</div>';
         } else {
             // Single language
             container.innerHTML = about.map(function(text) {
-                return '<div class="text-base flex flex-col gap-y-2 leading-[1.8] text-gray-600 mb-4 last:mb-0 prose prose-sm max-w-none">' + text + '</div>';
+                return '<div class="text-base flex flex-col gap-y-2 leading-[1.8] text-gray-600 mb-4 last:mb-0 prose prose-sm max-w-none bg-white border border-gray-200 shadow-sm rounded-2xl p-4">' + text + '</div>';
             }).join('');
         }
     },

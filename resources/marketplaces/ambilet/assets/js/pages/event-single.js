@@ -2156,9 +2156,11 @@ const EventPage = {
         document.getElementById('seat-selection-modal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
 
-        // Auto-center map after modal is visible (needs a frame to measure container)
+        // Auto-center map after modal is visible (double rAF to ensure layout is settled on mobile)
         requestAnimationFrame(function() {
-            self.centerMapToContent();
+            requestAnimationFrame(function() {
+                self.centerMapToContent();
+            });
         });
     },
 
@@ -2177,20 +2179,21 @@ const EventPage = {
         modal.style.zIndex = '9999'; // Above navigation
         modal.innerHTML =
             '<div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="EventPage.closeSeatSelection()"></div>' +
-            '<div class="absolute inset-2 md:inset-4 lg:inset-8 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">' +
+            // Full-screen on mobile (inset-0), padded on larger screens
+            '<div class="absolute inset-0 md:inset-4 lg:inset-8 bg-white md:rounded-2xl shadow-2xl flex flex-col overflow-hidden">' +
                 // Header
                 '<div class="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border">' +
-                    '<div>' +
-                        '<h2 class="text-lg md:text-xl font-bold text-secondary">Alege locurile tale la ' + (this.event?.title || 'eveniment') + '</h2>' +
+                    '<div class="flex-1 min-w-0">' +
+                        '<h2 class="text-base md:text-xl font-bold text-secondary truncate">Alege locurile</h2>' +
                         '<p class="text-xs md:text-sm text-muted" id="seat-selection-subtitle">Selectează locurile dorite pe hartă</p>' +
                     '</div>' +
-                    '<button onclick="EventPage.closeSeatSelection()" class="p-2 transition-colors rounded-lg hover:bg-surface">' +
+                    '<button onclick="EventPage.closeSeatSelection()" class="p-2 transition-colors rounded-lg hover:bg-surface flex-shrink-0">' +
                         '<svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
                     '</button>' +
                 '</div>' +
                 // Content area with sidebar and map
                 '<div class="flex-1 flex overflow-hidden">' +
-                    // Left sidebar - ticket types
+                    // Left sidebar - ticket types (hidden on mobile)
                     '<div class="w-48 lg:w-64 border-r border-border bg-white overflow-y-auto hidden md:block" id="seat-modal-sidebar">' +
                         '<div class="p-4 border-b border-border">' +
                             '<h3 class="font-bold text-secondary text-sm">Tipuri de bilete</h3>' +
@@ -2200,24 +2203,25 @@ const EventPage = {
                     // Map container
                     '<div class="flex-1 flex flex-col bg-surface/50 overflow-hidden">' +
                         // Zoom controls
-                        '<div class="flex items-center justify-between px-4 py-2 bg-white border-b border-border">' +
-                            '<div class="flex items-center gap-2">' +
-                                '<button onclick="EventPage.zoomMap(-0.2)" class="p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom out">' +
+                        '<div class="flex items-center justify-between px-3 md:px-4 py-2 bg-white border-b border-border">' +
+                            '<div class="flex items-center gap-1 md:gap-2">' +
+                                '<button onclick="EventPage.zoomMap(-0.2)" class="p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom out">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>' +
                                 '</button>' +
                                 '<span id="zoom-level" class="text-sm font-medium text-muted w-12 text-center">100%</span>' +
-                                '<button onclick="EventPage.zoomMap(0.2)" class="p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom in">' +
+                                '<button onclick="EventPage.zoomMap(0.2)" class="p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom in">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
                                 '</button>' +
-                                '<button onclick="EventPage.resetMapZoom()" class="ml-2 p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors text-xs" title="Reset zoom">' +
+                                '<button onclick="EventPage.resetMapZoom()" class="ml-1 md:ml-2 p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors text-xs" title="Reset zoom">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
                                 '</button>' +
                             '</div>' +
-                            '<div class="text-xs text-muted">Scroll pentru zoom, drag pentru panoramare</div>' +
+                            '<div class="text-xs text-muted hidden md:block">Scroll pentru zoom, drag pentru panoramare</div>' +
+                            '<div class="text-xs text-muted md:hidden">Ciupește pentru zoom</div>' +
                         '</div>' +
                         // Map SVG container with legend
-                        '<div class="flex-1 overflow-hidden p-2 relative" id="seat-map-container">' +
-                            '<div id="seat-map-wrapper" class="w-full h-full overflow-hidden" style="cursor: grab;">' +
+                        '<div class="flex-1 overflow-hidden p-1 md:p-2 relative" id="seat-map-container">' +
+                            '<div id="seat-map-wrapper" class="w-full h-full overflow-hidden touch-none" style="cursor: grab;">' +
                                 '<div id="seat-map-svg" class="inline-block min-w-full min-h-full flex items-center justify-center" style="transform-origin: center center;">' +
                                     '<div class="text-center text-muted">' +
                                         '<svg class="w-12 h-12 mx-auto mb-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>' +
@@ -2226,14 +2230,14 @@ const EventPage = {
                                 '</div>' +
                             '</div>' +
                             // Legend in bottom-left corner of map
-                            '<div class="absolute bottom-3 left-3 flex flex-wrap items-center gap-3 md:gap-4 text-xs md:text-sm bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-sm">' +
+                            '<div class="absolute bottom-3 left-3 flex flex-wrap items-center gap-2 md:gap-4 text-[10px] md:text-sm bg-white/90 backdrop-blur-sm rounded-lg px-2 md:px-3 py-1.5 md:py-2 shadow-sm">' +
                                 '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded" style="background-color: #a51c30;"></span> Selectat</div>' +
                                 '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-300"></span> Ocupat</div>' +
                                 '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded relative" style="background-color: #D1D5DB;"><span class="absolute inset-0 flex items-center justify-center text-gray-500 font-bold" style="font-size:8px;line-height:1">&times;</span></span> Indisponibil</div>' +
                             '</div>' +
                         '</div>' +
                     '</div>' +
-                    // Right sidebar - selected tickets
+                    // Right sidebar - selected tickets (hidden on mobile, uses mobile bottom bar)
                     '<div class="w-64 lg:w-80 border-l border-border bg-white overflow-y-auto hidden lg:flex flex-col" id="seat-selected-sidebar">' +
                         '<div class="py-4 px-3 border-b border-border">' +
                             '<h3 class="font-bold text-secondary text-sm" id="selected-tickets-count-header">0 bilete</h3>' +
@@ -2248,12 +2252,25 @@ const EventPage = {
                                 '<span id="selected-seats-total" class="font-bold text-primary">0 lei</span>' +
                             '</div>' +
                             '<div class="flex gap-2">' +
-                                '<button onclick="EventPage.confirmSeatSelection()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Comandă</button>' +
+                                '<button onclick="EventPage.confirmSeatSelection()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Cumpără bilete</button>' +
                                 '<button onclick="EventPage.clearAllSelections()" class="p-2.5 text-secondary border border-secondary rounded-xl opacity-50 hover:bg-red-50 hover:opacity-100 hover:border-red-600 hover:text-red-600 transition-all" title="Golește coșul">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
                                 '</button>' +
                             '</div>' +
                         '</div>' +
+                    '</div>' +
+                '</div>' +
+                // Mobile bottom bar - shows selected seats count and buy button (visible on < lg)
+                '<div class="lg:hidden border-t border-border bg-white px-4 py-3 flex items-center justify-between gap-3" id="seat-mobile-bottom-bar">' +
+                    '<div class="flex-1 min-w-0">' +
+                        '<span class="text-sm font-bold text-secondary" id="mobile-seats-count">0 locuri</span>' +
+                        '<span class="text-sm text-muted ml-2" id="mobile-seats-total">0 lei</span>' +
+                    '</div>' +
+                    '<div class="flex gap-2 flex-shrink-0">' +
+                        '<button onclick="EventPage.clearAllSelections()" class="p-2.5 text-muted border border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all" title="Golește">' +
+                            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
+                        '</button>' +
+                        '<button onclick="EventPage.confirmSeatSelection()" class="px-5 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors" id="mobile-seats-buy-btn">Cumpără bilete</button>' +
                     '</div>' +
                 '</div>' +
             '</div>';
@@ -2301,6 +2318,65 @@ const EventPage = {
             self.mapPan.y = startPanY + dy;
             self.applyMapTransform();
         });
+
+        // Touch events for mobile pan and pinch-zoom
+        var touchStartDist = 0;
+        var touchStartZoom = 1;
+        var isTouchDragging = false;
+        var touchStartX, touchStartY, touchStartPanX, touchStartPanY;
+
+        mapWrapper.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 2) {
+                // Pinch zoom start
+                e.preventDefault();
+                var dx = e.touches[0].clientX - e.touches[1].clientX;
+                var dy = e.touches[0].clientY - e.touches[1].clientY;
+                touchStartDist = Math.sqrt(dx * dx + dy * dy);
+                touchStartZoom = self.mapZoom;
+                isTouchDragging = false;
+            } else if (e.touches.length === 1) {
+                // Single finger pan
+                isTouchDragging = true;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                touchStartPanX = self.mapPan.x;
+                touchStartPanY = self.mapPan.y;
+            }
+        }, { passive: false });
+
+        mapWrapper.addEventListener('touchmove', function(e) {
+            if (e.touches.length === 2) {
+                // Pinch zoom
+                e.preventDefault();
+                var dx = e.touches[0].clientX - e.touches[1].clientX;
+                var dy = e.touches[0].clientY - e.touches[1].clientY;
+                var dist = Math.sqrt(dx * dx + dy * dy);
+                if (touchStartDist > 0) {
+                    var scale = dist / touchStartDist;
+                    self.mapZoom = Math.max(0.5, Math.min(3, touchStartZoom * scale));
+                    self.applyMapTransform();
+                    var zoomEl = document.getElementById('zoom-level');
+                    if (zoomEl) zoomEl.textContent = Math.round(self.mapZoom * 100) + '%';
+                }
+            } else if (e.touches.length === 1 && isTouchDragging) {
+                // Single finger pan
+                e.preventDefault();
+                var panDx = e.touches[0].clientX - touchStartX;
+                var panDy = e.touches[0].clientY - touchStartY;
+                self.mapPan.x = touchStartPanX + panDx;
+                self.mapPan.y = touchStartPanY + panDy;
+                self.applyMapTransform();
+            }
+        }, { passive: false });
+
+        mapWrapper.addEventListener('touchend', function(e) {
+            if (e.touches.length < 2) {
+                touchStartDist = 0;
+            }
+            if (e.touches.length === 0) {
+                isTouchDragging = false;
+            }
+        });
     },
 
     /**
@@ -2345,7 +2421,9 @@ const EventPage = {
         var canvasH = this.seatingLayout?.canvas_height || 1080;
 
         // Calculate zoom to fit the canvas in the visible area with some padding
-        var padX = 40, padY = 40;
+        var isMobile = wrapperRect.width < 768;
+        var padX = isMobile ? 10 : 40;
+        var padY = isMobile ? 10 : 40;
         var availW = wrapperRect.width - padX;
         var availH = wrapperRect.height - padY;
         var fitZoom = Math.min(availW / canvasW, availH / canvasH);
@@ -3222,8 +3300,27 @@ const EventPage = {
             });
         });
 
-        document.getElementById('selected-seats-count').textContent = totalSeats;
-        document.getElementById('selected-seats-total').textContent = totalPrice.toFixed(2) + ' lei';
+        // Update desktop sidebar
+        var desktopCount = document.getElementById('selected-seats-count');
+        var desktopTotal = document.getElementById('selected-seats-total');
+        if (desktopCount) desktopCount.textContent = totalSeats;
+        if (desktopTotal) desktopTotal.textContent = totalPrice.toFixed(2) + ' lei';
+
+        // Update mobile bottom bar
+        var mobileCount = document.getElementById('mobile-seats-count');
+        var mobileTotal = document.getElementById('mobile-seats-total');
+        var mobileBuyBtn = document.getElementById('mobile-seats-buy-btn');
+        if (mobileCount) mobileCount.textContent = totalSeats + (totalSeats === 1 ? ' loc selectat' : ' locuri selectate');
+        if (mobileTotal) mobileTotal.textContent = totalPrice.toFixed(2) + ' lei';
+        if (mobileBuyBtn) {
+            mobileBuyBtn.textContent = totalSeats > 0 ? 'Cumpără bilete' : 'Selectează locuri';
+            mobileBuyBtn.disabled = totalSeats === 0;
+            mobileBuyBtn.style.opacity = totalSeats > 0 ? '1' : '0.5';
+        }
+
+        // Update header count for desktop sidebar
+        var headerCount = document.getElementById('selected-tickets-count-header');
+        if (headerCount) headerCount.textContent = totalSeats + (totalSeats === 1 ? ' bilet' : ' bilete');
 
         // Update subtitle
         var subtitle = document.getElementById('seat-selection-subtitle');

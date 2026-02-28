@@ -198,20 +198,24 @@ const UserOrders = {
                         <div class="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 ${isPast ? 'grayscale opacity-75' : ''}">
                             <img src="${eventImage}" class="object-cover w-full h-full" alt="" onerror="this.src='/assets/images/default-event.png'" loading="lazy">
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="font-mono text-xs text-muted">${orderRef}</span>
+                        <div class="mobile:flex-col mobile:flex">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-mono text-xs text-muted">${orderRef}</span>
+                                </div>
+                                <h3 class="font-semibold text-secondary">${eventTitle}</h3>
+                                <p class="text-sm text-muted">${this.formatDateTime(order.created_at)} • ${ticketCount < 2 ? '1 bilet' : ticketCount + ' bilete'} ${ticketName}</p>
                             </div>
-                            <h3 class="font-semibold text-secondary">${eventTitle}</h3>
-                            <p class="text-sm text-muted">${this.formatDateTime(order.created_at)} • ${ticketCount < 2 ? '1 bilet' : ticketCount + ' bilete'} ${ticketName}</p>
+                            <div class="mobile:items-center mobile:gap-4 mobile:flex">
+                                <div class="flex items-center flex-shrink-0 text-right gap-x-4">
+                                    ${order.status === 'refunded' ?
+                                        `<p class="font-bold line-through text-muted">${order.total} lei</p><p class="text-xs text-error">Rambursat</p>` :
+                                        `<span class="flex items-center justify-center px-2 py-0.5 ${statusClass} text-xs font-bold rounded">${statusLabel}</span> <p class="font-bold text-secondary">${order.total} lei</p>${order.points_earned ? `<p class="text-xs text-success">+${order.points_earned} puncte</p>` : ''}`
+                                    }
+                                </div>
+                                <svg class="w-5 h-5 expand-icon text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
                         </div>
-                        <div class="flex items-center flex-shrink-0 text-right gap-x-4">
-                            ${order.status === 'refunded' ?
-                                `<p class="font-bold line-through text-muted">${order.total} lei</p><p class="text-xs text-error">Rambursat</p>` :
-                                `<span class="flex items-center justify-center px-2 py-0.5 ${statusClass} text-xs font-bold rounded">${statusLabel}</span> <p class="font-bold text-secondary">${order.total} lei</p>${order.points_earned ? `<p class="text-xs text-success">+${order.points_earned} puncte</p>` : ''}`
-                            }
-                        </div>
-                        <svg class="w-5 h-5 expand-icon text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </div>
                 </button>
 

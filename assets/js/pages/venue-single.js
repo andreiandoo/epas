@@ -604,6 +604,99 @@ const VenuePage = {
     },
 
     /**
+     * Open contact venue modal
+     */
+    openContactModal() {
+        var modal = document.getElementById('contactVenueModal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        // Set venue name in modal
+        var nameEl = document.getElementById('contactVenueName');
+        if (nameEl && this.venue) {
+            nameEl.textContent = this.venue.name;
+        }
+
+        // Pre-fill email if logged in
+        if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isLoggedIn()) {
+            var user = AmbiletAuth.getUser();
+            var form = document.getElementById('contactVenueForm');
+            if (user && form) {
+                if (user.name) form.querySelector('[name="name"]').value = user.name;
+                if (user.email) form.querySelector('[name="email"]').value = user.email;
+            }
+        }
+
+        // Reset messages
+        document.getElementById('contactFormError').classList.add('hidden');
+        document.getElementById('contactFormSuccess').classList.add('hidden');
+    },
+
+    /**
+     * Close contact venue modal
+     */
+    closeContactModal(event) {
+        if (event && event.target !== event.currentTarget) return;
+        var modal = document.getElementById('contactVenueModal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.style.display = '';
+        document.body.style.overflow = '';
+    },
+
+    /**
+     * Submit contact form
+     */
+    async submitContactForm(event) {
+        event.preventDefault();
+        var form = document.getElementById('contactVenueForm');
+        var submitBtn = document.getElementById('contactSubmitBtn');
+        var errorEl = document.getElementById('contactFormError');
+        var successEl = document.getElementById('contactFormSuccess');
+
+        if (!form || !this.venueSlug) return;
+
+        // Disable button
+        submitBtn.disabled = true;
+        submitBtn.querySelector('span').textContent = 'Se trimite...';
+
+        errorEl.classList.add('hidden');
+        successEl.classList.add('hidden');
+
+        var data = {
+            name: form.querySelector('[name="name"]').value.trim(),
+            email: form.querySelector('[name="email"]').value.trim(),
+            subject: form.querySelector('[name="subject"]').value.trim(),
+            message: form.querySelector('[name="message"]').value.trim()
+        };
+
+        try {
+            var response = await AmbiletAPI.post('/venues/' + this.venueSlug + '/contact', data);
+            if (response.success) {
+                successEl.textContent = 'Mesajul tău a fost trimis cu succes! Locația va reveni cu un răspuns.';
+                successEl.classList.remove('hidden');
+                form.reset();
+                // Close modal after 3 seconds
+                setTimeout(function() { VenuePage.closeContactModal(); }, 3000);
+            } else {
+                errorEl.textContent = response.message || 'Eroare la trimiterea mesajului. Încearcă din nou.';
+                errorEl.classList.remove('hidden');
+            }
+        } catch (e) {
+            var msg = 'Eroare la trimiterea mesajului. Încearcă din nou.';
+            if (e.data && e.data.message) msg = e.data.message;
+            else if (e.message) msg = e.message;
+            errorEl.textContent = msg;
+            errorEl.classList.remove('hidden');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.querySelector('span').textContent = 'Trimite mesajul';
+        }
+    },
+
+    /**
      * Update follow button visual state
      */
     updateFollowButton() {

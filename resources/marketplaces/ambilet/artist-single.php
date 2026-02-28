@@ -89,7 +89,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <!-- Actions Card -->
-        <div class="p-6 bg-white shadow-lg rounded-2xl mobile:p-0 mobile:shadow-none mobile:rounded-none">
+        <div class="p-6 bg-white shadow-lg rounded-2xl mobile:p-0 mobile:bg-transparent mobile:shadow-none mobile:rounded-none">
             <div class="flex gap-3 mb-5">
                 <button id="follow-btn" onclick="ArtistPage.toggleFollow()" class="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 bg-gradient-to-r from-primary to-primary-light rounded-xl text-white font-semibold transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/35">
                     <svg id="follow-icon" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -165,12 +165,24 @@ require_once __DIR__ . '/includes/header.php';
                 </section>
                 
                 <!-- About Card -->
-                <div id="aboutCard" class="bg-white border border-gray-200 shadow-sm rounded-2xl p-7">
-                    <div class="w-full h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
-                    <div class="w-5/6 h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
-                    <div class="w-4/5 h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
-                    <div class="w-3/4 h-4 bg-gray-200 rounded animate-pulse"></div>
-                </div>
+                <section class="mb-10" id="aboutSection">
+                    <div class="flex items-center mb-5">
+                        <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
+                            <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="16" x2="12" y2="12"/>
+                                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                            </svg>
+                            Despre
+                        </h2>
+                    </div>
+                    <div id="aboutCard">
+                        <div class="w-full h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
+                        <div class="w-5/6 h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
+                        <div class="w-4/5 h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
+                        <div class="w-3/4 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                </section>
             </div>
 
             <div class="sticky self-start top-24">
@@ -258,7 +270,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </section>
 </div>
-<div class="px-6 mx-auto max-w-7xl">
+<div class="px-6 mx-auto max-w-7xl mobile:p-4">
     <!-- Spotify Section -->
     <section id="spotifySection" class="mt-10">
         <div class="grid items-center grid-cols-1 gap-10 p-8 bg-white lg:grid-cols-2 mobile:p-0">
@@ -293,7 +305,7 @@ require_once __DIR__ . '/includes/header.php';
             </h2>
         </div>
 
-        <div id="similarArtists" class="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        <div id="similarArtists" class="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mobile:grid-cols-3">
             <!-- Skeleton artists -->
             <?php for ($i = 0; $i < 6; $i++): ?>
             <div class="text-center">
