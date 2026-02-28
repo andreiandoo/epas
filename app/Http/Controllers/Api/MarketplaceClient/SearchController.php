@@ -159,10 +159,16 @@ class SearchController extends BaseController
                     ?? (is_array($event->venue->name) ? ($event->venue->name[$language] ?? $event->venue->name['ro'] ?? null) : $event->venue->name);
             }
 
-            // Calculate min price
-            $minPrice = $event->ticketTypes->map(function ($tt) {
-                return ($tt->sale_price_cents ?? $tt->price_cents) / 100;
-            })->min();
+            // Calculate min price (skip free/0-price tickets when paid tickets exist)
+            $allPrices = $event->ticketTypes->map(function ($tt) {
+                if ($tt->sale_price_cents !== null && $tt->sale_price_cents > 0) {
+                    return $tt->sale_price_cents;
+                }
+                return $tt->price_cents ?? 0;
+            });
+            $paidPrices = $allPrices->filter(fn ($p) => $p > 0);
+            $minPriceCents = $paidPrices->isNotEmpty() ? $paidPrices->min() : $allPrices->min();
+            $minPrice = ($minPriceCents !== null && $minPriceCents > 0) ? $minPriceCents / 100 : null;
 
             return [
                 'id' => $event->id,
