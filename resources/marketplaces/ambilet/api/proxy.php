@@ -2809,6 +2809,29 @@ if ($useCache && $response !== false) {
 
 http_response_code($statusCode);
 
+// Browser Cache-Control headers — allows browsers to cache GET responses
+if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAuth) {
+    $browserTtl = match(true) {
+        // Static/rarely changing content — 1 day browser cache
+        in_array($action, ['categories', 'event-categories', 'event-genres', 'venue-categories', 'locations.regions', 'locations.stats']) => 86400,
+        // Listings — 5 min browser cache
+        in_array($action, ['events', 'events.featured', 'venues', 'venues.featured', 'artists', 'organizers', 'locations.cities']) => 300,
+        // Single items — 2 min browser cache
+        str_starts_with($action, 'event') || str_starts_with($action, 'venue') || str_starts_with($action, 'artist') || str_starts_with($action, 'organizer') => 120,
+        // Search — 1 min
+        $action === 'search' => 60,
+        // Default — no browser cache (cart, auth, checkout, etc.)
+        default => 0,
+    };
+    if ($browserTtl > 0) {
+        header("Cache-Control: public, max-age={$browserTtl}, stale-while-revalidate=60");
+    } else {
+        header('Cache-Control: no-store');
+    }
+} else {
+    header('Cache-Control: no-store');
+}
+
 // For raw responses (PDF, exports), forward Content-Type and Content-Disposition from upstream
 if (!empty($rawResponse) && isset($http_response_header)) {
     foreach ($http_response_header as $header) {
