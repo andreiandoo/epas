@@ -2,6 +2,7 @@
 
 namespace App\Models\Platform;
 
+use App\Models\MarketplaceClient;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -142,6 +143,10 @@ class CoreCustomer extends Model
         'anonymized_at',
         // Computed RFM score
         'rfm_score',
+        // Marketplace client tracking
+        'marketplace_client_ids',
+        'primary_marketplace_client_id',
+        'marketplace_client_count',
     ];
 
     protected $casts = [
@@ -186,6 +191,7 @@ class CoreCustomer extends Model
         'is_anonymized' => 'boolean',
         'anonymized_at' => 'datetime',
         'rfm_score' => 'integer',
+        'marketplace_client_ids' => 'array',
     ];
 
     protected $hidden = [
@@ -271,6 +277,11 @@ class CoreCustomer extends Model
         return $this->belongsTo(Tenant::class, 'primary_tenant_id');
     }
 
+    public function primaryMarketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class, 'primary_marketplace_client_id');
+    }
+
     public function events(): HasMany
     {
         return $this->hasMany(CoreCustomerEvent::class, 'customer_id');
@@ -347,6 +358,11 @@ class CoreCustomer extends Model
     public function scopeFromTenant($query, int $tenantId)
     {
         return $query->whereJsonContains('tenant_ids', $tenantId);
+    }
+
+    public function scopeFromMarketplaceClient($query, int $clientId)
+    {
+        return $query->whereJsonContains('marketplace_client_ids', $clientId);
     }
 
     public function scopeWithConsent($query, string $type = 'marketing')
@@ -464,6 +480,23 @@ class CoreCustomer extends Model
 
             if (!$this->first_tenant_id) {
                 $this->first_tenant_id = $tenantId;
+            }
+
+            $this->save();
+        }
+    }
+
+    public function addMarketplaceClient(int $clientId): void
+    {
+        $clientIds = $this->marketplace_client_ids ?? [];
+
+        if (!in_array($clientId, $clientIds)) {
+            $clientIds[] = $clientId;
+            $this->marketplace_client_ids = $clientIds;
+            $this->marketplace_client_count = count($clientIds);
+
+            if (!$this->primary_marketplace_client_id) {
+                $this->primary_marketplace_client_id = $clientId;
             }
 
             $this->save();

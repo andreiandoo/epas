@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Models\MarketplaceClient;
 use App\Models\Platform\CoreCustomer;
 use App\Models\Tenant;
 use Filament\Actions\Action;
@@ -348,52 +349,81 @@ class CoreCustomerResource extends Resource
                             ->columns(4),
                     ]),
 
-                // ===== CROSS-TENANT & DEVICE =====
-                SC\Section::make('Cross-Tenant & Device')
+                // ===== CROSS-TENANT, MARKETPLACE & DEVICE =====
+                SC\Section::make('Cross-Tenant, Marketplace & Device')
                     ->icon('heroicon-o-device-phone-mobile')
                     ->collapsed()
                     ->schema([
-                        Forms\Components\Placeholder::make('display_primary_tenant')
-                            ->label('Primary Tenant')
-                            ->content(function ($record) {
-                                if (!$record?->primary_tenant_id) return '-';
-                                $tenant = Tenant::find($record->primary_tenant_id);
-                                return $tenant ? ($tenant->public_name ?? $tenant->name) . " (ID: {$tenant->id})" : "ID: {$record->primary_tenant_id}";
-                            }),
+                        SC\Fieldset::make('Marketplace Clients')
+                            ->schema([
+                                Forms\Components\Placeholder::make('display_primary_marketplace')
+                                    ->label('Primary Marketplace')
+                                    ->content(function ($record) {
+                                        if (!$record?->primary_marketplace_client_id) return '-';
+                                        $client = MarketplaceClient::find($record->primary_marketplace_client_id);
+                                        return $client ? $client->name . " (ID: {$client->id})" : "ID: {$record->primary_marketplace_client_id}";
+                                    }),
 
-                        Forms\Components\Placeholder::make('display_tenant_count')
-                            ->label('Tenant Count')
-                            ->content(fn ($record) => $record?->tenant_count ?? 0),
+                                Forms\Components\Placeholder::make('display_marketplace_count')
+                                    ->label('Marketplace Count')
+                                    ->content(fn ($record) => $record?->marketplace_client_count ?? 0),
 
-                        Forms\Components\Placeholder::make('display_tenant_ids')
-                            ->label('Tenant IDs')
-                            ->content(fn ($record) => $record?->tenant_ids
-                                ? implode(', ', (array) $record->tenant_ids)
-                                : '-'),
+                                Forms\Components\Placeholder::make('display_marketplace_ids')
+                                    ->label('Marketplace Client IDs')
+                                    ->content(fn ($record) => $record?->marketplace_client_ids
+                                        ? implode(', ', (array) $record->marketplace_client_ids)
+                                        : '-'),
+                            ])
+                            ->columns(3),
 
-                        Forms\Components\Placeholder::make('display_visitor_id')
-                            ->label('Visitor ID')
-                            ->content(fn ($record) => $record?->visitor_id
-                                ? new HtmlString('<span class="text-xs font-mono">' . e($record->visitor_id) . '</span>')
-                                : '-'),
+                        SC\Fieldset::make('Tenants')
+                            ->schema([
+                                Forms\Components\Placeholder::make('display_primary_tenant')
+                                    ->label('Primary Tenant')
+                                    ->content(function ($record) {
+                                        if (!$record?->primary_tenant_id) return '-';
+                                        $tenant = Tenant::find($record->primary_tenant_id);
+                                        return $tenant ? ($tenant->public_name ?? $tenant->name) . " (ID: {$tenant->id})" : "ID: {$record->primary_tenant_id}";
+                                    }),
 
-                        Forms\Components\Placeholder::make('display_device_type')
-                            ->label('Device Type')
-                            ->content(fn ($record) => ucfirst($record?->device_type ?? $record?->primary_device ?? '-')),
+                                Forms\Components\Placeholder::make('display_tenant_count')
+                                    ->label('Tenant Count')
+                                    ->content(fn ($record) => $record?->tenant_count ?? 0),
 
-                        Forms\Components\Placeholder::make('display_browser')
-                            ->label('Browser')
-                            ->content(fn ($record) => $record?->browser ?? $record?->primary_browser ?? '-'),
+                                Forms\Components\Placeholder::make('display_tenant_ids')
+                                    ->label('Tenant IDs')
+                                    ->content(fn ($record) => $record?->tenant_ids
+                                        ? implode(', ', (array) $record->tenant_ids)
+                                        : '-'),
+                            ])
+                            ->columns(3),
 
-                        Forms\Components\Placeholder::make('display_os')
-                            ->label('OS')
-                            ->content(fn ($record) => $record?->os ?? '-'),
+                        SC\Fieldset::make('Device & Session')
+                            ->schema([
+                                Forms\Components\Placeholder::make('display_visitor_id')
+                                    ->label('Visitor ID')
+                                    ->content(fn ($record) => $record?->visitor_id
+                                        ? new HtmlString('<span style="font-size:0.75rem;font-family:monospace;">' . e($record->visitor_id) . '</span>')
+                                        : '-'),
 
-                        Forms\Components\Placeholder::make('display_ip')
-                            ->label('IP Address')
-                            ->content(fn ($record) => $record?->ip_address ?? '-'),
-                    ])
-                    ->columns(4),
+                                Forms\Components\Placeholder::make('display_device_type')
+                                    ->label('Device Type')
+                                    ->content(fn ($record) => ucfirst($record?->device_type ?? $record?->primary_device ?? '-')),
+
+                                Forms\Components\Placeholder::make('display_browser')
+                                    ->label('Browser')
+                                    ->content(fn ($record) => $record?->browser ?? $record?->primary_browser ?? '-'),
+
+                                Forms\Components\Placeholder::make('display_os')
+                                    ->label('OS')
+                                    ->content(fn ($record) => $record?->os ?? '-'),
+
+                                Forms\Components\Placeholder::make('display_ip')
+                                    ->label('IP Address')
+                                    ->content(fn ($record) => $record?->ip_address ?? '-'),
+                            ])
+                            ->columns(5),
+                    ]),
 
                 // ===== EMAIL ENGAGEMENT =====
                 SC\Section::make('Email Engagement')
@@ -533,6 +563,23 @@ class CoreCustomerResource extends Resource
                               ->orWhere('email_hash', 'like', "%{$search}%");
                         });
                     }),
+
+                Tables\Columns\TextColumn::make('source_display')
+                    ->label('Source')
+                    ->getStateUsing(function ($record) {
+                        $parts = [];
+                        if ($record->primary_marketplace_client_id) {
+                            $client = MarketplaceClient::find($record->primary_marketplace_client_id);
+                            if ($client) $parts[] = $client->name;
+                        }
+                        if ($record->primary_tenant_id) {
+                            $tenant = Tenant::find($record->primary_tenant_id);
+                            if ($tenant) $parts[] = $tenant->public_name ?? $tenant->name;
+                        }
+                        return implode(', ', $parts) ?: '-';
+                    })
+                    ->wrap()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('customer_segment')
                     ->label('Segment')

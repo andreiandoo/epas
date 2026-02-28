@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Customer;
+use App\Models\MarketplaceCustomer;
 use App\Models\Order;
 use App\Models\Platform\CoreCustomer;
 use App\Models\Platform\CoreCustomerEvent;
@@ -154,7 +156,8 @@ class SyncCoreCustomerMetrics extends Command
         );
 
         $totalSessions = (int) ($sessionStats->total_sessions ?? 0);
-        $totalVisits = max($totalSessions, 1); // At least 1 if they have data
+        // total_visits = max of sessions, orders, or existing value (each order implies at least 1 visit)
+        $totalVisits = max($totalSessions, $totalOrders, $customer->total_visits ?? 0, 1);
         $totalTimeSpent = (int) ($sessionStats->total_duration ?? 0);
         $avgSessionDuration = (int) ($sessionStats->avg_duration ?? 0);
         $bounceRate = $totalSessions > 0
@@ -200,6 +203,14 @@ class SyncCoreCustomerMetrics extends Command
         if ($firstSeenAt) $updates['first_seen_at'] = $firstSeenAt;
         if ($lastSeenAt) $updates['last_seen_at'] = $lastSeenAt;
 
+        // Enrich profile from source models if missing
+        $profileUpdates = $this->enrichProfileFromSources($customer, $email);
+        $updates = array_merge($updates, $profileUpdates);
+
+        // Cross-tenant and marketplace client tracking from orders
+        $crossTenantUpdates = $this->buildCrossTenantData($customer, $orders);
+        $updates = array_merge($updates, $crossTenantUpdates);
+
         // Purchase frequency
         if ($totalOrders >= 2 && $firstPurchaseAt && $lastPurchaseAt) {
             $daysBetween = $firstPurchaseAt->diffInDays($lastPurchaseAt);
@@ -241,5 +252,118 @@ class SyncCoreCustomerMetrics extends Command
         }
 
         return count($updates);
+    }
+
+    protected function enrichProfileFromSources(CoreCustomer $customer, string $email): array
+    {
+        $updates = [];
+
+        // Only enrich if profile data is missing
+        $needsName = empty($customer->first_name);
+        $needsPhone = empty($customer->phone);
+        $needsLocation = empty($customer->city) && empty($customer->country_code);
+        $needsGender = empty($customer->gender);
+
+        if (!$needsName && !$needsPhone && !$needsLocation && !$needsGender) {
+            return $updates;
+        }
+
+        // Try MarketplaceCustomer first (more likely to have full profile)
+        $source = MarketplaceCustomer::where('email', $email)->first();
+        if (!$source) {
+            $source = Customer::where('email', $email)->first();
+        }
+
+        if (!$source) {
+            return $updates;
+        }
+
+        if ($needsName) {
+            $firstName = $source->first_name ?? null;
+            $lastName = $source->last_name ?? null;
+            if ($firstName && $firstName !== '-') $updates['first_name'] = $firstName;
+            if ($lastName && $lastName !== '-') $updates['last_name'] = $lastName;
+        }
+
+        if ($needsPhone && !empty($source->phone)) {
+            $updates['phone'] = $source->phone;
+        }
+
+        if ($needsLocation) {
+            if (!empty($source->city)) $updates['city'] = $source->city;
+            if (!empty($source->country)) {
+                $updates['country_code'] = strtoupper(substr($source->country, 0, 2));
+            }
+            if ($source instanceof MarketplaceCustomer) {
+                if (!empty($source->state)) $updates['region'] = $source->state;
+                if (!empty($source->postal_code)) $updates['postal_code'] = $source->postal_code;
+            }
+        }
+
+        if ($needsGender && $source instanceof MarketplaceCustomer) {
+            if (!empty($source->gender)) $updates['gender'] = $source->gender;
+            if (!empty($source->birth_date)) $updates['birth_date'] = $source->birth_date;
+            if (!empty($source->locale)) $updates['language'] = $source->locale;
+        }
+
+        return $updates;
+    }
+
+    protected function buildCrossTenantData(CoreCustomer $customer, $orders): array
+    {
+        $updates = [];
+        $tenantIds = $customer->tenant_ids ?? [];
+        $marketplaceClientIds = $customer->marketplace_client_ids ?? [];
+
+        foreach ($orders as $order) {
+            if ($order->tenant_id && !in_array($order->tenant_id, $tenantIds)) {
+                $tenantIds[] = $order->tenant_id;
+            }
+            if ($order->marketplace_client_id && !in_array($order->marketplace_client_id, $marketplaceClientIds)) {
+                $marketplaceClientIds[] = $order->marketplace_client_id;
+            }
+        }
+
+        $tenantIds = array_values(array_unique($tenantIds));
+        $marketplaceClientIds = array_values(array_unique($marketplaceClientIds));
+
+        if (!empty($tenantIds)) {
+            $updates['tenant_ids'] = $tenantIds;
+            $updates['tenant_count'] = count($tenantIds);
+            if (!$customer->first_tenant_id) {
+                $updates['first_tenant_id'] = $tenantIds[0];
+            }
+        }
+
+        if (!empty($marketplaceClientIds)) {
+            $updates['marketplace_client_ids'] = $marketplaceClientIds;
+            $updates['marketplace_client_count'] = count($marketplaceClientIds);
+        }
+
+        // Set primary marketplace client from most frequent on orders
+        if (!$customer->primary_marketplace_client_id && $orders->isNotEmpty()) {
+            $mpClientCounts = $orders->whereNotNull('marketplace_client_id')
+                ->groupBy('marketplace_client_id')
+                ->map->count()
+                ->sortDesc();
+
+            if ($mpClientCounts->isNotEmpty()) {
+                $updates['primary_marketplace_client_id'] = $mpClientCounts->keys()->first();
+            }
+        }
+
+        // Set primary tenant from most frequent on orders
+        if (!$customer->primary_tenant_id && $orders->isNotEmpty()) {
+            $tenantCounts = $orders->whereNotNull('tenant_id')
+                ->groupBy('tenant_id')
+                ->map->count()
+                ->sortDesc();
+
+            if ($tenantCounts->isNotEmpty()) {
+                $updates['primary_tenant_id'] = $tenantCounts->keys()->first();
+            }
+        }
+
+        return $updates;
     }
 }
