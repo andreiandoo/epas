@@ -2,6 +2,7 @@
 require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Autentificare Organizator';
 $bodyClass = 'min-h-screen flex bg-surface';
+$cssBundle = 'organizer';
 require_once dirname(__DIR__) . '/includes/head.php';
 ?>
     <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-secondary via-secondary to-primary-dark relative overflow-hidden">

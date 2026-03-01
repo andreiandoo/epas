@@ -2,6 +2,7 @@
 require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Detalii Comanda';
 $currentPage = 'orders';
+$cssBundle = 'account';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/header.php';
 ?>

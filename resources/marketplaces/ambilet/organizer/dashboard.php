@@ -4,6 +4,7 @@ $pageTitle = 'Dashboard Organizator';
 $bodyClass = 'min-h-screen flex bg-slate-100';
 $currentPage = 'dashboard';
 $headExtra = '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>';
+$cssBundle = 'organizer';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>

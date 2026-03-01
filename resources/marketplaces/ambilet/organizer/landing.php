@@ -2,6 +2,7 @@
 require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Devino Organizator';
 $bodyClass = 'min-h-screen bg-white';
+$cssBundle = 'organizer';
 require_once dirname(__DIR__) . '/includes/head.php';
 ?>
     <div id="header-container"></div>

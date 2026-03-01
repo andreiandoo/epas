@@ -3,6 +3,7 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Notificari';
 $bodyClass = 'min-h-screen flex bg-slate-100';
 $currentPage = 'notifications';
+$cssBundle = 'organizer';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>
