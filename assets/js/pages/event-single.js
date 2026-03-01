@@ -765,13 +765,12 @@ const EventPage = {
         // Update breadcrumb
         document.getElementById(this.elements.breadcrumbTitle).textContent = e.title;
 
-        // Show content, hide loading (grid overlay prevents CLS)
+        // Show content, hide loading (both stay in grid to prevent CLS)
         var loadingEl = document.getElementById(this.elements.loadingState);
         var contentEl = document.getElementById(this.elements.eventContent);
-        contentEl.classList.remove('hidden');
+        contentEl.style.visibility = '';
         loadingEl.style.visibility = 'hidden';
         loadingEl.style.pointerEvents = 'none';
-        requestAnimationFrame(function() { loadingEl.classList.add('hidden'); loadingEl.style.visibility = ''; });
 
         // Check if event has ended
         this.eventEnded = this.isEventEnded();
