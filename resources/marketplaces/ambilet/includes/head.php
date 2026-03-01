@@ -274,8 +274,16 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <script type="application/ld+json"><?= json_encode($breadcrumbSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?></script>
     <?php endif; ?>
 
-    <!-- Custom CSS -->
+    <!-- CSS: per-page bundle (Tailwind + custom CSS combined) or fallback -->
+    <?php
+    $cssBundle = $cssBundle ?? 'static';
+    $bundlePath = __DIR__ . '/../assets/css/bundles/' . $cssBundle . '.css';
+    if (file_exists($bundlePath)): ?>
+    <link rel="stylesheet" href="<?= asset('assets/css/bundles/' . $cssBundle . '.css') ?>">
+    <?php else: ?>
     <link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>">
+    <link rel="stylesheet" href="<?= asset('assets/css/tailwind.min.css') ?>">
+    <?php endif; ?>
 
     <!-- Page-specific preloads (LCP image, etc.) -->
     <?php if (!empty($extraHead)) echo $extraHead . "\n"; ?>
@@ -285,16 +293,12 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <link rel="dns-prefetch" href="https://core.tixello.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- cdn.tailwindcss.com removed: using pre-built tailwind.min.css -->
     <link rel="dns-prefetch" href="//images.unsplash.com">
 
     <!-- Fonts (non-render-blocking: preload + print swap) -->
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-
-    <!-- Tailwind CSS (pre-built, replaces CDN) -->
-    <link rel="stylesheet" href="<?= asset('assets/css/tailwind.min.css') ?>">
 
     <!-- Google Consent Mode v2 — MUST be before any tracking scripts -->
     <script>
