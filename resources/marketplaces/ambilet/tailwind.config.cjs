@@ -111,10 +111,10 @@ module.exports = {
     'gap-10',
     // Arbitrary values used in templates (won't be caught by content scanner for all)
     {
-      pattern: /bg-(primary|secondary|accent|surface|muted|border|success|warning|error|white)\/(5|10|20|30|40|50|60|70|80|90)/,
+      pattern: /bg-(primary|secondary|accent|surface|muted|border|success|warning|error|white)\/(5|10|20|25|30|40|50|60|70|75|80|85|90|95)/,
     },
     {
-      pattern: /text-(primary|secondary|accent|surface|muted|white)\/(50|60|70|80|90)/,
+      pattern: /text-(primary|secondary|accent|surface|muted|white)\/(30|40|50|60|70|75|80|85|90|95)/,
     },
   ],
   plugins: [],
