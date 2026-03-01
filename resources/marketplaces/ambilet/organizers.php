@@ -91,6 +91,7 @@ function buildOrgUrl($params = []) {
     return '/organizatori' . ($qs ? '?' . $qs : '');
 }
 
+$cssBundle = 'listing';
 require_once __DIR__ . '/includes/head.php';
 $transparentHeader = false;
 require_once __DIR__ . '/includes/header.php'; ?>

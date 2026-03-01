@@ -37,6 +37,7 @@ $pageDescription = 'Explorează evenimentele trecute din România. Concerte, fes
 $currentPage = 'past-events';
 $transparentHeader = false;
 
+$cssBundle = 'listing';
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>

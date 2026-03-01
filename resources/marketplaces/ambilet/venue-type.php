@@ -103,6 +103,7 @@ $allTypes = [
     ['slug' => 'centre-culturale', 'name' => 'Centre Culturale', 'icon' => 'building-library'],
 ];
 
+$cssBundle = 'listing';
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
 

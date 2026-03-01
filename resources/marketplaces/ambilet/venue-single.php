@@ -13,6 +13,7 @@ $pageTitle = 'Locație'; // Updated by JS when data loads
 $pageDescription = 'Descoperă evenimente și informații despre această locație.';
 $bodyClass = 'bg-surface';
 
+$cssBundle = 'single';
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
 ?>

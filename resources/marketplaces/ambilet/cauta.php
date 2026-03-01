@@ -11,6 +11,7 @@ $pageDescription = 'Caută evenimente, artiști și locații pe ' . SITE_NAME;
 
 $currentPage = 'search';
 $transparentHeader = false;
+$cssBundle = 'listing';
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>

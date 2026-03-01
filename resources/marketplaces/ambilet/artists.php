@@ -17,6 +17,7 @@ $letterFilter = $_GET['letter'] ?? '';
 $sortBy = $_GET['sort'] ?? 'popular';
 $page = max(1, (int)($_GET['page'] ?? 1));
 
+$cssBundle = 'listing';
 require_once __DIR__ . '/includes/head.php';
 ?>
 

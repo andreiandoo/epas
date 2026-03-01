@@ -16,6 +16,7 @@ $pageDescription = 'Descoperă cele mai bune evenimente din această regiune.';
 $currentPage = 'regions';
 $transparentHeader = false;
 
+$cssBundle = 'listing';
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>
