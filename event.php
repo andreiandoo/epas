@@ -166,8 +166,8 @@ require_once __DIR__ . '/includes/head.php';
             </div>
         </div>
 
-        <!-- Event Content (hidden until loaded) -->
-        <div id="event-content" class="flex flex-col hidden gap-8 lg:flex-row" style="grid-area:1/1">
+        <!-- Event Content (invisible until loaded, stays in grid for CLS prevention) -->
+        <div id="event-content" class="flex flex-col gap-8 lg:flex-row" style="grid-area:1/1;visibility:hidden">
             <!-- Left Column - Event Details -->
             <div class="lg:w-2/3">
                 <!-- Event Header -->
