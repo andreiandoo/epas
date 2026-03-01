@@ -112,7 +112,7 @@ exit /b 0
 
 
 :: ============================================================
-:: Subroutine: Rebuild Tailwind CSS from source
+:: Subroutine: Rebuild Tailwind CSS per-page bundles
 :: ============================================================
 :rebuild_tailwind
 where tailwindcss >nul 2>&1
@@ -120,16 +120,31 @@ if errorlevel 1 (
     echo [3.5/7] [SKIP] tailwindcss not found. Install with: npm install -g tailwindcss
     goto :eof
 )
-echo [3.5/7] Rebuilding Tailwind CSS...
+echo [3.5/7] Rebuilding Tailwind CSS bundles...
+
+:: Create bundles output directory
+if not exist "assets\css\bundles" mkdir "assets\css\bundles"
+
+:: Build per-page CSS bundles (Tailwind + custom CSS combined)
+set "BUNDLE_COUNT=0"
+for %%b in (home event listing single checkout auth account organizer static error) do (
+    if exist "assets\css\build\tailwind.%%b.cjs" (
+        call tailwindcss -c assets\css\build\tailwind.%%b.cjs -i assets\css\build\input-%%b.css -o assets\css\bundles\%%b.css --minify 2>nul
+        if exist "assets\css\bundles\%%b.css" (
+            set /a BUNDLE_COUNT+=1
+        ) else (
+            echo       [WARN] Failed to build bundle: %%b
+        )
+    )
+)
+echo       !BUNDLE_COUNT! CSS bundles built.
+
+:: Also build legacy fallback (full tailwind.min.css) in case any page misses $cssBundle
 if exist "tailwind.config.cjs" (
     call tailwindcss -c tailwind.config.cjs -i assets\css\tailwind-input.css -o assets\css\tailwind.min.css --minify 2>nul
     if exist "assets\css\tailwind.min.css" (
-        echo       Tailwind CSS built successfully.
-    ) else (
-        echo       [WARN] Tailwind build failed, using existing CSS
+        echo       Legacy tailwind.min.css also built (fallback).
     )
-) else (
-    echo       [SKIP] tailwind.config.cjs not found
 )
 goto :eof
 
@@ -151,7 +166,7 @@ for /r "assets\js" %%f in (*.js) do call :minify_one_js "%%f" "%%~nxf"
 
 echo       JS: !MINIFIED! files minified.
 
-:: Minify CSS
+:: Minify CSS (bundles are already minified by tailwindcss --minify, but minify custom.css fallback)
 where cleancss >nul 2>&1
 if not errorlevel 1 (
     if exist "assets\css\custom.css" (
