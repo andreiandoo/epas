@@ -281,13 +281,9 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     .site-header{position:fixed;top:0;left:0;right:0;z-index:1000;transition:all .3s ease}.site-header.scrolled{background:rgba(255,255,255,.98);backdrop-filter:blur(12px);box-shadow:0 1px 3px rgba(0,0,0,.08)}.mega-menu{position:absolute;top:100%;left:50%;transform:translateX(-50%);opacity:0;visibility:hidden;pointer-events:none;transition:all .2s ease}.nav-item:hover .mega-menu{opacity:1;visibility:visible;pointer-events:auto}.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;font-weight:600;border-radius:.75rem;transition:all .2s ease;cursor:pointer;border:none;text-decoration:none}.btn-primary{background:linear-gradient(135deg,#a51c30,#c41e3a);color:#fff;padding:.625rem 1.25rem;font-size:.875rem}.btn-primary:hover{background:linear-gradient(135deg,#8b1728,#a51c30);box-shadow:0 4px 12px rgba(165,28,48,.3)}
     </style>
     <?php if (!empty($extraHead)) echo $extraHead . "\n"; ?>
-    <!-- Full CSS (async, non-render-blocking) -->
-    <link rel="preload" href="<?= asset('assets/css/custom.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="<?= asset('assets/css/tailwind.min.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript>
-        <link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>">
-        <link rel="stylesheet" href="<?= asset('assets/css/tailwind.min.css') ?>">
-    </noscript>
+    <!-- Full CSS (sync — async causes CLS 0.87 from bulk style application) -->
+    <link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>">
+    <link rel="stylesheet" href="<?= asset('assets/css/tailwind.min.css') ?>">
 
     <!-- Preconnect for Performance -->
     <link rel="preconnect" href="https://core.tixello.com">
