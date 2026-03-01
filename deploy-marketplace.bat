@@ -143,7 +143,7 @@ echo       !BUNDLE_COUNT! CSS bundles built.
 if exist "tailwind.config.cjs" (
     call tailwindcss -c tailwind.config.cjs -i assets\css\tailwind-input.css -o assets\css\tailwind.min.css --minify 2>nul
     if exist "assets\css\tailwind.min.css" (
-        echo       Legacy tailwind.min.css also built (fallback).
+        echo       Legacy tailwind.min.css also built as fallback.
     )
 )
 goto :eof
