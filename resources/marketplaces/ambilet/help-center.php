@@ -86,6 +86,7 @@ function getColorClasses($color) {
     ];
     return $colorMap[$color] ?? 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600';
 }
+$cssBundle = 'static';
 ?>
 <!DOCTYPE html>
 <html lang="ro">

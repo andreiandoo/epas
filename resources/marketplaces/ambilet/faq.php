@@ -151,6 +151,7 @@ $sectionTitles = [
     'refunds' => 'Rambursări',
     'account' => 'Cont & Setări'
 ];
+$cssBundle = 'static';
 ?>
 <!DOCTYPE html>
 <html lang="ro">

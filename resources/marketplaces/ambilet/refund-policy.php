@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Politica de Returnare';
+$cssBundle = 'static';
 ?>
 <!DOCTYPE html>
 <html lang="ro">

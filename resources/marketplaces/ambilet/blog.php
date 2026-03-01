@@ -25,6 +25,7 @@ $articles = [
     ['title' => 'Cum sa folosesti social media pentru promovare', 'excerpt' => 'Strategii dovedite pentru Instagram, TikTok si Facebook care aduc participanti.', 'category' => 'Ghiduri', 'date' => '5 Dec 2024', 'author' => ['name' => 'Ana Dumitrescu', 'initials' => 'AD'], 'read_time' => '10 min'],
 ];
 
+$cssBundle = 'static';
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>

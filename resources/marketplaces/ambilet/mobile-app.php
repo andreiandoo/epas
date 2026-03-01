@@ -7,6 +7,7 @@ require_once 'includes/config.php';
 $pageTitle = 'Aplicația Mobilă — AmBilet.ro';
 $pageDescription = 'Descarcă aplicația AmBilet și ai toate biletele în buzunar. Scanare rapidă, notificări pentru evenimente și acces instant la experiențe.';
 
+$cssBundle = 'static';
 require_once 'includes/head.php';
 require_once 'includes/header.php';
 ?>

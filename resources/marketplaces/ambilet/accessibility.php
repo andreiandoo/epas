@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Declaratie de Accesibilitate';
+$cssBundle = 'static';
 ?>
 <!DOCTYPE html>
 <html lang="ro">

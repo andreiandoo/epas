@@ -11,6 +11,7 @@ $pageDescription = 'Gestionează preferințele tale de comunicare pentru newslet
 // Get email from URL token (would be validated in real implementation)
 $email = 'andrei.p***@gmail.com'; // Masked for privacy
 
+$cssBundle = 'static';
 require_once 'includes/head.php';
 ?>
 

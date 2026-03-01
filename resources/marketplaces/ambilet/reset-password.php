@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Setează Parolă Nouă';
 $pageDescription = 'Setează o parolă nouă pentru contul tău';
+$cssBundle = 'auth';
 require_once __DIR__ . '/includes/head.php';
 ?>
 <body class="min-h-screen flex">

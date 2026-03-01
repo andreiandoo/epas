@@ -14,6 +14,7 @@ $authFeatures = [
     ['icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', 'text' => 'Tranzacții 100% sigure'],
 ];
 
+$cssBundle = 'auth';
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/auth-branding.php';
 ?>

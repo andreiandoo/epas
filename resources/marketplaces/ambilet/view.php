@@ -21,6 +21,7 @@ if (!$code || !preg_match('/^[A-Za-z0-9]{6,20}$/', $code)) {
 $noIndex = true;
 $bodyClass = 'bg-slate-50 min-h-screen';
 $pageDescription = 'Monitorizare in timp real a vanzarilor de bilete.';
+$cssBundle = 'static';
 require_once __DIR__ . '/includes/head.php';
 ?>
 

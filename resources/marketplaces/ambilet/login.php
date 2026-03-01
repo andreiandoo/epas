@@ -11,6 +11,7 @@ $bodyClass = 'min-h-screen flex bg-surface';
 $authTitle = 'Bine ai revenit!';
 $authSubtitle = 'Accesează contul tău pentru a vedea biletele, a descoperi evenimente noi și a folosi punctele acumulate.';
 
+$cssBundle = 'auth';
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/auth-branding.php';
 ?>
