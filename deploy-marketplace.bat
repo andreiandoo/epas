@@ -177,6 +177,14 @@ if not errorlevel 1 (
         )
     )
 )
+
+:: Combine custom.css + tailwind.min.css into single styles.css (reduces critical path by 1 request)
+if exist "assets\css\custom.css" (
+    if exist "assets\css\tailwind.min.css" (
+        copy /b "assets\css\custom.css"+"assets\css\tailwind.min.css" "assets\css\styles.css" >nul
+        echo       CSS: combined custom.css + tailwind.min.css into styles.css
+    )
+)
 goto :eof
 
 
