@@ -23,6 +23,7 @@ $refund = [
     'service_fee' => '18,00'
 ];
 
+$cssBundle = 'event';
 require_once 'includes/head.php';
 ?>
 

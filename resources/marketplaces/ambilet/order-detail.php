@@ -50,6 +50,7 @@ $timeline = [
 
 $pageTitle = 'Comandă #' . $order['id'] . ' — AmBilet.ro';
 
+$cssBundle = 'checkout';
 require_once 'includes/head.php';
 require_once 'includes/header.php';
 ?>

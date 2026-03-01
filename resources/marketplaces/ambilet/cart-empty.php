@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Cos de cumparaturi';
+$cssBundle = 'checkout';
 ?>
 <!DOCTYPE html>
 <html lang="ro">

@@ -35,6 +35,7 @@ if ($lcpImageUrl) {
     $extraHead = '<link rel="preload" as="image" href="' . htmlspecialchars($lcpImageUrl) . '" fetchpriority="high">';
 }
 
+$cssBundle = 'event';
 require_once __DIR__ . '/includes/head.php';
 ?>
     <style>

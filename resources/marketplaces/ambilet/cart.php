@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Coșul tău';
 $pageDescription = 'Finalizează achiziția biletelor tale';
+$cssBundle = 'checkout';
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>
