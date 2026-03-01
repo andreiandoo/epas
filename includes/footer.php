@@ -135,7 +135,7 @@ $currentYear = date('Y');
                 <div class="grid gap-8 mobile:grid-cols-2 lg:col-span-4 lg:grid-cols-4">
                     <!-- Evenimente Column -->
                     <div>
-                        <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Evenimente</h4>
+                        <span class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Evenimente</span>
                         <ul class="space-y-3">
                             <li><a href="/evenimente" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Toate evenimentele</a></li>
                             <li><a href="/concerte" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Concerte</a></li>
@@ -149,7 +149,7 @@ $currentYear = date('Y');
 
                     <!-- Descoperă Column -->
                     <div class="mobile:text-right">
-                        <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Descoperă</h4>
+                        <span class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Descoperă</span>
                         <ul class="space-y-3">
                             <li><a href="/orase" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Orașe</a></li>
                             <li><a href="/locatii" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Locații</a></li>
@@ -168,7 +168,7 @@ $currentYear = date('Y');
 
                     <!-- Companie Column -->
                     <div>
-                        <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Companie</h4>
+                        <span class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Companie</span>
                         <ul class="space-y-3">
                             <li><a href="/despre" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Despre noi</a></li>
                             <li><a href="/press-kit" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Press Kit</a></li>
@@ -182,7 +182,7 @@ $currentYear = date('Y');
 
                     <!-- Organizatori Column -->
                     <div class="mobile:text-right">
-                        <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Organizatori</h4>
+                        <span class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Organizatori</span>
                         <ul class="space-y-3">
                             <li class="hidden"><a href="/organizatori" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Vinde bilete</a></li>
                             <li><a href="/organizator/inregistrare" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Înregistrare organizator</a></li>

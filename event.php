@@ -146,9 +146,9 @@ require_once __DIR__ . '/includes/head.php';
     </div>
 
     <!-- Main Content -->
-    <main class="px-4 py-8 mx-auto max-w-7xl mobile:p-0 mobile:mt-18" id="main-content">
+    <main class="px-4 py-8 mx-auto max-w-7xl mobile:p-0 mobile:mt-18" id="main-content" style="display:grid">
         <!-- Loading State -->
-        <div id="loading-state" class="flex flex-col gap-8 lg:flex-row">
+        <div id="loading-state" class="flex flex-col gap-8 lg:flex-row" style="grid-area:1/1">
             <div class="lg:w-2/3">
                 <div class="mb-8 overflow-hidden bg-white border rounded-3xl border-border">
                     <div class="bg-gray-200 animate-pulse h-72 md:h-[29rem]"></div>
@@ -167,7 +167,7 @@ require_once __DIR__ . '/includes/head.php';
         </div>
 
         <!-- Event Content (hidden until loaded) -->
-        <div id="event-content" class="flex flex-col hidden gap-8 lg:flex-row">
+        <div id="event-content" class="flex flex-col hidden gap-8 lg:flex-row" style="grid-area:1/1">
             <!-- Left Column - Event Details -->
             <div class="lg:w-2/3">
                 <!-- Event Header -->
@@ -416,8 +416,8 @@ require_once __DIR__ . '/includes/head.php';
     </div>
 
     <!-- Mobile Ticket Drawer -->
-    <div id="ticketDrawerBackdrop" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden" onclick="closeTicketDrawer()"></div>
-    <div id="ticketDrawer" class="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col overflow-hidden bg-white lg:hidden rounded-t-3xl max-h-[85vh]">
+    <div id="ticketDrawerBackdrop" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden" onclick="closeTicketDrawer()" style="visibility:hidden"></div>
+    <div id="ticketDrawer" class="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col overflow-hidden bg-white lg:hidden rounded-t-3xl max-h-[85vh]" style="visibility:hidden">
         <!-- Drawer Header -->
         <div class="flex items-center justify-between flex-shrink-0 p-4 bg-white border-b border-border">
             <div>
