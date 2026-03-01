@@ -59,10 +59,10 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 ?>
 
 <!-- Search Overlay -->
-<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[2000] opacity-0 invisible transition-all duration-300" id="searchOverlay"></div>
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[2000] opacity-0 invisible transition-all duration-300" id="searchOverlay" style="visibility:hidden"></div>
 
 <!-- Search Container -->
-<div class="fixed top-0 left-0 right-0 bg-white z-[2001] -translate-y-full transition-transform duration-300" id="searchContainer">
+<div class="fixed top-0 left-0 right-0 bg-white z-[2001] -translate-y-full transition-transform duration-300" id="searchContainer" style="visibility:hidden">
     <div class="max-w-[800px] mx-auto p-6">
         <div class="flex items-center gap-4 px-5 pr-1 transition-colors border-2 border-gray-200 bg-gray-50 rounded-2xl focus-within:border-primary mobile:px-2">
             <svg class="flex-shrink-0 w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -643,10 +643,10 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 </div>
 
 <!-- Cart Drawer Overlay -->
-<div id="cartOverlay" class="fixed inset-0 z-[1001] bg-black/50 opacity-0 invisible transition-all duration-300"></div>
+<div id="cartOverlay" class="fixed inset-0 z-[1001] bg-black/50 opacity-0 invisible transition-all duration-300" style="visibility:hidden"></div>
 
 <!-- Cart Drawer -->
-<div id="cartDrawer" class="fixed top-0 right-0 bottom-0 w-96 max-w-[90vw] bg-white z-[1002] translate-x-full transition-transform duration-300 flex flex-col">
+<div id="cartDrawer" class="fixed top-0 right-0 bottom-0 w-96 max-w-[90vw] bg-white z-[1002] translate-x-full transition-transform duration-300 flex flex-col" style="visibility:hidden">
     <!-- Header -->
     <div class="flex items-center justify-between flex-shrink-0 p-4 border-b border-gray-200">
         <div class="flex items-center gap-2">
@@ -854,6 +854,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 
     // ==================== SEARCH PANEL ====================
     function openSearch() {
+        searchOverlay.style.visibility = '';
+        searchContainer.style.visibility = '';
         searchOverlay.classList.remove('opacity-0', 'invisible');
         searchOverlay.classList.add('opacity-100', 'visible');
         searchContainer.classList.remove('-translate-y-full');
@@ -1198,6 +1200,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 
     function openCartDrawer() {
         updateCartUI();
+        cartOverlay.style.visibility = '';
+        cartDrawer.style.visibility = '';
         cartOverlay.classList.remove('opacity-0', 'invisible');
         cartOverlay.classList.add('opacity-100', 'visible');
         cartDrawer.classList.remove('translate-x-full');
