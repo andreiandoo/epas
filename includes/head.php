@@ -274,16 +274,9 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <script type="application/ld+json"><?= json_encode($breadcrumbSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?></script>
     <?php endif; ?>
 
-    <!-- CSS: per-page bundle (Tailwind + custom CSS combined) or fallback -->
-    <?php
-    $cssBundle = $cssBundle ?? 'static';
-    $bundlePath = __DIR__ . '/../assets/css/bundles/' . $cssBundle . '.css';
-    if (file_exists($bundlePath)): ?>
-    <link rel="stylesheet" href="<?= asset('assets/css/bundles/' . $cssBundle . '.css') ?>">
-    <?php else: ?>
+    <!-- CSS -->
     <link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>">
     <link rel="stylesheet" href="<?= asset('assets/css/tailwind.min.css') ?>">
-    <?php endif; ?>
 
     <!-- Page-specific preloads (LCP image, etc.) -->
     <?php if (!empty($extraHead)) echo $extraHead . "\n"; ?>
