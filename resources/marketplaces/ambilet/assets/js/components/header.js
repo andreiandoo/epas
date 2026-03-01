@@ -168,7 +168,7 @@ const AmbiletHeader = {
                         ${isLoggedIn ? this.getUserMenu(user, isOrganizer) : this.getAuthLinks()}
 
                         <!-- Mobile Menu Button -->
-                        <button id="mobile-menu-btn" class="lg:hidden p-2 hover:bg-surface rounded-xl transition-colors">
+                        <button id="mobile-menu-btn" aria-label="Meniu" class="lg:hidden p-2 hover:bg-surface rounded-xl transition-colors">
                             <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                             </svg>
@@ -182,7 +182,7 @@ const AmbiletHeader = {
                 <div class="flex flex-col h-full">
                     <div class="flex items-center justify-between p-4 border-b border-border">
                         <span class="text-lg font-bold text-secondary">Meniu</span>
-                        <button id="close-mobile-menu" class="p-2 hover:bg-surface rounded-xl">
+                        <button id="close-mobile-menu" aria-label="Închide" class="p-2 hover:bg-surface rounded-xl">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>

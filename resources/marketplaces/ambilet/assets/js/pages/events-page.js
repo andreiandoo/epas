@@ -438,7 +438,7 @@ const EventsPage = {
         tagsContainer.innerHTML = activeFilters.map(f =>
             '<span class="inline-flex items-center gap-1 px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full">' +
                 AmbiletEventCard.escapeHtml(f.label) +
-                '<button onclick="EventsPage.removeFilter(\'' + f.key + '\')" class="ml-1 text-gray-400 hover:text-gray-600">' +
+                '<button onclick="EventsPage.removeFilter(\'' + f.key + '\')" aria-label="Șterge filtrul" class="ml-1 text-gray-400 hover:text-gray-600">' +
                     '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                         '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>' +
                     '</svg>' +

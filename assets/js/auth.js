@@ -534,7 +534,7 @@ const AmbiletAuth = {
                 <a href="/register" class="bg-white text-purple-600 px-4 py-1 rounded-full font-semibold hover:bg-gray-100 transition-colors text-sm">
                     Inregistreaza-te acum
                 </a>
-                <button onclick="this.closest('#referral-banner').remove()" class="ml-2 text-white/80 hover:text-white">
+                <button onclick="this.closest('#referral-banner').remove()" aria-label="Închide" class="ml-2 text-white/80 hover:text-white">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>

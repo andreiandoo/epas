@@ -23,7 +23,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <p class="font-semibold text-success" id="success-title">Succes!</p>
                         <p class="text-sm text-success/80" id="success-message">Operatiunea a fost finalizata cu succes.</p>
                     </div>
-                    <button onclick="closeSuccessBanner()" class="p-2 hover:bg-success/10 rounded-lg">
+                    <button onclick="closeSuccessBanner()" aria-label="Închide" class="p-2 hover:bg-success/10 rounded-lg">
                         <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>

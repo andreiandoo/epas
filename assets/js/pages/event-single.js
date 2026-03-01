@@ -2187,7 +2187,7 @@ const EventPage = {
                         '<h2 class="text-base md:text-xl font-bold text-secondary truncate">Alege locurile</h2>' +
                         '<p class="text-xs md:text-sm text-muted" id="seat-selection-subtitle">Selectează locurile dorite pe hartă</p>' +
                     '</div>' +
-                    '<button onclick="EventPage.closeSeatSelection()" class="p-2 transition-colors rounded-lg hover:bg-surface flex-shrink-0">' +
+                    '<button onclick="EventPage.closeSeatSelection()" aria-label="Închide" class="p-2 transition-colors rounded-lg hover:bg-surface flex-shrink-0">' +
                         '<svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
                     '</button>' +
                 '</div>' +
@@ -2205,14 +2205,14 @@ const EventPage = {
                         // Zoom controls
                         '<div class="flex items-center justify-between px-3 md:px-4 py-2 bg-white border-b border-border">' +
                             '<div class="flex items-center gap-1 md:gap-2">' +
-                                '<button onclick="EventPage.zoomMap(-0.2)" class="p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom out">' +
+                                '<button onclick="EventPage.zoomMap(-0.2)" class="p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom out" aria-label="Zoom out">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>' +
                                 '</button>' +
                                 '<span id="zoom-level" class="text-sm font-medium text-muted w-12 text-center">100%</span>' +
-                                '<button onclick="EventPage.zoomMap(0.2)" class="p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom in">' +
+                                '<button onclick="EventPage.zoomMap(0.2)" class="p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom in" aria-label="Zoom in">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
                                 '</button>' +
-                                '<button onclick="EventPage.resetMapZoom()" class="ml-1 md:ml-2 p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors text-xs" title="Reset zoom">' +
+                                '<button onclick="EventPage.resetMapZoom()" class="ml-1 md:ml-2 p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors text-xs" title="Reset zoom" aria-label="Reset zoom">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
                                 '</button>' +
                             '</div>' +
@@ -2253,7 +2253,7 @@ const EventPage = {
                             '</div>' +
                             '<div class="flex gap-2">' +
                                 '<button onclick="EventPage.confirmSeatSelection()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Cumpără bilete</button>' +
-                                '<button onclick="EventPage.clearAllSelections()" class="p-2.5 text-secondary border border-secondary rounded-xl opacity-50 hover:bg-red-50 hover:opacity-100 hover:border-red-600 hover:text-red-600 transition-all" title="Golește coșul">' +
+                                '<button onclick="EventPage.clearAllSelections()" aria-label="Golește coșul" class="p-2.5 text-secondary border border-secondary rounded-xl opacity-50 hover:bg-red-50 hover:opacity-100 hover:border-red-600 hover:text-red-600 transition-all" title="Golește coșul">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
                                 '</button>' +
                             '</div>' +
@@ -2267,7 +2267,7 @@ const EventPage = {
                         '<span class="text-sm text-muted ml-2" id="mobile-seats-total">0 lei</span>' +
                     '</div>' +
                     '<div class="flex gap-2 flex-shrink-0">' +
-                        '<button onclick="EventPage.clearAllSelections()" class="p-2.5 text-muted border border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all" title="Golește">' +
+                        '<button onclick="EventPage.clearAllSelections()" aria-label="Golește" class="p-2.5 text-muted border border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all" title="Golește">' +
                             '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
                         '</button>' +
                         '<button onclick="EventPage.confirmSeatSelection()" class="px-5 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors" id="mobile-seats-buy-btn">Cumpără bilete</button>' +
@@ -2504,7 +2504,7 @@ const EventPage = {
                         '<div class="font-medium text-secondary">' + seat.section + '</div>' +
                         '<div class="text-muted">Rând ' + seat.row + ', Loc ' + seat.seat + '</div>' +
                     '</div>' +
-                    '<button onclick="EventPage.removeSeat(\'' + tt.id + '\', ' + index + ')" class="p-1 text-red-500 hover:bg-red-50 rounded transition-colors" title="Șterge">' +
+                    '<button onclick="EventPage.removeSeat(\'' + tt.id + '\', ' + index + ')" aria-label="Șterge" class="p-1 text-red-500 hover:bg-red-50 rounded transition-colors" title="Șterge">' +
                         '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
                     '</button>' +
                 '</div>';

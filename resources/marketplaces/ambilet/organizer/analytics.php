@@ -359,7 +359,7 @@ $eventId = $_GET['event'] ?? null;
             <div class="p-6 border-b border-border">
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-bold text-secondary">Adaugă obiectiv</h2>
-                    <button onclick="closeGoalModal()" class="p-2 transition-colors text-muted hover:text-secondary">
+                    <button onclick="closeGoalModal()" aria-label="Închide" class="p-2 transition-colors text-muted hover:text-secondary">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -404,7 +404,7 @@ $eventId = $_GET['event'] ?? null;
             <div class="p-6 border-b border-border">
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-bold text-secondary">Adaugă campanie</h2>
-                    <button onclick="closeMilestoneModal()" class="p-2 transition-colors text-muted hover:text-secondary">
+                    <button onclick="closeMilestoneModal()" aria-label="Închide" class="p-2 transition-colors text-muted hover:text-secondary">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -542,7 +542,7 @@ $eventId = $_GET['event'] ?? null;
                         <span id="globe-live-count" class="text-lg font-bold text-slate-800">0</span>
                         <span class="text-sm text-slate-500">online now</span>
                     </div>
-                    <button onclick="closeGlobeModal()" class="p-3 bg-white hover:bg-slate-100 rounded-xl shadow-sm border border-slate-200 transition-colors">
+                    <button onclick="closeGlobeModal()" aria-label="Închide" class="p-3 bg-white hover:bg-slate-100 rounded-xl shadow-sm border border-slate-200 transition-colors">
                         <svg class="w-5 h-5 text-slate-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"></path>
                         </svg>

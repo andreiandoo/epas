@@ -88,7 +88,7 @@ $pageTitle = '503 - Mentenanta';
 
             <!-- Notify Form -->
             <div class="p-5 border rounded-xl bg-white/5 border-white/10">
-                <h3 class="mb-3 font-semibold">Anunta-ma cand revine</h3>
+                <h2 class="mb-3 font-semibold">Anunta-ma cand revine</h2>
                 <form class="flex flex-col gap-3 sm:flex-row" id="notifyForm">
                     <input type="email" class="flex-1 px-4 py-3 text-white border rounded-lg bg-white/10 border-white/20 placeholder-gray-500 focus:outline-none focus:border-amber-500" placeholder="Adresa ta de email">
                     <button type="submit" class="px-5 py-3 font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-500/30">
