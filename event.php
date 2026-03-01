@@ -146,9 +146,9 @@ require_once __DIR__ . '/includes/head.php';
     </div>
 
     <!-- Main Content -->
-    <main class="px-4 py-8 mx-auto max-w-7xl mobile:p-0 mobile:mt-18" id="main-content" style="display:grid">
+    <main class="px-4 py-8 mx-auto max-w-7xl mobile:p-0 mobile:mt-18" id="main-content">
         <!-- Loading State -->
-        <div id="loading-state" class="flex flex-col gap-8 lg:flex-row" style="grid-area:1/1">
+        <div id="loading-state" class="flex flex-col gap-8 lg:flex-row">
             <div class="lg:w-2/3">
                 <div class="mb-8 overflow-hidden bg-white border rounded-3xl border-border">
                     <div class="bg-gray-200 animate-pulse h-72 md:h-[29rem]"></div>
@@ -166,8 +166,8 @@ require_once __DIR__ . '/includes/head.php';
             </div>
         </div>
 
-        <!-- Event Content (invisible until loaded, stays in grid for CLS prevention) -->
-        <div id="event-content" class="flex flex-col gap-8 lg:flex-row" style="grid-area:1/1;visibility:hidden">
+        <!-- Event Content (hidden until loaded) -->
+        <div id="event-content" class="flex flex-col hidden gap-8 lg:flex-row">
             <!-- Left Column - Event Details -->
             <div class="lg:w-2/3">
                 <!-- Event Header -->
