@@ -67,7 +67,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     <div id="payout-modal" class="fixed inset-0 z-50 items-center justify-center hidden p-4 bg-black/50">
         <div class="w-full max-w-md p-6 bg-white rounded-2xl">
-            <div class="flex items-center justify-between mb-6"><h3 class="text-xl font-bold text-secondary">Solicita Plata</h3><button onclick="closePayoutModal()" class="text-muted hover:text-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+            <div class="flex items-center justify-between mb-6"><h3 class="text-xl font-bold text-secondary">Solicita Plata</h3><button onclick="closePayoutModal()" aria-label="Închide" class="text-muted hover:text-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
             <form onsubmit="submitPayoutRequest(event)">
                 <input type="hidden" id="payout-event-id" value="">
                 <div id="payout-event-info" class="p-4 mb-4 bg-surface rounded-xl hidden">

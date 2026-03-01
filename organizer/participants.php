@@ -110,7 +110,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     <div id="manual-checkin-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-md w-full p-6">
-            <div class="flex items-center justify-between mb-6"><h3 class="text-xl font-bold text-secondary">Check-in Manual</h3><button onclick="closeManualCheckin()" class="text-muted hover:text-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+            <div class="flex items-center justify-between mb-6"><h3 class="text-xl font-bold text-secondary">Check-in Manual</h3><button onclick="closeManualCheckin()" aria-label="Închide" class="text-muted hover:text-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
             <form onsubmit="processManualCheckin(event)"><div class="mb-4"><label class="label">Cod Control</label><input type="text" id="manual-ticket-code" placeholder="Ex: X1SG7TLS" class="input w-full" required><p class="text-xs text-muted mt-1">Introdu codul de control afisat sub codul QR al biletului</p></div><button type="submit" class="btn btn-primary w-full">Verifica si Check-in</button></form>
         </div>
     </div>

@@ -81,7 +81,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div class="sticky top-0 bg-white p-6 border-b border-border flex items-center justify-between">
                 <h3 id="modal-title" class="text-xl font-bold text-secondary">Creeaza Cod Promotional</h3>
-                <button onclick="closePromoModal()" class="p-2 hover:bg-surface rounded-lg"><svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                <button onclick="closePromoModal()" aria-label="Închide" class="p-2 hover:bg-surface rounded-lg"><svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
             </div>
             <form onsubmit="savePromoCode(event)" class="p-6 space-y-4">
                 <input type="hidden" id="promo-id">
