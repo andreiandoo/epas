@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Despre Noi';
 $transparentHeader = false;
+$cssBundle = 'static';
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>

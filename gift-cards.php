@@ -41,6 +41,7 @@ $faqs = [
     ['question' => 'Pot combina mai multe carduri?', 'answer' => 'Absolut! Poți folosi mai multe carduri cadou pentru aceeași comandă.'],
     ['question' => 'Pot primi restul dacă nu acoper biletul?', 'answer' => 'Diferența poate fi plătită cu cardul sau alte metode de plată disponibile.']
 ];
+$cssBundle = 'static';
 ?>
 <!DOCTYPE html>
 <html lang="ro">

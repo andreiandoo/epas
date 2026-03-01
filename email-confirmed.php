@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Email Confirmat';
 $bodyClass = 'min-h-screen flex items-center justify-center bg-surface p-4';
+$cssBundle = 'auth';
 require_once __DIR__ . '/includes/head.php';
 ?>
     <div class="w-full max-w-md text-center">

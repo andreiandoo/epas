@@ -25,6 +25,7 @@ $tickets = [
     'status' => 'Valabil'
 ];
 
+$cssBundle = 'event';
 require_once 'includes/head.php';
 ?>
 

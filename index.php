@@ -12,6 +12,7 @@ $currentPage = 'home';
 $transparentHeader = false;
 $headExtra = '<link rel="stylesheet" href="' . asset('assets/css/homepage.css') . '">';
 
+$cssBundle = 'home';
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>

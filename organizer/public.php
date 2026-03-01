@@ -12,6 +12,7 @@ $pageDescription = "Descoperă evenimentele organizate de Events Pro Romania. Co
 $bodyClass = 'page-organizer';
 
 // Include head
+$cssBundle = 'organizer';
 require_once __DIR__ . '/../includes/head.php';
 
 // Include header

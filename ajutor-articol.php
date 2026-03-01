@@ -79,6 +79,7 @@ function getColorClasses($color) {
     ];
     return $colorMap[$color] ?? 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600';
 }
+$cssBundle = 'listing';
 ?>
 <!DOCTYPE html>
 <html lang="ro">

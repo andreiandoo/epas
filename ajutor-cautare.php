@@ -45,6 +45,7 @@ function highlightTerms($text, $query) {
     }
     return $result;
 }
+$cssBundle = 'listing';
 ?>
 <!DOCTYPE html>
 <html lang="ro">

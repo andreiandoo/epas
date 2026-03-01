@@ -11,6 +11,7 @@ $pageTitle = 'Gestionare echipă';
 $bodyClass = 'min-h-screen flex bg-slate-100';
 $currentPage = 'team';
 
+$cssBundle = 'organizer';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>

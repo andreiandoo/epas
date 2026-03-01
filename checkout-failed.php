@@ -12,6 +12,7 @@ $pageDescription = 'Plata nu a fost procesată. Încearcă din nou sau foloseșt
 $errorCode = $_GET['error'] ?? 'ERR_CARD_DECLINED_51';
 $orderTotal = '1.596,50';
 
+$cssBundle = 'checkout';
 require_once 'includes/head.php';
 ?>
 

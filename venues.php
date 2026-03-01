@@ -11,6 +11,7 @@ $pageDescription = 'Descoperă cele mai populare locații pentru evenimente din 
 $bodyClass = 'bg-surface min-h-screen';
 $transparentHeader = false;
 
+$cssBundle = 'listing';
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
 ?>

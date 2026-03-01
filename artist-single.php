@@ -25,6 +25,7 @@ $pageDescription = "Descoperă concertele și evenimentele {$artistName}. Cumpă
 $bodyClass = 'page-artist-single';
 
 // Include head
+$cssBundle = 'single';
 require_once __DIR__ . '/includes/head.php';
 
 // Include header

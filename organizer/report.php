@@ -14,6 +14,7 @@ $headExtra = '
     }
 </style>
 ';
+$cssBundle = 'organizer';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 

@@ -2,6 +2,7 @@
 require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Înregistrare Organizator';
 $bodyClass = 'min-h-screen bg-surface';
+$cssBundle = 'organizer';
 require_once dirname(__DIR__) . '/includes/head.php';
 ?>
     <header class="bg-white border-b border-border">

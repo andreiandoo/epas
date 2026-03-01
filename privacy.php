@@ -13,6 +13,7 @@ $bodyClass = 'page-privacy';
 $transparentHeader = false;
 
 // Include head
+$cssBundle = 'static';
 require_once __DIR__ . '/includes/head.php';
 
 // Include header

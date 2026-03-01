@@ -3,6 +3,7 @@ require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Resetare Parolă';
 $pageDescription = 'Resetează parola contului tău';
 $bodyClass = 'min-h-screen flex bg-surface';
+$cssBundle = 'auth';
 require_once __DIR__ . '/includes/head.php';
 ?>
 <body class="flex min-h-screen">

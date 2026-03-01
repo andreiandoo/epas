@@ -3,6 +3,7 @@ require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Comandă confirmată!';
 $pageDescription = 'Mulțumim pentru achiziție! Biletele tale au fost procesate cu succes.';
 $orderRef = $_GET['order'] ?? '';
+$cssBundle = 'checkout';
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>

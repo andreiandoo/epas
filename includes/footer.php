@@ -127,7 +127,7 @@ $currentYear = date('Y');
                     <div class="flex items-center justify-center gap-2 pt-5 mt-5 border-t border-white/10 lg:justify-start">
                         <span class="text-xs text-white/40">Powered by</span>
                         <a href="https://tixello.com" target="_blank" class="flex items-center gap-1 text-xs font-bold transition-colors text-white/90 hover:text-white">
-                            <img src="https://tixello.com/wp-content/themes/tix/assets/images/tixello-white.svg" alt="Tixello" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>
+                            <img src="/assets/images/tixello-logo.svg" alt="Tixello" width="40" height="12" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>
                         </a>
                     </div>
                 </div>

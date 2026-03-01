@@ -31,7 +31,7 @@ $currentYear = date('Y');
             <div class="flex items-center gap-1.5 text-[11px] text-white/40">
                 Powered by
                 <a href="https://tixello.com" target="_blank" class="flex items-center gap-1 font-semibold transition-colors text-white/90 hover:text-white">
-                    <img src="https://tixello.com/wp-content/themes/tix/assets/images/tixello-white.svg" alt="Tixello" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>
+                    <img src="/assets/images/tixello-logo.svg" width="40" height="12" alt="Tixello" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>
                 </a>
             </div>
             <div class="flex gap-2">

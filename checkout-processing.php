@@ -8,6 +8,7 @@ require_once 'includes/config.php';
 $pageTitle = 'Se procesează plata... - AmBilet.ro';
 $pageDescription = 'Plata ta este în curs de procesare. Te rugăm să aștepți.';
 
+$cssBundle = 'checkout';
 require_once 'includes/head.php';
 ?>
 
