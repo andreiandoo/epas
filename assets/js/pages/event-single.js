@@ -765,9 +765,13 @@ const EventPage = {
         // Update breadcrumb
         document.getElementById(this.elements.breadcrumbTitle).textContent = e.title;
 
-        // Show content, hide loading
-        document.getElementById(this.elements.loadingState).classList.add('hidden');
-        document.getElementById(this.elements.eventContent).classList.remove('hidden');
+        // Show content, hide loading (grid overlay prevents CLS)
+        var loadingEl = document.getElementById(this.elements.loadingState);
+        var contentEl = document.getElementById(this.elements.eventContent);
+        contentEl.classList.remove('hidden');
+        loadingEl.style.visibility = 'hidden';
+        loadingEl.style.pointerEvents = 'none';
+        requestAnimationFrame(function() { loadingEl.classList.add('hidden'); loadingEl.style.visibility = ''; });
 
         // Check if event has ended
         this.eventEnded = this.isEventEnded();
@@ -1545,8 +1549,11 @@ const EventPage = {
             const pointsEl = document.getElementById(this.elements.pointsEarned);
             pointsEl.innerHTML = points + ' puncte';
             pointsEl.classList.remove('points-counter');
-            void pointsEl.offsetWidth;
-            pointsEl.classList.add('points-counter');
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    pointsEl.classList.add('points-counter');
+                });
+            });
 
             // Update checkout button based on seating status
             this.updateCheckoutButton();

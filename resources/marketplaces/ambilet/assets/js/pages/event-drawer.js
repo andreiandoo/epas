@@ -1,7 +1,11 @@
 // Mobile ticket drawer functions
 function openTicketDrawer() {
-    document.getElementById('ticketDrawerBackdrop').classList.add('open');
-    document.getElementById('ticketDrawer').classList.add('open');
+    var backdrop = document.getElementById('ticketDrawerBackdrop');
+    var drawer = document.getElementById('ticketDrawer');
+    backdrop.style.visibility = '';
+    drawer.style.visibility = '';
+    backdrop.classList.add('open');
+    drawer.classList.add('open');
     document.body.style.overflow = 'hidden';
     syncDrawerContent();
 }
