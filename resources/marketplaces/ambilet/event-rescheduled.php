@@ -3,6 +3,9 @@
  * Event Rescheduled Page
  * Notification about rescheduled event with options
  */
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
+
 require_once 'includes/config.php';
 
 $pageTitle = 'Eveniment Reprogramat - AmBilet.ro';

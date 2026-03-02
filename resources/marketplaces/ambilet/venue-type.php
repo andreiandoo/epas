@@ -7,6 +7,8 @@
  *
  * Based on venue-type.html design - converted to Tailwind CSS only
  */
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
 
 require_once __DIR__ . '/includes/config.php';
 
@@ -148,7 +150,7 @@ $typeEmoji = match($typeSlug) {
         <div class="absolute right-0 w-2/5 h-full bg-gradient-to-l from-white/5 to-transparent"></div>
     </div>
 
-    <div class="relative z-10 max-w-7xl px-6 mx-auto">
+    <div class="relative z-10 px-6 mx-auto max-w-7xl">
         <!-- Breadcrumb -->
         <nav class="flex items-center gap-2 mb-6 text-sm">
             <a href="/" class="transition-colors text-white/90 hover:text-white">Acasă</a>
@@ -160,7 +162,7 @@ $typeEmoji = match($typeSlug) {
 
         <!-- Icon -->
         <div class="flex items-center justify-center w-[72px] h-[72px] bg-gradient-to-br from-primary to-red-700 rounded-2xl mb-6">
-            <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><?= getVenueIconPath($currentType['icon']) ?></svg>
+            <svg class="text-white w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24"><?= getVenueIconPath($currentType['icon']) ?></svg>
         </div>
 
         <!-- Title -->
@@ -247,7 +249,7 @@ $typeEmoji = match($typeSlug) {
     <section id="featuredVenueSection" class="hidden mb-8">
         <div class="grid overflow-hidden bg-white border md:grid-cols-2 rounded-2xl border-slate-200">
             <div id="featuredVenueImage" class="relative flex items-center justify-center min-h-[320px] bg-gradient-to-br from-indigo-500 to-purple-600">
-                <span class="absolute flex items-center gap-2 px-4 py-2 text-xs font-bold text-white uppercase bg-amber-500 top-6 left-6 rounded-lg">
+                <span class="absolute flex items-center gap-2 px-4 py-2 text-xs font-bold text-white uppercase rounded-lg bg-amber-500 top-6 left-6">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                     Locație populară
                 </span>
@@ -277,7 +279,7 @@ $typeEmoji = match($typeSlug) {
                 Toate <?= strtolower($currentType['name']) ?>
             </h2>
             <div class="flex gap-1 p-1 rounded-lg bg-slate-100">
-                <button class="flex items-center justify-center w-9 h-9 transition-all bg-white rounded-md shadow-sm view-btn active text-primary" data-view="grid">
+                <button class="flex items-center justify-center transition-all bg-white rounded-md shadow-sm w-9 h-9 view-btn active text-primary" data-view="grid">
                     <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
                 </button>
                 <button class="flex items-center justify-center transition-all rounded-md view-btn w-9 h-9 text-slate-400 hover:text-slate-600" data-view="list">
@@ -353,7 +355,7 @@ $typeEmoji = match($typeSlug) {
             <?php foreach ($venueTypes as $slug => $type): ?>
                 <?php if ($slug !== $typeSlug): ?>
                     <a href="/locatii/<?= $slug ?>" class="p-6 text-center transition-all bg-white border rounded-2xl border-slate-200 hover:border-primary hover:-translate-y-1 hover:shadow-lg group">
-                        <div class="flex items-center justify-center w-14 h-14 mx-auto mb-3 transition-colors rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 group-hover:from-red-100 group-hover:to-red-200">
+                        <div class="flex items-center justify-center mx-auto mb-3 transition-colors w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 group-hover:from-red-100 group-hover:to-red-200">
                             <svg class="w-7 h-7 text-slate-400 group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><?= getVenueIconPath($type['icon']) ?></svg>
                         </div>
                         <div class="font-semibold text-slate-800"><?= htmlspecialchars($type['short_name']) ?></div>
@@ -532,12 +534,12 @@ const VenueTypePage = {
         const container = document.getElementById('pagination');
         if (pages <= 1) { container.innerHTML = ''; return; }
 
-        let html = `<button class="flex items-center justify-center w-10 h-10 transition-all bg-white border rounded-xl border-slate-200 text-slate-500 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed" ${this.currentPage === 1 ? 'disabled' : ''} onclick="VenueTypePage.goToPage(${this.currentPage - 1})"><svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>`;
+        let html = `<button class="flex items-center justify-center w-10 h-10 transition-all bg-white border rounded-xl border-slate-200 text-slate-500 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed" ${this.currentPage === 1 ? 'disabled' : ''} onclick="VenueTypePage.goToPage(${this.currentPage - 1})" aria-label="Previous Page"><svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>`;
         for (let i = 1; i <= Math.min(pages, 5); i++) {
-            html += `<button class="flex items-center justify-center w-10 h-10 text-sm font-semibold transition-all border rounded-xl ${this.currentPage === i ? 'bg-primary border-primary text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-primary hover:text-primary'}" onclick="VenueTypePage.goToPage(${i})">${i}</button>`;
+            html += `<button class="flex items-center justify-center w-10 h-10 text-sm font-semibold transition-all border rounded-xl ${this.currentPage === i ? 'bg-primary border-primary text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-primary hover:text-primary'}" onclick="VenueTypePage.goToPage(${i})"  aria-label="Page ${i}">${i}</button>`;
         }
-        if (pages > 5) html += `<span class="flex items-center justify-center w-10 h-10 text-slate-400">...</span><button class="flex items-center justify-center w-10 h-10 text-sm font-semibold transition-all bg-white border rounded-xl border-slate-200 text-slate-500 hover:border-primary hover:text-primary" onclick="VenueTypePage.goToPage(${pages})">${pages}</button>`;
-        html += `<button class="flex items-center justify-center w-10 h-10 transition-all bg-white border rounded-xl border-slate-200 text-slate-500 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed" ${this.currentPage === pages ? 'disabled' : ''} onclick="VenueTypePage.goToPage(${this.currentPage + 1})"><svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>`;
+        if (pages > 5) html += `<span class="flex items-center justify-center w-10 h-10 text-slate-400">...</span><button class="flex items-center justify-center w-10 h-10 text-sm font-semibold transition-all bg-white border rounded-xl border-slate-200 text-slate-500 hover:border-primary hover:text-primary" onclick="VenueTypePage.goToPage(${pages})" aria-label="Page ${pages}">${pages}</button>`;
+        html += `<button class="flex items-center justify-center w-10 h-10 transition-all bg-white border rounded-xl border-slate-200 text-slate-500 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed" ${this.currentPage === pages ? 'disabled' : ''} onclick="VenueTypePage.goToPage(${this.currentPage + 1})" aria-label="Next Page"><svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>`;
         container.innerHTML = html;
     },
 

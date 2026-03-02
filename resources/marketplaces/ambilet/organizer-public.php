@@ -3,6 +3,8 @@
  * Organizer Public Page - Ambilet Marketplace
  * Public profile page for event organizers
  */
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
 
 require_once __DIR__ . '/includes/config.php';
 

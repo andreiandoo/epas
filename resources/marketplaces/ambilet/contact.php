@@ -3,6 +3,8 @@
  * Contact Page - Ambilet Marketplace
  * Contact form, contact options, and FAQ section
  */
+$pageCacheTTL = 1800; // 30 minutes (static page)
+require_once __DIR__ . '/includes/page-cache.php';
 
 require_once __DIR__ . '/includes/config.php';
 
@@ -32,7 +34,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Main Content -->
 <main class="px-6 py-12 mx-auto max-w-7xl">
     <!-- Contact Options -->
-    <div class="relative z-10 grid grid-cols-1 gap-5 mb-12 -mt-20 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="relative z-10 grid grid-cols-1 gap-5 mb-12 -mt-20 sm:grid-cols-2 lg:grid-cols-3">
         <a href="mailto:support@ambilet.ro" class="text-center transition-all bg-white border border-gray-200 shadow-lg rounded-2xl p-7 hover:-translate-y-1 hover:shadow-xl hover:border-primary group">
             <div class="w-14 h-14 bg-gradient-to-br from-primary to-primary-light rounded-[14px] flex items-center justify-center mx-auto mb-4 text-white">
                 <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -45,7 +47,7 @@ require_once __DIR__ . '/includes/header.php';
             <span class="text-sm font-semibold text-primary">support@ambilet.ro</span>
         </a>
 
-        <a href="tel:+40312345678" class="text-center transition-all bg-white border border-gray-200 shadow-lg rounded-2xl p-7 hover:-translate-y-1 hover:shadow-xl hover:border-primary group">
+        <a href="tel:+40729121232" class="text-center transition-all bg-white border border-gray-200 shadow-lg rounded-2xl p-7 hover:-translate-y-1 hover:shadow-xl hover:border-primary group">
             <div class="w-14 h-14 bg-gradient-to-br from-primary to-primary-light rounded-[14px] flex items-center justify-center mx-auto mb-4 text-white">
                 <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
@@ -53,10 +55,10 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <h3 class="text-base font-bold text-gray-900 mb-1.5">Telefon</h3>
             <p class="mb-3 text-sm text-gray-500">Luni - Vineri, 9-18</p>
-            <span class="text-sm font-semibold text-primary">+40 31 234 5678</span>
+            <span class="text-sm font-semibold text-primary">+40 729 121 232</span>
         </a>
 
-        <a href="#" class="text-center transition-all bg-white border border-gray-200 shadow-lg rounded-2xl p-7 hover:-translate-y-1 hover:shadow-xl hover:border-primary group">
+        <a href="#" class="hidden text-center transition-all bg-white border border-gray-200 shadow-lg rounded-2xl p-7 hover:-translate-y-1 hover:shadow-xl hover:border-primary group">
             <div class="w-14 h-14 bg-gradient-to-br from-primary to-primary-light rounded-[14px] flex items-center justify-center mx-auto mb-4 text-white">
                 <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -187,7 +189,7 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                         <div>
                             <div class="mb-1 text-xs tracking-wide text-gray-400 uppercase">Telefon</div>
-                            <a href="tel:+40312345678" class="text-[15px] font-semibold text-primary">+40 31 234 5678</a>
+                            <a href="tel:+40729121232" class="text-[15px] font-semibold text-primary">+40 729 121 232</a>
                         </div>
                     </div>
 

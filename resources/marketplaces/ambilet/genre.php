@@ -3,6 +3,9 @@
  * Genre Page - Events filtered by music genre
  * Based on genre.html template
  */
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
+
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/category-config.php';
 
@@ -99,7 +102,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
 <!-- Mobile Filters Button -->
 <section class="sticky top-[72px] z-20 py-3 bg-white border-b border-gray-200 shadow-sm lg:hidden">
     <div class="flex items-center justify-between gap-3 px-4">
-        <button onclick="openGenreFiltersDrawer()" class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl">
+        <button onclick="openGenreFiltersDrawer()" class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" aria-label="Deschide filtrele de căutare pentru genul <?= htmlspecialchars($pageTitle) ?>">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
             Filtre
             <span id="mobileFilterCount" class="hidden px-2 py-0.5 text-xs font-bold text-white rounded-full bg-primary">0</span>
@@ -159,7 +162,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
 <div id="genreFiltersDrawer" class="fixed bottom-0 left-0 right-0 z-[110] overflow-hidden transition-transform duration-300 bg-white lg:hidden rounded-t-3xl max-h-[85vh]" style="transform: translateY(100%);">
     <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-200">
         <h2 class="text-lg font-bold text-gray-900">Filtre</h2>
-        <button onclick="closeGenreFiltersDrawer()" aria-label="Închide filtrele" class="flex items-center justify-center w-10 h-10 transition-colors bg-gray-100 rounded-full hover:bg-gray-200">
+        <button onclick="closeGenreFiltersDrawer()" aria-label="Închide filtrele" class="flex items-center justify-center w-10 h-10 transition-colors bg-gray-100 rounded-full hover:bg-gray-200" aria-label="Închide filtrele">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
     </div>
@@ -195,10 +198,10 @@ require_once __DIR__ . '/includes/header.php'; ?>
         </div>
     </div>
     <div class="flex gap-3 p-4 border-t border-gray-200 bg-gray-50">
-        <button onclick="clearGenreFilters(); closeGenreFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-200 rounded-xl hover:bg-gray-50">
+        <button onclick="clearGenreFilters(); closeGenreFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-200 rounded-xl hover:bg-gray-50" aria-label="Șterge filtrele">
             Șterge filtre
         </button>
-        <button onclick="GenrePage.loadEvents(); closeGenreFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-bold text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark">
+        <button onclick="GenrePage.loadEvents(); closeGenreFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-bold text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark" aria-label="Aplică filtrele">
             Aplică filtre
         </button>
     </div>
@@ -277,8 +280,8 @@ function clearGenreFilters() {
 
         <!-- Load More -->
         <div class="mt-12 text-center" id="loadMoreSection">
-            <button id="loadMoreBtn" onclick="GenrePage.loadMore()" class="inline-flex items-center gap-2 px-8 py-4 font-bold transition-all border-2 border-primary text-primary rounded-xl hover:bg-primary hover:text-white">
-                Incarca mai multe
+            <button id="loadMoreBtn" onclick="GenrePage.loadMore()" class="inline-flex items-center gap-2 px-8 py-4 font-bold transition-all border-2 border-primary text-primary rounded-xl hover:bg-primary hover:text-white" aria-label="Încarcă mai multe evenimente">
+                Încarcă mai multe
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
         </div>

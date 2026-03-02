@@ -79,9 +79,9 @@ const AmbiletPagination = {
 
         for (let i = 1; i <= totalPages; i++) {
             if (i === currentPage) {
-                html += '<button class="w-10 h-10 font-bold text-white rounded-xl bg-primary" disabled>' + i + '</button>';
+                html += '<button class="w-10 h-10 font-bold text-white rounded-xl bg-primary" disabled aria-label="' + labels.page + ' ' + i + ' ' + labels.of + ' ' + totalPages + '">' + i + '</button>';
             } else {
-                html += '<button onclick="window._paginationCallback && window._paginationCallback(' + i + ')" class="w-10 h-10 font-medium transition-colors bg-white border rounded-xl border-border hover:bg-surface">' + i + '</button>';
+                html += '<button onclick="window._paginationCallback && window._paginationCallback(' + i + ')" class="w-10 h-10 font-medium transition-colors bg-white border rounded-xl border-border hover:bg-surface" aria-label="' + labels.page + ' ' + i + ' ' + labels.of + ' ' + totalPages + '">' + i + '</button>';
             }
         }
 
@@ -116,9 +116,9 @@ const AmbiletPagination = {
                 (i >= currentPage - range && i <= currentPage + range) // Pages around current
             ) {
                 if (i === currentPage) {
-                    pagesHtml += '<button class="w-10 h-10 font-bold text-white rounded-xl bg-primary" disabled>' + i + '</button>';
+                    pagesHtml += '<button class="w-10 h-10 font-bold text-white rounded-xl bg-primary" disabled aria-label="' + labels.page + ' ' + i + ' ' + labels.of + ' ' + totalPages + '">' + i + '</button>';
                 } else {
-                    pagesHtml += '<button onclick="window._paginationCallback && window._paginationCallback(' + i + ')" class="w-10 h-10 font-medium text-gray-700 transition-colors bg-white border border-gray-200 rounded-xl hover:bg-gray-50">' + i + '</button>';
+                    pagesHtml += '<button onclick="window._paginationCallback && window._paginationCallback(' + i + ')" class="w-10 h-10 font-medium text-gray-700 transition-colors bg-white border border-gray-200 rounded-xl hover:bg-gray-50" aria-label="' + labels.page + ' ' + i + ' ' + labels.of + ' ' + totalPages + '">' + i + '</button>';
                 }
             } else if (
                 (i === currentPage - range - 1 && i > 1) ||
@@ -152,7 +152,7 @@ const AmbiletPagination = {
             return ''; // No more pages to load
         }
 
-        return '<button id="loadMoreBtn" onclick="window._paginationCallback && window._paginationCallback(' + (currentPage + 1) + ')" class="w-full px-6 py-3 font-semibold transition-colors border-2 rounded-xl text-primary border-primary hover:bg-primary hover:text-white">' +
+        return '<button id="loadMoreBtn" onclick="window._paginationCallback && window._paginationCallback(' + (currentPage + 1) + ')" class="w-full px-6 py-3 font-semibold transition-colors border-2 rounded-xl text-primary border-primary hover:bg-primary hover:text-white" aria-label="' + labels.loadMore + '">' +
             '<span class="flex items-center justify-center gap-2">' +
                 '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m0 0l-4-4m4 4l4-4"/></svg>' +
                 labels.loadMore +

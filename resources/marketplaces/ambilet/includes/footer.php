@@ -260,7 +260,7 @@ $currentYear = date('Y');
                     <a href="/anpc" class="text-[13px] text-white/90 hover:text-white transition-colors">ANPC</a>
                 </div>
 
-                <button onclick="CookieConsent.openSettings()" aria-label="Setări cookies" class="flex items-center gap-1.5 px-3.5 py-2 bg-transparent border border-white/20 rounded-lg text-white/90 text-[13px] hover:border-white/40 hover:text-white transition-all">
+                <button onclick="CookieConsent.openSettings()" aria-label="Setări cookies" class="flex items-center gap-1.5 px-3.5 py-2 bg-transparent border border-white/20 rounded-lg text-white/90 text-[13px] hover:border-white/40 hover:text-white transition-all" name="cookie-settings">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"/>
                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -273,7 +273,7 @@ $currentYear = date('Y');
 </footer>
 
 <!-- Back to Top Button -->
-<button class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Înapoi sus" aria-label="Înapoi sus">
+<button class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Înapoi sus" aria-label="Înapoi sus" name="back-to-top">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <polyline points="18 15 12 9 6 15"/>
     </svg>

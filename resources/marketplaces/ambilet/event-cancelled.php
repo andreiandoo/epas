@@ -3,6 +3,9 @@
  * Event Cancelled Page
  * Notification about cancelled event with refund info
  */
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
+
 require_once 'includes/config.php';
 
 $pageTitle = 'Eveniment Anulat - AmBilet.ro';

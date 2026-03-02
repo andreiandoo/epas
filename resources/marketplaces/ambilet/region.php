@@ -2,6 +2,9 @@
 /**
  * Region Page - Events filtered by region
  */
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
+
 require_once __DIR__ . '/includes/config.php';
 
 $regionSlug = $_GET['slug'] ?? '';
@@ -82,7 +85,7 @@ require_once __DIR__ . '/includes/header.php';
     <section class="mb-12">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-secondary">Orase din <span id="sectionRegionName">regiune</span></h2>
-            <button onclick="RegionPage.showAllCities()" id="showAllCitiesBtn" class="flex items-center gap-1 text-sm font-semibold text-primary">
+            <button onclick="RegionPage.showAllCities()" id="showAllCitiesBtn" class="flex items-center gap-1 text-sm font-semibold text-primary" aria-label="Vezi toate orasele din regiune">
                 Vezi toate <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
         </div>

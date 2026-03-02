@@ -21,10 +21,10 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Page Hero -->
-<section class="py-16 text-center bg-gradient-to-br from-gray-900 to-gray-700">
+<section class="py-16 text-center pt-28 bg-gradient-to-br from-gray-900 to-gray-700">
     <div class="max-w-[700px] mx-auto px-6">
         <div class="w-[72px] h-[72px] bg-primary/20 border border-primary/30 rounded-[20px] flex items-center justify-center mx-auto mb-6">
-            <svg class="w-9 h-9 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg class="text-red-400 w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
@@ -49,7 +49,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="p-8 transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
             <div class="flex items-start gap-4 mb-5">
                 <div class="flex items-center justify-center flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600">
-                    <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="text-white w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/>
                         <path d="M21 21l-4.35-4.35"/>
                     </svg>
@@ -78,7 +78,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="p-8 transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
             <div class="flex items-start gap-4 mb-5">
                 <div class="flex items-center justify-center flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600">
-                    <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="text-white w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
@@ -106,7 +106,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="p-8 transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
             <div class="flex items-start gap-4 mb-5">
                 <div class="flex items-center justify-center flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-red-600">
-                    <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="text-white w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"/>
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                         <line x1="10" y1="11" x2="10" y2="17"/>
@@ -136,7 +136,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="p-8 transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
             <div class="flex items-start gap-4 mb-5">
                 <div class="flex items-center justify-center flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600">
-                    <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="text-white w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                         <line x1="9" y1="9" x2="15" y2="15"/>
                         <line x1="15" y1="9" x2="9" y2="15"/>
@@ -165,7 +165,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="p-8 transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
             <div class="flex items-start gap-4 mb-5">
                 <div class="flex items-center justify-center flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600">
-                    <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="text-white w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                         <polyline points="7 10 12 15 17 10"/>
                         <line x1="12" y1="15" x2="12" y2="3"/>
@@ -194,7 +194,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="p-8 transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
             <div class="flex items-start gap-4 mb-5">
                 <div class="flex items-center justify-center flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-pink-600">
-                    <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="text-white w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/>
                         <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
                     </svg>
@@ -222,7 +222,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="p-8 transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
             <div class="flex items-start gap-4 mb-5">
                 <div class="flex items-center justify-center flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600">
-                    <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="text-white w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                         <circle cx="9" cy="7" r="4"/>
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -252,7 +252,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="p-8 transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary">
             <div class="flex items-start gap-4 mb-5">
                 <div class="flex items-center justify-center flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary-light">
-                    <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="text-white w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
                     </svg>
                 </div>
@@ -285,9 +285,9 @@ require_once __DIR__ . '/includes/header.php';
                 <p class="text-white/90">Alege metoda care ți se potrivește cel mai bine</p>
             </div>
             <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
-                <div class="p-7 bg-white/10 border border-white/15 rounded-2xl text-center hover:bg-white/15 hover:-translate-y-1 transition-all">
-                    <div class="flex items-center justify-center w-14 h-14 mx-auto mb-4 bg-primary/30 rounded-xl">
-                        <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <div class="text-center transition-all border p-7 bg-white/10 border-white/15 rounded-2xl hover:bg-white/15 hover:-translate-y-1">
+                    <div class="flex items-center justify-center mx-auto mb-4 w-14 h-14 bg-primary/30 rounded-xl">
+                        <svg class="text-white w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                             <circle cx="12" cy="7" r="4"/>
                         </svg>
@@ -301,9 +301,9 @@ require_once __DIR__ . '/includes/header.php';
                         </svg>
                     </a>
                 </div>
-                <div class="p-7 bg-white/10 border border-white/15 rounded-2xl text-center hover:bg-white/15 hover:-translate-y-1 transition-all">
-                    <div class="flex items-center justify-center w-14 h-14 mx-auto mb-4 bg-primary/30 rounded-xl">
-                        <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <div class="text-center transition-all border p-7 bg-white/10 border-white/15 rounded-2xl hover:bg-white/15 hover:-translate-y-1">
+                    <div class="flex items-center justify-center mx-auto mb-4 w-14 h-14 bg-primary/30 rounded-xl">
+                        <svg class="text-white w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                             <polyline points="22,6 12,13 2,6"/>
                         </svg>
@@ -317,9 +317,9 @@ require_once __DIR__ . '/includes/header.php';
                         </svg>
                     </a>
                 </div>
-                <div class="p-7 bg-white/10 border border-white/15 rounded-2xl text-center hover:bg-white/15 hover:-translate-y-1 transition-all">
-                    <div class="flex items-center justify-center w-14 h-14 mx-auto mb-4 bg-primary/30 rounded-xl">
-                        <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <div class="text-center transition-all border p-7 bg-white/10 border-white/15 rounded-2xl hover:bg-white/15 hover:-translate-y-1">
+                    <div class="flex items-center justify-center mx-auto mb-4 w-14 h-14 bg-primary/30 rounded-xl">
+                        <svg class="text-white w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                             <polyline points="14 2 14 8 20 8"/>
                             <line x1="16" y1="13" x2="8" y2="13"/>
@@ -344,22 +344,22 @@ require_once __DIR__ . '/includes/header.php';
         <h2 class="mb-8 text-2xl font-bold text-center text-gray-900">Procesul de soluționare a cererii</h2>
         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <div class="relative text-center">
-                <div class="flex items-center justify-center w-14 h-14 mx-auto mb-4 text-xl font-bold text-white rounded-full bg-gradient-to-br from-primary to-primary-light">1</div>
+                <div class="flex items-center justify-center mx-auto mb-4 text-xl font-bold text-white rounded-full w-14 h-14 bg-gradient-to-br from-primary to-primary-light">1</div>
                 <h3 class="mb-2 font-bold text-gray-900">Primim cererea</h3>
                 <p class="text-[13px] text-gray-500 leading-relaxed">Înregistrăm cererea ta și îți trimitem confirmare în 24 de ore.</p>
             </div>
             <div class="relative text-center">
-                <div class="flex items-center justify-center w-14 h-14 mx-auto mb-4 text-xl font-bold text-white rounded-full bg-gradient-to-br from-primary to-primary-light">2</div>
+                <div class="flex items-center justify-center mx-auto mb-4 text-xl font-bold text-white rounded-full w-14 h-14 bg-gradient-to-br from-primary to-primary-light">2</div>
                 <h3 class="mb-2 font-bold text-gray-900">Verificăm identitatea</h3>
                 <p class="text-[13px] text-gray-500 leading-relaxed">Pentru siguranța ta, verificăm că cererea vine de la tine.</p>
             </div>
             <div class="relative text-center">
-                <div class="flex items-center justify-center w-14 h-14 mx-auto mb-4 text-xl font-bold text-white rounded-full bg-gradient-to-br from-primary to-primary-light">3</div>
+                <div class="flex items-center justify-center mx-auto mb-4 text-xl font-bold text-white rounded-full w-14 h-14 bg-gradient-to-br from-primary to-primary-light">3</div>
                 <h3 class="mb-2 font-bold text-gray-900">Procesăm cererea</h3>
                 <p class="text-[13px] text-gray-500 leading-relaxed">Analizăm și îndeplinim cererea ta în cel mult 30 de zile.</p>
             </div>
             <div class="relative text-center">
-                <div class="flex items-center justify-center w-14 h-14 mx-auto mb-4 text-xl font-bold text-white rounded-full bg-gradient-to-br from-primary to-primary-light">4</div>
+                <div class="flex items-center justify-center mx-auto mb-4 text-xl font-bold text-white rounded-full w-14 h-14 bg-gradient-to-br from-primary to-primary-light">4</div>
                 <h3 class="mb-2 font-bold text-gray-900">Te informăm</h3>
                 <p class="text-[13px] text-gray-500 leading-relaxed">Primești rezultatul pe email, inclusiv acțiunile întreprinse.</p>
             </div>
@@ -436,14 +436,14 @@ require_once __DIR__ . '/includes/header.php';
                         <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
                         </svg>
-                        <a href="tel:+40312345679" class="text-primary">+40 31 234 5679</a>
+                        <a href="tel:+40729121232" class="text-primary">+40 729 121 232</a>
                     </li>
                     <li class="flex items-center justify-center gap-2 text-sm text-gray-500 sm:justify-start">
                         <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                             <circle cx="12" cy="10" r="3"/>
                         </svg>
-                        Str. Exemplu nr. 123, București
+                        Str. Dimtrie Cantemir 17 Bl. 10 Sc. 1 Ap. 25, București
                     </li>
                 </ul>
             </div>

@@ -3,6 +3,8 @@
  * Terms and Conditions Page - Ambilet Marketplace
  * Legal terms, privacy policy, and conditions of use
  */
+$pageCacheTTL = 1800; // 30 minutes (static page)
+require_once __DIR__ . '/includes/page-cache.php';
 
 require_once __DIR__ . '/includes/config.php';
 
@@ -21,7 +23,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Page Hero -->
-<section class="py-16 text-center bg-gradient-to-br from-gray-900 to-gray-700">
+<section class="py-16 text-center pt-28 bg-gradient-to-br from-gray-900 to-gray-700">
     <div class="max-w-[700px] mx-auto px-6">
         <h1 class="text-[42px] font-extrabold text-white mb-4">Termeni și Condiții</h1>
         <p class="text-lg leading-relaxed text-white/90">Vă rugăm să citiți cu atenție termenii și condițiile de utilizare a platformei Ambilet înainte de a folosi serviciile noastre.</p>

@@ -21,10 +21,10 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Page Hero -->
-<section class="py-16 text-center bg-gradient-to-br from-gray-900 to-gray-700">
+<section class="py-16 text-center pt-28 bg-gradient-to-br from-gray-900 to-gray-700">
     <div class="max-w-[700px] mx-auto px-6">
         <div class="w-[72px] h-[72px] bg-primary/20 border border-primary/30 rounded-[20px] flex items-center justify-center mx-auto mb-6">
-            <svg class="w-9 h-9 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg class="text-red-400 w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"/>
                 <circle cx="12" cy="12" r="4"/>
                 <line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/>
@@ -158,7 +158,7 @@ require_once __DIR__ . '/includes/header.php';
                 Cookie-uri esențiale
             </h2>
 
-            <div class="p-6 my-5 bg-gray-50 border border-gray-200 rounded-2xl">
+            <div class="p-6 my-5 border border-gray-200 bg-gray-50 rounded-2xl">
                 <div class="flex flex-col items-start justify-between gap-4 mb-4 sm:flex-row sm:items-center">
                     <div class="flex items-center gap-3.5">
                         <div class="flex items-center justify-center w-12 h-12 text-white rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600">
@@ -176,7 +176,7 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="w-full h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[22px] after:w-[22px] after:shadow-md after:transition-all"></div>
                     </label>
                 </div>
-                <p class="text-sm leading-relaxed text-gray-500 mb-4">Aceste cookie-uri sunt necesare pentru funcționarea de bază a platformei. Fără ele, nu poți naviga pe site sau folosi funcții esențiale precum coșul de cumpărături sau autentificarea. Nu pot fi dezactivate.</p>
+                <p class="mb-4 text-sm leading-relaxed text-gray-500">Aceste cookie-uri sunt necesare pentru funcționarea de bază a platformei. Fără ele, nu poți naviga pe site sau folosi funcții esențiale precum coșul de cumpărături sau autentificarea. Nu pot fi dezactivate.</p>
 
                 <div class="pt-4 border-t border-gray-200">
                     <div class="grid grid-cols-[1fr_1fr_100px] gap-4 py-3 border-b border-gray-200 text-[13px]">
@@ -209,7 +209,7 @@ require_once __DIR__ . '/includes/header.php';
                 Cookie-uri funcționale
             </h2>
 
-            <div class="p-6 my-5 bg-gray-50 border border-gray-200 rounded-2xl">
+            <div class="p-6 my-5 border border-gray-200 bg-gray-50 rounded-2xl">
                 <div class="flex flex-col items-start justify-between gap-4 mb-4 sm:flex-row sm:items-center">
                     <div class="flex items-center gap-3.5">
                         <div class="flex items-center justify-center w-12 h-12 text-white rounded-xl bg-gradient-to-br from-blue-500 to-blue-600">
@@ -228,7 +228,7 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="w-full h-full bg-gray-300 rounded-full peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-emerald-600 peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[22px] after:w-[22px] after:shadow-md after:transition-all"></div>
                     </label>
                 </div>
-                <p class="text-sm leading-relaxed text-gray-500 mb-4">Aceste cookie-uri permit funcționalități îmbunătățite și personalizare, cum ar fi memorarea preferințelor tale de limbă sau regiune. Dezactivarea lor poate afecta unele funcții ale site-ului.</p>
+                <p class="mb-4 text-sm leading-relaxed text-gray-500">Aceste cookie-uri permit funcționalități îmbunătățite și personalizare, cum ar fi memorarea preferințelor tale de limbă sau regiune. Dezactivarea lor poate afecta unele funcții ale site-ului.</p>
 
                 <div class="pt-4 border-t border-gray-200">
                     <div class="grid grid-cols-[1fr_1fr_100px] gap-4 py-3 border-b border-gray-200 text-[13px]">
@@ -256,7 +256,7 @@ require_once __DIR__ . '/includes/header.php';
                 Cookie-uri analitice
             </h2>
 
-            <div class="p-6 my-5 bg-gray-50 border border-gray-200 rounded-2xl">
+            <div class="p-6 my-5 border border-gray-200 bg-gray-50 rounded-2xl">
                 <div class="flex flex-col items-start justify-between gap-4 mb-4 sm:flex-row sm:items-center">
                     <div class="flex items-center gap-3.5">
                         <div class="flex items-center justify-center w-12 h-12 text-white rounded-xl bg-gradient-to-br from-amber-500 to-amber-600">
@@ -276,7 +276,7 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="w-full h-full bg-gray-300 rounded-full peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-emerald-600 peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[22px] after:w-[22px] after:shadow-md after:transition-all"></div>
                     </label>
                 </div>
-                <p class="text-sm leading-relaxed text-gray-500 mb-4">Ne ajută să înțelegem cum folosești platforma, ce pagini vizitezi și cum putem îmbunătăți experiența. Datele sunt anonimizate și agregate.</p>
+                <p class="mb-4 text-sm leading-relaxed text-gray-500">Ne ajută să înțelegem cum folosești platforma, ce pagini vizitezi și cum putem îmbunătăți experiența. Datele sunt anonimizate și agregate.</p>
 
                 <div class="pt-4 border-t border-gray-200">
                     <div class="grid grid-cols-[1fr_1fr_100px] gap-4 py-3 border-b border-gray-200 text-[13px]">
@@ -309,7 +309,7 @@ require_once __DIR__ . '/includes/header.php';
                 Cookie-uri de marketing
             </h2>
 
-            <div class="p-6 my-5 bg-gray-50 border border-gray-200 rounded-2xl">
+            <div class="p-6 my-5 border border-gray-200 bg-gray-50 rounded-2xl">
                 <div class="flex flex-col items-start justify-between gap-4 mb-4 sm:flex-row sm:items-center">
                     <div class="flex items-center gap-3.5">
                         <div class="flex items-center justify-center w-12 h-12 text-white rounded-xl bg-gradient-to-br from-primary to-primary-light">
@@ -327,7 +327,7 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="w-full h-full bg-gray-300 rounded-full peer-checked:bg-gradient-to-r peer-checked:from-emerald-500 peer-checked:to-emerald-600 peer-checked:after:translate-x-6 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-[22px] after:w-[22px] after:shadow-md after:transition-all"></div>
                     </label>
                 </div>
-                <p class="text-sm leading-relaxed text-gray-500 mb-4">Sunt folosite pentru a-ți afișa reclame relevante pe alte site-uri pe care le vizitezi. Dacă le dezactivezi, vei vedea în continuare reclame, dar acestea nu vor fi personalizate.</p>
+                <p class="mb-4 text-sm leading-relaxed text-gray-500">Sunt folosite pentru a-ți afișa reclame relevante pe alte site-uri pe care le vizitezi. Dacă le dezactivezi, vei vedea în continuare reclame, dar acestea nu vor fi personalizate.</p>
 
                 <div class="pt-4 border-t border-gray-200">
                     <div class="grid grid-cols-[1fr_1fr_100px] gap-4 py-3 border-b border-gray-200 text-[13px]">
@@ -409,7 +409,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="text-[13px] text-gray-400">
                 Ultima actualizare: 15 Ianuarie 2025 • Versiunea 2.0
             </div>
-            <button onclick="window.print()" class="flex items-center gap-2 px-5 py-3 text-sm font-semibold text-gray-600 transition-all border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-900 hover:border-gray-900 hover:text-white">
+            <button onclick="window.print()" class="flex items-center gap-2 px-5 py-3 text-sm font-semibold text-gray-600 transition-all border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-900 hover:border-gray-900 hover:text-white" aria-label="Printează documentul" aria-label="Print this document">
                 <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="6 9 6 2 18 2 18 9"/>
                     <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
