@@ -39,16 +39,14 @@ return [
     | Temporary File Uploads
     |---------------------------------------------------------------------------
     |
-    | Use the 'public' disk instead of 'local' for Livewire temporary uploads.
-    | The 'local' disk (storage/app/private/) may not be writable in all
-    | environments, causing silent failures (throw: false). The 'public' disk
-    | (storage/app/public/) is already used by Filament FileUpload for final
-    | storage and is guaranteed to be writable on the server.
+    | Use the default 'local' disk (storage/app/private/) for Livewire
+    | temporary uploads. This keeps temp files out of the public web root
+    | and avoids path conflicts with Filament's permanent 'public' disk storage.
     |
     */
 
     'temporary_file_upload' => [
-        'disk'          => 'public',
+        'disk'          => null,
         'rules'         => null,
         'directory'     => 'livewire-tmp',
         'middleware'    => null,
