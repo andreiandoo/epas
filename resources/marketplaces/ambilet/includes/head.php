@@ -45,7 +45,7 @@ $siteSchema = [
         'url' => SITE_URL,
         'logo' => [
             '@type' => 'ImageObject',
-            'url' => SITE_URL . '/assets/images/logo.svg'
+            'url' => SITE_URL . '/assets/images/ambilet-logo.webp'
         ],
         'contactPoint' => [
             '@type' => 'ContactPoint',
@@ -63,7 +63,7 @@ $orgSchema = [
     '@type' => 'Organization',
     'name' => SITE_NAME,
     'url' => SITE_URL,
-    'logo' => SITE_URL . '/assets/images/logo.svg',
+    'logo' => SITE_URL . '/assets/images/ambilet-logo.webp',
     'sameAs' => [
         'https://facebook.com/ambilet',
         'https://instagram.com/ambilet',
@@ -229,7 +229,6 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <link rel="alternate" hreflang="x-default" href="<?= htmlspecialchars($canonicalUrl) ?>">
 
     <!-- Favicons -->
-    <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png">
