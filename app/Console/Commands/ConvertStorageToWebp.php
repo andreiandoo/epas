@@ -44,8 +44,8 @@ class ConvertStorageToWebp extends Command
                 return in_array($ext, ['jpg', 'jpeg', 'png']);
             })
             ->filter(function ($file) {
-                // Skip files that are backups (contain _original)
-                return !str_contains($file, '_original.');
+                return !str_contains($file, '_original.')
+                    && !str_contains($file, 'livewire-tmp/');
             })
             ->values();
 
