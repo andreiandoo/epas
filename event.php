@@ -140,7 +140,7 @@ require_once __DIR__ . '/includes/head.php';
             <nav class="flex items-center gap-2 text-sm" id="breadcrumb">
                 <a href="/" class="transition-colors text-muted hover:text-primary">Acasă</a>
                 <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                <span class="font-medium text-secondary" id="breadcrumb-title">Se încarcă...</span>
+                <span class="font-medium text-secondary" id="breadcrumb-title"><?= (!empty($pageTitle) && $pageTitle !== 'Eveniment') ? htmlspecialchars($pageTitle) : 'Se încarcă...' ?></span>
             </nav>
         </div>
     </div>
@@ -151,9 +151,19 @@ require_once __DIR__ . '/includes/head.php';
         <div id="loading-state" class="flex flex-col gap-8 lg:flex-row">
             <div class="lg:w-2/3">
                 <div class="mb-8 overflow-hidden bg-white border rounded-3xl border-border">
+                    <?php if ($lcpImageUrl): ?>
+                    <div class="relative overflow-hidden rounded-t-3xl" style="aspect-ratio: 1.904/1;">
+                        <img src="<?= htmlspecialchars($lcpImageUrl) ?>" alt="<?= htmlspecialchars($pageTitle) ?>" class="object-cover w-full h-full" fetchpriority="high" width="800" height="420">
+                    </div>
+                    <?php else: ?>
                     <div class="bg-gray-200 animate-pulse h-72 md:h-[29rem]"></div>
+                    <?php endif; ?>
                     <div class="p-6 md:p-8">
+                        <?php if (!empty($pageTitle) && $pageTitle !== 'Eveniment'): ?>
+                        <h1 class="mb-4 text-2xl font-bold md:text-3xl text-secondary"><?= htmlspecialchars($pageTitle) ?></h1>
+                        <?php else: ?>
                         <div class="w-3/4 h-10 mb-4 bg-gray-200 rounded animate-pulse"></div>
+                        <?php endif; ?>
                         <div class="grid gap-4 mb-6 sm:grid-cols-2">
                             <div class="h-24 bg-gray-100 animate-pulse rounded-xl"></div>
                             <div class="h-24 bg-gray-100 animate-pulse rounded-xl"></div>
