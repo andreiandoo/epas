@@ -61,7 +61,8 @@ function api_request(string $method, string $url, ?array $data = null): array
     curl_setopt_array($ch, [
         CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 30,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_TIMEOUT => 10,
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_FOLLOWLOCATION => true,
@@ -126,7 +127,8 @@ function api_request(string $method, string $url, ?array $data = null): array
 
 /**
  * Cache wrapper for API requests
- * Uses file-based caching for simple deployments
+ * Uses file-based caching with stale-while-revalidate strategy.
+ * When cache expires, serves stale data immediately and refreshes in background.
  *
  * @param string $key Cache key
  * @param callable $callback Function to call if cache miss
@@ -146,12 +148,29 @@ function api_cached(string $key, callable $callback, int $ttl = 300)
     // Check cache
     if (file_exists($cacheFile)) {
         $cached = json_decode(file_get_contents($cacheFile), true);
-        if ($cached && isset($cached['expires']) && $cached['expires'] > time()) {
-            return $cached['data'];
+        if ($cached && isset($cached['expires']) && isset($cached['data'])) {
+            if ($cached['expires'] > time()) {
+                // Fresh cache — return immediately
+                return $cached['data'];
+            }
+            // Stale cache — serve stale data, refresh in background
+            // Allow stale data up to 5x the TTL (e.g., 30min TTL → stale OK for 2.5h)
+            $staleLimit = $cached['expires'] + ($ttl * 4);
+            if (time() < $staleLimit) {
+                // Serve stale, then refresh cache asynchronously via shutdown function
+                register_shutdown_function(function () use ($callback, $cacheFile, $ttl) {
+                    $data = $callback();
+                    if ($data && (!isset($data['success']) || $data['success'] !== false)) {
+                        $cacheData = ['expires' => time() + $ttl, 'data' => $data];
+                        @file_put_contents($cacheFile, json_encode($cacheData));
+                    }
+                });
+                return $cached['data'];
+            }
         }
     }
 
-    // Fetch fresh data
+    // No cache or stale limit exceeded — fetch fresh (blocking)
     $data = $callback();
 
     // Save to cache
