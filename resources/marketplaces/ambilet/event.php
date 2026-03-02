@@ -7,12 +7,24 @@ $pageTitle = 'Eveniment';
 $pageDescription = 'Detalii eveniment si cumparare bilete';
 $bodyClass = 'bg-surface';
 
+// Preview mode: prevent browser from caching the page itself
+if (!empty($_GET['preview'])) {
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+}
+
 // Server-side: fetch event data for LCP image preload and SEO meta
 $eventPreload = null;
+$isPreview = !empty($_GET['preview']);
 if ($eventSlug) {
-    $eventPreload = api_cached('event_preload_' . $eventSlug, function () use ($eventSlug) {
-        return api_get('/events/' . urlencode($eventSlug));
-    }, 1800); // 30min cache (stale-while-revalidate extends to ~2.5h)
+    if ($isPreview) {
+        // Preview mode: always fetch fresh data, bypass cache
+        $eventPreload = api_get('/events/' . urlencode($eventSlug));
+    } else {
+        $eventPreload = api_cached('event_preload_' . $eventSlug, function () use ($eventSlug) {
+            return api_get('/events/' . urlencode($eventSlug));
+        }, 1800); // 30min cache (stale-while-revalidate extends to ~2.5h)
+    }
     // API returns: { data: { event: {...}, venue: {...}, ... } }
     $ev = $eventPreload['data']['event'] ?? null;
     if ($ev) {

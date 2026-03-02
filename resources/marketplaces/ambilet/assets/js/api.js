@@ -39,6 +39,10 @@ const AmbiletAPI = {
         if (endpointQuery) {
             url += '&' + endpointQuery;
         }
+        // Auto-forward preview mode from page URL to bypass all caching
+        if (new URLSearchParams(window.location.search).get('preview') === '1') {
+            url += '&preview=1';
+        }
 
         const headers = {
             'Content-Type': 'application/json',
