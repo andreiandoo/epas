@@ -95,13 +95,30 @@ echo "   Has '=== null': " . (strpos($navCacheContent, '$data === null') !== fal
 
 echo "\n";
 
-// 4. Actions
+// 4. Page cache stats
+$pageCacheDir = __DIR__ . '/includes/cache/pages';
+echo "4. Page cache (full-page HTML):\n";
+if (is_dir($pageCacheDir)) {
+    $pageFiles = glob($pageCacheDir . '/*.html');
+    echo "   Files: " . count($pageFiles) . "\n";
+    $totalSize = 0;
+    foreach ($pageFiles as $f) {
+        $totalSize += filesize($f);
+    }
+    echo "   Total size: " . round($totalSize / 1024, 1) . " KB\n";
+} else {
+    echo "   Directory not created yet (no cache hits)\n";
+}
+
+echo "\n";
+
+// 5. Actions
 if (isset($_GET['clear'])) {
     if (file_exists($cacheFile)) {
         unlink($cacheFile);
-        echo "4. Cache CLEARED! Refresh any page to test.\n";
+        echo "5. Nav cache CLEARED!\n";
     } else {
-        echo "4. Cache already clear.\n";
+        echo "5. Nav cache already clear.\n";
     }
 
     // Also clear nav-counts
@@ -110,12 +127,22 @@ if (isset($_GET['clear'])) {
         unlink($navCountsFile);
         echo "   nav-counts.json also cleared.\n";
     }
+
+    // Clear page cache
+    if (is_dir($pageCacheDir)) {
+        $cleared = 0;
+        foreach (glob($pageCacheDir . '/*.html') as $f) {
+            unlink($f);
+            $cleared++;
+        }
+        echo "   Page cache: $cleared files cleared.\n";
+    }
 } else {
-    echo "4. Add ?clear to URL to clear cache.\n";
+    echo "5. Add ?clear to URL to clear ALL caches.\n";
 }
 
-// 5. Test full getEventCategories flow
-echo "\n5. Testing getEventCategories() full flow...\n";
+// 6. Test full getEventCategories flow
+echo "\n6. Testing getEventCategories() full flow...\n";
 require_once __DIR__ . '/includes/nav-cache.php';
 $result = getEventCategories();
 echo "   Result count: " . count($result) . "\n";

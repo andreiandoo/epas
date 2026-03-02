@@ -2,6 +2,9 @@
 /**
  * Region Page - Events filtered by region
  */
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
+
 require_once __DIR__ . '/includes/config.php';
 
 $regionSlug = $_GET['slug'] ?? '';

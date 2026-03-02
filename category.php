@@ -7,6 +7,9 @@
  * 1. API cache (nav-cache.php) for dynamic categories from DB
  * 2. Fallback to static category-config.php for defaults
  */
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
+
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/nav-cache.php';
 require_once __DIR__ . '/includes/category-config.php';

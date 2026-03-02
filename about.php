@@ -1,4 +1,7 @@
 <?php
+$pageCacheTTL = 1800; // 30 minutes (static page)
+require_once __DIR__ . '/includes/page-cache.php';
+
 require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Despre Noi';
 $transparentHeader = false;

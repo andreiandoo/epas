@@ -3,6 +3,9 @@
  * Search Results Page
  * Displays search results for events, artists, and locations
  */
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
+
 require_once __DIR__ . '/includes/config.php';
 
 $searchQuery = trim($_GET['q'] ?? '');

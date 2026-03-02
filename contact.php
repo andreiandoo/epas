@@ -3,6 +3,8 @@
  * Contact Page - Ambilet Marketplace
  * Contact form, contact options, and FAQ section
  */
+$pageCacheTTL = 1800; // 30 minutes (static page)
+require_once __DIR__ . '/includes/page-cache.php';
 
 require_once __DIR__ . '/includes/config.php';
 

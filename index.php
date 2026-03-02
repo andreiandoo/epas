@@ -4,6 +4,9 @@
  * Based on ticketing-homepage-v3.html template
  */
 
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
+
 require_once __DIR__ . '/includes/config.php';
 
 $pageTitle = 'Bilete Evenimente Romania';

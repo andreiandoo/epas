@@ -3,6 +3,9 @@
  * Artists Listing Page
  * Based on artists-listing.html template
  */
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
+
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/category-config.php';
 

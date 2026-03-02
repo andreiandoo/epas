@@ -3,6 +3,9 @@
  * FAQ Page - Întrebări Frecvente
  * Ambilet Marketplace
  */
+$pageCacheTTL = 1800; // 30 minutes (static page)
+require_once __DIR__ . '/includes/page-cache.php';
+
 require_once 'includes/config.php';
 
 $pageTitle = 'Întrebări Frecvente — ' . SITE_NAME;

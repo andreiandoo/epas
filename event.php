@@ -2,6 +2,10 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
+// Full-page HTML cache: serves cached HTML on hit (zero API calls)
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
+
 $eventSlug = $_GET['slug'] ?? '';
 $pageTitle = 'Eveniment';
 $pageDescription = 'Detalii eveniment si cumparare bilete';

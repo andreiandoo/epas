@@ -3,6 +3,8 @@
  * Artist Single Page - Ambilet Marketplace
  * Individual artist/performer page with events and details
  */
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
 
 require_once __DIR__ . '/includes/config.php';
 

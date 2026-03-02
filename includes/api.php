@@ -153,18 +153,12 @@ function api_cached(string $key, callable $callback, int $ttl = 300)
                 // Fresh cache — return immediately
                 return $cached['data'];
             }
-            // Stale cache — serve stale data, refresh in background
+            // Stale cache — serve stale data immediately, let next request refresh
             // Allow stale data up to 5x the TTL (e.g., 30min TTL → stale OK for 2.5h)
+            // Note: register_shutdown_function blocks response on LiteSpeed/LSAPI,
+            // so we don't do background refresh — just serve stale and let it expire.
             $staleLimit = $cached['expires'] + ($ttl * 4);
             if (time() < $staleLimit) {
-                // Serve stale, then refresh cache asynchronously via shutdown function
-                register_shutdown_function(function () use ($callback, $cacheFile, $ttl) {
-                    $data = $callback();
-                    if ($data && (!isset($data['success']) || $data['success'] !== false)) {
-                        $cacheData = ['expires' => time() + $ttl, 'data' => $data];
-                        @file_put_contents($cacheFile, json_encode($cacheData));
-                    }
-                });
                 return $cached['data'];
             }
         }
