@@ -12,7 +12,7 @@ $eventPreload = null;
 if ($eventSlug) {
     $eventPreload = api_cached('event_preload_' . $eventSlug, function () use ($eventSlug) {
         return api_get('/events/' . urlencode($eventSlug));
-    }, 120); // 2min cache
+    }, 1800); // 30min cache (stale-while-revalidate extends to ~2.5h)
     // API returns: { data: { event: {...}, venue: {...}, ... } }
     $ev = $eventPreload['data']['event'] ?? null;
     if ($ev) {
