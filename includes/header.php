@@ -847,10 +847,12 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 
     window.addEventListener('scroll', () => {
         updateHeaderState(window.scrollY > 50);
-    });
+    }, {passive: true});
 
-    // Initial state
-    updateHeaderState(window.scrollY > 50);
+    // Initial state — deferred to avoid forced reflow during parse
+    requestAnimationFrame(function() {
+        updateHeaderState(window.scrollY > 50);
+    });
 
     // ==================== SEARCH PANEL ====================
     function openSearch() {

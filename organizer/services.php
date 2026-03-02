@@ -848,7 +848,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <?php
 $scriptsExtra = <<<'JS'
 <script>
-AmbiletAuth.requireOrganizerAuth();
+document.addEventListener('DOMContentLoaded', function() {
+    AmbiletAuth.requireOrganizerAuth();
+});
 
 let currentStep = 1;
 let currentServiceType = '';
@@ -1394,7 +1396,7 @@ function validateStep2() {
                 AmbiletNotifications.error('Data de inceput nu poate fi in trecut');
                 return false;
             }
-            if (endDate < startDate) {
+            if (endDate <= startDate) {
                 AmbiletNotifications.error('Data de sfarsit trebuie sa fie dupa data de inceput');
                 return false;
             }
@@ -1451,20 +1453,12 @@ function calculateOrderSummary() {
             const startVal = document.getElementById('featuring-start').value;
             const endVal = document.getElementById('featuring-end').value;
 
-            // Hours-based calculation:
-            // If start date is today, use current time; otherwise use midnight of start date
-            const todayStr = new Date().toISOString().slice(0, 10);
-            let startMs;
-            if (startVal === todayStr) {
-                startMs = Date.now();
-            } else {
-                startMs = new Date(startVal + 'T00:00:00').getTime();
-            }
-            // End = 23:59:59 of the selected end date
-            const endMs = new Date(endVal + 'T23:59:59').getTime();
-            const hours = (endMs - startMs) / (1000 * 60 * 60);
-            const daysMultiplier = Math.max(hours / 24, 0);
-            const daysDisplay = daysMultiplier.toFixed(2);
+            // Day-based calculation:
+            // Days = difference between end date and start date (integer)
+            const startDate = new Date(startVal + 'T00:00:00');
+            const endDate = new Date(endVal + 'T00:00:00');
+            const daysMultiplier = Math.max(Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)), 1);
+            const daysDisplay = daysMultiplier;
 
             const prices = servicePricing.featuring;
             const labels = {
@@ -1913,13 +1907,32 @@ document.getElementById('service-form').addEventListener('submit', async functio
 
     // Add service-specific data nested under "config" (required by server)
     switch (currentServiceType) {
-        case 'featuring':
+        case 'featuring': {
+            const featStartVal = document.getElementById('featuring-start').value;
+            const featEndVal = document.getElementById('featuring-end').value;
+            const todayStr = new Date().toISOString().slice(0, 10);
+            let startDatetime, endDatetime;
+
+            if (featStartVal === todayStr) {
+                // Start today: begins now, ends at same time on end date
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2, '0');
+                const mm = String(now.getMinutes()).padStart(2, '0');
+                startDatetime = featStartVal + 'T' + hh + ':' + mm;
+                endDatetime = featEndVal + 'T' + hh + ':' + mm;
+            } else {
+                // Future start: begins at 07:00, ends at 00:00 (midnight) on end date
+                startDatetime = featStartVal + 'T07:00';
+                endDatetime = featEndVal + 'T00:00';
+            }
+
             data.config = {
                 locations: Array.from(document.querySelectorAll('input[name="featuring_locations[]"]:checked')).map(c => c.value),
-                start_date: document.getElementById('featuring-start').value,
-                end_date: document.getElementById('featuring-end').value,
+                start_date: startDatetime,
+                end_date: endDatetime,
             };
             break;
+        }
         case 'email': {
             const emailAudienceType = document.querySelector('input[name="email_audience"]:checked').value;
             const emailDate = document.getElementById('email-send-date').value;
