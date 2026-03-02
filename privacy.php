@@ -21,10 +21,10 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Page Hero -->
-<section class="py-16 text-center bg-gradient-to-br from-gray-900 to-gray-700">
+<section class="py-16 text-center pt-28 bg-gradient-to-br from-gray-900 to-gray-700">
     <div class="max-w-[700px] mx-auto px-6">
         <div class="w-[72px] h-[72px] bg-primary/20 border border-primary/30 rounded-[20px] flex items-center justify-center mx-auto mb-6">
-            <svg class="w-9 h-9 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg class="text-red-400 w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             </svg>
         </div>

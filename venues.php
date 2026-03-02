@@ -447,20 +447,20 @@ const VenuesPage = {
             return;
         }
 
-        let html = `<button class="pagination-btn ${this.currentPage === 1 ? 'disabled opacity-50 cursor-not-allowed' : ''}" ${this.currentPage === 1 ? 'disabled' : ''} onclick="VenuesPage.goToPage(${this.currentPage - 1})" name="previous">
+        let html = `<button class="pagination-btn ${this.currentPage === 1 ? 'disabled opacity-50 cursor-not-allowed' : ''}" ${this.currentPage === 1 ? 'disabled' : ''} onclick="VenuesPage.goToPage(${this.currentPage - 1})" aria-label="Pagina anterioară" name="prev">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
         </button>`;
 
         for (let i = 1; i <= Math.min(pages, 5); i++) {
-            html += `<button class="pagination-btn ${this.currentPage === i ? 'active bg-primary border-primary text-white' : 'bg-white border-border text-muted hover:border-muted hover:text-secondary'} w-10 h-10 flex items-center justify-center border rounded-xl text-sm font-semibold transition-all" onclick="VenuesPage.goToPage(${i})" name="${i}">${i}</button>`;
+            html += `<button class="pagination-btn ${this.currentPage === i ? 'active bg-primary border-primary text-white' : 'bg-white border-border text-muted hover:border-muted hover:text-secondary'} w-10 h-10 flex items-center justify-center border rounded-xl text-sm font-semibold transition-all" onclick="VenuesPage.goToPage(${i})" aria-label="Pagina ${i}" name="${i}">${i}</button>`;
         }
 
         if (pages > 5) {
             html += `<span class="flex items-center justify-center w-10 h-10 text-muted">...</span>`;
-            html += `<button class="flex items-center justify-center w-10 h-10 text-sm font-semibold transition-all bg-white border pagination-btn border-border rounded-xl text-muted hover:border-muted hover:text-secondary" onclick="VenuesPage.goToPage(${pages})" name="${pages}">${pages}</button>`;
+            html += `<button class="flex items-center justify-center w-10 h-10 text-sm font-semibold transition-all bg-white border pagination-btn border-border rounded-xl text-muted hover:border-muted hover:text-secondary" onclick="VenuesPage.goToPage(${pages})" aria-label="Pagina ${pages}">${pages}</button>`;
         }
 
-        html += `<button class="pagination-btn ${this.currentPage === pages ? 'disabled opacity-50 cursor-not-allowed' : ''}" ${this.currentPage === pages ? 'disabled' : ''} onclick="VenuesPage.goToPage(${this.currentPage + 1})" name="next">
+        html += `<button class="pagination-btn ${this.currentPage === pages ? 'disabled opacity-50 cursor-not-allowed' : ''}" ${this.currentPage === pages ? 'disabled' : ''} onclick="VenuesPage.goToPage(${this.currentPage + 1})" aria-label="Pagina următoare">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>`;
 

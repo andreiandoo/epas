@@ -49,7 +49,7 @@ include __DIR__ . '/includes/header.php';
         </div>
 
         <!-- Follow Button -->
-        <button id="follow-btn" onclick="VenuePage.toggleFollow()" class="flex items-center gap-2 px-5 py-2.5 mt-4 bg-white/20 backdrop-blur-md rounded-xl text-white font-semibold transition-all hover:bg-white/30 absolute right-4 bottom-28" name="followButton">
+        <button id="follow-btn" onclick="VenuePage.toggleFollow()" class="flex items-center gap-2 px-5 py-2.5 mt-4 bg-white/20 backdrop-blur-md rounded-xl text-white font-semibold transition-all hover:bg-white/30 absolute right-4 bottom-28" aria-label="Urmărește locația">
             <svg id="follow-icon" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -266,7 +266,7 @@ include __DIR__ . '/includes/header.php';
             <!-- Contact CTA -->
             <div class="p-6 bg-gradient-to-br from-secondary to-slate-600 rounded-2xl">
                 <h3 class="mb-4 text-base font-bold text-white">Organizezi un eveniment?</h3>
-                <button onclick="VenuePage.openContactModal()" class="flex items-center justify-center gap-2 w-full py-3.5 bg-primary hover:bg-primary-dark rounded-xl text-white text-sm font-semibold transition-all mb-3" name="contactVenueButton">
+                <button onclick="VenuePage.openContactModal()" class="flex items-center justify-center gap-2 w-full py-3.5 bg-primary hover:bg-primary-dark rounded-xl text-white text-sm font-semibold transition-all mb-3" aria-label="Contactează locația">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                         <polyline points="22,6 12,13 2,6"/>
@@ -317,7 +317,7 @@ include __DIR__ . '/includes/header.php';
                 <h2 class="text-lg font-bold text-secondary">Contactează locația</h2>
                 <p id="contactVenueName" class="text-sm text-muted"></p>
             </div>
-            <button onclick="VenuePage.closeContactModal()" class="p-2 transition-colors rounded-lg hover:bg-surface" aria-label="Închide" name="closeContactModalButton">
+            <button onclick="VenuePage.closeContactModal()" class="p-2 transition-colors rounded-lg hover:bg-surface" aria-label="Închide modalul de contact">
                 <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>

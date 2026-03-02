@@ -63,11 +63,11 @@ require_once __DIR__ . '/includes/header.php';
             </p>
         </div>
         <div id="categoryFilters" class="flex items-center gap-3 pb-2 overflow-x-auto lg:justify-center scrollbar-hide snap-x snap-mandatory mobile:pl-4 mobile:-mr-4">
-            <button onclick="EventsPage.setCategory('')" data-category="" class="category-btn flex-shrink-0 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer snap-start <?= !$filterCategory ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>" name="allCategoriesButton">
+            <button onclick="EventsPage.setCategory('')" data-category="" class="category-btn flex-shrink-0 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer snap-start <?= !$filterCategory ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>" aria-label="Filtrează toate categoriile">
                 Toate
             </button>
             <?php foreach ($eventCategories as $category): ?>
-            <button onclick="EventsPage.setCategory('<?= addslashes($category['slug']) ?>')" data-category="<?= htmlspecialchars($category['slug']) ?>" class="category-btn flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer snap-start <?= $filterCategory === $category['slug'] ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>" name="categoryButton-<?= htmlspecialchars($category['slug']) ?>">
+            <button onclick="EventsPage.setCategory('<?= addslashes($category['slug']) ?>')" data-category="<?= htmlspecialchars($category['slug']) ?>" class="category-btn flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer snap-start <?= $filterCategory === $category['slug'] ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>" aria-label="Filtrează categoria <?= htmlspecialchars($category['name']) ?>">
                 <span class="text-base"><?= $category['icon_emoji'] ?? '🎫' ?></span>
                 <?= htmlspecialchars($category['name']) ?>
             </button>
@@ -80,7 +80,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Mobile Filters Button -->
 <section class="sticky top-[72px] z-20 py-3 bg-white border-b border-gray-200 shadow-sm lg:hidden">
     <div class="flex items-center justify-between gap-3 px-4">
-        <button onclick="openFiltersDrawer()" class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" name="openFiltersButton">
+        <button onclick="openFiltersDrawer()" class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" aria-label="Deschide filtrele de căutare pentru evenimentele trecute">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
             Filtre
             <span id="mobileFilterCount" class="hidden px-2 py-0.5 text-xs font-bold text-white rounded-full bg-primary">0</span>
@@ -126,7 +126,7 @@ require_once __DIR__ . '/includes/header.php';
         <div id="activeFilters" class="flex flex-wrap items-center gap-2 mt-3" style="display: none;">
             <span class="text-sm text-gray-500">Filtre active:</span>
             <div id="activeFilterTags" class="flex flex-wrap gap-2"></div>
-            <button onclick="EventsPage.clearFilters()" class="ml-2 text-sm font-medium text-primary" name="clearAllFiltersButton">Șterge toate</button>
+            <button onclick="EventsPage.clearFilters()" class="ml-2 text-sm font-medium text-primary" aria-label="Șterge toate filtrele">Șterge toate</button>
         </div>
     </div>
 </section>
@@ -137,7 +137,7 @@ require_once __DIR__ . '/includes/header.php';
     <!-- Drawer Header -->
     <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-200">
         <h2 class="text-lg font-bold text-gray-900">Filtre</h2>
-        <button onclick="closeFiltersDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors bg-gray-100 rounded-full hover:bg-gray-200" name="closeFiltersButtonMobile">
+        <button onclick="closeFiltersDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors bg-gray-100 rounded-full hover:bg-gray-200" aria-label="Închide filtrele">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
     </div>
@@ -167,10 +167,10 @@ require_once __DIR__ . '/includes/header.php';
     </div>
     <!-- Drawer Footer -->
     <div class="flex gap-3 p-4 border-t border-gray-200 bg-gray-50">
-        <button onclick="EventsPage.clearFilters(); closeFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-200 rounded-xl hover:bg-gray-50" name="clearFiltersMobile">
+        <button onclick="EventsPage.clearFilters(); closeFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-200 rounded-xl hover:bg-gray-50" aria-label="Șterge filtrele">
             Șterge filtre
         </button>
-        <button onclick="EventsPage.applyFilters(); closeFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-bold text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark" name="applyFiltersMobile">
+        <button onclick="EventsPage.applyFilters(); closeFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-bold text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark" aria-label="Aplică filtrele">
             Aplică filtre
         </button>
     </div>
@@ -254,12 +254,12 @@ document.addEventListener('DOMContentLoaded', () => {
             <span id="resultsCount" class="font-semibold text-gray-900">0</span> evenimente trecute
         </p>
         <div class="flex items-center gap-2">
-            <button onclick="EventsPage.setView('grid')" id="viewGrid" class="p-2 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-primary" name="viewGridButton">
+            <button onclick="EventsPage.setView('grid')" id="viewGrid" class="p-2 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-primary" aria-label="Vizualizare grilă">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
                 </svg>
             </button>
-            <button onclick="EventsPage.setView('list')" id="viewList" class="p-2 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-primary" name="viewListButton">
+            <button onclick="EventsPage.setView('list')" id="viewList" class="p-2 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-primary" aria-label="Vizualizare listă">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
@@ -287,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </svg>
             <h3 class="mb-2 text-xl font-bold text-gray-900">Nu am găsit evenimente trecute</h3>
             <p class="mb-6 text-gray-500">Încearcă să modifici filtrele sau să cauți altceva.</p>
-            <button onclick="EventsPage.clearFilters()" class="px-6 py-3 font-semibold text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark" name="resetFiltersEmptyState">
+            <button onclick="EventsPage.clearFilters()" class="px-6 py-3 font-semibold text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark" aria-label="Resetează filtrele">
                 Resetează filtrele
             </button>
         </div>

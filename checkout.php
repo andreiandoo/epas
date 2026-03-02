@@ -67,7 +67,7 @@ require_once __DIR__ . '/includes/header.php';
                                 Datele tale
                             </h2>
                             <!-- Login button for guests -->
-                            <button type="button" id="guest-login-btn" onclick="CheckoutPage.showLoginModal()" class="items-center hidden gap-2 px-4 py-2 text-sm font-medium transition-all border-2 rounded-xl text-primary border-primary hover:bg-primary hover:text-white">
+                            <button type="button" id="guest-login-btn" onclick="CheckoutPage.showLoginModal()" class="items-center hidden gap-2 px-4 py-2 text-sm font-medium transition-all border-2 rounded-xl text-primary border-primary hover:bg-primary hover:text-white" aria-label="Autentificare pentru clienți existenți">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
                                 Intră în cont
                             </button>
@@ -357,7 +357,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <span id="points-earned" class="font-bold text-accent">0 puncte</span>
                             </div>
 
-                            <button onclick="CheckoutPage.submit()" id="payBtn" class="flex items-center justify-center w-full gap-2 py-4 mt-6 text-lg font-bold text-white btn-primary rounded-xl" disabled>
+                            <button onclick="CheckoutPage.submit()" id="payBtn" class="flex items-center justify-center w-full gap-2 py-4 mt-6 text-lg font-bold text-white btn-primary rounded-xl" disabled aria-label="Finalizează comanda">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                 <span id="pay-btn-text">Plătește 0.00 lei</span>
                             </button>
@@ -395,7 +395,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="w-full max-w-md p-8 mx-4 bg-white shadow-2xl rounded-2xl">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-xl font-bold text-secondary">Conectează-te</h3>
-                <button type="button" onclick="CheckoutPage.hideLoginModal()" class="p-2 transition-colors rounded-lg hover:bg-surface">
+                <button type="button" onclick="CheckoutPage.hideLoginModal()" class="p-2 transition-colors rounded-lg hover:bg-surface" aria-label="Închide modalul de login">
                     <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>

@@ -21,7 +21,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Page Hero -->
-<section class="py-16 text-center bg-gradient-to-br from-gray-900 to-gray-700">
+<section class="py-16 text-center pt-28 bg-gradient-to-br from-gray-900 to-gray-700">
     <div class="max-w-[700px] mx-auto px-6">
         <div class="w-[72px] h-[72px] bg-primary/20 border border-primary/30 rounded-[20px] flex items-center justify-center mx-auto mb-6">
             <svg class="text-red-400 w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -409,7 +409,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="text-[13px] text-gray-400">
                 Ultima actualizare: 15 Ianuarie 2025 • Versiunea 2.0
             </div>
-            <button onclick="window.print()" class="flex items-center gap-2 px-5 py-3 text-sm font-semibold text-gray-600 transition-all border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-900 hover:border-gray-900 hover:text-white" aria-label="Printează documentul" name="print">
+            <button onclick="window.print()" class="flex items-center gap-2 px-5 py-3 text-sm font-semibold text-gray-600 transition-all border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-900 hover:border-gray-900 hover:text-white" aria-label="Printează documentul" aria-label="Print this document">
                 <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="6 9 6 2 18 2 18 9"/>
                     <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
