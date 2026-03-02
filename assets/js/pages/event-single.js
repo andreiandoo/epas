@@ -256,7 +256,7 @@ const EventPage = {
                         '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>' +
                         'Creeaza cont nou' +
                     '</a>' +
-                    '<button onclick="EventPage.closeLoginPrompt()" class="w-full px-6 py-3 font-medium transition-colors text-muted hover:text-secondary">' +
+                    '<button onclick="EventPage.closeLoginPrompt()" class="w-full px-6 py-3 font-medium transition-colors text-muted hover:text-secondary" aria-label="Close login prompt">' +
                         'Inchide' +
                     '</button>' +
                 '</div>' +
@@ -387,25 +387,32 @@ const EventPage = {
      * Load event data from API
      */
     async loadEvent() {
+        // Use server-injected data if available (eliminates browser→API roundtrip)
+        if (window.__EVENT_PRELOAD__ && !this.isPreview) {
+            try {
+                const preloadData = window.__EVENT_PRELOAD__;
+                window.__EVENT_PRELOAD__ = null;
+                this.event = this.transformApiData(preloadData);
+                this.render();
+                if (this.event.organizer && this.event.organizer.id) {
+                    this.loadOrganizerTracking(this.event.organizer.id);
+                }
+                // If preload data lacks ticket_types, fetch full data in background
+                if (!preloadData.ticket_types || !preloadData.ticket_types.length) {
+                    this.refreshFromApi();
+                }
+                return;
+            } catch (e) {
+                console.warn('[EventPage] Preload data failed, falling back to API:', e);
+            }
+        }
+
         try {
             const params = this.isPreview ? { preview: true } : {};
             const response = await AmbiletAPI.getEvent(this.slug, params);
-            console.log('[EventPage] API Response:', response);
-            console.log('[EventPage] === EVENT DATA ===');
-            console.log('[EventPage] Event object:', response.data?.event);
-            console.log('[EventPage] TARGET_PRICE:', response.data?.event?.target_price);
-            console.log('[EventPage] === TAXES ===');
-            console.log('[EventPage] Taxes from API:', response.data?.taxes);
-            console.log('[EventPage] === TICKET TYPES ===');
-            console.log('[EventPage] Ticket types from API:', response.data?.ticket_types);
             if (response.success && response.data) {
                 this.event = this.transformApiData(response.data);
-                console.log('[EventPage] Transformed event:', this.event);
-                console.log('[EventPage] Transformed target_price:', this.event.target_price);
-                console.log('[EventPage] Event taxes:', this.event.taxes);
-                console.log('[EventPage] Event ticket_types:', this.ticketTypes);
                 this.render();
-                // Load organizer tracking scripts (non-blocking)
                 if (this.event.organizer && this.event.organizer.id) {
                     this.loadOrganizerTracking(this.event.organizer.id);
                 }
@@ -419,6 +426,25 @@ const EventPage = {
             } else {
                 this.showError('Eroare la încărcarea evenimentului');
             }
+        }
+    },
+
+    /**
+     * Refresh event data from API in background (for ticket types etc.)
+     */
+    async refreshFromApi() {
+        try {
+            const params = this.isPreview ? { preview: true } : {};
+            const response = await AmbiletAPI.getEvent(this.slug, params);
+            if (response.success && response.data) {
+                this.event = this.transformApiData(response.data);
+                // Re-render only ticket section with fresh data
+                if (this.event.ticketTypes && this.event.ticketTypes.length) {
+                    this.renderTicketTypes();
+                }
+            }
+        } catch (e) {
+            console.warn('[EventPage] Background API refresh failed:', e);
         }
     },
 
@@ -897,7 +923,7 @@ const EventPage = {
 
         // Category badge
         if (e.category) {
-            badgesHtml.push('<span class="px-3 py-1.5 bg-accent text-white text-xs font-bold rounded-lg uppercase">' + e.category + '</span>');
+            badgesHtml.push('<span class="px-3 py-1.5 bg-accent text-slate-800 text-xs font-bold rounded-lg uppercase">' + e.category + '</span>');
         }
 
         // Popular badge (only if not cancelled/postponed/sold out)
@@ -1291,7 +1317,7 @@ const EventPage = {
             } else if (tt.available <= 5) {
                 availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Ultimele ' + tt.available + ' disponibile</span>';
             } else if (tt.available <= 20) {
-                availabilityHtml = '<span class="text-xs font-semibold text-accent">🔥 Doar ' + tt.available + ' disponibile</span>';
+                availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Doar ' + tt.available + ' disponibile</span>';
             } else if (tt.available < 40) {
                 availabilityHtml = '<span class="text-xs font-semibold text-success">⚡ ' + tt.available + ' disponibile</span>';
             } else {
@@ -1367,9 +1393,9 @@ const EventPage = {
             } else {
                 // Quantity controls (always show for available tickets)
                 controlsHtml = '<div class="flex items-center gap-2">' +
-                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary border border-slate-200 hover:text-white">-</button>' +
+                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary border border-slate-200 hover:text-white"  aria-label="Decrease quantity">-</button>' +
                     '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center">' + currentQty + '</span>' +
-                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary border border-slate-200 hover:text-white">+</button>';
+                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary border border-slate-200 hover:text-white" aria-label="Increase quantity">+</button>';
 
                 // Add "Alege locul/locurile" button for seating tickets when quantity > 0
                 if (hasSeating && currentQty > 0) {
@@ -1378,7 +1404,7 @@ const EventPage = {
                         btnLabel = selectedCount + ' loc' + (selectedCount > 1 ? 'uri' : '') + ' selectat' + (selectedCount > 1 ? 'e' : '');
                     }
                     controlsHtml += '<button onclick="EventPage.openSeatSelection(\'' + tt.id + '\')" class="flex items-center gap-2 px-3 py-2 ml-2 text-xs font-semibold transition-colors rounded-lg ' +
-                        (selectedCount > 0 ? 'bg-green-500 text-white' : 'bg-accent text-white hover:bg-accent/80') + '">' +
+                        (selectedCount > 0 ? 'bg-green-500 text-white' : 'bg-accent text-white hover:bg-accent/80') + '" aria-label="Select seat(s)">' +
                         '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>' +
                         btnLabel +
                     '</button>';
@@ -2190,7 +2216,7 @@ const EventPage = {
                         '<h2 class="text-base md:text-xl font-bold text-secondary truncate">Alege locurile</h2>' +
                         '<p class="text-xs md:text-sm text-muted" id="seat-selection-subtitle">Selectează locurile dorite pe hartă</p>' +
                     '</div>' +
-                    '<button onclick="EventPage.closeSeatSelection()" aria-label="Închide" class="p-2 transition-colors rounded-lg hover:bg-surface flex-shrink-0">' +
+                    '<button onclick="EventPage.closeSeatSelection()" aria-label="Închide" class="p-2 transition-colors rounded-lg hover:bg-surface flex-shrink-0" aria-label="Închide">' +
                         '<svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
                     '</button>' +
                 '</div>' +
@@ -2208,14 +2234,14 @@ const EventPage = {
                         // Zoom controls
                         '<div class="flex items-center justify-between px-3 md:px-4 py-2 bg-white border-b border-border">' +
                             '<div class="flex items-center gap-1 md:gap-2">' +
-                                '<button onclick="EventPage.zoomMap(-0.2)" class="p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom out" aria-label="Zoom out">' +
+                                '<button onclick="EventPage.zoomMap(-0.2)" class="p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom out" aria-label="Zoom out" name="zoom-out">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>' +
                                 '</button>' +
                                 '<span id="zoom-level" class="text-sm font-medium text-muted w-12 text-center">100%</span>' +
-                                '<button onclick="EventPage.zoomMap(0.2)" class="p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom in" aria-label="Zoom in">' +
+                                '<button onclick="EventPage.zoomMap(0.2)" class="p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors" title="Zoom in" aria-label="Zoom in" name="zoom-in">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
                                 '</button>' +
-                                '<button onclick="EventPage.resetMapZoom()" class="ml-1 md:ml-2 p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors text-xs" title="Reset zoom" aria-label="Reset zoom">' +
+                                '<button onclick="EventPage.resetMapZoom()" class="ml-1 md:ml-2 p-1.5 md:p-2 rounded-lg bg-surface hover:bg-gray-200 transition-colors text-xs" title="Reset zoom" aria-label="Reset zoom" name="reset-zoom">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
                                 '</button>' +
                             '</div>' +
@@ -2233,7 +2259,7 @@ const EventPage = {
                                 '</div>' +
                             '</div>' +
                             // Legend in bottom-left corner of map
-                            '<div class="absolute bottom-3 left-3 flex flex-wrap items-center gap-2 md:gap-4 text-[10px] md:text-sm bg-white/90 backdrop-blur-sm rounded-lg px-2 md:px-3 py-1.5 md:py-2 shadow-sm">' +
+                            '<div class="absolute bottom-3 left-3 flex flex-wrap items-center gap-2 md:gap-4 text-[10px] md:text-sm bg-white/90 backdrop-blur-sm rounded-lg px-2 md:px-3 py-1.5 md:py-2 shadow-sm mobile:text-sm mobile:w-full mobile:justify-center">' +
                                 '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded" style="background-color: #a51c30;"></span> Selectat</div>' +
                                 '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded bg-gray-300"></span> Ocupat</div>' +
                                 '<div class="flex items-center gap-1"><span class="w-3 h-3 md:w-4 md:h-4 rounded relative" style="background-color: #D1D5DB;"><span class="absolute inset-0 flex items-center justify-center text-gray-500 font-bold" style="font-size:8px;line-height:1">&times;</span></span> Indisponibil</div>' +
@@ -2255,8 +2281,8 @@ const EventPage = {
                                 '<span id="selected-seats-total" class="font-bold text-primary">0 lei</span>' +
                             '</div>' +
                             '<div class="flex gap-2">' +
-                                '<button onclick="EventPage.confirmSeatSelection()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors">Cumpără bilete</button>' +
-                                '<button onclick="EventPage.clearAllSelections()" aria-label="Golește coșul" class="p-2.5 text-secondary border border-secondary rounded-xl opacity-50 hover:bg-red-50 hover:opacity-100 hover:border-red-600 hover:text-red-600 transition-all" title="Golește coșul">' +
+                                '<button onclick="EventPage.confirmSeatSelection()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors" name="buy-tickets">Cumpără bilete</button>' +
+                                '<button onclick="EventPage.clearAllSelections()" aria-label="Golește coșul" class="p-2.5 text-secondary border border-secondary rounded-xl opacity-50 hover:bg-red-50 hover:opacity-100 hover:border-red-600 hover:text-red-600 transition-all" title="Golește coșul" aria-label="Golește coșul">' +
                                     '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
                                 '</button>' +
                             '</div>' +
@@ -2265,15 +2291,15 @@ const EventPage = {
                 '</div>' +
                 // Mobile bottom bar - shows selected seats count and buy button (visible on < lg)
                 '<div class="lg:hidden border-t border-border bg-white px-4 py-3 flex items-center justify-between gap-3" id="seat-mobile-bottom-bar">' +
-                    '<div class="flex-1 min-w-0">' +
+                    '<div class="flex-1 min-w-0 mobile:flex mobile:flex-col">' +
                         '<span class="text-sm font-bold text-secondary" id="mobile-seats-count">0 locuri</span>' +
-                        '<span class="text-sm text-muted ml-2" id="mobile-seats-total">0 lei</span>' +
+                        '<span class="text-sm text-muted ml-2 mobile:ml-0" id="mobile-seats-total">0 lei</span>' +
                     '</div>' +
                     '<div class="flex gap-2 flex-shrink-0">' +
-                        '<button onclick="EventPage.clearAllSelections()" aria-label="Golește" class="p-2.5 text-muted border border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all" title="Golește">' +
+                        '<button onclick="EventPage.clearAllSelections()" aria-label="Golește" class="p-2.5 text-muted border border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all" title="Golește" aria-label="Golește">' +
                             '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
                         '</button>' +
-                        '<button onclick="EventPage.confirmSeatSelection()" class="px-5 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors" id="mobile-seats-buy-btn">Cumpără bilete</button>' +
+                        '<button onclick="EventPage.confirmSeatSelection()" class="px-5 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors" id="mobile-seats-buy-btn" aria-label="Cumpără bilete">Cumpără bilete</button>' +
                     '</div>' +
                 '</div>' +
             '</div>';
@@ -2507,7 +2533,7 @@ const EventPage = {
                         '<div class="font-medium text-secondary">' + seat.section + '</div>' +
                         '<div class="text-muted">Rând ' + seat.row + ', Loc ' + seat.seat + '</div>' +
                     '</div>' +
-                    '<button onclick="EventPage.removeSeat(\'' + tt.id + '\', ' + index + ')" aria-label="Șterge" class="p-1 text-red-500 hover:bg-red-50 rounded transition-colors" title="Șterge">' +
+                    '<button onclick="EventPage.removeSeat(\'' + tt.id + '\', ' + index + ')" aria-label="Șterge" class="p-1 text-red-500 hover:bg-red-50 rounded transition-colors" title="Șterge" aria-label="Șterge">' +
                         '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
                     '</button>' +
                 '</div>';
@@ -3184,7 +3210,7 @@ const EventPage = {
         popup.className = 'fixed inset-0 z-[9999] flex items-center justify-center';
         popup.style.background = 'rgba(0,0,0,0.4)';
 
-        var html = '<div class="bg-white rounded-xl shadow-2xl p-5 max-w-xs w-full mx-4">';
+        var html = '<div class="bg-white rounded-xl shadow-2xl p-5 max-w-xs w-full mx-4 mobile:max-w-md">';
         html += '<div class="text-sm font-semibold text-gray-700 mb-1">Alege tipul de bilet</div>';
         html += '<div class="text-xs text-gray-500 mb-2">' + sectionName + ', Rând ' + rowLabel + ', Loc ' + seatLabel + '</div>';
         html += '<div class="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2 mb-3">Acest loc are alocate mai multe tipuri de bilete. Alege-l pe cel care ți se potrivește.</div>';
@@ -3194,14 +3220,14 @@ const EventPage = {
             var color = self.getTicketTypeColor(tt);
             var sn = sectionName.replace(/'/g, "\\'");
             html += '<button onclick="EventPage.chooserSelect(' + tt.id + ', ' + seatId + ', \'' + sn + '\', \'' + rowLabel + '\', \'' + seatLabel + '\', \'' + (seatUid || '') + '\')" ' +
-                'class="w-full text-left px-3 py-2.5 mb-1.5 rounded-lg border border-gray-200 hover:border-gray-400 hover:bg-gray-50 flex items-center gap-3 transition-colors">' +
+                'class="w-full text-left px-3 py-2.5 mb-1.5 rounded-lg border border-gray-200 hover:border-gray-400 hover:bg-gray-50 flex items-center gap-3 transition-colors" aria-label="Alege tipul de bilet: ' + tt.name + '">' +
                 '<span class="w-4 h-4 rounded-full flex-shrink-0" style="background:' + color + '"></span>' +
                 '<span class="text-sm font-medium text-gray-800">' + tt.name + '</span>' +
                 '<span class="text-xs text-gray-500 ml-auto">' + tt.price.toFixed(2) + ' lei</span>' +
                 '</button>';
         });
 
-        html += '<button onclick="document.getElementById(\'tt-chooser-popup\').remove()" class="w-full text-center text-xs text-gray-400 mt-2 py-1 hover:text-gray-600 transition-colors">Anulează</button>';
+        html += '<button onclick="document.getElementById(\'tt-chooser-popup\').remove()" class="w-full text-center text-xs text-gray-400 mt-2 py-1 hover:text-gray-600 transition-colors" aria-label="Anulează">Anulează</button>';
         html += '</div>';
 
         popup.innerHTML = html;

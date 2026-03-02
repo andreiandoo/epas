@@ -60,6 +60,11 @@ if ($lcpPosterUrl && $lcpHeroUrl && $lcpPosterUrl !== $lcpHeroUrl) {
     $extraHead = '<link rel="preload" as="image" href="' . htmlspecialchars($lcpImageUrl) . '" fetchpriority="high">';
 }
 
+// Inject server-fetched data so JS can render immediately (no API roundtrip)
+if (!empty($eventPreload['data'])) {
+    $headExtra = '<script>window.__EVENT_PRELOAD__=' . json_encode($eventPreload['data'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';</script>';
+}
+
 $cssBundle = 'event';
 require_once __DIR__ . '/includes/head.php';
 ?>
