@@ -116,8 +116,11 @@
         }
     }
 
+    // Cache scroll state to avoid forced reflow when other code needs it
+    var cachedIsScrolled = false;
     window.addEventListener('scroll', function() {
-        updateHeaderState(window.scrollY > 50);
+        cachedIsScrolled = window.scrollY > 50;
+        updateHeaderState(cachedIsScrolled);
     }, {passive: true});
 
     // ==================== SEARCH PANEL ====================
@@ -595,7 +598,8 @@
         if (e.key === 'Escape' && !cartOverlay.classList.contains('invisible')) closeCartDrawer();
     });
 
-    updateCartUI();
+    // Defer initial cart UI update to avoid forced reflow during script init
+    requestAnimationFrame(function() { updateCartUI(); });
 
     window.addEventListener('ambilet:cart:update', function() { updateCartUI(); });
     window.addEventListener('ambilet:cart:expired', function() { closeCartDrawer(); updateCartUI(); });
@@ -631,9 +635,7 @@
 
         function showDefaultBar() {
             headerTimerBar.classList.add('hidden');
-            var isScrolled = window.scrollY > 50;
-            var isTransparent = document.getElementById('header') && document.getElementById('header').dataset.transparent === 'true';
-            if (!isScrolled && !isTransparent) headerTopBar.classList.remove('hidden');
+            if (!cachedIsScrolled && !isTransparentMode) headerTopBar.classList.remove('hidden');
         }
 
         function updateHeaderTimer() {
