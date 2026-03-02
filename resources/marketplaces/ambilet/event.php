@@ -21,17 +21,30 @@ if ($eventSlug) {
     }
 }
 
-// Build LCP image URL for preload
-$lcpImageUrl = '';
+// Build LCP image URLs for preload (hero for desktop, poster for mobile)
+$lcpHeroUrl = '';
+$lcpPosterUrl = '';
 if (!empty($ev)) {
-    $heroImg = $ev['hero_image_url'] ?? $ev['cover_image_url'] ?? $ev['poster_url'] ?? $ev['image_url'] ?? $ev['image'] ?? '';
-    if ($heroImg) {
-        $lcpImageUrl = (str_starts_with($heroImg, 'http') ? '' : STORAGE_URL . '/') . $heroImg;
+    $heroRaw = $ev['hero_image_url'] ?? $ev['cover_image_url'] ?? $ev['image_url'] ?? $ev['image'] ?? '';
+    $posterRaw = $ev['poster_url'] ?? $ev['poster_image_url'] ?? '';
+    if ($heroRaw) {
+        $lcpHeroUrl = (str_starts_with($heroRaw, 'http') ? '' : STORAGE_URL . '/') . $heroRaw;
+    }
+    if ($posterRaw) {
+        $lcpPosterUrl = (str_starts_with($posterRaw, 'http') ? '' : STORAGE_URL . '/') . $posterRaw;
     }
 }
+// Fallback: if only one exists, use it for both
+$lcpImageUrl = $lcpHeroUrl ?: $lcpPosterUrl;
+if (!$lcpPosterUrl) $lcpPosterUrl = $lcpHeroUrl;
+if (!$lcpHeroUrl) $lcpHeroUrl = $lcpPosterUrl;
 
-// Extra head tags for LCP preload
-if ($lcpImageUrl) {
+// Extra head tags: responsive preload (poster on mobile, hero on desktop)
+$extraHead = '';
+if ($lcpPosterUrl && $lcpHeroUrl && $lcpPosterUrl !== $lcpHeroUrl) {
+    $extraHead = '<link rel="preload" as="image" href="' . htmlspecialchars($lcpPosterUrl) . '" media="(max-width: 767px)" fetchpriority="high">'
+        . "\n    " . '<link rel="preload" as="image" href="' . htmlspecialchars($lcpHeroUrl) . '" media="(min-width: 768px)" fetchpriority="high">';
+} elseif ($lcpImageUrl) {
     $extraHead = '<link rel="preload" as="image" href="' . htmlspecialchars($lcpImageUrl) . '" fetchpriority="high">';
 }
 
@@ -151,7 +164,14 @@ require_once __DIR__ . '/includes/head.php';
         <div id="loading-state" class="flex flex-col gap-8 lg:flex-row">
             <div class="lg:w-2/3">
                 <div class="mb-8 overflow-hidden bg-white border rounded-3xl border-border">
-                    <?php if ($lcpImageUrl): ?>
+                    <?php if ($lcpPosterUrl && $lcpHeroUrl && $lcpPosterUrl !== $lcpHeroUrl): ?>
+                    <div class="relative overflow-hidden rounded-t-3xl" style="aspect-ratio: 1.904/1;">
+                        <picture>
+                            <source srcset="<?= htmlspecialchars($lcpPosterUrl) ?>" media="(max-width: 767px)">
+                            <img src="<?= htmlspecialchars($lcpHeroUrl) ?>" alt="<?= htmlspecialchars($pageTitle) ?>" class="object-cover w-full h-full" fetchpriority="high" width="800" height="420">
+                        </picture>
+                    </div>
+                    <?php elseif ($lcpImageUrl): ?>
                     <div class="relative overflow-hidden rounded-t-3xl" style="aspect-ratio: 1.904/1;">
                         <img src="<?= htmlspecialchars($lcpImageUrl) ?>" alt="<?= htmlspecialchars($pageTitle) ?>" class="object-cover w-full h-full" fetchpriority="high" width="800" height="420">
                     </div>
