@@ -92,7 +92,7 @@ require_once __DIR__ . '/includes/header.php';
         <!-- Actions Card -->
         <div class="p-6 bg-white shadow-lg rounded-2xl mobile:p-0 mobile:bg-transparent mobile:shadow-none mobile:rounded-none">
             <div class="flex gap-3 mb-5">
-                <button id="follow-btn" onclick="ArtistPage.toggleFollow()" class="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 bg-gradient-to-r from-primary to-primary-light rounded-xl text-white font-semibold transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/35">
+                <button id="follow-btn" onclick="ArtistPage.toggleFollow()" class="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 bg-gradient-to-r from-primary to-primary-light rounded-xl text-white font-semibold transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/35" name="follow" aria-pressed="false">
                     <svg id="follow-icon" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -237,7 +237,7 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- Video Modal -->
     <div id="videoModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/90 backdrop-blur-sm" onclick="ArtistPage.closeVideoModal(event)">
-        <button onclick="ArtistPage.closeVideoModal()" class="absolute z-10 flex items-center justify-center w-10 h-10 text-white transition-colors rounded-full top-4 right-4 bg-white/10 hover:bg-white/20" aria-label="Închide videoul">
+        <button onclick="ArtistPage.closeVideoModal()" class="absolute z-10 flex items-center justify-center w-10 h-10 text-white transition-colors rounded-full top-4 right-4 bg-white/10 hover:bg-white/20" aria-label="Închide videoul" name="closeVideoModal">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
         <div class="w-full max-w-5xl px-4 mx-auto" onclick="event.stopPropagation()">

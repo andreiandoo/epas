@@ -78,7 +78,7 @@ require_once __DIR__ . '/includes/header.php';
                     <h3 class="mb-3 font-semibold text-secondary">Ai un cod promoțional?</h3>
                     <div class="flex gap-3">
                         <input type="text" id="promoCode" placeholder="Introdu codul aici" class="flex-1 px-4 py-3 transition-all border bg-surface border-border rounded-xl text-secondary placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                        <button onclick="CartPage.applyPromo()" class="px-6 py-3 font-semibold text-white transition-colors bg-secondary rounded-xl hover:bg-secondary/90">
+                        <button onclick="CartPage.applyPromo()" class="px-6 py-3 font-semibold text-white transition-colors bg-secondary rounded-xl hover:bg-secondary/90" name="applyPromoButton">
                             Aplică
                         </button>
                     </div>

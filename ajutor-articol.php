@@ -195,13 +195,13 @@ $cssBundle = 'listing';
         <div class="p-8 mb-8 text-center bg-white border border-gray-200 rounded-2xl">
             <p class="mb-4 text-lg font-semibold text-secondary">A fost util acest articol?</p>
             <div class="flex items-center justify-center gap-4">
-                <button onclick="voteArticle(<?= $article['id'] ?>, true)" class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-green-600 transition-all bg-green-100 rounded-xl hover:bg-green-200" id="btn-helpful">
+                <button onclick="voteArticle(<?= $article['id'] ?>, true)" class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-green-600 transition-all bg-green-100 rounded-xl hover:bg-green-200" id="btn-helpful" name="voteHelpful">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
                     </svg>
                     Da, m-a ajutat
                 </button>
-                <button onclick="voteArticle(<?= $article['id'] ?>, false)" class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-red-600 transition-all bg-red-100 rounded-xl hover:bg-red-200" id="btn-not-helpful">
+                <button onclick="voteArticle(<?= $article['id'] ?>, false)" class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-red-600 transition-all bg-red-100 rounded-xl hover:bg-red-200" id="btn-not-helpful" name="voteNotHelpful">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
                     </svg>

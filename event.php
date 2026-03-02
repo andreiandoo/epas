@@ -217,7 +217,7 @@ require_once __DIR__ . '/includes/head.php';
                         <!-- Social Stats -->
                         <div id="social-stats" class="flex flex-wrap items-center gap-4 mb-8 mobile:justify-between mobile:border-t mobile:border-b border-slate-200 mobile:p-4">
                             <!-- Interested Button -->
-                            <button id="interest-btn" onclick="EventPage.toggleInterest()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all rounded-full border border-border hover:border-primary hover:text-primary">
+                            <button id="interest-btn" onclick="EventPage.toggleInterest()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all rounded-full border border-border hover:border-primary hover:text-primary" name="interestButton">
                                 <svg id="interest-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                                 <span id="event-interested">Mă interesează</span>
                             </button>
@@ -228,7 +228,7 @@ require_once __DIR__ . '/includes/head.php';
                             </span>
                             <!-- Share Dropdown -->
                             <div class="relative" id="share-dropdown">
-                                <button onclick="EventPage.toggleShareMenu()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors rounded-full border border-border hover:border-primary hover:text-primary">
+                                <button onclick="EventPage.toggleShareMenu()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors rounded-full border border-border hover:border-primary hover:text-primary" name="shareButton">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                                     <span class="mobile:hidden">Distribuie</span>
                                 </button>
@@ -326,7 +326,7 @@ require_once __DIR__ . '/includes/head.php';
                                 <!-- Hidden subtotal for JavaScript calculations -->
                                 <span id="subtotal" class="hidden">0 lei</span>
 
-                                <button id="checkoutBtn" onclick="EventPage.handleCheckout()" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl">
+                                <button id="checkoutBtn" onclick="EventPage.handleCheckout()" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl" name="checkoutButton">
                                     <svg id="checkoutBtnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                                     <span id="checkoutBtnText">Cumpără bilete</span>
                                 </button>
@@ -367,7 +367,7 @@ require_once __DIR__ . '/includes/head.php';
 
         <!-- Mobile Fixed Bottom Button (shows on mobile only) -->
         <div id="mobileTicketBtn" class="hidden sticky bottom-0 left-0 right-0 z-[105] p-4 bg-primary border-t lg:hidden border-border border-b safe-area-bottom mobile:block">
-            <button onclick="openTicketDrawer()" class="flex items-center justify-center w-full gap-3 py-4 text-lg font-bold bg-white text-primary rounded-xl">
+            <button onclick="openTicketDrawer()" class="flex items-center justify-center w-full gap-3 py-4 text-lg font-bold bg-white text-primary rounded-xl" name="mobileCheckoutButton">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 <span>Cumpără bilete</span>
                 <span id="mobileMinPrice" class="px-2 py-1 text-sm font-semibold rounded-lg bg-white/20">De la -- lei</span>
@@ -424,7 +424,7 @@ require_once __DIR__ . '/includes/head.php';
                 <h2 class="text-lg font-bold text-secondary">Selectează bilete</h2>
                 <p class="text-sm text-muted">Alege tipul și cantitatea</p>
             </div>
-            <button onclick="closeTicketDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-surface hover:bg-gray-200" aria-label="Închide selecția de bilete">
+            <button onclick="closeTicketDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-surface hover:bg-gray-200" aria-label="Închide selecția de bilete" name="closeMobileCheckout">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
@@ -434,7 +434,7 @@ require_once __DIR__ . '/includes/head.php';
             <div id="drawerTicketTypes" class="p-4 space-y-2"></div>
             <!-- Drawer Ticket Terms (collapsible) -->
             <div id="drawer-ticket-terms-section" class="px-4 pb-4" style="display: none;">
-                <button type="button" onclick="toggleDrawerTerms()" class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium transition-colors rounded-xl text-primary bg-primary/5 hover:bg-primary/10">
+                <button type="button" onclick="toggleDrawerTerms()" class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium transition-colors rounded-xl text-primary bg-primary/5 hover:bg-primary/10" name="drawerTermsToggle">
                     <span class="flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         Vezi termeni și condiții
@@ -471,7 +471,7 @@ require_once __DIR__ . '/includes/head.php';
                     <span id="drawerTotalPrice" class="text-primary">0 lei</span>
                 </div>
             </div>
-            <button onclick="closeTicketDrawer(); EventPage.handleCheckout();" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl">
+            <button onclick="closeTicketDrawer(); EventPage.handleCheckout();" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl" name="drawerCheckoutButton">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 Cumpără bilete
             </button>

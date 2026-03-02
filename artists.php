@@ -38,7 +38,7 @@ require_once __DIR__ . '/includes/head.php';
     <div class="max-w-2xl mx-auto">
         <div class="relative z-10 flex items-center gap-2 p-2 bg-white shadow-xl rounded-2xl">
             <input type="text" id="artistSearch" placeholder="Cauta un artist..." class="flex-1 px-5 py-4 text-base border-0 outline-none text-secondary placeholder-muted">
-            <button onclick="ArtistsPage.search()" class="flex items-center gap-2 px-6 py-4 font-semibold text-white transition-all btn-primary rounded-xl hover:shadow-lg">
+            <button onclick="ArtistsPage.search()" class="flex items-center gap-2 px-6 py-4 font-semibold text-white transition-all btn-primary rounded-xl hover:shadow-lg" name="searchButton">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="11" cy="11" r="8"/>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35"/>

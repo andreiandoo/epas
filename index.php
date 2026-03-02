@@ -31,9 +31,9 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="hero-skeleton-item skeleton" style="transform: rotateY(-20deg) translateX(-240px); opacity: 0.4;"></div>
             </div>
             <!-- Dot Indicators -->
-            <div id="heroDots" class="hero-dots">
+            <div id="heroDots" class="hidden hero-dots">
                 <?php for ($i = 0; $i < 5; $i++): ?>
-                <button class="hero-dot <?= $i === 0 ? 'active' : '' ?>"></button>
+                <button class="hero-dot <?= $i === 0 ? 'active' : '' ?>" name="heroDot<?= $i ?>"></button>
                 <?php endfor; ?>
             </div>
         </div>

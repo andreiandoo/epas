@@ -44,7 +44,7 @@ $errorId = 'ERR-500-' . strtoupper(substr(md5(time()), 0, 6)) . '-' . time();
     <div class="flex items-center justify-center flex-1 p-8">
         <div class="max-w-xl text-center">
             <!-- Illustration -->
-            <svg class="w-72 h-48 mx-auto mb-8" viewBox="0 0 300 200" fill="none">
+            <svg class="h-48 mx-auto mb-8 w-72" viewBox="0 0 300 200" fill="none">
                 <rect x="75" y="40" width="150" height="120" rx="8" fill="#334155"/>
                 <rect x="85" y="50" width="130" height="30" rx="4" fill="#1E293B"/>
                 <circle cx="100" cy="65" r="6" fill="#EF4444"/>
@@ -66,7 +66,7 @@ $errorId = 'ERR-500-' . strtoupper(substr(md5(time()), 0, 6)) . '-' . time();
                 <circle cx="70" cy="15" r="6" fill="#475569" opacity="0.2"/>
             </svg>
 
-            <div class="text-8xl font-extrabold bg-gradient-to-r from-red-500 to-red-400 bg-clip-text text-transparent mb-4">500</div>
+            <div class="mb-4 font-extrabold text-transparent text-8xl bg-gradient-to-r from-red-500 to-red-400 bg-clip-text">500</div>
             <h1 class="mb-3 text-2xl font-bold">Oops! Ceva nu a functionat</h1>
             <p class="mb-8 text-gray-400">Serverul nostru a intampinat o problema neasteptata si nu a putut procesa cererea ta. Echipa noastra tehnica a fost notificata automat si lucreaza la rezolvare.</p>
 
@@ -76,7 +76,7 @@ $errorId = 'ERR-500-' . strtoupper(substr(md5(time()), 0, 6)) . '-' . time();
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                     Pagina principala
                 </a>
-                <button onclick="location.reload()" class="inline-flex items-center gap-2 px-6 py-3 font-semibold text-white transition-colors border rounded-xl bg-white/10 border-white/20 hover:bg-white/20">
+                <button onclick="location.reload()" class="inline-flex items-center gap-2 px-6 py-3 font-semibold text-white transition-colors border rounded-xl bg-white/10 border-white/20 hover:bg-white/20" name="reloadButton">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     Incearca din nou
                 </button>
