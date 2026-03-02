@@ -169,6 +169,9 @@ class ApiCache {
         // Don't cache authenticated requests
         if ($requiresAuth) return false;
 
+        // Preview mode bypasses all caching
+        if (!empty($_GET['preview'])) return false;
+
         // Check if we have a TTL for this action
         return self::getTtl($action) > 0;
     }
@@ -2810,7 +2813,8 @@ if ($useCache && $response !== false) {
 http_response_code($statusCode);
 
 // Browser Cache-Control headers — allows browsers to cache GET responses
-if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAuth) {
+// Preview mode always gets no-store
+if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAuth && empty($_GET['preview'])) {
     $browserTtl = match(true) {
         // Static/rarely changing content — 1 day browser cache
         in_array($action, ['categories', 'event-categories', 'event-genres', 'venue-categories', 'locations.regions', 'locations.stats']) => 86400,
