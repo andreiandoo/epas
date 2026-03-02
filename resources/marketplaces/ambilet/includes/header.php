@@ -849,10 +849,10 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         updateHeaderState(window.scrollY > 50);
     }, {passive: true});
 
-    // Initial state — deferred to avoid forced reflow during parse
-    requestAnimationFrame(function() {
-        updateHeaderState(window.scrollY > 50);
-    });
+    // No initial call needed — fresh loads start at scrollY=0 where the
+    // default HTML classes are already correct. For browser back/forward,
+    // the browser restores scroll position and fires a scroll event,
+    // which the listener above handles. This avoids forced reflow entirely.
 
     // ==================== SEARCH PANEL ====================
     function openSearch() {
