@@ -111,7 +111,14 @@ const CheckoutPage = {
         // Show partial note for mixed carts (some eligible, some not)
         const partialNote = document.getElementById('insurance-partial-note');
         if (partialNote && isMixed) {
-            const eligibleNames = refundableItems.map(item => item.ticketType?.name || 'Bilet').join(', ');
+            const eligibleNames = refundableItems.map(item => {
+                const ticketName = item.ticketType?.name || 'Bilet';
+                const eventName = item.event?.title || item.event?.name || item.event_title || '';
+                const eventDate = item.event?.date || item.event_date || '';
+                const city = item.event?.city?.name || item.event?.city || item.event?.venue?.city || '';
+                const details = [eventName, eventDate ? AmbiletUtils.formatDate(eventDate) : '', city].filter(Boolean).join(' · ');
+                return details ? ticketName + ' (' + details + ')' : ticketName;
+            }).join(', ');
             partialNote.textContent = 'Se aplică doar pentru biletele returnabile: ' + eligibleNames;
             partialNote.classList.remove('hidden');
         }
