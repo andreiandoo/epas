@@ -23,8 +23,8 @@ $userMenuItems = [
 $currentPage = $currentPage ?? 'dashboard';
 ?>
 
-<!-- Mobile Menu Toggle -->
-<button id="mobile-sidebar-toggle" class="fixed z-40 justify-center text-white rounded-full flex items-center gap-x-2 shadow-lg lg:hidden bottom-4 right-0 left-0 mx-auto w-[90%] h-14 bg-primary">
+<!-- Mobile Menu Toggle id="mobile-sidebar-toggle" -->
+<button class="mobile:hidden fixed z-40 justify-center text-white rounded-full items-center gap-x-2 shadow-lg lg:hidden bottom-4 right-0 left-0 mx-auto w-[90%] h-14 bg-primary">
     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
     <span class="">Meniul meu</span>
 </button>
@@ -36,12 +36,12 @@ $currentPage = $currentPage ?? 'dashboard';
 <aside id="user-sidebar" class="mobile:z-[1000] fixed lg:static inset-y-0 right-0 z-50 w-72 lg:w-64 bg-white lg:bg-transparent transform translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex-shrink-0 overflow-y-auto">
     <div class="min-h-screen p-4 bg-white lg:rounded-2xl lg:border lg:border-border lg:sticky lg:top-24 lg:min-h-0 mobile:p-0">
         <!-- Mobile Close Button -->
-        <button id="close-sidebar" class="absolute p-2 lg:hidden top-4 left-4 text-muted hover:text-secondary">
+        <button id="close-sidebar" class="absolute p-2 lg:hidden top-4 right-4 text-muted hover:text-secondary">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
 
         <!-- User Info -->
-        <div class="flex items-center gap-3 pb-4 mt-8 mb-4 border-b border-border lg:mt-0 mobile:px-4 mobile:mt-4 mobile:mb-0">
+        <div class="flex items-center gap-3 pb-4 mt-8 mb-4 border-b border-border lg:mt-0 mobile:px-4 mobile:mt-4 mobile:mb-0 mobile:pb-2">
             <div id="sidebar-user-avatar" class="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent">
                 <span class="text-lg font-bold text-white" id="sidebar-user-initials">--</span>
             </div>

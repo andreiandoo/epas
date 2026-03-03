@@ -341,10 +341,8 @@ const ProfileCompletionModal = {
                 @keyframes pcmSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
                 .pcm-card { animation: pcmSlideUp 0.3s ease; max-width: 480px; width: 100%; background: white; border-radius: 1.25rem; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
                 .pcm-chip { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 1rem; border-radius: 2rem; border: 2px solid #E2E8F0; background: white; cursor: pointer; font-size: 0.875rem; transition: all 0.2s; user-select: none; }
-                .pcm-chip:hover { border-color: #A51C30; }
                 .pcm-chip.selected { border-color: #A51C30; background: rgba(165,28,48,0.08); color: #A51C30; font-weight: 600; }
                 .pcm-pill-btn { padding: 0.625rem 1.25rem; border-radius: 0.75rem; border: 2px solid #E2E8F0; background: white; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; }
-                .pcm-pill-btn:hover { border-color: #A51C30; }
                 .pcm-pill-btn.selected { border-color: #A51C30; background: #A51C30; color: white; }
                 .pcm-input { width: 100%; padding: 0.625rem 0.875rem; border: 1px solid #E2E8F0; border-radius: 0.75rem; font-size: 0.875rem; transition: all 0.2s; outline: none; }
                 .pcm-input:focus { border-color: #A51C30; box-shadow: 0 0 0 3px rgba(165,28,48,0.1); }
@@ -354,7 +352,6 @@ const ProfileCompletionModal = {
                 .pcm-suggestion-text { font-size: 0.8125rem; color: #0369A1; }
                 .pcm-suggestion strong { color: #0C4A6E; }
                 .pcm-venue-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 0.875rem; border: 2px solid #E2E8F0; border-radius: 0.75rem; cursor: pointer; transition: all 0.2s; margin-bottom: 0.5rem; }
-                .pcm-venue-item:hover { border-color: #A51C30; }
                 .pcm-venue-item.selected { border-color: #A51C30; background: rgba(165,28,48,0.05); }
             </style>
             <div class="pcm-card">

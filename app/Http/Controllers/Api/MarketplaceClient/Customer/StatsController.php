@@ -8,6 +8,7 @@ use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceEventCategory;
 use App\Models\Artist;
 use App\Models\Order;
+use App\Models\Ticket;
 use App\Models\Gamification\CustomerPoints;
 use App\Models\Gamification\CustomerExperience;
 use App\Models\Gamification\CustomerBadge;
@@ -206,12 +207,28 @@ class StatsController extends BaseController
         $clientId = $customer->marketplace_client_id;
         $paidStatuses = ['paid', 'confirmed', 'completed'];
 
-        // Get all paid orders with event data
-        $orders = Order::where('marketplace_customer_id', $customer->id)
-            ->whereIn('status', $paidStatuses)
+        // Broader filter: include orders where payment_status is 'paid' even if order status wasn't updated
+        $validOrderQuery = function () use ($customer, $paidStatuses) {
+            return Order::where('marketplace_customer_id', $customer->id)
+                ->where(function ($q) use ($paidStatuses) {
+                    $q->whereIn('status', $paidStatuses)
+                      ->orWhere('payment_status', 'paid');
+                });
+        };
+
+        $validOrderIds = $validOrderQuery()->pluck('id');
+
+        // Get events from TICKETS (tickets always have marketplace_event_id set correctly,
+        // unlike orders which may have null marketplace_event_id for multi-event orders)
+        $tickets = Ticket::whereIn('order_id', $validOrderIds)
             ->whereNotNull('marketplace_event_id')
-            ->with(['marketplaceEvent:id,name,slug,starts_at,ends_at,venue_name,venue_city,marketplace_event_category_id,artist_ids,image'])
+            ->with('marketplaceEvent:id,name,slug,starts_at,ends_at,venue_name,venue_city,marketplace_event_category_id,artist_ids,image')
             ->get();
+
+        // Deduplicate: group by event to get unique events
+        $uniqueEvents = $tickets->groupBy('marketplace_event_id')->map(function ($group) {
+            return $group->first()->marketplaceEvent;
+        })->filter();
 
         // === Taste Profile ===
         $categoryCount = [];
@@ -219,10 +236,7 @@ class StatsController extends BaseController
         $artistIdCount = [];
         $monthlyActivity = array_fill(0, 12, 0);
 
-        foreach ($orders as $order) {
-            $event = $order->marketplaceEvent;
-            if (!$event) continue;
-
+        foreach ($uniqueEvents as $event) {
             // Category counting
             if ($event->marketplace_event_category_id) {
                 $catId = $event->marketplace_event_category_id;
@@ -337,15 +351,13 @@ class StatsController extends BaseController
             ];
         }
 
-        // Average spend
-        $totalSpentCents = Order::where('marketplace_customer_id', $customer->id)
-            ->whereIn('status', $paidStatuses)
-            ->sum('total_cents');
-        $paidOrdersCount = Order::where('marketplace_customer_id', $customer->id)
-            ->whereIn('status', $paidStatuses)
-            ->count();
+        // Average spend (use broader filter, try both total_cents and total columns)
+        $totalSpentCents = $validOrderQuery()->sum('total_cents');
+        $totalSpentDecimal = (float) $validOrderQuery()->sum('total');
+        $totalSpent = $totalSpentCents > 0 ? ($totalSpentCents / 100) : $totalSpentDecimal;
+        $paidOrdersCount = $validOrderQuery()->count();
         if ($paidOrdersCount > 0) {
-            $avgSpend = ($totalSpentCents / 100) / $paidOrdersCount;
+            $avgSpend = $totalSpent / $paidOrdersCount;
             $insights[] = [
                 'icon' => '💰',
                 'label' => 'Cheltuiala medie',
@@ -455,7 +467,7 @@ class StatsController extends BaseController
             ],
             'stats' => [
                 'total_events' => $totalEvents,
-                'total_spent' => $totalSpentCents / 100,
+                'total_spent' => $totalSpent,
                 'total_cities' => count($citiesVisited),
                 'total_artists' => count($artistIdCount),
             ],

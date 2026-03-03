@@ -3,10 +3,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     let profileData = {};
 
     try {
-        // Load customer data and profile data in parallel
-        const [profileRes, dataRes] = await Promise.all([
+        // Load customer data, profile data, and badges in parallel
+        // Badges loaded from dedicated endpoint (same as rewards page) which also evaluates/awards new badges
+        const [profileRes, dataRes, badgesRes] = await Promise.all([
             AmbiletAPI.customer.getProfile(),
-            AmbiletAPI.customer.getProfileData()
+            AmbiletAPI.customer.getProfileData(),
+            AmbiletAPI.customer.getBadges().catch(() => ({ success: false }))
         ]);
 
         if (profileRes.success && profileRes.data) {
@@ -14,6 +16,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         if (dataRes.success && dataRes.data) {
             profileData = dataRes.data;
+        }
+
+        // Merge badges: prefer dedicated endpoint (evaluates conditions), fallback to profileData
+        if (badgesRes.success && badgesRes.data) {
+            const earned = badgesRes.data.earned || badgesRes.data.badges || [];
+            if (earned.length > 0) {
+                // Normalize field names to match profile format
+                profileData.badges = earned.map(b => ({
+                    name: b.name,
+                    description: b.description,
+                    icon: b.icon_url || b.icon,
+                    color: b.color,
+                    rarity: b.rarity_level || b.rarity,
+                    earned_at: b.earned_at,
+                }));
+            }
         }
     } catch (error) {
         console.error('Failed to load profile data:', error);
