@@ -54,27 +54,28 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <div class="flex-1">
                             <p class="font-semibold text-secondary">Notificari active pentru <span id="notification-count">0</span> evenimente</p>
                             <p class="text-sm text-muted">Vei fi notificat cand biletele devin disponibile sau se apropie de sold out.</p>
+                            <a href="/cont/setari" class="hidden text-sm font-medium mobile:block text-primary whitespace-nowrap">Gestioneaza →</a>
                         </div>
-                        <a href="/cont/setari" class="text-sm font-medium text-primary whitespace-nowrap">Gestioneaza →</a>
+                        <a href="/cont/setari" class="text-sm font-medium text-primary whitespace-nowrap mobile:hidden">Gestioneaza →</a>
                     </div>
                 </div>
 
                 <!-- Events Grid -->
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6" id="events-grid">
+                <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6" id="events-grid">
                     <!-- Populated by JavaScript -->
                 </div>
             </div>
 
             <!-- Artists Tab -->
             <div id="tab-artists" class="hidden">
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6" id="artists-grid">
+                <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6" id="artists-grid">
                     <!-- Populated by JavaScript -->
                 </div>
             </div>
 
             <!-- Venues Tab -->
             <div id="tab-venues" class="hidden">
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6" id="venues-grid">
+                <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6" id="venues-grid">
                     <!-- Populated by JavaScript -->
                 </div>
             </div>
@@ -193,7 +194,7 @@ const WatchlistPage = {
     renderEvents() {
         const grid = document.getElementById('events-grid');
         if (this.events.length === 0) {
-            grid.innerHTML = '<p class="col-span-full text-center py-8 text-muted">Nu ai evenimente in favorite.</p>';
+            grid.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Nu ai evenimente in favorite.</p>';
             return;
         }
 
@@ -202,20 +203,20 @@ const WatchlistPage = {
             const eventId = event.id || 0;
             const eventUrl = '/bilete/' + (event.slug || event.id);
             const hasPrice = event.price && event.price > 0;
-            return '<div class="event-card bg-white rounded-xl lg:rounded-2xl border border-border overflow-hidden ' + (isSoldOut ? 'opacity-75' : '') + '">' +
-                '<a href="' + eventUrl + '" class="block relative">' +
-                    '<img src="' + getStorageUrl(event.image) + '" class="w-full h-40 object-cover ' + (isSoldOut ? 'grayscale' : '') + '" alt="' + (event.title || '') + '" loading="lazy">' +
+            return '<div class="overflow-hidden bg-white border event-card rounded-xl lg:rounded-2xl border-border ' + (isSoldOut ? 'opacity-75' : '') + '">' +
+                '<a href="' + eventUrl + '" class="relative block">' +
+                    '<img src="' + getStorageUrl(event.image) + '" class="object-cover w-full h-40 ' + (isSoldOut ? 'grayscale' : '') + '" alt="' + (event.title || '') + '" loading="lazy">' +
                     (isSoldOut ?
                         '<div class="absolute inset-0 flex items-center justify-center bg-black/50">' +
                             '<span class="px-4 py-2 text-sm font-bold text-white rounded-lg bg-error">SOLD OUT</span>' +
                         '</div>'
                     : (event.badge ?
                         '<div class="absolute top-3 left-3">' +
-                            '<span class="notification-badge px-2 py-1 ' + (event.badge_color || 'bg-primary') + ' text-white text-xs font-bold rounded-lg">' + event.badge + '</span>' +
+                            '<span class="px-2 py-1 notification-badge ' + (event.badge_color || 'bg-primary') + ' text-white text-xs font-bold rounded-lg">' + event.badge + '</span>' +
                         '</div>'
                     : '')) +
                 '</a>' +
-                '<button onclick="event.stopPropagation(); WatchlistPage.removeFromWatchlist(\'event\', ' + eventId + ')" class="absolute flex items-center justify-center rounded-full shadow-lg heart-btn active top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur z-10">' +
+                '<button onclick="event.stopPropagation(); WatchlistPage.removeFromWatchlist(\'event\', ' + eventId + ')" class="absolute z-10 flex items-center justify-center rounded-full shadow-lg heart-btn active top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur">' +
                     '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
                 '</button>' +
                 '<a href="' + eventUrl + '" class="block p-4">' +
@@ -248,7 +249,7 @@ const WatchlistPage = {
     renderArtists() {
         const grid = document.getElementById('artists-grid');
         if (this.artists.length === 0) {
-            grid.innerHTML = '<p class="col-span-full text-center py-8 text-muted">Nu ai artisti in favorite.</p>';
+            grid.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Nu ai artisti in favorite.</p>';
             return;
         }
 
@@ -256,7 +257,7 @@ const WatchlistPage = {
             const artistId = artist.id || 0;
             const artistUrl = '/artist/' + (artist.slug || artist.id);
             return '<div class="relative p-5 text-center bg-white border event-card rounded-xl lg:rounded-2xl border-border">' +
-                '<button onclick="event.stopPropagation(); WatchlistPage.removeFromWatchlist(\'artist\', ' + artistId + ')" class="absolute flex items-center justify-center w-8 h-8 bg-white border rounded-full shadow-lg heart-btn active top-3 right-3 border-border z-10">' +
+                '<button onclick="event.stopPropagation(); WatchlistPage.removeFromWatchlist(\'artist\', ' + artistId + ')" class="absolute z-10 flex items-center justify-center w-8 h-8 bg-white border rounded-full shadow-lg heart-btn active top-3 right-3 border-border">' +
                     '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
                 '</button>' +
                 '<a href="' + artistUrl + '" class="block mb-4">' +
@@ -278,7 +279,7 @@ const WatchlistPage = {
     renderVenues() {
         const grid = document.getElementById('venues-grid');
         if (this.venues.length === 0) {
-            grid.innerHTML = '<p class="col-span-full text-center py-8 text-muted">Nu ai locatii in favorite.</p>';
+            grid.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Nu ai locatii in favorite.</p>';
             return;
         }
 
@@ -289,7 +290,7 @@ const WatchlistPage = {
                 '<a href="' + venueUrl + '" class="block h-32">' +
                     '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" class="object-cover w-full h-full" alt="' + (venue.name || '') + '" loading="lazy">' +
                 '</a>' +
-                '<button onclick="event.stopPropagation(); WatchlistPage.removeFromWatchlist(\'venue\', ' + venueId + ')" class="absolute flex items-center justify-center w-8 h-8 rounded-full shadow-lg heart-btn active top-3 right-3 bg-white/90 backdrop-blur z-10">' +
+                '<button onclick="event.stopPropagation(); WatchlistPage.removeFromWatchlist(\'venue\', ' + venueId + ')" class="absolute z-10 flex items-center justify-center w-8 h-8 rounded-full shadow-lg heart-btn active top-3 right-3 bg-white/90 backdrop-blur">' +
                     '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
                 '</button>' +
                 '<a href="' + venueUrl + '" class="block p-4">' +

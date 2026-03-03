@@ -39,6 +39,10 @@ const AmbiletAPI = {
         if (endpointQuery) {
             url += '&' + endpointQuery;
         }
+        // Auto-forward preview mode from page URL to bypass all caching
+        if (new URLSearchParams(window.location.search).get('preview') === '1') {
+            url += '&preview=1';
+        }
 
         const headers = {
             'Content-Type': 'application/json',
@@ -86,6 +90,8 @@ const AmbiletAPI = {
         if (endpoint === '/customer/password') return 'customer.password';
         if (endpoint === '/customer/account') return 'customer.account';
         if (endpoint === '/customer/settings') return 'customer.settings';
+        if (endpoint === '/customer/avatar') return 'customer.avatar';
+        if (endpoint === '/customer/profile-data') return 'customer.profile-data';
         if (endpoint === '/customer/forgot-password') return 'customer.forgot-password';
         if (endpoint === '/customer/reset-password') return 'customer.reset-password';
         if (endpoint === '/customer/verify-email') return 'customer.verify-email';
@@ -897,6 +903,41 @@ const AmbiletAPI = {
          */
         async getProfile() {
             return AmbiletAPI.get('/customer/me');
+        },
+
+        /**
+         * Get rich profile data (taste profile, top artists, cities, etc.)
+         */
+        async getProfileData() {
+            return AmbiletAPI.get('/customer/profile-data');
+        },
+
+        /**
+         * Upload avatar image
+         */
+        async uploadAvatar(file) {
+            const formData = new FormData();
+            formData.append('avatar', file);
+
+            const baseUrl = AmbiletAPI.getApiUrl();
+            const url = `${baseUrl}?action=customer.avatar`;
+            const headers = {};
+            const token = AmbiletAPI.auth.getToken();
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: formData,
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new APIError(data.message || 'Upload failed', response.status, data);
+            }
+            return data;
         },
 
         /**

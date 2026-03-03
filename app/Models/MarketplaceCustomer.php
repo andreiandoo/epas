@@ -21,6 +21,7 @@ class MarketplaceCustomer extends Authenticatable
         'password',
         'first_name',
         'last_name',
+        'avatar',
         'phone',
         'birth_date',
         'gender',

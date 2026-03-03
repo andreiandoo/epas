@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceCustomer;
 use App\Models\Gamification\CustomerPoints;
+use App\Models\Gamification\ExperienceAction;
+use App\Services\Gamification\ExperienceService;
 use App\Notifications\MarketplacePasswordResetNotification;
 use App\Notifications\MarketplaceEmailVerificationNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRules;
 
@@ -267,6 +270,10 @@ class AuthController extends BaseController
         ]);
 
         $customer->update($validated);
+        $customer = $customer->fresh();
+
+        // Check profile completion and award XP if threshold reached
+        $this->checkAndAwardProfileCompletion($customer);
 
         return $this->success([
             'customer' => $this->formatCustomer($customer->fresh()),
@@ -342,6 +349,16 @@ class AuthController extends BaseController
             'notification_preferences.favorites' => 'sometimes|boolean',
             'notification_preferences.history' => 'sometimes|boolean',
             'notification_preferences.marketing' => 'sometimes|boolean',
+            'profile_public' => 'sometimes|boolean',
+            'billing_address' => 'sometimes|array',
+            'billing_address.address' => 'sometimes|nullable|string|max:255',
+            'billing_address.city' => 'sometimes|nullable|string|max:100',
+            'billing_address.state' => 'sometimes|nullable|string|max:100',
+            'billing_address.postal_code' => 'sometimes|nullable|string|max:20',
+            'billing_address.country' => 'sometimes|nullable|string|max:2',
+            'interests' => 'sometimes|array',
+            'interests.event_categories' => 'sometimes|array',
+            'interests.music_genres' => 'sometimes|array',
         ]);
 
         $updates = [];
@@ -352,19 +369,51 @@ class AuthController extends BaseController
             $updates['marketing_consent_at'] = $validated['accepts_marketing'] ? now() : null;
         }
 
-        // Update settings JSON
+        // Build settings JSON updates
+        $currentSettings = $customer->settings ?? [];
+        $settingsChanged = false;
+
         if (isset($validated['notification_preferences'])) {
-            $currentSettings = $customer->settings ?? [];
-            $updates['settings'] = array_merge($currentSettings, [
-                'notification_preferences' => $validated['notification_preferences'],
-            ]);
+            $currentSettings['notification_preferences'] = $validated['notification_preferences'];
+            $settingsChanged = true;
+        }
+
+        if (isset($validated['profile_public'])) {
+            $currentSettings['profile_public'] = $validated['profile_public'];
+            $settingsChanged = true;
+        }
+
+        if (isset($validated['billing_address'])) {
+            $currentSettings['billing_address'] = array_merge(
+                $currentSettings['billing_address'] ?? [],
+                $validated['billing_address']
+            );
+            $settingsChanged = true;
+        }
+
+        if (isset($validated['interests'])) {
+            $currentSettings['interests'] = array_merge(
+                $currentSettings['interests'] ?? [],
+                $validated['interests']
+            );
+            $settingsChanged = true;
+        }
+
+        if ($settingsChanged) {
+            $updates['settings'] = $currentSettings;
         }
 
         if (!empty($updates)) {
             $customer->update($updates);
         }
 
+        $customer = $customer->fresh();
+
+        // Check profile completion after interests/billing update
+        $this->checkAndAwardProfileCompletion($customer);
+
         return $this->success([
+            'customer' => $this->formatCustomer($customer->fresh()),
             'settings' => $customer->fresh()->settings,
             'accepts_marketing' => $customer->fresh()->accepts_marketing,
         ], 'Settings updated');
@@ -543,6 +592,104 @@ class AuthController extends BaseController
     }
 
     /**
+     * Upload customer avatar
+     */
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $customer = $request->user();
+
+        if (!$customer instanceof MarketplaceCustomer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
+        ]);
+
+        // Delete old avatar if exists
+        if ($customer->avatar && Storage::disk('public')->exists($customer->avatar)) {
+            Storage::disk('public')->delete($customer->avatar);
+        }
+
+        $clientId = $customer->marketplace_client_id;
+        $path = $request->file('avatar')->store(
+            "marketplace/{$clientId}/avatars",
+            'public'
+        );
+
+        $customer->update(['avatar' => $path]);
+
+        return $this->success([
+            'avatar_url' => Storage::disk('public')->url($path),
+            'customer' => $this->formatCustomer($customer->fresh()),
+        ], 'Avatar updated');
+    }
+
+    /**
+     * Check profile completion and award XP if threshold reached
+     */
+    protected function checkAndAwardProfileCompletion(MarketplaceCustomer $customer): void
+    {
+        $settings = $customer->settings ?? [];
+
+        // Already awarded
+        if (!empty($settings['profile_completion_awarded'])) {
+            return;
+        }
+
+        $completion = $this->calculateProfileCompletion($customer);
+
+        if ($completion['percentage'] >= 80) {
+            try {
+                $experienceService = app(ExperienceService::class);
+                $experienceService->awardActionXpForMarketplace(
+                    $customer->marketplace_client_id,
+                    $customer->id,
+                    ExperienceAction::ACTION_PROFILE_COMPLETE
+                );
+            } catch (\Exception $e) {
+                \Log::channel('marketplace')->warning('Failed to award profile completion XP', [
+                    'customer_id' => $customer->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            // Flag so we don't award again
+            $settings['profile_completion_awarded'] = true;
+            $customer->update(['settings' => $settings]);
+        }
+    }
+
+    /**
+     * Calculate profile completion percentage
+     */
+    protected function calculateProfileCompletion(MarketplaceCustomer $customer): array
+    {
+        $settings = $customer->settings ?? [];
+        $fields = [
+            'first_name' => !empty($customer->first_name),
+            'last_name' => !empty($customer->last_name),
+            'phone' => !empty($customer->phone),
+            'birth_date' => !empty($customer->birth_date),
+            'gender' => !empty($customer->gender),
+            'city' => !empty($customer->city) || !empty($settings['billing_address']['city'] ?? null),
+            'state' => !empty($customer->state) || !empty($settings['billing_address']['state'] ?? null),
+            'interests' => !empty($settings['interests']['event_categories'] ?? null)
+                || !empty($settings['interests']['music_genres'] ?? null),
+        ];
+
+        $completed = array_filter($fields);
+        $total = count($fields);
+
+        return [
+            'percentage' => $total > 0 ? round((count($completed) / $total) * 100) : 0,
+            'completed' => count($completed),
+            'total' => $total,
+            'fields' => $fields,
+        ];
+    }
+
+    /**
      * Format customer for response
      */
     protected function formatCustomer(MarketplaceCustomer $customer): array
@@ -559,6 +706,7 @@ class AuthController extends BaseController
             'first_name' => $customer->first_name,
             'last_name' => $customer->last_name,
             'full_name' => $customer->full_name,
+            'avatar' => $customer->avatar ? Storage::disk('public')->url($customer->avatar) : null,
             'phone' => $customer->phone,
             'birth_date' => $customer->birth_date?->format('Y-m-d'),
             'gender' => $customer->gender,
@@ -574,6 +722,7 @@ class AuthController extends BaseController
             'email_verified' => $customer->isEmailVerified(),
             'points' => $pointsBalance,
             'referral_code' => $referralCode,
+            'profile_completion' => $this->calculateProfileCompletion($customer),
             'stats' => [
                 'total_orders' => $customer->total_orders,
                 'total_spent' => (float) $customer->total_spent,

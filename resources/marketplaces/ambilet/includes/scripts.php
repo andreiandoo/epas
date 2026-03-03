@@ -33,6 +33,7 @@
     <script defer src="<?= asset('assets/js/components/pagination.js') ?>"></script>
     <script defer src="<?= asset('assets/js/components/empty-state.js') ?>"></script>
     <script defer src="<?= asset('assets/js/components/featured-carousel.js') ?>"></script>
+    <script defer src="<?= asset('assets/js/components/profile-completion-modal.js') ?>"></script>
 
     <!-- Page-specific scripts -->
     <?php if (isset($scriptsExtra)) echo $scriptsExtra; ?>

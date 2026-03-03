@@ -1890,11 +1890,19 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         Route::delete('/account', [CustomerAccountController::class, 'deleteAccount'])
             ->name('api.marketplace-client.customer.account.delete');
 
+        // Avatar
+        Route::post('/avatar', [CustomerAuthController::class, 'uploadAvatar'])
+            ->name('api.marketplace-client.customer.avatar.upload');
+
         // Dashboard Stats
         Route::get('/stats', [CustomerStatsController::class, 'index'])
             ->name('api.marketplace-client.customer.stats');
         Route::get('/stats/upcoming-events', [CustomerStatsController::class, 'upcomingEvents'])
             ->name('api.marketplace-client.customer.stats.upcoming-events');
+
+        // Profile Data (rich computed data)
+        Route::get('/profile-data', [CustomerStatsController::class, 'profileData'])
+            ->name('api.marketplace-client.customer.profile-data');
 
         // Reviews
         Route::get('/reviews', [CustomerReviewsController::class, 'index'])

@@ -1075,6 +1075,19 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'customer.avatar':
+        $method = 'POST';
+        $endpoint = '/customer/avatar';
+        $requiresAuth = true;
+        $isFileUpload = true;
+        break;
+
+    case 'customer.profile-data':
+        $method = 'GET';
+        $endpoint = '/customer/profile-data';
+        $requiresAuth = true;
+        break;
+
     case 'customer.orders':
         $method = 'GET';
         $params = [];
@@ -2705,6 +2718,55 @@ if ($useCache) {
         echo $cached['response'];
         exit;
     }
+}
+
+// Handle file uploads via cURL (multipart/form-data)
+if (!empty($isFileUpload) && !empty($_FILES)) {
+    $url = API_BASE_URL . $endpoint;
+    $curlHeaders = [
+        'X-API-Key: ' . API_KEY,
+        'Accept: application/json',
+        'User-Agent: Ambilet Marketplace/1.0',
+        'X-Session-ID: ' . session_id(),
+    ];
+
+    if ($requiresAuth) {
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        if (!$authHeader && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+            $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+        }
+        if ($authHeader) {
+            $curlHeaders[] = 'Authorization: ' . $authHeader;
+        }
+    }
+
+    $postFields = [];
+    foreach ($_FILES as $key => $file) {
+        if ($file['error'] === UPLOAD_ERR_OK) {
+            $postFields[$key] = new CURLFile(
+                $file['tmp_name'],
+                $file['type'],
+                $file['name']
+            );
+        }
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $postFields,
+        CURLOPT_HTTPHEADER => $curlHeaders,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 30,
+    ]);
+
+    $response = curl_exec($ch);
+    $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    http_response_code($statusCode ?: 500);
+    echo $response ?: json_encode(['error' => 'Upload failed']);
+    exit;
 }
 
 // Make the actual API request

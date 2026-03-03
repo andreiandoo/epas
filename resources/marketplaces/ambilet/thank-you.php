@@ -315,6 +315,7 @@ $scriptsExtra = <<<'STYLES'
 </style>
 STYLES;
 $scriptsExtra .= '<script defer src="' . asset('assets/js/pages/thank-you.js') . '"></script>';
+$scriptsExtra .= '<script>document.addEventListener("DOMContentLoaded", () => { if (typeof ProfileCompletionModal !== "undefined") ProfileCompletionModal.triggerAfterPurchase(); });</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
 ?>
