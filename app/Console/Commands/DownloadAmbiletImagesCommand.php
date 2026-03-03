@@ -37,11 +37,7 @@ class DownloadAmbiletImagesCommand extends Command
             return 0;
         }
 
-        // Ensure target directory exists (hero = horizontal/landscape images)
         $directory = 'events/hero';
-        if (!$dryRun) {
-            Storage::disk('public')->makeDirectory($directory);
-        }
 
         $downloaded = 0;
         $skipped    = 0;
