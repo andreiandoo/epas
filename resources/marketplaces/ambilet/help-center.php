@@ -204,9 +204,9 @@ $cssBundle = 'static';
             Contactează-ne
         </h2>
 
-        <div class="grid grid-cols-1 gap-6 mb-12 md:grid-cols-3">
+        <div class="grid grid-cols-1 gap-6 mb-12 md:grid-cols-2">
             <!-- Chat -->
-            <div class="p-8 text-center transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-xl">
+            <div class="hidden p-8 text-center transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-xl">
                 <div class="flex items-center justify-center w-16 h-16 mx-auto mb-5 text-white bg-gradient-to-br from-primary to-primary-dark rounded-2xl">
                     <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -313,8 +313,8 @@ $cssBundle = 'static';
                             const title = article.type === 'faq' ? article.question : article.title;
                             const category = article.category ? article.category.name : '';
                             html += `
-                                <a href="/ajutor/articol/${article.slug}" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 transition-colors">
-                                    <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500">
+                                <a href="/ajutor/articol/${article.slug}" class="flex items-center gap-3 px-4 py-3 transition-colors rounded-xl hover:bg-gray-50">
+                                    <div class="flex items-center justify-center w-8 h-8 text-gray-500 bg-gray-100 rounded-lg">
                                         ${article.type === 'faq' ? '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'}
                                     </div>
                                     <div>
@@ -328,7 +328,7 @@ $cssBundle = 'static';
                         searchResults.innerHTML = html;
                         searchResults.classList.remove('hidden');
                     } else {
-                        searchResults.innerHTML = '<div class="p-4 text-center text-gray-500 text-sm">Nu am găsit rezultate</div>';
+                        searchResults.innerHTML = '<div class="p-4 text-sm text-center text-gray-500">Nu am găsit rezultate</div>';
                         searchResults.classList.remove('hidden');
                     }
                 } catch (error) {

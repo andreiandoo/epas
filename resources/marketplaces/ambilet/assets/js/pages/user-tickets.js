@@ -196,22 +196,33 @@ const UserTickets = {
                             </button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${Math.min(tickets.length, 4)} gap-3">
-                        ${tickets.map((t, i) => `
-                        <div class="p-3 text-center bg-white border ticket-qr rounded-xl border-border" onclick="UserTickets.showQRModal('${t.code}', '${(t.type || 'Bilet').replace(/'/g, "\\'")}', '${(t.attendee_name || '').replace(/'/g, "\\'")}', '${(event.name || 'Eveniment').replace(/'/g, "\\'")}')">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-xs text-muted">#${i + 1}</span>
-                                <span class="px-1.5 py-0.5 ${t.status === 'valid' ? 'bg-success/10 text-success' : t.status === 'used' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'} text-[10px] font-bold rounded uppercase">${t.status === 'valid' ? 'VALID' : t.status === 'used' ? 'FOLOSIT' : t.status?.toUpperCase()}</span>
+                    <div class="relative tickets-collapsible-wrap" data-event-idx="${idx}">
+                        <div class="tickets-collapsible${tickets.length > 2 ? ' mobile-collapsed' : ''}" data-event-idx="${idx}">
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${Math.min(tickets.length, 4)} gap-3">
+                                ${tickets.map((t, i) => `
+                                <div class="p-3 text-center bg-white border ticket-qr rounded-xl border-border" onclick="UserTickets.showQRModal('${t.code}', '${(t.type || 'Bilet').replace(/'/g, "\\'")}', '${(t.attendee_name || '').replace(/'/g, "\\'")}', '${(event.name || 'Eveniment').replace(/'/g, "\\'")}')">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs text-muted">#${i + 1}</span>
+                                        <span class="px-1.5 py-0.5 ${t.status === 'valid' ? 'bg-success/10 text-success' : t.status === 'used' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'} text-[10px] font-bold rounded uppercase">${t.status === 'valid' ? 'VALID' : t.status === 'used' ? 'FOLOSIT' : t.status?.toUpperCase()}</span>
+                                    </div>
+                                    <div id="qr-${t.code.replace(/[^a-zA-Z0-9]/g, '')}" class="w-full aspect-square bg-white flex items-center justify-center mb-2 mx-auto max-w-[120px]">
+                                        <div class="w-6 h-6 border-2 rounded-full animate-spin border-primary border-t-transparent"></div>
+                                    </div>
+                                    ${t.attendee_name ? `<p class="text-[10px] text-secondary font-medium truncate">${t.attendee_name}</p>` : ''}
+                                    <p class="text-[10px] text-muted font-mono truncate">${t.code}</p>
+                                    <p class="mt-1 text-xs font-medium text-secondary">${t.type}</p>
+                                    ${t.seat ? `<p class="mt-0.5 text-[10px] text-muted">${[t.seat.section_name, t.seat.row_label ? 'R' + t.seat.row_label : '', t.seat.seat_number ? 'Loc ' + t.seat.seat_number : ''].filter(Boolean).join(', ')}</p>` : ''}
+                                </div>
+                                `).join('')}
                             </div>
-                            <div id="qr-${t.code.replace(/[^a-zA-Z0-9]/g, '')}" class="w-full aspect-square bg-white flex items-center justify-center mb-2 mx-auto max-w-[120px]">
-                                <div class="w-6 h-6 border-2 rounded-full animate-spin border-primary border-t-transparent"></div>
-                            </div>
-                            ${t.attendee_name ? `<p class="text-[10px] text-secondary font-medium truncate">${t.attendee_name}</p>` : ''}
-                            <p class="text-[10px] text-muted font-mono truncate">${t.code}</p>
-                            <p class="mt-1 text-xs font-medium text-secondary">${t.type}</p>
-                            ${t.seat ? `<p class="mt-0.5 text-[10px] text-muted">${[t.seat.section_name, t.seat.row_label ? 'R' + t.seat.row_label : '', t.seat.seat_number ? 'Loc ' + t.seat.seat_number : ''].filter(Boolean).join(', ')}</p>` : ''}
                         </div>
-                        `).join('')}
+                        ${tickets.length > 2 ? `
+                        <div class="tickets-show-all mobile-only" data-event-idx="${idx}">
+                            <button onclick="UserTickets.expandTickets(${idx})" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold transition-colors rounded-lg text-primary hover:bg-primary/10">
+                                Vezi toate ${tickets.length} biletele
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                        </div>` : ''}
                     </div>
                 </div>
             </div>
@@ -291,6 +302,17 @@ const UserTickets = {
         document.getElementById('tab-' + tabName).classList.remove('hidden');
         document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
         document.querySelector(`[data-tab="${tabName}"]`).classList.remove('text-muted', 'bg-surface');
+    },
+
+    expandTickets(eventIdx) {
+        const collapsible = document.querySelector(`.tickets-collapsible[data-event-idx="${eventIdx}"]`);
+        const showAllBtn = document.querySelector(`.tickets-show-all[data-event-idx="${eventIdx}"]`);
+        if (collapsible) {
+            collapsible.classList.remove('mobile-collapsed');
+        }
+        if (showAllBtn) {
+            showAllBtn.style.display = 'none';
+        }
     },
 
     // Show QR Modal

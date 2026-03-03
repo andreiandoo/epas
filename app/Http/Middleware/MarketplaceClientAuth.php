@@ -17,6 +17,20 @@ class MarketplaceClientAuth
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Handle CORS preflight requests before auth check
+        if ($request->isMethod('OPTIONS')) {
+            $response = response('', 200);
+            $origin = $request->header('Origin');
+            if ($origin) {
+                $response->headers->set('Access-Control-Allow-Origin', $origin);
+                $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+                $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key, X-Requested-With, X-Session-ID');
+                $response->headers->set('Access-Control-Allow-Credentials', 'true');
+                $response->headers->set('Access-Control-Max-Age', '86400');
+            }
+            return $response;
+        }
+
         // Get API key from header
         $apiKey = $request->header('X-API-Key')
             ?? $request->header('Authorization');

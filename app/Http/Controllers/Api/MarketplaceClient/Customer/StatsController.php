@@ -21,20 +21,22 @@ class StatsController extends BaseController
 
         // Orders stats
         $totalOrders = Order::where('marketplace_customer_id', $customer->id)->count();
+        $paidStatuses = ['paid', 'confirmed', 'completed'];
+
         $completedOrders = Order::where('marketplace_customer_id', $customer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', $paidStatuses)
             ->count();
 
         // Tickets stats
         $totalTickets = Order::where('marketplace_customer_id', $customer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', $paidStatuses)
             ->withCount('tickets')
             ->get()
             ->sum('tickets_count');
 
         // Upcoming events
         $upcomingEvents = Order::where('marketplace_customer_id', $customer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', $paidStatuses)
             ->whereHas('marketplaceEvent', function ($q) {
                 $q->where('starts_at', '>=', now());
             })
@@ -42,7 +44,7 @@ class StatsController extends BaseController
 
         // Past events
         $pastEvents = Order::where('marketplace_customer_id', $customer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', $paidStatuses)
             ->whereHas('marketplaceEvent', function ($q) {
                 $q->where('starts_at', '<', now());
             })
@@ -50,7 +52,7 @@ class StatsController extends BaseController
 
         // Active tickets (for upcoming events)
         $activeTickets = Order::where('marketplace_customer_id', $customer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', $paidStatuses)
             ->whereHas('marketplaceEvent', function ($q) {
                 $q->where('starts_at', '>=', now());
             })
@@ -104,7 +106,7 @@ class StatsController extends BaseController
 
         // Total spent (stored in cents)
         $totalSpentCents = Order::where('marketplace_customer_id', $customer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', $paidStatuses)
             ->sum('total_cents');
         $totalSpent = $totalSpentCents / 100;
 
@@ -149,7 +151,7 @@ class StatsController extends BaseController
         $limit = min((int) $request->get('limit', 5), 20);
 
         $orders = Order::where('marketplace_customer_id', $customer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereHas('marketplaceEvent', function ($q) {
                 $q->where('starts_at', '>=', now());
             })

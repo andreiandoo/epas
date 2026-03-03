@@ -21,6 +21,13 @@ require_once dirname(__DIR__) . '/includes/header.php';
     .qr-modal-backdrop.active .qr-modal { transform: scale(1); }
     .qr-modal-qr { width: 280px; height: 280px; margin: 1rem auto; background: white; padding: 1rem; border-radius: 1rem; }
     .qr-modal-qr canvas { width: 100% !important; height: 100% !important; }
+    /* Mobile collapsible tickets */
+    .tickets-show-all { display: none; }
+    @media (max-width: 767px) {
+        .tickets-collapsible.mobile-collapsed { max-height: 340px; overflow: hidden; position: relative; }
+        .tickets-collapsible.mobile-collapsed::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 60px; background: linear-gradient(transparent, var(--color-surface, #f8f9fa)); pointer-events: none; }
+        .tickets-show-all.mobile-only { display: flex; justify-content: center; padding-top: 0.5rem; }
+    }
 </style>
 <!-- QRCode.js library for local QR generation (with fallback) -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js" onerror="window._qrLibFailed=true"></script>

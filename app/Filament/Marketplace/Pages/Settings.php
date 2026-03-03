@@ -116,20 +116,14 @@ class Settings extends Page
                                     ->schema([
                                         Forms\Components\TextInput::make('company_name')
                                             ->label('Legal Company Name')
-                                            ->disabled()
-                                            ->dehydrated(true)
                                             ->maxLength(255),
 
                                         Forms\Components\TextInput::make('cui')
                                             ->label('CUI / VAT Number')
-                                            ->disabled()
-                                            ->dehydrated(true)
                                             ->maxLength(50),
 
                                         Forms\Components\TextInput::make('reg_com')
                                             ->label('Trade Register')
-                                            ->disabled()
-                                            ->dehydrated(true)
                                             ->maxLength(50),
 
                                         Forms\Components\Toggle::make('vat_payer')

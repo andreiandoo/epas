@@ -434,8 +434,7 @@ const UserDashboard = {
                 urlPrefix: '/bilete/',
                 showCategory: true,
                 showPrice: true,
-                showVenue: true,
-                showPromotedBadge: true
+                showVenue: true
             });
         } else {
             container.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Descopera evenimente noi</p>';
