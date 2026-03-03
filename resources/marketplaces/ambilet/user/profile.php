@@ -111,7 +111,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
                     <!-- Activity Chart -->
                     <div class="p-5 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
-                        <h2 class="mb-4 text-lg font-bold text-secondary">Activitatea ta in 2024</h2>
+                        <h2 class="mb-4 text-lg font-bold text-secondary">Activitatea ta in <?= date('Y') ?></h2>
                         <div class="h-64">
                             <canvas id="activityChart"></canvas>
                         </div>

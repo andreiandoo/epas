@@ -2,6 +2,7 @@
 require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Puncte & Recompense';
 $currentPage = 'rewards';
+$cssBundle = 'account';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/header.php';
 ?>
@@ -30,6 +31,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
         100% { transform: translateX(100%) rotate(30deg); }
     }
     .tab-btn.active { background: white; color: #A51C30; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
 </style>
 
 <?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
@@ -42,12 +45,12 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <div class="grid gap-6 lg:grid-cols-3 lg:gap-8">
                         <!-- Points Balance -->
                         <div class="lg:col-span-1">
-                            <p class="mb-1 text-sm text-white/70">Punctele tale</p>
+                            <p class="mb-1 text-sm text-white/90">Punctele tale</p>
                             <div class="flex items-baseline gap-2">
                                 <span class="text-4xl font-extrabold lg:text-5xl" id="user-points">0</span>
-                                <span class="text-white/70">puncte</span>
+                                <span class="text-white/90">puncte</span>
                             </div>
-                            <p class="mt-2 text-sm text-white/60" id="points-value">≈ 0 lei reducere</p>
+                            <p class="mt-2 text-sm text-white/90" id="points-value">≈ 0 lei reducere</p>
                         </div>
 
                         <!-- Level Progress -->
@@ -59,18 +62,18 @@ require_once dirname(__DIR__) . '/includes/header.php';
                                     </div>
                                     <div>
                                         <p class="text-lg font-bold" id="level-info">Nivel 0 - Loading...</p>
-                                        <p class="text-sm text-white/70" id="level-remaining">... XP pana la nivelul urmator</p>
+                                        <p class="text-sm text-white/90" id="level-remaining">... XP pana la nivelul urmator</p>
                                     </div>
                                 </div>
                                 <div class="hidden text-right sm:block">
                                     <p class="text-2xl font-bold" id="xp-progress">0 / 0</p>
-                                    <p class="text-xs text-white/70">XP</p>
+                                    <p class="text-xs text-white/90">XP</p>
                                 </div>
                             </div>
                             <div class="h-4 overflow-hidden rounded-full bg-white/20">
                                 <div class="h-full transition-all duration-1000 rounded-full level-progress" style="width: 0%" id="level-bar"></div>
                             </div>
-                            <div class="flex justify-between mt-2 text-xs text-white/60">
+                            <div class="flex justify-between mt-2 text-xs text-white/90">
                                 <span id="level-current">Nivel 0</span>
                                 <span id="level-next">Nivel 1 - Loading...</span>
                             </div>
@@ -80,7 +83,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <!-- Tabs -->
-            <div class="flex gap-2 p-1 mb-6 overflow-x-auto bg-surface rounded-xl w-fit">
+            <div class="flex gap-2 p-1 mb-6 overflow-x-auto bg-surface rounded-xl max-w-full scrollbar-hide">
                 <button onclick="showTab('rewards')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn active whitespace-nowrap" id="tab-btn-rewards">
                     Recompense
                 </button>
@@ -128,8 +131,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <div class="divide-y divide-border" id="history-container">
                         <!-- Populated by JavaScript -->
                     </div>
-                    <div class="p-4 text-center border-t border-border">
-                        <button class="text-sm font-medium text-primary">Incarca mai mult</button>
+                    <div class="hidden p-4 text-center border-t border-border" id="history-load-more">
+                        <button onclick="RewardsPage.loadMoreHistory()" class="text-sm font-medium text-primary">Incarca mai mult</button>
                     </div>
                 </div>
             </div>
@@ -189,6 +192,8 @@ const RewardsPage = {
     rewards: [],
     badges: { earned: [], available: [] },
     pointsHistory: [],
+    historyMeta: null,
+    historyPage: 1,
     levels: [],
 
     async init() {
@@ -280,14 +285,28 @@ const RewardsPage = {
         }
     },
 
-    async loadHistory() {
+    async loadHistory(page = 1) {
         try {
-            const response = await AmbiletAPI.customer.getPointsHistory();
-            if (response.success && response.data) {
-                this.pointsHistory = response.data.history || response.data || [];
+            const response = await AmbiletAPI.customer.getPointsHistory({ page });
+            if (response.success) {
+                const items = response.data?.history || response.data || [];
+                if (page === 1) {
+                    this.pointsHistory = Array.isArray(items) ? items : [];
+                } else {
+                    this.pointsHistory = [...this.pointsHistory, ...(Array.isArray(items) ? items : [])];
+                }
+                this.historyMeta = response.meta || null;
+                this.historyPage = page;
             }
         } catch (error) {
             console.error('History API error:', error);
+        }
+    },
+
+    async loadMoreHistory() {
+        if (this.historyMeta && this.historyPage < this.historyMeta.last_page) {
+            await this.loadHistory(this.historyPage + 1);
+            this.renderHistory();
         }
     },
 
@@ -439,9 +458,21 @@ const RewardsPage = {
 
     renderHistory() {
         const container = document.getElementById('history-container');
+        const loadMoreBtn = document.getElementById('history-load-more');
+
         if (!this.pointsHistory || this.pointsHistory.length === 0) {
             container.innerHTML = '<p class="p-8 text-center text-muted">Nu ai tranzactii in istoric.</p>';
+            if (loadMoreBtn) loadMoreBtn.classList.add('hidden');
             return;
+        }
+
+        // Show/hide load more button based on pagination
+        if (loadMoreBtn) {
+            if (this.historyMeta && this.historyPage < this.historyMeta.last_page) {
+                loadMoreBtn.classList.remove('hidden');
+            } else {
+                loadMoreBtn.classList.add('hidden');
+            }
         }
 
         container.innerHTML = this.pointsHistory.map(item => {
