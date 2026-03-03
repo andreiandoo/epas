@@ -11,6 +11,7 @@ class ExternalTicket extends Model
         'event_id',
         'marketplace_client_id',
         'import_batch_id',
+        'source_name',
         'barcode',
         'attendee_first_name',
         'attendee_last_name',

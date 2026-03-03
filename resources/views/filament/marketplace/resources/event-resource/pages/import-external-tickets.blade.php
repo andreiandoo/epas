@@ -43,6 +43,15 @@
 
             <form wire:submit="uploadCsv" class="space-y-4">
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Sursă / Operator extern
+                    </label>
+                    <input type="text" wire:model="source_name" placeholder="ex: iaBilet, Eventim, MyTicket..."
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
+                    <p class="mt-1 text-xs text-gray-400">Numele platformei de unde provin biletele (opțional, se salvează la fiecare bilet importat)</p>
+                </div>
+
+                <div>
                     <x-filament::input.wrapper>
                         <input type="file" accept=".csv,.txt" wire:model="csv_file"
                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-primary-950 dark:file:text-primary-400">
@@ -190,6 +199,7 @@
                             <th class="px-3 py-2 text-left font-medium text-gray-500">Nume</th>
                             <th class="px-3 py-2 text-left font-medium text-gray-500">Email</th>
                             <th class="px-3 py-2 text-left font-medium text-gray-500">Tip bilet</th>
+                            <th class="px-3 py-2 text-left font-medium text-gray-500">Sursă</th>
                             <th class="px-3 py-2 text-left font-medium text-gray-500">Status</th>
                             <th class="px-3 py-2 text-left font-medium text-gray-500">Check-in</th>
                         </tr>
@@ -201,6 +211,7 @@
                             <td class="px-3 py-2">{{ $ticket->attendee_name }}</td>
                             <td class="px-3 py-2 text-gray-500">{{ $ticket->attendee_email ?? '-' }}</td>
                             <td class="px-3 py-2">{{ $ticket->ticket_type_name ?? '-' }}</td>
+                            <td class="px-3 py-2 text-gray-500 text-xs">{{ $ticket->source_name ?? '-' }}</td>
                             <td class="px-3 py-2">
                                 @if($ticket->status === 'valid')
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800 dark:bg-success-900 dark:text-success-200">Valid</span>

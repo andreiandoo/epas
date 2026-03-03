@@ -31,6 +31,7 @@ class ImportExternalTickets extends Page
     public ?string $col_email = null;
     public ?string $col_ticket_type = null;
     public ?string $col_original_id = null;
+    public ?string $source_name = null;
 
     public array $csvHeaders = [];
     public array $csvPreview = [];
@@ -199,6 +200,7 @@ class ImportExternalTickets extends Page
                 'event_id' => $this->record->id,
                 'marketplace_client_id' => $marketplace->id,
                 'import_batch_id' => $batchId,
+                'source_name' => $this->source_name ?: null,
                 'barcode' => $barcode,
                 'attendee_first_name' => $this->col_first_name ? trim($data[$this->col_first_name] ?? '') : null,
                 'attendee_last_name' => $this->col_last_name ? trim($data[$this->col_last_name] ?? '') : null,
