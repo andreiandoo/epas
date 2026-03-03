@@ -30,6 +30,17 @@
             <x-slot name="heading">1. Încarcă fișier CSV</x-slot>
             <x-slot name="description">Selectează fișierul CSV cu biletele de la operatorul extern. Separatorul (virgulă sau punct-virgulă) este detectat automat.</x-slot>
 
+            <div class="mb-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center gap-3">
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                        Nu știi cum să formatezi fișierul? Descarcă modelul CSV cu coloanele recunoscute automat.
+                    </div>
+                    <x-filament::button wire:click="downloadTemplate" color="gray" size="sm" icon="heroicon-o-arrow-down-tray">
+                        Descarcă model CSV
+                    </x-filament::button>
+                </div>
+            </div>
+
             <form wire:submit="uploadCsv" class="space-y-4">
                 <div>
                     {{ $this->form }}

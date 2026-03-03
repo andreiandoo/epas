@@ -67,6 +67,29 @@ class ImportExternalTickets extends Page
         ];
     }
 
+    public function downloadTemplate(): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        return response()->streamDownload(function () {
+            $header = ['cod_bilet', 'prenume', 'nume', 'email', 'tip_bilet', 'id'];
+            $sample = [
+                ['ABC123456', 'Ion', 'Popescu', 'ion@exemplu.ro', 'VIP', '1001'],
+                ['DEF789012', 'Maria', 'Ionescu', 'maria@exemplu.ro', 'General', '1002'],
+                ['GHI345678', 'Andrei', 'Dumitrescu', 'andrei@exemplu.ro', 'VIP', '1003'],
+            ];
+
+            $handle = fopen('php://output', 'w');
+            // UTF-8 BOM for Excel compatibility
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, $header);
+            foreach ($sample as $row) {
+                fputcsv($handle, $row);
+            }
+            fclose($handle);
+        }, 'model-import-bilete.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
     public function uploadCsv(): void
     {
         if (!$this->csv_file) {
