@@ -52,6 +52,7 @@ class ApiCache {
         'categories' => 3600,
         'event-categories' => 3600,
         'event-genres' => 3600,
+        'event-types' => 3600,
         'venue-categories' => 3600,
         'artists.genre-counts' => 3600,
         'artists.alphabet' => 3600,
