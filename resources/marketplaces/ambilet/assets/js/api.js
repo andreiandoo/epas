@@ -1019,8 +1019,8 @@ const AmbiletAPI = {
         /**
          * Verify email
          */
-        async verifyEmail(token) {
-            return AmbiletAPI.post('/customer/verify-email', { token });
+        async verifyEmail(token, email) {
+            return AmbiletAPI.post('/customer/verify-email', { token, email });
         },
 
         /**
