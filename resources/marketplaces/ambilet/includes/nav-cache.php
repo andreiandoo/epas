@@ -16,6 +16,9 @@
 define('NAV_CACHE_FILE', __DIR__ . '/cache/nav-counts.json');
 define('NAV_CACHE_TTL', 6 * 60 * 60); // 6 hours in seconds
 
+// Preview mode: bypass all nav caches when ?preview=1
+define('NAV_PREVIEW_MODE', !empty($_GET['preview']));
+
 // API configuration - update this to your actual API endpoint
 define('NAV_API_URL', '/api/v1/public/navigation/counts');
 
@@ -55,25 +58,35 @@ function isContentCorrupted(string $content): bool {
 function getNavCounts(): array {
     // Check if cache exists and is valid
     if (isNavCacheValid()) {
-        return loadNavCache();
+        $cached = loadNavCache();
+        if (!empty($cached)) return $cached;
     }
 
     // Fetch fresh data from API
     $freshData = fetchNavCountsFromAPI();
 
-    // Save to cache
-    saveNavCache($freshData);
+    // Only cache successful API responses (not defaults)
+    if ($freshData !== false) {
+        saveNavCache($freshData);
+        return $freshData;
+    }
 
-    return $freshData;
+    // API failed - try stale cache before falling back to defaults
+    if (file_exists(NAV_CACHE_FILE)) {
+        $staleData = loadNavCache();
+        if (!empty($staleData)) return $staleData;
+    }
+
+    // Last resort: return defaults (NOT cached)
+    return getDefaultCounts();
 }
 
 /**
  * Check if cached data is still valid
  */
 function isNavCacheValid(): bool {
-    if (!file_exists(NAV_CACHE_FILE)) {
-        return false;
-    }
+    if (NAV_PREVIEW_MODE) return false;
+    if (!file_exists(NAV_CACHE_FILE)) return false;
 
     $cacheTime = filemtime(NAV_CACHE_FILE);
     return (time() - $cacheTime) < NAV_CACHE_TTL;
@@ -116,7 +129,7 @@ function saveNavCache(array $data): void {
 /**
  * Fetch fresh counts from API
  */
-function fetchNavCountsFromAPI(): array {
+function fetchNavCountsFromAPI(): array|false {
     // Try to fetch from API
     $apiUrl = (defined('SITE_URL') ? SITE_URL : '') . NAV_API_URL;
 
@@ -130,17 +143,18 @@ function fetchNavCountsFromAPI(): array {
     $response = @file_get_contents($apiUrl, false, $context);
 
     if ($response === false) {
-        // API not available, return defaults
-        return getDefaultCounts();
+        error_log('[nav-cache] Failed to fetch nav counts from API: ' . $apiUrl);
+        return false;
     }
 
     $data = json_decode($response, true);
 
     if (!$data || !isset($data['success']) || !$data['success']) {
-        return getDefaultCounts();
+        error_log('[nav-cache] Invalid API response for nav counts');
+        return false;
     }
 
-    return $data['counts'] ?? getDefaultCounts();
+    return $data['counts'] ?? false;
 }
 
 /**
@@ -241,25 +255,35 @@ define('FEATURED_CITIES_CACHE_TTL', 30 * 60); // 30 minutes
 function getFeaturedCities(): array {
     // Check if cache exists and is valid
     if (isFeaturedCitiesCacheValid()) {
-        return loadFeaturedCitiesCache();
+        $cached = loadFeaturedCitiesCache();
+        if (!empty($cached)) return $cached;
     }
 
     // Fetch fresh data from API
     $freshData = fetchFeaturedCitiesFromAPI();
 
-    // Save to cache
-    saveFeaturedCitiesCache($freshData);
+    // Only cache successful API responses (not defaults)
+    if ($freshData !== false) {
+        saveFeaturedCitiesCache($freshData);
+        return $freshData;
+    }
 
-    return $freshData;
+    // API failed - try stale cache before falling back to defaults
+    if (file_exists(FEATURED_CITIES_CACHE_FILE)) {
+        $staleData = loadFeaturedCitiesCache();
+        if (!empty($staleData)) return $staleData;
+    }
+
+    // Last resort: return defaults (NOT cached)
+    return getDefaultFeaturedCities();
 }
 
 /**
  * Check if featured cities cache is still valid
  */
 function isFeaturedCitiesCacheValid(): bool {
-    if (!file_exists(FEATURED_CITIES_CACHE_FILE)) {
-        return false;
-    }
+    if (NAV_PREVIEW_MODE) return false;
+    if (!file_exists(FEATURED_CITIES_CACHE_FILE)) return false;
 
     $cacheTime = filemtime(FEATURED_CITIES_CACHE_FILE);
     return (time() - $cacheTime) < FEATURED_CITIES_CACHE_TTL;
@@ -306,7 +330,7 @@ function saveFeaturedCitiesCache(array $data): void {
 /**
  * Fetch featured cities from API via proxy
  */
-function fetchFeaturedCitiesFromAPI(): array {
+function fetchFeaturedCitiesFromAPI(): array|false {
     require_once __DIR__ . '/../includes/config.php';
 
     // Call API directly (not through proxy) for server-side requests
@@ -332,14 +356,14 @@ function fetchFeaturedCitiesFromAPI(): array {
 
     if ($response === false) {
         error_log('[nav-cache] Failed to fetch featured cities from API: ' . $apiUrl);
-        return getDefaultFeaturedCities();
+        return false;
     }
 
     $data = json_decode($response, true);
 
     if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['cities'])) {
         error_log('[nav-cache] Invalid API response for featured cities: ' . substr($response, 0, 500));
-        return getDefaultFeaturedCities();
+        return false;
     }
 
     // Transform API response to nav format
@@ -451,9 +475,8 @@ function getEventCategories(): array {
  * Check if event categories cache is still valid
  */
 function isEventCategoriesCacheValid(): bool {
-    if (!file_exists(EVENT_CATEGORIES_CACHE_FILE)) {
-        return false;
-    }
+    if (NAV_PREVIEW_MODE) return false;
+    if (!file_exists(EVENT_CATEGORIES_CACHE_FILE)) return false;
 
     $cacheTime = filemtime(EVENT_CATEGORIES_CACHE_FILE);
     return (time() - $cacheTime) < EVENT_CATEGORIES_CACHE_TTL;
@@ -599,25 +622,35 @@ define('TRENDING_EVENTS_CACHE_TTL', 15 * 60); // 15 minutes
 function getTrendingEvents(): array {
     // Check if cache exists and is valid
     if (isTrendingEventsCacheValid()) {
-        return loadTrendingEventsCache();
+        $cached = loadTrendingEventsCache();
+        if (!empty($cached)) return $cached;
     }
 
     // Fetch fresh data from API
     $freshData = fetchTrendingEventsFromAPI();
 
-    // Save to cache
-    saveTrendingEventsCache($freshData);
+    // Only cache successful API responses (not empty failures)
+    if ($freshData !== false && !empty($freshData)) {
+        saveTrendingEventsCache($freshData);
+        return $freshData;
+    }
 
-    return $freshData;
+    // API failed - try stale cache
+    if (file_exists(TRENDING_EVENTS_CACHE_FILE)) {
+        $staleData = loadTrendingEventsCache();
+        if (!empty($staleData)) return $staleData;
+    }
+
+    // No data available
+    return [];
 }
 
 /**
  * Check if trending events cache is still valid
  */
 function isTrendingEventsCacheValid(): bool {
-    if (!file_exists(TRENDING_EVENTS_CACHE_FILE)) {
-        return false;
-    }
+    if (NAV_PREVIEW_MODE) return false;
+    if (!file_exists(TRENDING_EVENTS_CACHE_FILE)) return false;
 
     $cacheTime = filemtime(TRENDING_EVENTS_CACHE_FILE);
     return (time() - $cacheTime) < TRENDING_EVENTS_CACHE_TTL;
@@ -657,7 +690,7 @@ function saveTrendingEventsCache(array $data): void {
  * Fetch trending events from API
  * Tries featured events first, falls back to upcoming events
  */
-function fetchTrendingEventsFromAPI(): array {
+function fetchTrendingEventsFromAPI(): array|false {
     require_once __DIR__ . '/../includes/config.php';
 
     // First try featured events
@@ -706,7 +739,7 @@ function fetchTrendingEventsFromAPI(): array {
 
     if (empty($events)) {
         error_log('[nav-cache] Failed to fetch trending events from API');
-        return [];
+        return false;
     }
 
     // Transform API response to nav format
@@ -764,25 +797,35 @@ define('FEATURED_VENUES_CACHE_TTL', 30 * 60); // 30 minutes
 function getFeaturedVenues(): array {
     // Check if cache exists and is valid
     if (isFeaturedVenuesCacheValid()) {
-        return loadFeaturedVenuesCache();
+        $cached = loadFeaturedVenuesCache();
+        if (!empty($cached)) return $cached;
     }
 
     // Fetch fresh data from API
     $freshData = fetchFeaturedVenuesFromAPI();
 
-    // Save to cache
-    saveFeaturedVenuesCache($freshData);
+    // Only cache successful API responses
+    if ($freshData !== false && !empty($freshData)) {
+        saveFeaturedVenuesCache($freshData);
+        return $freshData;
+    }
 
-    return $freshData;
+    // API failed - try stale cache
+    if (file_exists(FEATURED_VENUES_CACHE_FILE)) {
+        $staleData = loadFeaturedVenuesCache();
+        if (!empty($staleData)) return $staleData;
+    }
+
+    // No data available
+    return [];
 }
 
 /**
  * Check if featured venues cache is still valid
  */
 function isFeaturedVenuesCacheValid(): bool {
-    if (!file_exists(FEATURED_VENUES_CACHE_FILE)) {
-        return false;
-    }
+    if (NAV_PREVIEW_MODE) return false;
+    if (!file_exists(FEATURED_VENUES_CACHE_FILE)) return false;
 
     $cacheTime = filemtime(FEATURED_VENUES_CACHE_FILE);
     return (time() - $cacheTime) < FEATURED_VENUES_CACHE_TTL;
@@ -829,7 +872,7 @@ function saveFeaturedVenuesCache(array $data): void {
 /**
  * Fetch featured venues from API directly
  */
-function fetchFeaturedVenuesFromAPI(): array {
+function fetchFeaturedVenuesFromAPI(): array|false {
     require_once __DIR__ . '/../includes/config.php';
 
     // Call API directly (not through proxy) for server-side requests
@@ -856,14 +899,14 @@ function fetchFeaturedVenuesFromAPI(): array {
 
     if ($response === false) {
         error_log('[nav-cache] Failed to fetch featured venues from API: ' . $apiUrl);
-        return [];
+        return false;
     }
 
     $data = json_decode($response, true);
 
     if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['venues'])) {
         error_log('[nav-cache] Invalid API response for featured venues: ' . substr($response, 0, 500));
-        return [];
+        return false;
     }
 
     // Transform API response to nav format
@@ -950,25 +993,35 @@ define('VENUE_CATEGORIES_CACHE_TTL', 30 * 60); // 30 minutes
 function getVenueCategories(): array {
     // Check if cache exists and is valid
     if (isVenueCategoriesCacheValid()) {
-        return loadVenueCategoriesCache();
+        $cached = loadVenueCategoriesCache();
+        if (!empty($cached)) return $cached;
     }
 
     // Fetch fresh data from API
     $freshData = fetchVenueCategoriesFromAPI();
 
-    // Save to cache
-    saveVenueCategoriesCache($freshData);
+    // Only cache successful API responses (not defaults)
+    if ($freshData !== false) {
+        saveVenueCategoriesCache($freshData);
+        return $freshData;
+    }
 
-    return $freshData;
+    // API failed - try stale cache before falling back to defaults
+    if (file_exists(VENUE_CATEGORIES_CACHE_FILE)) {
+        $staleData = loadVenueCategoriesCache();
+        if (!empty($staleData)) return $staleData;
+    }
+
+    // Last resort: return defaults (NOT cached)
+    return getDefaultVenueCategories();
 }
 
 /**
  * Check if venue categories cache is still valid
  */
 function isVenueCategoriesCacheValid(): bool {
-    if (!file_exists(VENUE_CATEGORIES_CACHE_FILE)) {
-        return false;
-    }
+    if (NAV_PREVIEW_MODE) return false;
+    if (!file_exists(VENUE_CATEGORIES_CACHE_FILE)) return false;
 
     $cacheTime = filemtime(VENUE_CATEGORIES_CACHE_FILE);
     return (time() - $cacheTime) < VENUE_CATEGORIES_CACHE_TTL;
@@ -1015,7 +1068,7 @@ function saveVenueCategoriesCache(array $data): void {
 /**
  * Fetch venue categories from API via proxy
  */
-function fetchVenueCategoriesFromAPI(): array {
+function fetchVenueCategoriesFromAPI(): array|false {
     require_once __DIR__ . '/../includes/config.php';
 
     // Call API directly (not through proxy) for server-side requests
@@ -1041,14 +1094,14 @@ function fetchVenueCategoriesFromAPI(): array {
 
     if ($response === false) {
         error_log('[nav-cache] Failed to fetch venue categories from API: ' . $apiUrl);
-        return getDefaultVenueCategories();
+        return false;
     }
 
     $data = json_decode($response, true);
 
     if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['categories'])) {
         error_log('[nav-cache] Invalid API response for venue categories: ' . substr($response, 0, 500));
-        return getDefaultVenueCategories();
+        return false;
     }
 
     // Transform API response to nav format
