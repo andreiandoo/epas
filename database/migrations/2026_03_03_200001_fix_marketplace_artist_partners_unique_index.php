@@ -9,12 +9,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Add unique index with short name (original migration failed on MySQL due to long auto-name)
-        Schema::table('marketplace_artist_partners', function (Blueprint $table) {
-            $table->unique(['marketplace_client_id', 'artist_id'], 'mp_artist_partners_client_artist_unique');
-        });
+        // Add unique index if it doesn't exist (on fresh installs, migration 200000 already created it)
+        try {
+            Schema::table('marketplace_artist_partners', function (Blueprint $table) {
+                $table->unique(['marketplace_client_id', 'artist_id'], 'mp_artist_partners_client_artist_unique');
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Index already exists — skip
+        }
 
-        // Migrate existing data (original migration didn't reach this step due to the index error)
+        // Migrate existing data if not already done
         if (DB::table('marketplace_artist_partners')->count() === 0) {
             DB::table('artists')
                 ->whereNotNull('marketplace_client_id')
@@ -36,8 +40,12 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('marketplace_artist_partners', function (Blueprint $table) {
-            $table->dropUnique('mp_artist_partners_client_artist_unique');
-        });
+        try {
+            Schema::table('marketplace_artist_partners', function (Blueprint $table) {
+                $table->dropUnique('mp_artist_partners_client_artist_unique');
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Index doesn't exist — skip
+        }
     }
 };
