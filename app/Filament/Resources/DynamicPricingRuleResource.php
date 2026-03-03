@@ -19,7 +19,7 @@ class DynamicPricingRuleResource extends Resource
     protected static ?string $model = DynamicPricingRule::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
-    protected static UnitEnum|string|null $navigationGroup = 'Venues & Mapping';
+    protected static UnitEnum|string|null $navigationGroup = 'Catalog';
     protected static ?int $navigationSort = 20;
     protected static ?string $navigationLabel = 'Dynamic Pricing Rules';
     protected static ?string $modelLabel = 'Dynamic Pricing Rule';

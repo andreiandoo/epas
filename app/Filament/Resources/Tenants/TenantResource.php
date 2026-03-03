@@ -18,7 +18,7 @@ class TenantResource extends Resource
 {
     protected static ?string $model = Tenant::class;
 
-    protected static UnitEnum|string|null $navigationGroup = 'Core';
+    protected static UnitEnum|string|null $navigationGroup = 'Tenants';
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office';
     protected static ?int $navigationSort = 10;
 

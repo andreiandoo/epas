@@ -18,7 +18,7 @@ class InvoiceResource extends Resource
     protected static ?string $model = Invoice::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-text';
-    protected static UnitEnum|string|null $navigationGroup = 'Billing';
+    protected static UnitEnum|string|null $navigationGroup = 'Core';
     protected static ?int $navigationSort = 10;
     protected static ?string $modelLabel = 'Invoice';
     protected static ?string $navigationLabel = 'Invoices';

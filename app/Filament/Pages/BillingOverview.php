@@ -20,7 +20,7 @@ class BillingOverview extends Page
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-banknotes';
     protected static ?string $navigationLabel = 'Billing Overview';
     protected static ?string $title = 'Billing Overview';
-    protected static \UnitEnum|string|null $navigationGroup = 'Billing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Core';
     protected static ?int $navigationSort = 1;
 
     public Collection $tenants;

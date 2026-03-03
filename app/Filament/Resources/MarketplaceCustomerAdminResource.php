@@ -29,7 +29,7 @@ class MarketplaceCustomerAdminResource extends Resource
 
     protected static ?string $navigationLabel = 'Marketplace Customers';
 
-    protected static UnitEnum|string|null $navigationGroup = 'Core';
+    protected static UnitEnum|string|null $navigationGroup = 'Marketplace';
 
     protected static ?int $navigationSort = 31;
 

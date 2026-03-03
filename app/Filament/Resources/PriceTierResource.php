@@ -18,7 +18,7 @@ class PriceTierResource extends Resource
     protected static ?string $model = PriceTier::class;
     
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-currency-dollar';
-    protected static UnitEnum|string|null $navigationGroup = 'Venues & Mapping';
+    protected static UnitEnum|string|null $navigationGroup = 'Catalog';
     protected static ?int $navigationSort = 4;
     protected static ?string $navigationLabel = 'Price Tiers';
     protected static ?string $modelLabel = 'Price Tier';

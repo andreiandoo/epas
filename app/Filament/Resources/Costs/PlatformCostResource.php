@@ -16,7 +16,7 @@ class PlatformCostResource extends Resource
     protected static ?string $model = PlatformCost::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calculator';
-    protected static UnitEnum|string|null $navigationGroup = 'Finance';
+    protected static UnitEnum|string|null $navigationGroup = 'Core';
     protected static ?int $navigationSort = 20;
     protected static ?string $modelLabel = 'Platform Cost';
     protected static ?string $pluralModelLabel = 'Platform Costs';
