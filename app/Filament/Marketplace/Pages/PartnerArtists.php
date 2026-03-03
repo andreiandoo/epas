@@ -55,7 +55,7 @@ class PartnerArtists extends Page implements HasForms, HasTable
 
         return $table
             ->query(
-                Artist::query()
+                Artist::query()->with('marketplaceClients')
             )
             ->searchable()
             ->searchPlaceholder('Caută artiști...')
@@ -76,7 +76,7 @@ class PartnerArtists extends Page implements HasForms, HasTable
                     ->separator(','),
                 Tables\Columns\IconColumn::make('is_partner_status')
                     ->label('Status')
-                    ->state(fn ($record) => $record->marketplace_client_id === $marketplace?->id)
+                    ->state(fn ($record) => $record->marketplaceClients->contains('id', $marketplace?->id))
                     ->boolean()
                     ->trueIcon('heroicon-o-check-badge')
                     ->falseIcon('heroicon-o-x-mark')
@@ -90,8 +90,8 @@ class PartnerArtists extends Page implements HasForms, HasTable
                     ->trueLabel('Parteneri')
                     ->falseLabel('Disponibili')
                     ->queries(
-                        true: fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id)->where('is_partner', true),
-                        false: fn (Builder $query) => $query->where(fn ($q) => $q->whereNull('marketplace_client_id')->orWhere('marketplace_client_id', '!=', $marketplace?->id)),
+                        true: fn (Builder $query) => $query->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $marketplace?->id)),
+                        false: fn (Builder $query) => $query->whereDoesntHave('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $marketplace?->id)),
                         blank: fn (Builder $query) => $query,
                     ),
                 Tables\Filters\SelectFilter::make('city')
@@ -109,7 +109,7 @@ class PartnerArtists extends Page implements HasForms, HasTable
                     ->label('Adaugă partener')
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
-                    ->visible(fn (Artist $record): bool => $record->marketplace_client_id !== $marketplace?->id)
+                    ->visible(fn (Artist $record): bool => !$record->marketplaceClients->contains('id', $marketplace?->id))
                     ->modalHeading('Adaugă artist ca partener')
                     ->modalDescription('Confirmă adăugarea acestui artist ca partener.')
                     ->form([
@@ -127,8 +127,7 @@ class PartnerArtists extends Page implements HasForms, HasTable
                     ])
                     ->action(function (Artist $record, array $data) use ($marketplace) {
                         $artistName = static::getArtistName($record);
-                        $record->update([
-                            'marketplace_client_id' => $marketplace?->id,
+                        $record->marketplaceClients()->attach($marketplace->id, [
                             'is_partner' => true,
                             'partner_notes' => $data['partner_notes'] ?? null,
                         ]);
@@ -144,17 +143,13 @@ class PartnerArtists extends Page implements HasForms, HasTable
                     ->label('Elimină')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->visible(fn (Artist $record): bool => $record->marketplace_client_id === $marketplace?->id && $record->is_partner)
+                    ->visible(fn (Artist $record): bool => $record->marketplaceClients->contains('id', $marketplace?->id))
                     ->requiresConfirmation()
                     ->modalHeading('Elimină artistul din parteneri')
                     ->modalDescription('Această acțiune va elimina artistul din lista de parteneri.')
-                    ->action(function (Artist $record) {
+                    ->action(function (Artist $record) use ($marketplace) {
                         $artistName = static::getArtistName($record);
-                        $record->update([
-                            'marketplace_client_id' => null,
-                            'is_partner' => false,
-                            'partner_notes' => null,
-                        ]);
+                        $record->marketplaceClients()->detach($marketplace->id);
 
                         Notification::make()
                             ->title('Artist eliminat')
@@ -166,7 +161,7 @@ class PartnerArtists extends Page implements HasForms, HasTable
                 Actions\Action::make('edit_notes')
                     ->label('Note')
                     ->icon('heroicon-o-pencil-square')
-                    ->visible(fn (Artist $record): bool => $record->marketplace_client_id === $marketplace?->id)
+                    ->visible(fn (Artist $record): bool => $record->marketplaceClients->contains('id', $marketplace?->id))
                     ->modalHeading('Editează notele')
                     ->form([
                         Forms\Components\TextInput::make('artist_name')
@@ -177,12 +172,14 @@ class PartnerArtists extends Page implements HasForms, HasTable
                             ->label('Note parteneriat')
                             ->rows(3),
                     ])
-                    ->fillForm(fn (Artist $record): array => [
+                    ->fillForm(fn (Artist $record) use ($marketplace): array => [
                         'artist_name' => static::getArtistName($record) . ($record->city ? ' - ' . $record->city : ''),
-                        'partner_notes' => $record->partner_notes,
+                        'partner_notes' => $record->marketplaceClients
+                            ->where('id', $marketplace?->id)
+                            ->first()?->pivot?->partner_notes,
                     ])
-                    ->action(function (Artist $record, array $data) {
-                        $record->update([
+                    ->action(function (Artist $record, array $data) use ($marketplace) {
+                        $record->marketplaceClients()->updateExistingPivot($marketplace->id, [
                             'partner_notes' => $data['partner_notes'],
                         ]);
 
@@ -201,9 +198,8 @@ class PartnerArtists extends Page implements HasForms, HasTable
                     ->action(function ($records) use ($marketplace) {
                         $count = 0;
                         foreach ($records as $record) {
-                            if ($record->marketplace_client_id !== $marketplace?->id) {
-                                $record->update([
-                                    'marketplace_client_id' => $marketplace?->id,
+                            if (!$record->marketplaceClients->contains('id', $marketplace?->id)) {
+                                $record->marketplaceClients()->attach($marketplace->id, [
                                     'is_partner' => true,
                                 ]);
                                 $count++;

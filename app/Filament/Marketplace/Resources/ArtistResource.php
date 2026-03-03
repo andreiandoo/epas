@@ -39,7 +39,8 @@ class ArtistResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $marketplace = static::getMarketplaceClient();
-        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplace?->id);
+        return parent::getEloquentQuery()
+            ->whereHas('marketplaceClients', fn (Builder $q) => $q->where('marketplace_artist_partners.marketplace_client_id', $marketplace?->id));
     }
 
     public static function form(Schema $schema): Schema
@@ -47,14 +48,6 @@ class ArtistResource extends Resource
         $marketplace = static::getMarketplaceClient();
 
         return $schema->schema([
-            // Hidden marketplace_client_id
-            Forms\Components\Hidden::make('marketplace_client_id')
-                ->default($marketplace?->id),
-
-            // Set as partner automatically when created from marketplace
-            Forms\Components\Hidden::make('is_partner')
-                ->default(true),
-
             SC\Grid::make(4)->schema([
                 SC\Group::make()->columnSpan(3)->schema([
                     SC\Grid::make(5)->schema([
@@ -89,6 +82,7 @@ class ArtistResource extends Resource
                                         }
 
                                         $artists = Artist::whereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($name) . '%'])
+                                            ->with('marketplaceClients')
                                             ->limit(5)
                                             ->get();
 
@@ -102,7 +96,7 @@ class ArtistResource extends Resource
                                             . '<div class="text-xs font-medium text-amber-600 mb-1">⚠ Artiști existenți cu nume similar:</div>';
 
                                         foreach ($artists as $artist) {
-                                            $isPartner = $artist->marketplace_client_id === $marketplace?->id;
+                                            $isPartner = $artist->marketplaceClients->contains('id', $marketplace?->id);
                                             $city = $artist->city ? ' — ' . e($artist->city) : '';
 
                                             if ($isPartner) {

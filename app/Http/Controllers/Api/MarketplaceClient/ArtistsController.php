@@ -18,7 +18,7 @@ class ArtistsController extends BaseController
         $client = $this->requireClient($request);
 
         $query = Artist::query()
-            ->where('marketplace_client_id', $client->id)
+            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $client->id))
             ->where('is_active', true);
 
         // Filter by letter
@@ -115,7 +115,7 @@ class ArtistsController extends BaseController
         $client = $this->requireClient($request);
 
         $artists = Artist::query()
-            ->where('marketplace_client_id', $client->id)
+            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $client->id))
             ->where('is_featured', true)
             ->where('is_active', true)
             ->limit($request->input('limit', 6))
@@ -136,7 +136,7 @@ class ArtistsController extends BaseController
         $client = $this->requireClient($request);
 
         $artists = Artist::query()
-            ->where('marketplace_client_id', $client->id)
+            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $client->id))
             ->where('is_active', true)
             ->whereHas('events', function ($q) {
                 $q->where('event_date', '>=', now()->toDateString())
@@ -166,7 +166,7 @@ class ArtistsController extends BaseController
 
         $genres = ArtistGenre::query()
             ->withCount(['artists' => function ($q) use ($client) {
-                $q->where('marketplace_client_id', $client->id)
+                $q->whereHas('marketplaceClients', fn ($mq) => $mq->where('marketplace_artist_partners.marketplace_client_id', $client->id))
                   ->where('is_active', true);
             }])
             ->having('artists_count', '>', 0)
@@ -194,7 +194,7 @@ class ArtistsController extends BaseController
         $client = $this->requireClient($request);
 
         $letters = Artist::query()
-            ->where('marketplace_client_id', $client->id)
+            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $client->id))
             ->where('is_active', true)
             ->whereNotNull('letter')
             ->distinct()
@@ -216,15 +216,15 @@ class ArtistsController extends BaseController
 
         // First, try to find marketplace artist
         $artist = Artist::query()
-            ->where('marketplace_client_id', $client->id)
+            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $client->id))
             ->where('slug', $slug)
             ->where('is_active', true)
             ->first();
 
-        // If not found in marketplace, check Core DB (artists without marketplace_client_id)
+        // If not found in marketplace, check Core DB (artists not partnered with any marketplace)
         if (!$artist) {
             $coreArtist = Artist::query()
-                ->whereNull('marketplace_client_id')
+                ->whereDoesntHave('marketplaceClients')
                 ->where('slug', $slug)
                 ->where('is_active', true)
                 ->first();
@@ -303,7 +303,7 @@ class ArtistsController extends BaseController
 
         if ($genreIds->isNotEmpty()) {
             $similarArtists = Artist::query()
-                ->where('marketplace_client_id', $client->id)
+                ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $client->id))
                 ->where('is_active', true)
                 ->where('id', '!=', $artist->id)
                 ->whereHas('artistGenres', function ($q) use ($genreIds) {
@@ -380,7 +380,7 @@ class ArtistsController extends BaseController
         $client = $this->requireClient($request);
 
         $artist = Artist::query()
-            ->where('marketplace_client_id', $client->id)
+            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $client->id))
             ->where('slug', $slug)
             ->where('is_active', true)
             ->first();

@@ -129,6 +129,13 @@ class Artist extends Model
         return $this->belongsTo(\App\Models\MarketplaceClient::class);
     }
 
+    public function marketplaceClients(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\MarketplaceClient::class, 'marketplace_artist_partners')
+            ->withPivot('is_partner', 'partner_notes')
+            ->withTimestamps();
+    }
+
     public function artistTypes(): BelongsToMany
     {
         return $this->belongsToMany(\App\Models\ArtistType::class, 'artist_artist_type');
