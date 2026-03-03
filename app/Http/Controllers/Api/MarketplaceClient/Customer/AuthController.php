@@ -642,21 +642,23 @@ class AuthController extends BaseController
         if ($completion['percentage'] >= 80) {
             try {
                 $experienceService = app(ExperienceService::class);
-                $experienceService->awardActionXpForMarketplace(
+                $result = $experienceService->awardActionXpForMarketplace(
                     $customer->marketplace_client_id,
                     $customer->id,
                     ExperienceAction::ACTION_PROFILE_COMPLETE
                 );
+
+                // Only flag as awarded if XP was actually granted
+                if ($result) {
+                    $settings['profile_completion_awarded'] = true;
+                    $customer->update(['settings' => $settings]);
+                }
             } catch (\Exception $e) {
                 \Log::channel('marketplace')->warning('Failed to award profile completion XP', [
                     'customer_id' => $customer->id,
                     'error' => $e->getMessage(),
                 ]);
             }
-
-            // Flag so we don't award again
-            $settings['profile_completion_awarded'] = true;
-            $customer->update(['settings' => $settings]);
         }
     }
 

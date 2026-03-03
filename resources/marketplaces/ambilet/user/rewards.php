@@ -129,8 +129,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <div class="divide-y divide-border" id="history-container">
                         <!-- Populated by JavaScript -->
                     </div>
-                    <div class="p-4 text-center border-t border-border">
-                        <button class="text-sm font-medium text-primary">Incarca mai mult</button>
+                    <div class="hidden p-4 text-center border-t border-border" id="history-load-more">
+                        <button onclick="RewardsPage.loadMoreHistory()" class="text-sm font-medium text-primary">Incarca mai mult</button>
                     </div>
                 </div>
             </div>
@@ -190,6 +190,8 @@ const RewardsPage = {
     rewards: [],
     badges: { earned: [], available: [] },
     pointsHistory: [],
+    historyMeta: null,
+    historyPage: 1,
     levels: [],
 
     async init() {
@@ -281,14 +283,28 @@ const RewardsPage = {
         }
     },
 
-    async loadHistory() {
+    async loadHistory(page = 1) {
         try {
-            const response = await AmbiletAPI.customer.getPointsHistory();
-            if (response.success && response.data) {
-                this.pointsHistory = response.data.history || response.data || [];
+            const response = await AmbiletAPI.customer.getPointsHistory({ page });
+            if (response.success) {
+                const items = response.data?.history || response.data || [];
+                if (page === 1) {
+                    this.pointsHistory = Array.isArray(items) ? items : [];
+                } else {
+                    this.pointsHistory = [...this.pointsHistory, ...(Array.isArray(items) ? items : [])];
+                }
+                this.historyMeta = response.meta || null;
+                this.historyPage = page;
             }
         } catch (error) {
             console.error('History API error:', error);
+        }
+    },
+
+    async loadMoreHistory() {
+        if (this.historyMeta && this.historyPage < this.historyMeta.last_page) {
+            await this.loadHistory(this.historyPage + 1);
+            this.renderHistory();
         }
     },
 
@@ -440,9 +456,21 @@ const RewardsPage = {
 
     renderHistory() {
         const container = document.getElementById('history-container');
+        const loadMoreBtn = document.getElementById('history-load-more');
+
         if (!this.pointsHistory || this.pointsHistory.length === 0) {
             container.innerHTML = '<p class="p-8 text-center text-muted">Nu ai tranzactii in istoric.</p>';
+            if (loadMoreBtn) loadMoreBtn.classList.add('hidden');
             return;
+        }
+
+        // Show/hide load more button based on pagination
+        if (loadMoreBtn) {
+            if (this.historyMeta && this.historyPage < this.historyMeta.last_page) {
+                loadMoreBtn.classList.remove('hidden');
+            } else {
+                loadMoreBtn.classList.add('hidden');
+            }
         }
 
         container.innerHTML = this.pointsHistory.map(item => {

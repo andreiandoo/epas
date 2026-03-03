@@ -922,7 +922,7 @@ const AmbiletAPI = {
             const baseUrl = AmbiletAPI.getApiUrl();
             const url = `${baseUrl}?action=customer.avatar`;
             const headers = {};
-            const token = AmbiletAPI.auth.getToken();
+            const token = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
             }

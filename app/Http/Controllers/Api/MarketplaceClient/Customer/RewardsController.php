@@ -285,15 +285,91 @@ class RewardsController extends BaseController
                 ];
             });
 
+        // Add computed profile/interests badges (not DB-dependent)
+        $profileBadges = $this->getProfileBadges($customer);
+
+        $allEarned = $earnedBadges->values()->toArray();
+        $allAvailable = $availableBadges->values()->toArray();
+        foreach ($profileBadges as $pb) {
+            if ($pb['earned']) {
+                $allEarned[] = $pb;
+            } else {
+                $allAvailable[] = $pb;
+            }
+        }
+
         return $this->success([
-            'earned' => $earnedBadges,
-            'available' => $availableBadges,
+            'earned' => $allEarned,
+            'available' => $allAvailable,
             'stats' => [
-                'earned_count' => $earnedBadges->count(),
-                'available_count' => $availableBadges->count(),
+                'earned_count' => count($allEarned),
+                'available_count' => count($allAvailable),
                 'total_xp_from_badges' => $earnedBadges->sum('xp_reward'),
             ],
         ]);
+    }
+
+    /**
+     * Get computed profile/interests badges (not stored in DB)
+     */
+    protected function getProfileBadges(MarketplaceCustomer $customer): array
+    {
+        $settings = $customer->settings ?? [];
+        $badges = [];
+
+        // Profile completion badge
+        $profileFields = ['first_name', 'last_name', 'phone', 'birth_date', 'gender', 'city', 'state'];
+        $profileComplete = true;
+        foreach ($profileFields as $field) {
+            if (empty($customer->$field)) {
+                if (in_array($field, ['city', 'state'])) {
+                    // Check billing_address fallback
+                    if (empty($settings['billing_address'][$field] ?? null)) {
+                        $profileComplete = false;
+                        break;
+                    }
+                } else {
+                    $profileComplete = false;
+                    break;
+                }
+            }
+        }
+
+        $badges[] = [
+            'id' => 'profile_complete',
+            'name' => 'Profil complet',
+            'description' => 'Ai completat toate informațiile personale din profil',
+            'icon_url' => null,
+            'emoji' => '✅',
+            'color' => 'from-green-400 to-emerald-500',
+            'category' => 'profile',
+            'rarity_level' => 'common',
+            'xp_reward' => 20,
+            'earned' => $profileComplete,
+            'earned_at' => $profileComplete ? ($customer->updated_at?->toIso8601String() ?? now()->toIso8601String()) : null,
+            'progress' => $profileComplete ? null : 'Completează-ți profilul',
+        ];
+
+        // Interests badge
+        $hasInterests = !empty($settings['interests']['event_categories'] ?? null)
+            || !empty($settings['interests']['music_genres'] ?? null);
+
+        $badges[] = [
+            'id' => 'interests_added',
+            'name' => 'Gusturi definite',
+            'description' => 'Ai adăugat preferințele tale de evenimente și genuri muzicale',
+            'icon_url' => null,
+            'emoji' => '🎯',
+            'color' => 'from-purple-400 to-violet-500',
+            'category' => 'profile',
+            'rarity_level' => 'common',
+            'xp_reward' => 10,
+            'earned' => $hasInterests,
+            'earned_at' => $hasInterests ? ($customer->updated_at?->toIso8601String() ?? now()->toIso8601String()) : null,
+            'progress' => $hasInterests ? null : 'Adaugă interesele tale',
+        ];
+
+        return $badges;
     }
 
     /**

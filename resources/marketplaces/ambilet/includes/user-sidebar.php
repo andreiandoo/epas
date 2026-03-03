@@ -33,10 +33,10 @@ $currentPage = $currentPage ?? 'dashboard';
 <div id="sidebar-overlay" class="fixed inset-0 z-40 hidden bg-black/50 lg:hidden"></div>
 
 <!-- Sidebar -->
-<aside id="user-sidebar" class="mobile:z-[1000] fixed lg:static inset-y-0 left-0 z-50 w-72 lg:w-64 bg-white lg:bg-transparent transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex-shrink-0 overflow-y-auto">
+<aside id="user-sidebar" class="mobile:z-[1000] fixed lg:static inset-y-0 right-0 z-50 w-72 lg:w-64 bg-white lg:bg-transparent transform translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex-shrink-0 overflow-y-auto">
     <div class="min-h-screen p-4 bg-white lg:rounded-2xl lg:border lg:border-border lg:sticky lg:top-24 lg:min-h-0 mobile:p-0">
         <!-- Mobile Close Button -->
-        <button id="close-sidebar" class="absolute p-2 lg:hidden top-4 right-4 text-muted hover:text-secondary">
+        <button id="close-sidebar" class="absolute p-2 lg:hidden top-4 left-4 text-muted hover:text-secondary">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
 
@@ -103,13 +103,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeBtn = document.getElementById('close-sidebar');
 
     function openSidebar() {
-        sidebar.classList.remove('-translate-x-full');
+        sidebar.classList.remove('translate-x-full');
         overlay.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }
 
     function closeSidebar() {
-        sidebar.classList.add('-translate-x-full');
+        sidebar.classList.add('translate-x-full');
         overlay.classList.add('hidden');
         document.body.style.overflow = '';
     }

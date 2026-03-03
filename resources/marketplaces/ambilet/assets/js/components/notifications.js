@@ -69,12 +69,7 @@ const AmbiletNotifications = {
 
         toast.innerHTML = `
             <div class="flex-shrink-0">${icon}</div>
-            <div class="flex-1 text-sm font-medium text-secondary">${message}</div>
-            <button class="flex-shrink-0 p-1 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Închide" onclick="AmbiletNotifications.hide(this.closest('.toast'))">
-                <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
+            <div class="text-sm font-medium text-secondary">${message}</div>
         `;
 
         return toast;
@@ -109,10 +104,11 @@ const AmbiletNotifications = {
         if (!toast) return;
 
         toast.classList.remove('show');
+        toast.classList.add('hiding');
 
         setTimeout(() => {
             toast.remove();
-        }, 300);
+        }, 200);
     },
 
     /**
