@@ -15,7 +15,7 @@ class DownloadAmbiletImagesCommand extends Command
         {--timeout=30 : HTTP timeout in seconds per image}
         {--concurrency=5 : Not used yet, reserved}';
 
-    protected $description = 'Download external AmBilet event poster images to local storage before ambilet.ro shuts down';
+    protected $description = 'Download external AmBilet event images to local storage (hero_image_url) before ambilet.ro shuts down';
 
     public function handle(): int
     {
@@ -23,22 +23,22 @@ class DownloadAmbiletImagesCommand extends Command
         $dryRun   = $this->option('dry-run');
         $timeout  = (int) $this->option('timeout');
 
-        // Find all events with external poster URLs
+        // Find all events with external URLs in poster_url (AmBilet images are landscape/hero format)
         $events = DB::table('events')
             ->where('marketplace_client_id', $clientId)
             ->where('poster_url', 'LIKE', 'http%')
             ->select('id', 'poster_url')
             ->get();
 
-        $this->info("Found {$events->count()} events with external poster URLs.");
+        $this->info("Found {$events->count()} events with external image URLs to download.");
 
         if ($events->isEmpty()) {
             $this->info('Nothing to download.');
             return 0;
         }
 
-        // Ensure target directory exists
-        $directory = 'events/posters';
+        // Ensure target directory exists (hero = horizontal/landscape images)
+        $directory = 'events/hero';
         if (!$dryRun) {
             Storage::disk('public')->makeDirectory($directory);
         }
@@ -104,12 +104,13 @@ class DownloadAmbiletImagesCommand extends Command
                 // Store the image
                 Storage::disk('public')->put($relativePath, $response->body());
 
-                // Update the event poster_url to local path
+                // Move to hero_image_url (landscape) and clear poster_url (was just a temp holder)
                 DB::table('events')
                     ->where('id', $event->id)
                     ->update([
-                        'poster_url' => $relativePath,
-                        'updated_at' => now(),
+                        'hero_image_url' => $relativePath,
+                        'poster_url'     => null,
+                        'updated_at'     => now(),
                     ]);
 
                 $downloaded++;
