@@ -893,8 +893,9 @@ class EventsController extends BaseController
             })
             ->first();
 
+        // Fallback: search external tickets if not found in main tickets table
         if (!$ticket) {
-            return $this->error('Ticket not found or invalid', 404);
+            return $this->checkInExternalTicket($barcode, $eventIds->toArray(), $organizer);
         }
 
         if ($ticket->status === 'cancelled' || $ticket->status === 'refunded') {
@@ -990,8 +991,9 @@ class EventsController extends BaseController
             })
             ->first();
 
+        // Fallback: search external tickets if not found in main tickets table
         if (!$ticket) {
-            return $this->error('Ticket not found or invalid', 404);
+            return $this->checkInExternalTicket($barcode, [$event->id], $organizer);
         }
 
         if ($ticket->status === 'cancelled' || $ticket->status === 'refunded') {
@@ -1084,8 +1086,20 @@ class EventsController extends BaseController
             })
             ->first();
 
+        // Fallback: check external tickets
         if (!$ticket) {
-            return $this->error('Ticket not found', 404);
+            $extTicket = \App\Models\ExternalTicket::where('barcode', $barcode)
+                ->where('event_id', $event->id)
+                ->first();
+
+            if (!$extTicket) {
+                return $this->error('Ticket not found', 404);
+            }
+            if (!$extTicket->checked_in_at) {
+                return $this->error('Ticket is not checked in', 400);
+            }
+            $extTicket->update(['checked_in_at' => null, 'checked_in_by' => null]);
+            return $this->success(null, 'Check-in undone');
         }
 
         if (!$ticket->checked_in_at) {
@@ -1098,6 +1112,71 @@ class EventsController extends BaseController
         ]);
 
         return $this->success(null, 'Check-in undone');
+    }
+
+    /**
+     * Check in an external ticket (imported from other ticketing platforms).
+     * Used as a fallback when ticket is not found in the main tickets table.
+     */
+    protected function checkInExternalTicket(string $barcode, array $eventIds, $organizer): JsonResponse
+    {
+        $extTicket = \App\Models\ExternalTicket::where('barcode', $barcode)
+            ->whereIn('event_id', $eventIds)
+            ->first();
+
+        if (!$extTicket) {
+            return $this->error('Ticket not found or invalid', 404);
+        }
+
+        if ($extTicket->status === 'cancelled') {
+            return $this->error('This ticket has been cancelled', 400);
+        }
+
+        if ($extTicket->checked_in_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ticket already checked in at ' . $extTicket->checked_in_at->format('Y-m-d H:i:s'),
+                'ticket' => [
+                    'barcode' => $extTicket->barcode,
+                    'ticket_type' => $extTicket->ticket_type_name,
+                    'checked_in_at' => $extTicket->checked_in_at->toIso8601String(),
+                    'checked_in_by' => $extTicket->checked_in_by,
+                    'attendee_name' => $extTicket->attendee_name,
+                ],
+                'customer' => [
+                    'name' => $extTicket->attendee_name,
+                ],
+                'order' => [
+                    'source' => 'external',
+                    'customer_name' => $extTicket->attendee_name,
+                ],
+            ], 400);
+        }
+
+        $extTicket->update([
+            'checked_in_at' => now(),
+            'checked_in_by' => $organizer->contact_name ?? $organizer->name,
+            'status' => 'used',
+        ]);
+
+        return $this->success([
+            'ticket' => [
+                'id' => $extTicket->id,
+                'barcode' => $extTicket->barcode,
+                'ticket_type' => $extTicket->ticket_type_name,
+                'status' => 'used',
+                'checked_in_at' => $extTicket->checked_in_at->toIso8601String(),
+                'attendee_name' => $extTicket->attendee_name,
+            ],
+            'customer' => [
+                'name' => $extTicket->attendee_name,
+                'email' => $extTicket->attendee_email,
+            ],
+            'order' => [
+                'source' => 'external',
+                'customer_name' => $extTicket->attendee_name,
+            ],
+        ], 'Ticket checked in successfully');
     }
 
     /**

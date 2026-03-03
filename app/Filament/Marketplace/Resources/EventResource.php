@@ -2927,6 +2927,7 @@ class EventResource extends Resource
             'analytics' => Pages\EventAnalytics::route('/{record}/analytics'),
             'activity-log' => Pages\EventActivityLog::route('/{record}/activity-log'),
             'view-guest' => Pages\ViewGuestEvent::route('/{record}/view'),
+            'import-external-tickets' => Pages\ImportExternalTickets::route('/{record}/external-tickets'),
         ];
     }
 }

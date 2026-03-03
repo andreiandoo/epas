@@ -107,6 +107,14 @@ class EditEvent extends EditRecord
                 ->url(fn () => route('filament.marketplace.pages.invitations') . '?event=' . $this->record->id);
         }
 
+        // External tickets import
+        $extCount = \App\Models\ExternalTicket::where('event_id', $this->record->id)->count();
+        $actions[] = Actions\Action::make('external_tickets')
+            ->label('Bilete Externe' . ($extCount > 0 ? " ({$extCount})" : ''))
+            ->icon('heroicon-o-ticket')
+            ->color('gray')
+            ->url(fn () => EventResource::getUrl('import-external-tickets', ['record' => $this->record]));
+
         // Upload Images action - modal-based to avoid Livewire re-render issues
         $actions[] = $this->getUploadImagesAction();
 
