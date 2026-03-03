@@ -50,6 +50,33 @@ $judete = [
             </div>
 
             <div class="space-y-6">
+                <!-- Avatar Upload -->
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <h2 class="section-title">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        Fotografie profil
+                    </h2>
+
+                    <div class="flex items-center gap-5">
+                        <div class="relative group">
+                            <div id="avatarPreview" class="flex items-center justify-center overflow-hidden text-2xl font-bold text-white rounded-full w-20 h-20 bg-primary" style="min-width:80px">
+                                <span id="avatarInitials"></span>
+                            </div>
+                            <label for="avatarInput" class="absolute inset-0 flex items-center justify-center transition-opacity bg-black/50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            </label>
+                            <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/jpg,image/webp" class="hidden">
+                        </div>
+                        <div>
+                            <p class="font-medium text-secondary">Schimbă fotografia</p>
+                            <p class="text-sm text-muted">JPG, PNG sau WebP. Max 2MB.</p>
+                            <p id="avatarStatus" class="hidden mt-1 text-sm text-primary"></p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Profile Information -->
                 <div class="p-6 bg-white border rounded-2xl border-border">
                     <h2 class="section-title">
@@ -107,7 +134,7 @@ $judete = [
                         </div>
 
                         <div class="flex justify-end mt-4">
-                            <button type="submit" class="btn btn-primary" id="saveProfileBtn">
+                            <button type="submit" class="btn btn-primary bg-primary" id="saveProfileBtn">
                                 Salvează modificările
                             </button>
                         </div>
@@ -141,7 +168,7 @@ $judete = [
                         </div>
 
                         <div class="flex justify-end mt-4">
-                            <button type="submit" class="btn btn-primary" id="changePasswordBtn">
+                            <button type="submit" class="btn btn-primary bg-primary" id="changePasswordBtn">
                                 Schimbă parola
                             </button>
                         </div>
@@ -190,7 +217,7 @@ $judete = [
                         </div>
 
                         <div class="flex justify-end mt-4">
-                            <button type="submit" class="btn btn-primary" id="saveBillingBtn">
+                            <button type="submit" class="btn btn-primary bg-primary" id="saveBillingBtn">
                                 Salvează adresa
                             </button>
                         </div>
@@ -222,6 +249,32 @@ $judete = [
                             </select>
                             <p class="hint">Moneda este determinată automat</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Privacy -->
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <h2 class="section-title">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        Confidențialitate
+                    </h2>
+
+                    <div class="space-y-4">
+                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
+                            <div>
+                                <p class="font-medium text-secondary">Profil public</p>
+                                <p class="text-sm text-muted">Permite altor utilizatori să vadă pagina ta de profil cu gusturile muzicale și statisticile tale</p>
+                            </div>
+                            <input type="checkbox" class="flex-none toggle" id="profile-public">
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end mt-4">
+                        <button onclick="SettingsPage.savePrivacySettings()" class="btn btn-primary bg-primary" id="savePrivacyBtn">
+                            Salvează
+                        </button>
                     </div>
                 </div>
 
@@ -285,7 +338,7 @@ $judete = [
                     </div>
 
                     <div class="flex justify-end mt-4">
-                        <button onclick="saveNotificationSettings()" class="btn btn-primary" id="saveNotificationsBtn">
+                        <button onclick="saveNotificationSettings()" class="btn btn-primary bg-primary" id="saveNotificationsBtn">
                             Salvează preferințele
                         </button>
                     </div>
@@ -400,6 +453,13 @@ const SettingsPage = {
         document.getElementById('city').value = c.city || '';
         document.getElementById('language').value = c.locale || 'ro';
 
+        // Avatar
+        this.updateAvatarPreview();
+
+        // Privacy
+        const profilePublic = c.settings?.profile_public ?? false;
+        document.getElementById('profile-public').checked = profilePublic;
+
         // Load billing address
         const billing = c.settings?.billing_address || {};
         document.getElementById('billing_address').value = billing.address || c.address || '';
@@ -410,6 +470,20 @@ const SettingsPage = {
 
         // Load notification preferences from customer settings
         this.loadNotificationSettings();
+    },
+
+    updateAvatarPreview() {
+        const c = this.customer;
+        const preview = document.getElementById('avatarPreview');
+        const initials = document.getElementById('avatarInitials');
+
+        if (c?.avatar) {
+            preview.innerHTML = `<img src="${c.avatar}" alt="Avatar" class="object-cover w-full h-full">`;
+        } else {
+            const fi = (c?.first_name || '?')[0].toUpperCase();
+            const li = (c?.last_name || '')[0]?.toUpperCase() || '';
+            initials.textContent = fi + li;
+        }
     },
 
     loadNotificationSettings() {
@@ -465,6 +539,65 @@ const SettingsPage = {
         document.getElementById('new_password').addEventListener('input', (e) => {
             this.updatePasswordStrength(e.target.value);
         });
+
+        // Avatar upload
+        document.getElementById('avatarInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) await this.uploadAvatar(file);
+        });
+    },
+
+    async uploadAvatar(file) {
+        if (file.size > 2 * 1024 * 1024) {
+            AmbiletNotifications.error('Imaginea trebuie să fie mai mică de 2MB');
+            return;
+        }
+
+        const status = document.getElementById('avatarStatus');
+        status.textContent = 'Se încarcă...';
+        status.classList.remove('hidden');
+
+        try {
+            const response = await AmbiletAPI.customer.uploadAvatar(file);
+            if (response.success || response.data?.avatar_url) {
+                if (response.data?.customer) {
+                    this.customer = response.data.customer;
+                }
+                this.updateAvatarPreview();
+                AmbiletNotifications.success('Fotografia a fost actualizată!');
+                status.classList.add('hidden');
+            }
+        } catch (error) {
+            console.error('Avatar upload error:', error);
+            AmbiletNotifications.error(error.message || 'Eroare la încărcarea fotografiei');
+            status.textContent = 'Eroare la încărcare';
+        }
+    },
+
+    async savePrivacySettings() {
+        const btn = document.getElementById('savePrivacyBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="loading-spinner"></span> Se salvează...';
+        btn.disabled = true;
+
+        try {
+            const profilePublic = document.getElementById('profile-public').checked;
+            const response = await AmbiletAPI.put('/customer/settings', {
+                profile_public: profilePublic
+            });
+
+            if (response.success) {
+                AmbiletNotifications.success('Setările de confidențialitate au fost salvate!');
+            } else {
+                AmbiletNotifications.error(response.message || 'Eroare la salvare');
+            }
+        } catch (error) {
+            console.error('Save privacy settings error:', error);
+            AmbiletNotifications.error(error.message || 'Eroare la salvare');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
     },
 
     updatePasswordStrength(password) {
