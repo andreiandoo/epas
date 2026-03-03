@@ -240,6 +240,7 @@ class ArtistResource extends Resource
                         ->icon('heroicon-o-link')
                         ->collapsible()
                         ->collapsed()
+                        ->persistCollapsed()
                         ->schema([
                             Forms\Components\TextInput::make('website')
                                 ->label('Website')
@@ -289,6 +290,7 @@ class ArtistResource extends Resource
                         ->icon('heroicon-o-play')
                         ->collapsible()
                         ->collapsed()
+                        ->persistCollapsed()
                         ->schema([
                             Forms\Components\Repeater::make('youtube_videos')
                                 ->hiddenLabel()
@@ -315,7 +317,7 @@ class ArtistResource extends Resource
                         // CONTACT
                         SC\Section::make('Contact')
                             ->icon('heroicon-o-envelope')
-                            ->collapsible()->collapsed()
+                            ->collapsible()->collapsed()->persistCollapsed()
                             ->schema([
                                 Forms\Components\TextInput::make('email')
                                     ->label('Email')
@@ -331,7 +333,7 @@ class ArtistResource extends Resource
                         // MANAGER
                         SC\Section::make('Manager')
                             ->icon('heroicon-o-user')
-                            ->collapsible()->collapsed()
+                            ->collapsible()->collapsed()->persistCollapsed()
                             ->schema([
                                 Forms\Components\TextInput::make('manager_first_name')
                                     ->label('Prenume'),
@@ -348,7 +350,7 @@ class ArtistResource extends Resource
                     SC\Grid::make(2)->schema([
                         SC\Section::make('Agent Booking')
                             ->icon('heroicon-o-briefcase')
-                            ->collapsible()->collapsed()
+                            ->collapsible()->collapsed()->persistCollapsed()
                             ->schema([
                                 Forms\Components\TextInput::make('agent_first_name')
                                     ->label('Prenume'),
@@ -363,7 +365,7 @@ class ArtistResource extends Resource
                         // BOOKING AGENCY
                         SC\Section::make('Agenție de Booking')
                             ->icon('heroicon-o-building-office')
-                            ->collapsible()->collapsed()
+                            ->collapsible()->collapsed()->persistCollapsed()
                             ->schema([
                                 Forms\Components\TextInput::make('booking_agency.name')
                                     ->label('Nume Agenție')
@@ -386,7 +388,7 @@ class ArtistResource extends Resource
                     SC\Section::make('Note interne')
                         ->description('Note interne despre acest artist (nu sunt vizibile public)')
                         ->icon('heroicon-o-lock-closed')
-                        ->collapsible()->collapsed()
+                        ->collapsible()->collapsed()->persistCollapsed()
                         ->schema([
                             Forms\Components\Textarea::make('partner_notes')
                                 ->label('Note')
