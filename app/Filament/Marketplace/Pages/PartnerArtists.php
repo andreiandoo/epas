@@ -172,12 +172,14 @@ class PartnerArtists extends Page implements HasForms, HasTable
                             ->label('Note parteneriat')
                             ->rows(3),
                     ])
-                    ->fillForm(fn (Artist $record) use ($marketplace): array => [
-                        'artist_name' => static::getArtistName($record) . ($record->city ? ' - ' . $record->city : ''),
-                        'partner_notes' => $record->marketplaceClients
-                            ->where('id', $marketplace?->id)
-                            ->first()?->pivot?->partner_notes,
-                    ])
+                    ->fillForm(function (Artist $record) use ($marketplace): array {
+                        return [
+                            'artist_name' => static::getArtistName($record) . ($record->city ? ' - ' . $record->city : ''),
+                            'partner_notes' => $record->marketplaceClients
+                                ->where('id', $marketplace?->id)
+                                ->first()?->pivot?->partner_notes,
+                        ];
+                    })
                     ->action(function (Artist $record, array $data) use ($marketplace) {
                         $record->marketplaceClients()->updateExistingPivot($marketplace->id, [
                             'partner_notes' => $data['partner_notes'],
