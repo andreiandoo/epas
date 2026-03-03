@@ -31,6 +31,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
         100% { transform: translateX(100%) rotate(30deg); }
     }
     .tab-btn.active { background: white; color: #A51C30; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
 </style>
 
 <?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
@@ -81,7 +83,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <!-- Tabs -->
-            <div class="flex gap-2 p-1 mb-6 overflow-x-auto bg-surface rounded-xl w-fit">
+            <div class="flex gap-2 p-1 mb-6 overflow-x-auto bg-surface rounded-xl max-w-full scrollbar-hide">
                 <button onclick="showTab('rewards')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn active whitespace-nowrap" id="tab-btn-rewards">
                     Recompense
                 </button>

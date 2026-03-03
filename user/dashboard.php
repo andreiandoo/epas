@@ -353,10 +353,10 @@ const UserDashboard = {
     },
 
     async loadUpcomingEvents() {
+        // Try dedicated upcoming events endpoint first
         try {
             const response = await AmbiletAPI.customer.getUpcomingEvents(3);
             if (response.success && response.data) {
-                // API may return data directly as array or nested under upcoming_events
                 const events = response.data.upcoming_events || response.data;
                 if (Array.isArray(events) && events.length) {
                     this.renderUpcomingEvents(events);
@@ -364,8 +364,49 @@ const UserDashboard = {
                 }
             }
         } catch (e) {
-            console.warn('Failed to load upcoming events:', e.message);
+            console.warn('Upcoming events endpoint failed:', e.message);
         }
+
+        // Fallback: try loading upcoming tickets
+        try {
+            const ticketsRes = await AmbiletAPI.customer.getAllTickets('upcoming', { limit: 3 });
+            if (ticketsRes.success && ticketsRes.data) {
+                const tickets = ticketsRes.data?.data || ticketsRes.data;
+                if (Array.isArray(tickets) && tickets.length) {
+                    // Transform tickets to event format for rendering
+                    const events = tickets.map(t => ({
+                        event: {
+                            id: t.event?.id || t.event_id,
+                            name: t.event?.name || t.event_name || '',
+                            slug: t.event?.slug || t.event_slug || '',
+                            date: t.event?.start_date || t.event?.starts_at || t.event_date || '',
+                            date_formatted: t.event?.date_formatted || '',
+                            time: t.event?.start_time || '',
+                            venue: t.event?.venue_name || t.venue_name || '',
+                            city: t.event?.venue_city || t.city || '',
+                            image: t.event?.image || t.event_image || '',
+                            days_until: t.event?.days_until,
+                        },
+                        tickets_count: t.quantity || 1,
+                    }));
+                    // Deduplicate by event id
+                    const seen = new Set();
+                    const unique = events.filter(e => {
+                        const key = e.event.id || e.event.slug;
+                        if (seen.has(key)) return false;
+                        seen.add(key);
+                        return true;
+                    });
+                    if (unique.length) {
+                        this.renderUpcomingEvents(unique);
+                        return;
+                    }
+                }
+            }
+        } catch (e2) {
+            console.warn('Tickets fallback failed:', e2.message);
+        }
+
         this.renderUpcomingEvents([]);
     },
 
