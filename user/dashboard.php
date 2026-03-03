@@ -63,7 +63,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <p id="stat-events" class="text-3xl font-bold lg:text-3xl text-secondary">0</p>
                 <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
             </div>
-            <p class="text-xs lg:text-sm text-muted text-center">Evenimente participat</p>
+            <p class="text-xs text-center lg:text-sm text-muted">Evenimente participat</p>
         </div>
 
         <div class="p-4 bg-white border rounded-xl lg:rounded-2xl lg:p-5 border-border">
@@ -71,7 +71,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <p id="stat-points" class="text-3xl font-bold lg:text-3xl text-secondary">0</p>
                 <svg class="w-6 h-6 text-accent" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
             </div>
-            <p class="text-xs lg:text-sm text-muted text-center">Puncte acumulate</p>
+            <p class="text-xs text-center lg:text-sm text-muted">Puncte acumulate</p>
         </div>
 
         <div class="p-4 bg-white border rounded-xl lg:rounded-2xl lg:p-5 border-border">
@@ -79,7 +79,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <p id="stat-badges" class="text-3xl font-bold lg:text-3xl text-secondary">0</p>
                 <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
             </div>
-            <p class="text-xs lg:text-sm text-muted text-center">Badge-uri obtinute</p>
+            <p class="text-xs text-center lg:text-sm text-muted">Badge-uri obtinute</p>
         </div>
 
         <div class="p-4 bg-white border rounded-xl lg:rounded-2xl lg:p-5 border-border">
@@ -87,11 +87,11 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <p id="stat-favorites" class="text-3xl font-bold lg:text-3xl text-secondary">0</p>
                 <svg class="w-6 h-6 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
             </div>
-            <p class="text-xs lg:text-sm text-muted text-center">Evenimente favorite</p>
+            <p class="text-xs text-center lg:text-sm text-muted">Evenimente favorite</p>
         </div>
     </div>
 
-    <div class="grid gap-6 lg:grid-cols-5">
+    <div class="grid gap-6 mobile:grid-cols-1 lg:grid-cols-5">
         <!-- Left Column -->
         <div class="space-y-6 lg:col-span-3">
             <!-- Upcoming Events -->
@@ -112,8 +112,33 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 </div>
             </div>
 
+            <!-- Quick Actions -->
+            <div class="hidden p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6 mobile:block">
+                <h2 class="mb-4 font-bold text-secondary">Actiuni rapide</h2>
+                <div class="space-y-2">
+                    <a href="/cont/bilete" class="flex items-center gap-3 p-3 transition-colors bg-surface rounded-xl hover:bg-primary/10 group">
+                        <div class="flex items-center justify-center w-10 h-10 transition-colors rounded-lg bg-primary/10 group-hover:bg-primary">
+                            <svg class="w-5 h-5 text-primary group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                        </div>
+                        <span class="text-sm font-medium text-secondary">Descarca biletele</span>
+                    </a>
+                    <a href="/evenimente" class="flex items-center gap-3 p-3 transition-colors bg-surface rounded-xl hover:bg-primary/10 group">
+                        <div class="flex items-center justify-center w-10 h-10 transition-colors rounded-lg bg-success/10 group-hover:bg-success">
+                            <svg class="w-5 h-5 text-success group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </div>
+                        <span class="text-sm font-medium text-secondary">Descopera evenimente</span>
+                    </a>
+                    <a href="/cont/puncte" class="flex items-center gap-3 p-3 transition-colors bg-surface rounded-xl hover:bg-primary/10 group">
+                        <div class="flex items-center justify-center w-10 h-10 transition-colors rounded-lg bg-accent/10 group-hover:bg-accent">
+                            <svg class="w-5 h-5 text-accent group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
+                        </div>
+                        <span class="text-sm font-medium text-secondary">Foloseste punctele</span>
+                    </a>
+                </div>
+            </div>
+
             <!-- Recommended Events -->
-            <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
+            <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6 mobile:p-0 mobile:border-none mobile:rounded-none">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="font-bold text-secondary">Recomandate pentru tine</h2>
                     <a href="/evenimente" class="text-sm font-medium text-primary">Vezi toate</a>
@@ -121,7 +146,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <div id="recommended-events" class="grid grid-cols-2 gap-4 lg:grid-cols-3 md:gap-5">
                     <?php for ($i = 0; $i < 6; $i++): ?>
                     <div class="overflow-hidden bg-white border rounded-xl border-border">
-                        <div class="skeleton h-40 mobile:h-64"></div>
+                        <div class="h-40 skeleton mobile:h-64"></div>
                         <div class="p-3 space-y-2">
                             <div class="w-3/4 h-4 bg-gray-200 rounded skeleton"></div>
                             <div class="w-1/2 h-3 bg-gray-200 rounded skeleton"></div>
@@ -133,7 +158,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
         </div>
 
         <!-- Right Column -->
-        <div class="space-y-6 lg:col-span-2">
+        <div class="space-y-6 lg:col-span-2 mobile:hidden">
             <!-- Quick Actions -->
             <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
                 <h2 class="mb-4 font-bold text-secondary">Actiuni rapide</h2>
@@ -382,7 +407,7 @@ const UserDashboard = {
                 '</div>' +
                 '<div class="flex-1 min-w-0">' +
                 '<span class="px-2 py-0.5 ' + daysClass + ' text-xs font-semibold rounded">' + daysText + '</span>' +
-                '<h3 class="mt-1 font-semibold text-secondary truncate">' + this.escapeHtml(eventName) + '</h3>' +
+                '<h3 class="mt-1 font-semibold truncate text-secondary">' + this.escapeHtml(eventName) + '</h3>' +
                 '<p class="mt-1 text-sm text-muted">' + dateStr + (timeStr ? ', ' + timeStr : '') + '</p>' +
                 '<p class="mt-1 text-xs text-muted">' + this.escapeHtml(venueName) + (cityName ? ', ' + this.escapeHtml(cityName) : '') + '</p>' +
                 (ticketsCount ? '<div class="flex items-center gap-2 mt-2"><span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded">' + ticketsCount + ' bilete</span></div>' : '') +
@@ -480,8 +505,8 @@ const UserDashboard = {
             return '<div class="flex items-center gap-3 p-3 bg-surface rounded-xl">' +
                 '<div class="flex items-center justify-center flex-shrink-0 w-12 h-12 text-2xl bg-gradient-to-br ' + gradient + ' rounded-xl">' + this.escapeHtml(icon) + '</div>' +
                 '<div class="min-w-0">' +
-                '<p class="text-sm font-semibold text-secondary truncate">' + this.escapeHtml(name) + '</p>' +
-                (desc ? '<p class="text-xs text-muted truncate">' + this.escapeHtml(desc) + '</p>' : '') +
+                '<p class="text-sm font-semibold truncate text-secondary">' + this.escapeHtml(name) + '</p>' +
+                (desc ? '<p class="text-xs truncate text-muted">' + this.escapeHtml(desc) + '</p>' : '') +
                 '</div>' +
                 '</div>';
         }).join('');
