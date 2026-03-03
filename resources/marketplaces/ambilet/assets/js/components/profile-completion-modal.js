@@ -12,15 +12,13 @@ const ProfileCompletionModal = {
     customer: null,
     selectedCategories: [],
     selectedGenres: [],
+    mode: 'profile', // 'profile' = full completion, 'interests_only' = just interests
 
     /**
      * Initialize — auto-triggers after delay if conditions met
      */
     async init() {
         if (!AmbiletAuth?.isAuthenticated()) return;
-
-        // Don't show if already dismissed this session
-        if (sessionStorage.getItem('pcm_dismissed')) return;
 
         // Load customer data first
         try {
@@ -29,23 +27,49 @@ const ProfileCompletionModal = {
             this.customer = res.data.customer;
         } catch { return; }
 
-        // Check completion - skip if >= 80%
         const completion = this.customer.profile_completion;
-        if (!completion || completion.percentage >= 80) return;
+        if (!completion) return;
 
-        // Build steps from missing fields
-        this.buildSteps();
+        const hasInterests = !!completion.fields?.interests;
+
+        // Fully complete — nothing to show
+        if (completion.percentage >= 80 && hasInterests) return;
+
+        if (completion.percentage < 80) {
+            // Standard profile completion flow
+            if (sessionStorage.getItem('pcm_dismissed')) return;
+            this.mode = 'profile';
+            this.buildSteps();
+        } else {
+            // Interests-only mode — profile is done but interests missing
+            // Gentler: max once per 7 days, not every session
+            const lastDismissed = localStorage.getItem('pcm_interests_dismissed_at');
+            if (lastDismissed && (Date.now() - parseInt(lastDismissed)) < 7 * 24 * 60 * 60 * 1000) return;
+            if (sessionStorage.getItem('pcm_interests_dismissed')) return;
+            this.mode = 'interests_only';
+            this.steps = [{
+                id: 'interests',
+                title: 'Personalizează-ți experiența',
+                subtitle: 'Spune-ne ce te interesează și îți vom recomanda evenimentele potrivite',
+                icon: '✨',
+            }];
+        }
+
         if (this.steps.length === 0) return;
 
-        // Auto show after 5s delay
-        setTimeout(() => this.show(), 5000);
+        // Longer delay for interests-only (less urgent)
+        const delay = this.mode === 'interests_only' ? 8000 : 5000;
+        setTimeout(() => this.show(), delay);
     },
 
     /**
-     * Trigger after purchase (bypasses session flag, shorter delay)
+     * Trigger after purchase (bypasses session/localStorage flags, shorter delay)
+     * Post-purchase = best moment to ask for interests (customer is engaged)
      */
     triggerAfterPurchase() {
         sessionStorage.removeItem('pcm_dismissed');
+        sessionStorage.removeItem('pcm_interests_dismissed');
+        localStorage.removeItem('pcm_interests_dismissed_at');
         setTimeout(async () => {
             if (!AmbiletAuth?.isAuthenticated()) return;
             try {
@@ -53,8 +77,23 @@ const ProfileCompletionModal = {
                 if (!res.success || !res.data?.customer) return;
                 this.customer = res.data.customer;
                 const completion = this.customer.profile_completion;
-                if (!completion || completion.percentage >= 80) return;
-                this.buildSteps();
+                if (!completion) return;
+                const hasInterests = !!completion.fields?.interests;
+                if (completion.percentage >= 80 && hasInterests) return;
+
+                if (completion.percentage < 80) {
+                    this.mode = 'profile';
+                    this.buildSteps();
+                } else {
+                    this.mode = 'interests_only';
+                    this.steps = [{
+                        id: 'interests',
+                        title: 'Personalizează-ți experiența',
+                        subtitle: 'Tocmai ai cumpărat bilete! Spune-ne ce te mai interesează pentru recomandări mai bune.',
+                        icon: '✨',
+                    }];
+                }
+
                 if (this.steps.length === 0) return;
                 this.show();
             } catch {}
@@ -121,7 +160,12 @@ const ProfileCompletionModal = {
      */
     dismiss() {
         this.isOpen = false;
-        sessionStorage.setItem('pcm_dismissed', '1');
+        if (this.mode === 'interests_only') {
+            sessionStorage.setItem('pcm_interests_dismissed', '1');
+            localStorage.setItem('pcm_interests_dismissed_at', Date.now().toString());
+        } else {
+            sessionStorage.setItem('pcm_dismissed', '1');
+        }
         const el = document.getElementById('pcm-overlay');
         if (el) el.remove();
         document.body.style.overflow = '';
@@ -156,7 +200,7 @@ const ProfileCompletionModal = {
 
         const step = this.steps[this.currentStep];
         const totalSteps = this.steps.length;
-        const xpReward = 20;
+        const isInterestsOnly = this.mode === 'interests_only';
 
         const overlay = document.createElement('div');
         overlay.id = 'pcm-overlay';
@@ -165,6 +209,17 @@ const ProfileCompletionModal = {
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) this.dismiss();
         });
+
+        // Different incentive badge based on mode
+        const incentiveBadge = isInterestsOnly
+            ? `<div style="display:flex;align-items:center;gap:0.375rem;margin-top:0.75rem;padding:0.375rem 0.75rem;background:rgba(255,255,255,0.15);border-radius:2rem;width:fit-content;font-size:0.8125rem">
+                    <span>🎯</span>
+                    <span>Descoperă <strong>recomandări personalizate</strong></span>
+               </div>`
+            : `<div style="display:flex;align-items:center;gap:0.375rem;margin-top:0.75rem;padding:0.375rem 0.75rem;background:rgba(255,255,255,0.15);border-radius:2rem;width:fit-content;font-size:0.8125rem">
+                    <span>⚡</span>
+                    <span>Completează pentru <strong>+20 XP</strong></span>
+               </div>`;
 
         overlay.innerHTML = `
             <style>
@@ -183,18 +238,15 @@ const ProfileCompletionModal = {
                 .pcm-select:focus { border-color: #A51C30; box-shadow: 0 0 0 3px rgba(165,28,48,0.1); }
             </style>
             <div class="pcm-card">
-                <!-- Header with XP reward -->
-                <div style="background:linear-gradient(135deg,#A51C30 0%,#8B1728 100%);padding:1.25rem 1.5rem;color:white;position:relative">
+                <!-- Header -->
+                <div style="background:linear-gradient(135deg,${isInterestsOnly ? '#4F46E5 0%,#7C3AED 100%' : '#A51C30 0%,#8B1728 100%'});padding:1.25rem 1.5rem;color:white;position:relative">
                     <button onclick="ProfileCompletionModal.dismiss()" style="position:absolute;top:0.75rem;right:0.75rem;background:rgba(255,255,255,0.2);border:none;color:white;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem">&times;</button>
                     <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem">
                         <span style="font-size:1.25rem">${step.icon}</span>
                         <span style="font-weight:700;font-size:1.125rem">${step.title}</span>
                     </div>
                     <p style="font-size:0.8125rem;opacity:0.9">${step.subtitle}</p>
-                    <div style="display:flex;align-items:center;gap:0.375rem;margin-top:0.75rem;padding:0.375rem 0.75rem;background:rgba(255,255,255,0.15);border-radius:2rem;width:fit-content;font-size:0.8125rem">
-                        <span>⚡</span>
-                        <span>Completează pentru <strong>+${xpReward} XP</strong></span>
-                    </div>
+                    ${incentiveBadge}
                 </div>
 
                 <!-- Progress dots -->
@@ -487,25 +539,42 @@ const ProfileCompletionModal = {
     },
 
     /**
-     * Show success screen with XP reward
+     * Show success screen — different for profile vs interests_only
      */
     showSuccess() {
         const overlay = document.getElementById('pcm-overlay');
         if (!overlay) return;
 
+        const isInterestsOnly = this.mode === 'interests_only';
         const card = overlay.querySelector('.pcm-card');
-        card.innerHTML = `
-            <div style="padding:2.5rem 1.5rem;text-align:center">
-                <div style="font-size:3rem;margin-bottom:0.75rem">🎉</div>
-                <h3 style="font-size:1.25rem;font-weight:700;color:#1E293B;margin-bottom:0.5rem">Felicitări!</h3>
-                <p style="color:#64748B;font-size:0.9375rem;margin-bottom:1rem">Profilul tău a fost actualizat cu succes.</p>
-                <div style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.5rem;background:linear-gradient(135deg,#A51C30,#E8336D);color:white;border-radius:2rem;font-weight:700;font-size:1.125rem;margin-bottom:1.5rem">
-                    <span>⚡</span> +20 XP
+
+        if (isInterestsOnly) {
+            card.innerHTML = `
+                <div style="padding:2.5rem 1.5rem;text-align:center">
+                    <div style="font-size:3rem;margin-bottom:0.75rem">✨</div>
+                    <h3 style="font-size:1.25rem;font-weight:700;color:#1E293B;margin-bottom:0.5rem">Mulțumim!</h3>
+                    <p style="color:#64748B;font-size:0.9375rem;margin-bottom:1rem">Preferințele tale au fost salvate.</p>
+                    <div style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.5rem;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;border-radius:2rem;font-weight:600;font-size:0.9375rem;margin-bottom:1.5rem">
+                        <span>🎯</span> Recomandări personalizate activate
+                    </div>
+                    <p style="color:#94A3B8;font-size:0.8125rem;margin-bottom:1.5rem">De acum înainte vei vedea evenimentele care ți se potrivesc cel mai bine!</p>
+                    <button onclick="ProfileCompletionModal.dismiss()" style="padding:0.75rem 2rem;border-radius:0.75rem;border:none;background:#4F46E5;color:white;cursor:pointer;font-size:0.9375rem;font-weight:600;width:100%">Super!</button>
                 </div>
-                <p style="color:#94A3B8;font-size:0.8125rem;margin-bottom:1.5rem">Vei primi recomandări mai bune de acum înainte!</p>
-                <button onclick="ProfileCompletionModal.dismiss()" style="padding:0.75rem 2rem;border-radius:0.75rem;border:none;background:#A51C30;color:white;cursor:pointer;font-size:0.9375rem;font-weight:600;width:100%">Gata!</button>
-            </div>
-        `;
+            `;
+        } else {
+            card.innerHTML = `
+                <div style="padding:2.5rem 1.5rem;text-align:center">
+                    <div style="font-size:3rem;margin-bottom:0.75rem">🎉</div>
+                    <h3 style="font-size:1.25rem;font-weight:700;color:#1E293B;margin-bottom:0.5rem">Felicitări!</h3>
+                    <p style="color:#64748B;font-size:0.9375rem;margin-bottom:1rem">Profilul tău a fost actualizat cu succes.</p>
+                    <div style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.5rem;background:linear-gradient(135deg,#A51C30,#E8336D);color:white;border-radius:2rem;font-weight:700;font-size:1.125rem;margin-bottom:1.5rem">
+                        <span>⚡</span> +20 XP
+                    </div>
+                    <p style="color:#94A3B8;font-size:0.8125rem;margin-bottom:1.5rem">Vei primi recomandări mai bune de acum înainte!</p>
+                    <button onclick="ProfileCompletionModal.dismiss()" style="padding:0.75rem 2rem;border-radius:0.75rem;border:none;background:#A51C30;color:white;cursor:pointer;font-size:0.9375rem;font-weight:600;width:100%">Gata!</button>
+                </div>
+            `;
+        }
 
         // Auto dismiss after 8s
         setTimeout(() => this.dismiss(), 8000);
