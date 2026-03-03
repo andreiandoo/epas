@@ -18,7 +18,7 @@ class ImportExternalTickets extends Page
     use HasMarketplaceContext;
 
     protected static string $resource = EventResource::class;
-    protected static string $view = 'filament.marketplace.resources.event-resource.pages.import-external-tickets';
+    protected string $view = 'filament.marketplace.resources.event-resource.pages.import-external-tickets';
     protected static ?string $title = 'Import Bilete Externe';
 
     public $record;
