@@ -558,11 +558,14 @@ class CoreCustomerResource extends Resource
                     ->getStateUsing(fn ($record) => $record->email ?? 'Anonymous')
                     ->description(fn ($record) => $record->full_name)
                     ->searchable(query: function ($query, $search) {
-                        // Search by email hash or try to search by hashed email
+                        // Email is encrypted — only exact match via SHA256 hash works
                         $hash = hash('sha256', strtolower(trim($search)));
                         return $query->where(function ($q) use ($search, $hash) {
                             $q->where('email_hash', $hash)
-                              ->orWhere('email_hash', 'like', "%{$search}%");
+                              ->orWhere('uuid', 'like', "%{$search}%")
+                              ->orWhere('country_code', $search)
+                              ->orWhere('city', 'like', "%{$search}%")
+                              ->orWhere('customer_segment', 'like', "%{$search}%");
                         });
                     }),
 
