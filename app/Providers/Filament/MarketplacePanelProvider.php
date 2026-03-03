@@ -128,13 +128,14 @@ class MarketplacePanelProvider extends PanelProvider
             // Set dark mode as default if not already set
             ->renderHook('panels::head.end', fn () => '<script>if(!localStorage.getItem("theme")){localStorage.setItem("theme","dark");document.documentElement.classList.add("dark");}</script>')
 
-            // Preserve scroll position AND repeater collapse state during Livewire morph updates
+            // Preserve scroll position, section collapse state AND repeater collapse state during Livewire morph updates
             ->renderHook('panels::body.end', fn () => <<<'HTML'
             <script>
             document.addEventListener('livewire:init', () => {
                 let savedScrollY = null;
                 let isFormSubmit = false;
                 let savedCollapseStates = new Map();
+                let savedSectionStates = new Map();
 
                 Livewire.hook('commit.prepare', ({ component }) => {
                     savedScrollY = window.scrollY;
@@ -146,6 +147,17 @@ class MarketplacePanelProvider extends PanelProvider
                         const key = el.getAttribute('wire:key');
                         if (key) {
                             savedCollapseStates.set(key, el.classList.contains('fi-collapsed'));
+                        }
+                    });
+
+                    // Save collapse states of all collapsible sections
+                    savedSectionStates.clear();
+                    document.querySelectorAll('[x-data]').forEach(el => {
+                        if (el._x_dataStack && typeof el._x_dataStack[0]?.isCollapsed !== 'undefined') {
+                            const id = el.getAttribute('wire:key') || el.getAttribute('id') || el.dataset.epSection;
+                            if (id) {
+                                savedSectionStates.set(id, el._x_dataStack[0].isCollapsed);
+                            }
                         }
                     });
                 });
@@ -168,16 +180,14 @@ class MarketplacePanelProvider extends PanelProvider
                             }
                             savedScrollY = null;
 
-                            // Restore repeater collapse states
-                            if (!isFormSubmit && savedCollapseStates.size > 0) {
-                                document.querySelectorAll('.fi-fo-repeater-item').forEach(el => {
-                                    const key = el.getAttribute('wire:key');
-                                    if (key && savedCollapseStates.has(key)) {
-                                        const wasCollapsed = savedCollapseStates.get(key);
-                                        const isCollapsed = el.classList.contains('fi-collapsed');
-                                        if (wasCollapsed !== isCollapsed) {
-                                            // Toggle via Alpine's reactive data
-                                            if (el._x_dataStack) {
+                            if (!isFormSubmit) {
+                                // Restore repeater collapse states
+                                if (savedCollapseStates.size > 0) {
+                                    document.querySelectorAll('.fi-fo-repeater-item').forEach(el => {
+                                        const key = el.getAttribute('wire:key');
+                                        if (key && savedCollapseStates.has(key)) {
+                                            const wasCollapsed = savedCollapseStates.get(key);
+                                            if (el._x_dataStack && typeof el._x_dataStack[0]?.isCollapsed !== 'undefined') {
                                                 el._x_dataStack[0].isCollapsed = wasCollapsed;
                                             } else if (wasCollapsed) {
                                                 el.classList.add('fi-collapsed');
@@ -185,10 +195,21 @@ class MarketplacePanelProvider extends PanelProvider
                                                 el.classList.remove('fi-collapsed');
                                             }
                                         }
-                                    }
-                                });
+                                    });
+                                }
+
+                                // Restore section collapse states
+                                if (savedSectionStates.size > 0) {
+                                    document.querySelectorAll('[x-data]').forEach(el => {
+                                        const id = el.getAttribute('wire:key') || el.getAttribute('id') || el.dataset?.epSection;
+                                        if (id && savedSectionStates.has(id) && el._x_dataStack && typeof el._x_dataStack[0]?.isCollapsed !== 'undefined') {
+                                            el._x_dataStack[0].isCollapsed = savedSectionStates.get(id);
+                                        }
+                                    });
+                                }
                             }
                             savedCollapseStates.clear();
+                            savedSectionStates.clear();
                         });
                     });
                 });

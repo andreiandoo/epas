@@ -56,15 +56,6 @@ class PartnerArtists extends Page implements HasForms, HasTable
         return $table
             ->query(
                 Artist::query()
-                    ->where(function (Builder $query) use ($marketplace) {
-                        // Show artists that are NOT already associated with any marketplace
-                        $query->whereNull('marketplace_client_id')
-                            // Or show artists that belong to this marketplace as partners
-                            ->orWhere(function (Builder $q) use ($marketplace) {
-                                $q->where('marketplace_client_id', $marketplace?->id)
-                                    ->where('is_partner', true);
-                            });
-                    })
             )
             ->searchable()
             ->searchPlaceholder('Caută artiști...')
@@ -99,17 +90,13 @@ class PartnerArtists extends Page implements HasForms, HasTable
                     ->trueLabel('Parteneri')
                     ->falseLabel('Disponibili')
                     ->queries(
-                        true: fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id),
-                        false: fn (Builder $query) => $query->whereNull('marketplace_client_id'),
+                        true: fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id)->where('is_partner', true),
+                        false: fn (Builder $query) => $query->where(fn ($q) => $q->whereNull('marketplace_client_id')->orWhere('marketplace_client_id', '!=', $marketplace?->id)),
                         blank: fn (Builder $query) => $query,
                     ),
                 Tables\Filters\SelectFilter::make('city')
                     ->label('Oraș')
-                    ->options(fn () => Artist::where(function (Builder $q) use ($marketplace) {
-                            $q->whereNull('marketplace_client_id')
-                                ->orWhere('marketplace_client_id', $marketplace?->id);
-                        })
-                        ->whereNotNull('city')
+                    ->options(fn () => Artist::whereNotNull('city')
                         ->where('city', '!=', '')
                         ->distinct()
                         ->pluck('city', 'city')

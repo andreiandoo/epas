@@ -88,11 +88,7 @@ class ArtistResource extends Resource
                                             return '';
                                         }
 
-                                        $artists = Artist::where('name', 'LIKE', "%{$name}%")
-                                            ->where(function ($q) use ($marketplace) {
-                                                $q->whereNull('marketplace_client_id')
-                                                    ->orWhere('marketplace_client_id', $marketplace?->id);
-                                            })
+                                        $artists = Artist::whereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($name) . '%'])
                                             ->limit(5)
                                             ->get();
 
