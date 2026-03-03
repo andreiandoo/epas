@@ -448,7 +448,7 @@ require_once __DIR__ . '/includes/head.php';
         </div>
     </section>
 
-    <div class="px-4 py-8 mx-auto max-w-7xl mobile:p-0">
+    <div class="px-4 py-8 mx-auto max-w-7xl mobile:px-0 mobile:py-6 mobile:bg-slate-200">
         <!-- Related Events -->
         <section class="mt-8 mobile:px-4 mobile:mb-8 mobile:mt-18" id="related-events-section" style="display:none;">
             <div class="flex items-center justify-between mb-8">
