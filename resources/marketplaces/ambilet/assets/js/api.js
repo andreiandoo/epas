@@ -92,6 +92,7 @@ const AmbiletAPI = {
         if (endpoint === '/customer/settings') return 'customer.settings';
         if (endpoint === '/customer/avatar') return 'customer.avatar';
         if (endpoint === '/customer/profile-data') return 'customer.profile-data';
+        if (endpoint === '/customer/smart-suggestions') return 'customer.smart-suggestions';
         if (endpoint === '/customer/forgot-password') return 'customer.forgot-password';
         if (endpoint === '/customer/reset-password') return 'customer.reset-password';
         if (endpoint === '/customer/verify-email') return 'customer.verify-email';
@@ -227,6 +228,9 @@ const AmbiletAPI = {
         // Events endpoints (match /events but not /marketplace-events which is handled above)
         if (endpoint.match(/^\/events\/[a-z0-9-]+$/i)) return 'event';
         if (endpoint.startsWith('/events')) return 'events';
+
+        // Event types endpoint (global taxonomy)
+        if (endpoint === '/event-types') return 'event-types';
 
         // Event categories endpoint
         if (endpoint.includes('event-categories')) return 'event-categories';
@@ -683,6 +687,24 @@ const AmbiletAPI = {
     },
 
     /**
+     * Get all event types (global taxonomy, for profiling)
+     */
+    async getEventTypes() {
+        return this.get('/event-types');
+    },
+
+    /**
+     * Get event genres, optionally filtered by event type IDs
+     */
+    async getEventGenres(eventTypeIds = []) {
+        const params = {};
+        if (eventTypeIds.length > 0) {
+            params.event_type_ids = eventTypeIds.join(',');
+        }
+        return this.get('/event-genres', params);
+    },
+
+    /**
      * Get event cities
      */
     async getCities() {
@@ -910,6 +932,13 @@ const AmbiletAPI = {
          */
         async getProfileData() {
             return AmbiletAPI.get('/customer/profile-data');
+        },
+
+        /**
+         * Get smart suggestions for progressive profiling (cities, venues from history)
+         */
+        async getSmartSuggestions() {
+            return AmbiletAPI.get('/customer/smart-suggestions');
         },
 
         /**

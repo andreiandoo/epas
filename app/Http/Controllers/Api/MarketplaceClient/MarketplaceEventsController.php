@@ -1194,28 +1194,77 @@ class MarketplaceEventsController extends BaseController
     }
 
     /**
+     * Get all event types (global taxonomy, not marketplace-specific)
+     */
+    public function eventTypes(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+        $language = $client->language ?? 'ro';
+
+        $types = \App\Models\EventType::query()
+            ->whereNull('parent_id')
+            ->with('children')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($type) use ($language) {
+                $item = [
+                    'id' => $type->id,
+                    'name' => $type->getTranslation('name', $language),
+                    'slug' => $type->slug,
+                ];
+                if ($type->children->isNotEmpty()) {
+                    $item['children'] = $type->children->map(fn ($child) => [
+                        'id' => $child->id,
+                        'name' => $child->getTranslation('name', $language),
+                        'slug' => $child->slug,
+                    ])->values()->all();
+                }
+                return $item;
+            });
+
+        return $this->success([
+            'event_types' => $types,
+        ]);
+    }
+
+    /**
      * Get event genres with event counts
+     * Supports ?event_type_ids=1,2,3 to filter genres by allowed event types
      */
     public function genres(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
         $language = $client->language ?? 'ro';
 
+        $query = \App\Models\EventGenre::query();
+
+        // Filter by event type IDs if provided (uses event_type_event_genre pivot)
+        $eventTypeIds = $request->get('event_type_ids');
+        if ($eventTypeIds) {
+            $ids = is_array($eventTypeIds) ? $eventTypeIds : explode(',', $eventTypeIds);
+            $ids = array_filter(array_map('intval', $ids));
+            if (!empty($ids)) {
+                $query->whereHas('allowedEventTypes', function ($q) use ($ids) {
+                    $q->whereIn('event_types.id', $ids);
+                });
+            }
+        }
+
         // Get all event genres that have events in this marketplace
-        $genres = \App\Models\EventGenre::query()
-            ->whereHas('events', function ($query) use ($client) {
-                $query->where('marketplace_client_id', $client->id)
-                    ->where(function ($q) {
-                        $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+        $genres = $query
+            ->whereHas('events', function ($q) use ($client) {
+                $q->where('marketplace_client_id', $client->id)
+                    ->where(function ($q2) {
+                        $q2->whereNull('is_cancelled')->orWhere('is_cancelled', false);
                     });
-                $this->applyUpcomingFilter($query);
+                $this->applyUpcomingFilter($q);
             })
-            ->withCount(['events' => function ($query) use ($client) {
-                $query->where('marketplace_client_id', $client->id)
-                    ->where(function ($q) {
-                        $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            ->withCount(['events' => function ($q) use ($client) {
+                $q->where('marketplace_client_id', $client->id)
+                    ->where(function ($q2) {
+                        $q2->whereNull('is_cancelled')->orWhere('is_cancelled', false);
                     });
-                $this->applyUpcomingFilter($query);
+                $this->applyUpcomingFilter($q);
             }])
             ->orderBy('name')
             ->get()

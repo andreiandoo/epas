@@ -359,6 +359,17 @@ class AuthController extends BaseController
             'interests' => 'sometimes|array',
             'interests.event_categories' => 'sometimes|array',
             'interests.music_genres' => 'sometimes|array',
+            'interests.event_types' => 'sometimes|array',
+            'interests.event_types.*' => 'string|max:100',
+            'interests.event_genres' => 'sometimes|array',
+            'interests.event_genres.*' => 'string|max:100',
+            'interests.preferred_cities' => 'sometimes|array',
+            'interests.preferred_cities.*' => 'string|max:100',
+            'interests.preferred_venues' => 'sometimes|array',
+            'interests.preferred_venues.*' => 'integer',
+            'profiling' => 'sometimes|array',
+            'profiling.completed_steps' => 'sometimes|array',
+            'profiling.last_modal_at' => 'sometimes|nullable|string',
         ]);
 
         $updates = [];
@@ -395,6 +406,14 @@ class AuthController extends BaseController
             $currentSettings['interests'] = array_merge(
                 $currentSettings['interests'] ?? [],
                 $validated['interests']
+            );
+            $settingsChanged = true;
+        }
+
+        if (isset($validated['profiling'])) {
+            $currentSettings['profiling'] = array_merge(
+                $currentSettings['profiling'] ?? [],
+                $validated['profiling']
             );
             $settingsChanged = true;
         }

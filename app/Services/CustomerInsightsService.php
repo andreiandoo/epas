@@ -806,18 +806,95 @@ class CustomerInsightsService
         ];
     }
 
-    // ─── Weighted Profile (orders × 0.7 + favorites × 0.3) ──────
+    // ─── Personal Selections Profile (from settings.interests) ──
 
-    public function weightedProfile(float $orderWeight = 0.7, float $favWeight = 0.3): array
+    public function personalSelectionsProfile(): array
+    {
+        $empty = ['event_types' => [], 'event_genres' => [], 'artist_genres' => [], 'venue_types' => [], 'cities' => []];
+        if (! $this->marketplaceCustomer) {
+            return $empty;
+        }
+
+        $settings = $this->marketplaceCustomer->settings ?? [];
+        $interests = $settings['interests'] ?? [];
+
+        // Build counts from personal selections (each selection = 1 count)
+        $result = [];
+
+        // Event types (stored as slugs)
+        $eventTypeSlugs = $interests['event_types'] ?? [];
+        if (!empty($eventTypeSlugs)) {
+            $types = \App\Models\EventType::whereIn('slug', $eventTypeSlugs)->get();
+            $counts = [];
+            foreach ($types as $t) {
+                $label = $this->extractTranslatableName($t->name);
+                $counts[$label] = 1;
+            }
+            $result['event_types'] = $this->sortedCounts($counts);
+        } else {
+            $result['event_types'] = [];
+        }
+
+        // Event genres (stored as slugs)
+        $eventGenreSlugs = $interests['event_genres'] ?? $interests['music_genres'] ?? [];
+        if (!empty($eventGenreSlugs)) {
+            $genres = \App\Models\EventGenre::whereIn('slug', $eventGenreSlugs)->get();
+            $counts = [];
+            foreach ($genres as $g) {
+                $label = $this->extractTranslatableName($g->name);
+                $counts[$label] = 1;
+            }
+            $result['event_genres'] = $this->sortedCounts($counts);
+            $result['artist_genres'] = $this->sortedCounts($counts); // same genres apply
+        } else {
+            $result['event_genres'] = [];
+            $result['artist_genres'] = [];
+        }
+
+        // Cities (stored as city names)
+        $cities = $interests['preferred_cities'] ?? [];
+        if (!empty($cities)) {
+            $counts = [];
+            foreach ($cities as $c) {
+                $counts[$c] = 1;
+            }
+            $result['cities'] = $this->sortedCounts($counts);
+        } else {
+            $result['cities'] = [];
+        }
+
+        // Venue types not directly selectable; derive from preferred venues
+        $venueIds = $interests['preferred_venues'] ?? [];
+        if (!empty($venueIds)) {
+            $venues = \App\Models\Venue::whereIn('id', $venueIds)->with('venueTypes')->get();
+            $counts = [];
+            foreach ($venues as $v) {
+                foreach ($v->venueTypes as $vt) {
+                    $label = $this->extractTranslatableName($vt->name);
+                    $counts[$label] = ($counts[$label] ?? 0) + 1;
+                }
+            }
+            $result['venue_types'] = $this->sortedCounts($counts);
+        } else {
+            $result['venue_types'] = [];
+        }
+
+        return $result;
+    }
+
+    // ─── Weighted Profile (orders × 0.5 + favorites × 0.3 + personal × 0.2) ──
+
+    public function weightedProfile(float $orderWeight = 0.5, float $favWeight = 0.3, float $personalWeight = 0.2): array
     {
         $favs = $this->favoritesProfile();
+        $personal = $this->personalSelectionsProfile();
 
         return [
-            'event_types' => $this->mergeWeighted($this->eventTypes(), $favs['event_types'], $orderWeight, $favWeight),
-            'event_genres' => $this->mergeWeighted($this->eventGenres(), $favs['event_genres'], $orderWeight, $favWeight),
-            'artist_genres' => $this->mergeWeighted($this->artistGenres(), $favs['artist_genres'], $orderWeight, $favWeight),
-            'venue_types' => $this->mergeWeighted($this->venueTypes(), $favs['venue_types'], $orderWeight, $favWeight),
-            'cities' => $this->mergeWeighted($this->preferredCities(), $favs['cities'], $orderWeight, $favWeight),
+            'event_types' => $this->mergeWeighted3($this->eventTypes(), $favs['event_types'], $personal['event_types'], $orderWeight, $favWeight, $personalWeight),
+            'event_genres' => $this->mergeWeighted3($this->eventGenres(), $favs['event_genres'], $personal['event_genres'], $orderWeight, $favWeight, $personalWeight),
+            'artist_genres' => $this->mergeWeighted3($this->artistGenres(), $favs['artist_genres'], $personal['artist_genres'], $orderWeight, $favWeight, $personalWeight),
+            'venue_types' => $this->mergeWeighted3($this->venueTypes(), $favs['venue_types'], $personal['venue_types'], $orderWeight, $favWeight, $personalWeight),
+            'cities' => $this->mergeWeighted3($this->preferredCities(), $favs['cities'], $personal['cities'], $orderWeight, $favWeight, $personalWeight),
         ];
     }
 
@@ -1058,9 +1135,16 @@ class CustomerInsightsService
         return $result;
     }
 
-    // ─── Helper: Merge Weighted ─────────────────────────────────
+    // ─── Helper: Merge Weighted (2 sources, legacy) ────────────
 
     protected function mergeWeighted(array $orderItems, array $favItems, float $ow, float $fw): array
+    {
+        return $this->mergeWeighted3($orderItems, $favItems, [], $ow, $fw, 0.0);
+    }
+
+    // ─── Helper: Merge Weighted (3 sources) ──────────────────────
+
+    protected function mergeWeighted3(array $orderItems, array $favItems, array $personalItems, float $ow, float $fw, float $pw): array
     {
         // Normalize to percentage maps
         $orderMap = [];
@@ -1071,21 +1155,28 @@ class CustomerInsightsService
         foreach ($favItems as $item) {
             $favMap[$item['label']] = ['pct' => $item['percentage'] ?? 0, 'count' => $item['count'] ?? 0];
         }
+        $personalMap = [];
+        foreach ($personalItems as $item) {
+            $personalMap[$item['label']] = ['pct' => $item['percentage'] ?? 0, 'count' => $item['count'] ?? 0];
+        }
 
         // All unique labels
-        $allLabels = array_unique(array_merge(array_keys($orderMap), array_keys($favMap)));
+        $allLabels = array_unique(array_merge(array_keys($orderMap), array_keys($favMap), array_keys($personalMap)));
         $merged = [];
         foreach ($allLabels as $label) {
             $oPct = $orderMap[$label]['pct'] ?? 0;
             $fPct = $favMap[$label]['pct'] ?? 0;
-            $weighted = round(($oPct * $ow) + ($fPct * $fw), 1);
+            $pPct = $personalMap[$label]['pct'] ?? 0;
+            $weighted = round(($oPct * $ow) + ($fPct * $fw) + ($pPct * $pw), 1);
             $merged[] = [
                 'label' => $label,
                 'order_pct' => $oPct,
                 'fav_pct' => $fPct,
+                'personal_pct' => $pPct,
                 'weighted' => $weighted,
                 'order_count' => $orderMap[$label]['count'] ?? 0,
                 'fav_count' => $favMap[$label]['count'] ?? 0,
+                'personal_count' => $personalMap[$label]['count'] ?? 0,
             ];
         }
 

@@ -1904,6 +1904,10 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         Route::get('/profile-data', [CustomerStatsController::class, 'profileData'])
             ->name('api.marketplace-client.customer.profile-data');
 
+        // Smart Suggestions (cities, venues from order history for progressive profiling)
+        Route::get('/smart-suggestions', [CustomerStatsController::class, 'smartSuggestions'])
+            ->name('api.marketplace-client.customer.smart-suggestions');
+
         // Reviews
         Route::get('/reviews', [CustomerReviewsController::class, 'index'])
             ->name('api.marketplace-client.customer.reviews');
@@ -2260,7 +2264,12 @@ Route::prefix('marketplace-client/event-categories')->middleware(['throttle:120,
         ->name('api.marketplace-client.event-categories.show');
 });
 
-// Event Genres
+// Event Types (global taxonomy)
+Route::get('/marketplace-client/event-types', [MarketplaceEventsController::class, 'eventTypes'])
+    ->middleware(['throttle:120,1', 'marketplace.auth'])
+    ->name('api.marketplace-client.event-types');
+
+// Event Genres (supports ?event_type_ids=1,2,3 filter)
 Route::get('/marketplace-client/event-genres', [MarketplaceEventsController::class, 'genres'])
     ->middleware(['throttle:120,1', 'marketplace.auth'])
     ->name('api.marketplace-client.event-genres');

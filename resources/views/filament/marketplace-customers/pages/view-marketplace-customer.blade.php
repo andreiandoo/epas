@@ -758,11 +758,17 @@
                 </div>
             @endif
 
-            {{-- Weighted Profile (Orders 70% + Favorites 30%) --}}
+            {{-- Weighted Profile (Orders 50% + Favorites 30% + Personal 20%) --}}
             @php
                 $hasWeightedData = false;
                 foreach ($weightedProfileData as $cat => $items) {
                     if (!empty($items)) { $hasWeightedData = true; break; }
+                }
+                $hasPersonalData = false;
+                foreach ($weightedProfileData as $items) {
+                    foreach ($items as $item) {
+                        if (($item['personal_pct'] ?? 0) > 0) { $hasPersonalData = true; break 2; }
+                    }
                 }
             @endphp
             @if($hasWeightedData)
@@ -770,9 +776,11 @@
                     <div class="p-4 mb-4 rounded-xl bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950/30 dark:via-orange-950/30 dark:to-yellow-950/30 ring-1 ring-amber-200/60 dark:ring-amber-700/40">
                         <div class="flex items-center gap-2 mb-1">
                             <x-filament::icon icon="heroicon-o-scale" class="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                            <h3 class="text-sm font-semibold text-amber-700 dark:text-amber-300">Profil Ponderat (Comenzi 70% + Favorite 30%)</h3>
+                            <h3 class="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                                Profil Ponderat (Comenzi 50% + Favorite 30% + Selecții Personale 20%)
+                            </h3>
                         </div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Scorurile combină datele din comenzile plasate cu cele din listele de favorite/watchlist.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Scorurile combină datele din comenzi, favorite/watchlist și selecțiile personale ale clientului.</p>
                     </div>
 
                     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -793,6 +801,9 @@
                                                     <th class="pb-1 pr-2 font-medium text-left">Categorie</th>
                                                     <th class="pb-1 px-1 font-medium text-center" title="Din comenzi">Cmd%</th>
                                                     <th class="pb-1 px-1 font-medium text-center" title="Din favorite">Fav%</th>
+                                                    @if($hasPersonalData)
+                                                        <th class="pb-1 px-1 font-medium text-center" title="Selecții personale">Pers%</th>
+                                                    @endif
                                                     <th class="pb-1 pl-1 font-medium text-right" title="Scor ponderat">Scor</th>
                                                 </tr>
                                             </thead>
@@ -802,6 +813,9 @@
                                                         <td class="py-1.5 pr-2 text-gray-700 dark:text-gray-300">{{ $wpItem['label'] }}</td>
                                                         <td class="py-1.5 px-1 text-center text-blue-600 dark:text-blue-400">{{ $wpItem['order_pct'] }}%</td>
                                                         <td class="py-1.5 px-1 text-center text-purple-600 dark:text-purple-400">{{ $wpItem['fav_pct'] }}%</td>
+                                                        @if($hasPersonalData)
+                                                            <td class="py-1.5 px-1 text-center text-emerald-600 dark:text-emerald-400">{{ $wpItem['personal_pct'] ?? 0 }}%</td>
+                                                        @endif
                                                         <td class="py-1.5 pl-1 text-right font-semibold text-amber-600 dark:text-amber-400">{{ $wpItem['weighted'] }}%</td>
                                                     </tr>
                                                 @endforeach

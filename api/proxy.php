@@ -828,9 +828,14 @@ switch ($action) {
         $endpoint = '/event-categories' . ($params ? '?' . http_build_query($params) : '');
         break;
 
+    case 'event-types':
+        $endpoint = '/event-types';
+        break;
+
     case 'event-genres':
         $params = [];
         if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        if (isset($_GET['event_type_ids'])) $params['event_type_ids'] = $_GET['event_type_ids'];
         $endpoint = '/event-genres' . ($params ? '?' . http_build_query($params) : '');
         break;
 
@@ -1085,6 +1090,12 @@ switch ($action) {
     case 'customer.profile-data':
         $method = 'GET';
         $endpoint = '/customer/profile-data';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.smart-suggestions':
+        $method = 'GET';
+        $endpoint = '/customer/smart-suggestions';
         $requiresAuth = true;
         break;
 

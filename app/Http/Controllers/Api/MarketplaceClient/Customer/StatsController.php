@@ -463,6 +463,121 @@ class StatsController extends BaseController
     }
 
     /**
+     * Smart suggestions for progressive profiling
+     * Returns suggested cities, venues based on order history and favorites
+     */
+    public function smartSuggestions(Request $request): JsonResponse
+    {
+        $customer = $this->requireCustomer($request);
+        $paidStatuses = ['paid', 'confirmed', 'completed'];
+
+        // === Suggested Cities (from orders + favorites) ===
+        $cityScores = [];
+
+        // From orders (weight: 70%)
+        $orderCities = Order::where('marketplace_customer_id', $customer->id)
+            ->whereIn('status', $paidStatuses)
+            ->whereNotNull('marketplace_event_id')
+            ->with('marketplaceEvent:id,venue_city')
+            ->get()
+            ->pluck('marketplaceEvent.venue_city')
+            ->filter();
+
+        foreach ($orderCities as $city) {
+            $cityScores[$city] = ($cityScores[$city] ?? 0) + 2; // orders weighted more
+        }
+
+        // From favorite venues
+        try {
+            $favVenues = $customer->favoriteVenues()->get(['city']);
+            foreach ($favVenues as $fv) {
+                if ($fv->city) {
+                    $cityScores[$fv->city] = ($cityScores[$fv->city] ?? 0) + 1;
+                }
+            }
+        } catch (\Exception $e) {}
+
+        // From watchlist events
+        try {
+            $watchlistEvents = $customer->watchlistEvents()->with('venue:id,city')->get();
+            foreach ($watchlistEvents as $we) {
+                $city = $we->venue?->city;
+                if ($city) {
+                    $cityScores[$city] = ($cityScores[$city] ?? 0) + 1;
+                }
+            }
+        } catch (\Exception $e) {}
+
+        // From customer profile
+        if ($customer->city) {
+            $cityScores[$customer->city] = ($cityScores[$customer->city] ?? 0) + 3; // profile city is strongest
+        }
+
+        arsort($cityScores);
+        $suggestedCities = [];
+        foreach ($cityScores as $city => $score) {
+            $suggestedCities[] = ['name' => $city, 'score' => $score];
+        }
+
+        // === Suggested Venues (from orders + favorites, grouped by city) ===
+        $venueScores = [];
+
+        // From orders
+        $orderVenueIds = Order::where('marketplace_customer_id', $customer->id)
+            ->whereIn('status', $paidStatuses)
+            ->whereNotNull('marketplace_event_id')
+            ->with('marketplaceEvent:id,venue_id')
+            ->get()
+            ->pluck('marketplaceEvent.venue_id')
+            ->filter();
+
+        foreach ($orderVenueIds as $vid) {
+            $venueScores[$vid] = ($venueScores[$vid] ?? 0) + 2;
+        }
+
+        // From favorites
+        try {
+            $favVenueIds = $customer->favoriteVenues()->pluck('venues.id');
+            foreach ($favVenueIds as $vid) {
+                $venueScores[$vid] = ($venueScores[$vid] ?? 0) + 1;
+            }
+        } catch (\Exception $e) {}
+
+        arsort($venueScores);
+        $topVenueIds = array_slice(array_keys($venueScores), 0, 20, true);
+
+        $suggestedVenues = [];
+        if (!empty($topVenueIds)) {
+            $venues = \App\Models\Venue::whereIn('id', $topVenueIds)->get();
+            foreach ($topVenueIds as $vid) {
+                $venue = $venues->firstWhere('id', $vid);
+                if (!$venue) continue;
+                $suggestedVenues[] = [
+                    'id' => $venue->id,
+                    'name' => $venue->getTranslation('name', 'ro'),
+                    'city' => $venue->city,
+                    'score' => $venueScores[$vid],
+                ];
+            }
+        }
+
+        // === Existing interests from settings ===
+        $settings = $customer->settings ?? [];
+        $existingInterests = $settings['interests'] ?? [];
+
+        return $this->success([
+            'suggested_cities' => $suggestedCities,
+            'suggested_venues' => $suggestedVenues,
+            'existing_interests' => $existingInterests,
+            'profile' => [
+                'city' => $customer->city,
+                'state' => $customer->state,
+            ],
+            'profiling_state' => $settings['profiling'] ?? null,
+        ]);
+    }
+
+    /**
      * Require authenticated customer
      */
     protected function requireCustomer(Request $request): MarketplaceCustomer
