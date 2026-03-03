@@ -116,23 +116,18 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="font-bold text-secondary">Recomandate pentru tine</h2>
-                    <a href="/" class="text-sm font-medium text-primary">Vezi toate</a>
+                    <a href="/evenimente" class="text-sm font-medium text-primary">Vezi toate</a>
                 </div>
-                <div id="recommended-events" class="grid gap-4 sm:grid-cols-2">
-                    <div class="overflow-hidden border animate-pulse rounded-xl border-border">
-                        <div class="h-32 bg-gray-200"></div>
+                <div id="recommended-events" class="grid grid-cols-2 gap-4 lg:grid-cols-3 md:gap-5">
+                    <?php for ($i = 0; $i < 6; $i++): ?>
+                    <div class="overflow-hidden bg-white border rounded-xl border-border">
+                        <div class="skeleton h-40 mobile:h-64"></div>
                         <div class="p-3 space-y-2">
-                            <div class="w-3/4 h-4 bg-gray-200 rounded"></div>
-                            <div class="w-1/2 h-3 bg-gray-200 rounded"></div>
+                            <div class="w-3/4 h-4 bg-gray-200 rounded skeleton"></div>
+                            <div class="w-1/2 h-3 bg-gray-200 rounded skeleton"></div>
                         </div>
                     </div>
-                    <div class="overflow-hidden border animate-pulse rounded-xl border-border">
-                        <div class="h-32 bg-gray-200"></div>
-                        <div class="p-3 space-y-2">
-                            <div class="w-3/4 h-4 bg-gray-200 rounded"></div>
-                            <div class="w-1/2 h-3 bg-gray-200 rounded"></div>
-                        </div>
-                    </div>
+                    <?php endfor; ?>
                 </div>
             </div>
         </div>
@@ -171,18 +166,11 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <a href="/cont/puncte" class="text-sm font-medium text-primary">Toate</a>
                 </div>
                 <div id="recent-badges" class="space-y-3">
-                    <div class="flex items-center gap-3 p-3 bg-surface rounded-xl">
-                        <div class="flex items-center justify-center w-12 h-12 text-2xl bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl">🎸</div>
-                        <div>
-                            <p class="text-sm font-semibold text-secondary">Rock Veteran</p>
-                            <p class="text-xs text-muted">10+ concerte rock</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3 p-3 bg-surface rounded-xl">
-                        <div class="flex items-center justify-center w-12 h-12 text-2xl bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl">🌟</div>
-                        <div>
-                            <p class="text-sm font-semibold text-secondary">Early Bird</p>
-                            <p class="text-xs text-muted">5+ bilete early bird</p>
+                    <div class="flex items-center gap-3 p-3 animate-pulse bg-surface rounded-xl">
+                        <div class="w-12 h-12 bg-gray-200 rounded-xl"></div>
+                        <div class="flex-1 space-y-2">
+                            <div class="w-1/2 h-4 bg-gray-200 rounded"></div>
+                            <div class="w-3/4 h-3 bg-gray-200 rounded"></div>
                         </div>
                     </div>
                 </div>
@@ -220,46 +208,89 @@ const UserDashboard = {
         }
 
         this.user = AmbiletAuth.getCurrentUser();
-        await this.loadDashboard();
         this.renderUser();
+        await this.loadDashboard();
     },
 
     async loadDashboard() {
+        // Load all data in parallel using dedicated endpoints that work correctly
+        await Promise.all([
+            this.loadStats(),
+            this.loadUpcomingEvents(),
+            this.loadRecommendedEvents(),
+            this.loadRecentBadges(),
+            this.loadFavoriteArtists()
+        ]);
+    },
+
+    async loadStats() {
+        // Use dedicated endpoints (same as rewards.php which works correctly)
+        // instead of /customer/stats which returns mismatched field names
         try {
-            const response = await AmbiletAPI.customer.getDashboardStats();
-            if (response.success && response.data) {
-                // Map API response to dashboard format
-                const d = response.data;
-                this.stats = {
-                    events_attended: d.events?.past || 0,
-                    points: d.rewards?.points || 0,
-                    badges: d.badges_earned || 0,
-                    favorites: d.watchlist_count || 0,
-                    level: d.rewards?.level || 1,
-                    level_title: d.rewards?.level_name || 'Bronze',
-                    xp: d.rewards?.xp || 0,
-                    xp_next: (d.rewards?.xp || 0) + (d.rewards?.xp_to_next_level || 100),
-                    badge_title: d.rewards?.level_name || 'MEMBER',
-                    active_tickets: d.tickets?.active || 0,
-                    upcoming_events: d.events?.upcoming || 0,
-                    total_spent: d.total_spent || 0,
-                    credit_balance: d.credit_balance || 0
-                };
-                this.renderStats();
+            const [rewardsRes, badgesRes, watchlistRes, statsRes] = await Promise.all([
+                AmbiletAPI.customer.getPoints(),
+                AmbiletAPI.customer.getBadges(),
+                AmbiletAPI.customer.getWatchlist({ limit: 1 }),
+                AmbiletAPI.customer.getDashboardStats()
+            ]);
+
+            // Points: same parsing as rewards.php
+            let points = 0, level = 1, levelName = 'Bronze', xp = 0, xpNext = 500, xpToNext = 500;
+            if (rewardsRes.success && rewardsRes.data) {
+                const pointsData = rewardsRes.data.points || rewardsRes.data;
+                points = pointsData.balance || 0;
+                const levelData = rewardsRes.data.level || {};
+                xp = levelData.total_xp || rewardsRes.data.total_xp || 0;
+                level = levelData.current || (typeof rewardsRes.data.level === 'number' ? rewardsRes.data.level : 1);
+                levelName = levelData.name || rewardsRes.data.level_name || 'Bronze';
+                xpToNext = levelData.xp_to_next || rewardsRes.data.xp_to_next_level || 500;
+                xpNext = xp + xpToNext;
             }
+
+            // Badges count: same parsing as rewards.php
+            let badgesCount = 0;
+            if (badgesRes.success && badgesRes.data) {
+                const earned = badgesRes.data.earned || [];
+                badgesCount = earned.length;
+            }
+
+            // Watchlist/favorites count
+            let favoritesCount = 0;
+            if (watchlistRes.success && watchlistRes.data) {
+                // API may return total in meta/pagination or array length
+                favoritesCount = watchlistRes.meta?.total || watchlistRes.data?.total || 0;
+                if (!favoritesCount && Array.isArray(watchlistRes.data)) {
+                    favoritesCount = watchlistRes.data.length;
+                }
+            }
+
+            // Events attended from stats endpoint
+            let eventsAttended = 0;
+            if (statsRes.success && statsRes.data) {
+                const d = statsRes.data;
+                eventsAttended = d.events?.past || d.events_attended || 0;
+            }
+
+            this.stats = {
+                events_attended: eventsAttended,
+                points: points,
+                badges: badgesCount,
+                favorites: favoritesCount,
+                level: level,
+                level_title: levelName,
+                xp: xp,
+                xp_next: xpNext,
+                badge_title: levelName
+            };
         } catch (error) {
-            console.warn('Failed to load stats from API, using fallback:', error.message);
+            console.warn('Failed to load stats:', error.message);
             this.stats = {
                 events_attended: 0, points: 0, badges: 0, favorites: 0,
-                level: 1, level_title: 'Bronze', xp: 0, xp_next: 100,
+                level: 1, level_title: 'Bronze', xp: 0, xp_next: 500,
                 badge_title: 'MEMBER'
             };
-            this.renderStats();
         }
-
-        await this.loadUpcomingEvents();
-        await this.loadRecommendedEvents();
-        await this.loadFavoriteArtists();
+        this.renderStats();
     },
 
     renderUser() {
@@ -292,16 +323,20 @@ const UserDashboard = {
         document.getElementById('level-remaining').textContent = `${this.formatNumber(xpNext - xp)} XP pana la nivelul ${level + 1}`;
 
         if (this.stats.badge_title) {
-            document.getElementById('user-badge').textContent = '🎸 ' + this.stats.badge_title;
+            document.getElementById('user-badge').textContent = this.stats.badge_title.toUpperCase();
         }
     },
 
     async loadUpcomingEvents() {
         try {
             const response = await AmbiletAPI.customer.getUpcomingEvents(3);
-            if (response.success && response.data?.upcoming_events?.length) {
-                this.renderUpcomingEvents(response.data.upcoming_events);
-                return;
+            if (response.success && response.data) {
+                // API may return data directly as array or nested under upcoming_events
+                const events = response.data.upcoming_events || response.data;
+                if (Array.isArray(events) && events.length) {
+                    this.renderUpcomingEvents(events);
+                    return;
+                }
             }
         } catch (e) {
             console.warn('Failed to load upcoming events:', e.message);
@@ -317,23 +352,40 @@ const UserDashboard = {
         }
 
         container.innerHTML = events.map(item => {
-            const e = item.event;
-            const daysUntil = e.days_until || 0;
+            // Support both nested {event, tickets_count} and flat event objects
+            const e = item.event || item;
+            const ticketsCount = item.tickets_count || item.ticket_count || 0;
+            const imgSrc = e.image ? (typeof getStorageUrl === 'function' ? getStorageUrl(e.image) : e.image) : '/assets/images/default-event.png';
+            const eventName = e.name || e.title || '';
+            const eventSlug = e.slug || '';
+            const venueName = e.venue?.name || e.venue || '';
+            const cityName = e.city?.name || e.city || '';
+            const dateStr = e.date_formatted || this.formatDate(e.start_date || e.date);
+            const timeStr = e.start_time || e.time || '';
+
+            // Calculate days until event
+            let daysUntil = e.days_until;
+            if (daysUntil === undefined && (e.start_date || e.date)) {
+                const eventDate = new Date(e.start_date || e.date);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                eventDate.setHours(0, 0, 0, 0);
+                daysUntil = Math.max(0, Math.round((eventDate - today) / 86400000));
+            }
+            daysUntil = daysUntil || 0;
             const daysClass = daysUntil <= 7 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning';
             const daysText = daysUntil === 0 ? 'Azi' : daysUntil === 1 ? 'Maine' : 'In ' + daysUntil + ' zile';
 
-            return '<a href="/bilete/' + (e.slug || '') + '" class="flex gap-4 p-3 card-hover bg-surface rounded-xl">' +
+            return '<a href="/bilete/' + eventSlug + '" class="flex gap-4 p-3 card-hover bg-surface rounded-xl">' +
                 '<div class="flex-shrink-0 w-20 h-20 overflow-hidden rounded-xl">' +
-                '<img src="' + (e.image || '/assets/images/default-event.png') + '" class="object-cover w-full h-full" alt="" loading="lazy">' +
+                '<img src="' + imgSrc + '" class="object-cover w-full h-full" alt="" loading="lazy">' +
                 '</div>' +
                 '<div class="flex-1 min-w-0">' +
                 '<span class="px-2 py-0.5 ' + daysClass + ' text-xs font-semibold rounded">' + daysText + '</span>' +
-                '<h3 class="mt-1 font-semibold text-secondary">' + e.name + '</h3>' +
-                '<p class="mt-1 text-sm text-muted">' + (e.date_formatted || this.formatDate(e.date)) + ', ' + (e.time || '20:00') + '</p>' +
-                '<p class="mt-1 text-xs text-muted">' + (e.venue || '') + ', ' + (e.city || '') + '</p>' +
-                '<div class="flex items-center gap-2 mt-2">' +
-                '<span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded">' + item.tickets_count + ' bilete</span>' +
-                '</div>' +
+                '<h3 class="mt-1 font-semibold text-secondary truncate">' + this.escapeHtml(eventName) + '</h3>' +
+                '<p class="mt-1 text-sm text-muted">' + dateStr + (timeStr ? ', ' + timeStr : '') + '</p>' +
+                '<p class="mt-1 text-xs text-muted">' + this.escapeHtml(venueName) + (cityName ? ', ' + this.escapeHtml(cityName) : '') + '</p>' +
+                (ticketsCount ? '<div class="flex items-center gap-2 mt-2"><span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded">' + ticketsCount + ' bilete</span></div>' : '') +
                 '</div>' +
                 '</a>';
         }).join('');
@@ -341,40 +393,99 @@ const UserDashboard = {
 
     async loadRecommendedEvents() {
         try {
-            const response = await AmbiletAPI.get('/events', { limit: 2, recommended: true });
-            if (response.success && response.data?.length) {
-                this.renderRecommendedEvents(response.data);
-                return;
+            // Load promoted/recommended events, same as homepage
+            const response = await AmbiletAPI.get('/events', { limit: 6, promoted: true });
+            if (response.success) {
+                const events = response.data?.data || response.data || [];
+                if (Array.isArray(events) && events.length) {
+                    this.renderRecommendedEvents(events);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load recommended events:', e.message);
+        }
+
+        // Fallback: load latest events
+        try {
+            const response = await AmbiletAPI.get('/events', { limit: 6 });
+            if (response.success) {
+                const events = response.data?.data || response.data || [];
+                if (Array.isArray(events) && events.length) {
+                    this.renderRecommendedEvents(events);
+                    return;
+                }
             }
         } catch (e) {}
 
-        // No data available - show empty state
         this.renderRecommendedEvents([]);
     },
 
     renderRecommendedEvents(events) {
         const container = document.getElementById('recommended-events');
         if (!events.length) {
-            container.innerHTML = '<p class="py-8 text-center text-muted">Descopera evenimente noi</p>';
+            container.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Descopera evenimente noi</p>';
             return;
         }
 
-        container.innerHTML = events.map(e => `
-            <a href="/bilete/${e.slug}" class="overflow-hidden border card-hover group rounded-xl border-border">
-                <div class="relative h-32">
-                    <img src="${e.image || '/assets/images/default-event.png'}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" alt="" loading="lazy">
-                    <div class="absolute px-2 py-1 text-xs font-bold text-white rounded top-2 left-2 bg-primary">${e.match || 90}% MATCH</div>
-                </div>
-                <div class="p-3">
-                    <h3 class="text-sm font-semibold text-secondary">${e.title}</h3>
-                    <p class="mt-1 text-xs text-muted">${this.formatDate(e.start_date)} • ${e.venue?.name || ''}</p>
-                    <div class="flex items-center justify-between mt-2">
-                        <span class="text-sm font-bold text-primary">de la ${e.min_price || 50} lei</span>
-                        <span class="px-2 py-0.5 bg-accent/10 text-accent text-xs font-semibold rounded">${e.category || 'Concert'}</span>
-                    </div>
-                </div>
-            </a>
-        `).join('');
+        // Use AmbiletEventCard component for consistent display (same as homepage)
+        if (typeof AmbiletEventCard !== 'undefined') {
+            container.innerHTML = AmbiletEventCard.renderMany(events.slice(0, 6), {
+                urlPrefix: '/bilete/',
+                showCategory: true,
+                showPrice: true,
+                showVenue: true,
+                showPromotedBadge: true
+            });
+        } else {
+            container.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Descopera evenimente noi</p>';
+        }
+    },
+
+    async loadRecentBadges() {
+        try {
+            const response = await AmbiletAPI.customer.getBadges();
+            if (response.success && response.data) {
+                const earned = response.data.earned || [];
+                this.renderRecentBadges(earned.slice(0, 3));
+                return;
+            }
+        } catch (e) {
+            console.warn('Failed to load badges:', e.message);
+        }
+        this.renderRecentBadges([]);
+    },
+
+    renderRecentBadges(badges) {
+        const container = document.getElementById('recent-badges');
+        if (!badges.length) {
+            container.innerHTML = '<div class="py-4 text-center"><p class="text-sm text-muted">Nu ai badge-uri inca</p><a href="/cont/puncte" class="text-sm font-medium text-primary">Descopera cum obtii badge-uri</a></div>';
+            return;
+        }
+
+        // Badge gradient colors for variety
+        const gradients = [
+            'from-yellow-400 to-orange-500',
+            'from-purple-400 to-pink-500',
+            'from-blue-400 to-cyan-500',
+            'from-green-400 to-emerald-500',
+            'from-red-400 to-rose-500'
+        ];
+
+        container.innerHTML = badges.map((badge, i) => {
+            const icon = badge.icon || badge.emoji || '🏆';
+            const name = badge.name || badge.title || 'Badge';
+            const desc = badge.description || '';
+            const gradient = gradients[i % gradients.length];
+
+            return '<div class="flex items-center gap-3 p-3 bg-surface rounded-xl">' +
+                '<div class="flex items-center justify-center flex-shrink-0 w-12 h-12 text-2xl bg-gradient-to-br ' + gradient + ' rounded-xl">' + this.escapeHtml(icon) + '</div>' +
+                '<div class="min-w-0">' +
+                '<p class="text-sm font-semibold text-secondary truncate">' + this.escapeHtml(name) + '</p>' +
+                (desc ? '<p class="text-xs text-muted truncate">' + this.escapeHtml(desc) + '</p>' : '') +
+                '</div>' +
+                '</div>';
+        }).join('');
     },
 
     async loadFavoriteArtists() {
