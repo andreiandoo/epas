@@ -2,9 +2,21 @@
 
 namespace App\Filament\Marketplace\Pages\UserManual;
 
-class ArtistsManual extends BaseManualPage
+use Filament\Pages\Page;
+use Livewire\Attributes\Url;
+
+class ArtistsManual extends Page
 {
-    protected static ?string $slug = 'manual/artists';
+    use BaseManualPage;
+
+    protected static bool $shouldRegisterNavigation = false;
+
+    protected string $view = 'filament.marketplace.pages.user-manual.module';
+
+    #[Url(as: 'lang')]
+    public string $locale = 'ro';
+
+    protected static ?string $slug = 'manual-artists';
 
     protected function getManualContent(): array
     {

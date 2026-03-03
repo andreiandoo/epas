@@ -2,9 +2,21 @@
 
 namespace App\Filament\Marketplace\Pages\UserManual;
 
-class TicketsManual extends BaseManualPage
+use Filament\Pages\Page;
+use Livewire\Attributes\Url;
+
+class TicketsManual extends Page
 {
-    protected static ?string $slug = 'manual/tickets';
+    use BaseManualPage;
+
+    protected static bool $shouldRegisterNavigation = false;
+
+    protected string $view = 'filament.marketplace.pages.user-manual.module';
+
+    #[Url(as: 'lang')]
+    public string $locale = 'ro';
+
+    protected static ?string $slug = 'manual-tickets';
 
     protected function getManualContent(): array
     {

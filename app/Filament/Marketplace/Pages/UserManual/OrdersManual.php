@@ -2,9 +2,21 @@
 
 namespace App\Filament\Marketplace\Pages\UserManual;
 
-class OrdersManual extends BaseManualPage
+use Filament\Pages\Page;
+use Livewire\Attributes\Url;
+
+class OrdersManual extends Page
 {
-    protected static ?string $slug = 'manual/orders';
+    use BaseManualPage;
+
+    protected static bool $shouldRegisterNavigation = false;
+
+    protected string $view = 'filament.marketplace.pages.user-manual.module';
+
+    #[Url(as: 'lang')]
+    public string $locale = 'ro';
+
+    protected static ?string $slug = 'manual-orders';
 
     protected function getManualContent(): array
     {

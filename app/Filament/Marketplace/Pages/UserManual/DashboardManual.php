@@ -2,9 +2,21 @@
 
 namespace App\Filament\Marketplace\Pages\UserManual;
 
-class DashboardManual extends BaseManualPage
+use Filament\Pages\Page;
+use Livewire\Attributes\Url;
+
+class DashboardManual extends Page
 {
-    protected static ?string $slug = 'manual/dashboard';
+    use BaseManualPage;
+
+    protected static bool $shouldRegisterNavigation = false;
+
+    protected string $view = 'filament.marketplace.pages.user-manual.module';
+
+    #[Url(as: 'lang')]
+    public string $locale = 'ro';
+
+    protected static ?string $slug = 'manual-dashboard';
 
     protected function getManualContent(): array
     {
