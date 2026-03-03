@@ -22,7 +22,7 @@ return new class extends Migration
             $table->text('partner_notes')->nullable();
             $table->timestamps();
 
-            $table->unique(['marketplace_client_id', 'artist_id']);
+            $table->unique(['marketplace_client_id', 'artist_id'], 'mp_artist_partners_client_artist_unique');
         });
 
         // Migrate existing data from artists.marketplace_client_id to the pivot table
