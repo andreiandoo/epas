@@ -43,10 +43,6 @@
 
             <form wire:submit="uploadCsv" class="space-y-4">
                 <div>
-                    {{ $this->form }}
-                </div>
-
-                <div>
                     <x-filament::input.wrapper>
                         <input type="file" accept=".csv,.txt" wire:model="csv_file"
                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-primary-950 dark:file:text-primary-400">
