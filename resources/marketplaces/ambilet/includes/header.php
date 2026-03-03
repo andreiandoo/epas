@@ -229,6 +229,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             <path d="M6 9l6 6 6-6"/>
                         </svg>
                     </button>
+                    <?php if (!empty($navCities)): ?>
                     <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
                         <div class="w-[700px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2">
                             <div class="flex items-center justify-between px-1 mb-2">
@@ -257,6 +258,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Events Dropdown -->
@@ -271,6 +273,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                         <div class="w-[820px] bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden flex">
                             <!-- Categories -->
                             <div class="w-[250px] px-3 py-2 bg-gray-50 border-r border-gray-200">
+                                <?php if (!empty($navCategories)): ?>
                                 <?php foreach ($navCategories as $index => $cat): ?>
                                 <a href="/<?= $cat['slug'] ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm transition-all mb-1 group/cat <?= $index === 0 ? 'bg-white text-gray-900 shadow-sm' : '' ?>" title="<?= htmlspecialchars($cat['name']) ?>">
                                     <div class="w-[38px] h-[38px] bg-white rounded-lg flex items-center justify-center shadow-sm text-gray-500 transition-all group-hover/cat:bg-gradient-to-br group-hover/cat:from-primary group-hover/cat:to-primary-light group-hover/cat:text-white <?= $index === 0 ? '!bg-gradient-to-br !from-primary !to-primary-light !text-white' : '' ?>">
@@ -299,6 +302,14 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                     </svg>
                                 </a>
                                 <?php endforeach; ?>
+                                <?php else: ?>
+                                <div class="flex flex-col items-center justify-center py-8 text-sm text-gray-400">
+                                    <a href="/evenimente" class="flex items-center gap-2 text-primary hover:underline">
+                                        Toate evenimentele
+                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                    </a>
+                                </div>
+                                <?php endif; ?>
                             </div>
 
                             <!-- Featured Events -->
@@ -424,6 +435,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                 </a>
                             </div>
                             <?php endif; ?>
+                            <?php if (!empty($navVenueTypes)): ?>
                             <div class="flex gap-2.5 mt-5 pt-5 border-t border-gray-200">
                                 <?php foreach ($navVenueTypes as $type): ?>
                                 <a href="/locatii/<?= $type['slug'] ?>" class="flex-1 flex items-center gap-2.5 px-4 py-3 bg-gray-50 rounded-lg text-gray-600 hover:bg-primary hover:text-white transition-all group/type">
@@ -437,6 +449,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                 </a>
                                 <?php endforeach; ?>
                             </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -561,6 +574,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 <!-- Mobile Menu -->
 <div class="hidden fixed top-[72px] left-0 right-0 bottom-0 bg-white z-[999] overflow-y-auto lg:hidden" id="mobileMenu">
     <!-- Cities -->
+    <?php if (!empty($navCities)): ?>
     <div class="px-4 border-b border-gray-200" data-dropdown>
         <div class="flex items-center justify-between py-4 text-base font-semibold text-gray-900 cursor-pointer mobile-nav-link">
             Orașe
@@ -587,9 +601,15 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             <a href="/orase" class="block py-3 text-sm font-semibold text-center text-white rounded-lg bg-primary">Vezi toate orașele →</a>
         </div>
     </div>
+    <?php else: ?>
+    <div class="px-4 border-b border-gray-200">
+        <a href="/orase" class="block py-4 text-base font-semibold text-gray-900">Orașe</a>
+    </div>
+    <?php endif; ?>
 
     <!-- Events -->
-    <div class="px-4 border-b border-gray-200" data-dropdown>
+    <div class="px-4 border-b border-gray-200" <?php if (!empty($navCategories)): ?>data-dropdown<?php endif; ?>>
+        <?php if (!empty($navCategories)): ?>
         <div class="flex items-center justify-between py-4 text-base font-semibold text-gray-900 cursor-pointer mobile-nav-link">
             Evenimente
             <svg class="w-5 h-5 text-gray-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -607,6 +627,9 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             <?php endforeach; ?>
             <a href="/evenimente" class="block py-3 mt-2 text-sm font-semibold text-center text-white rounded-lg bg-primary">Toate evenimentele →</a>
         </div>
+        <?php else: ?>
+        <a href="/evenimente" class="block py-4 text-base font-semibold text-gray-900">Evenimente</a>
+        <?php endif; ?>
     </div>
 
     <!-- Artists -->
@@ -615,7 +638,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     </div>
 
     <!-- Locations -->
-    <div class="px-4 border-b border-gray-200" data-dropdown>
+    <div class="px-4 border-b border-gray-200" <?php if (!empty($navVenueTypes)): ?>data-dropdown<?php endif; ?>>
+        <?php if (!empty($navVenueTypes)): ?>
         <div class="flex items-center justify-between py-4 text-base font-semibold text-gray-900 cursor-pointer mobile-nav-link">
             Locații
             <svg class="w-5 h-5 text-gray-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -633,6 +657,9 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             <?php endforeach; ?>
             <a href="/locatii" class="block py-3 mt-2 text-sm font-semibold text-center text-white rounded-lg bg-primary">Toate locațiile →</a>
         </div>
+        <?php else: ?>
+        <a href="/locatii" class="block py-4 text-base font-semibold text-gray-900">Locații</a>
+        <?php endif; ?>
     </div>
 
     <!-- Mobile Actions -->

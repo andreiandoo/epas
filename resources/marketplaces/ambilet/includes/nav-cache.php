@@ -77,8 +77,8 @@ function getNavCounts(): array {
         if (!empty($staleData)) return $staleData;
     }
 
-    // Last resort: return defaults (NOT cached)
-    return getDefaultCounts();
+    // Last resort: return empty (NOT cached) — never show fake data
+    return [];
 }
 
 /**
@@ -101,7 +101,7 @@ function loadNavCache(): array {
     // Detect corrupted files
     if (isContentCorrupted($content)) {
         @unlink(NAV_CACHE_FILE);
-        return getDefaultCounts();
+        return [];
     }
 
     // Strip UTF-8 BOM if present
@@ -109,7 +109,7 @@ function loadNavCache(): array {
 
     $data = json_decode($content, true);
 
-    return $data ?: getDefaultCounts();
+    return $data ?: [];
 }
 
 /**
@@ -200,8 +200,16 @@ function getDefaultCounts(): array {
  */
 function refreshNavCache(): array {
     $freshData = fetchNavCountsFromAPI();
-    saveNavCache($freshData);
-    return $freshData;
+    if ($freshData !== false) {
+        saveNavCache($freshData);
+        return $freshData;
+    }
+    // API failed — return current cache or empty
+    if (file_exists(NAV_CACHE_FILE)) {
+        $cached = loadNavCache();
+        if (!empty($cached)) return $cached;
+    }
+    return [];
 }
 
 /**
@@ -274,8 +282,8 @@ function getFeaturedCities(): array {
         if (!empty($staleData)) return $staleData;
     }
 
-    // Last resort: return defaults (NOT cached)
-    return getDefaultFeaturedCities();
+    // Last resort: return empty (NOT cached) — never show fake data
+    return [];
 }
 
 /**
@@ -298,7 +306,7 @@ function loadFeaturedCitiesCache(): array {
     // Detect corrupted files
     if (isContentCorrupted($content)) {
         @unlink(FEATURED_CITIES_CACHE_FILE);
-        return getDefaultFeaturedCities();
+        return [];
     }
 
     // Strip UTF-8 BOM if present
@@ -307,7 +315,7 @@ function loadFeaturedCitiesCache(): array {
     $data = json_decode($content, true);
 
     if (!$data) {
-        return getDefaultFeaturedCities();
+        return [];
     }
 
     // Filter out items with invalid slugs
@@ -467,8 +475,8 @@ function getEventCategories(): array {
         }
     }
 
-    // Last resort: return defaults (will NOT be cached)
-    return getDefaultEventCategories();
+    // Last resort: return empty (NOT cached) — never show fake data
+    return [];
 }
 
 /**
@@ -491,7 +499,7 @@ function loadEventCategoriesCache(): array {
     // Detect corrupted files
     if (isContentCorrupted($content)) {
         @unlink(EVENT_CATEGORIES_CACHE_FILE);
-        return getDefaultEventCategories();
+        return [];
     }
 
     // Strip UTF-8 BOM if present
@@ -499,9 +507,9 @@ function loadEventCategoriesCache(): array {
 
     $data = json_decode($content, true);
 
-    // Only fall back to defaults if JSON parse failed (null), not for empty array
+    // Only return empty if JSON parse failed (null), not for empty array
     if ($data === null) {
-        return getDefaultEventCategories();
+        return [];
     }
 
     // Filter out items with invalid slugs
@@ -1012,8 +1020,8 @@ function getVenueCategories(): array {
         if (!empty($staleData)) return $staleData;
     }
 
-    // Last resort: return defaults (NOT cached)
-    return getDefaultVenueCategories();
+    // Last resort: return empty (NOT cached) — never show fake data
+    return [];
 }
 
 /**
@@ -1036,7 +1044,7 @@ function loadVenueCategoriesCache(): array {
     // Detect corrupted files
     if (isContentCorrupted($content)) {
         @unlink(VENUE_CATEGORIES_CACHE_FILE);
-        return getDefaultVenueCategories();
+        return [];
     }
 
     // Strip UTF-8 BOM if present
@@ -1045,7 +1053,7 @@ function loadVenueCategoriesCache(): array {
     $data = json_decode($content, true);
 
     if (!$data) {
-        return getDefaultVenueCategories();
+        return [];
     }
 
     // Filter out items with invalid slugs
