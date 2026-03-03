@@ -29,13 +29,13 @@ $currentYear = date('Y');
         <!-- Right: Powered by & Social -->
         <div class="flex items-center gap-4 mobile:w-full mobile:justify-between mobile:px-4">
             <div class="mobile:flex mobile:flex-col mobile:items-start">
+                <p class="hidden mb-1 text-xs font-semibold mobile:block text-white/90"><?= SITE_NAME ?> &copy; <?= $currentYear ?>. Toate drepturile rezervate.</p>
                 <div class="flex items-center gap-1.5 text-[11px] text-white/40">
                     Powered by
                     <a href="https://tixello.com" target="_blank" class="flex items-center gap-1 font-semibold transition-colors text-white/90 hover:text-white">
                         <img src="/assets/images/tixello-logo.svg" width="40" height="12" alt="Tixello" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>
                     </a>
                 </div>
-                <p class="hidden mb-1 text-xs font-semibold mobile:block text-white/90"><?= SITE_NAME ?> &copy; <?= $currentYear ?>. Toate drepturile rezervate.</p>
             </div>
             <div class="flex gap-2">
                 <a href="<?= htmlspecialchars($socialLinks['facebook']) ?>" target="_blank" rel="noopener" class="flex items-center justify-center transition-all rounded-md w-7 h-7 bg-white/10 text-white/90 hover:bg-primary hover:text-white mobile:w-10 mobile:h-10">
