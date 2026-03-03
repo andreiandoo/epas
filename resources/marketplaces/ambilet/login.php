@@ -61,7 +61,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
                         <label for="remember" class="ml-2 text-sm text-muted">Ține-mă minte</label>
                     </div>
 
-                    <button type="submit" class="w-full btn btn-primary btn-lg">
+                    <button type="submit" class="w-full text-white btn bg-primary btn-primary btn-lg">
                         Conectează-te
                     </button>
                 </form>

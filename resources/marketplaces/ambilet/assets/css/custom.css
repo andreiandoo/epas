@@ -80,7 +80,7 @@ a:hover {
 .btn-primary {
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     color: white;
-}
+} 
 
 .btn-primary:hover {
     transform: translateY(-2px);

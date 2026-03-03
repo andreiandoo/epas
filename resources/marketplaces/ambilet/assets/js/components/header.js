@@ -30,8 +30,42 @@ const AmbiletHeader = {
         window.addEventListener('ambilet:auth:login', () => this.updatePHPHeaderAuth());
         window.addEventListener('ambilet:auth:logout', () => this.updatePHPHeaderAuth());
 
+        // Close user dropdown on click outside or scroll
+        this.bindDropdownDismiss();
+
         // Initial auth state check
         this.updatePHPHeaderAuth();
+    },
+
+    /**
+     * Bind click-outside and scroll listeners to close the header user dropdown
+     */
+    bindDropdownDismiss() {
+        const userMenu = document.getElementById('headerUserMenu');
+        if (!userMenu) return;
+
+        const dropdown = userMenu.querySelector('.dropdown');
+        if (!dropdown) return;
+
+        // Close on click outside
+        document.addEventListener('click', (e) => {
+            if (dropdown.classList.contains('active') && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('active');
+            }
+        });
+
+        // Close on scroll
+        let scrollTimer;
+        window.addEventListener('scroll', () => {
+            if (dropdown.classList.contains('active')) {
+                dropdown.classList.remove('active');
+            }
+        }, { passive: true });
+
+        // Close when mobile nav or other overlays open
+        document.addEventListener('ambilet:menu:open', () => {
+            dropdown.classList.remove('active');
+        });
     },
 
     /**

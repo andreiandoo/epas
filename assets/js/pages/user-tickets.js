@@ -539,27 +539,32 @@ const UserTickets = {
         const printHtml = `<!DOCTYPE html>
 <html><head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bilete - ${event.name || 'Eveniment'}</title>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1a1a2e; }
-    @page { size: A4; margin: 15mm; }
-    .ticket-page { page-break-after: always; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px 0; }
+    @page { size: A4; margin: 10mm; }
+    .ticket-page { page-break-after: always; page-break-inside: avoid; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 15px 0; }
     .ticket-page:last-child { page-break-after: avoid; }
-    .ticket-header { text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; }
-    .event-name { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
-    .event-details { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; color: #4b5563; font-size: 14px; margin-top: 12px; }
-    .event-details span { display: flex; align-items: center; gap: 6px; }
-    .ticket-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+    .ticket-header { text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px; }
+    .event-name { font-size: 20px; font-weight: 700; margin-bottom: 6px; word-break: break-word; }
+    .event-details { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; color: #4b5563; font-size: 13px; margin-top: 8px; }
+    .event-details span { display: flex; align-items: center; gap: 4px; }
+    .ticket-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 15px 0; }
     .qr-section { text-align: center; }
-    .qr-section img { width: 200px; height: 200px; }
-    .ticket-code { font-family: monospace; font-size: 18px; font-weight: 700; margin-top: 8px; letter-spacing: 1px; }
+    .qr-section img { width: 180px; height: 180px; max-width: 50vw; }
+    .ticket-code { font-family: monospace; font-size: 16px; font-weight: 700; margin-top: 6px; letter-spacing: 1px; }
     .ticket-info { text-align: center; }
-    .ticket-type { font-size: 18px; font-weight: 600; color: #1a1a2e; }
-    .ticket-seat { font-size: 14px; color: #4b5563; margin-top: 4px; }
-    .ticket-attendee { font-size: 14px; color: #6b7280; margin-top: 4px; }
-    .ticket-number { font-size: 12px; color: #9ca3af; }
-    .ticket-footer { text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px; font-size: 11px; color: #9ca3af; }
+    .ticket-type { font-size: 16px; font-weight: 600; color: #1a1a2e; }
+    .ticket-seat { font-size: 13px; color: #4b5563; margin-top: 4px; }
+    .ticket-attendee { font-size: 13px; color: #6b7280; margin-top: 4px; }
+    .ticket-number { font-size: 11px; color: #9ca3af; }
+    .ticket-footer { text-align: center; border-top: 1px solid #e5e7eb; padding-top: 12px; font-size: 10px; color: #9ca3af; }
+    @media print {
+        .ticket-page { height: auto; min-height: 0; overflow: hidden; break-inside: avoid; }
+        .qr-section img { width: 160px; height: 160px; }
+    }
 </style>
 </head><body>
 ${tickets.map((t, i) => {
