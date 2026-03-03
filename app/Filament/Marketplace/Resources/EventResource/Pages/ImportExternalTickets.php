@@ -44,14 +44,14 @@ class ImportExternalTickets extends Page
 
     public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
     {
-        return 'Import Bilete Externe — ' . ($this->record->title ?? 'Event');
+        return 'Import Bilete Externe — ' . ($this->record->name ?: 'Event');
     }
 
     public function getBreadcrumbs(): array
     {
         return [
             EventResource::getUrl() => 'Evenimente',
-            EventResource::getUrl('edit', ['record' => $this->record]) => $this->record->title ?? 'Event',
+            EventResource::getUrl('edit', ['record' => $this->record]) => $this->record->name ?: 'Event',
             '' => 'Import Bilete Externe',
         ];
     }
