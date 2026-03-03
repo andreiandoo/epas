@@ -412,6 +412,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^accesabilitate/?$ accesibility.php [L]
 
+# /ghid-organizator -> organizer-guide.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ghid-organizator/?$ organizer-guide.php [L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^email-confirmat/?$ email-confirmed.php [L]
