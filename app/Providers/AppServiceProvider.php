@@ -38,6 +38,9 @@ class AppServiceProvider extends ServiceProvider
             require_once $helpers;
         }
 
+        // Ensure all upload directories exist on the public disk
+        $this->ensureUploadDirectories();
+
         // Define API rate limiter
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
@@ -66,5 +69,63 @@ class AppServiceProvider extends ServiceProvider
                 \App\Listeners\IssueInvoiceListener::class,
             ]
         );
+    }
+
+    /**
+     * Ensure all required upload directories exist on the public disk.
+     * Uses a stamp file so directory checks only run once per deploy.
+     */
+    protected function ensureUploadDirectories(): void
+    {
+        $stampFile = storage_path('app/.upload-dirs-created');
+        if (file_exists($stampFile)) {
+            return;
+        }
+
+        $publicDisk = storage_path('app/public');
+
+        $directories = [
+            'artists',
+            'artists/logos',
+            'artists/portraits',
+            'avatars',
+            'badges',
+            'blog-images',
+            'blog-og-images',
+            'cities',
+            'cities/covers',
+            'contracts',
+            'counties',
+            'downloads',
+            'event-categories',
+            'events/featured',
+            'events/featured/homepage',
+            'events/hero',
+            'events/posters',
+            'gift-card-designs',
+            'imports',
+            'organizer-documents',
+            'seating/backgrounds',
+            'seating/zones',
+            'shop/categories',
+            'shop-products',
+            'shop-products/gallery',
+            'shop-variants',
+            'temp-imports',
+            'tenant-branding',
+            'venues',
+            'venues/gallery',
+            'venues/videos',
+        ];
+
+        foreach ($directories as $dir) {
+            $path = $publicDisk . '/' . $dir;
+            if (!is_dir($path)) {
+                @mkdir($path, 0755, true);
+            }
+        }
+
+        // Write stamp so we skip on subsequent requests
+        @file_put_contents($stampFile, date('Y-m-d H:i:s'));
     }
 }
