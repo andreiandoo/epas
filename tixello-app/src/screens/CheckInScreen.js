@@ -693,6 +693,9 @@ export default function CheckInScreen({ navigation }) {
                 <Text style={styles.resultName}>{scanResult.data.name}</Text>
                 <View style={styles.resultDetails}>
                   <Text style={styles.resultDetail}>{scanResult.data.ticketType}</Text>
+                  {scanResult.data.orderSource === 'external' && (
+                    <Text style={{ fontSize: 11, color: '#6366f1', fontWeight: '600', backgroundColor: '#eef2ff', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 6, overflow: 'hidden' }}>Bilet extern</Text>
+                  )}
                 </View>
                 {(scanResult.data.section || scanResult.data.row || scanResult.data.seat) && (
                   <Text style={styles.resultDetail}>
