@@ -1018,5 +1018,14 @@ class EditEvent extends EditRecord
                 }
             }
         }
+
+        // Fallback: copy hero_image_url to featured image fields when empty
+        $record = $this->record;
+        if ($record->is_homepage_featured && !$record->homepage_featured_image && $record->hero_image_url) {
+            $record->updateQuietly(['homepage_featured_image' => $record->hero_image_url]);
+        }
+        if (($record->is_general_featured || $record->is_category_featured) && !$record->featured_image && $record->hero_image_url) {
+            $record->updateQuietly(['featured_image' => $record->hero_image_url]);
+        }
     }
 }

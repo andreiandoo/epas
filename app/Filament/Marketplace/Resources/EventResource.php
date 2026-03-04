@@ -1824,6 +1824,7 @@ class EventResource extends Resource
                                 ->default(false)
                                 ->live(),
                             Forms\Components\Placeholder::make('preview_link')
+                                ->hiddenLabel()
                                 ->content(function (?Event $record) use ($marketplace, $t) {
                                     if (!$record || !$record->exists) {
                                         return new \Illuminate\Support\HtmlString('<span class="text-gray-500">' . $t('Salvați evenimentul pentru a genera link-ul de previzualizare', 'Save the event to generate the preview link') . '</span>');

@@ -41,6 +41,29 @@ body {
     border-bottom-left-radius: 0;
 }
 
+/* ─── EventResource tabs styling ─────────────────────────────────── */
+
+/* Tab content panels: no padding */
+.fi-sc-tabs .fi-tabs-tab-panel {
+    padding: 0 !important;
+}
+
+/* Sections inside tabs: no rounded corners */
+.fi-sc-tabs .fi-section {
+    border-radius: 0 !important;
+    overflow: hidden;
+}
+
+/* Section headers: same dark background as tab nav bar */
+.fi-sc-tabs .fi-section-header-ctn {
+    background: #111827 !important;
+    border-radius: 0 !important;
+}
+.fi-sc-tabs .fi-section-header-ctn h3,
+.fi-sc-tabs .fi-section-header-ctn p {
+    color: rgb(229 231 235) !important;
+}
+
 .divide-gray-100 {
     --tw-divide-opacity: 1;
     border-color: rgb(229 231 235 / var(--tw-divide-opacity));
