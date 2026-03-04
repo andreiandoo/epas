@@ -22,11 +22,16 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <p class="mt-1 text-sm text-muted">Istoric complet al achizițiilor tale</p>
             </div>
             <div class="flex items-center gap-2">
-                <select id="filter-status" class="px-4 py-2 text-sm border bg-surface border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <select id="filter-status" class="px-4 pr-9 py-2 text-sm border bg-surface border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none bg-no-repeat bg-[length:16px_16px] bg-[position:right_0.75rem_center]" style="background-image:url('data:image/svg+xml,<%3Fxml version=%221.0%22%3F><svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%2364748b%22><path d=%22M7 10l5 5 5-5z%22/></svg>')">
                     <option value="">Toate comenzile</option>
                     <option value="confirmed">Confirmate</option>
+                    <option value="completed">Finalizate</option>
+                    <option value="paid">Plătite</option>
                     <option value="pending">În așteptare</option>
+                    <option value="expired">Expirate</option>
+                    <option value="cancelled">Anulate</option>
                     <option value="refunded">Rambursate</option>
+                    <option value="failed">Eșuate</option>
                 </select>
             </div>
         </div>

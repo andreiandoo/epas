@@ -212,7 +212,7 @@ const ReferralsPage = {
         document.getElementById('stat-completed').textContent = stats.conversions || stats.completed || '0';
         const pending = (stats.registrations || 0) - (stats.conversions || 0);
         document.getElementById('stat-pending').textContent = stats.pending || (pending > 0 ? pending : 0);
-        document.getElementById('stat-credit').textContent = (stats.total_earnings || stats.credit || 0) + ' ' + (stats.currency || 'puncte');
+        document.getElementById('stat-credit').textContent = (stats.total_earnings || stats.credit || 0) + ' ' + (stats.currency || '');
     },
 
     renderReferrals(referrals) {
