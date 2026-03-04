@@ -1029,6 +1029,7 @@ class EventResource extends Resource
                                     ->label($t('Tipuri de bilete', 'Ticket types'))
                                     ->collapsible()
                                     ->collapsed()
+                                    ->persistCollapsed()
                                     ->reorderable()
                                     ->reorderableWithDragAndDrop()
                                     ->orderColumn('sort_order')
@@ -1460,6 +1461,7 @@ class EventResource extends Resource
                                                     })
                                                     ->collapsible()
                                                     ->collapsed()
+                                                    ->persistCollapsed()
                                                     ->columns(12)
                                                     ->columnSpan(12)
                                                     ->schema([
@@ -1509,7 +1511,7 @@ class EventResource extends Resource
                                             ->columns(12)
                                             ->columnSpan(12),
                                     ]),
-                            ])->collapsible(),
+                            ])->collapsible()->persistCollapsed(),
                                     ]), // End Tab 4: Bilete
 
                                 // ========== TAB 5: SEO ==========
