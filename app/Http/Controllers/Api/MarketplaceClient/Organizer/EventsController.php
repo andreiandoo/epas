@@ -2788,6 +2788,7 @@ class EventsController extends BaseController
                     'max_per_order' => 10,
                     'status' => $tt->status === 'active' ? 'on_sale' : $tt->status,
                     'is_visible' => $tt->status === 'active',
+                    'is_entry_ticket' => (bool) ($tt->is_entry_ticket ?? false),
                 ];
             }),
             'created_at' => $event->created_at?->toIso8601String(),

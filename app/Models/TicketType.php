@@ -48,6 +48,8 @@ class TicketType extends Model
         'is_active',
         // Refund eligibility
         'is_refundable',
+        // Entry ticket flag (for mobile POS filtering)
+        'is_entry_ticket',
         // Series fields for ticket numbering
         'series_start',
         'series_end',
@@ -67,6 +69,7 @@ class TicketType extends Model
         'active_until'   => 'datetime',
         'autostart_when_previous_sold_out' => 'boolean',
         'is_refundable'  => 'boolean',
+        'is_entry_ticket' => 'boolean',
         'min_per_order'    => 'integer',
         'max_per_order'    => 'integer',
         'commission_rate'  => 'decimal:2',

@@ -1103,6 +1103,11 @@ class EventResource extends Resource
                                             ->inlineLabel($il)
                                             ->placeholder($t('Se generează automat dacă lași gol', 'AUTO-GEN if left empty'))
                                             ->columnSpan(4),
+                                        Forms\Components\Toggle::make('is_entry_ticket')
+                                            ->label($t('Bilet Intrare', 'Entry Ticket'))
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Doar tipurile cu acest flag sunt disponibile în aplicația mobilă POS', 'Only types with this flag are available in the mobile POS app'))
+                                            ->default(false)
+                                            ->columnSpan(3),
                                         Forms\Components\ColorPicker::make('color')
                                             ->label($t('Culoare pe hartă', 'Map color'))
                                             ->hexColor()

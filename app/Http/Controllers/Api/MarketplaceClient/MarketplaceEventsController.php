@@ -564,13 +564,13 @@ class MarketplaceEventsController extends BaseController
                 $basePrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
 
                 // Calculate original_price:
-                // 1. If ticket has its own original_price, use that
-                // 2. If event has target_price and no ticket original_price, use target_price
+                // 1. If event has target_price and it's > display price, use target_price (highest priority)
+                // 2. If ticket has sale_price_cents set and it's < price_cents, use price_cents as original (promotional discount)
                 $originalPrice = null;
-                if ($tt->original_price_cents && $tt->original_price_cents > ($tt->sale_price_cents ?? $tt->price_cents)) {
-                    $originalPrice = $tt->original_price_cents / 100;
-                } elseif ($targetPrice && $targetPrice > $basePrice) {
+                if ($targetPrice && $targetPrice > $basePrice) {
                     $originalPrice = $targetPrice;
+                } elseif ($tt->sale_price_cents && $tt->price_cents && $tt->sale_price_cents < $tt->price_cents) {
+                    $originalPrice = $tt->price_cents / 100;
                 }
 
                 // Get seating sections — derive from assigned rows or direct section assignments
