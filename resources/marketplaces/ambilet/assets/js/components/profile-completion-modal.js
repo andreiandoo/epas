@@ -473,20 +473,27 @@ const ProfileCompletionModal = {
             return '<p style="text-align:center;color:#94A3B8;padding:1rem 0">Se încarcă tipurile de evenimente...</p>';
         }
 
+        // Parent category chips
         let html = '<div style="display:flex;flex-wrap:wrap;gap:0.5rem">';
-        const renderType = (type) => {
-            const isSelected = this.selectedEventTypes.includes(type.slug);
-            html += `<div class="pcm-chip ${isSelected ? 'selected' : ''}" onclick="ProfileCompletionModal.toggleEventType(this, '${type.slug}')">${type.name}</div>`;
-        };
-
         this.eventTypes.forEach(type => {
-            renderType(type);
-            if (type.children) {
-                type.children.forEach(child => renderType(child));
-            }
+            const isSelected = this.selectedEventTypes.includes(type.slug);
+            html += `<div class="pcm-chip ${isSelected ? 'selected' : ''}" onclick="ProfileCompletionModal.toggleParentEventType('${type.slug}')">${type.name}</div>`;
+        });
+        html += '</div>';
+
+        // Subcategory sections for selected parents
+        const selectedParents = this.eventTypes.filter(t => this.selectedEventTypes.includes(t.slug) && t.children && t.children.length > 0);
+        selectedParents.forEach(parent => {
+            html += `<div style="margin-top:0.75rem;padding:0.75rem;background:#F8FAFC;border-radius:0.75rem;border-left:3px solid #A51C30">`;
+            html += `<div style="font-size:0.75rem;font-weight:600;color:#64748B;margin-bottom:0.5rem;text-transform:uppercase">${parent.name}</div>`;
+            html += `<div style="display:flex;flex-wrap:wrap;gap:0.375rem">`;
+            parent.children.forEach(child => {
+                const childSelected = this.selectedEventTypes.includes(child.slug);
+                html += `<div class="pcm-chip ${childSelected ? 'selected' : ''}" onclick="ProfileCompletionModal.toggleEventType(this, '${child.slug}')" style="font-size:0.8125rem;padding:0.375rem 0.75rem">${child.name}</div>`;
+            });
+            html += '</div></div>';
         });
 
-        html += '</div>';
         return html;
     },
 
@@ -615,6 +622,25 @@ const ProfileCompletionModal = {
         this._selectedGender = value;
         el.parentElement.querySelectorAll('.pcm-pill-btn').forEach(b => b.classList.remove('selected'));
         el.classList.add('selected');
+    },
+
+    toggleParentEventType(slug) {
+        const idx = this.selectedEventTypes.indexOf(slug);
+        if (idx >= 0) {
+            this.selectedEventTypes.splice(idx, 1);
+            // Also deselect children of this parent
+            const parent = this.eventTypes.find(t => t.slug === slug);
+            if (parent && parent.children) {
+                parent.children.forEach(child => {
+                    const childIdx = this.selectedEventTypes.indexOf(child.slug);
+                    if (childIdx >= 0) this.selectedEventTypes.splice(childIdx, 1);
+                });
+            }
+        } else {
+            this.selectedEventTypes.push(slug);
+        }
+        // Re-render to show/hide subcategories
+        this.reRenderContent();
     },
 
     toggleEventType(el, slug) {
