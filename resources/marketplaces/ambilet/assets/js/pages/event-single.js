@@ -1373,7 +1373,7 @@ const EventPage = {
                 ? 'relative z-10 p-2 pl-4 border ticket-card border-gray-200 rounded-lg bg-gray-100 cursor-default'
                 : 'bg-white relative z-10 p-2 pl-4 border cursor-pointer ticket-card border-border rounded-lg hover:z-20 group';
             var titleClasses = isSoldOut ? 'text-gray-400' : 'text-secondary';
-            var priceClasses = isSoldOut ? 'text-gray-400 line-through' : 'text-primary';
+            var priceClasses = isSoldOut ? 'text-gray-400 line-through' : 'text-slate-700';
             var descClasses = isSoldOut ? 'text-gray-400' : 'text-muted';
 
             // Controls HTML - different messages based on event status
@@ -1408,7 +1408,7 @@ const EventPage = {
                         '<span class="group-hover:opacity-0 group-hover:hidden block opacity-100 transition-all duration-150 ease-in-out">-</span>' +
                     '</button>' +
                     '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center text-primary text-xl flex items-center gap-x-1 justify-center">' + currentQty + '<b class="text-sm text-slate-700">x</b></span>' +
-                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-all duration-150 ease-in-out rounded-md bg-surface hover:bg-primary border border-slate-200 hover:text-white group-hover:bg-primary/50 group-hover:text-white group-hover:w-8  group-hover:h-8  group-hover:border-none group-hover:rounded"  aria-label="Increase quantity">' +
+                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-all duration-150 ease-in-out rounded-md bg-surface border border-slate-200 group-hover:text-white group-hover:w-8  group-hover:h-8  group-hover:border-none group-hover:rounded group-hover:bg-[linear-gradient(135deg, #10B981 0%, #059669 100%)]"  aria-label="Increase quantity">' +
                         '<span class="group-hover:opacity-100 group-hover:block hidden opacity-0 transition-all duration-150 ease-in-out">' +
                             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">' +
                                 '<path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd"></path>' +
@@ -1444,7 +1444,7 @@ const EventPage = {
                         (isSoldOut ? '' : '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' + tooltipHtml + '</div>') +
                     '</div>' +
                     '<div class="text-right relative">' +
-                        (hasDiscount && !isSoldOut ? '<span class="bg-primary p-1 px-3 rounded-md absolute -right-4 -top-6 line-through font-bold text-xs text-white">' + crossedOutPrice.toFixed(0) + ' lei</span>' : '') +
+                        (hasDiscount && !isSoldOut ? '<span class="bg-slate-700 p-1 px-3 rounded-md absolute -right-4 -top-6 line-through font-bold text-xs text-white">' + crossedOutPrice.toFixed(0) + ' lei</span>' : '') +
                         '<span class="block text-xl font-bold ' + priceClasses + '">' + displayPrice.toFixed(2) + ' lei</span>' +
                     '</div>' +
                 '</div>' +
@@ -1504,7 +1504,7 @@ const EventPage = {
                 this.renderTicketTypes();
             } else {
                 const qtyEl = document.getElementById('qty-' + ticketId);
-                if (qtyEl) qtyEl.textContent = newQty;
+                if (qtyEl) qtyEl.innerHTML = newQty + '<b class="text-sm text-slate-700">x</b>';
             }
 
             const card = document.querySelector('[data-ticket="' + ticketId + '"]');

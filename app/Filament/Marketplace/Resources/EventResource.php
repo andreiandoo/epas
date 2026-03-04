@@ -1122,6 +1122,12 @@ class EventResource extends Resource
                                             ->inlineLabel($il)
                                             ->placeholder($t('Descriere opțională tip bilet (ex: "Include acces backstage și meet & greet")', 'Optional ticket type description (e.g. "Includes backstage access and meet & greet")'))
                                             ->rows(2)
+                                            ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                if (!$state && $get('sales_end_at') && $get('price')) {
+                                                    $date = Carbon::parse($get('sales_end_at'))->format('d.m.Y');
+                                                    $set('description', "Reducere până la {$date}");
+                                                }
+                                            })
                                             ->columnSpan(12),
 
                                         SC\Grid::make(3)->schema([
@@ -1419,6 +1425,13 @@ class EventResource extends Resource
                                                     ->native(false)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
+                                                    ->live(debounce: 500)
+                                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                        if ($state && !$get('description')) {
+                                                            $date = Carbon::parse($state)->format('d.m.Y');
+                                                            $set('description', "Reducere până la {$date}");
+                                                        }
+                                                    })
                                                     ->visible(fn (SGet $get) => $get('has_sale'))
                                                     ->columnSpan(3),
 
