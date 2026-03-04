@@ -1192,20 +1192,14 @@ class EventResource extends Resource
                                                     ])
                                                     ->default('')
                                                     ->live()
-                                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) use ($marketplace) {
-                                                        // Auto-populate organizer/marketplace defaults when type is selected
+                                                    ->afterStateUpdated(function ($state, SSet $set) use ($marketplace) {
+                                                        $defaultRate = $marketplace?->commission_rate ?? 5;
+                                                        $defaultMode = $marketplace?->commission_mode ?? 'included';
                                                         if ($state === 'percentage' || $state === 'both') {
-                                                            $organizerId = $get('../../marketplace_organizer_id');
-                                                            $organizer = $organizerId ? MarketplaceOrganizer::find($organizerId) : null;
-                                                            $defaultRate = $organizer?->commission_rate ?? $marketplace?->commission_rate ?? 5;
-                                                            $defaultMode = $organizer?->default_commission_mode ?? $marketplace?->commission_mode ?? 'included';
                                                             $set('commission_rate', $defaultRate);
                                                             $set('commission_mode', $defaultMode);
                                                         }
                                                         if ($state === 'fixed' || $state === 'both') {
-                                                            $organizerId = $get('../../marketplace_organizer_id');
-                                                            $organizer = $organizerId ? MarketplaceOrganizer::find($organizerId) : null;
-                                                            $defaultMode = $organizer?->default_commission_mode ?? $marketplace?->commission_mode ?? 'included';
                                                             $set('commission_mode', $defaultMode);
                                                         }
                                                     })
@@ -1349,7 +1343,7 @@ class EventResource extends Resource
                                                     ->placeholder($t('lasă gol dacă nu e reducere', 'leave empty if no sale'))
                                                     ->numeric()
                                                     ->minValue(0)
-                                                    ->live(debounce: 300)
+                                                    ->live(onBlur: true)
                                                     ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                         $price = (float) ($get('price_max') ?: 0);
                                                         $sale = $state !== null && $state !== '' ? (float)$state : null;
@@ -1369,7 +1363,7 @@ class EventResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0)
                                                     ->maxValue(100)
-                                                    ->live(debounce: 300)
+                                                    ->live(onBlur: true)
                                                     ->formatStateUsing(function ($state, SGet $get) {
                                                         if ($state !== null && $state !== '') {
                                                             return $state;
@@ -1401,7 +1395,7 @@ class EventResource extends Resource
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
                                                     ->minDate(now())
-                                                    ->live(debounce: 500)
+                                                    ->live(onBlur: true)
                                                     ->afterStateUpdated(function ($state, SSet $set) {
                                                         if (!$state) return;
 
@@ -1425,7 +1419,7 @@ class EventResource extends Resource
                                                     ->native(false)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
-                                                    ->live(debounce: 500)
+                                                    ->live(onBlur: true)
                                                     ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                         if ($state && !$get('description')) {
                                                             $date = Carbon::parse($state)->format('d.m.Y');
