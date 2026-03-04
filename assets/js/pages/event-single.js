@@ -1266,7 +1266,7 @@ const EventPage = {
         var eventDisabled = eventIsCancelled || eventIsPostponed || eventIsSoldOut;
 
         container.innerHTML = this.ticketTypes.map(function(tt) {
-            self.quantities[tt.id] = 0;
+            if (!(tt.id in self.quantities)) self.quantities[tt.id] = 0;
             // Force all tickets as unavailable if event is disabled (cancelled/postponed/sold out)
             const isSoldOut = eventDisabled || tt.is_sold_out || tt.available <= 0;
 
