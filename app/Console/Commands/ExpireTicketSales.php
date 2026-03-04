@@ -13,13 +13,16 @@ class ExpireTicketSales extends Command
 
     public function handle(): int
     {
+        // Use Europe/Bucharest because DateTimePicker saves dates in local timezone
+        $now = now('Europe/Bucharest');
+
         $clearFields = [
             'sale_price_cents' => null,
             'sales_start_at' => null,
             'sales_end_at' => null,
             'sale_stock' => null,
             'sale_stock_sold' => null,
-            'updated_at' => now(),
+            'updated_at' => $now,
         ];
 
         // 1. Expire by end date
@@ -27,7 +30,7 @@ class ExpireTicketSales extends Command
             ->whereNotNull('sale_price_cents')
             ->where('sale_price_cents', '>', 0)
             ->whereNotNull('sales_end_at')
-            ->where('sales_end_at', '<=', now())
+            ->where('sales_end_at', '<=', $now)
             ->update($clearFields);
 
         // 2. Expire by depleted sale stock
