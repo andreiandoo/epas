@@ -5,6 +5,7 @@ function toggleOrder(btn) {
 
 const UserOrders = {
     orders: [],
+    serverStats: null,
 
     async init() {
         if (!AmbiletAuth.isAuthenticated()) {
@@ -34,12 +35,16 @@ const UserOrders = {
 
     async loadOrders() {
         try {
-            const response = await AmbiletAPI.customer.getOrders();
+            const response = await AmbiletAPI.customer.getOrders({ per_page: 50 });
             if (response.success && response.data) {
                 this.orders = response.data.orders || response.data || [];
             } else {
                 console.warn('No orders in API response');
                 this.orders = [];
+            }
+            // Use server-side aggregate stats (accurate across all orders, not just current page)
+            if (response.stats) {
+                this.serverStats = response.stats;
             }
         } catch (error) {
             console.error('Failed to load orders:', error);
@@ -52,17 +57,21 @@ const UserOrders = {
 
 
     updateStats() {
-        // Only count confirmed/paid orders for stats
-        const confirmed = this.orders.filter(o => ['confirmed', 'paid', 'completed'].includes(o.status));
-        const totalSpent = confirmed.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-        // Use the calculated savings field from API (includes promo discount + target price savings)
-        const totalSaved = confirmed.reduce((sum, o) => {
-            return sum + (parseFloat(o.savings) || 0);
-        }, 0);
+        // Use server-side stats when available (accurate for all orders, including insurance)
+        if (this.serverStats) {
+            document.getElementById('stat-total').textContent = this.serverStats.total_orders || this.orders.length;
+            document.getElementById('stat-spent').textContent = parseFloat(this.serverStats.total_spent || 0).toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' lei';
+            document.getElementById('stat-saved').textContent = parseFloat(this.serverStats.total_saved || 0).toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' lei';
+        } else {
+            // Fallback: compute from loaded orders
+            const confirmed = this.orders.filter(o => ['confirmed', 'paid', 'completed'].includes(o.status));
+            const totalSpent = confirmed.reduce((sum, o) => sum + (parseFloat(o.total) || 0) + (parseFloat(o.insurance_amount) || 0), 0);
+            const totalSaved = confirmed.reduce((sum, o) => sum + (parseFloat(o.savings) || 0), 0);
 
-        document.getElementById('stat-total').textContent = this.orders.length;
-        document.getElementById('stat-spent').textContent = totalSpent.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' lei';
-        document.getElementById('stat-saved').textContent = totalSaved.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' lei';
+            document.getElementById('stat-total').textContent = this.orders.length;
+            document.getElementById('stat-spent').textContent = totalSpent.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' lei';
+            document.getElementById('stat-saved').textContent = totalSaved.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' lei';
+        }
     },
 
     filterOrders() {
@@ -91,24 +100,36 @@ const UserOrders = {
         container.innerHTML = filtered.map(order => this.renderOrderCard(order)).join('');
     },
 
+    /** Compute the total the customer actually paid (order total + insurance fee) */
+    orderPaidTotal(order) {
+        return (parseFloat(order.total) || 0) + (parseFloat(order.insurance_amount) || 0);
+    },
+
     renderOrderCard(order) {
         const statusClass = {
             'confirmed': 'bg-success/10 text-success',
-            'completed': 'bg-muted/20 text-muted',
+            'completed': 'bg-success/10 text-success',
             'pending': 'bg-warning/10 text-warning',
             'paid': 'bg-success/10 text-success',
+            'cancelled': 'bg-error/10 text-error',
+            'expired': 'bg-muted/20 text-muted',
+            'failed': 'bg-error/10 text-error',
             'refunded': 'bg-error/10 text-error'
         }[order.status] || 'bg-muted/20 text-muted';
 
         const statusLabel = {
-            'confirmed': 'CONFIRMAT',
-            'completed': 'ÎNCHEIAT',
+            'confirmed': 'CONFIRMATĂ',
+            'completed': 'FINALIZATĂ',
             'pending': 'ÎN AȘTEPTARE',
-            'paid': 'PLĂTIT',
-            'refunded': 'RAMBURSAT'
-        }[order.status] || (order.status || 'UNKNOWN').toUpperCase();
+            'paid': 'PLĂTITĂ',
+            'cancelled': 'ANULATĂ',
+            'expired': 'EXPIRATĂ',
+            'failed': 'EȘUATĂ',
+            'refunded': 'RAMBURSATĂ'
+        }[order.status] || (order.status || 'NECUNOSCUT').toUpperCase();
 
         const isPast = order.status === 'completed' || order.status === 'refunded';
+        const paidTotal = this.orderPaidTotal(order);
 
         // Get event info with fallbacks
         const eventImage = order.event?.image || order.event?.featured_image || order.tickets?.[0]?.event?.image || '/assets/images/default-event.png';
@@ -138,8 +159,8 @@ const UserOrders = {
                             <div class="mobile:items-center mobile:gap-4 mobile:flex">
                                 <div class="flex items-center flex-shrink-0 text-right gap-x-4">
                                     ${order.status === 'refunded' ?
-                                        `<p class="font-bold line-through text-muted">${order.total} lei</p><p class="text-xs text-error">Rambursat</p>` :
-                                        `<span class="flex items-center justify-center px-2 py-0.5 ${statusClass} text-xs font-bold rounded">${statusLabel}</span> <p class="font-bold text-secondary">${order.total} lei</p>${order.points_earned ? `<p class="text-xs text-success">+${order.points_earned} puncte</p>` : ''}`
+                                        `<p class="font-bold line-through text-muted">${paidTotal.toFixed(2)} lei</p><p class="text-xs text-error">Rambursată</p>` :
+                                        `<span class="flex items-center justify-center px-2 py-0.5 ${statusClass} text-xs font-bold rounded">${statusLabel}</span> <p class="font-bold text-secondary">${paidTotal.toFixed(2)} lei</p>${order.points_earned ? `<p class="text-xs text-success">+${order.points_earned} puncte</p>` : ''}`
                                     }
                                 </div>
                                 <svg class="w-5 h-5 expand-icon text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -158,6 +179,9 @@ const UserOrders = {
     },
 
     renderOrderDetails(order) {
+        const insurance = parseFloat(order.insurance_amount) || 0;
+        const paidTotal = this.orderPaidTotal(order);
+
         return `
             ${order.status === 'confirmed' ? `
             <div class="mb-6">
@@ -214,6 +238,12 @@ const UserOrders = {
                             <span class="text-secondary">${parseFloat(order.commission_amount).toFixed(2)} lei</span>
                         </div>
                         ` : ''}
+                        ${insurance > 0 ? `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-muted">Taxă rambursare Ambilet</span>
+                            <span class="text-secondary">${insurance.toFixed(2)} lei</span>
+                        </div>
+                        ` : ''}
                         ${order.discount ? `
                         <div class="flex justify-between text-sm">
                             <span class="text-muted">Cod promoțional ${order.promo_code ? `(${order.promo_code})` : ''}</span>
@@ -223,7 +253,7 @@ const UserOrders = {
                         <hr class="border-border">
                         <div class="flex justify-between font-semibold">
                             <span class="text-secondary">Total plătit</span>
-                            <span class="text-secondary">${(['on_top', 'add_on_top', 'added_on_top'].includes(order.commission_mode) ? parseFloat(order.total) + parseFloat(order.commission_amount || 0) : parseFloat(order.total)).toFixed(2)} lei</span>
+                            <span class="text-secondary">${paidTotal.toFixed(2)} lei</span>
                         </div>
                         ${order.commission_amount > 0 && order.commission_mode === 'included' ? `
                         <div class="flex justify-between text-xs text-muted">

@@ -60,7 +60,8 @@
                             @endphp
 
                             @foreach([
-                                ['Lifetime Value', number_format($lifetimeStats['lifetime_value'] ?? 0, 2) . ' RON', 'heroicon-o-banknotes', 'text-green-600 dark:text-green-400'],
+                                ['Lifetime Value (Plătit)', number_format($lifetimeStats['lifetime_value'] ?? 0, 2) . ' RON', 'heroicon-o-banknotes', 'text-green-600 dark:text-green-400'],
+                                ['Total Comenzi (Toate)', number_format($lifetimeStats['all_orders_value'] ?? $lifetimeStats['lifetime_value'] ?? 0, 2) . ' RON', 'heroicon-o-banknotes', 'text-gray-600 dark:text-gray-400'],
                                 ['Client din', ($lifetimeStats['customer_since'] ?? 'N/A') . ' (' . number_format($lifetimeStats['lifetime_days'] ?? 0) . ' zile)', 'heroicon-o-calendar', 'text-blue-600 dark:text-blue-400'],
                                 ['Comenzi', number_format($lifetimeStats['total_orders'] ?? 0), 'heroicon-o-shopping-cart', 'text-amber-600 dark:text-amber-400'],
                                 ['Bilete', number_format($lifetimeStats['total_tickets'] ?? 0), 'heroicon-o-ticket', 'text-cyan-600 dark:text-cyan-400'],

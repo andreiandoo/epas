@@ -77,6 +77,12 @@ class CustomerInsightsService
             ->selectRaw("COUNT(*) as total_orders, SUM(" . $this->totalExpr() . ") as total_value")
             ->first();
 
+        // Paid value: only completed/paid/confirmed orders
+        $paidValue = DB::table('orders')
+            ->where($this->orderColumn, $this->customerId)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->sum(DB::raw($this->totalExpr()));
+
         $tickets = DB::table('tickets as t')
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.' . $this->orderColumn, $this->customerId)
@@ -93,7 +99,8 @@ class CustomerInsightsService
         $lifetimeDays = $this->createdAt ? (int) $this->createdAt->diffInDays(now()) : 0;
 
         return [
-            'lifetime_value' => ($orders->total_value ?? 0) / 100,
+            'lifetime_value' => ($paidValue ?? 0) / 100,
+            'all_orders_value' => ($orders->total_value ?? 0) / 100,
             'lifetime_days' => $lifetimeDays,
             'customer_since' => $this->createdAt?->format('d.m.Y'),
             'total_orders' => $orders->total_orders ?? 0,

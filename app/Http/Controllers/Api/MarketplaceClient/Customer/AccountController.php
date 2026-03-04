@@ -48,10 +48,26 @@ class AccountController extends BaseController
 
         $query->orderByDesc('created_at');
 
+        // Compute aggregate stats for ALL orders (not just current page)
+        $paidStatuses = ['confirmed', 'paid', 'completed'];
+        $allOrdersQuery = Order::where('marketplace_customer_id', $customer->id);
+
+        // total_spent: use total_cents when available, fallback to total
+        $totalSpentCents = (clone $allOrdersQuery)->whereIn('status', $paidStatuses)->sum('total_cents');
+        $totalSpentDecimal = (float) (clone $allOrdersQuery)->whereIn('status', $paidStatuses)->sum('total');
+        $totalSpent = $totalSpentCents > 0 ? ($totalSpentCents / 100) : $totalSpentDecimal;
+
+        // Also sum insurance amounts from meta for paid orders
+        $paidOrders = (clone $allOrdersQuery)->whereIn('status', $paidStatuses)->get(['meta']);
+        $totalInsurance = $paidOrders->sum(fn ($o) => (float) ($o->meta['insurance_amount'] ?? 0));
+        $totalSpent += $totalInsurance;
+
+        $totalSaved = (float) (clone $allOrdersQuery)->whereIn('status', $paidStatuses)->sum('discount_amount');
+
         $perPage = min((int) $request->get('per_page', 20), 50);
         $orders = $query->paginate($perPage);
 
-        return $this->paginated($orders, function ($order) {
+        $paginatedResponse = $this->paginated($orders, function ($order) {
             // Handle both marketplace events and tenant events
             $eventData = null;
 
@@ -253,11 +269,22 @@ class AccountController extends BaseController
                         'is_refundable' => $isRefundable,
                     ];
                 })->values()->toArray(),
+                'insurance_amount' => (float) ($order->meta['insurance_amount'] ?? 0),
                 'can_request_refund' => $canRequestRefund,
                 'refund_reason' => $refundReason,
                 'created_at' => $order->created_at->toIso8601String(),
             ];
         });
+
+        // Inject aggregate stats into the response
+        $responseData = json_decode($paginatedResponse->getContent(), true);
+        $responseData['stats'] = [
+            'total_spent' => round($totalSpent, 2),
+            'total_saved' => round($totalSaved, 2),
+            'total_orders' => (clone $allOrdersQuery)->count(),
+        ];
+
+        return response()->json($responseData, $paginatedResponse->getStatusCode());
     }
 
     /**

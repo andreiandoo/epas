@@ -397,7 +397,7 @@ RewriteRule ^contact/?$ contact.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^despre-noi/?$ about.php [L]
+RewriteRule ^despre/?$ about.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -428,6 +428,10 @@ RewriteRule ^dezabonare/?$ newsletter-unsubscribed.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^blog/?$ blog.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^press-kit/?$ press-kit.php [L]
 
 # /cauta -> cauta.php (search results page)
 RewriteCond %{REQUEST_FILENAME} !-f

@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     const tasteProfile = profileData.taste_profile || [];
     const topArtists = profileData.top_artists || [];
+    const preferredGenres = profileData.preferred_genres || [];
     const citiesVisited = profileData.cities_visited || [];
     const insights = profileData.insights || [];
     const badges = profileData.badges || [];
@@ -104,6 +105,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Render sections
     renderTasteProfile(tasteProfile);
     renderTopArtists(topArtists);
+    renderPreferredGenres(preferredGenres);
     renderCities(citiesVisited);
     renderInsights(insights);
     renderBadges(badges);
@@ -112,6 +114,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Show/hide empty states
     toggleEmptyState('taste-profile-container', tasteProfile.length === 0);
     toggleEmptyState('top-artists-container', topArtists.length === 0);
+    toggleEmptyState('preferred-genres-container', preferredGenres.length === 0);
     toggleEmptyState('cities-container', citiesVisited.length === 0);
     toggleEmptyState('insights-container', insights.length === 0);
 });
@@ -157,16 +160,37 @@ function renderTopArtists(artists) {
         const imgHtml = artist.image
             ? `<img src="${artist.image}" class="object-cover w-full h-full" alt="${artist.name}" onerror="this.parentElement.innerHTML='<div class=\\'flex items-center justify-center w-full h-full text-xl font-bold text-white bg-primary\\'>${artist.name[0]}</div>'">`
             : `<div class="flex items-center justify-center w-full h-full text-xl font-bold text-white bg-primary">${artist.name[0]}</div>`;
+        const favHeart = artist.is_favorite ? '<span class="ml-1 text-error" title="Favorit">&#9829;</span>' : '';
+        const evtLabel = artist.events_count > 0
+            ? `${artist.events_count} eveniment${artist.events_count > 1 ? 'e' : ''}`
+            : (artist.is_favorite ? 'Favorit' : '');
         return `
         <div class="text-center artist-card">
             <div class="w-16 h-16 mx-auto mb-2 overflow-hidden rounded-full">
                 ${imgHtml}
             </div>
-            <p class="text-sm font-semibold text-secondary">${artist.name}</p>
-            <p class="text-xs text-muted">${artist.events_count} eveniment${artist.events_count > 1 ? 'e' : ''}</p>
+            <p class="text-sm font-semibold text-secondary">${artist.name}${favHeart}</p>
+            <p class="text-xs text-muted">${evtLabel}</p>
         </div>
     `;
     }).join('');
+}
+
+function renderPreferredGenres(genres) {
+    const container = document.getElementById('preferred-genres-container');
+    if (!container || !genres.length) return;
+
+    container.innerHTML = genres.map(genre => `
+        <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-secondary">${genre.name}</span>
+            <div class="flex items-center gap-2">
+                <div class="w-24 h-2 overflow-hidden rounded-full bg-surface">
+                    <div class="h-full rounded-full bg-accent" style="width: ${genre.percentage}%"></div>
+                </div>
+                <span class="w-12 text-xs text-right text-muted">${genre.percentage}%</span>
+            </div>
+        </div>
+    `).join('');
 }
 
 function renderCities(cities) {

@@ -289,22 +289,59 @@ class StatsController extends BaseController
             }
         }
 
-        // === Top Artists ===
+        // === Top Artists (merged: order history + favorites) ===
+        // Add favorite artists with a weight of 1
+        try {
+            $favArtistIds = $customer->favoriteArtists()->pluck('artists.id')->toArray();
+            foreach ($favArtistIds as $faid) {
+                $artistIdCount[$faid] = ($artistIdCount[$faid] ?? 0) + 1;
+            }
+        } catch (\Exception $e) {}
+
         $topArtists = [];
         if (!empty($artistIdCount)) {
             arsort($artistIdCount);
-            $topIds = array_slice(array_keys($artistIdCount), 0, 4, true);
-            $artists = Artist::whereIn('id', $topIds)->get();
+            $topIds = array_slice(array_keys($artistIdCount), 0, 6, true);
+            $artists = Artist::whereIn('id', $topIds)->with('artistGenres')->get();
             foreach ($topIds as $aid) {
                 $artist = $artists->firstWhere('id', $aid);
                 if (!$artist) continue;
+                $isFavorite = in_array($aid, $favArtistIds ?? []);
                 $topArtists[] = [
                     'id' => $artist->id,
                     'name' => $artist->name,
                     'image' => $artist->main_image_full_url,
-                    'events_count' => $artistIdCount[$aid],
+                    'events_count' => $artistIdCount[$aid] - ($isFavorite ? 1 : 0), // subtract the +1 fav weight for display
+                    'is_favorite' => $isFavorite,
                 ];
             }
+        }
+
+        // === Preferred Genres (from artists in orders + favorites) ===
+        $genreCount = [];
+        if (!empty($artistIdCount)) {
+            $allArtistIds = array_keys($artistIdCount);
+            $genreRows = \DB::table('artist_genres as ag')
+                ->join('artist_artist_genre as aag', 'aag.artist_genre_id', '=', 'ag.id')
+                ->whereIn('aag.artist_id', $allArtistIds)
+                ->select(
+                    'ag.id',
+                    \DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.ro')), JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.en')), ag.name) as label")
+                )
+                ->get();
+            foreach ($genreRows as $gr) {
+                $genreCount[$gr->label] = ($genreCount[$gr->label] ?? 0) + 1;
+            }
+        }
+        arsort($genreCount);
+        $totalGenres = array_sum($genreCount);
+        $preferredGenres = [];
+        foreach ($genreCount as $label => $count) {
+            $preferredGenres[] = [
+                'name' => $label,
+                'count' => $count,
+                'percentage' => $totalGenres > 0 ? round(($count / $totalGenres) * 100) : 0,
+            ];
         }
 
         // === Cities Visited ===
@@ -457,6 +494,7 @@ class StatsController extends BaseController
             'customer_type_emoji' => $customerTypeEmoji,
             'taste_profile' => $tasteProfile,
             'top_artists' => $topArtists,
+            'preferred_genres' => $preferredGenres,
             'cities_visited' => $citiesVisited,
             'activity_data' => $activityData,
             'insights' => $insights,
