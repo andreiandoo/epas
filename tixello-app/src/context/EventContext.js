@@ -83,7 +83,11 @@ export function EventProvider({ children }) {
         mode: event.commission_mode || 'included',
         useFixed: event.use_fixed_commission || false,
       });
-      const types = event.ticket_types || [];
+      const allTypes = event.ticket_types || [];
+      // Filter by is_entry_ticket: only show entry tickets in mobile POS
+      // Fallback: if no ticket type has is_entry_ticket=true, show all (backward compat)
+      const entryTypes = allTypes.filter(t => t.is_entry_ticket);
+      const types = entryTypes.length > 0 ? entryTypes : allTypes;
       if (types.length > 0) {
         const colorPalette = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];
         setTicketTypes(types.map((t, i) => ({
@@ -120,6 +124,12 @@ export function EventProvider({ children }) {
     }
   }, [selectedEvent]);
 
+  const refreshTicketTypes = useCallback(() => {
+    if (selectedEvent) {
+      fetchTicketTypes(selectedEvent.id);
+    }
+  }, [selectedEvent]);
+
   const groupedEvents = groupEventsByCategory(events);
 
   return (
@@ -136,6 +146,7 @@ export function EventProvider({ children }) {
       fetchEvents,
       selectEvent,
       refreshStats,
+      refreshTicketTypes,
       incrementCheckedIn,
     }}>
       {children}
