@@ -21,7 +21,7 @@ class ExpireTicketSales extends Command
             'sales_start_at' => null,
             'sales_end_at' => null,
             'sale_stock' => null,
-            'sale_stock_sold' => null,
+            'sale_stock_sold' => 0,
             'updated_at' => $now,
         ];
 
