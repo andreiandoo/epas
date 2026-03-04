@@ -343,6 +343,7 @@ class EventResource extends Resource
                                 SC\Tabs\Tab::make($t('Program', 'Schedule'))
                                     ->key('program')
                                     ->icon('heroicon-o-calendar')
+                                    ->lazy()
                                     ->schema([
                         // SCHEDULE
                         SC\Section::make($t('Program', 'Schedule'))
@@ -622,6 +623,7 @@ class EventResource extends Resource
                                 SC\Tabs\Tab::make($t('Conținut', 'Content'))
                                     ->key('continut')
                                     ->icon('heroicon-o-pencil-square')
+                                    ->lazy()
                                     ->schema([
                         // CONTENT - Single Language
                         SC\Section::make($t('Conținut', 'Content'))
@@ -979,6 +981,7 @@ class EventResource extends Resource
                                 SC\Tabs\Tab::make($t('Bilete', 'Tickets'))
                                     ->key('bilete')
                                     ->icon('heroicon-o-ticket')
+                                    ->lazy()
                                     ->schema([
                         // TICKETS
                         SC\Section::make($t('Bilete', 'Tickets'))
@@ -1506,6 +1509,7 @@ class EventResource extends Resource
                                 SC\Tabs\Tab::make('SEO')
                                     ->key('seo')
                                     ->icon('heroicon-o-globe-alt')
+                                    ->lazy()
                                     ->schema([
                         // SEO Section (not collapsible - always visible when on SEO tab)
                         SC\Section::make('SEO')
@@ -1712,6 +1716,7 @@ class EventResource extends Resource
                                     ->key('harta')
                                     ->icon('heroicon-o-map')
                                     ->visible(fn (SGet $get) => (bool) $get('seating_layout_id'))
+                                    ->lazy()
                                     ->schema([
                         // Interactive seating map editor with zoom/pan and row assignment
                         Forms\Components\Placeholder::make('seating_map_editor')
@@ -1737,6 +1742,7 @@ class EventResource extends Resource
                                 SC\Tabs\Tab::make($t('Turneu', 'Tour'))
                                     ->key('turneu')
                                     ->icon('heroicon-o-map-pin')
+                                    ->lazy()
                                     ->schema([
                         SC\Section::make($t('Setări Turneu', 'Tour Settings'))
                             ->schema([
