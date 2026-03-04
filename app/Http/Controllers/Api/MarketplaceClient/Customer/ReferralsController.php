@@ -404,16 +404,16 @@ class ReferralsController extends BaseController
         ];
 
         try {
-            $settings = DB::table('marketplace_client_settings')
-                ->where('marketplace_client_id', $clientId)
-                ->where('key', 'referral_program')
-                ->first();
+            $clientRecord = DB::table('marketplace_clients')->where('id', $clientId)->first();
+            $clientSettings = $clientRecord && $clientRecord->settings
+                ? (is_string($clientRecord->settings) ? json_decode($clientRecord->settings, true) : (array) $clientRecord->settings)
+                : [];
 
-            if ($settings && $settings->value) {
-                return json_decode($settings->value, true);
+            if (!empty($clientSettings['referral_program'])) {
+                return array_merge($defaults, $clientSettings['referral_program']);
             }
         } catch (\Exception $e) {
-            // Table may not exist, return defaults
+            // Fallback to defaults
         }
 
         return $defaults;

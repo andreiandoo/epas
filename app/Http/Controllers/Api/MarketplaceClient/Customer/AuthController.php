@@ -79,13 +79,21 @@ class AuthController extends BaseController
         // Track referral if code provided
         $referralInfo = null;
         if (!empty($validated['referral_code'])) {
-            $referralInfo = $this->trackReferralRegistration($client->id, $customer->id, $validated['referral_code']);
+            try {
+                $referralInfo = $this->trackReferralRegistration($client->id, $customer->id, $validated['referral_code']);
+            } catch (\Exception $e) {
+                \Log::channel('marketplace')->warning('Failed to track referral registration', [
+                    'customer_id' => $customer->id,
+                    'referral_code' => $validated['referral_code'],
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         // Send verification email via marketplace transport
         $verificationToken = $customer->generateEmailVerificationToken();
         try {
-            $this->sendVerificationEmail($client, $customer, $verificationToken);
+            $this->sendVerificationEmail($client, $customer, $verificationToken, $referralInfo);
         } catch (\Exception $e) {
             \Log::channel('marketplace')->warning('Failed to send verification email', [
                 'customer_id' => $customer->id,
@@ -163,15 +171,14 @@ class AuthController extends BaseController
             ->where('id', $referralCode->marketplace_customer_id)
             ->first();
 
-        // Get referral settings
-        $settings = DB::table('marketplace_client_settings')
-            ->where('marketplace_client_id', $clientId)
-            ->where('key', 'referral_program')
-            ->first();
-
-        $referralSettings = $settings && $settings->value
-            ? json_decode($settings->value, true)
-            : ['referrer_reward' => 50, 'referred_reward' => 25, 'reward_type' => 'points'];
+        // Get referral settings from marketplace_clients.settings JSON column
+        $clientRecord = DB::table('marketplace_clients')->where('id', $clientId)->first();
+        $clientSettings = $clientRecord && $clientRecord->settings
+            ? (is_string($clientRecord->settings) ? json_decode($clientRecord->settings, true) : (array) $clientRecord->settings)
+            : [];
+        $referralSettings = $clientSettings['referral_program'] ?? [
+            'referrer_reward' => 50, 'referred_reward' => 25, 'reward_type' => 'points',
+        ];
 
         return [
             'referrer_name' => $referrer ? ($referrer->first_name ?? 'Un prieten') : 'Un prieten',
@@ -855,7 +862,7 @@ class AuthController extends BaseController
     /**
      * Send verification email via marketplace transport.
      */
-    protected function sendVerificationEmail($client, MarketplaceCustomer $customer, string $token): void
+    protected function sendVerificationEmail($client, MarketplaceCustomer $customer, string $token, ?array $referralInfo = null): void
     {
         $domain = rtrim($client->domain, '/');
         if ($domain && !str_starts_with($domain, 'http')) {
@@ -866,29 +873,56 @@ class AuthController extends BaseController
         $firstName = $customer->first_name ?: 'Client';
         $siteName = $client->name ?? 'bilete.online';
 
+        // Build referral bonus section if applicable
+        $referralSection = '';
+        if ($referralInfo) {
+            $reward = $referralInfo['referred_reward'] ?? 25;
+            $referrerName = $referralInfo['referrer_name'] ?? 'un prieten';
+            $referralSection = ''
+                . '<div style="background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin:0 0 20px;text-align:center">'
+                . '<p style="font-size:24px;margin:0 0 8px">🎉</p>'
+                . '<p style="font-size:16px;font-weight:700;color:#166534;margin:0 0 6px">Ai fost invitat de ' . htmlspecialchars($referrerName) . '!</p>'
+                . '<p style="font-size:14px;color:#15803d;margin:0">Vei primi <strong>' . $reward . ' puncte bonus</strong> după prima ta comandă.</p>'
+                . '<p style="font-size:13px;color:#16a34a;margin:8px 0 0">Punctele pot fi folosite ca reducere la achiziții viitoare.</p>'
+                . '</div>';
+        }
+
         $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;background:#f8fafc">'
             . '<div style="max-width:600px;margin:0 auto;padding:40px 20px">'
             . '<div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">'
             . '<div style="background:linear-gradient(135deg,#A51C30 0%,#8B1728 100%);padding:32px;text-align:center">'
-            . '<h1 style="color:white;margin:0;font-size:24px">Verifică adresa de email</h1>'
+            . '<h1 style="color:white;margin:0;font-size:24px">Bine ai venit pe ' . htmlspecialchars($siteName) . '!</h1>'
             . '</div>'
             . '<div style="padding:32px">'
-            . '<p style="font-size:16px;color:#1e293b;margin:0 0 16px">Bine ai venit, ' . htmlspecialchars($firstName) . '!</p>'
-            . '<p style="font-size:15px;color:#475569;margin:0 0 16px">Mulțumim pentru înregistrare! Te rugăm să-ți verifici adresa de email pentru a finaliza configurarea contului.</p>'
+            . '<p style="font-size:16px;color:#1e293b;margin:0 0 16px">Salut, ' . htmlspecialchars($firstName) . '!</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 20px">Mulțumim pentru înregistrare! Te rugăm să-ți verifici adresa de email pentru a finaliza configurarea contului.</p>'
+            . $referralSection
             . '<div style="text-align:center;margin:24px 0">'
             . '<a href="' . htmlspecialchars($verifyUrl) . '" style="display:inline-block;background:#A51C30;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px">Verifică adresa de email</a>'
             . '</div>'
             . '<p style="font-size:13px;color:#94a3b8;margin:16px 0 0;text-align:center">Linkul de verificare expiră în 24 de ore.</p>'
-            . '<p style="font-size:13px;color:#94a3b8;margin:8px 0 0;text-align:center">Dacă nu ai creat un cont, poți ignora acest email.</p>'
+            . ($referralInfo ? ''
+                . '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin:20px 0 0;text-align:center">'
+                . '<p style="font-size:14px;color:#1e40af;margin:0 0 8px;font-weight:600">💡 Cum funcționează punctele?</p>'
+                . '<p style="font-size:13px;color:#3b82f6;margin:0 0 4px">1. Plasează prima ta comandă pe ' . htmlspecialchars($siteName) . '</p>'
+                . '<p style="font-size:13px;color:#3b82f6;margin:0 0 4px">2. Primești automat ' . ($referralInfo['referred_reward'] ?? 25) . ' puncte bonus</p>'
+                . '<p style="font-size:13px;color:#3b82f6;margin:0 0 4px">3. Folosește punctele ca reducere la achiziții</p>'
+                . '<p style="font-size:13px;color:#3b82f6;margin:0">4. Invită prieteni și câștigă și mai multe puncte!</p>'
+                . '</div>'
+            : '<p style="font-size:13px;color:#94a3b8;margin:8px 0 0;text-align:center">Dacă nu ai creat un cont, poți ignora acest email.</p>')
             . '</div>'
             . '<div style="padding:16px 32px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0">'
             . '<p style="font-size:13px;color:#94a3b8;margin:0">Echipa ' . htmlspecialchars($siteName) . '</p>'
             . '</div>'
             . '</div></div></body></html>';
 
-        $this->sendMarketplaceEmail($client, $customer->email, $firstName, 'Verifică adresa de email', $html, [
+        $subject = $referralInfo
+            ? 'Bine ai venit! Verifică emailul și primește ' . ($referralInfo['referred_reward'] ?? 25) . ' puncte bonus'
+            : 'Verifică adresa de email';
+
+        $this->sendMarketplaceEmail($client, $customer->email, $firstName, $subject, $html, [
             'marketplace_customer_id' => $customer->id,
-            'template_slug' => 'email_verification',
+            'template_slug' => $referralInfo ? 'referral_welcome' : 'email_verification',
         ]);
     }
 

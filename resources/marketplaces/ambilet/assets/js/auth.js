@@ -526,13 +526,13 @@ const AmbiletAuth = {
 
         banner = document.createElement('div');
         banner.id = 'referral-banner';
-        banner.className = 'fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-4 text-center shadow-lg';
+        banner.className = 'mobile:hidden text-sm py-2.5 transition-all duration-200 ease-in-out text-white bg-gradient-to-r from-purple-600 to-pink-600';
         banner.innerHTML = `
-            <div class="container mx-auto flex items-center justify-center gap-3 flex-wrap">
+            <div class="flex items-center justify-center gap-3 px-4 mx-auto max-w-7xl flex-wrap">
                 <span class="text-lg">🎉</span>
-                <span class="font-medium">${referralInfo.message || ('Ai fost invitat! Primesti ' + referralInfo.referred_reward + ' puncte bonus la inregistrare.')}</span>
-                <a href="/register" class="bg-white text-purple-600 px-4 py-1 rounded-full font-semibold hover:bg-gray-100 transition-colors text-sm">
-                    Inregistreaza-te acum
+                <span class="font-medium">${referralInfo.message || ('Ai fost invitat! Primești ' + referralInfo.referred_reward + ' puncte bonus la înregistrare.')}</span>
+                <a href="/inregistrare" class="bg-white text-purple-600 px-4 py-1 rounded-full font-semibold hover:bg-gray-100 transition-colors text-sm">
+                    Înregistrează-te acum
                 </a>
                 <button onclick="this.closest('#referral-banner').remove()" aria-label="Închide" class="ml-2 text-white/80 hover:text-white">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -542,10 +542,13 @@ const AmbiletAuth = {
             </div>
         `;
 
-        // Add some top padding to body to account for fixed banner
-        document.body.style.paddingTop = '56px';
-
-        document.body.insertBefore(banner, document.body.firstChild);
+        // Insert inside the header, before the top bar (same position as cart timer)
+        const header = document.getElementById('header');
+        if (header) {
+            header.insertBefore(banner, header.firstChild);
+        } else {
+            document.body.insertBefore(banner, document.body.firstChild);
+        }
     },
 
     /**

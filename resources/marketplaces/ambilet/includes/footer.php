@@ -59,7 +59,7 @@ $currentYear = date('Y');
                             <polyline points="22,6 12,13 2,6"/>
                         </svg>
                         <input type="email" name="email" placeholder="Adresa ta de email" required
-                            class="w-full pl-12 pr-5 py-3 bg-white/15 border border-white/20 rounded-xl text-[15px] text-white placeholder-white/50 outline-none focus:border-white focus:bg-white/20 transition-all">
+                            class="w-full py-3 pl-12 pr-5 text-sm text-white transition-all border outline-none bg-white/15 border-white/20 rounded-xl placeholder-white/50 focus:border-white focus:bg-white/20">
                     </div>
                     <button type="submit" class="px-7 py-3 bg-white border-none rounded-xl text-primary text-[15px] font-semibold cursor-pointer hover:-translate-y-0.5 hover:shadow-lg transition-all whitespace-nowrap flex items-center justify-center gap-2">
                         Abonează-te
@@ -74,7 +74,7 @@ $currentYear = date('Y');
     </div>
 
     <!-- Main Footer -->
-    <div class="relative z-10 px-6 py-16 mobile:pt-8 mobile:pb-12">
+    <div class="relative z-10 px-6 py-16 mobile:pt-8 mobile:pb-12 mobile:px-0">
         <div class="mx-auto max-w-7xl">
             <!-- Footer Grid -->
             <div class="grid grid-cols-1 gap-8 mb-6 md:grid-cols-2 lg:grid-cols-5 lg:gap-12">
@@ -83,7 +83,7 @@ $currentYear = date('Y');
                     <a href="/" class="hidden items-center gap-2.5 mb-4">
                         <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="w-auto h-10 brightness-0 invert">
                     </a>
-                    <a href="/" class="flex items-center mobile:justify-center gap-2.5 mb-4">
+                    <a href="/" class="flex items-center mobile:justify-center gap-2.5 mb-4 mobile:gap-8">
                         <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo  <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
                         <svg class="hidden w-10 h-10 mobile:h-12 mobile:w-12" viewBox="0 0 48 48" fill="none">
                             <path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="white"></path>
@@ -95,11 +95,36 @@ $currentYear = date('Y');
                             <span class="text-white/85">Am</span>
                             <span class="text-white">Bilet</span>
                         </div>
+                        <div class="hidden mobile:flex gap-2.5 justify-center lg:justify-start">
+                            <a href="<?= htmlspecialchars($socialLinks['facebook']) ?>" target="_blank" rel="noopener" aria-label="Facebook" class="w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                                </svg>
+                            </a>
+                            <a href="<?= htmlspecialchars($socialLinks['instagram']) ?>" target="_blank" rel="noopener" aria-label="Instagram" class="w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                                </svg>
+                            </a>
+                            <a href="<?= htmlspecialchars($socialLinks['tiktok']) ?>" target="_blank" rel="noopener" aria-label="TikTok" class="hidden w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                                </svg>
+                            </a>
+                            <a href="<?= htmlspecialchars($socialLinks['youtube']) ?>" target="_blank" rel="noopener" aria-label="YouTube" class="hidden w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+                                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#0F172A"/>
+                                </svg>
+                            </a>
+                        </div>
                     </a>
-                    <p class="mb-6 text-sm leading-relaxed text-white/90">
+                    <p class="mb-6 text-sm leading-relaxed text-white/90 mobile:px-6">
                         Platforma ta de încredere pentru bilete la evenimente. Descoperă concerte, festivaluri, spectacole și experiențe unice în toată România.
                     </p>
-                    <div class="flex gap-2.5 justify-center lg:justify-start">
+                    <div class="flex gap-2.5 justify-center lg:justify-start mobile:hidden">
                         <a href="<?= htmlspecialchars($socialLinks['facebook']) ?>" target="_blank" rel="noopener" aria-label="Facebook" class="w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
@@ -124,7 +149,7 @@ $currentYear = date('Y');
                             </svg>
                         </a>
                     </div>
-                    <div class="flex items-center justify-center gap-2 pt-5 mt-5 border-t border-white/10 lg:justify-start">
+                    <div class="flex items-center justify-center gap-2 pt-5 mt-5 border-t border-white/10 lg:justify-start mobile:border-b mobile:pb-5 mobile:mb-5">
                         <span class="text-xs text-white/40">Powered by</span>
                         <a href="https://tixello.com" target="_blank" class="flex items-center gap-1 text-xs font-bold transition-colors text-white/90 hover:text-white">
                             <img src="/assets/images/tixello-logo.svg" alt="Tixello" width="40" height="12" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>
@@ -132,10 +157,10 @@ $currentYear = date('Y');
                     </div>
                 </div>
 
-                <div class="grid gap-8 mobile:grid-cols-2 lg:col-span-4 lg:grid-cols-4">
+                <div class="grid gap-8 mobile:grid-cols-2 lg:col-span-4 lg:grid-cols-4 mobile:px-6">
                     <!-- Evenimente Column -->
                     <div>
-                        <span class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Evenimente</span>
+                        <span class="block mb-5 text-sm font-bold tracking-wider text-white uppercase mobile:mb-3">Evenimente</span>
                         <ul class="space-y-3">
                             <li><a href="/evenimente" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Toate evenimentele</a></li>
                             <li><a href="/bilete-concerte" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Concerte</a></li>
@@ -149,7 +174,7 @@ $currentYear = date('Y');
 
                     <!-- Descoperă Column -->
                     <div class="mobile:text-right">
-                        <span class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Descoperă</span>
+                        <span class="block mb-5 text-sm font-bold tracking-wider text-white uppercase mobile:mb-3">Descoperă</span>
                         <ul class="space-y-3">
                             <li><a href="/orase" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Orașe</a></li>
                             <li><a href="/locatii" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Locații</a></li>
@@ -168,21 +193,21 @@ $currentYear = date('Y');
 
                     <!-- Companie Column -->
                     <div>
-                        <span class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Companie</span>
+                        <span class="block mb-5 text-sm font-bold tracking-wider text-white uppercase mobile:mb-3">Companie</span>
                         <ul class="space-y-3">
                             <li><a href="/despre" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Despre noi</a></li>
                             <li><a href="/press-kit" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Press Kit</a></li>
                             <li><a href="/blog" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Blog</a></li>
                             <li class="hidden"><a href="/parteneri" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Parteneri</a></li>
                             <li><a href="/ajutor" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Centru de ajutor</a></li>
-                            <li><a href="/faq" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Întrebări frecvente</a></li>
+                            <li><a href="/intrebari" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Întrebări frecvente</a></li>
                             <li><a href="/contact" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Contact</a></li>
                         </ul>
                     </div>
 
                     <!-- Organizatori Column -->
                     <div class="mobile:text-right">
-                        <span class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Organizatori</span>
+                        <span class="block mb-5 text-sm font-bold tracking-wider text-white uppercase mobile:mb-3">Organizatori</span>
                         <ul class="space-y-3">
                             <li class="hidden"><a href="/organizatori" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Vinde bilete</a></li>
                             <li><a href="/organizator/inregistrare" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Înregistrare organizator</a></li>

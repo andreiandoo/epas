@@ -1375,6 +1375,22 @@ select.pr-10 {
     justify-content: center;
 }
 
+.text-white\/85 {
+    color: rgba(255, 255, 255, 0.85);
+}
+.bg-white\/15 {
+    background: rgba(255, 255, 255, 0.15);
+}
+.border-white\/20 {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+.placeholder-white\/50::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+.focus:bg-white\/20:focus {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 /* Mobile Menu Button */
 .mobile-menu-btn {
     display: none;
