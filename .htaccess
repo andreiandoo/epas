@@ -285,6 +285,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^inregistrare/?$ register.php [L]
 
+# /verify-email -> verify-email.php (handles token verification + pending state)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^verify-email/?$ verify-email.php [L,QSA]
+
 # /parola-uitata -> forgot-password.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
