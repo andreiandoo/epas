@@ -642,6 +642,11 @@ select.pr-10 {
     box-shadow: none;
 }
 
+/* Ticket quantity +/- button green gradient on group hover */
+.group:hover .btn-qty-add {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
 .ticket-divider {
     background-image: radial-gradient(circle, var(--border) 6px, transparent 6px);
     background-size: 20px 20px;
@@ -1387,7 +1392,7 @@ select.pr-10 {
 .placeholder-white\/50::placeholder {
     color: rgba(255, 255, 255, 0.5);
 }
-.focus:bg-white\/20:focus {
+.focus\:bg-white\/20:focus {
     background: rgba(255, 255, 255, 0.2);
 }
 

@@ -1408,7 +1408,7 @@ const EventPage = {
                         '<span class="group-hover:opacity-0 group-hover:hidden block opacity-100 transition-all duration-150 ease-in-out">-</span>' +
                     '</button>' +
                     '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center text-primary text-xl flex items-center gap-x-1 justify-center">' + currentQty + '<b class="text-sm text-slate-700">x</b></span>' +
-                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-all duration-150 ease-in-out rounded-md bg-surface border border-slate-200 group-hover:text-white group-hover:w-8  group-hover:h-8  group-hover:border-none group-hover:rounded group-hover:bg-[linear-gradient(135deg, #10B981 0%, #059669 100%)]"  aria-label="Increase quantity">' +
+                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="btn-qty-add flex items-center justify-center w-8 h-8 font-bold transition-all duration-150 ease-in-out rounded-md bg-surface border border-slate-200 group-hover:text-white group-hover:w-8 group-hover:h-8 group-hover:border-none group-hover:rounded"  aria-label="Increase quantity">' +
                         '<span class="group-hover:opacity-100 group-hover:block hidden opacity-0 transition-all duration-150 ease-in-out">' +
                             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">' +
                                 '<path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd"></path>' +
