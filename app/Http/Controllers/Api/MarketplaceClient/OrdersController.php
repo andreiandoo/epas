@@ -664,7 +664,7 @@ class OrdersController extends BaseController
         // Send ticket email
         try {
             $this->sendPosTicketEmail($order, $email, $client);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to send POS ticket email', [
                 'order_id' => $order->id,
                 'email' => $email,
@@ -730,7 +730,10 @@ class OrdersController extends BaseController
     {
         $order->load(['tickets.ticketType', 'event']);
         $event = $order->event;
-        $eventName = $event?->title ?? 'Eveniment';
+        $rawTitle = $event?->title;
+        $eventName = is_array($rawTitle)
+            ? ($rawTitle['ro'] ?? $rawTitle['en'] ?? reset($rawTitle) ?: 'Eveniment')
+            : ($rawTitle ?? 'Eveniment');
 
         // Build ticket list HTML
         $ticketRows = '';
