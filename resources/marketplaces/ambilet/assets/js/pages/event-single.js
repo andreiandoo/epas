@@ -1212,7 +1212,7 @@ const EventPage = {
             '<div class="md:w-3/4">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
                 '<p class="mb-2 text-muted">' + venueAddress + '</p>' +
-                '<div class="leading-relaxed text-muted text-sm">' + (venue.description || '') + '</div>';
+                '<div class="leading-relaxed text-muted text-sm line-clamp-2">' + (venue.description || '') + '</div>';
 
         if (venue.amenities && venue.amenities.length) {
             html += '<div class="mt-4 mb-6 space-y-3">';
@@ -1400,12 +1400,12 @@ const EventPage = {
                 // Quantity controls (always show for available tickets)
                 controlsHtml = '<div class="flex items-center gap-2">' +
                     '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-all duration-150 ease-in-out rounded-md bg-surface hover:bg-primary border border-slate-200 hover:text-white group-hover:bg-primary/50 group-hover:text-white group-hover:w-6  group-hover:h-6  group-hover:border-none group-hover:rounded"  aria-label="Decrease quantity">' +
-                        '<span class="group-hover:opacity-100 group-hover:block hidden opacity-0 transition-all duration-150 ease-in-out">' +
+                        '<span class="group-hover:opacity-100 group-hover:block hidden opacity-0 transition-all duration-200 ease-in-out">' +
                             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-6">' +
                                 '<path fill-rule="evenodd" d="M4.25 12a.75.75 0 0 1 .75-.75h14a.75.75 0 0 1 0 1.5H5a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd"></path>' +
                             '</svg>' +
                         '</span>' +
-                        '<span class="group-hover:opacity-0 group-hover:hidden block opacity-100 transition-all duration-150 ease-in-out">-</span>' +
+                        '<span class="group-hover:opacity-0 group-hover:hidden block opacity-100 transition-all duration-100 ease-in-out">-</span>' +
                     '</button>' +
                     '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center text-primary text-xl flex items-center gap-x-1 justify-center">' + currentQty + '<b class="text-sm text-slate-700">x</b></span>' +
                     '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="btn-qty-add flex items-center justify-center w-8 h-8 font-bold transition-all duration-150 ease-in-out rounded-md bg-surface border border-slate-200 group-hover:text-white group-hover:w-8 group-hover:h-8 group-hover:border-none group-hover:rounded"  aria-label="Increase quantity">' +
