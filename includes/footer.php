@@ -138,12 +138,12 @@ $currentYear = date('Y');
                         <span class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Evenimente</span>
                         <ul class="space-y-3">
                             <li><a href="/evenimente" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Toate evenimentele</a></li>
-                            <li><a href="/concerte" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Concerte</a></li>
+                            <li><a href="/bilete-concerte" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Concerte</a></li>
                             <li><a href="/festivaluri" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Festivaluri</a></li>
                             <li><a href="/teatru" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Teatru & Spectacole</a></li>
                             <li><a href="/evenimente-copii" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Evenimente copii</a></li>
-                            <li><a href="/comedie" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Stand-up Comedy</a></li>
-                            <li><a href="/festivaluri-moto" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Festivaluri Moto</a></li>
+                            <li><a href="/stand-up" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Stand-up Comedy</a></li>
+                            <li><a href="/festival-moto" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Festivaluri Moto</a></li>
                         </ul>
                     </div>
 
@@ -175,7 +175,7 @@ $currentYear = date('Y');
                             <li><a href="/blog" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Blog</a></li>
                             <li class="hidden"><a href="/parteneri" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Parteneri</a></li>
                             <li><a href="/ajutor" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Centru de ajutor</a></li>
-                            <li><a href="/faq" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Întrebări frecvente</a></li>
+                            <li><a href="/intrebari" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Întrebări frecvente</a></li>
                             <li><a href="/contact" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Contact</a></li>
                         </ul>
                     </div>

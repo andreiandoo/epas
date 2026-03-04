@@ -120,7 +120,15 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <!-- Top Artists -->
                     <div class="p-5 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
                         <h2 class="mb-4 text-lg font-bold text-secondary">Artistii tai preferati</h2>
-                        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4" id="top-artists-container">
+                        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3" id="top-artists-container">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Preferred Music Genres -->
+                    <div class="p-5 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
+                        <h2 class="mb-4 text-lg font-bold text-secondary">Genuri muzicale preferate</h2>
+                        <div class="space-y-3" id="preferred-genres-container">
                             <!-- Populated by JavaScript -->
                         </div>
                     </div>
