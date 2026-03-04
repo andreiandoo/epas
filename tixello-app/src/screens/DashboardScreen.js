@@ -1,15 +1,19 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Modal,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Svg, { Path, Circle, Line, Rect, Polyline } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { useEvent } from '../context/EventContext';
 import { useApp } from '../context/AppContext';
+import { apiGet } from '../api/client';
 import { formatCurrency } from '../utils/formatCurrency';
 import { colors } from '../theme/colors';
 
@@ -225,7 +229,7 @@ function ReportsStatsGrid({ stats }) {
   );
 }
 
-function AdminLiveStats({ stats }) {
+function AdminLiveStats({ stats, onShowSales }) {
   const totalSold = stats?.total_sold ?? 0;
   const checkedIn = stats?.checked_in ?? 0;
   const revenue = stats?.revenue ?? 0;
@@ -260,16 +264,24 @@ function AdminLiveStats({ stats }) {
 
       {/* Secondary stats (2 columns) */}
       <View style={styles.statsGrid}>
-        <View style={[styles.statCard, { borderColor: colors.greenBorder }]}>
+        <TouchableOpacity
+          style={[styles.statCard, { borderColor: colors.greenBorder }]}
+          onPress={onShowSales}
+          activeOpacity={0.7}
+        >
           <Icon name="ticket" size={18} color={colors.green} />
           <Text style={styles.statCardValue}>{totalSold.toLocaleString()}</Text>
-          <Text style={styles.statCardLabel}>Vândute</Text>
-        </View>
-        <View style={[styles.statCard, { borderColor: colors.cyanBorder }]}>
+          <Text style={styles.statCardLabel}>Vânzări</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.statCard, { borderColor: colors.cyanBorder }]}
+          onPress={onShowSales}
+          activeOpacity={0.7}
+        >
           <Icon name="cash" size={18} color={colors.cyan} />
           <Text style={styles.statCardValue}>{formatCurrency(revenue)}</Text>
           <Text style={styles.statCardLabel}>Venituri</Text>
-        </View>
+        </TouchableOpacity>
         <View style={[styles.statCard, { borderColor: colors.amberBorder }]}>
           <Icon name="hourglass" size={18} color={colors.amber} />
           <Text style={styles.statCardValue}>{remaining.toLocaleString()}</Text>
@@ -402,7 +414,7 @@ function RecentActivity({ recentScans }) {
   );
 }
 
-function AdminDashboard({ navigation, eventStats, isReportsOnlyMode, recentScans, onShowGuestList, onShowStaff }) {
+function AdminDashboard({ navigation, eventStats, isReportsOnlyMode, recentScans, onShowGuestList, onShowStaff, onShowSales, onCloseShift }) {
   return (
     <>
       {isReportsOnlyMode && <ReportsOnlyBanner />}
@@ -411,9 +423,19 @@ function AdminDashboard({ navigation, eventStats, isReportsOnlyMode, recentScans
         <ReportsStatsGrid stats={eventStats} />
       ) : (
         <>
-          <AdminLiveStats stats={eventStats} />
+          <AdminLiveStats stats={eventStats} onShowSales={onShowSales} />
           <QuickActions navigation={navigation} onShowGuestList={onShowGuestList} onShowStaff={onShowStaff} />
           <RecentActivity recentScans={recentScans} />
+          {onCloseShift && (
+            <TouchableOpacity
+              style={styles.closeShiftBtn}
+              onPress={onCloseShift}
+              activeOpacity={0.7}
+            >
+              <Icon name="x-circle" size={20} color={colors.red} />
+              <Text style={styles.closeShiftBtnText}>Închide Tura</Text>
+            </TouchableOpacity>
+          )}
         </>
       )}
     </>
@@ -512,7 +534,7 @@ function ScannerStats({ myScans, mySales, shiftStartTime }) {
   );
 }
 
-function ScannerDashboard({ navigation, cashTurnover, cardTurnover, myScans, mySales, shiftStartTime }) {
+function ScannerDashboard({ navigation, cashTurnover, cardTurnover, myScans, mySales, shiftStartTime, onCloseShift }) {
   return (
     <>
       <TurnoverCard cashTurnover={cashTurnover} cardTurnover={cardTurnover} />
@@ -542,7 +564,235 @@ function ScannerDashboard({ navigation, cashTurnover, cardTurnover, myScans, myS
           <Text style={styles.scannerActionBtnText}>Începe Vânzarea</Text>
         </TouchableOpacity>
       </View>
+
+      {shiftStartTime && (
+        <TouchableOpacity
+          style={styles.closeShiftBtn}
+          onPress={onCloseShift}
+          activeOpacity={0.7}
+        >
+          <Icon name="x-circle" size={20} color={colors.red} />
+          <Text style={styles.closeShiftBtnText}>Închide Tura</Text>
+        </TouchableOpacity>
+      )}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Close Shift Summary Modal
+// ---------------------------------------------------------------------------
+
+function ShiftSummaryModal({ visible, onClose, onConfirm, cashTurnover, cardTurnover, recentScans, recentSales, shiftStartTime }) {
+  const validScans = recentScans.filter(s => s.status === 'valid').length;
+  const invalidScans = recentScans.filter(s => s.status !== 'valid').length;
+
+  // Group sales by ticket type
+  const salesByType = useMemo(() => {
+    const map = {};
+    recentSales.forEach(sale => {
+      const desc = sale.description || sale.type || 'Bilet';
+      if (!map[desc]) map[desc] = { count: 0, total: 0 };
+      map[desc].count += sale.qty || 1;
+      map[desc].total += sale.total || 0;
+    });
+    return Object.entries(map);
+  }, [recentSales]);
+
+  const shiftDuration = useMemo(() => {
+    if (!shiftStartTime) return '--:--';
+    const now = new Date();
+    const diff = Math.floor((now - new Date(shiftStartTime)) / 1000);
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    return `${hours}h ${minutes.toString().padStart(2, '0')}m`;
+  }, [shiftStartTime, visible]);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.shiftModal}>
+          <Text style={styles.shiftModalTitle}>Rezumat Tură</Text>
+          <Text style={styles.shiftModalDuration}>Durată: {shiftDuration}</Text>
+
+          {/* Cash to hand over */}
+          {cashTurnover > 0 && (
+            <View style={styles.shiftCashBox}>
+              <Icon name="cash" size={22} color={colors.green} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.shiftCashLabel}>Numerar de predat</Text>
+                <Text style={styles.shiftCashAmount}>{formatCurrency(cashTurnover)}</Text>
+              </View>
+            </View>
+          )}
+
+          {cardTurnover > 0 && (
+            <View style={[styles.shiftCashBox, { borderColor: colors.cyanBorder }]}>
+              <Icon name="credit-card" size={22} color={colors.cyan} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.shiftCashLabel}>Încasări card</Text>
+                <Text style={[styles.shiftCashAmount, { color: colors.cyan }]}>{formatCurrency(cardTurnover)}</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Scan stats */}
+          {recentScans.length > 0 && (
+            <View style={styles.shiftSection}>
+              <Text style={styles.shiftSectionTitle}>Scanări</Text>
+              <View style={styles.shiftRow}>
+                <Text style={styles.shiftRowLabel}>Total scanări</Text>
+                <Text style={styles.shiftRowValue}>{recentScans.length}</Text>
+              </View>
+              <View style={styles.shiftRow}>
+                <Text style={styles.shiftRowLabel}>Valide</Text>
+                <Text style={[styles.shiftRowValue, { color: colors.green }]}>{validScans}</Text>
+              </View>
+              <View style={styles.shiftRow}>
+                <Text style={styles.shiftRowLabel}>Invalide</Text>
+                <Text style={[styles.shiftRowValue, { color: colors.red }]}>{invalidScans}</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Sales by type */}
+          {salesByType.length > 0 && (
+            <View style={styles.shiftSection}>
+              <Text style={styles.shiftSectionTitle}>Vânzări bilete</Text>
+              {salesByType.map(([type, data]) => (
+                <View key={type} style={styles.shiftRow}>
+                  <Text style={styles.shiftRowLabel} numberOfLines={1}>{type}</Text>
+                  <Text style={styles.shiftRowValue}>{data.count} buc - {formatCurrency(data.total)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {recentScans.length === 0 && recentSales.length === 0 && cashTurnover === 0 && (
+            <Text style={styles.shiftEmptyText}>Nicio activitate în această tură.</Text>
+          )}
+
+          <TouchableOpacity style={styles.shiftConfirmBtn} onPress={onConfirm} activeOpacity={0.7}>
+            <Text style={styles.shiftConfirmBtnText}>Închide Tura</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shiftCancelBtn} onPress={onClose} activeOpacity={0.7}>
+            <Text style={styles.shiftCancelBtnText}>Anulează</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sales Breakdown Modal
+// ---------------------------------------------------------------------------
+
+function SalesBreakdownModal({ visible, onClose, eventId }) {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(null);
+
+  const fetchData = useCallback(async () => {
+    if (!eventId) return;
+    setLoading(true);
+    try {
+      const resp = await apiGet(`/events/${eventId}/sales-breakdown`);
+      setData(resp.data || resp);
+    } catch (e) {
+      console.error('Failed to fetch sales breakdown:', e);
+    }
+    setLoading(false);
+  }, [eventId]);
+
+  React.useEffect(() => {
+    if (visible && eventId) fetchData();
+  }, [visible, eventId]);
+
+  const online = data?.online || {};
+  const pos = data?.pos || {};
+  const byUser = pos.by_user || [];
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.salesModal}>
+          <Text style={styles.salesModalTitle}>Detalii Vânzări</Text>
+
+          {loading ? (
+            <ActivityIndicator size="large" color={colors.purple} style={{ marginVertical: 24 }} />
+          ) : data ? (
+            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+              {/* Online */}
+              <View style={styles.salesBreakdownSection}>
+                <View style={styles.salesBreakdownHeader}>
+                  <View style={[styles.salesBreakdownDot, { backgroundColor: colors.cyan }]} />
+                  <Text style={styles.salesBreakdownTitle}>Online</Text>
+                </View>
+                <View style={styles.salesBreakdownStats}>
+                  <View style={styles.salesBreakdownStat}>
+                    <Text style={styles.salesBreakdownStatValue}>{online.orders || 0}</Text>
+                    <Text style={styles.salesBreakdownStatLabel}>Comenzi</Text>
+                  </View>
+                  <View style={styles.salesBreakdownStat}>
+                    <Text style={styles.salesBreakdownStatValue}>{online.tickets || 0}</Text>
+                    <Text style={styles.salesBreakdownStatLabel}>Bilete</Text>
+                  </View>
+                  <View style={styles.salesBreakdownStat}>
+                    <Text style={[styles.salesBreakdownStatValue, { color: colors.cyan }]}>{formatCurrency(online.revenue || 0)}</Text>
+                    <Text style={styles.salesBreakdownStatLabel}>Încasări</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* POS total */}
+              <View style={styles.salesBreakdownSection}>
+                <View style={styles.salesBreakdownHeader}>
+                  <View style={[styles.salesBreakdownDot, { backgroundColor: colors.green }]} />
+                  <Text style={styles.salesBreakdownTitle}>Fizic (POS)</Text>
+                </View>
+                <View style={styles.salesBreakdownStats}>
+                  <View style={styles.salesBreakdownStat}>
+                    <Text style={styles.salesBreakdownStatValue}>{pos.orders || 0}</Text>
+                    <Text style={styles.salesBreakdownStatLabel}>Comenzi</Text>
+                  </View>
+                  <View style={styles.salesBreakdownStat}>
+                    <Text style={styles.salesBreakdownStatValue}>{pos.tickets || 0}</Text>
+                    <Text style={styles.salesBreakdownStatLabel}>Bilete</Text>
+                  </View>
+                  <View style={styles.salesBreakdownStat}>
+                    <Text style={[styles.salesBreakdownStatValue, { color: colors.green }]}>{formatCurrency(pos.revenue || 0)}</Text>
+                    <Text style={styles.salesBreakdownStatLabel}>Încasări</Text>
+                  </View>
+                </View>
+
+                {/* By user */}
+                {byUser.length > 0 && (
+                  <View style={styles.salesByUserSection}>
+                    <Text style={styles.salesByUserTitle}>Per utilizator</Text>
+                    {byUser.map((u, i) => (
+                      <View key={i} style={styles.salesByUserRow}>
+                        <View style={styles.salesByUserInfo}>
+                          <Icon name="people" size={14} color={colors.textTertiary} />
+                          <Text style={styles.salesByUserName} numberOfLines={1}>{u.user}</Text>
+                        </View>
+                        <Text style={styles.salesByUserDetail}>{u.tickets} bil.</Text>
+                        <Text style={styles.salesByUserAmount}>{formatCurrency(u.revenue)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+          ) : (
+            <Text style={styles.shiftEmptyText}>Nu s-au putut încărca datele.</Text>
+          )}
+
+          <TouchableOpacity style={styles.salesModalCloseBtn} onPress={onClose} activeOpacity={0.7}>
+            <Text style={styles.salesModalCloseBtnText}>Închide</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -560,48 +810,86 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
     myScans,
     mySales,
     recentScans,
+    recentSales,
+    endShift,
   } = useApp();
 
   const isAdmin = userRole === 'admin';
 
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Event header */}
-      <View style={styles.eventHeader}>
-        <Text style={styles.eventName} numberOfLines={1}>
-          {selectedEvent?.title || selectedEvent?.name || 'Niciun Eveniment Selectat'}
-        </Text>
-        {selectedEvent && (
-          <Text style={styles.eventMeta}>
-            {selectedEvent.venue_name || selectedEvent.location || ''}
-          </Text>
-        )}
-      </View>
+  // Shift summary modal
+  const [showShiftSummary, setShowShiftSummary] = useState(false);
+  // Sales breakdown modal
+  const [showSalesBreakdown, setShowSalesBreakdown] = useState(false);
 
-      {isAdmin ? (
-        <AdminDashboard
-          navigation={navigation}
-          eventStats={eventStats}
-          isReportsOnlyMode={isReportsOnlyMode}
-          recentScans={recentScans}
-          onShowGuestList={onShowGuestList}
-          onShowStaff={onShowStaff}
-        />
-      ) : (
-        <ScannerDashboard
-          navigation={navigation}
-          cashTurnover={cashTurnover}
-          cardTurnover={cardTurnover}
-          myScans={myScans}
-          mySales={mySales}
-          shiftStartTime={shiftStartTime}
-        />
-      )}
-    </ScrollView>
+  const handleCloseShift = () => {
+    setShowShiftSummary(true);
+  };
+
+  const confirmCloseShift = () => {
+    setShowShiftSummary(false);
+    endShift();
+    Alert.alert('Tură închisă', 'Tura a fost închisă cu succes.');
+  };
+
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Event header */}
+        <View style={styles.eventHeader}>
+          <Text style={styles.eventName} numberOfLines={1}>
+            {selectedEvent?.title || selectedEvent?.name || 'Niciun Eveniment Selectat'}
+          </Text>
+          {selectedEvent && (
+            <Text style={styles.eventMeta}>
+              {selectedEvent.venue_name || selectedEvent.location || ''}
+            </Text>
+          )}
+        </View>
+
+        {isAdmin ? (
+          <AdminDashboard
+            navigation={navigation}
+            eventStats={eventStats}
+            isReportsOnlyMode={isReportsOnlyMode}
+            recentScans={recentScans}
+            onShowGuestList={onShowGuestList}
+            onShowStaff={onShowStaff}
+            onShowSales={() => setShowSalesBreakdown(true)}
+            onCloseShift={shiftStartTime ? handleCloseShift : null}
+          />
+        ) : (
+          <ScannerDashboard
+            navigation={navigation}
+            cashTurnover={cashTurnover}
+            cardTurnover={cardTurnover}
+            myScans={myScans}
+            mySales={mySales}
+            shiftStartTime={shiftStartTime}
+            onCloseShift={handleCloseShift}
+          />
+        )}
+      </ScrollView>
+
+      <ShiftSummaryModal
+        visible={showShiftSummary}
+        onClose={() => setShowShiftSummary(false)}
+        onConfirm={confirmCloseShift}
+        cashTurnover={cashTurnover}
+        cardTurnover={cardTurnover}
+        recentScans={recentScans}
+        recentSales={recentSales}
+        shiftStartTime={shiftStartTime}
+      />
+
+      <SalesBreakdownModal
+        visible={showSalesBreakdown}
+        onClose={() => setShowSalesBreakdown(false)}
+        eventId={selectedEvent?.id}
+      />
+    </View>
   );
 }
 
@@ -941,5 +1229,248 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: colors.white,
+  },
+
+  // Close Shift button
+  closeShiftBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.red + '40',
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginTop: 20,
+    gap: 8,
+  },
+  closeShiftBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.red,
+  },
+
+  // Modal overlay
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Shift Summary Modal
+  shiftModal: {
+    backgroundColor: '#16161F',
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 20,
+    width: '90%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  shiftModalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  shiftModalDuration: {
+    fontSize: 13,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  shiftCashBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.greenBg,
+    borderWidth: 1,
+    borderColor: colors.greenBorder,
+    borderRadius: 12,
+    padding: 14,
+    gap: 12,
+    marginBottom: 10,
+  },
+  shiftCashLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  shiftCashAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.green,
+  },
+  shiftSection: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  shiftSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: 10,
+  },
+  shiftRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+  shiftRowLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  shiftRowValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  shiftEmptyText: {
+    fontSize: 14,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginVertical: 16,
+  },
+  shiftConfirmBtn: {
+    backgroundColor: colors.red,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  shiftConfirmBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  shiftCancelBtn: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  shiftCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+
+  // Sales Breakdown Modal
+  salesModal: {
+    backgroundColor: '#16161F',
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 20,
+    width: '90%',
+    maxWidth: 420,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  salesModalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  salesBreakdownSection: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  salesBreakdownHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  salesBreakdownDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  salesBreakdownTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  salesBreakdownStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  salesBreakdownStat: {
+    alignItems: 'center',
+  },
+  salesBreakdownStatValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  salesBreakdownStatLabel: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    marginTop: 2,
+  },
+  salesByUserSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  salesByUserTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: 8,
+  },
+  salesByUserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    gap: 8,
+  },
+  salesByUserInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  salesByUserName: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    fontWeight: '500',
+    flex: 1,
+  },
+  salesByUserDetail: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  salesByUserAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.green,
+    minWidth: 60,
+    textAlign: 'right',
+  },
+  salesModalCloseBtn: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  salesModalCloseBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
 });

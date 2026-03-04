@@ -3,14 +3,15 @@ import {
   View,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   StyleSheet,
   ScrollView,
   TextInput,
   ActivityIndicator,
   Animated,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
+  Keyboard,
+  Alert,
 } from 'react-native';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { colors } from '../theme/colors';
@@ -323,7 +324,7 @@ function CartItemRow({ item, onUpdateQuantity }) {
 // ─── Main SalesScreen Component ───────────────────────────────────────────────
 
 export default function SalesScreen({ navigation }) {
-  const { ticketTypes, isReportsOnlyMode, selectedEvent, refreshStats, eventCommission } = useEvent();
+  const { ticketTypes, isReportsOnlyMode, selectedEvent, refreshStats, refreshTicketTypes, eventCommission } = useEvent();
   const { user } = useAuth();
   const { recentSales, addSale } = useApp();
 
@@ -430,6 +431,7 @@ export default function SalesScreen({ navigation }) {
         },
         payment_method: method,
         source: 'pos_app',
+        sold_by: user?.name || 'POS',
       };
 
       const response = await apiPost('/orders', orderPayload);
@@ -464,6 +466,7 @@ export default function SalesScreen({ navigation }) {
         });
 
         refreshStats();
+        refreshTicketTypes();
       } else {
         throw new Error(response.message || 'Eroare la crearea comenzii');
       }
@@ -497,17 +500,19 @@ export default function SalesScreen({ navigation }) {
 
   const sendTicketsEmail = async () => {
     if (!buyerEmail.trim() || !lastOrderData) return;
+    Keyboard.dismiss();
     setSendingEmail(true);
     try {
       await apiPost(`/orders/${lastOrderData.id}/send-tickets`, {
         email: buyerEmail.trim(),
       });
+      setSendingEmail(false);
+      finishPayment(false);
     } catch (e) {
-      // Silently fail - best effort
       console.error('Failed to send ticket email:', e);
+      setSendingEmail(false);
+      Alert.alert('Eroare', e.message || 'Nu s-au putut trimite biletele. Încercați din nou.');
     }
-    setSendingEmail(false);
-    finishPayment(false);
   };
 
   // ─── Ticket List View (inline, keeps tab bar visible) ──────────────────────
@@ -729,59 +734,63 @@ export default function SalesScreen({ navigation }) {
           transparent
           animationType="fade"
           onRequestClose={() => {
+            Keyboard.dismiss();
             setShowEmailCapture(false);
             finishPayment(true);
           }}
         >
-          <KeyboardAvoidingView
-            style={styles.modalOverlay}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          >
-            <View style={styles.emailModal}>
-              <View style={styles.emailModalIconWrap}>
-                <MailIcon size={32} color={colors.purple} />
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalOverlay}>
+              <View style={styles.emailModal}>
+                <View style={styles.emailModalIconWrap}>
+                  <MailIcon size={32} color={colors.purple} />
+                </View>
+                <Text style={styles.emailModalTitle}>Trimite Biletele pe Email</Text>
+                <Text style={styles.emailModalDescription}>
+                  Introduceți adresa de email a cumpărătorului pentru a trimite biletele digital.
+                </Text>
+
+                <TextInput
+                  style={styles.emailInput}
+                  placeholder="buyer@example.com"
+                  placeholderTextColor={colors.textQuaternary}
+                  value={buyerEmail}
+                  onChangeText={setBuyerEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoFocus={true}
+                />
+
+                <TouchableOpacity
+                  style={[
+                    styles.sendTicketsButton,
+                    !buyerEmail.trim() && styles.sendTicketsButtonDisabled,
+                  ]}
+                  onPress={sendTicketsEmail}
+                  activeOpacity={0.7}
+                  disabled={!buyerEmail.trim() || sendingEmail}
+                >
+                  {sendingEmail ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <Text style={styles.sendTicketsButtonText}>Trimite Biletele</Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.emailSkipButton}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    finishPayment(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.emailSkipButtonText}>Omite</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.emailModalTitle}>Trimite Biletele pe Email</Text>
-              <Text style={styles.emailModalDescription}>
-                Introduceți adresa de email a cumpărătorului pentru a trimite biletele digital.
-              </Text>
-
-              <TextInput
-                style={styles.emailInput}
-                placeholder="buyer@example.com"
-                placeholderTextColor={colors.textQuaternary}
-                value={buyerEmail}
-                onChangeText={setBuyerEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-
-              <TouchableOpacity
-                style={[
-                  styles.sendTicketsButton,
-                  !buyerEmail.trim() && styles.sendTicketsButtonDisabled,
-                ]}
-                onPress={sendTicketsEmail}
-                activeOpacity={0.7}
-                disabled={!buyerEmail.trim() || sendingEmail}
-              >
-                {sendingEmail ? (
-                  <ActivityIndicator size="small" color={colors.white} />
-                ) : (
-                  <Text style={styles.sendTicketsButtonText}>Trimite Biletele</Text>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.emailSkipButton}
-                onPress={() => finishPayment(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.emailSkipButtonText}>Omite</Text>
-              </TouchableOpacity>
             </View>
-          </KeyboardAvoidingView>
+          </TouchableWithoutFeedback>
         </Modal>
       </View>
     );
