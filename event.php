@@ -12,9 +12,33 @@ $pageDescription = 'Detalii eveniment si cumparare bilete';
 $bodyClass = 'bg-surface';
 
 // Preview mode: prevent browser from caching the page itself
+// AND invalidate all server caches so the next public visit gets fresh data
 if (!empty($_GET['preview'])) {
     header('Cache-Control: no-store, no-cache, must-revalidate');
     header('Pragma: no-cache');
+
+    if ($eventSlug) {
+        // 1. Invalidate full-page HTML cache for the public (non-preview) URL
+        $publicUri = '/bilete/' . $eventSlug;
+        $pageCacheDir = __DIR__ . '/includes/cache/pages';
+        $publicCacheFile = $pageCacheDir . '/' . md5($publicUri) . '.html';
+        if (file_exists($publicCacheFile)) @unlink($publicCacheFile);
+
+        // 2. Invalidate application-level api_cached() entry
+        $appCacheDir = sys_get_temp_dir() . '/ambilet_cache';
+        $appCacheFile = $appCacheDir . '/' . md5('event_preload_' . $eventSlug) . '.json';
+        if (file_exists($appCacheFile)) @unlink($appCacheFile);
+
+        // 3. Invalidate proxy API cache for single event endpoint
+        //    The proxy uses action='event' with empty $params (slug is in the URL, not params)
+        //    so cache key = 'event_' + md5(serialize([])) — shared by all events (10s TTL anyway)
+        $apiCacheDir = __DIR__ . '/cache/api';
+        if (is_dir($apiCacheDir)) {
+            $apiCacheKey = 'event_' . md5(serialize([]));
+            $apiCacheFile = $apiCacheDir . '/' . $apiCacheKey . '.json';
+            if (file_exists($apiCacheFile)) @unlink($apiCacheFile);
+        }
+    }
 }
 
 // Server-side: fetch event data for LCP image preload and SEO meta
