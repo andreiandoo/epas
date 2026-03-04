@@ -4071,6 +4071,15 @@ html.dark {
 .dark .fi-section-header {
 	background-color: transparent !important;
 }
+.dark .fi-sc-tabs .fi-section-header {
+	background-color: #111827 !important;
+}
+.dark .fi-sc-tabs-tab > .fi-sc.fi-sc-has-gap.fi-grid {
+    gap: 0;
+}
+.dark .fi-section.fi-section-has-header {
+    overflow: hidden;
+}
 
 .dark [class*="bg-white"]:not(.fi-badge):not(.fi-btn) {
 	background-color: var(--metro-bg-secondary) !important;
@@ -4277,6 +4286,9 @@ html.dark {
 	border-color: var(--metro-accent) !important;
 }
 
+.dark .fi-sc-tabs-tab {
+	padding:0 !important;
+}
 .dark .fi-ta-empty-state {
 	color: var(--metro-text-muted) !important;
 }
