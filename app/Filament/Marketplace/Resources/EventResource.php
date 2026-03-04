@@ -1208,11 +1208,7 @@ class EventResource extends Resource
                                                     ->minValue(0)
                                                     ->maxValue(100)
                                                     ->step(0.01)
-                                                    ->placeholder(function (SGet $get) use ($marketplace, $t) {
-                                                        $organizerId = $get('../../marketplace_organizer_id');
-                                                        $organizer = $organizerId ? MarketplaceOrganizer::find($organizerId) : null;
-                                                        return ($organizer?->commission_rate ?? $marketplace?->commission_rate ?? 5) . '%';
-                                                    })
+                                                    ->placeholder(($marketplace?->commission_rate ?? 5) . '%')
                                                     ->visible(fn (SGet $get) => in_array($get('commission_type'), ['percentage', 'both']))
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('commission_fixed')
@@ -1232,12 +1228,7 @@ class EventResource extends Resource
                                                         'included' => $t('Inclus în preț', 'Included in price'),
                                                         'added_on_top' => $t('Adăugat la preț', 'Added on top'),
                                                     ])
-                                                    ->placeholder(function (SGet $get) use ($marketplace, $t) {
-                                                        $organizerId = $get('../../marketplace_organizer_id');
-                                                        $organizer = $organizerId ? MarketplaceOrganizer::find($organizerId) : null;
-                                                        $mode = $organizer?->default_commission_mode ?? $marketplace?->commission_mode ?? 'included';
-                                                        return $mode === 'included' ? $t('Inclus', 'Included') : $t('Adăugat', 'Added');
-                                                    })
+                                                    ->placeholder($marketplace?->commission_mode === 'added_on_top' ? $t('Adăugat', 'Added') : $t('Inclus', 'Included'))
                                                     ->visible(fn (SGet $get) => !empty($get('commission_type')))
                                                     ->columnSpan(3),
                                             ])
