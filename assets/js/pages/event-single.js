@@ -1371,7 +1371,7 @@ const EventPage = {
             // Card classes
             var cardClasses = isSoldOut
                 ? 'relative z-10 p-2 pl-4 border ticket-card border-gray-200 rounded-lg bg-gray-100 cursor-default'
-                : 'bg-white relative z-10 p-2 pl-4 border cursor-pointer ticket-card border-border rounded-lg hover:z-20';
+                : 'bg-white relative z-10 p-2 pl-4 border cursor-pointer ticket-card border-border rounded-lg hover:z-20 group';
             var titleClasses = isSoldOut ? 'text-gray-400' : 'text-secondary';
             var priceClasses = isSoldOut ? 'text-gray-400 line-through' : 'text-primary';
             var descClasses = isSoldOut ? 'text-gray-400' : 'text-muted';
@@ -1391,11 +1391,32 @@ const EventPage = {
             } else if (isSoldOut) {
                 controlsHtml = '<span class="text-sm font-medium text-gray-400">Epuizat</span>';
             } else {
+                if (currentQty === 0) {
+                    controlsHtml = '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center gap-2 px-3 py-2 text-xs font-semibold transition-colors rounded-lg bg-primary text-white hover:bg-primary/80" aria-label="Add to cart">' +
+                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+                        'Adaugă în coș' +
+                    '</button>';
+                } else {
                 // Quantity controls (always show for available tickets)
                 controlsHtml = '<div class="flex items-center gap-2">' +
-                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary border border-slate-200 hover:text-white"  aria-label="Decrease quantity">-</button>' +
-                    '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center">' + currentQty + '</span>' +
-                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary border border-slate-200 hover:text-white" aria-label="Increase quantity">+</button>';
+                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-all duration-150 ease-in-out rounded-md bg-surface hover:bg-primary border border-slate-200 hover:text-white group-hover:bg-primary/50 group-hover:text-white group-hover:w-6  group-hover:h-6  group-hover:border-none group-hover:rounded"  aria-label="Decrease quantity">' +
+                        '<span class="group-hover:opacity-100 group-hover:block hidden opacity-0 transition-all duration-150 ease-in-out">' +
+                            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-6">' +
+                                '<path fill-rule="evenodd" d="M4.25 12a.75.75 0 0 1 .75-.75h14a.75.75 0 0 1 0 1.5H5a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd"></path>' +
+                            '</svg>' +
+                        '</span>' +
+                        '<span class="group-hover:opacity-0 group-hover:hidden block opacity-100 transition-all duration-150 ease-in-out">-</span>' +
+                    '</button>' +
+                    '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center text-primary text-xl flex items-center gap-x-1 justify-center">' + currentQty + '<b class="text-sm text-slate-700">x</b></span>' +
+                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-all duration-150 ease-in-out rounded-md bg-surface hover:bg-primary border border-slate-200 hover:text-white group-hover:bg-primary/50 group-hover:text-white group-hover:w-8  group-hover:h-8  group-hover:border-none group-hover:rounded"  aria-label="Increase quantity">' +
+                        '<span class="group-hover:opacity-100 group-hover:block hidden opacity-0 transition-all duration-150 ease-in-out">' +
+                            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">' +
+                                '<path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd"></path>' +
+                            '</svg>' + 
+                        '</span>' +
+                        '<span class="group-hover:opacity-0 group-hover:hidden block opacity-100 transition-all duration-150 ease-in-out">+</span>' +
+                    '</button>';
+                }
 
                 // Add "Alege locul/locurile" button for seating tickets when quantity > 0
                 if (hasSeating && currentQty > 0) {
@@ -1477,7 +1498,14 @@ const EventPage = {
 
         if (newQty !== currentQty) {
             this.quantities[ticketId] = newQty;
-            document.getElementById('qty-' + ticketId).textContent = newQty;
+
+            // If transitioning to/from 0, re-render to swap between "Adaugă" button and qty controls
+            if (currentQty === 0 || newQty === 0) {
+                this.renderTicketTypes();
+            } else {
+                const qtyEl = document.getElementById('qty-' + ticketId);
+                if (qtyEl) qtyEl.textContent = newQty;
+            }
 
             const card = document.querySelector('[data-ticket="' + ticketId + '"]');
             if (card) card.classList.toggle('selected', newQty > 0);
