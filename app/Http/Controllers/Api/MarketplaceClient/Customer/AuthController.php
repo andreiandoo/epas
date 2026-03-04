@@ -177,7 +177,7 @@ class AuthController extends BaseController
             ? (is_string($clientRecord->settings) ? json_decode($clientRecord->settings, true) : (array) $clientRecord->settings)
             : [];
         $referralSettings = $clientSettings['referral_program'] ?? [
-            'referrer_reward' => 50, 'referred_reward' => 25, 'reward_type' => 'points',
+            'referrer_reward' => 100, 'referred_reward' => 50, 'reward_type' => 'points',
         ];
 
         return [

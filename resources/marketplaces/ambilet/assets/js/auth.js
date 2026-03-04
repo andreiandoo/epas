@@ -526,14 +526,24 @@ const AmbiletAuth = {
 
         banner = document.createElement('div');
         banner.id = 'referral-banner';
-        banner.className = 'mobile:hidden text-sm py-2.5 transition-all duration-200 ease-in-out text-white bg-gradient-to-r from-purple-600 to-pink-600';
+        banner.className = 'text-sm py-2.5 transition-all duration-200 ease-in-out text-white bg-gradient-to-r from-purple-600 to-pink-600';
+
+        const isRegisterPage = window.location.pathname.includes('inregistrare') || window.location.pathname.includes('register');
+        const referrerName = referralInfo.referrer_name || 'un prieten';
+        const reward = referralInfo.referred_reward || 50;
+        const bannerText = isRegisterPage
+            ? `Ai fost invitat de ${referrerName}! Finalizează înregistrarea și primești ${reward} puncte bonus.`
+            : (referralInfo.message || `Ai fost invitat de ${referrerName}! Primești ${reward} puncte bonus la înregistrare.`);
+        const ctaButton = isRegisterPage ? '' : `
+                <a href="/inregistrare" class="bg-white text-purple-600 px-4 py-1 rounded-full font-semibold hover:bg-gray-100 transition-colors text-sm">
+                    Înregistrează-te acum
+                </a>`;
+
         banner.innerHTML = `
             <div class="flex items-center justify-center gap-3 px-4 mx-auto max-w-7xl flex-wrap">
                 <span class="text-lg">🎉</span>
-                <span class="font-medium">${referralInfo.message || ('Ai fost invitat! Primești ' + referralInfo.referred_reward + ' puncte bonus la înregistrare.')}</span>
-                <a href="/inregistrare" class="bg-white text-purple-600 px-4 py-1 rounded-full font-semibold hover:bg-gray-100 transition-colors text-sm">
-                    Înregistrează-te acum
-                </a>
+                <span class="font-medium">${bannerText}</span>
+                ${ctaButton}
                 <button onclick="this.closest('#referral-banner').remove()" aria-label="Închide" class="ml-2 text-white/80 hover:text-white">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>

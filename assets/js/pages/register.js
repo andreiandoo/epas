@@ -1,28 +1,66 @@
-document.getElementById('register-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = {
-        first_name: document.getElementById('first_name').value,
-        last_name: document.getElementById('last_name').value,
-        email: document.getElementById('email').value,
-        phone: document.getElementById('phone').value,
-        password: document.getElementById('password').value,
-        password_confirmation: document.getElementById('password_confirmation').value
-    };
-
-    if (formData.password !== formData.password_confirmation) {
-        AmbiletNotifications.error('Parolele nu coincid');
-        return;
+document.addEventListener('DOMContentLoaded', function () {
+    // Phone field: only allow digits, +, spaces
+    const phoneInput = document.getElementById('phone');
+    if (phoneInput) {
+        phoneInput.setAttribute('inputmode', 'tel');
+        phoneInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^\d+\s]/g, '');
+        });
+        phoneInput.addEventListener('paste', function (e) {
+            setTimeout(() => {
+                this.value = this.value.replace(/[^\d+\s]/g, '');
+            }, 0);
+        });
     }
 
-    try {
-        const result = await AmbiletAuth.register(formData);
-        if (result.success) {
-            AmbiletNotifications.success('Cont creat cu succes! Verifica email-ul pentru confirmare.');
-            setTimeout(() => window.location.href = '/autentificare', 2000);
-        } else {
-            AmbiletNotifications.error(result.message || 'Eroare la inregistrare');
+    // Form submit
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Se creează contul...';
+
+        const formData = {
+            first_name: document.getElementById('first_name').value.trim(),
+            last_name: document.getElementById('last_name').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            phone: document.getElementById('phone').value.replace(/\s/g, ''),
+            password: document.getElementById('password').value,
+            password_confirmation: document.getElementById('password_confirmation').value
+        };
+
+        if (formData.password !== formData.password_confirmation) {
+            AmbiletNotifications.error('Parolele nu coincid');
+            btn.disabled = false;
+            btn.textContent = originalText;
+            return;
         }
-    } catch (error) {
-        AmbiletNotifications.error('Eroare la inregistrare. Incearca din nou.');
-    }
+
+        // Validate phone: if provided, must be digits only (after stripping spaces)
+        if (formData.phone && !/^\+?\d{7,15}$/.test(formData.phone)) {
+            AmbiletNotifications.error('Numărul de telefon trebuie să conțină doar cifre (7-15 cifre)');
+            btn.disabled = false;
+            btn.textContent = originalText;
+            return;
+        }
+
+        try {
+            const result = await AmbiletAuth.register(formData);
+            if (result.success) {
+                AmbiletNotifications.success('Cont creat cu succes!');
+                // Redirect to email verification page (user is already auto-logged-in)
+                setTimeout(() => window.location.href = '/verify-email', 1500);
+            } else {
+                AmbiletNotifications.error(result.message || 'Eroare la înregistrare');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        } catch (error) {
+            AmbiletNotifications.error('Eroare la înregistrare. Încearcă din nou.');
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    });
 });

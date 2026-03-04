@@ -1024,6 +1024,13 @@ const AmbiletAPI = {
         },
 
         /**
+         * Resend verification email
+         */
+        async resendVerification(email) {
+            return AmbiletAPI.post('/customer/resend-verification', { email });
+        },
+
+        /**
          * Get customer orders
          */
         async getOrders(params = {}) {

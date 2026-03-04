@@ -39,8 +39,11 @@ class MarketplaceEventsController extends BaseController
                 'marketplaceEventCategory',
                 'venue:id,name,city,address',
                 'ticketTypes' => function ($query) {
-                    $query->select('id', 'event_id', 'price_cents', 'sale_price_cents')
-                        ->where('status', 'active');
+                    $query->select('id', 'event_id', 'price_cents', 'sale_price_cents', 'is_entry_ticket')
+                        ->where('status', 'active')
+                        ->where(function ($q) {
+                            $q->where('is_entry_ticket', false)->orWhereNull('is_entry_ticket');
+                        });
                 },
             ]);
 
@@ -349,8 +352,11 @@ class MarketplaceEventsController extends BaseController
                 'venue:id,name,city',
                 'marketplaceEventCategory',
                 'ticketTypes' => function ($query) {
-                    $query->select('id', 'event_id', 'price_cents', 'sale_price_cents')
-                        ->where('status', 'active');
+                    $query->select('id', 'event_id', 'price_cents', 'sale_price_cents', 'is_entry_ticket')
+                        ->where('status', 'active')
+                        ->where(function ($q) {
+                            $q->where('is_entry_ticket', false)->orWhereNull('is_entry_ticket');
+                        });
                 },
             ])
             ->orderBy('event_date')
@@ -551,7 +557,7 @@ class MarketplaceEventsController extends BaseController
                 'social_links' => $organizer->social_links,
                 'verified' => $organizer->verified_at !== null,
             ] : null,
-            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active')->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate) {
+            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active' && !$tt->is_entry_ticket)->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate) {
                 // Debug: log ticket type color and seating row data
                 \Log::info('[MarketplaceEventsController] TicketType #' . $tt->id . ' "' . $tt->name . '"'
                     . ' | color=' . var_export($tt->color, true)
@@ -730,8 +736,11 @@ class MarketplaceEventsController extends BaseController
                 'venue:id,name,city',
                 'marketplaceEventCategory',
                 'ticketTypes' => function ($query) {
-                    $query->select('id', 'event_id', 'price_cents', 'sale_price_cents')
-                        ->where('status', 'active');
+                    $query->select('id', 'event_id', 'price_cents', 'sale_price_cents', 'is_entry_ticket')
+                        ->where('status', 'active')
+                        ->where(function ($q) {
+                            $q->where('is_entry_ticket', false)->orWhereNull('is_entry_ticket');
+                        });
                 },
             ])
             ->orderBy('event_date')
@@ -758,6 +767,9 @@ class MarketplaceEventsController extends BaseController
 
         $ticketTypes = $event->ticketTypes()
             ->where('status', 'active')
+            ->where(function ($q) {
+                $q->where('is_entry_ticket', false)->orWhereNull('is_entry_ticket');
+            })
             ->get()
             ->map(function ($tt) {
                 $available = max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
@@ -1647,8 +1659,11 @@ class MarketplaceEventsController extends BaseController
                 'venue:id,name,city',
                 'marketplaceEventCategory',
                 'ticketTypes' => function ($query) {
-                    $query->select('id', 'event_id', 'price_cents', 'sale_price_cents')
-                        ->where('status', 'active');
+                    $query->select('id', 'event_id', 'price_cents', 'sale_price_cents', 'is_entry_ticket')
+                        ->where('status', 'active')
+                        ->where(function ($q) {
+                            $q->where('is_entry_ticket', false)->orWhereNull('is_entry_ticket');
+                        });
                 },
             ]);
 
