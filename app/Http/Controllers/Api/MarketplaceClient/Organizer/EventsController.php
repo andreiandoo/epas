@@ -1616,21 +1616,23 @@ class EventsController extends BaseController
         // Valid order statuses for analytics (only truly paid/completed)
         $validStatuses = ['paid', 'completed'];
 
+        // Scoped orders query: only this organizer's marketplace orders
+        $scopedOrders = fn () => $event->orders()
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->whereIn('status', $validStatuses);
+
         // Base query for orders in the range (used for chart data & period comparisons)
-        $ordersQuery = $event->orders()
-            ->whereIn('status', $validStatuses)
-            ->whereBetween('created_at', [$rangeStart, $rangeEnd]);
+        $ordersQuery = $scopedOrders()->whereBetween('created_at', [$rangeStart, $rangeEnd]);
 
         // Overview metrics — always all-time (not filtered by period)
-        $allTimeQuery = $event->orders()->whereIn('status', $validStatuses);
+        $allTimeQuery = $scopedOrders();
         $totalRevenue = (float) (clone $allTimeQuery)->sum('total');
         $ticketsSold = (int) (clone $allTimeQuery)->withCount('tickets')->get()->sum('tickets_count');
         $pageViews = $event->views_count ?? 0;
         $conversionRate = $pageViews > 0 ? round(($ticketsSold / $pageViews) * 100, 2) : 0;
 
         // Tickets sold today
-        $ticketsToday = (int) $event->orders()
-            ->whereIn('status', $validStatuses)
+        $ticketsToday = (int) $scopedOrders()
             ->whereDate('created_at', today())
             ->withCount('tickets')
             ->get()
@@ -1644,8 +1646,7 @@ class EventsController extends BaseController
         $prevStart = $rangeStart->copy()->subDays($periodDays);
         $prevEnd = $rangeStart->copy()->subSecond();
 
-        $prevOrdersQuery = $event->orders()
-            ->whereIn('status', $validStatuses)
+        $prevOrdersQuery = $scopedOrders()
             ->whereBetween('created_at', [$prevStart, $prevEnd]);
         $prevRevenue = (float) $prevOrdersQuery->sum('total');
         $prevTickets = (int) $prevOrdersQuery->withCount('tickets')->get()->sum('tickets_count');
@@ -1683,8 +1684,7 @@ class EventsController extends BaseController
             $dayStart = $currentDate->copy()->startOfDay();
             $dayEnd = $currentDate->copy()->endOfDay();
 
-            $dayOrders = $event->orders()
-                ->whereIn('status', $validStatuses)
+            $dayOrders = $scopedOrders()
                 ->whereBetween('created_at', [$dayStart, $dayEnd]);
 
             $dailyData[] = [
@@ -1755,23 +1755,21 @@ class EventsController extends BaseController
         }
 
         // Ticket performance with trend and conversion
-        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $validStatuses, $rangeStart, $rangeEnd, $periodDays, $pageViews) {
-            $sold = \App\Models\Ticket::where('ticket_type_id', $tt->id)
-                ->whereIn('status', ['valid', 'checked_in'])
-                ->count();
+        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $organizer, $validStatuses, $rangeStart, $rangeEnd, $periodDays, $pageViews) {
+            $ticketQuery = fn () => \App\Models\Ticket::where('ticket_type_id', $tt->id)
+                ->whereHas('order', fn ($q) => $q->whereIn('status', $validStatuses)
+                    ->where('marketplace_organizer_id', $organizer->id));
 
-            $revenue = (float) \App\Models\Ticket::where('ticket_type_id', $tt->id)
-                ->whereIn('status', ['valid', 'checked_in'])
-                ->sum('price');
+            $sold = $ticketQuery()->count();
+
+            $revenue = (float) $ticketQuery()->sum('price');
 
             // Trend: compare sales in current period vs previous period
-            $currentPeriodSold = \App\Models\Ticket::where('ticket_type_id', $tt->id)
-                ->whereIn('status', ['valid', 'checked_in'])
+            $currentPeriodSold = $ticketQuery()
                 ->whereBetween('created_at', [$rangeStart, $rangeEnd])
                 ->count();
 
-            $prevPeriodSold = \App\Models\Ticket::where('ticket_type_id', $tt->id)
-                ->whereIn('status', ['valid', 'checked_in'])
+            $prevPeriodSold = $ticketQuery()
                 ->whereBetween('created_at', [
                     $rangeStart->copy()->subDays($periodDays),
                     $rangeStart->copy()->subSecond(),
@@ -1805,8 +1803,7 @@ class EventsController extends BaseController
         $topLocations = [];
 
         // Recent sales
-        $recentSales = $event->orders()
-            ->whereIn('status', $validStatuses)
+        $recentSales = $scopedOrders()
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get()
