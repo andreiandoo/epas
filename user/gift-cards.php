@@ -12,7 +12,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
     <!-- Page Header -->
     <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <h1 class="text-2xl font-bold text-secondary">Carduri Cadou</h1>
-        <a href="/card-cadou" class="inline-flex items-center gap-2 btn btn-primary">
+        <a href="/card-cadou" class="inline-flex items-center gap-2 btn btn-primary bg-primary">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
             Cumpara card cadou
         </a>
@@ -81,7 +81,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
             <h3 class="mb-2 text-lg font-bold text-secondary">Nu ai cumparat inca carduri cadou</h3>
             <p class="mb-6 text-muted">Ofera un card cadou prietenilor sau familiei tale pentru a le face o surpriza placuta.</p>
-            <a href="/card-cadou" class="btn btn-primary">Cumpara primul card cadou</a>
+            <a href="/card-cadou" class="btn btn-primary bg-primary">Cumpara primul card cadou</a>
         </div>
     </div>
 
@@ -283,7 +283,7 @@ const GiftCardsPage = {
                     </div>
                     ${card.status === 'active' && !card.recipient ? `
                     <div class="pt-4 mt-4 border-t border-border">
-                        <button onclick="GiftCardsPage.useCard('${card.code}')" class="w-full btn btn-primary">Foloseste acum</button>
+                        <button onclick="GiftCardsPage.useCard('${card.code}')" class="w-full btn btn-primary bg-primary">Foloseste acum</button>
                     </div>
                     ` : ''}
                     ${card.status === 'pending' ? `
@@ -365,12 +365,12 @@ const GiftCardsPage = {
                     </div>
                     ${isActive ? `
                     <div class="flex gap-2 pt-4 mt-4 border-t border-border">
-                        <button onclick="GiftCardsPage.useCard('${card.code}')" class="flex-1 btn btn-primary">Foloseste acum</button>
+                        <button onclick="GiftCardsPage.useCard('${card.code}')" class="flex-1 btn btn-primary bg-primary">Foloseste acum</button>
                         <button onclick="GiftCardsPage.viewTransactions('${card.code}')" class="flex-1 btn btn-secondary">Vezi tranzactii</button>
                     </div>
                     ` : isPending ? `
                     <div class="pt-4 mt-4 border-t border-border">
-                        <button onclick="GiftCardsPage.activateCard('${card.code}')" class="w-full btn btn-primary">Activeaza cardul</button>
+                        <button onclick="GiftCardsPage.activateCard('${card.code}')" class="w-full btn btn-primary bg-primary">Activeaza cardul</button>
                     </div>
                     ` : ''}
                 </div>

@@ -235,7 +235,7 @@ const WatchlistPage = {
                                 '<span class="text-lg font-bold text-primary">' + event.price + ' lei</span>' +
                                 '<span class="ml-1 text-xs text-muted">de la</span>' +
                             '</div>' +
-                            '<span class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary">Cumpara</span>'
+                            '<span class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary bg-primary">Cumpara</span>'
                         :
                             '<div><span class="text-sm text-muted">Bilete in curand</span></div>' +
                             '<span class="px-4 py-2 text-sm font-semibold rounded-lg bg-surface text-secondary">Vezi detalii</span>'

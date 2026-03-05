@@ -85,7 +85,7 @@ require_once __DIR__ . '/includes/head.php';
                             <input type="email" id="emailInput" placeholder="nume@email.com" required class="w-full px-4 py-3 text-sm transition-all bg-white border input-focus border-border rounded-xl focus:outline-none">
                         </div>
 
-                        <button type="submit" id="submitBtn" class="btn-primary w-full py-3.5 text-white font-semibold rounded-xl text-sm">
+                        <button type="submit" id="submitBtn" class="btn-primary w-full py-3.5 bg-primary text-white font-semibold rounded-xl text-sm">
                             Trimite link de resetare
                         </button>
                     </form>

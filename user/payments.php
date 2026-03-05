@@ -20,7 +20,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <h1 class="text-2xl font-bold text-secondary">Metode de plata</h1>
                 <p class="mt-1 text-sm text-muted">Gestioneaza cardurile salvate</p>
             </div>
-            <button onclick="openModal()" class="btn btn-primary flex items-center gap-2 px-5 py-2.5 text-white font-semibold rounded-xl text-sm">
+            <button onclick="openModal()" class="btn btn-primary bg-primary flex items-center gap-2 px-5 py-2.5 text-white font-semibold rounded-xl text-sm">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Adauga card nou
             </button>
@@ -176,7 +176,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <button onclick="closeModal()" class="flex-1 py-3 text-sm font-semibold transition-colors bg-surface text-secondary rounded-xl hover:bg-primary/10 hover:text-primary">
                     Anuleaza
                 </button>
-                <button onclick="saveCard()" class="flex-1 py-3 text-sm font-semibold text-white btn btn-primary rounded-xl">
+                <button onclick="saveCard()" class="flex-1 py-3 text-sm font-semibold text-white btn btn-primary bg-primary rounded-xl">
                     Salveaza cardul
                 </button>
             </div>

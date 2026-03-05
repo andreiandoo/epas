@@ -70,7 +70,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="flex items-center justify-between mb-6"><h3 class="text-xl font-bold text-secondary">Solicita Plata</h3><button onclick="closePayoutModal()" aria-label="Închide" class="text-muted hover:text-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
             <form onsubmit="submitPayoutRequest(event)">
                 <input type="hidden" id="payout-event-id" value="">
-                <div id="payout-event-info" class="p-4 mb-4 bg-surface rounded-xl hidden">
+                <div id="payout-event-info" class="hidden p-4 mb-4 bg-surface rounded-xl">
                     <p class="mb-1 text-sm text-muted">Eveniment</p>
                     <p class="font-semibold text-secondary" id="payout-event-name"></p>
                 </div>
@@ -78,7 +78,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="mb-4"><label class="label">Suma de retras</label><input type="number" id="payout-amount" min="100" step="0.01" class="w-full input" required><p class="mt-1 text-sm text-muted" id="payout-amount-hint">Suma minima: 100 RON</p></div>
                 <div class="mb-4"><label class="label">Cont Bancar</label><select id="payout-account" class="w-full input" required><option value="">Se incarca...</option></select></div>
                 <div class="mb-6"><label class="label">Note (optional)</label><textarea id="payout-notes" class="w-full input" rows="2" placeholder="Adauga note sau detalii..."></textarea></div>
-                <div class="flex gap-3"><button type="button" onclick="closePayoutModal()" class="flex-1 btn btn-secondary">Anuleaza</button><button type="submit" class="flex-1 btn btn-primary">Solicita Plata</button></div>
+                <div class="flex gap-3"><button type="button" onclick="closePayoutModal()" class="flex-1 btn btn-secondary">Anuleaza</button><button type="submit" class="flex-1 btn btn-primary bg-primary">Solicita Plata</button></div>
             </form>
         </div>
     </div>
@@ -143,14 +143,14 @@ function renderEvents(events) {
             : `<span class="text-xs text-muted">Min. 100 RON</span>`;
 
         return `
-            <tr class="hover:bg-surface/50 cursor-pointer event-row" data-event-id="${e.id}" onclick="toggleEventDetails(${e.id})">
+            <tr class="cursor-pointer hover:bg-surface/50 event-row" data-event-id="${e.id}" onclick="toggleEventDetails(${e.id})">
                 <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-surface overflow-hidden flex-shrink-0">
-                            ${e.image ? `<img src="${e.image}" class="w-full h-full object-cover">` : '<div class="w-full h-full flex items-center justify-center text-muted"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>'}
+                        <div class="flex-shrink-0 w-10 h-10 overflow-hidden rounded-lg bg-surface">
+                            ${e.image ? `<img src="${e.image}" class="object-cover w-full h-full">` : '<div class="flex items-center justify-center w-full h-full text-muted"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>'}
                         </div>
                         <div class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-muted transition-transform event-expand-icon" id="expand-icon-${e.id}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <svg class="w-4 h-4 transition-transform text-muted event-expand-icon" id="expand-icon-${e.id}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             <div>
                                 <p class="font-medium text-secondary hover:text-primary">${e.title}</p>
                                 <div class="flex items-center gap-2 mt-0.5">
@@ -161,7 +161,7 @@ function renderEvents(events) {
                         </div>
                     </div>
                 </td>
-                <td class="px-6 py-4 text-right font-medium">${AmbiletUtils.formatCurrency(e.gross_revenue)}</td>
+                <td class="px-6 py-4 font-medium text-right">${AmbiletUtils.formatCurrency(e.gross_revenue)}</td>
                 <td class="px-6 py-4 text-right">
                     <div class="flex items-center justify-end gap-1">
                         <span class="text-amber-600">${AmbiletUtils.formatCurrency(e.commission_amount)}</span>
@@ -169,7 +169,7 @@ function renderEvents(events) {
                         ${commissionModeIcon}
                     </div>
                 </td>
-                <td class="px-6 py-4 text-right font-semibold text-success">${AmbiletUtils.formatCurrency(e.net_revenue)}</td>
+                <td class="px-6 py-4 font-semibold text-right text-success">${AmbiletUtils.formatCurrency(e.net_revenue)}</td>
                 <td class="px-6 py-4 text-right text-muted">${AmbiletUtils.formatCurrency(e.total_paid_out)}</td>
                 <td class="px-6 py-4 text-right">
                     <span class="font-semibold ${e.available_balance > 0 ? 'text-primary' : 'text-muted'}">${AmbiletUtils.formatCurrency(e.available_balance)}</span>
@@ -187,7 +187,7 @@ function renderEvents(events) {
                         <div id="event-${e.id}-transactions" class="event-tab-content">
                             <div class="overflow-hidden bg-white border rounded-xl border-border">
                                 <div class="divide-y divide-border" id="event-${e.id}-transactions-list">
-                                    <div class="p-4 text-center text-muted text-sm">Se incarca...</div>
+                                    <div class="p-4 text-sm text-center text-muted">Se incarca...</div>
                                 </div>
                             </div>
                         </div>
@@ -196,7 +196,7 @@ function renderEvents(events) {
                                 <table class="w-full">
                                     <thead class="bg-surface"><tr><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">ID Plata</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Suma</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Status</th><th class="px-4 py-3 text-xs font-semibold text-left text-secondary">Data</th></tr></thead>
                                     <tbody id="event-${e.id}-payouts-list" class="divide-y divide-border">
-                                        <tr><td colspan="4" class="px-4 py-4 text-center text-muted text-sm">Se incarca...</td></tr>
+                                        <tr><td colspan="4" class="px-4 py-4 text-sm text-center text-muted">Se incarca...</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -262,7 +262,7 @@ function loadEventFinanceDetails(eventId) {
 function renderEventTransactions(eventId, transactions) {
     const container = document.getElementById(`event-${eventId}-transactions-list`);
     if (!transactions.length) {
-        container.innerHTML = '<div class="p-4 text-center text-muted text-sm">Nu exista tranzactii pentru acest eveniment</div>';
+        container.innerHTML = '<div class="p-4 text-sm text-center text-muted">Nu exista tranzactii pentru acest eveniment</div>';
         return;
     }
     container.innerHTML = transactions.map(t => `
@@ -281,7 +281,7 @@ function renderEventTransactions(eventId, transactions) {
 function renderEventPayouts(eventId, payouts) {
     const tbody = document.getElementById(`event-${eventId}-payouts-list`);
     if (!payouts.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-center text-muted text-sm">Nu exista plati pentru acest eveniment</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-sm text-center text-muted">Nu exista plati pentru acest eveniment</td></tr>';
         return;
     }
     tbody.innerHTML = payouts.map(p => {
@@ -295,9 +295,9 @@ function renderEventPayouts(eventId, payouts) {
         };
         const statusInfo = statusColors[p.status] || statusColors['pending'];
         const rejectionTooltip = p.status === 'rejected' && p.rejection_reason
-            ? `<span class="ml-1 relative group cursor-help">
-                <svg class="w-4 h-4 inline text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap max-w-xs z-50">
+            ? `<span class="relative ml-1 group cursor-help">
+                <svg class="inline w-4 h-4 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="absolute z-50 invisible max-w-xs px-3 py-2 mb-2 text-xs text-white transition-all -translate-x-1/2 bg-gray-900 rounded-lg opacity-0 bottom-full left-1/2 group-hover:opacity-100 group-hover:visible whitespace-nowrap">
                     <span class="font-semibold">Motiv:</span> ${p.rejection_reason}
                 </span>
                </span>`

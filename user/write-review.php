@@ -8,7 +8,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
 <!-- Main Container -->
-<div class="px-4 py-6 mx-auto max-w-2xl lg:py-8">
+<div class="max-w-2xl px-4 py-6 mx-auto lg:py-8">
     <!-- Event Preview -->
     <div class="flex flex-col items-center gap-4 p-5 mb-6 text-center bg-white border sm:flex-row sm:text-left rounded-xl border-border" id="event-preview">
         <div class="flex items-center justify-center flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500" id="event-image">
@@ -41,19 +41,19 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <div class="p-6 text-center rounded-xl bg-gradient-to-r from-yellow-100 to-amber-100">
                 <h3 class="mb-4 font-semibold text-amber-800">Rating general</h3>
                 <div class="flex justify-center gap-2 overall-stars" id="overall-rating">
-                    <label class="cursor-pointer hover:scale-110 transition-transform" data-rating="1">
+                    <label class="transition-transform cursor-pointer hover:scale-110" data-rating="1">
                         <svg class="w-10 h-10 text-amber-600 opacity-30 hover:opacity-100" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                     </label>
-                    <label class="cursor-pointer hover:scale-110 transition-transform" data-rating="2">
+                    <label class="transition-transform cursor-pointer hover:scale-110" data-rating="2">
                         <svg class="w-10 h-10 text-amber-600 opacity-30 hover:opacity-100" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                     </label>
-                    <label class="cursor-pointer hover:scale-110 transition-transform" data-rating="3">
+                    <label class="transition-transform cursor-pointer hover:scale-110" data-rating="3">
                         <svg class="w-10 h-10 text-amber-600 opacity-30 hover:opacity-100" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                     </label>
-                    <label class="cursor-pointer hover:scale-110 transition-transform" data-rating="4">
+                    <label class="transition-transform cursor-pointer hover:scale-110" data-rating="4">
                         <svg class="w-10 h-10 text-amber-600 opacity-30 hover:opacity-100" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                     </label>
-                    <label class="cursor-pointer hover:scale-110 transition-transform" data-rating="5">
+                    <label class="transition-transform cursor-pointer hover:scale-110" data-rating="5">
                         <svg class="w-10 h-10 text-amber-600 opacity-30 hover:opacity-100" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                     </label>
                 </div>
@@ -118,7 +118,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <!-- Photo Upload -->
             <div>
                 <label class="label">Adauga fotografii <span class="font-normal text-muted">(optional)</span></label>
-                <label class="flex flex-col items-center p-6 text-center border-2 border-dashed cursor-pointer rounded-xl border-border hover:border-primary hover:bg-red-50 transition-colors">
+                <label class="flex flex-col items-center p-6 text-center transition-colors border-2 border-dashed cursor-pointer rounded-xl border-border hover:border-primary hover:bg-red-50">
                     <input type="file" class="hidden" id="photo-upload" multiple accept="image/*">
                     <div class="flex items-center justify-center w-12 h-12 mb-3 rounded-full bg-surface">
                         <svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -145,7 +145,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <!-- Tips -->
-            <div class="p-4 border rounded-xl bg-blue-50 border-blue-200">
+            <div class="p-4 border border-blue-200 rounded-xl bg-blue-50">
                 <h4 class="flex items-center gap-2 mb-2 text-sm font-semibold text-blue-800">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
                     Sfaturi pentru o recenzie utila
@@ -159,14 +159,14 @@ require_once dirname(__DIR__) . '/includes/header.php';
         </div>
 
         <!-- Form Footer -->
-        <div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between bg-surface border-t border-border">
+        <div class="flex flex-col gap-4 p-5 border-t sm:flex-row sm:items-center sm:justify-between bg-surface border-border">
             <div class="flex items-center gap-2 text-sm text-muted">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 Recenzia va fi moderata inainte de publicare
             </div>
             <div class="flex gap-3">
                 <a href="/cont/recenzii" class="btn btn-secondary">Anuleaza</a>
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary bg-primary">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     Publica recenzia
                 </button>
@@ -290,7 +290,7 @@ const WriteReviewPage = {
                         div.className = 'relative w-20 h-20 rounded-lg overflow-hidden';
                         div.innerHTML = `
                             <img src="${ev.target.result}" class="object-cover w-full h-full">
-                            <button type="button" class="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center" onclick="WriteReviewPage.removePhoto(${this.photos.length - 1})">
+                            <button type="button" class="absolute flex items-center justify-center w-5 h-5 rounded-full top-1 right-1 bg-black/60" onclick="WriteReviewPage.removePhoto(${this.photos.length - 1})">
                                 <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                             </button>
                         `;
@@ -313,7 +313,7 @@ const WriteReviewPage = {
                 div.className = 'relative w-20 h-20 rounded-lg overflow-hidden';
                 div.innerHTML = `
                     <img src="${ev.target.result}" class="object-cover w-full h-full">
-                    <button type="button" class="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center" onclick="WriteReviewPage.removePhoto(${i})">
+                    <button type="button" class="absolute flex items-center justify-center w-5 h-5 rounded-full top-1 right-1 bg-black/60" onclick="WriteReviewPage.removePhoto(${i})">
                         <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 `;

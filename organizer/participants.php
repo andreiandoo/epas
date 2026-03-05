@@ -9,7 +9,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>
 
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col min-h-screen lg:ml-0">
+    <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
         <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
         <!-- Page Content -->
         <main class="flex-1 p-4 lg:p-8">
@@ -22,16 +22,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
 
             <!-- Event Selector & Stats Card -->
-            <div class="bg-white rounded-xl lg:rounded-2xl border border-border p-4 lg:p-6 mb-6">
-                <div class="flex flex-col lg:flex-row lg:items-center gap-4 mb-6">
+            <div class="p-4 mb-6 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
+                <div class="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center">
                     <div class="flex-1">
-                        <label class="text-sm font-medium text-secondary mb-2 block">Selecteaza evenimentul</label>
+                        <label class="block mb-2 text-sm font-medium text-secondary">Selecteaza evenimentul</label>
                         <div class="relative w-full lg:w-80" id="event-dropdown-wrapper">
-                            <input type="text" id="event-search-input" class="w-full px-4 py-3 bg-surface border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 pr-10" placeholder="Cauta eveniment..." autocomplete="off"
+                            <input type="text" id="event-search-input" class="w-full px-4 py-3 pr-10 text-sm font-medium border bg-surface border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Cauta eveniment..." autocomplete="off"
                                    onfocus="openEventDropdown()" oninput="filterEventDropdown()">
                             <input type="hidden" id="event-filter" value="">
-                            <svg class="w-5 h-5 text-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                            <div id="event-dropdown-list" class="hidden absolute z-50 mt-1 w-full max-h-64 overflow-y-auto bg-white border border-border rounded-xl shadow-lg"></div>
+                            <svg class="absolute w-5 h-5 -translate-y-1/2 pointer-events-none text-muted right-3 top-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            <div id="event-dropdown-list" class="absolute z-50 hidden w-full mt-1 overflow-y-auto bg-white border shadow-lg max-h-64 border-border rounded-xl"></div>
                         </div>
                     </div>
                     <div class="flex gap-2">
@@ -47,21 +47,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
 
                 <!-- Check-in Stats -->
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-                    <div class="bg-surface rounded-xl p-4 text-center">
-                        <p class="text-2xl lg:text-3xl font-bold text-secondary" id="total-participants">0</p>
+                <div class="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+                    <div class="p-4 text-center bg-surface rounded-xl">
+                        <p class="text-2xl font-bold lg:text-3xl text-secondary" id="total-participants">0</p>
                         <p class="text-xs lg:text-sm text-muted">Total participanti</p>
                     </div>
-                    <div class="bg-success/10 rounded-xl p-4 text-center">
-                        <p class="text-2xl lg:text-3xl font-bold text-success" id="checked-in">0</p>
+                    <div class="p-4 text-center bg-success/10 rounded-xl">
+                        <p class="text-2xl font-bold lg:text-3xl text-success" id="checked-in">0</p>
                         <p class="text-xs lg:text-sm text-success">Check-in facut</p>
                     </div>
-                    <div class="bg-warning/10 rounded-xl p-4 text-center">
-                        <p class="text-2xl lg:text-3xl font-bold text-warning" id="pending-checkin">0</p>
+                    <div class="p-4 text-center bg-warning/10 rounded-xl">
+                        <p class="text-2xl font-bold lg:text-3xl text-warning" id="pending-checkin">0</p>
                         <p class="text-xs lg:text-sm text-warning">In asteptare</p>
                     </div>
-                    <div class="bg-primary/10 rounded-xl p-4 text-center">
-                        <p class="text-2xl lg:text-3xl font-bold text-primary" id="checkin-rate">0%</p>
+                    <div class="p-4 text-center bg-primary/10 rounded-xl">
+                        <p class="text-2xl font-bold lg:text-3xl text-primary" id="checkin-rate">0%</p>
                         <p class="text-xs lg:text-sm text-primary">Rata check-in</p>
                     </div>
                 </div>
@@ -69,36 +69,36 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
             <!-- Filters Row -->
             <div class="flex flex-wrap items-center gap-3 mb-4">
-                <select id="checkin-filter" class="px-4 py-2 bg-white border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <select id="checkin-filter" class="px-4 py-2 text-sm bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20">
                     <option value="">Toti participantii</option>
                     <option value="checked_in">Check-in facut</option>
                     <option value="not_checked">In asteptare</option>
                 </select>
-                <input type="text" id="search-participant" placeholder="Cauta participant..." class="px-4 py-2 bg-white border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-64">
+                <input type="text" id="search-participant" placeholder="Cauta participant..." class="w-64 px-4 py-2 text-sm bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20">
             </div>
 
             <!-- No Event Selected Message -->
-            <div id="no-event-message" class="bg-white rounded-2xl border border-border p-12 text-center hidden">
-                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div id="no-event-message" class="hidden p-12 text-center bg-white border rounded-2xl border-border">
+                <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10">
                     <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </div>
-                <h3 class="text-lg font-semibold text-secondary mb-2">Selecteaza un eveniment</h3>
+                <h3 class="mb-2 text-lg font-semibold text-secondary">Selecteaza un eveniment</h3>
                 <p class="text-muted">Alege un eveniment din lista de mai sus pentru a vedea participantii</p>
             </div>
 
             <!-- Participants Table -->
-            <div id="participants-table-container" class="bg-white rounded-2xl border border-border overflow-hidden">
+            <div id="participants-table-container" class="overflow-hidden bg-white border rounded-2xl border-border">
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead class="bg-surface">
                             <tr>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Participant</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Telefon</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Bilet</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Tip Bilet</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Comanda</th>
-                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Status</th>
-                                <th class="px-6 py-4 text-right text-sm font-semibold text-secondary">Actiuni</th>
+                                <th class="px-6 py-4 text-sm font-semibold text-left text-secondary">Participant</th>
+                                <th class="px-6 py-4 text-sm font-semibold text-left text-secondary">Telefon</th>
+                                <th class="px-6 py-4 text-sm font-semibold text-left text-secondary">Bilet</th>
+                                <th class="px-6 py-4 text-sm font-semibold text-left text-secondary">Tip Bilet</th>
+                                <th class="px-6 py-4 text-sm font-semibold text-left text-secondary">Comanda</th>
+                                <th class="px-6 py-4 text-sm font-semibold text-left text-secondary">Status</th>
+                                <th class="px-6 py-4 text-sm font-semibold text-right text-secondary">Actiuni</th>
                             </tr>
                         </thead>
                         <tbody id="participants-list" class="divide-y divide-border"></tbody>
@@ -108,10 +108,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </main>
     </div>
 
-    <div id="manual-checkin-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+    <div id="manual-checkin-modal" class="fixed inset-0 z-50 items-center justify-center hidden p-4 bg-black/50">
+        <div class="w-full max-w-md p-6 bg-white rounded-2xl">
             <div class="flex items-center justify-between mb-6"><h3 class="text-xl font-bold text-secondary">Check-in Manual</h3><button onclick="closeManualCheckin()" aria-label="Închide" class="text-muted hover:text-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-            <form onsubmit="processManualCheckin(event)"><div class="mb-4"><label class="label">Cod Control</label><input type="text" id="manual-ticket-code" placeholder="Ex: X1SG7TLS" class="input w-full" required><p class="text-xs text-muted mt-1">Introdu codul de control afisat sub codul QR al biletului</p></div><button type="submit" class="btn btn-primary w-full">Verifica si Check-in</button></form>
+            <form onsubmit="processManualCheckin(event)"><div class="mb-4"><label class="label">Cod Control</label><input type="text" id="manual-ticket-code" placeholder="Ex: X1SG7TLS" class="w-full input" required><p class="mt-1 text-xs text-muted">Introdu codul de control afisat sub codul QR al biletului</p></div><button type="submit" class="w-full btn btn-primary bg-primary">Verifica si Check-in</button></form>
         </div>
     </div>
 <?php
@@ -209,7 +209,7 @@ function renderEventDropdown(items) {
         return;
     }
     list.innerHTML = items.map(item =>
-        '<div class="px-4 py-3 text-sm cursor-pointer hover:bg-primary/5 transition-colors ' +
+        '<div class="px-4 py-3 text-sm transition-colors cursor-pointer hover:bg-primary/5 ' +
         (String(item.id) === String(selectedEventId) ? 'bg-primary/10 font-semibold text-primary' : 'text-secondary') +
         '" onclick="selectEvent(\'' + item.id + '\')">' + escapeHtmlP(item.label) + '</div>'
     ).join('');
@@ -301,13 +301,13 @@ function renderParticipants(participants) {
         // Format order date
         const orderDate = p.order_date ? AmbiletUtils.formatDate(p.order_date) : (p.created_at ? AmbiletUtils.formatDate(p.created_at) : '-');
         // Seat info
-        const seatInfo = p.seat_label ? `<div class="text-xs text-muted mt-1">${escapeHtmlP(p.seat_label)}</div>` : '';
+        const seatInfo = p.seat_label ? `<div class="mt-1 text-xs text-muted">${escapeHtmlP(p.seat_label)}</div>` : '';
 
         return `
         <tr class="hover:bg-surface/50">
             <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
                         <span class="text-sm font-semibold text-primary">${initials || '?'}</span>
                     </div>
                     <div>
@@ -321,9 +321,9 @@ function renderParticipants(participants) {
             </td>
             <td class="px-6 py-4">
                 <div>
-                    <code class="text-sm font-bold text-secondary bg-surface px-2 py-1 rounded">${p.control_code || '-'}</code>
+                    <code class="px-2 py-1 text-sm font-bold rounded text-secondary bg-surface">${p.control_code || '-'}</code>
                 </div>
-                <div class="text-xs text-muted mt-1">#${p.ticket_id || p.id || '-'}</div>
+                <div class="mt-1 text-xs text-muted">#${p.ticket_id || p.id || '-'}</div>
             </td>
             <td class="px-6 py-4">
                 <span class="px-2.5 py-1 bg-primary/10 text-primary text-sm font-medium rounded-lg">${escapeHtmlP(p.ticket_type) || '-'}</span>

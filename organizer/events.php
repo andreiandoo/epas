@@ -26,7 +26,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <h1 class="text-2xl font-bold text-secondary">Evenimentele mele</h1>
                         <p class="text-sm text-muted">Gestioneaza si monitorizeaza evenimentele tale</p>
                     </div>
-                    <button onclick="showCreateForm()" class="btn btn-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Eveniment nou</button>
+                    <button onclick="showCreateForm()" class="btn btn-primary bg-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Eveniment nou</button>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-4 mb-6">
@@ -41,7 +41,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div class="flex items-center justify-center w-24 h-24 mx-auto mb-6 rounded-full bg-muted/10"><svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
                     <h2 class="mb-2 text-xl font-bold text-secondary">Nu ai evenimente inca</h2>
                     <p class="mb-6 text-muted">Creeaza primul tau eveniment si incepe sa vinzi bilete!</p>
-                    <button onclick="showCreateForm()" class="btn btn-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Creeaza eveniment</button>
+                    <button onclick="showCreateForm()" class="btn btn-primary bg-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Creeaza eveniment</button>
                 </div>
             </div>
 
@@ -62,7 +62,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                     <div class="flex items-center gap-3">
                         <span id="save-status" class="hidden text-sm text-muted"></span>
-                        <button onclick="saveEventDraft()" class="btn btn-primary" id="save-draft-btn">
+                        <button onclick="saveEventDraft()" class="btn btn-primary bg-primary" id="save-draft-btn">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                             <span id="save-btn-text">Salveaza ciorna</span>
                             <div id="save-btn-spinner" class="hidden spinner"></div>
@@ -494,7 +494,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             Inapoi la evenimente
                         </button>
                         <div class="flex items-center gap-3">
-                            <button type="button" onclick="saveEventDraft()" class="btn btn-primary">
+                            <button type="button" onclick="saveEventDraft()" class="btn btn-primary bg-primary">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                 Salveaza ciorna
                             </button>
@@ -728,7 +728,7 @@ function renderEvents(events) {
 
         // Promote button (only for ongoing events)
         const promoteButton = isOngoing
-            ? `<a href="/organizator/servicii?event=${event.id}" class="btn btn-sm btn-primary" title="Promovează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>Promovează</a>`
+            ? `<a href="/organizator/servicii?event=${event.id}" class="btn btn-sm btn-primary bg-primary" title="Promovează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>Promovează</a>`
             : '';
 
         // Documents button

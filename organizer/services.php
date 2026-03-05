@@ -80,7 +80,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </div>
                     </div>
                     <div class="px-6 py-4 border-t bg-surface border-border">
-                        <button onclick="openServiceModal('featuring')" class="w-full btn btn-primary">
+                        <button onclick="openServiceModal('featuring')" class="w-full btn btn-primary bg-primary">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                             Cumpara Promovare
                         </button>
@@ -755,11 +755,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         Inapoi
                     </button>
-                    <button type="button" id="btn-next" onclick="nextStep()" class="flex-1 btn btn-primary">
+                    <button type="button" id="btn-next" onclick="nextStep()" class="flex-1 btn btn-primary bg-primary">
                         Continua
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     </button>
-                    <button type="submit" id="btn-pay" class="flex-1 hidden btn btn-primary">
+                    <button type="submit" id="btn-pay" class="flex-1 hidden btn btn-primary bg-primary">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                         Plateste Acum
                     </button>

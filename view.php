@@ -27,10 +27,10 @@ require_once __DIR__ . '/includes/head.php';
 
     <!-- Minimal Header -->
     <header class="bg-white border-b border-border">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center justify-between max-w-6xl px-4 py-3 mx-auto">
             <a href="/" class="flex items-center gap-2">
                 <img src="/assets/images/logo.svg" alt="<?= SITE_NAME ?>" class="h-8" onerror="this.style.display='none'">
-                <span class="font-bold text-secondary text-lg"><?= SITE_NAME ?></span>
+                <span class="text-lg font-bold text-secondary"><?= SITE_NAME ?></span>
             </a>
             <div class="flex items-center gap-3 text-sm text-muted">
                 <span id="auto-refresh-indicator" class="hidden items-center gap-1.5">
@@ -42,47 +42,47 @@ require_once __DIR__ . '/includes/head.php';
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 py-8">
+    <main class="max-w-6xl px-4 py-8 mx-auto">
         <?php if ($showError): ?>
             <!-- Error State -->
-            <div class="text-center py-20">
-                <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div class="py-20 text-center">
+                <div class="flex items-center justify-center w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full">
                     <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
                 </div>
-                <h1 class="text-2xl font-bold text-secondary mb-2"><?= htmlspecialchars($errorMessage) ?></h1>
+                <h1 class="mb-2 text-2xl font-bold text-secondary"><?= htmlspecialchars($errorMessage) ?></h1>
                 <p class="text-muted">Verifica link-ul primit sau contacteaza organizatorul.</p>
-                <a href="/" class="btn btn-primary mt-6 inline-flex items-center gap-2">
+                <a href="/" class="inline-flex items-center gap-2 mt-6 btn btn-primary bg-primary">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                     Inapoi la <?= SITE_NAME ?>
                 </a>
             </div>
         <?php else: ?>
             <!-- Loading State -->
-            <div id="loading-state" class="text-center py-20">
-                <div class="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+            <div id="loading-state" class="py-20 text-center">
+                <div class="w-12 h-12 mx-auto mb-4 border-4 rounded-full border-primary/20 border-t-primary animate-spin"></div>
                 <p class="text-muted">Se incarca datele...</p>
             </div>
 
             <!-- Password Prompt -->
-            <div id="password-state" class="hidden text-center py-20">
-                <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div id="password-state" class="hidden py-20 text-center">
+                <div class="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full bg-amber-100">
                     <svg class="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                 </div>
-                <h1 class="text-2xl font-bold text-secondary mb-2">Link protejat</h1>
-                <p class="text-muted mb-6">Introdu parola pentru a vizualiza datele.</p>
+                <h1 class="mb-2 text-2xl font-bold text-secondary">Link protejat</h1>
+                <p class="mb-6 text-muted">Introdu parola pentru a vizualiza datele.</p>
                 <form onsubmit="window._submitSharePassword(event)" class="max-w-xs mx-auto">
-                    <input type="password" id="share-password-input" class="w-full px-4 py-3 border border-border rounded-xl text-center text-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Parola" autocomplete="off" autofocus>
-                    <p id="password-error" class="text-red-500 text-sm mt-2 hidden">Parola incorecta</p>
-                    <button type="submit" id="password-submit-btn" class="w-full mt-4 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors">Acceseaza</button>
+                    <input type="password" id="share-password-input" class="w-full px-4 py-3 text-lg text-center border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Parola" autocomplete="off" autofocus>
+                    <p id="password-error" class="hidden mt-2 text-sm text-red-500">Parola incorecta</p>
+                    <button type="submit" id="password-submit-btn" class="w-full px-6 py-3 mt-4 font-medium text-white transition-colors bg-primary rounded-xl hover:bg-primary/90">Acceseaza</button>
                 </form>
             </div>
 
             <!-- Error State (JS) -->
-            <div id="error-state" class="hidden text-center py-20">
-                <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div id="error-state" class="hidden py-20 text-center">
+                <div class="flex items-center justify-center w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full">
                     <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </div>
-                <h1 class="text-2xl font-bold text-secondary mb-2" id="error-title">Link indisponibil</h1>
+                <h1 class="mb-2 text-2xl font-bold text-secondary" id="error-title">Link indisponibil</h1>
                 <p class="text-muted" id="error-desc">Acest link nu mai este activ sau a fost sters.</p>
             </div>
 
@@ -90,11 +90,11 @@ require_once __DIR__ . '/includes/head.php';
             <div id="content-state" class="hidden">
                 <div class="mb-8">
                     <h1 class="text-2xl font-bold text-secondary" id="share-title">Monitorizare Evenimente</h1>
-                    <p class="text-sm text-muted mt-1" id="share-subtitle"></p>
+                    <p class="mt-1 text-sm text-muted" id="share-subtitle"></p>
                 </div>
 
                 <!-- Summary Cards -->
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8" id="summary-cards"></div>
+                <div class="grid grid-cols-2 gap-4 mb-8 lg:grid-cols-4" id="summary-cards"></div>
 
                 <!-- Events Grid -->
                 <div class="space-y-4" id="events-container"></div>
@@ -103,8 +103,8 @@ require_once __DIR__ . '/includes/head.php';
     </main>
 
     <!-- Footer -->
-    <footer class="border-t border-border bg-white mt-12">
-        <div class="max-w-6xl mx-auto px-4 py-4 text-center text-xs text-muted">
+    <footer class="mt-12 bg-white border-t border-border">
+        <div class="max-w-6xl px-4 py-4 mx-auto text-xs text-center text-muted">
             Generat de <a href="<?= SITE_URL ?>" class="text-primary hover:underline"><?= SITE_NAME ?></a> &mdash; Informatii actualizate automat
         </div>
     </footer>
@@ -315,20 +315,20 @@ require_once __DIR__ . '/includes/head.php';
         const summaryEl = document.getElementById('summary-cards');
         const pct = totalTickets > 0 ? Math.round((totalSold / totalTickets) * 100) : 0;
         summaryEl.innerHTML = `
-            <div class="bg-white rounded-2xl border border-border p-5">
-                <p class="text-sm text-muted mb-1">Evenimente</p>
+            <div class="p-5 bg-white border rounded-2xl border-border">
+                <p class="mb-1 text-sm text-muted">Evenimente</p>
                 <p class="text-2xl font-bold text-secondary">${formatNumber(totalEvents)}</p>
             </div>
-            <div class="bg-white rounded-2xl border border-border p-5">
-                <p class="text-sm text-muted mb-1">Bilete vandute</p>
+            <div class="p-5 bg-white border rounded-2xl border-border">
+                <p class="mb-1 text-sm text-muted">Bilete vandute</p>
                 <p class="text-2xl font-bold text-primary">${formatNumber(totalSold)}</p>
             </div>
-            <div class="bg-white rounded-2xl border border-border p-5">
-                <p class="text-sm text-muted mb-1">Bilete totale</p>
+            <div class="p-5 bg-white border rounded-2xl border-border">
+                <p class="mb-1 text-sm text-muted">Bilete totale</p>
                 <p class="text-2xl font-bold text-secondary">${formatNumber(totalTickets)}</p>
             </div>
-            <div class="bg-white rounded-2xl border border-border p-5">
-                <p class="text-sm text-muted mb-1">Grad ocupare</p>
+            <div class="p-5 bg-white border rounded-2xl border-border">
+                <p class="mb-1 text-sm text-muted">Grad ocupare</p>
                 <p class="text-2xl font-bold ${pct >= 80 ? 'text-green-600' : pct >= 50 ? 'text-yellow-600' : 'text-secondary'}">${pct}%</p>
             </div>
         `;
@@ -336,7 +336,7 @@ require_once __DIR__ . '/includes/head.php';
         // Events as accordions
         const eventsEl = document.getElementById('events-container');
         if (!events.length) {
-            eventsEl.innerHTML = '<div class="text-center py-12 text-muted">Nu sunt evenimente in acest link.</div>';
+            eventsEl.innerHTML = '<div class="py-12 text-center text-muted">Nu sunt evenimente in acest link.</div>';
             return;
         }
 
@@ -348,17 +348,17 @@ require_once __DIR__ . '/includes/head.php';
             const isOpen = !!openAccordions[evId];
 
             // Ticket types tab content
-            let ticketTypesHtml = '<p class="text-sm text-muted py-4">Nu sunt categorii de bilete.</p>';
+            let ticketTypesHtml = '<p class="py-4 text-sm text-muted">Nu sunt categorii de bilete.</p>';
             if (ev.ticket_types && ev.ticket_types.length > 0) {
                 ticketTypesHtml = `<div class="space-y-2">${ev.ticket_types.map(tt => {
                     const ttPct = tt.total > 0 ? Math.round((tt.sold / tt.total) * 100) : 0;
                     return `<div class="flex items-center gap-3">
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between mb-1">
-                                <span class="text-sm font-medium text-secondary truncate">${escapeHtml(tt.name)}</span>
+                                <span class="text-sm font-medium truncate text-secondary">${escapeHtml(tt.name)}</span>
                                 <span class="text-sm text-muted">${formatNumber(tt.sold)} / ${formatNumber(tt.total)}</span>
                             </div>
-                            <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-2 overflow-hidden rounded-full bg-slate-100">
                                 <div class="h-full rounded-full transition-all duration-500 ${ttPct >= 90 ? 'bg-red-500' : ttPct >= 70 ? 'bg-yellow-500' : 'bg-primary'}" style="width: ${ttPct}%"></div>
                             </div>
                         </div>
@@ -374,7 +374,7 @@ require_once __DIR__ . '/includes/head.php';
                 if (evParticipants.length > 0) {
                     participantsHtml = `<div class="overflow-x-auto">
                         <table class="w-full text-sm">
-                            <thead><tr class="border-b border-border text-left">
+                            <thead><tr class="text-left border-b border-border">
                                 <th class="pb-2 font-medium text-muted">Nume</th>
                                 <th class="pb-2 font-medium text-muted">Telefon</th>
                                 <th class="pb-2 font-medium text-muted">Tip bilet</th>
@@ -389,7 +389,7 @@ require_once __DIR__ . '/includes/head.php';
                         </table>
                     </div>`;
                 } else {
-                    participantsHtml = '<p class="text-sm text-muted py-4">Nu sunt participanti inregistrati.</p>';
+                    participantsHtml = '<p class="py-4 text-sm text-muted">Nu sunt participanti inregistrati.</p>';
                 }
             }
 
@@ -409,21 +409,21 @@ require_once __DIR__ . '/includes/head.php';
             }
 
             return `
-                <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                <div class="overflow-hidden bg-white border rounded-2xl border-border">
                     <!-- Accordion Header -->
-                    <button onclick="_toggleAccordion(${evId})" class="w-full p-5 lg:p-6 text-left hover:bg-slate-50/50 transition-colors">
+                    <button onclick="_toggleAccordion(${evId})" class="w-full p-5 text-left transition-colors lg:p-6 hover:bg-slate-50/50">
                         <div class="flex flex-col lg:flex-row lg:items-center lg:gap-6">
-                            <div class="flex-1 min-w-0 flex items-start gap-3">
+                            <div class="flex items-start flex-1 min-w-0 gap-3">
                                 <svg id="accordion-icon-${evId}" class="w-5 h-5 text-muted flex-shrink-0 mt-0.5 transition-transform ${isOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                 <div class="min-w-0">
-                                    <h3 class="text-lg font-bold text-secondary mb-1">${escapeHtml(ev.title)}</h3>
-                                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+                                    <h3 class="mb-1 text-lg font-bold text-secondary">${escapeHtml(ev.title)}</h3>
+                                    <div class="flex flex-wrap items-center text-sm gap-x-4 gap-y-1 text-muted">
                                         ${ev.venue_name ? `<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>${escapeHtml(ev.venue_name)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</span>` : ''}
                                         ${ev.start_date ? `<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${formatDate(ev.start_date)}${ev.start_time ? ' ' + formatTime(ev.start_time) : ''}</span>` : ''}
                                     </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-4 lg:gap-6 mt-3 lg:mt-0 flex-shrink-0 pl-8 lg:pl-0">
+                            <div class="flex items-center flex-shrink-0 gap-4 pl-8 mt-3 lg:gap-6 lg:mt-0 lg:pl-0">
                                 <div class="text-center">
                                     <p class="text-xl font-bold text-primary">${formatNumber(evSold)}</p>
                                     <p class="text-xs text-muted">Vandute</p>
@@ -433,7 +433,7 @@ require_once __DIR__ . '/includes/head.php';
                                     <p class="text-xs text-muted">Total</p>
                                 </div>
                                 <div class="min-w-[60px]">
-                                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                    <div class="h-2 overflow-hidden rounded-full bg-slate-100">
                                         <div class="h-full rounded-full ${evPct >= 90 ? 'bg-red-500' : evPct >= 70 ? 'bg-yellow-500' : 'bg-primary'}" style="width: ${evPct}%"></div>
                                     </div>
                                     <p class="text-xs font-semibold text-center mt-1 ${evPct >= 90 ? 'text-red-600' : 'text-muted'}">${evPct}%</p>
@@ -443,7 +443,7 @@ require_once __DIR__ . '/includes/head.php';
                     </button>
                     <!-- Accordion Body -->
                     <div id="accordion-body-${evId}" class="${isOpen ? '' : 'hidden'}">
-                        <div class="px-5 lg:px-6 pb-5 lg:pb-6 pt-0 border-t border-border">
+                        <div class="px-5 pt-0 pb-5 border-t lg:px-6 lg:pb-6 border-border">
                             <div class="pt-4">
                                 ${tabsHtml}
                             </div>

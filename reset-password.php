@@ -5,18 +5,18 @@ $pageDescription = 'Setează o parolă nouă pentru contul tău';
 $cssBundle = 'auth';
 require_once __DIR__ . '/includes/head.php';
 ?>
-<body class="min-h-screen flex">
+<body class="flex min-h-screen">
     <!-- Left Side - Branding -->
-    <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary-dark to-secondary bg-pattern relative overflow-hidden">
+    <div class="relative hidden overflow-hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary-dark to-secondary bg-pattern">
         <div class="absolute inset-0">
-            <div class="absolute top-20 left-20 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
-            <div class="absolute bottom-20 right-20 w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
+            <div class="absolute w-64 h-64 rounded-full top-20 left-20 bg-white/5 blur-3xl"></div>
+            <div class="absolute rounded-full bottom-20 right-20 w-96 h-96 bg-accent/10 blur-3xl"></div>
         </div>
 
         <div class="relative z-10 flex flex-col justify-between p-12 text-white">
             <div>
                 <a href="/" class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+                    <div class="flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur rounded-xl">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                     </div>
                     <span class="text-2xl font-extrabold"><?= SITE_NAME ?></span>
@@ -24,12 +24,12 @@ require_once __DIR__ . '/includes/head.php';
             </div>
 
             <div>
-                <h1 class="text-4xl font-bold mb-4">Aproape gata!</h1>
-                <p class="text-lg text-white/80 mb-8">Setează o parolă nouă pentru contul tău și vei putea accesa din nou toate funcționalitățile.</p>
+                <h1 class="mb-4 text-4xl font-bold">Aproape gata!</h1>
+                <p class="mb-8 text-lg text-white/80">Setează o parolă nouă pentru contul tău și vei putea accesa din nou toate funcționalitățile.</p>
 
-                <div class="bg-white/10 backdrop-blur rounded-xl p-5">
-                    <p class="font-medium mb-3">Sfaturi pentru o parolă sigură:</p>
-                    <ul class="space-y-2 text-white/80 text-sm">
+                <div class="p-5 bg-white/10 backdrop-blur rounded-xl">
+                    <p class="mb-3 font-medium">Sfaturi pentru o parolă sigură:</p>
+                    <ul class="space-y-2 text-sm text-white/80">
                         <li class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                             Minim 8 caractere
@@ -57,26 +57,26 @@ require_once __DIR__ . '/includes/head.php';
     </div>
 
     <!-- Right Side - Form -->
-    <div class="flex-1 flex flex-col bg-surface">
+    <div class="flex flex-col flex-1 bg-surface">
         <!-- Mobile Header -->
-        <div class="lg:hidden p-4 border-b border-border bg-white">
+        <div class="p-4 bg-white border-b lg:hidden border-border">
             <a href="/" class="flex items-center gap-2">
-                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                <div class="flex items-center justify-center w-10 h-10 bg-primary rounded-xl">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 </div>
                 <span class="text-xl font-extrabold text-secondary"><?= SITE_NAME ?></span>
             </a>
         </div>
 
-        <div class="flex-1 flex items-center justify-center p-6 lg:p-12">
+        <div class="flex items-center justify-center flex-1 p-6 lg:p-12">
             <div class="w-full max-w-md">
                 <!-- Reset Form -->
                 <div id="resetForm">
-                    <div class="text-center mb-8">
-                        <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <div class="mb-8 text-center">
+                        <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-2xl">
                             <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
                         </div>
-                        <h2 class="text-2xl lg:text-3xl font-bold text-secondary mb-2">Setează parolă nouă</h2>
+                        <h2 class="mb-2 text-2xl font-bold lg:text-3xl text-secondary">Setează parolă nouă</h2>
                         <p class="text-muted">Introdu noua parolă pentru contul tău</p>
                     </div>
 
@@ -85,10 +85,10 @@ require_once __DIR__ . '/includes/head.php';
                         <input type="hidden" id="email">
 
                         <div>
-                            <label class="block text-sm font-medium text-secondary mb-2">Parolă nouă</label>
+                            <label class="block mb-2 text-sm font-medium text-secondary">Parolă nouă</label>
                             <div class="relative">
-                                <input type="password" id="password" oninput="ResetPage.checkStrength(this.value)" placeholder="Minim 8 caractere" required class="input-focus w-full px-4 py-3 bg-white border border-border rounded-xl text-sm focus:outline-none transition-all pr-12">
-                                <button type="button" onclick="ResetPage.togglePassword('password', 'eyeIcon1')" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary">
+                                <input type="password" id="password" oninput="ResetPage.checkStrength(this.value)" placeholder="Minim 8 caractere" required class="w-full px-4 py-3 pr-12 text-sm transition-all bg-white border input-focus border-border rounded-xl focus:outline-none">
+                                <button type="button" onclick="ResetPage.togglePassword('password', 'eyeIcon1')" class="absolute -translate-y-1/2 right-3 top-1/2 text-muted hover:text-secondary">
                                     <svg id="eyeIcon1" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 </button>
                             </div>
@@ -105,59 +105,59 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-secondary mb-2">Confirmă parola nouă</label>
+                            <label class="block mb-2 text-sm font-medium text-secondary">Confirmă parola nouă</label>
                             <div class="relative">
-                                <input type="password" id="confirmPassword" oninput="ResetPage.checkMatch()" placeholder="Reintrodu parola" required class="input-focus w-full px-4 py-3 bg-white border border-border rounded-xl text-sm focus:outline-none transition-all pr-12">
-                                <button type="button" onclick="ResetPage.togglePassword('confirmPassword', 'eyeIcon2')" class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary">
+                                <input type="password" id="confirmPassword" oninput="ResetPage.checkMatch()" placeholder="Reintrodu parola" required class="w-full px-4 py-3 pr-12 text-sm transition-all bg-white border input-focus border-border rounded-xl focus:outline-none">
+                                <button type="button" onclick="ResetPage.togglePassword('confirmPassword', 'eyeIcon2')" class="absolute -translate-y-1/2 right-3 top-1/2 text-muted hover:text-secondary">
                                     <svg id="eyeIcon2" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 </button>
                             </div>
-                            <p id="matchText" class="text-xs text-muted mt-1 hidden"></p>
+                            <p id="matchText" class="hidden mt-1 text-xs text-muted"></p>
                         </div>
 
-                        <button type="submit" id="submitBtn" class="btn-primary w-full py-3.5 text-white font-semibold rounded-xl text-sm mt-6">
+                        <button type="submit" id="submitBtn" class="btn-primary w-full py-3.5 text-white font-semibold rounded-xl text-sm mt-6 bg-primary">
                             Salvează parola nouă
                         </button>
                     </form>
 
-                    <p class="text-center text-sm text-muted mt-6">
-                        <a href="/login" class="text-primary font-semibold">Înapoi la autentificare</a>
+                    <p class="mt-6 text-sm text-center text-muted">
+                        <a href="/login" class="font-semibold text-primary">Înapoi la autentificare</a>
                     </p>
                 </div>
 
                 <!-- Success State -->
                 <div id="successState" class="hidden text-center">
                     <div class="success-animation">
-                        <div class="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <div class="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full bg-success/10">
                             <svg class="w-10 h-10 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         </div>
                     </div>
 
-                    <h2 class="text-2xl font-bold text-secondary mb-2">Parolă schimbată!</h2>
-                    <p class="text-muted mb-8">Parola ta a fost actualizată cu succes. Poți acum să te autentifici cu noua parolă.</p>
+                    <h2 class="mb-2 text-2xl font-bold text-secondary">Parolă schimbată!</h2>
+                    <p class="mb-8 text-muted">Parola ta a fost actualizată cu succes. Poți acum să te autentifici cu noua parolă.</p>
 
-                    <a href="/login" class="btn-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center">
+                    <a href="/login" class="btn-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center bg-primary">
                         Mergi la autentificare
                     </a>
 
-                    <p class="text-sm text-muted mt-6">
+                    <p class="mt-6 text-sm text-muted">
                         Vei fi redirecționat automat în <span id="countdown" class="font-bold text-primary">5</span> secunde
                     </p>
                 </div>
 
                 <!-- Expired Link State -->
                 <div id="expiredState" class="hidden text-center">
-                    <div class="w-20 h-20 bg-error/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <div class="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full bg-error/10">
                         <svg class="w-10 h-10 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
 
-                    <h2 class="text-2xl font-bold text-secondary mb-2">Link expirat</h2>
-                    <p class="text-muted mb-8">Link-ul de resetare a expirat sau a fost deja folosit. Te rugăm să soliciți un nou link.</p>
+                    <h2 class="mb-2 text-2xl font-bold text-secondary">Link expirat</h2>
+                    <p class="mb-8 text-muted">Link-ul de resetare a expirat sau a fost deja folosit. Te rugăm să soliciți un nou link.</p>
 
-                    <a href="/forgot-password" class="btn-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center mb-3">
+                    <a href="/forgot-password" class="btn-primary bg-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center mb-3">
                         Solicită link nou
                     </a>
-                    <a href="/login" class="block w-full py-3 text-center text-primary font-medium text-sm">
+                    <a href="/login" class="block w-full py-3 text-sm font-medium text-center text-primary">
                         Înapoi la autentificare
                     </a>
                 </div>
@@ -165,7 +165,7 @@ require_once __DIR__ . '/includes/head.php';
         </div>
 
         <!-- Footer -->
-        <div class="p-4 border-t border-border lg:hidden bg-white">
+        <div class="p-4 bg-white border-t border-border lg:hidden">
             <p class="text-xs text-center text-muted">© <?= date('Y') ?> <?= SITE_NAME ?>. Toate drepturile rezervate.</p>
         </div>
     </div>
