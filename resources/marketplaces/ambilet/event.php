@@ -472,22 +472,24 @@ require_once __DIR__ . '/includes/head.php';
         </div>
     </section>
 
-    <div class="px-4 py-8 mx-auto max-w-7xl mobile:px-0 mobile:py-6 mobile:bg-slate-200">
-        <!-- Related Events -->
-        <section class="mt-8 mobile:px-4 mobile:mb-8 mobile:mt-18" id="related-events-section" style="display:none;">
-            <div class="flex items-center justify-between mb-8">
-                <div>
-                    <h2 class="text-2xl font-bold text-secondary">Alte evenimente recomandate</h2>
-                    <p class="mt-1 text-muted" id="related-category-text">Evenimente similare</p>
+    <div class="border-t bg-slate-200 border-slate-300">
+        <div class="px-4 pb-8 mx-auto max-w-7xl mobile:px-0 mobile:py-6">
+            <!-- Related Events -->
+            <section class="mt-8 mobile:px-4 mobile:mb-8 mobile:mt-18" id="related-events-section" style="display:none;">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-secondary">Alte evenimente recomandate</h2>
+                        <p class="mt-1 text-muted" id="related-category-text">Evenimente similare</p>
+                    </div>
+                    <a href="/evenimente" id="see-all-link" class="items-center hidden gap-2 font-semibold md:flex text-primary">
+                        Vezi toate
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </a>
                 </div>
-                <a href="/evenimente" id="see-all-link" class="items-center hidden gap-2 font-semibold md:flex text-primary">
-                    Vezi toate
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                </a>
-            </div>
-            <!-- Mobile: horizontal scroll snap, Desktop: grid -->
-            <div class="flex gap-4 pb-4 -mx-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 lg:mx-0 lg:pb-0 lg:overflow-visible lg:grid lg:grid-cols-4 lg:gap-5 lg:snap-none related-events-scroll" id="related-events"></div>
-        </section>
+                <!-- Mobile: horizontal scroll snap, Desktop: grid -->
+                <div class="flex gap-4 pb-4 -mx-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 lg:mx-0 lg:pb-0 lg:overflow-visible lg:grid lg:grid-cols-4 lg:gap-5 lg:snap-none related-events-scroll" id="related-events"></div>
+            </section>
+        </div>
     </div>
 
     <!-- Mobile Ticket Drawer -->
