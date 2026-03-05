@@ -96,7 +96,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             </tr>
                         </thead>
                         <tbody id="orders-list" class="divide-y divide-border">
-                            <tr><td colspan="8" class="px-4 py-12 text-center text-muted">Se incarca...</td></tr>
+                            <tr id="select-event-prompt"><td colspan="8" class="px-4 py-16 text-center">
+                                <svg class="w-12 h-12 mx-auto mb-3 text-muted/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <p class="text-base font-medium text-secondary mb-1">Selecteaza un eveniment</p>
+                                <p class="text-sm text-muted">Alege un eveniment din filtrul de mai sus pentru a vedea comenzile</p>
+                            </td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -129,8 +133,12 @@ const urlParams = new URLSearchParams(window.location.search);
 const highlightEventId = urlParams.get('event');
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadEvents();
-    loadOrders();
+    loadEvents().then(() => {
+        // Only auto-load orders if an event is pre-selected via URL
+        if (highlightEventId) {
+            loadOrders();
+        }
+    });
 });
 
 function escHtml(str) {
@@ -186,7 +194,22 @@ async function loadOrders() {
     const toDate = document.getElementById('filter-to').value;
     const search = document.getElementById('filter-search').value.trim();
 
-    if (eventId) params.event_id = eventId;
+    if (!eventId) {
+        // No event selected — show prompt
+        document.getElementById('orders-list').innerHTML = `<tr><td colspan="8" class="px-4 py-16 text-center">
+            <svg class="w-12 h-12 mx-auto mb-3 text-muted/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <p class="text-base font-medium text-secondary mb-1">Selecteaza un eveniment</p>
+            <p class="text-sm text-muted">Alege un eveniment din filtrul de mai sus pentru a vedea comenzile</p>
+        </td></tr>`;
+        document.getElementById('stat-total-orders').textContent = '-';
+        document.getElementById('stat-total-value').textContent = '-';
+        document.getElementById('stat-total-tickets').textContent = '-';
+        document.getElementById('stat-completed').textContent = '-';
+        document.getElementById('pagination').classList.add('hidden');
+        return;
+    }
+
+    params.event_id = eventId;
     if (status) params.status = status;
     if (fromDate) params.from_date = fromDate;
     if (toDate) params.to_date = toDate;
