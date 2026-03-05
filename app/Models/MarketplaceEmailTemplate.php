@@ -51,6 +51,12 @@ class MarketplaceEmailTemplate extends Model
         'organizer_event_rejected' => 'Event Rejected',
         'organizer_daily_report' => 'Organizer Daily Report',
         'organizer_weekly_report' => 'Organizer Weekly Report',
+        'organizer_report' => 'Organizer Report',
+        // Admin Notifications
+        'admin_event_cancelled' => 'Admin: Event Cancelled by Organizer',
+        'admin_event_postponed' => 'Admin: Event Postponed by Organizer',
+        // Stock Alerts
+        'stock_low_alert' => 'Low Stock Alert',
         // Gift Card Templates
         'gift_card_delivery' => 'Gift Card Delivery',
         'gift_card_purchase_confirmation' => 'Gift Card Purchase Confirmation',
@@ -147,9 +153,40 @@ class MarketplaceEmailTemplate extends Model
                 'venue_address' => 'Venue address',
             ],
             'organizer_payout' => [
+                'organizer_name' => 'Organizer name',
                 'payout_amount' => 'Payout amount',
                 'payout_reference' => 'Payout reference',
                 'payout_status' => 'Payout status',
+                'period' => 'Payout period',
+            ],
+            'organizer_event_approved', 'organizer_event_rejected' => [
+                'organizer_name' => 'Organizer name',
+                'event_name' => 'Event name',
+                'event_date' => 'Event date',
+                'rejection_reason' => 'Rejection reason (if rejected)',
+            ],
+            'organizer_report', 'organizer_daily_report', 'organizer_weekly_report' => [
+                'organizer_name' => 'Organizer name',
+                'period' => 'Report period',
+                'total_sales' => 'Total sales amount',
+                'commission' => 'Commission amount',
+                'net_amount' => 'Net amount',
+                'orders_count' => 'Number of orders',
+                'tickets_count' => 'Number of tickets sold',
+            ],
+            'admin_event_cancelled', 'admin_event_postponed' => [
+                'organizer_name' => 'Organizer name',
+                'event_name' => 'Event name',
+                'event_date' => 'Event date',
+                'venue_name' => 'Venue name',
+                'admin_url' => 'Admin edit URL',
+            ],
+            'stock_low_alert' => [
+                'organizer_name' => 'Organizer name',
+                'event_name' => 'Event name',
+                'ticket_type' => 'Ticket type name',
+                'remaining_stock' => 'Remaining stock count',
+                'admin_url' => 'Admin edit URL',
             ],
             'gift_card_delivery' => [
                 'recipient_name' => 'Gift card recipient name',
