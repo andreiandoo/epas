@@ -72,9 +72,9 @@ $eventId = $_GET['event'] ?? null;
                     <!-- Period Selector -->
                     <div class="flex items-center p-1 bg-gray-100 rounded-xl">
                         <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all period-btn text-gray-500" data-period="7d">7D</button>
-                        <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all period-btn bg-white shadow-sm text-gray-900" data-period="30d">30D</button>
+                        <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all period-btn text-gray-500" data-period="30d">30D</button>
                         <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all period-btn text-gray-500" data-period="90d">90D</button>
-                        <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all period-btn text-gray-500" data-period="all">Tot</button>
+                        <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all period-btn bg-white shadow-sm text-gray-900" data-period="all">Tot</button>
                     </div>
 
                     <!-- Live Indicator -->
@@ -582,7 +582,7 @@ $eventId = $_GET['event'] ?? null;
 
 <script>
 const eventId = <?= json_encode($eventId) ?>;
-let currentPeriod = '30d';
+let currentPeriod = 'all';
 let mainChart = null;
 let chartMetrics = { revenue: true, tickets: true, views: true };
 let eventData = null;
