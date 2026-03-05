@@ -170,6 +170,7 @@ const AmbiletAuth = {
         }
 
         this.clearCustomerSession();
+        window.location.href = '/';
     },
 
     /**
@@ -278,6 +279,7 @@ const AmbiletAuth = {
         }
 
         this.clearOrganizerSession();
+        window.location.href = '/';
     },
 
     /**
