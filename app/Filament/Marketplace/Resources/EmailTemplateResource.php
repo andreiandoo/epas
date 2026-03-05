@@ -43,6 +43,7 @@ class EmailTemplateResource extends Resource
                             ->label('Template Type')
                             ->options(MarketplaceEmailTemplate::TEMPLATE_SLUGS)
                             ->required()
+                            ->live()
                             ->unique(ignoreRecord: true, modifyRuleUsing: function ($rule) {
                                 $marketplace = static::getMarketplaceClient();
                                 return $rule->where('marketplace_client_id', $marketplace?->id);
@@ -81,18 +82,20 @@ class EmailTemplateResource extends Resource
                         Forms\Components\Placeholder::make('variables_help')
                             ->content(function ($get) {
                                 $slug = $get('slug');
-                                $variables = match($slug) {
-                                    'ticket_purchase' => '{{customer_name}}, {{order_number}}, {{event_name}}, {{event_date}}, {{tickets_count}}, {{total_amount}}',
-                                    'welcome' => '{{customer_name}}, {{customer_email}}, {{marketplace_name}}',
-                                    'points_earned' => '{{customer_name}}, {{points_amount}}, {{reason}}, {{total_points}}',
-                                    'refund_approved' => '{{customer_name}}, {{order_number}}, {{refund_amount}}, {{refund_reference}}',
-                                    'refund_rejected' => '{{customer_name}}, {{order_number}}, {{rejection_reason}}',
-                                    'event_reminder' => '{{customer_name}}, {{event_name}}, {{event_date}}, {{event_venue}}, {{tickets_count}}',
-                                    'organizer_payout' => '{{organizer_name}}, {{payout_amount}}, {{payout_reference}}, {{period}}',
-                                    'organizer_report' => '{{organizer_name}}, {{period}}, {{total_sales}}, {{commission}}, {{net_amount}}',
-                                    default => 'Select a template type to see available variables',
-                                };
-                                return new \Illuminate\Support\HtmlString("<code class='text-sm'>{$variables}</code>");
+                                if (!$slug) {
+                                    return new \Illuminate\Support\HtmlString('<span class="text-sm text-gray-500">Selectează un tip de template pentru a vedea variabilele disponibile.</span>');
+                                }
+                                $template = new MarketplaceEmailTemplate(['slug' => $slug]);
+                                $vars = $template->getAvailableVariables();
+                                if (empty($vars)) {
+                                    return new \Illuminate\Support\HtmlString('<span class="text-sm text-gray-500">Nu există variabile specifice pentru acest template. Variabilele comune (customer_name, customer_email, marketplace_name) sunt disponibile.</span>');
+                                }
+                                $html = '<div class="text-sm space-y-1">';
+                                foreach ($vars as $key => $desc) {
+                                    $html .= '<div><code class="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">{{' . e($key) . '}}</code> <span class="text-gray-500">— ' . e($desc) . '</span></div>';
+                                }
+                                $html .= '</div>';
+                                return new \Illuminate\Support\HtmlString($html);
                             })
                             ->label(''),
                     ])
