@@ -227,7 +227,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <?php
 $scriptsExtra = <<<'JS'
 <script>
-AmbiletAuth.requireOrganizerAuth();
+document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOrganizerAuth(); });
 
 const ORDER_UUID = new URLSearchParams(window.location.search).get('uuid') || window.location.pathname.split('/').pop();
 

@@ -125,7 +125,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <?php
 $scriptsExtra = <<<'JS'
 <script>
-AmbiletAuth.requireOrganizerAuth();
+document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOrganizerAuth(); });
 
 let currentPage = 1;
 let totalPages = 1;

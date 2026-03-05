@@ -596,7 +596,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 $scriptsExtra = '<script>const MARKETPLACE_NAME = ' . json_encode(SITE_NAME) . ';</script>';
 $scriptsExtra .= <<<'JS'
 <script>
-AmbiletAuth.requireOrganizerAuth();
+document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOrganizerAuth(); });
 
 let ticketTypeCount = 1;
 let descriptionEditor = null;
