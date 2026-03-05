@@ -683,7 +683,9 @@ function instantSearchEvents() {
 }
 
 // Initialize instant search
-document.getElementById('search-input')?.addEventListener('input', AmbiletUtils.debounce(instantSearchEvents, 150));
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('search-input')?.addEventListener('input', AmbiletUtils.debounce(instantSearchEvents, 150));
+});
 
 function renderEvents(events) {
     const container = document.getElementById('events-list');
