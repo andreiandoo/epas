@@ -5,48 +5,48 @@ $bodyClass = 'min-h-screen flex bg-surface';
 $cssBundle = 'organizer';
 require_once dirname(__DIR__) . '/includes/head.php';
 ?>
-    <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-secondary via-secondary to-primary-dark relative overflow-hidden">
+    <div class="relative hidden overflow-hidden lg:flex lg:w-1/2 bg-gradient-to-br from-secondary via-secondary to-primary-dark">
         <div class="absolute inset-0">
-            <div class="absolute top-20 left-20 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
-            <div class="absolute bottom-20 right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
+            <div class="absolute w-64 h-64 rounded-full top-20 left-20 bg-white/5 blur-3xl"></div>
+            <div class="absolute rounded-full bottom-20 right-20 w-96 h-96 bg-primary/10 blur-3xl"></div>
         </div>
         <div class="relative z-10 flex flex-col justify-between p-12 text-white">
             <div>
                 <a href="/" class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+                    <div class="flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur rounded-xl">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                     </div>
                     <span class="text-2xl font-extrabold"><?= strtoupper(SITE_NAME) ?></span>
                 </a>
-                <span class="inline-block mt-2 px-3 py-1 bg-primary/30 rounded-full text-sm">Portal Organizatori</span>
+                <span class="inline-block px-3 py-1 mt-2 text-sm rounded-full bg-primary/30">Portal Organizatori</span>
             </div>
             <div>
-                <h1 class="text-4xl font-bold mb-4">Gestioneaza-ti evenimentele</h1>
-                <p class="text-lg text-white/80 mb-8">Acceseaza dashboard-ul pentru a vedea vanzarile, gestiona participantii si analiza datele.</p>
+                <h1 class="mb-4 text-4xl font-bold">Gestioneaza-ti evenimentele</h1>
+                <p class="mb-8 text-lg text-white/80">Acceseaza dashboard-ul pentru a vedea vanzarile, gestiona participantii si analiza datele.</p>
                 <div class="space-y-4">
-                    <div class="flex items-center gap-3"><div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div><span class="text-white/90">Rapoarte in timp real</span></div>
-                    <div class="flex items-center gap-3"><div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg></div><span class="text-white/90">Gestionare participanti</span></div>
-                    <div class="flex items-center gap-3"><div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><span class="text-white/90">Plati si facturi</span></div>
+                    <div class="flex items-center gap-3"><div class="flex items-center justify-center w-10 h-10 rounded-lg bg-white/20"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div><span class="text-white/90">Rapoarte in timp real</span></div>
+                    <div class="flex items-center gap-3"><div class="flex items-center justify-center w-10 h-10 rounded-lg bg-white/20"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg></div><span class="text-white/90">Gestionare participanti</span></div>
+                    <div class="flex items-center gap-3"><div class="flex items-center justify-center w-10 h-10 rounded-lg bg-white/20"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><span class="text-white/90">Plati si facturi</span></div>
                 </div>
             </div>
             <div class="text-sm text-white/90">&copy; <?= date('Y') ?> <?= SITE_NAME ?>. Portal Organizatori.</div>
         </div>
     </div>
 
-    <div class="flex-1 flex flex-col">
-        <div class="lg:hidden p-4 border-b border-border bg-white">
+    <div class="flex flex-col flex-1">
+        <div class="p-4 bg-white border-b lg:hidden border-border">
             <a href="/" class="flex items-center gap-2">
-                <div class="w-10 h-10 bg-secondary rounded-xl flex items-center justify-center"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg></div>
+                <div class="flex items-center justify-center w-10 h-10 bg-secondary rounded-xl"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg></div>
                 <div><span class="text-xl font-extrabold text-secondary"><?= strtoupper(SITE_NAME) ?></span><span class="block text-xs text-muted">Organizatori</span></div>
             </a>
         </div>
-        <div class="flex-1 flex items-center justify-center p-6 lg:p-12">
+        <div class="flex items-center justify-center flex-1 p-6 lg:p-12">
             <div class="w-full max-w-md">
-                <div class="text-center mb-8">
-                    <h2 class="text-2xl lg:text-3xl font-bold text-secondary mb-2">Autentificare</h2>
+                <div class="mb-8 text-center">
+                    <h2 class="mb-2 text-2xl font-bold lg:text-3xl text-secondary">Autentificare</h2>
                     <p class="text-muted">Introdu datele pentru a accesa dashboard-ul</p>
                 </div>
-                <div id="error-message" class="hidden mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-error"></div>
+                <div id="error-message" class="hidden p-4 mb-6 text-sm border border-red-200 bg-red-50 rounded-xl text-error"></div>
                 <form id="login-form" class="space-y-4">
                     <div>
                         <label class="label">Email</label>
@@ -54,12 +54,12 @@ require_once dirname(__DIR__) . '/includes/head.php';
                     </div>
                     <div>
                         <div class="flex items-center justify-between mb-2">
-                            <label class="label mb-0">Parola</label>
-                            <a href="/organizator/forgot-password" class="text-sm text-primary font-medium">Ai uitat parola?</a>
+                            <label class="mb-0 label">Parola</label>
+                            <a href="/organizator/forgot-password" class="text-sm font-medium text-primary">Ai uitat parola?</a>
                         </div>
                         <div class="relative">
-                            <input type="password" name="password" required placeholder="********" class="input pr-12" id="password-input" autocomplete="current-password">
-                            <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-secondary">
+                            <input type="password" name="password" required placeholder="********" class="pr-12 input" id="password-input" autocomplete="current-password">
+                            <button type="button" onclick="togglePassword()" class="absolute -translate-y-1/2 right-4 top-1/2 text-muted hover:text-secondary">
                                 <svg id="eye-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                             </button>
                         </div>
@@ -70,13 +70,13 @@ require_once dirname(__DIR__) . '/includes/head.php';
                             <span class="text-sm text-muted">Tine-ma minte</span>
                         </label>
                     </div>
-                    <button type="submit" class="btn btn-primary w-full" id="submit-btn">
+                    <button type="submit" class="w-full btn btn-primary bg-primary" id="submit-btn">
                         <span id="btn-text">Autentificare</span>
                         <div id="btn-spinner" class="hidden spinner"></div>
                     </button>
                 </form>
                 <div class="relative my-8"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-border"></div></div><div class="relative flex justify-center text-sm"><span class="px-4 bg-surface text-muted">sau</span></div></div>
-                <p class="text-center text-muted">Nu ai cont de organizator? <a href="/organizator/inregistrare" class="text-primary font-semibold">Inregistreaza-te</a></p>
+                <p class="text-center text-muted">Nu ai cont de organizator? <a href="/organizator/inregistrare" class="font-semibold text-primary">Inregistreaza-te</a></p>
                 <div class="mt-8 text-center"><a href="/autentificare" class="text-sm text-muted hover:text-primary">&larr; Inapoi la autentificarea clienti</a></div>
             </div>
         </div>
@@ -95,7 +95,8 @@ function togglePassword() {
         icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`;
     }
 }
-if (AmbiletAuth.isOrganizer()) { window.location.href = '/organizator/panou'; }
+document.addEventListener('DOMContentLoaded', function() {
+if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isOrganizer()) { window.location.href = '/organizator/panou'; }
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -119,6 +120,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         errorDiv.classList.remove('hidden');
         submitBtn.disabled = false; btnText.classList.remove('hidden'); btnSpinner.classList.add('hidden');
     }
+});
 });
 </script>
 JS;

@@ -348,7 +348,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <?php
 $scriptsExtra = <<<'JS'
 <script>
-AmbiletAuth.requireOrganizerAuth();
+document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOrganizerAuth(); });
 document.addEventListener('DOMContentLoaded', function() { loadSettings(); loadBankAccounts(); loadContract(); loadShareLinks(); initNotificationSoundToggle(); const hash = window.location.hash.replace('#', ''); const validSections = ['profile','company','bank','contract','notifications','security','sharelinks']; if (hash && validSections.includes(hash)) showSection(hash); });
 
 // Initialize notification sound toggle from saved preference
