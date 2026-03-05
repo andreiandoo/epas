@@ -447,6 +447,23 @@ class VenueResource extends Resource
                                 ])->columnSpanFull(),
                         ]),
 
+                    // CONDITIONS & TAXES
+                    SC\Section::make('Condiții & Taxe')
+                        ->description('Condiții specifice locației și taxe aplicabile')
+                        ->icon('heroicon-o-document-text')
+                        ->collapsible()
+                        ->schema([
+                            Forms\Components\RichEditor::make('venue_conditions')
+                                ->label('Condiții locație')
+                                ->helperText('Condiții specifice care se vor adăuga automat la termenii biletelor evenimentelor din acest venue.')
+                                ->columnSpanFull(),
+
+                            Forms\Components\Toggle::make('has_historical_monument_tax')
+                                ->label('Taxa de Monument Istoric (2%)')
+                                ->helperText('Dacă este activată, evenimentele din acest venue vor avea automat aplicată taxa de 2% pentru monument istoric.')
+                                ->default(false),
+                        ]),
+
                     // PARTNER NOTES (internal)
                     SC\Section::make('Note interne')
                         ->description('Note interne despre această locație (nu sunt vizibile public)')

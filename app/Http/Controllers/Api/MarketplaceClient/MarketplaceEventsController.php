@@ -541,10 +541,19 @@ class MarketplaceEventsController extends BaseController
                 // Custom related events flags
                 'has_custom_related' => (bool) $event->has_custom_related,
                 'custom_related_event_ids' => $event->custom_related_event_ids ?? [],
-                'ticket_terms' => $event->getTranslation('ticket_terms', $language)
-                    ?? $event->getTranslation('ticket_terms', 'ro')
-                    ?? $event->getTranslation('ticket_terms', 'en')
-                    ?? null,
+                'ticket_terms' => (function () use ($event, $venue, $language) {
+                    $terms = $event->getTranslation('ticket_terms', $language)
+                        ?? $event->getTranslation('ticket_terms', 'ro')
+                        ?? $event->getTranslation('ticket_terms', 'en')
+                        ?? null;
+                    $venueConditions = $venue?->venue_conditions;
+                    if ($venueConditions) {
+                        $venueName = is_array($venue->name) ? ($venue->name[$language] ?? $venue->name['ro'] ?? reset($venue->name) ?? '') : ($venue->name ?? '');
+                        $conditionsBlock = '<hr><strong>Condiții locație – ' . e($venueName) . '</strong>' . $venueConditions;
+                        $terms = $terms ? $terms . $conditionsBlock : $conditionsBlock;
+                    }
+                    return $terms;
+                })(),
             ],
             'venue' => $venueData,
             'organizer' => $organizer ? [
@@ -690,6 +699,7 @@ class MarketplaceEventsController extends BaseController
             'custom_related_events' => $this->getCustomRelatedEvents($event, $language, $client),
             // Tour
             'tour_name' => $event->tour_id ? \App\Models\Tour::find($event->tour_id)?->name : null,
+            'tour_type' => $event->tour_id ? (\App\Models\Tour::find($event->tour_id)?->type ?? 'serie_evenimente') : null,
             'tour_events' => $event->tour_id
                 ? Event::where('tour_id', $event->tour_id)
                     ->where('id', '!=', $event->id)

@@ -570,8 +570,9 @@ const EventPage = {
             has_custom_related: eventData.has_custom_related || false,
             custom_related_event_ids: eventData.custom_related_event_ids || [],
             custom_related_events: apiData.custom_related_events || [],
-            // Tour events
+            // Tour/Grouping events
             tour_name: apiData.tour_name || null,
+            tour_type: apiData.tour_type || 'serie_evenimente',
             tour_events: apiData.tour_events || [],
             // Ticket terms (HTML from WYSIWYG editor)
             ticket_terms: (apiData.event && apiData.event.ticket_terms) ? apiData.event.ticket_terms : null
@@ -893,9 +894,9 @@ const EventPage = {
             this.renderTicketTerms(e.ticket_terms);
         }
 
-        // Tour events
+        // Tour/Grouping events
         if (e.tour_events && e.tour_events.length > 0) {
-            this.renderTourEvents(e.tour_events, e.tour_name);
+            this.renderTourEvents(e.tour_events, e.tour_name, e.tour_type);
         }
 
         // Related events — lazy-load when section scrolls into view
@@ -1957,10 +1958,17 @@ const EventPage = {
     /**
      * Render tour events section
      */
-    renderTourEvents(tourEvents, tourName) {
+    renderTourEvents(tourEvents, tourName, tourType) {
         var section = document.getElementById('tour-events-section');
         var container = document.getElementById('tour-events-list');
         if (!section || !container || !tourEvents || tourEvents.length === 0) return;
+
+        // Update section title based on grouping type
+        var sectionTitle = document.getElementById('tour-section-title');
+        var isTour = tourType === 'turneu';
+        if (sectionTitle) {
+            sectionTitle.textContent = isTour ? 'Alte date din turneu' : 'Alte date din serie';
+        }
 
         // Update subtitle with tour name if available
         var nameDisplay = document.getElementById('tour-name-display');
@@ -1968,6 +1976,10 @@ const EventPage = {
         if (tourName && nameDisplay) {
             nameDisplay.textContent = tourName;
             if (nameFallback) nameFallback.style.display = 'none';
+        } else if (nameFallback) {
+            nameFallback.textContent = isTour
+                ? 'Evenimentul face parte dintr-un turneu. Alege și alte date.'
+                : 'Evenimentul face parte dintr-o serie. Alege și alte date.';
         }
 
         var MONTHS_SHORT = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec'];
@@ -2249,7 +2261,7 @@ const EventPage = {
                 // Header
                 '<div class="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border">' +
                     '<div class="flex-1 min-w-0">' +
-                        '<h2 class="text-base md:text-xl font-bold text-secondary truncate">Alege locurile</h2>' +
+                        '<h2 id="seat-selection-title" class="text-base md:text-xl font-bold text-secondary truncate">Alege locurile</h2>' +
                         '<p class="text-xs md:text-sm text-muted" id="seat-selection-subtitle">Selectează locurile dorite pe hartă</p>' +
                     '</div>' +
                     '<button onclick="EventPage.closeSeatSelection()" aria-label="Închide" class="p-2 transition-colors rounded-lg hover:bg-surface flex-shrink-0" aria-label="Închide">' +
@@ -3387,7 +3399,11 @@ const EventPage = {
         var headerCount = document.getElementById('selected-tickets-count-header');
         if (headerCount) headerCount.textContent = totalSeats + (totalSeats === 1 ? ' bilet' : ' bilete');
 
-        // Update subtitle
+        // Update title & subtitle
+        var title = document.getElementById('seat-selection-title');
+        if (title) {
+            title.textContent = totalSeats > 0 ? 'Ai selectat ' + totalSeats + (totalSeats === 1 ? ' loc' : ' locuri') : 'Alege locurile';
+        }
         var subtitle = document.getElementById('seat-selection-subtitle');
         if (seatDetails.length > 0) {
             var details = seatDetails.map(function(d) {

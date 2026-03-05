@@ -986,6 +986,19 @@ class EventResource extends Resource
                         // TICKETS
                         SC\Section::make($t('Bilete', 'Tickets'))
                             ->schema([
+                                // Warning: Cerere avizare document exists
+                                Forms\Components\Placeholder::make('cerere_avizare_warning')
+                                    ->hiddenLabel()
+                                    ->visible(fn (?Event $record) => $record && OrganizerDocument::where('event_id', $record->id)
+                                        ->where('document_type', 'cerere_avizare')->exists())
+                                    ->content(fn () => new HtmlString(
+                                        '<div class="flex items-center gap-2 p-3 text-sm border rounded-lg bg-warning-50 border-warning-300 text-warning-800">' .
+                                            '<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>' .
+                                            '<span><strong>' . $t('Atenție:', 'Warning:') . '</strong> ' . $t('Există o Cerere de Avizare generată pentru acest eveniment. Modificarea tipurilor de bilete poate necesita regenerarea documentului.', 'A Cerere de Avizare document has been generated for this event. Modifying ticket types may require regenerating the document.') . '</span>' .
+                                        '</div>'
+                                    ))
+                                    ->columnSpanFull(),
+
                                 // Ticket Template, General Stock, and Door Price row
                                 SC\Grid::make(3)->schema([
                                     Forms\Components\Select::make('ticket_template_id')
@@ -1108,8 +1121,8 @@ class EventResource extends Resource
                                             ->placeholder($t('Se generează automat dacă lași gol', 'AUTO-GEN if left empty'))
                                             ->columnSpan(4),
                                         Forms\Components\Toggle::make('is_entry_ticket')
-                                            ->label($t('Bilet Intrare', 'Entry Ticket'))
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Doar tipurile cu acest flag sunt disponibile în aplicația mobilă POS', 'Only types with this flag are available in the mobile POS app'))
+                                            ->label($t('Bilet pentru aplicație', 'App Ticket'))
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Doar tipurile cu acest flag sunt disponibile în aplicația mobilă', 'Only types with this flag are available in the mobile app'))
                                             ->default(false)
                                             ->columnSpan(3),
                                         Forms\Components\ColorPicker::make('color')
@@ -1148,12 +1161,10 @@ class EventResource extends Resource
                                             Forms\Components\TextInput::make('capacity')
                                                 ->label($t('Stoc bilete', 'Ticket stock'))
                                                 ->inlineLabel($il)
-                                                ->placeholder($t('Necompletat = folosește stoc general', 'Empty = use general stock'))
+                                                ->placeholder($t('obligatoriu', 'required'))
                                                 ->numeric()
                                                 ->minValue(0)
-                                                ->nullable()
-                                                ->dehydrateStateUsing(fn ($state) => $state === '' || $state === null ? null : (int) $state)
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă lași necompletat, se va folosi stocul general pentru seria de bilete.', 'If left empty, general stock will be used for ticket series.'))
+                                                ->required()
                                                 ->hint(function ($record) use ($t) {
                                                     return $record && $record->quota_sold > 0
                                                         ? $t('Vândute', 'Sold') . ": {$record->quota_sold}"
@@ -1747,25 +1758,36 @@ class EventResource extends Resource
                             ->columnSpanFull(),
                                     ]), // End Tab 6: Harta Locuri
 
-                                // ========== TAB 7: TURNEU ==========
-                                SC\Tabs\Tab::make($t('Turneu', 'Tour'))
+                                // ========== TAB 7: GRUPARE ==========
+                                SC\Tabs\Tab::make($t('Grupare', 'Grouping'))
                                     ->key('turneu')
                                     ->icon('heroicon-o-map-pin')
                                     ->lazy()
                                     ->schema([
-                        SC\Section::make($t('Setări Turneu', 'Tour Settings'))
+                        SC\Section::make($t('Setări Grupare', 'Grouping Settings'))
                             ->schema([
                                 Forms\Components\Toggle::make('is_in_tour')
-                                    ->label($t('Eveniment din turneu', 'Part of a Tour'))
-                                    ->helperText($t('Bifează dacă acest eveniment face parte dintr-un turneu', 'Check if this event is part of a tour'))
+                                    ->label($t('Face parte dintr-o grupare', 'Part of a Grouping'))
+                                    ->helperText($t('Bifează dacă acest eveniment face parte dintr-o grupare (serie sau turneu)', 'Check if this event is part of a grouping (series or tour)'))
                                     ->dehydrated(false)
                                     ->live(),
 
-                                Forms\Components\Radio::make('tour_mode')
-                                    ->label($t('Tip turneu', 'Tour type'))
+                                Forms\Components\Radio::make('grouping_type')
+                                    ->label($t('Tip grupare', 'Grouping type'))
                                     ->options([
-                                        'new'      => $t('Turneu nou', 'New tour'),
-                                        'existing' => $t('Turneu existent', 'Existing tour'),
+                                        'serie_evenimente' => $t('Serie evenimente', 'Event Series'),
+                                        'turneu'           => $t('Turneu', 'Tour'),
+                                    ])
+                                    ->default('serie_evenimente')
+                                    ->dehydrated(false)
+                                    ->live()
+                                    ->visible(fn (SGet $get) => (bool) $get('is_in_tour')),
+
+                                Forms\Components\Radio::make('tour_mode')
+                                    ->label($t('Mod grupare', 'Grouping mode'))
+                                    ->options([
+                                        'new'      => $t('Grupare nouă', 'New grouping'),
+                                        'existing' => $t('Grupare existentă', 'Existing grouping'),
                                     ])
                                     ->default('new')
                                     ->dehydrated(false)
@@ -1773,15 +1795,15 @@ class EventResource extends Resource
                                     ->visible(fn (SGet $get) => (bool) $get('is_in_tour')),
 
                                 Forms\Components\TextInput::make('tour_name')
-                                    ->label($t('Nume turneu', 'Tour name'))
-                                    ->helperText($t('Introduceți un nume pentru turneu (ex: "Dirtylicious Decade Tour")', 'Enter a name for the tour'))
+                                    ->label($t('Nume grupare', 'Grouping name'))
+                                    ->helperText($t('Introduceți un nume pentru grupare (ex: "Dirtylicious Decade Tour")', 'Enter a name for the grouping'))
                                     ->dehydrated(false)
                                     ->maxLength(255)
                                     ->visible(fn (SGet $get) => (bool) $get('is_in_tour') && $get('tour_mode') === 'new'),
 
                                 Forms\Components\Select::make('existing_tour_id')
-                                    ->label($t('Selectează turneul', 'Select tour'))
-                                    ->helperText($t('Alege un turneu existent. Lista este filtrată după formațiile acestui eveniment.', 'Choose an existing tour. List is filtered by this event\'s artists.'))
+                                    ->label($t('Selectează gruparea', 'Select grouping'))
+                                    ->helperText($t('Alege o grupare existentă. Lista este filtrată după formațiile acestui eveniment.', 'Choose an existing grouping. List is filtered by this event\'s artists.'))
                                     ->searchable()
                                     ->dehydrated(false)
                                     ->options(function (?Event $record) use ($marketplace) {
@@ -1808,12 +1830,12 @@ class EventResource extends Resource
                                         }
 
                                         return $query->orderBy('name')->get()->mapWithKeys(fn ($tour) => [
-                                            $tour->id => $tour->name ?: ('Turneu #' . $tour->id),
+                                            $tour->id => $tour->name ?: ($t('Grupare', 'Grouping') . ' #' . $tour->id),
                                         ]);
                                     })
                                     ->visible(fn (SGet $get) => (bool) $get('is_in_tour') && $get('tour_mode') === 'existing'),
                             ]),
-                                    ]), // End Tab 7: Turneu
+                                    ]), // End Tab 7: Grupare
 
                             ]), // End Tabs component
                     ]),

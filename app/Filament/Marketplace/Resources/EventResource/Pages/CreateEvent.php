@@ -74,6 +74,26 @@ class CreateEvent extends CreateRecord
             $record->saveQuietly();
         }
 
+        // Auto-fill short description from first 80 words of description if empty
+        $marketplace = static::getMarketplaceClient();
+        $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
+        $shortDesc = $this->record->getTranslation('short_description', $lang);
+        if (empty(trim(strip_tags($shortDesc ?? '')))) {
+            $desc = $this->record->getTranslation('description', $lang);
+            if ($desc) {
+                $text = strip_tags($desc);
+                $words = preg_split('/\s+/', trim($text), 81, PREG_SPLIT_NO_EMPTY);
+                if (count($words) > 80) {
+                    $words = array_slice($words, 0, 80);
+                    $text = implode(' ', $words) . '...';
+                } else {
+                    $text = implode(' ', $words);
+                }
+                $this->record->setTranslation('short_description', $lang, $text);
+                $this->record->saveQuietly();
+            }
+        }
+
         // Process multi-day and recurring event scheduling
         // Creates child events for each occurrence
         app(EventSchedulingService::class)->processEventScheduling($this->record);

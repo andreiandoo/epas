@@ -340,6 +340,11 @@ class VenueResource extends Resource
                         ->rows(2)
                         ->placeholder('Cash, Card (Visa/Mastercard), Contactless, Apple Pay...')
                         ->columnSpanFull(),
+
+                    Forms\Components\RichEditor::make('venue_conditions')
+                        ->label('Condiții locație')
+                        ->helperText('Condiții specifice locației care se vor adăuga automat la termenii biletelor evenimentelor din acest venue.')
+                        ->columnSpanFull(),
                 ])->columns(2),
 
             SC\Section::make('Descriere')->schema([

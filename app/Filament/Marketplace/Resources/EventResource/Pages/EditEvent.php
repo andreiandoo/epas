@@ -744,17 +744,19 @@ class EditEvent extends EditRecord
             }
         }
 
-        // Tour state — populate virtual fields for the Turneu tab
+        // Tour/Grouping state — populate virtual fields for the Grupare tab
         $data['is_in_tour'] = $this->record->tour_id !== null;
         if ($this->record->tour_id !== null) {
             $tour = Tour::find($this->record->tour_id);
             $data['tour_mode'] = 'existing';
             $data['existing_tour_id'] = $this->record->tour_id;
             $data['tour_name'] = $tour?->name ?? '';
+            $data['grouping_type'] = $tour?->type ?? 'serie_evenimente';
         } else {
             $data['tour_mode'] = 'new';
             $data['existing_tour_id'] = null;
             $data['tour_name'] = '';
+            $data['grouping_type'] = 'serie_evenimente';
         }
 
         return $data;
@@ -921,6 +923,26 @@ class EditEvent extends EditRecord
 
     protected function afterSave(): void
     {
+        // Auto-fill short description from first 80 words of description if empty
+        $marketplace = static::getMarketplaceClient();
+        $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
+        $shortDesc = $this->record->getTranslation('short_description', $lang);
+        if (empty(trim(strip_tags($shortDesc ?? '')))) {
+            $desc = $this->record->getTranslation('description', $lang);
+            if ($desc) {
+                $text = strip_tags($desc);
+                $words = preg_split('/\s+/', trim($text), 81, PREG_SPLIT_NO_EMPTY);
+                if (count($words) > 80) {
+                    $words = array_slice($words, 0, 80);
+                    $text = implode(' ', $words) . '...';
+                } else {
+                    $text = implode(' ', $words);
+                }
+                $this->record->setTranslation('short_description', $lang, $text);
+                $this->record->saveQuietly();
+            }
+        }
+
         // Auto-fill all SEO keys with latest event data on every save
         $this->autoFillSeoKeys();
 
@@ -973,18 +995,23 @@ class EditEvent extends EditRecord
 
         if ($isInTour) {
             $tourMode = $this->data['tour_mode'] ?? 'new';
+            $groupingType = $this->data['grouping_type'] ?? 'serie_evenimente';
 
             if ($tourMode === 'new') {
                 $tourName = trim($this->data['tour_name'] ?? '');
 
                 if ($this->record->tour_id) {
-                    // Update the name of the existing tour
-                    Tour::where('id', $this->record->tour_id)->update(['name' => $tourName]);
+                    // Update the name and type of the existing tour
+                    Tour::where('id', $this->record->tour_id)->update([
+                        'name' => $tourName,
+                        'type' => $groupingType,
+                    ]);
                 } else {
                     // Create a brand-new tour and assign only this event
                     $tour = Tour::create([
                         'marketplace_client_id' => $this->record->marketplace_client_id,
                         'name' => $tourName,
+                        'type' => $groupingType,
                     ]);
                     $this->record->update(['tour_id' => $tour->id]);
                 }
@@ -997,12 +1024,18 @@ class EditEvent extends EditRecord
                     $oldTourId = $this->record->tour_id;
                     $this->record->update(['tour_id' => $existingTourId]);
 
+                    // Update grouping type on the existing tour
+                    Tour::where('id', $existingTourId)->update(['type' => $groupingType]);
+
                     if ($oldTourId) {
                         $remaining = Event::where('tour_id', $oldTourId)->count();
                         if ($remaining === 0) {
                             Tour::where('id', $oldTourId)->delete();
                         }
                     }
+                } elseif ($existingTourId) {
+                    // Same tour, just update the type
+                    Tour::where('id', $existingTourId)->update(['type' => $groupingType]);
                 }
             }
         } else {

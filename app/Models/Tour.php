@@ -10,6 +10,7 @@ class Tour extends Model
     protected $fillable = [
         'marketplace_client_id',
         'name',
+        'type',
     ];
 
     public function events(): HasMany
