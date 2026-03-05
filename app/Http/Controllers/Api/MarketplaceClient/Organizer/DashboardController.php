@@ -238,6 +238,14 @@ class DashboardController extends BaseController
 
         $query->orderByDesc('created_at');
 
+        // Compute aggregate stats from full query (only completed/paid orders)
+        $statsQuery = (clone $query)->whereIn('status', ['completed', 'paid']);
+        $stats = [
+            'total_revenue' => (float) $statsQuery->sum('total'),
+            'total_tickets' => (int) (clone $statsQuery)->sum(\DB::raw('COALESCE(tickets_count, 0)')),
+            'completed_orders' => (int) $statsQuery->count(),
+        ];
+
         $perPage = min((int) $request->get('per_page', 20), 100);
         $orders = $query->paginate($perPage);
 
@@ -265,7 +273,7 @@ class DashboardController extends BaseController
                 'created_at' => $order->created_at->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),
             ];
-        });
+        }, $stats);
     }
 
     /**
