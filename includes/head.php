@@ -346,6 +346,20 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     </script>
     <?php endif; ?>
 
+    <!-- Clean tracking params from URL after GA has read them -->
+    <script>
+    setTimeout(function(){
+        if(!window.location.search)return;
+        var p=new URLSearchParams(window.location.search),del=[];
+        p.forEach(function(v,k){if(/^(_gl|_ga|_up|_gac|utm_)/.test(k))del.push(k)});
+        if(del.length){
+            del.forEach(function(k){p.delete(k)});
+            var s=p.toString();
+            history.replaceState(null,'',location.pathname+(s?'?'+s:'')+location.hash);
+        }
+    },15000);
+    </script>
+
     <!-- Page-specific head content -->
     <?php if (isset($headExtra)) echo $headExtra; ?>
 </head>
