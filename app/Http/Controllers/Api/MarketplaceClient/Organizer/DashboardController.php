@@ -38,8 +38,9 @@ class DashboardController extends BaseController
         $eventsList = (clone $upcomingEventsQuery)
             ->orderBy('event_date')
             ->limit(10)
-            ->withCount(['tickets as tickets_sold' => function ($q) {
-                $q->whereHas('order', fn ($oq) => $oq->whereIn('status', ['paid', 'completed']));
+            ->withCount(['tickets as tickets_sold' => function ($q) use ($organizer) {
+                $q->whereHas('order', fn ($oq) => $oq->whereIn('status', ['paid', 'completed'])
+                    ->where('marketplace_organizer_id', $organizer->id));
             }])
             ->with(['marketplaceCity', 'venue'])
             ->get()
@@ -70,11 +71,11 @@ class DashboardController extends BaseController
         $completedOrders = (clone $orders)->whereIn('status', ['paid', 'completed']);
 
         $commissionRate = $organizer->getEffectiveCommissionRate();
-        $grossRevenue = (float) $completedOrders->sum('total');
+        $grossRevenue = (float) (clone $completedOrders)->sum('total');
         $commissionAmount = round($grossRevenue * $commissionRate / 100, 2);
         $netRevenue = $grossRevenue - $commissionAmount;
 
-        $ticketsSold = $completedOrders->withCount('tickets')->get()->sum('tickets_count');
+        $ticketsSold = (clone $completedOrders)->withCount('tickets')->get()->sum('tickets_count');
 
         return $this->success([
             'period' => [
@@ -89,8 +90,8 @@ class DashboardController extends BaseController
                 'pending_review' => (clone $eventsBaseQuery)->where('is_published', false)->where('is_cancelled', false)->count(),
             ],
             'sales' => [
-                'total_orders' => $orders->count(),
-                'completed_orders' => $completedOrders->count(),
+                'total_orders' => (clone $orders)->count(),
+                'completed_orders' => (clone $completedOrders)->count(),
                 'tickets_sold' => $ticketsSold,
                 'gross_revenue' => $grossRevenue,
                 'commission_rate' => $commissionRate,
